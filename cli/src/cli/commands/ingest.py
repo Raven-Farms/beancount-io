@@ -234,16 +234,21 @@ def _refuse_config_only_script(script: Path) -> None:
     imports. `CONFIG` bound by an import or inside `try`/`if`/`with` is the
     same module too, and an `Ingest(` in a comment or a docstring calls
     nothing (w5/635). A file Python cannot parse is left for Python to report.
+
+    Read as Python reads it — bytes, so a UTF-8 BOM or an encoding cookie
+    parses — and `from helpers import *` binds whatever a sibling
+    `helpers.py` binds. Only an entrypoint that runs counts: one constructed
+    and never called, or called only inside a function nothing calls, is the
+    same silent exit, while an import alias such as `Ingest as Main` still
+    names it (w5/851).
     """
-    try:
-        text = script.read_text(encoding="utf-8", errors="replace")
-        tree = ast.parse(text)
-    except (OSError, SyntaxError, ValueError):
-        return
-    if any(_calls_ingest(node) for node in ast.walk(tree)):
+    tree = _parsed(script)
+    if tree is None:
         return
     statements = list(_module_statements(tree.body))
-    if any(_binds_config(node) for node in statements) and not any(_is_main_guard(node) for node in statements):
+    if any(_is_main_guard(node) for node in statements) or _runs_ingest(tree, statements):
+        return
+    if any(_binds_config(node, script.parent) for node in statements):
         raise UsageError(
             f"{script} looks like a `bea import --config` module (CONFIG = [...]). "
             "`bea ingest` needs a script that calls beangulp.Ingest(...)(); "
@@ -251,12 +256,57 @@ def _refuse_config_only_script(script: Path) -> None:
         )
 
 
-def _calls_ingest(node: ast.AST) -> bool:
-    """Whether a node calls `Ingest(...)` or `something.Ingest(...)`."""
+def _parsed(script: Path) -> ast.Module | None:
+    """The module's syntax tree, read from its bytes as Python reads them, or None when it does not parse."""
+    try:
+        return ast.parse(script.read_bytes())
+    except (OSError, SyntaxError, ValueError):
+        return None
+
+
+def _runs_ingest(tree: ast.Module, statements: list[ast.stmt]) -> bool:
+    """Whether the Beangulp entrypoint is called as the module loads, directly or through a function it calls.
+
+    A construction alone — the bare statement `Ingest(CONFIG)` — runs nothing;
+    one called, assigned, passed or returned is taken as used.
+    """
+    names = {"Ingest"} | {
+        alias.asname
+        for node in ast.walk(tree)
+        if isinstance(node, ast.ImportFrom)
+        for alias in node.names
+        if alias.name == "Ingest" and alias.asname
+    }
+    running: list[ast.AST] = [node for node in statements if not isinstance(node, _SCOPES)]
+    called = {
+        node.func.id
+        for scope in running
+        for node in _running_nodes(scope)
+        if isinstance(node, ast.Call) and isinstance(node.func, ast.Name)
+    }
+    running += [node for node in statements if isinstance(node, _SCOPES[:2]) and node.name in called]
+    nodes = [node for scope in running for node in _running_nodes(scope)]
+    bare = {id(node.value) for node in nodes if isinstance(node, ast.Expr)}
+    return any(_constructs_ingest(node, names) and id(node) not in bare for node in nodes)
+
+
+_SCOPES = (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef, ast.Lambda)
+
+
+def _running_nodes(node: ast.AST) -> Iterator[ast.AST]:
+    """`ast.walk` over code that runs with `node`, not into a nested function or class body."""
+    yield node
+    for child in ast.iter_child_nodes(node):
+        if not isinstance(child, _SCOPES):
+            yield from _running_nodes(child)
+
+
+def _constructs_ingest(node: ast.AST, names: set[str]) -> bool:
+    """Whether a node constructs the entrypoint: `Ingest(...)`, `beangulp.Ingest(...)` or an alias's call."""
     if not isinstance(node, ast.Call):
         return False
     func = node.func
-    return (isinstance(func, ast.Name) and func.id == "Ingest") or (
+    return (isinstance(func, ast.Name) and func.id in names) or (
         isinstance(func, ast.Attribute) and func.attr == "Ingest"
     )
 
@@ -275,8 +325,20 @@ def _module_statements(body: list[ast.stmt]) -> Iterator[ast.stmt]:
             yield from _module_statements(case.body)
 
 
-def _binds_config(node: ast.stmt) -> bool:
-    """Whether a statement binds `CONFIG`: assigned, annotated, or imported under that name."""
+def _binds_config(node: ast.stmt, directory: Path, depth: int = 0) -> bool:
+    """Whether a statement binds `CONFIG`: assigned, annotated, or imported under that name.
+
+    `from helpers import *` binds it when the sibling module it names does.
+    """
+    if isinstance(node, ast.ImportFrom) and node.level == 0 and node.module and depth < 3:
+        if any(alias.name == "*" for alias in node.names):
+            parts = node.module.split(".")
+            for candidate in (directory.joinpath(*parts).with_suffix(".py"), directory.joinpath(*parts, "__init__.py")):
+                tree = _parsed(candidate) if candidate.is_file() else None
+                if tree is not None and any(
+                    _binds_config(child, candidate.parent, depth + 1) for child in _module_statements(tree.body)
+                ):
+                    return True
     if isinstance(node, ast.Import | ast.ImportFrom):
         return any((alias.asname or alias.name) == "CONFIG" for alias in node.names)
     if isinstance(node, ast.Assign):
