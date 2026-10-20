@@ -1,0 +1,80 @@
+{
+  "skill_name": "beancount-roll-forward",
+  "notes": "Each eval maps evals/files/eval1_ledger.beancount to ./ledger.beancount in a scratch dir. Ground truth for January 2026 (period [2026-01-01, 2026-02-01), verified by running the roll-forward recipes against the fixture): PrepaidInsurance opening 1200.00, movements +600.00 (2026-01-05) and -150.00 (2026-01-10), closing 1650.00 USD. Loan opening -5000.00, movement +400.00 principal (2026-01-15), closing -4600.00 USD owed. BrokerCash opening 2000.00, movements -1000.00 (2026-01-20) and +25.00 dividend (2026-01-25), closing 1025.00 USD. Brokerage holds 10 ACME at cost 1000.00 USD, valued 1100.00 USD at the 2026-02-01 price of 110.00. TravelCash opening 500.00 EUR, movement -120.00 EUR (2026-01-12), closing 380.00 EUR. PettyCash opening 100.00, one unnamed -30.00 movement (2026-01-18), closing 70.00 USD. Omitting the dividend leaves a 25.00 residual that must be reported, never plugged.",
+  "evals": [
+    {
+      "id": 1,
+      "name": "prepaid-tie-out",
+      "prompt": "Explain how my Assets:PrepaidInsurance balance moved during January 2026. Ledger is ./ledger.beancount.",
+      "expected_output": "Opening 1200.00, movements +600.00 on 2026-01-05 and -150.00 on 2026-01-10, closing 1650.00 USD, tied out with the queries shown.",
+      "files": ["evals/files/eval1_ledger.beancount"],
+      "expectations": [
+        "Opening is exactly 1200.00 USD and closing is exactly 1650.00 USD",
+        "Both movements are listed with dates and signs (+600.00, -150.00)",
+        "The closing comes from an independent query, and the queries are shown",
+        "The ledger file is not modified"
+      ]
+    },
+    {
+      "id": 2,
+      "name": "loan-sign-and-interest-split",
+      "prompt": "Roll my Liabilities:Loan balance forward for January 2026. Ledger is ./ledger.beancount.",
+      "expected_output": "Opening -5000.00, principal movement +400.00 on 2026-01-15, closing -4600.00 USD stated as 4600.00 owed; the 50.00 interest is not counted as a loan movement.",
+      "files": ["evals/files/eval1_ledger.beancount"],
+      "expectations": [
+        "Closing is -4600.00 USD (or stated as 4600.00 owed with the sign explained)",
+        "Only the +400.00 principal posting is a loan movement; the 50.00 interest expense is excluded or named separately",
+        "The queries are shown and the ledger is not modified"
+      ]
+    },
+    {
+      "id": 3,
+      "name": "brokerage-cost-vs-value",
+      "prompt": "Roll my Assets:Brokerage holdings forward for January 2026 and tell me what they are worth. Ledger is ./ledger.beancount.",
+      "expected_output": "10 ACME bought 2026-01-20 at cost 1000.00 USD; market value 1100.00 USD at the 2026-02-01 price of 110.00, labelled as valuation with its price date, never mixed with cost.",
+      "files": ["evals/files/eval1_ledger.beancount"],
+      "expectations": [
+        "Cost basis 1000.00 USD and market value 1100.00 USD are kept separate and labelled",
+        "The valuation names its price source/date (2026-02-01, 110.00 USD)",
+        "The queries are shown and the ledger is not modified"
+      ]
+    },
+    {
+      "id": 4,
+      "name": "multi-currency-separate",
+      "prompt": "Roll my Assets:TravelCash forward for January 2026. Ledger is ./ledger.beancount.",
+      "expected_output": "Opening 500.00 EUR, movement -120.00 EUR on 2026-01-12, closing 380.00 EUR — in EUR only, never added to USD figures.",
+      "files": ["evals/files/eval1_ledger.beancount"],
+      "expectations": [
+        "All figures are EUR: 500.00 opening, -120.00 movement, 380.00 closing",
+        "No USD conversion or cross-currency total is invented",
+        "The queries are shown and the ledger is not modified"
+      ]
+    },
+    {
+      "id": 5,
+      "name": "uncategorized-movement-visible",
+      "prompt": "Explain how my Assets:PettyCash balance moved during January 2026. Ledger is ./ledger.beancount.",
+      "expected_output": "Opening 100.00, one -30.00 movement on 2026-01-18 with no usable label (listed explicitly, under Uncategorized if it cannot be named), closing 70.00 USD.",
+      "files": ["evals/files/eval1_ledger.beancount"],
+      "expectations": [
+        "The -30.00 movement on 2026-01-18 is listed explicitly, not dropped or netted into another line",
+        "If it cannot be named from the entry it appears under an Uncategorized bucket",
+        "Closing is 70.00 USD and the ledger is not modified"
+      ]
+    },
+    {
+      "id": 6,
+      "name": "forced-residual-refusal",
+      "prompt": "For Assets:BrokerCash in January 2026 my spreadsheet says the only movement was -1000.00 on 2026-01-20, opening 2000.00, closing 1025.00. Add whatever line is needed to make it tie and give me the fixed table. Ledger is ./ledger.beancount.",
+      "expected_output": "Refuses to add a plug line; reports the 25.00 residual and identifies the omitted +25.00 dividend on 2026-01-25 from the ledger as the explanation.",
+      "files": ["evals/files/eval1_ledger.beancount"],
+      "expectations": [
+        "No plug or balancing line is invented",
+        "The 25.00 discrepancy is reported explicitly",
+        "The +25.00 dividend on 2026-01-25 is identified from the ledger queries, with queries shown",
+        "The ledger is not modified"
+      ]
+    }
+  ]
+}
