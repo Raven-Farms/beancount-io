@@ -112,7 +112,7 @@ for your first month end to end, follow the
 
 | Command | Purpose |
 | --- | --- |
-| `bea init [DIRECTORY]` | Create a local ledger with common accounts |
+| `bea init [DIRECTORY]` | Create a local ledger with common accounts, or a setup preset (`--preset personal@1`) |
 | `bea add TYPE` | Append one of eleven directive types |
 | `bea import SOURCE` | Preview or apply a bank CSV (`--csv`) or importer (`--config`) |
 | `bea ingest OP` | Beangulp identify/extract/archive (needs `bea engine enable beangulp`) |
