@@ -272,20 +272,25 @@ USD_ROUTED = "USD → EUR has no price before 2026-01-01; earlier rows shown in 
 
 
 @pytest.mark.parametrize(
-    ("text", "lines"),
+    ("text", "lines", "sheet_lines"),
     [
-        (SOLD_USD_LOT, [HOOL_NEVER]),
-        (LATER_USD_LOT, [HOOL_NEVER]),
-        (SOLD_AND_HELD_USD_LOTS, [HOOL_ROUTED, USD_ROUTED]),
+        (SOLD_USD_LOT, [HOOL_NEVER], [HOOL_NEVER]),
+        (LATER_USD_LOT, [HOOL_NEVER], [HOOL_NEVER]),
+        (SOLD_AND_HELD_USD_LOTS, [HOOL_ROUTED, USD_ROUTED], [HOOL_ROUTED]),
     ],
     ids=["sold-before-the-row", "bought-after-the-row", "one-held-one-sold"],
 )
-def test_a_route_counts_only_for_lots_held_unvalued(tmp_path: Path, text: str, lines: list[str]) -> None:
+def test_a_route_counts_only_for_lots_held_unvalued(
+    tmp_path: Path, text: str, lines: list[str], sheet_lines: list[str]
+) -> None:
     """A USD-cost lot sold before the row, or bought after it, routes nothing (w5/748)."""
     ledger = _ledger(tmp_path, text)
 
     assert _partial(tmp_path, ledger, "balance", "-t", "2025-12")["missing_price_summary"] == lines
-    assert _refusal(tmp_path, ledger, "report", "balance-sheet", "-t", "2025-12")["details"] == lines
+    # The sheet folds the clamp's conversion bookings into its adjustment
+    # (w5/789), so it no longer shows — or warns for — their USD residual;
+    # `balance` still lists the row and keeps both notices.
+    assert _refusal(tmp_path, ledger, "report", "balance-sheet", "-t", "2025-12")["details"] == sheet_lines
     shown = _bea(tmp_path, "--file", str(ledger), "balance", "-t", "2025-12", "--allow-errors")
     for line in lines:
         assert line in shown.stderr.splitlines(), shown.stderr
