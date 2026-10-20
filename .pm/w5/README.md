@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [781 — Default importers.py shadows the importers/ folder importer-author proposes; the hint is wrong](./781.md)
 - [782 — The load cache freezes a date-dependent plugin's output (amortize_over): today's row stays missing until a file changes](./782.md)
 - [783 — import --date-format without a year books rows in 1900 and advises re-dating the open to 1900](./783.md)
 - [784 — First use: text check and doctor install twice after a failure, and exit 1 with a stale failure after ready](./784.md)
