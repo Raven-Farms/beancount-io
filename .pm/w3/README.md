@@ -78,7 +78,21 @@
 
 - [ ] **m52** — [Make Ask-AI proxy limits and failures truthful](./blocked/m52/README.md) (7 tasks) ← promoted 446 — **blocked:** provider/operator capacity contract, product decision, and near-limit verification; t001–t002 shipped
 
+- [ ] **m53** — [Ledger creation: setup specification, catalog, and builder across hosted surfaces and `bea init`](./m53/README.md) (9 tasks) ← `/pm-brainstorm w3` 2026-10-20 candidate 1, from PRFAQ001 + ADR021
+
+- [ ] **m54** — [Ledger creation: staged creation flow on dashboard and mobile](./m54/README.md) (7 tasks) ← `/pm-brainstorm w3` 2026-10-20 candidate 2, from PRFAQ001 + ADR021 — sequenced after m53
+
+- [ ] **m55** — [`beancount-roll-forward`: explain how a balance-sheet account moved](./m55/README.md) (6 tasks) ← `/pm-brainstorm w3` 2026-10-20 candidate 3, from ADR020 P1
+
+- [ ] **m56** — [Variance explanation in `beancount-ask`, reused by `beancount-close`](./m56/README.md) (6 tasks) ← `/pm-brainstorm w3` 2026-10-20 candidate 4, from ADR020 P1
+
+- [ ] **m57** — [`beancount-accruals`: supported accrual drafts with explicit period policy](./m57/README.md) (7 tasks) ← `/pm-brainstorm w3` 2026-10-20 candidate 5, from ADR020 P1 — sequenced after m55, m56
+
+- [ ] **m58** — [Reconciliation exception register in `beancount-reconcile`, summarized by `beancount-close`](./m58/README.md) (6 tasks) ← `/pm-brainstorm w3` 2026-10-20 candidate 6, from ADR020 P1 — sequenced after w2/m48 closeout
+
 ## Inbox
+
+- [648](./648.md) — Fix the web Starter copy promising an example transaction and rename the create button from Save (≤1h) ← `/pm-brainstorm w3` 2026-10-20 candidate 7, from ADR021
 
 ## Dropped
 
