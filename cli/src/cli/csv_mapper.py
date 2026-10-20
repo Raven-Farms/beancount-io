@@ -824,6 +824,47 @@ def infer_date_format(
     return date_format, ambiguous
 
 
+#: The engine's status words for a row that is not posted (`bea_engine.csv_mapper`),
+#: here so date inference skips those rows as the import does (w5/831). A test
+#: pins that the two sets agree.
+UNPOSTED_STATUSES = frozenset(
+    {
+        "authorized",
+        "authorised",
+        "authorization",
+        "authorisation",
+        "pre-authorized",
+        "pre-authorised",
+        "preauthorized",
+        "preauthorised",
+        "pre-authorization",
+        "pre-authorisation",
+        "hold",
+        "held",
+        "on hold",
+        "on-hold",
+        "temporary hold",
+        "processing",
+        "not posted",
+        "unposted",
+        "declined",
+        "reverted",
+        "failed",
+        "cancelled",
+        "canceled",
+        "void",
+        "voided",
+        "rejected",
+    }
+)
+
+
+def is_unposted(value: str | None) -> bool:
+    """Whether a status cell marks a row the import leaves out: pending, held, authorized or never posted."""
+    text = (value or "").strip().casefold()
+    return text.startswith("pending") or text in UNPOSTED_STATUSES
+
+
 def inspect_date_column(
     source: Path,
     column: str,
@@ -860,8 +901,13 @@ def inspect_date_column(
             if mapped_columns is not None and "category" not in mapped_columns:
                 counted.update(header for header in headers if header.casefold() == "category")
             row_number = 0
+            status = (mapped_columns or {}).get("status")
             for line, row in rows:
                 if _is_header_repeat(row, headers):
+                    continue
+                if status is not None and is_unposted(row.get(status)):
+                    # Left out by the import, numbered by none of its rows: a
+                    # pending charge's `Pending` date cell refused the export (w5/831).
                     continue
                 if any((row.get(header) or "").strip() for header in counted):
                     row_number += 1

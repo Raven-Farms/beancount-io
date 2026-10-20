@@ -284,11 +284,19 @@ def answer(
                 LedgerError(f"Importer failed ({type(exc).__name__}): {exc}.", traceback=_traceback(exc)), logs
             ) from exc
         skipped_blank = importer.skipped_blank_rows
-        skipped_pending = len(importer.skipped_pending)
+        skipped_pending = len(importer.skipped_pending) + len(importer.skipped_unposted)
         if importer.skipped_pending:
             pending = "; ".join(importer.skipped_pending[:3]) + ("; …" if len(importer.skipped_pending) > 3 else "")
             notes.append(
-                f"Left out {skipped_pending} pending row(s) ({pending}); import them from the export they post in."
+                f"Left out {len(importer.skipped_pending)} pending row(s) ({pending}); import them from the "
+                "export they post in."
+            )
+        if importer.skipped_unposted:
+            # Declined or reverted charges never post: no export will bring them (w5/831).
+            unposted = "; ".join(importer.skipped_unposted[:3]) + ("; …" if len(importer.skipped_unposted) > 3 else "")
+            notes.append(
+                f"Left out {len(importer.skipped_unposted)} row(s) whose status says they never posted "
+                f"({unposted}): declined, failed or reverted charges have no amount to book."
             )
         if importer.pending_column is not None:
             column, count = importer.pending_column

@@ -309,12 +309,18 @@ bea --file books/main.bean import category.csv --csv date=Date,amount=Amount,nar
 Card and bank exports often carry a `Status` column (`Pending`/`Posted`), and
 a pending charge often posts days later at another amount (a tip, a hold, a
 currency conversion). Map that column with `status=Column`, as header
-inference does for a `Status` header, and a row whose status reads `Pending`,
-`Authorized` or a hold is left out. The preview names it ("Left out 1 pending
-row(s) (…); import them from the export they post in") and counts it in
-`skipped_pending`. The posted row then arrives once, in the next export. A
-mapping without `status=` imports pending rows as they are, and a column that
-marks some rows pending is named in a note suggesting `status=` for it.
+inference does for a `Status` header, and a row whose status reads `Pending…`,
+an authorization (`Authorized`, `Pre-authorized`, `Authorization`), a hold
+(`Hold`, `Held`, `On-Hold`, `Temporary Hold`), `Processing` or `Not Posted` is
+left out; so is one that never posted (`Declined`, `Reverted`, `Failed`,
+`Cancelled`, `Void`, `Rejected`), matched case-insensitively. The preview names
+them ("Left out 1 pending row(s) (…); import them from the export they post
+in", and a separate note for rows that never posted) and counts them in
+`skipped_pending`. Those rows are not read for the date format either, so a
+pending row's empty or `Pending` date cell never refuses the export. The posted
+row then arrives once, in the next export. A mapping without `status=` imports
+such rows as they are, and a column that marks some rows so is named in a note
+suggesting `status=` for it; a date that will not parse on such a row says so too.
 
 The mapping is remembered per root ledger, CSV header row, and source account,
 along with the `--rules` path, `--default-account`, an explicit

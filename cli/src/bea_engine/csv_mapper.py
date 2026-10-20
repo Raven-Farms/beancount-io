@@ -680,10 +680,47 @@ _HEADER_SYNONYMS: dict[str, tuple[str, ...]] = {
 }
 
 
+#: Status words for a row not posted yet: it posts later, often at another
+#: amount (w5/614). Card exports spell holds and authorizations many ways, and
+#: `Temporary Hold` or `Pre-authorized` rows were imported as posted (w5/831).
+#: `cli.csv_mapper` keeps the same words; a test pins that they agree.
+PENDING_STATUSES = frozenset(
+    {
+        "authorized",
+        "authorised",
+        "authorization",
+        "authorisation",
+        "pre-authorized",
+        "pre-authorised",
+        "preauthorized",
+        "preauthorised",
+        "pre-authorization",
+        "pre-authorisation",
+        "hold",
+        "held",
+        "on hold",
+        "on-hold",
+        "temporary hold",
+        "processing",
+        "not posted",
+        "unposted",
+    }
+)
+#: Status words for a row that never posted and never will: no amount to book.
+NEVER_POSTED_STATUSES = frozenset(
+    {"declined", "reverted", "failed", "cancelled", "canceled", "void", "voided", "rejected"}
+)
+
+
 def is_pending(value: str | None) -> bool:
-    """Whether a status cell marks a row not yet posted: `Pending`, `Authorized`, a hold."""
+    """Whether a status cell marks a row that is not posted: pending, held, authorized — or never posted."""
     text = (value or "").strip().casefold()
-    return text.startswith("pending") or text in {"authorized", "authorised", "hold", "on hold"}
+    return text.startswith("pending") or text in PENDING_STATUSES or text in NEVER_POSTED_STATUSES
+
+
+def never_posts(value: str | None) -> bool:
+    """Whether a status cell marks a row that will never post: declined, reverted, failed, cancelled."""
+    return (value or "").strip().casefold() in NEVER_POSTED_STATUSES
 
 
 def _row_summary(row: dict[str, str], columns: dict[str, str]) -> str:
@@ -1338,6 +1375,7 @@ class CsvImporter:
         # Rows a mapped status column marks pending, each summarized for the
         # note; and, with none mapped, a column that marks some pending (w5/614).
         self.skipped_pending: list[str] = []
+        self.skipped_unposted: list[str] = []
         self.pending_column: tuple[str, int] | None = None
         # Category values that were not account names, for the caller to report once.
         self.rejected_categories: Counter[str] = Counter()
@@ -1593,8 +1631,10 @@ class CsvImporter:
                 if status_header is not None and is_pending(row.get(status_header)):
                     # A pending charge often posts later at another amount (a
                     # tip, a hold), and both were booked (w5/614). It waits
-                    # for the export it posts in.
-                    self.skipped_pending.append(_row_summary(row, columns))
+                    # for the export it posts in; a declined one never comes.
+                    status = row.get(status_header)
+                    unposted = self.skipped_unposted if never_posts(status) else self.skipped_pending
+                    unposted.append(_row_summary(row, columns))
                     continue
                 numbered.append((len(numbered) + 1, line, row))
             if status_header is None:
@@ -1620,9 +1660,18 @@ class CsvImporter:
                 try:
                     day = datetime.strptime(self._cell(row, where, "date"), self._date_format).date()
                 except ValueError:
+                    # A pending charge often has no posted date: say so when an
+                    # unmapped column marks this row pending (w5/831).
+                    marked = self.pending_column[0] if self.pending_column is not None else None
+                    hint = (
+                        f" Column {marked!r} marks this row {row.get(marked, '').strip()!r}: add status={marked} "
+                        "to the --csv mapping to leave rows that are not posted out."
+                        if marked is not None and is_pending(row.get(marked))
+                        else ""
+                    )
                     raise UsageError(
                         f"{where}: cannot parse date {self._cell(row, where, 'date')!r} "
-                        f"in column {date_column!r} with format {self._date_format!r}."
+                        f"in column {date_column!r} with format {self._date_format!r}.{hint}"
                     ) from None
                 if "amount" in columns:
                     amount_column = columns["amount"]
