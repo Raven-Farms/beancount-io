@@ -1,6 +1,6 @@
 # Beancount Skills
 
-Skills for Beancount users working with a ledger through a coding agent. The eleven workflows below support Claude Code and Codex; their source files live in [`skills/`](.).
+Skills for Beancount users working with a ledger through a coding agent. The twelve workflows below support Claude Code and Codex; their source files live in [`skills/`](.).
 
 The skills work on ledger files on your machine. For a ledger hosted on Beancount.io, connect the Beancount.io MCP server instead; the skills hand hosted requests to its tools and prompts.
 

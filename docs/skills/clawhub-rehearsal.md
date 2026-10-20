@@ -132,3 +132,9 @@ The synchronization run completes successfully, including publisher-credential c
 | 1.0.1 | ask, close, importer-author, options, property, trade |
 
 The post-run public API/download check still returns the previous versions for all eleven listings. No updated version is exposed as public latest yet. This is a registry promotion wait; the accepted uploads must not be repeated. After promotion, verify latest versions and authored-file bytes against this release and complete native supported-host installs before w6/m6/t013 closeout. No model-login approval or owner input remains pending.
+
+## Concurrent twelfth skill — 2026-10-20
+
+After the 0.3.3 dispatch, main adds `beancount-roll-forward` through active w3/m55. The source suite now has twelve skills. The catalog follow-up adds its missing plugin entry, advances both manifests to 0.3.4 and updates current source-suite counts; this does not change the eleven accepted registry updates above. Structural/fixture checks, guidance, six bundle/inventory tests and the roll-forward executable recipe test pass.
+
+Roll-forward has no registry listing in this rehearsal. Its first submission waits for w3/m55's client evals/routing and adoption checks (t002/t003), then needs its own standalone-bundle and real-host verification. The public registry results above cover the original eleven skills. m6 closeout now records both that prerequisite and promotion of the existing eleven pending updates. No owner or model-login approval is pending.

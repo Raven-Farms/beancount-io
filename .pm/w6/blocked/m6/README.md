@@ -1,6 +1,6 @@
 # w6 · m6 — Publish the ledger skills to ClawHub for OpenClaw and Hermes Agent
 
-**Worker:** worker1 **Goal:** An OpenClaw or Hermes Agent user installs any `beancount-*` skill by name from ClawHub, and it works on its own without a Git checkout or this repository's link installer. **Status:** blocked (t001–t012 done; suite 0.3.3 submitted successfully; t013 awaits eleven registry promotions and current-content host checks)
+**Worker:** worker1 **Goal:** An OpenClaw or Hermes Agent user installs any `beancount-*` skill by name from ClawHub, and it works on its own without a Git checkout or this repository's link installer. **Status:** blocked (t001–t012 done; eleven 0.3.3 updates await registry promotion; new roll-forward release also depends on w3/m55 client evals/adoption)
 
 **Research date:** 2026-10-16. Sources: ClawHub's quickstart, how-it-works, and skill-format pages at `docs.openclaw.ai/clawhub/`; Hermes Agent's skills page at `hermes-agent.nousresearch.com/docs/user-guide/features/skills`. Re-check the CLI flags against `clawhub --help` and `hermes skills --help` before relying on them.
 
@@ -20,7 +20,7 @@
 | [t010](done/t010.md) | Adoption surface — **DONE** | 30m | t009 |
 | [t011](done/t011.md) | Simplify — **DONE** | 30m | t010 |
 | [t012](done/t012.md) | Test coverage — **DONE** | 45m | t010, t011 |
-| [t013](t013.md) | Closeout after the listings are live — **BLOCKED** (eleven 0.3.3 bundle updates await public promotion) | 15m | t008, t012 |
+| [t013](t013.md) | Closeout after the listings are live — **BLOCKED** (eleven 0.3.3 bundle updates await public promotion) | 15m | t008, t012, w3/m55/t002, w3/m55/t003 |
 
 ## Decisions — 2026-10-19
 
@@ -159,3 +159,7 @@ All eleven submissions return 1.0.0, initially `pending-publication`. Real clean
 ## Submission review cleared — 2026-10-20
 
 All five 1.0.1 updates are public by 18:23 UTC, and all eleven latest downloads match the submitted release (105 authored files). The publication block above is historical. t013 is actionable again: synchronize later customer edits on main, retain published-CLI compatibility, verify the actual current bundles in supported hosts and then close. Hermes policy/search gaps remain separate in w6/039 and w6/040.
+
+## Concurrent twelfth skill — 2026-10-20
+
+Main adds `beancount-roll-forward` through active w3/m55 after the eleven-skill 0.3.3 dispatch. Its two-client evals/routing and adoption checks (t002/t003) are prerequisites for first registry publication; t013 records those dependencies. The catalog inventory/version repair advances the source plugin to 0.3.4 and passes structural, bundle and recipe checks. **Unblock:** the owning w3 worker completes those checks, the repository worker publishes and verifies roll-forward, and ClawHub promotes the eleven existing pending updates. No user input is needed.

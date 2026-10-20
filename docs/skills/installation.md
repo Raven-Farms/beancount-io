@@ -1,6 +1,6 @@
 # Install the Beancount skills
 
-Install the eleven `beancount-*` ledger skills for Claude Code, Codex, or both, from any directory. You keep one Git checkout of the skills and link it into each agent's skill directory. Updating the checkout updates every agent, and the helper script never touches skills it did not install. [OpenClaw and Hermes Agent](#openclaw-and-hermes-agent) use standalone ClawHub bundles, with the availability and host limits below.
+Install the twelve `beancount-*` ledger skills for Claude Code, Codex, or both, from any directory. You keep one Git checkout of the skills and link it into each agent's skill directory. Updating the checkout updates every agent, and the helper script never touches skills it did not install. [OpenClaw and Hermes Agent](#openclaw-and-hermes-agent) use standalone ClawHub bundles, with the availability and host limits below.
 
 Rehearsed on macOS with Claude Code and Codex (see [tested with](first-query.md#tested-with)). Linux uses the same commands but has not been rehearsed. Windows is not covered.
 
@@ -71,7 +71,7 @@ Next: get a first answer from a sample ledger with the [first-query walkthrough]
 
 ## Install from a standard channel instead
 
-The checkout-and-link install above is one way in. The standard skill channels also carry the suite, because it lives at the conventional `skills/<name>/SKILL.md` layout. A channel install **copies** the eleven skills into the agent's directory instead of linking a checkout, so there is no `verify` script afterwards: confirm with the client skill listing in step 3 and the [first-query walkthrough](first-query.md). Install the whole suite every time — the skills hand off to siblings and share one command contract. Each channel below was checked against the tool's current help (2026-10-19); the exact forms matter, for the reasons given.
+The checkout-and-link install above is one way in. The standard skill channels also carry the suite, because it lives at the conventional `skills/<name>/SKILL.md` layout. A channel install **copies** the twelve skills into the agent's directory instead of linking a checkout, so there is no `verify` script afterwards: confirm with the client skill listing in step 3 and the [first-query walkthrough](first-query.md). Install the whole suite every time — the skills hand off to siblings and share one command contract. Each channel below was checked against the tool's current help (2026-10-19); the exact forms matter, for the reasons given.
 
 ### `npx skills` (skills.sh)
 
@@ -113,7 +113,7 @@ codex plugin add beancount-io@beancount-io
 codex plugin remove beancount-io@beancount-io     # remove
 ```
 
-Both manifests carry one shared suite version; a client delivers a new copy only when that version changes, and every shipped skill change bumps it. Confirm with each client's skill listing (step 3): the eleven skills appear under the `beancount-io:` namespace.
+Both manifests carry one shared suite version; a client delivers a new copy only when that version changes, and every shipped skill change bumps it. Confirm with each client's skill listing (step 3): the twelve skills appear under the `beancount-io:` namespace.
 
 ### Hermes and raw GitHub folders
 
@@ -158,11 +158,13 @@ hermes skills update
 
 These commands were run on macOS with OpenClaw 2026.10.5 and Hermes v0.22.2. Both installed the standalone `beancount-ask@1.0.0` with its CLI contract and license; Hermes's scanner allowed it without `--force`. On 2026-10-20, each host also completed the synthetic first query through the installed skill and an executed `bea` 0.3.1 command, with the expected figures and unchanged ledger checksum. The [registry rehearsal](clawhub-rehearsal.md#real-host-turns--2026-10-20) records the tested model/runtime configuration and its limits; OpenClaw used its explicitly selected embedded runtime.
 
-**Release status, 2026-10-20:** all eleven 1.0.0 releases are public. The complete suite installs in one OpenClaw workspace. Ten skills install in Hermes; its scanner blocks `beancount-init` for the intended creation of ledger instruction files. Use the supported skills individually in Hermes, and keep the Git/link route above for the complete Claude Code/Codex suite. See the [per-skill results](clawhub-rehearsal.md#install-results).
+**Release status, 2026-10-20:** all eleven original 1.0.0 releases are public. That eleven-skill release installs in one OpenClaw workspace. Ten skills install in Hermes; its scanner blocks `beancount-init` for the intended creation of ledger instruction files. Use the supported skills individually in Hermes, and keep the Git/link route above for the complete Claude Code/Codex suite. See the [per-skill results](clawhub-rehearsal.md#install-results).
 
 The 0.3.2 wording fixes are public as registry 1.0.1 for add, import, init, migrate and reconcile; the other six listings remain at 1.0.0. All eleven downloads and OpenClaw installations match that submitted release. Later main changes were submitted as suite 0.3.3: five registry 1.0.2 updates and six 1.0.1 updates. All eleven new uploads await public promotion; the previous public versions remain available. See the [synchronization record](clawhub-rehearsal.md#suite-033-synchronization--2026-10-20) for release progress and host limits.
 
-Hermes's default search now finds all eleven suite listings:
+The Git/plugin suite now also contains `beancount-roll-forward`, bringing its inventory to twelve. Its first registry release waits for the client evals and adoption checks in w3/m55; the registry evidence below covers the original eleven skills.
+
+Hermes's default search now finds all eleven published suite listings:
 
 ```sh
 hermes skills search beancount
