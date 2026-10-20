@@ -1543,6 +1543,61 @@ class TestBeaRecipes(unittest.TestCase):
         self.assertEqual(self.recipe("price-refresh"), {"sources": [], "changed": []})
         self.assertEqual(self.ledger.read_bytes(), before)
 
+    def test_trade_batch_books_a_named_lot_sell_and_rejects_wholesale(self):
+        # beancount-trade's batch path: explicit-cost events in one batch
+        # write (sell gains leg omits units so booking computes it), and one
+        # bad row rejects the whole batch without --partial.
+        self.ledger.write_text(
+            'option "operating_currency" "USD"\n'
+            "2025-01-01 open Assets:Brokerage USD,VTI\n"
+            "2025-01-01 open Income:CapitalGains USD\n"
+            "2025-01-01 open Equity:OpeningBalances\n"
+            '2025-01-02 * "Cash in"\n  Assets:Brokerage 5000.00 USD\n  Equity:OpeningBalances\n'
+            '2025-01-15 * "Buy VTI"\n  Assets:Brokerage 10 VTI {100.00 USD}\n  Assets:Brokerage -1000.00 USD\n'
+            'include "transactions/2026.bean"\n'
+        )
+        batch_file = Path(self.values["batch"])
+        batch_file.write_text(json.dumps([
+            {"date": "2026-03-01", "payee": "Broker", "narration": "Buy VTI", "postings": [
+                {"account": "Assets:Brokerage", "units": {"number": "5", "currency": "VTI"},
+                 "cost": {"number": "250.00", "currency": "USD"}},
+                {"account": "Assets:Brokerage", "units": {"number": "-1250.00", "currency": "USD"}}]},
+            {"date": "2026-03-02", "payee": "Broker", "narration": "Sell VTI", "postings": [
+                {"account": "Assets:Brokerage", "units": {"number": "-5", "currency": "VTI"},
+                 "cost": {"number": "100.00", "currency": "USD", "date": "2025-01-15"},
+                 "price": {"number": "300.00", "currency": "USD"}},
+                {"account": "Assets:Brokerage", "units": {"number": "1500.00", "currency": "USD"}},
+                {"account": "Income:CapitalGains"}]},
+        ]))
+        written = self.recipe("batch")
+        self.assertEqual(written["written"], 2)
+        rows = self.run_query_text(
+            "SELECT -sum(number) AS booked WHERE account = 'Income:CapitalGains'")
+        self.assertEqual(rows, [["1000.00"]])
+
+        before = self.target.read_bytes()
+        batch_file.write_text(json.dumps([
+            {"date": "2026-03-03", "narration": "Good buy", "postings": [
+                {"account": "Assets:Brokerage", "units": {"number": "1", "currency": "VTI"},
+                 "cost": {"number": "250.00", "currency": "USD"}},
+                {"account": "Assets:Brokerage", "units": {"number": "-250.00", "currency": "USD"}}]},
+            {"date": "2026-03-04", "narration": "Sell unheld lot", "postings": [
+                {"account": "Assets:Brokerage", "units": {"number": "-5", "currency": "VTI"},
+                 "cost": {"number": "999.00", "currency": "USD", "date": "2024-01-01"},
+                 "price": {"number": "300.00", "currency": "USD"}},
+                {"account": "Assets:Brokerage", "units": {"number": "1500.00", "currency": "USD"}},
+                {"account": "Income:CapitalGains"}]},
+        ]))
+        self.recipe("batch", succeeds=False)
+        self.assertEqual(self.target.read_bytes(), before)
+
+    def run_query_text(self, query: str):
+        result = subprocess.run(
+            [*self.bea, "--file", self.values["ledger"], "--json", "--no-input", "query", query],
+            cwd=self.root, env=self.env, capture_output=True, text=True, timeout=90)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        return json.loads(result.stdout)["data"]["rows"]
+
 
 def load_tests(loader, tests, pattern):
     """Keep the focused journey and routing-runner checks in the existing skills CI entrypoint."""
