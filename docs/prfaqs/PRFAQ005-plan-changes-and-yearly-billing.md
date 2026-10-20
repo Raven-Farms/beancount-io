@@ -1,6 +1,6 @@
 # PRFAQ005 — Change plans and pay yearly from inside the product
 
-Status: Stage 1 shipped and deployed on 2026-10-18 (w1/m39, through `bcb5462c7`). It covers server-side previews, immediate changes, the Billing tab, the Checkout confirmation and the $143.88 Premium yearly price, which the marketing pricing page sells too. Stage 2's code is on `main` (w1/m40, through `87eac2708`). It covers scheduled downgrades and switches to monthly with undo, the cancel sheet, paid limits while past due with the failed-renewal banner, the ledger-count and collaborator-limit fixes, and the scheduled-change emails. Its deploy, two Stripe Dashboard settings and the production payment test are pending. All pricing and policy decisions were recorded on 2026-10-17 ([question 21](#21-what-has-been-decided)).
+Status: Stage 1 shipped and deployed on 2026-10-18 (w1/m39, through `bcb5462c7`). It covers server-side previews, immediate changes, the Billing tab, the Checkout confirmation and the $143.88 Premium yearly price, which the marketing pricing page sells too. Stage 2's code is on `main` (w1/m40, through `87eac2708`). It covers scheduled downgrades and switches to monthly with undo, the cancel sheet, paid limits while past due with the failed-renewal banner, the ledger-count and collaborator-limit fixes, and the scheduled-change emails. Its deploy, two Stripe Dashboard settings and the production payment test are pending. All pricing and policy decisions were recorded on 2026-10-17 ([question 21](#21-what-has-been-decided)). On 2026-10-20 (w2/m54) Checkout started returning to the dashboard confirmation, `purchase` moved to the browser, and a paid transaction gets a one-time confetti celebration.
 
 Date: 2026-10-17
 
@@ -188,7 +188,7 @@ The call to action depends on who is looking:
 | Subscriber, other tier | **Upgrade** or **Downgrade** | Dashboard change sheet, prefilled; Free's card leads to the cancel sheet |
 | Anyone, Enterprise | **Contact us** | Unchanged |
 
-A cancelled Checkout returns to `/pricing?plan=…&billing=…&checkout=canceled` with the choice still selected and "Checkout canceled — you weren't charged."
+A cancelled Checkout returns to where it started: the pricing page at `/pricing?plan=…&billing=…&checkout=canceled` with the choice still selected and "Checkout canceled — you weren't charged.", or Billing with "Checkout was canceled. Nothing was charged." when the dashboard started it.
 
 **Billing settings (dashboard).** Billing moves to its own `/settings/billing` tab; `/settings/general` keeps a one-line plan summary that links to it.
 
@@ -368,7 +368,7 @@ These are self-service billing operations, so they follow [the authorization mod
 
 ### 19. How do we know whether it worked?
 
-New analytics events, alongside today's `checkout_started` and a server-side `purchase` from the webhook:
+New analytics events, alongside today's `checkout_started` and a `purchase` sent from the browser once per paid invoice (the confirmation after Checkout, or the change sheet after an upgrade that charged; it replaced a server-side Measurement Protocol event on 2026-10-20):
 
 - `billing_toggle_changed {to, surface}`
 - `plan_change_previewed {kind, from, to, surface}`

@@ -1,6 +1,6 @@
 # w2 · m54 — A purchase ends on a confirmation that celebrates it, and analytics counts it in the browser
 
-**Worker:** worker2 **Goal:** Every successful payment — a new subscription through Stripe Checkout or an upgrade charged inside Billing — ends in the dashboard on a confirmation that says what the customer now has, celebrates it once, and records one GA4 `purchase` from the browser. Checkout no longer returns to the marketing pricing page, and the dormant server-side purchase reporter is retired so there is one purchase source. **Status:** todo (t001–t007 done)
+**Worker:** worker2 **Goal:** Every successful payment — a new subscription through Stripe Checkout or an upgrade charged inside Billing — ends in the dashboard on a confirmation that says what the customer now has, celebrates it once, and records one GA4 `purchase` from the browser. Checkout no longer returns to the marketing pricing page, and the dormant server-side purchase reporter is retired so there is one purchase source. **Status:** todo (t001–t008 done)
 
 ## Tasks (in order)
 
@@ -13,7 +13,7 @@
 | t005 | Record one client-side GA4 `purchase` per paid transaction — **DONE** | 40m | t002, t003, t004 |
 | t006 | Celebrate a successful payment with confetti, once, and never for reduced motion — **DONE** | 35m | t004, t005 |
 | t007 | Translate the new confirmation and cancel copy into every dashboard locale — **DONE** | 25m | t004, t006 |
-| t008 | Verify adoption surfaces for the purchase changes | 20m | t005, t006, t007 |
+| t008 | Verify adoption surfaces for the purchase changes — **DONE** | 20m | t005, t006, t007 |
 | t009 | Run `/simplify` over the milestone diff | 30m | t008 |
 | t010 | Prove return paths, purchase counting and the celebration with meaningful tests | 35m | t008, t009 |
 | t011 | Verify a real purchase in production and archive the milestone | 30m | t010 |
@@ -24,7 +24,7 @@
 
 - A paid Stripe Checkout, started from the marketing pricing page or from Billing, returns to `https://beancount.io/settings/billing?checkout=success&session_id=<id>`. The confirmation waits for the webhook, then shows the plan, renewal date and what was unlocked, with "Back to work" when the purchase began at an in-product prompt and "Start using <plan>" otherwise.
 - A Checkout cancelled from Billing returns to Billing with a "nothing was charged" notice. A cancel from the marketing pricing page still returns there with the plan and cycle preselected, and that page's `createSubscriptionSession` call is unchanged.
-- Exactly one GA4 `purchase` is sent from the browser per paid transaction — the Checkout session on the confirmation, or the invoice of an immediate in-sheet upgrade that charged — with a non-empty `transaction_id`, `value`, `currency` and `items`. A refresh, a back navigation, a second tab, a pending confirmation or a $0 transaction sends none.
+- Exactly one GA4 `purchase` is sent from the browser per paid invoice — a Checkout subscription's first invoice on the confirmation, or the invoice of an immediate in-sheet upgrade that charged — with a non-empty `transaction_id`, `value`, `currency` and `items`. A refresh, a back navigation, a second tab, a pending confirmation or a $0 transaction sends none.
 - Confetti plays once per paid transaction after the payment is confirmed, never while confirming, on a timeout, on a $0 transaction, or when the reader prefers reduced motion, and the confetti code is not in the entry chunk.
 - The backend sends no Measurement Protocol `purchase` and has no `GA_MEASUREMENT_PROTOCOL_SECRET` setting.
 - Verified in production after a deploy (t011).
