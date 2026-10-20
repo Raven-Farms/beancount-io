@@ -153,7 +153,7 @@ Holdings valuation (beancount-ask's holdings recipes) reads the latest `price` p
 
 1. **Managed price include (preferred when the pair exists).** One line — `include "https://beancount.io/prices/BTC-USD"` — values the holding in every `bea` load with no recurring writes; pairs are listed at <https://beancount.io/live-prices> and fetching needs `bea cloud login` (or `BEA_TOKEN`). This skill never edits `include` directives: show the exact line and let the user add it, then read `price-status` again to confirm the source resolves. `price-refresh` re-resolves the cache on request; it never writes the ledger.
 2. **Fetched quotes.** With the user's go-ahead, enable the optional engine feature once (`bea engine enable beanprice`), fetch as text — `bea --file "$ledger" --no-input price -e 'USD:yahoo/VTI'` (no `--json`; the format is `CCY:module/SYMBOL`) — and show the printed quotes with their source module in the proposal. After the yes, write each with the `price` recipe. A quote that fails to fetch is reported per commodity, never replaced by a remembered or estimated one.
-3. **User-supplied quote.** A single price the user states, through the `price` recipe as today.
+3. **User-supplied quote.** A single price the user states, through the `price` recipe.
 
 A fetched or managed price that disagrees with an authored one for the same date follows the `price` recipe's duplicate/`--force` rule — the user's say-so, never a silent overwrite.
 

@@ -1,6 +1,6 @@
 # Categorization — few-shot from the ledger's own history
 
-The ledger is the rules database. No separate rules file: every run learns from what the user has already accepted, so the suggestions improve exactly as fast as the ledger grows, and there is no second artifact to drift out of sync.
+The ledger is the source of every suggestion: each run learns from what the user has already accepted, so the suggestions improve exactly as fast as the ledger grows. On the `bea` CSV path the reviewed categories are also encoded in the source's durable rules file; it must reproduce the reviewed per-row categories and is read before reuse (`references/bea-import.md`), so the ledger's history stays the authority.
 
 ## Procedure
 

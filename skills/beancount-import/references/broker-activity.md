@@ -142,8 +142,9 @@ blended row into invented lots.
 - **One opening transaction** dated the export's as-of date (or the
   ledger's start, confirmed with the user): each lot as
   `N SYM {cost, acquisition-date}` into its account, any cash balance
-  row in the same entry, balanced against `Equity:Opening-Balances`
-  (propose its `open` if missing). The lot keeps its true acquisition
+  row in the same entry, balanced against the ledger's existing
+  opening-equity account (`bea init` creates `Equity:OpeningBalances`;
+  propose an `open` only when the ledger has none). The lot keeps its true acquisition
   date inside the cost braces, so later sells reduce it with the right
   holding period — the transaction date does not rewrite when the lot
   was acquired.

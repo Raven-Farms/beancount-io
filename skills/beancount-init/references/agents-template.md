@@ -36,8 +36,8 @@ itself).
 - Import rules and per-source mappings live in the
   `;; beancount-import config` block at the top of `main.bean`, recorded
   there when imports start.
-- Ledger workflow skills (init, add, import, reconcile, migrate, ask,
-  close, options):
+- Ledger workflow skills (init, add, trade, property, import,
+  importer-author, reconcile, migrate, ask, close, options):
   https://github.com/bex-co/beancount-io/tree/main/skills
 ```
 

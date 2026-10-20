@@ -72,7 +72,7 @@ Seed my existing holdings into ./main.bean from two cost-basis exports: INPUTS/b
 Expect one opening proposal per export — broker lots `10 VTI {100.00,
 2023-05-01}` + `5 VTI {120.00, 2024-06-15}` + 1000.00 cash tying to the
 export's 2600.00, and `0.500000 BTC {40000.00, 2025-01-10}` tying to
-20000.00 — each balanced against `Equity:Opening-Balances`. Approve each.
+20000.00 — each balanced against `Equity:OpeningBalances` (created by `bea init`). Approve each.
 Checkpoint `seeded`:
 
 ```sh
