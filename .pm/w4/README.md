@@ -4,7 +4,6 @@
 
 ## Inbox
 
-- [240 — Name file-view Edit at narrow widths](./240.md) — minor; dashboard QA, 2026-10-20.
 - [241 — Complete file saves without discarding newer edits](./241.md) — major; dashboard QA, 2026-10-20, pending-edit loss reproduced.
 - [242 — Name Documents, Collaborators, Errors and Import Preview tables](./242.md) — minor; dashboard QA, 2026-10-20, populated/loading/empty controls scoped.
 - [243 — Keep narrow Documents columns readable](./243.md) — minor; dashboard QA, 2026-10-20.
