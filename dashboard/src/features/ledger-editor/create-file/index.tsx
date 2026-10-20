@@ -59,6 +59,7 @@ const CreateFilePage = () => {
   const [isSaving, setIsSaving] = useState(false);
   // Allow the post-create navigate without prompting; cleared after each leave.
   const allowNavigationRef = useRef(false);
+  const savingRef = useRef(false);
 
   const [createFileMutation] = useMutation(CreateLedgerFileDocument);
   const { data: dirData } = useQuery(GetLedgerDirContentDocument, {
@@ -144,6 +145,10 @@ const CreateFilePage = () => {
     // mid-draft must stop the write here too, without discarding the draft.
     if (!canWrite || isSaveDisabled) return;
 
+    // From here until the write and directory refetch settle, the draft is
+    // read-only: the success path leaves with exactly this snapshot, so it
+    // must not accept a newer name or text it would discard (w4/247).
+    savingRef.current = true;
     setIsSaving(true);
     try {
       await createFileMutation({
@@ -172,6 +177,7 @@ const CreateFilePage = () => {
       console.error("Failed to create file:", error);
       toast.error(formatError(error));
     } finally {
+      savingRef.current = false;
       setIsSaving(false);
     }
   };
@@ -224,7 +230,10 @@ const CreateFilePage = () => {
                 type="text"
                 placeholder={t("ledgerEditor.nameYourFile")}
                 value={filename}
-                onChange={(e) => setFilename(e.target.value)}
+                onChange={(e) => {
+                  if (!savingRef.current) setFilename(e.target.value);
+                }}
+                readOnly={isSaving}
                 className="flex-1 min-w-0"
                 autoFocus
                 aria-invalid={Boolean(filenameError)}
@@ -278,7 +287,9 @@ const CreateFilePage = () => {
               height="100%"
               language={getFileLanguage(normalizedFilename)}
               value={content}
-              onChange={(value) => setContent(value || "")}
+              onChange={(value) => {
+                if (!savingRef.current) setContent(value || "");
+              }}
               theme={isDarkTheme ? "vs-dark" : "light"}
               beforeMount={(monaco) => {
                 // Register Beancount language before mounting
@@ -293,6 +304,8 @@ const CreateFilePage = () => {
                 fontSize: 14,
                 tabSize: 2,
                 insertSpaces: true,
+                readOnly: isSaving,
+                domReadOnly: isSaving,
               }}
             />
           </div>
