@@ -1,6 +1,7 @@
 ---
 name: beancount-init
 description: Scaffold a new local Beancount ledger with bea init and validation, with optional Fava browser setup when requested. Use for setting up a new ledger or initializing a bookkeeping repository. Skip importing history (beancount-migrate), bank exports, edits to a populated ledger, or ledgers hosted on Beancount.io.
+license: MIT-0
 metadata:
   openclaw:
     homepage: 'https://github.com/bex-co/beancount-io/tree/main/skills'
@@ -69,8 +70,8 @@ user asked for Fava / `make start` / "bootstrap fava", otherwise ask once
 still want a browser — otherwise they can install `bea` later).
 
 When FAVA is yes, verify `uv` with `command -v uv`. If missing, stop and tell
-them to install it (`brew install uv` on macOS, or
-`curl -LsSf https://astral.sh/uv/install.sh | sh`).
+them to install it with their package manager (`brew install uv` on macOS),
+or follow the [official uv installation guide](https://docs.astral.sh/uv/getting-started/installation/).
 
 ## Step 2 — Resolve the opening date
 
