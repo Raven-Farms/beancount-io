@@ -44,6 +44,11 @@ const bgAuth: Record<string, TranslationEntry> = {
     message: "Потвърдете паролата си",
     description: "Placeholder for password confirmation",
   },
+  "auth.chooseYourPassword": {
+    message: "Изберете парола (мин. 8 символа)",
+    description:
+      "Placeholder for the password a new account chooses, with the minimum length",
+  },
   "auth.createAccount": {
     message: "Създаване на профил",
     description: "Button to submit registration",
@@ -203,11 +208,12 @@ const bgAuth: Record<string, TranslationEntry> = {
     description: "Label for new password field",
   },
   "auth.newPasswordMinLength": {
-    message: "Паролата трябва да бъде поне 6 символа",
+    message: "Паролата трябва да бъде поне 8 символа",
     description: "Validation error for password length",
   },
   "auth.newPasswordMaxLength": {
-    message: "Паролата трябва да бъде най-много 128 символа",
+    message:
+      "Паролата е твърде дълга. Използвайте най-много 72 символа; буквите с диакритика, нелатинските букви и емоджитата се броят за 2 до 4 всяко.",
     description:
       "Validation error when new password exceeds the maximum length",
   },
@@ -250,6 +256,17 @@ const bgAuth: Record<string, TranslationEntry> = {
   "auth.passwordRequired": {
     message: "Паролата е задължителна",
     description: "Validation error when password is not provided",
+  },
+  "auth.passwordBreached": {
+    message:
+      "Тази парола е открита при изтичане на данни. Изберете парола, която не използвате никъде другаде.",
+    description:
+      "Error when the server finds the new password in a known data breach (Have I Been Pwned)",
+  },
+  "auth.passwordTooSimilar": {
+    message: "Паролата е твърде сходна с вашия имейл или потребителско име.",
+    description:
+      "Error when the new password is too close to the account's email or username",
   },
   "auth.passwordResetSuccessMessage": {
     message:

@@ -44,6 +44,11 @@ const ukAuth: Record<string, TranslationEntry> = {
     message: "Підтвердіть ваш пароль",
     description: "Placeholder for password confirmation",
   },
+  "auth.chooseYourPassword": {
+    message: "Придумайте пароль (мінімум 8 символів)",
+    description:
+      "Placeholder for the password a new account chooses, with the minimum length",
+  },
   "auth.createAccount": {
     message: "Створити обліковий запис",
     description: "Button to submit registration",
@@ -203,11 +208,12 @@ const ukAuth: Record<string, TranslationEntry> = {
     description: "Label for new password field",
   },
   "auth.newPasswordMinLength": {
-    message: "Пароль має містити щонайменше 6 символів",
+    message: "Пароль має містити щонайменше 8 символів",
     description: "Validation error for password length",
   },
   "auth.newPasswordMaxLength": {
-    message: "Пароль має містити не більше 128 символів",
+    message:
+      "Пароль задовгий: не більше 72 символів, причому літери з діакритикою, нелатинські літери (зокрема кирилиця) та емодзі рахуються за 2–4 символи.",
     description:
       "Validation error when new password exceeds the maximum length",
   },
@@ -250,6 +256,18 @@ const ukAuth: Record<string, TranslationEntry> = {
   "auth.passwordRequired": {
     message: "Пароль обов'язковий",
     description: "Validation error when password is not provided",
+  },
+  "auth.passwordBreached": {
+    message:
+      "Цей пароль виявлено у витоку даних. Виберіть пароль, який ви ніде більше не використовуєте.",
+    description:
+      "Error when the server finds the new password in a known data breach (Have I Been Pwned)",
+  },
+  "auth.passwordTooSimilar": {
+    message:
+      "Пароль занадто схожий на вашу електронну пошту або ім'я користувача.",
+    description:
+      "Error when the new password is too close to the account's email or username",
   },
   "auth.passwordResetSuccessMessage": {
     message:

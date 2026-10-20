@@ -16,6 +16,7 @@ import {
   USERNAME_CHARACTERS,
   USERNAME_MAX_LENGTH,
 } from "@/common/lib/auth/username-rule";
+import { newPasswordSchema } from "@/features/auth/lib/password-rule";
 
 export type RegisterFormProps = {
   onSubmit: (data: RegisterFormData) => Promise<void>;
@@ -66,11 +67,7 @@ export function RegisterForm({
               USERNAME_CHARACTERS,
               t("auth.usernameLowercaseAlphanumeric"),
             ),
-          password: z
-            .string()
-            .min(1, t("auth.passwordRequired"))
-            .min(6, t("auth.passwordMinLength"))
-            .max(128, t("auth.passwordMaxLength")),
+          password: newPasswordSchema(t),
           confirmPassword: z.string().min(1, t("auth.confirmPasswordRequired")),
         })
         .refine((data) => data.password === data.confirmPassword, {
@@ -247,9 +244,8 @@ export function RegisterForm({
         <PasswordInput
           id="password"
           autoComplete="new-password"
-          placeholder={t("auth.enterYourPassword")}
+          placeholder={t("auth.chooseYourPassword")}
           className="w-full bg-muted"
-          maxLength={128}
           {...register("password")}
           aria-invalid={errors.password ? true : undefined}
           aria-describedby={errors.password ? "password-error" : undefined}
@@ -274,7 +270,6 @@ export function RegisterForm({
           autoComplete="new-password"
           placeholder={t("auth.confirmYourPassword")}
           className="w-full bg-muted"
-          maxLength={128}
           {...register("confirmPassword")}
           aria-invalid={errors.confirmPassword ? true : undefined}
           aria-describedby={

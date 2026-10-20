@@ -36,6 +36,11 @@ const enAuth: Record<string, TranslationEntry> = {
     message: "Confirm your password",
     description: "Placeholder for password confirmation",
   },
+  "auth.chooseYourPassword": {
+    message: "Choose a password (min 8 characters)",
+    description:
+      "Placeholder for the password a new account chooses, with the minimum length",
+  },
   "auth.createAccount": {
     message: "Create account",
     description: "Button to submit registration",
@@ -177,11 +182,12 @@ const enAuth: Record<string, TranslationEntry> = {
     description: "Label for new password field",
   },
   "auth.newPasswordMinLength": {
-    message: "Password must be at least 6 characters",
+    message: "Password must be at least 8 characters",
     description: "Validation error for password length",
   },
   "auth.newPasswordMaxLength": {
-    message: "Password must be at most 128 characters",
+    message:
+      "Password is too long. Use at most 72 characters; accented letters, non-Latin scripts and emoji count as 2 to 4 each.",
     description:
       "Validation error when new password exceeds the maximum length",
   },
@@ -204,6 +210,17 @@ const enAuth: Record<string, TranslationEntry> = {
   "auth.passwordRequired": {
     message: "Password is required",
     description: "Validation error when password is not provided",
+  },
+  "auth.passwordBreached": {
+    message:
+      "This password has appeared in a data breach. Choose one you don't use anywhere else.",
+    description:
+      "Error when the server finds the new password in a known data breach (Have I Been Pwned)",
+  },
+  "auth.passwordTooSimilar": {
+    message: "Password is too similar to your email or username.",
+    description:
+      "Error when the new password is too close to the account's email or username",
   },
   "auth.passwordResetSuccessMessage": {
     message:

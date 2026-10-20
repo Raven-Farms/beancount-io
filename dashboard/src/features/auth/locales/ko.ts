@@ -33,6 +33,11 @@ const koAuth: Record<string, TranslationEntry> = {
     message: "비밀번호를 확인해 주세요",
     description: "Placeholder for password confirmation",
   },
+  "auth.chooseYourPassword": {
+    message: "비밀번호를 정하세요 (최소 8자)",
+    description:
+      "Placeholder for the password a new account chooses, with the minimum length",
+  },
   "auth.createAccount": {
     message: "계정 만들기",
     description: "Button to submit registration",
@@ -173,11 +178,12 @@ const koAuth: Record<string, TranslationEntry> = {
     description: "Label for new password field",
   },
   "auth.newPasswordMinLength": {
-    message: "비밀번호는 최소 6자 이상이어야 합니다",
+    message: "비밀번호는 최소 8자 이상이어야 합니다",
     description: "Validation error for password length",
   },
   "auth.newPasswordMaxLength": {
-    message: "비밀번호는 최대 128자 이하여야 합니다",
+    message:
+      "비밀번호가 너무 깁니다. 최대 72자까지 사용할 수 있으며, 악센트 문자, 한글 등 라틴 문자가 아닌 글자, 이모지는 각각 2~4자로 계산됩니다.",
     description:
       "Validation error when new password exceeds the maximum length",
   },
@@ -200,6 +206,17 @@ const koAuth: Record<string, TranslationEntry> = {
   "auth.passwordRequired": {
     message: "비밀번호는 필수입니다",
     description: "Validation error when password is not provided",
+  },
+  "auth.passwordBreached": {
+    message:
+      "이 비밀번호는 데이터 유출에서 발견되었습니다. 다른 곳에서 사용하지 않는 비밀번호를 선택하세요.",
+    description:
+      "Error when the server finds the new password in a known data breach (Have I Been Pwned)",
+  },
+  "auth.passwordTooSimilar": {
+    message: "비밀번호가 이메일 또는 사용자 이름과 너무 비슷합니다.",
+    description:
+      "Error when the new password is too close to the account's email or username",
   },
   "auth.passwordResetSuccessMessage": {
     message:

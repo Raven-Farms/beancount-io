@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { USERNAME_MAX_LENGTH } from "@/common/lib/auth/username-rule";
+import { numbersIn } from "@/test/locale-scan";
 
 /**
  * The signup form enforces a 20-character username, but twelve catalogs still
@@ -47,14 +48,6 @@ function message(file: string, key: string): string {
   const match = pattern.exec(source);
   expect(match, `${file} is missing ${key}`).not.toBeNull();
   return match![1];
-}
-
-/** Western and Eastern Arabic digits both count. */
-function numbersIn(text: string): number[] {
-  const normalized = text.replace(/[٠-٩۰-۹]/g, (digit) =>
-    String(digit.charCodeAt(0) & 0xf),
-  );
-  return [...normalized.matchAll(/\d+/g)].map((m) => Number(m[0]));
 }
 
 describe("username length copy", () => {

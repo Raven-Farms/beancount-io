@@ -28,6 +28,10 @@ import {
 import { useTranslations } from "@/common/hooks/use-translations";
 import { useErrorMessage } from "@/common/lib/errors/error-message";
 import { PageSEO } from "@/common/components/seo/page-seo";
+import {
+  newPasswordSchema,
+  useNewPasswordErrorMessage,
+} from "@/features/auth/lib/password-rule";
 
 type ResetPasswordFormData = {
   newPassword: string;
@@ -41,6 +45,7 @@ type ResetPasswordFormData = {
 export default function ResetPasswordPage() {
   const { t } = useTranslations();
   const formatError = useErrorMessage();
+  const formatResetError = useNewPasswordErrorMessage();
   const search = useSearch({ from: "/auth/reset-password" });
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
@@ -48,11 +53,7 @@ export default function ResetPasswordPage() {
   // Create Zod schema with translated messages
   const resetPasswordSchema = z
     .object({
-      newPassword: z
-        .string()
-        .min(1, t("auth.newPasswordRequired"))
-        .min(6, t("auth.newPasswordMinLength"))
-        .max(128, t("auth.newPasswordMaxLength")),
+      newPassword: newPasswordSchema(t),
       confirmPassword: z.string().min(1, t("auth.confirmPasswordRequired")),
     })
     .refine((data) => data.newPassword === data.confirmPassword, {
@@ -143,7 +144,7 @@ export default function ResetPasswordPage() {
         setError(t("auth.failedToResetPassword"));
       }
     } catch (err: unknown) {
-      setError(formatError(err));
+      setError(formatResetError(err));
     }
   };
 
@@ -334,7 +335,6 @@ export default function ResetPasswordPage() {
                     autoComplete="new-password"
                     placeholder={t("auth.enterYourNewPassword")}
                     className="w-full"
-                    maxLength={128}
                     {...register("newPassword")}
                     aria-invalid={errors.newPassword ? true : undefined}
                     aria-describedby={
@@ -360,7 +360,6 @@ export default function ResetPasswordPage() {
                     autoComplete="new-password"
                     placeholder={t("auth.confirmYourNewPassword")}
                     className="w-full"
-                    maxLength={128}
                     {...register("confirmPassword")}
                     aria-invalid={errors.confirmPassword ? true : undefined}
                     aria-describedby={

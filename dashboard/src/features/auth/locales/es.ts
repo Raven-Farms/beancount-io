@@ -44,6 +44,11 @@ const esAuth: Record<string, TranslationEntry> = {
     message: "Confirme su contraseña",
     description: "Placeholder for password confirmation",
   },
+  "auth.chooseYourPassword": {
+    message: "Elija una contraseña (mínimo 8 caracteres)",
+    description:
+      "Placeholder for the password a new account chooses, with the minimum length",
+  },
   "auth.createAccount": {
     message: "Crear cuenta",
     description: "Button to submit registration",
@@ -204,11 +209,12 @@ const esAuth: Record<string, TranslationEntry> = {
     description: "Label for new password field",
   },
   "auth.newPasswordMinLength": {
-    message: "La contraseña debe tener al menos 6 caracteres",
+    message: "La contraseña debe tener al menos 8 caracteres",
     description: "Validation error for password length",
   },
   "auth.newPasswordMaxLength": {
-    message: "La contraseña debe tener como máximo 128 caracteres",
+    message:
+      "La contraseña es demasiado larga. Use como máximo 72 caracteres; las letras acentuadas, los alfabetos no latinos y los emojis cuentan como 2 a 4 cada uno.",
     description:
       "Validation error when new password exceeds the maximum length",
   },
@@ -252,6 +258,18 @@ const esAuth: Record<string, TranslationEntry> = {
   "auth.passwordRequired": {
     message: "Se requiere la contraseña",
     description: "Validation error when password is not provided",
+  },
+  "auth.passwordBreached": {
+    message:
+      "Esta contraseña ha aparecido en una filtración de datos. Elija una que no use en ningún otro sitio.",
+    description:
+      "Error when the server finds the new password in a known data breach (Have I Been Pwned)",
+  },
+  "auth.passwordTooSimilar": {
+    message:
+      "La contraseña se parece demasiado a su correo electrónico o nombre de usuario.",
+    description:
+      "Error when the new password is too close to the account's email or username",
   },
   "auth.passwordResetSuccessMessage": {
     message:

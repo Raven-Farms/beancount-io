@@ -44,6 +44,11 @@ const skAuth: Record<string, TranslationEntry> = {
     message: "Potvrďte heslo",
     description: "Placeholder for password confirmation",
   },
+  "auth.chooseYourPassword": {
+    message: "Zvoľte heslo (min 8 znakov)",
+    description:
+      "Placeholder for the password a new account chooses, with the minimum length",
+  },
   "auth.createAccount": {
     message: "Vytvoriť účet",
     description: "Button to submit registration",
@@ -203,11 +208,12 @@ const skAuth: Record<string, TranslationEntry> = {
     description: "Label for new password field",
   },
   "auth.newPasswordMinLength": {
-    message: "Heslo musí mať aspoň 6 znakov",
+    message: "Heslo musí mať aspoň 8 znakov",
     description: "Validation error for password length",
   },
   "auth.newPasswordMaxLength": {
-    message: "Heslo musí mať najviac 128 znakov",
+    message:
+      "Heslo je príliš dlhé. Použite najviac 72 znakov; písmená s diakritikou, nelatinské písma a emoji sa počítajú ako 2 až 4 znaky.",
     description:
       "Validation error when new password exceeds the maximum length",
   },
@@ -250,6 +256,17 @@ const skAuth: Record<string, TranslationEntry> = {
   "auth.passwordRequired": {
     message: "Heslo je povinné",
     description: "Validation error when password is not provided",
+  },
+  "auth.passwordBreached": {
+    message:
+      "Toto heslo sa objavilo pri úniku údajov. Zvoľte heslo, ktoré nepoužívate nikde inde.",
+    description:
+      "Error when the server finds the new password in a known data breach (Have I Been Pwned)",
+  },
+  "auth.passwordTooSimilar": {
+    message: "Heslo sa príliš podobá na váš e-mail alebo používateľské meno.",
+    description:
+      "Error when the new password is too close to the account's email or username",
   },
   "auth.passwordResetSuccessMessage": {
     message:

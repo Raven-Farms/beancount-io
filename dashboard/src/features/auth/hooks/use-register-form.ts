@@ -6,8 +6,8 @@ import {
   type SignUpMutationVariables,
 } from "@/graphql/definitions";
 import { useTranslations } from "@/common/hooks/use-translations";
-import { useErrorMessage } from "@/common/lib/errors/error-message";
 import { generateDefaultUsername } from "@/common/lib/utils/nanoid-base58";
+import { useNewPasswordErrorMessage } from "@/features/auth/lib/password-rule";
 
 export type RegisterFormData = {
   firstName?: string;
@@ -32,7 +32,7 @@ export function useRegisterForm({
   onSuccess,
 }: UseRegisterFormOptions) {
   const { t } = useTranslations();
-  const formatError = useErrorMessage();
+  const formatError = useNewPasswordErrorMessage();
   const [serverError, setServerError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [defaultUsername] = useState(() => generateDefaultUsername());

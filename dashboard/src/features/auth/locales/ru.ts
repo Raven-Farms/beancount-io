@@ -44,6 +44,11 @@ const ruAuth: Record<string, TranslationEntry> = {
     message: "Подтвердите пароль",
     description: "Placeholder for password confirmation",
   },
+  "auth.chooseYourPassword": {
+    message: "Придумайте пароль (мин. 8 символов)",
+    description:
+      "Placeholder for the password a new account chooses, with the minimum length",
+  },
   "auth.createAccount": {
     message: "Создать учётную запись",
     description: "Button to submit registration",
@@ -203,11 +208,12 @@ const ruAuth: Record<string, TranslationEntry> = {
     description: "Label for new password field",
   },
   "auth.newPasswordMinLength": {
-    message: "Пароль должен содержать не менее 6 символов",
+    message: "Пароль должен содержать не менее 8 символов",
     description: "Validation error for password length",
   },
   "auth.newPasswordMaxLength": {
-    message: "Пароль должен содержать не более 128 символов",
+    message:
+      "Пароль слишком длинный: не более 72 символов, причём буквы с диакритикой, нелатинские буквы (включая кириллицу) и эмодзи считаются за 2–4 символа.",
     description:
       "Validation error when new password exceeds the maximum length",
   },
@@ -250,6 +256,18 @@ const ruAuth: Record<string, TranslationEntry> = {
   "auth.passwordRequired": {
     message: "Пароль обязателен",
     description: "Validation error when password is not provided",
+  },
+  "auth.passwordBreached": {
+    message:
+      "Этот пароль обнаружен в утечке данных. Выберите пароль, который вы больше нигде не используете.",
+    description:
+      "Error when the server finds the new password in a known data breach (Have I Been Pwned)",
+  },
+  "auth.passwordTooSimilar": {
+    message:
+      "Пароль слишком похож на ваш адрес электронной почты или имя пользователя.",
+    description:
+      "Error when the new password is too close to the account's email or username",
   },
   "auth.passwordResetSuccessMessage": {
     message:

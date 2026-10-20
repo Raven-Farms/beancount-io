@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, waitFor, act } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { CombinedGraphQLErrors } from "@apollo/client/errors";
 import ResetPasswordPage from "../index";
 
 // Mock dependencies - use vi.hoisted() to ensure mocks are available in hoisted vi.mock() calls
@@ -82,12 +83,63 @@ describe("ResetPasswordPage", () => {
       render(<ResetPasswordPage />);
 
       const passwordInput = screen.getByLabelText("New Password");
-      await user.type(passwordInput, "12345");
+      await user.type(passwordInput, "1234567");
       await user.tab();
 
       await waitFor(() => {
         expect(
-          screen.getByText("Password must be at least 6 characters"),
+          screen.getByText("Password must be at least 8 characters"),
+        ).toBeInTheDocument();
+      });
+    });
+
+    it("should refuse a password over bcrypt's 72 bytes", async () => {
+      const user = userEvent.setup();
+      render(<ResetPasswordPage />);
+
+      const passwordInput = screen.getByLabelText("New Password");
+      // 37 characters, but 74 bytes.
+      await user.type(passwordInput, "é".repeat(37));
+      await user.tab();
+
+      await waitFor(() => {
+        expect(
+          screen.getByText(/^Password is too long\. Use at most 72 characters/),
+        ).toBeInTheDocument();
+      });
+    });
+
+    it("should say why the server refused a breached password", async () => {
+      const user = userEvent.setup();
+
+      mockMutation.mockRejectedValue(
+        new CombinedGraphQLErrors({
+          errors: [
+            {
+              message:
+                "Validation failed for password: has appeared in a known data breach",
+              extensions: {
+                code: "VALIDATION_FAILED",
+                field: "password",
+                passwordPolicy: "BREACHED",
+              },
+            },
+          ],
+        }),
+      );
+
+      render(<ResetPasswordPage />);
+
+      await user.type(screen.getByLabelText("New Password"), "password123");
+      await user.type(
+        screen.getByLabelText("Confirm New Password"),
+        "password123",
+      );
+      await user.click(screen.getByRole("button", { name: "Reset password" }));
+
+      await waitFor(() => {
+        expect(
+          screen.getByText(/^This password has appeared in a data breach\./),
         ).toBeInTheDocument();
       });
     });

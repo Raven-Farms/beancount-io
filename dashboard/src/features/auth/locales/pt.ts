@@ -44,6 +44,11 @@ const ptAuth: Record<string, TranslationEntry> = {
     message: "Confirme sua senha",
     description: "Placeholder for password confirmation",
   },
+  "auth.chooseYourPassword": {
+    message: "Escolha uma senha (mín. 8 caracteres)",
+    description:
+      "Placeholder for the password a new account chooses, with the minimum length",
+  },
   "auth.createAccount": {
     message: "Criar conta",
     description: "Button to submit registration",
@@ -203,11 +208,12 @@ const ptAuth: Record<string, TranslationEntry> = {
     description: "Label for new password field",
   },
   "auth.newPasswordMinLength": {
-    message: "A senha deve ter pelo menos 6 caracteres",
+    message: "A senha deve ter pelo menos 8 caracteres",
     description: "Validation error for password length",
   },
   "auth.newPasswordMaxLength": {
-    message: "A senha deve ter no máximo 128 caracteres",
+    message:
+      "A senha é longa demais. Use no máximo 72 caracteres; letras acentuadas, alfabetos não latinos e emojis contam como 2 a 4 cada.",
     description:
       "Validation error when new password exceeds the maximum length",
   },
@@ -250,6 +256,17 @@ const ptAuth: Record<string, TranslationEntry> = {
   "auth.passwordRequired": {
     message: "Senha é obrigatória",
     description: "Validation error when password is not provided",
+  },
+  "auth.passwordBreached": {
+    message:
+      "Esta senha apareceu em um vazamento de dados. Escolha uma que você não use em nenhum outro lugar.",
+    description:
+      "Error when the server finds the new password in a known data breach (Have I Been Pwned)",
+  },
+  "auth.passwordTooSimilar": {
+    message: "A senha é parecida demais com seu e-mail ou nome de usuário.",
+    description:
+      "Error when the new password is too close to the account's email or username",
   },
   "auth.passwordResetSuccessMessage": {
     message:

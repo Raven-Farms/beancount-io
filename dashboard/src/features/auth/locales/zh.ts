@@ -44,6 +44,11 @@ const zhAuth: Record<string, TranslationEntry> = {
     message: "确认你的密码",
     description: "Placeholder for password confirmation",
   },
+  "auth.chooseYourPassword": {
+    message: "设置你的密码（至少8个字符）",
+    description:
+      "Placeholder for the password a new account chooses, with the minimum length",
+  },
   "auth.createAccount": {
     message: "创建账户",
     description: "Button to submit registration",
@@ -199,11 +204,12 @@ const zhAuth: Record<string, TranslationEntry> = {
     description: "Label for new password field",
   },
   "auth.newPasswordMinLength": {
-    message: "密码至少需要6个字符",
+    message: "密码至少需要8个字符",
     description: "Validation error for password length",
   },
   "auth.newPasswordMaxLength": {
-    message: "密码最多不能超过128个字符",
+    message:
+      "密码过长。最多72个字符；带重音符号的字母、中文等非拉丁文字以及表情符号，每个按2到4个字符计算。",
     description:
       "Validation error when new password exceeds the maximum length",
   },
@@ -246,6 +252,17 @@ const zhAuth: Record<string, TranslationEntry> = {
   "auth.passwordRequired": {
     message: "需要输入密码",
     description: "Validation error when password is not provided",
+  },
+  "auth.passwordBreached": {
+    message:
+      "该密码曾出现在数据泄露中。请选择一个你没有在其他地方使用过的密码。",
+    description:
+      "Error when the server finds the new password in a known data breach (Have I Been Pwned)",
+  },
+  "auth.passwordTooSimilar": {
+    message: "密码与你的邮箱或用户名过于相似。",
+    description:
+      "Error when the new password is too close to the account's email or username",
   },
   "auth.passwordResetSuccessMessage": {
     message:

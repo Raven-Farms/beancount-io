@@ -44,6 +44,11 @@ const frAuth: Record<string, TranslationEntry> = {
     message: "Confirmez votre mot de passe",
     description: "Placeholder for password confirmation",
   },
+  "auth.chooseYourPassword": {
+    message: "Choisissez un mot de passe (minimum 8 caractères)",
+    description:
+      "Placeholder for the password a new account chooses, with the minimum length",
+  },
   "auth.createAccount": {
     message: "Créer un compte",
     description: "Button to submit registration",
@@ -205,11 +210,12 @@ const frAuth: Record<string, TranslationEntry> = {
     description: "Label for new password field",
   },
   "auth.newPasswordMinLength": {
-    message: "Le mot de passe doit contenir au moins 6 caractères",
+    message: "Le mot de passe doit contenir au moins 8 caractères",
     description: "Validation error for password length",
   },
   "auth.newPasswordMaxLength": {
-    message: "Le mot de passe doit contenir au maximum 128 caractères",
+    message:
+      "Le mot de passe est trop long. Utilisez au maximum 72 caractères ; les lettres accentuées, les alphabets non latins et les emojis comptent chacun pour 2 à 4.",
     description:
       "Validation error when new password exceeds the maximum length",
   },
@@ -252,6 +258,18 @@ const frAuth: Record<string, TranslationEntry> = {
   "auth.passwordRequired": {
     message: "Le mot de passe est requis",
     description: "Validation error when password is not provided",
+  },
+  "auth.passwordBreached": {
+    message:
+      "Ce mot de passe est apparu dans une fuite de données. Choisissez-en un que vous n'utilisez nulle part ailleurs.",
+    description:
+      "Error when the server finds the new password in a known data breach (Have I Been Pwned)",
+  },
+  "auth.passwordTooSimilar": {
+    message:
+      "Le mot de passe ressemble trop à votre adresse e-mail ou à votre nom d'utilisateur.",
+    description:
+      "Error when the new password is too close to the account's email or username",
   },
   "auth.passwordResetSuccessMessage": {
     message:

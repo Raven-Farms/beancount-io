@@ -44,6 +44,11 @@ const deAuth: Record<string, TranslationEntry> = {
     message: "Bestätigen Sie Ihr Passwort",
     description: "Placeholder for password confirmation",
   },
+  "auth.chooseYourPassword": {
+    message: "Wählen Sie ein Passwort (mind. 8 Zeichen)",
+    description:
+      "Placeholder for the password a new account chooses, with the minimum length",
+  },
   "auth.createAccount": {
     message: "Konto erstellen",
     description: "Button to submit registration",
@@ -204,11 +209,12 @@ const deAuth: Record<string, TranslationEntry> = {
     description: "Label for new password field",
   },
   "auth.newPasswordMinLength": {
-    message: "Das Passwort muss mindestens 6 Zeichen lang sein",
+    message: "Das Passwort muss mindestens 8 Zeichen lang sein",
     description: "Validation error for password length",
   },
   "auth.newPasswordMaxLength": {
-    message: "Das Passwort darf höchstens 128 Zeichen lang sein",
+    message:
+      "Das Passwort ist zu lang. Verwenden Sie höchstens 72 Zeichen; Buchstaben mit Akzent, nichtlateinische Schriften und Emojis zählen jeweils als 2 bis 4.",
     description:
       "Validation error when new password exceeds the maximum length",
   },
@@ -251,6 +257,18 @@ const deAuth: Record<string, TranslationEntry> = {
   "auth.passwordRequired": {
     message: "Passwort ist erforderlich",
     description: "Validation error when password is not provided",
+  },
+  "auth.passwordBreached": {
+    message:
+      "Dieses Passwort ist bei einem Datenleck aufgetaucht. Wählen Sie eines, das Sie nirgendwo sonst verwenden.",
+    description:
+      "Error when the server finds the new password in a known data breach (Have I Been Pwned)",
+  },
+  "auth.passwordTooSimilar": {
+    message:
+      "Das Passwort ist Ihrer E-Mail-Adresse oder Ihrem Benutzernamen zu ähnlich.",
+    description:
+      "Error when the new password is too close to the account's email or username",
   },
   "auth.passwordResetSuccessMessage": {
     message:

@@ -33,6 +33,11 @@ const jaAuth: Record<string, TranslationEntry> = {
     message: "パスワードを確認してください",
     description: "Placeholder for password confirmation",
   },
+  "auth.chooseYourPassword": {
+    message: "パスワードを設定してください（最低8文字）",
+    description:
+      "Placeholder for the password a new account chooses, with the minimum length",
+  },
   "auth.createAccount": {
     message: "アカウントを作成",
     description: "Button to submit registration",
@@ -175,11 +180,12 @@ const jaAuth: Record<string, TranslationEntry> = {
     description: "Label for new password field",
   },
   "auth.newPasswordMinLength": {
-    message: "パスワードは6文字以上で入力してください",
+    message: "パスワードは8文字以上で入力してください",
     description: "Validation error for password length",
   },
   "auth.newPasswordMaxLength": {
-    message: "パスワードは128文字以下で入力してください",
+    message:
+      "パスワードが長すぎます。72文字以内にしてください（アクセント付きの文字、日本語などラテン文字以外の文字、絵文字は1文字につき2〜4文字分と数えます）。",
     description:
       "Validation error when new password exceeds the maximum length",
   },
@@ -202,6 +208,17 @@ const jaAuth: Record<string, TranslationEntry> = {
   "auth.passwordRequired": {
     message: "パスワードは必須です",
     description: "Validation error when password is not provided",
+  },
+  "auth.passwordBreached": {
+    message:
+      "このパスワードは過去のデータ漏洩で流出しています。他で使用していないパスワードを選んでください。",
+    description:
+      "Error when the server finds the new password in a known data breach (Have I Been Pwned)",
+  },
+  "auth.passwordTooSimilar": {
+    message: "パスワードがメールアドレスまたはユーザー名に似すぎています。",
+    description:
+      "Error when the new password is too close to the account's email or username",
   },
   "auth.passwordResetSuccessMessage": {
     message:

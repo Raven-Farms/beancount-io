@@ -530,3 +530,14 @@ export const IDENTICAL_BY_DESIGN: Record<string, string> = {
   "nl/seo.ledgerPullRequest.title":
     "These catalogs keep the Git term Pull Request throughout",
 };
+
+/**
+ * The numbers a message states, Western and Eastern Arabic digits alike, so a
+ * limit-copy test can compare them with the limit the code enforces.
+ */
+export function numbersIn(text: string): number[] {
+  const normalized = text.replace(/[٠-٩۰-۹]/g, (digit) =>
+    String(digit.charCodeAt(0) & 0xf),
+  );
+  return [...normalized.matchAll(/\d+/g)].map((m) => Number(m[0]));
+}

@@ -44,6 +44,11 @@ const nlAuth: Record<string, TranslationEntry> = {
     message: "Bevestig uw wachtwoord",
     description: "Placeholder for password confirmation",
   },
+  "auth.chooseYourPassword": {
+    message: "Kies een wachtwoord (min. 8 tekens)",
+    description:
+      "Placeholder for the password a new account chooses, with the minimum length",
+  },
   "auth.createAccount": {
     message: "Account aanmaken",
     description: "Button to submit registration",
@@ -203,11 +208,12 @@ const nlAuth: Record<string, TranslationEntry> = {
     description: "Label for new password field",
   },
   "auth.newPasswordMinLength": {
-    message: "Wachtwoord moet minimaal 6 tekens bevatten",
+    message: "Wachtwoord moet minimaal 8 tekens bevatten",
     description: "Validation error for password length",
   },
   "auth.newPasswordMaxLength": {
-    message: "Wachtwoord mag maximaal 128 tekens bevatten",
+    message:
+      "Wachtwoord is te lang. Gebruik maximaal 72 tekens; letters met accenten, niet-Latijnse schriften en emoji tellen elk als 2 tot 4.",
     description:
       "Validation error when new password exceeds the maximum length",
   },
@@ -250,6 +256,17 @@ const nlAuth: Record<string, TranslationEntry> = {
   "auth.passwordRequired": {
     message: "Wachtwoord is verplicht",
     description: "Validation error when password is not provided",
+  },
+  "auth.passwordBreached": {
+    message:
+      "Dit wachtwoord is aangetroffen in een datalek. Kies er een dat u nergens anders gebruikt.",
+    description:
+      "Error when the server finds the new password in a known data breach (Have I Been Pwned)",
+  },
+  "auth.passwordTooSimilar": {
+    message: "Wachtwoord lijkt te veel op uw e-mailadres of gebruikersnaam.",
+    description:
+      "Error when the new password is too close to the account's email or username",
   },
   "auth.passwordResetSuccessMessage": {
     message:

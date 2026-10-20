@@ -44,6 +44,11 @@ const caAuth: Record<string, TranslationEntry> = {
     message: "Confirmeu la vostra contrasenya",
     description: "Placeholder for password confirmation",
   },
+  "auth.chooseYourPassword": {
+    message: "Trieu una contrasenya (mínim 8 caràcters)",
+    description:
+      "Placeholder for the password a new account chooses, with the minimum length",
+  },
   "auth.createAccount": {
     message: "Crear compte",
     description: "Button to submit registration",
@@ -204,11 +209,12 @@ const caAuth: Record<string, TranslationEntry> = {
     description: "Label for new password field",
   },
   "auth.newPasswordMinLength": {
-    message: "La contrasenya ha de tenir almenys 6 caràcters",
+    message: "La contrasenya ha de tenir almenys 8 caràcters",
     description: "Validation error for password length",
   },
   "auth.newPasswordMaxLength": {
-    message: "La contrasenya ha de tenir com a màxim 128 caràcters",
+    message:
+      "La contrasenya és massa llarga. Utilitzeu com a màxim 72 caràcters; les lletres accentuades, els alfabets no llatins i els emojis compten com a 2 a 4 cadascun.",
     description:
       "Validation error when new password exceeds the maximum length",
   },
@@ -252,6 +258,18 @@ const caAuth: Record<string, TranslationEntry> = {
   "auth.passwordRequired": {
     message: "La contrasenya és obligatòria",
     description: "Validation error when password is not provided",
+  },
+  "auth.passwordBreached": {
+    message:
+      "Aquesta contrasenya ha aparegut en una filtració de dades. Trieu-ne una que no feu servir enlloc més.",
+    description:
+      "Error when the server finds the new password in a known data breach (Have I Been Pwned)",
+  },
+  "auth.passwordTooSimilar": {
+    message:
+      "La contrasenya s'assembla massa al vostre correu electrònic o nom d'usuari.",
+    description:
+      "Error when the new password is too close to the account's email or username",
   },
   "auth.passwordResetSuccessMessage": {
     message:
