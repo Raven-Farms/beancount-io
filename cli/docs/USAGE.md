@@ -202,7 +202,8 @@ destination is refused with exit **2**, before anything is written, when it
 - would become part of the ledger once written: a path that does not exist yet
   but that one of the ledger's `include` patterns matches — `-o txns/backup.bean`
   under `include "txns/*.bean"` — which the next load would read back as
-  entries. The refusal names the path and the include; `--force` does not get
+  entries — for `price export`, the directory it creates as well as each file
+  in it. The refusal names the path and the include; `--force` does not get
   past it, and another suffix or a directory no include reaches is fine, or
 - would replace a file that did not come from this command: an existing
   `.bean`/`.beancount` file for `treeify -o` (named directly or reached

@@ -42,8 +42,9 @@ def test_wildcard_matching_grows_linearly(tmp_path: Path, monkeypatch: pytest.Mo
     exported = managed_load.export_portable(ledger, tmp_path / "outside", offline=True, root=tmp_path / "cache")
 
     assert len(exported.files) == 201
-    # One wildcard pattern, matched once against each of the 201 planned files.
-    assert len(calls) <= 201
+    # One wildcard pattern, matched once against each of the 201 planned files
+    # and the one directory the export creates (w5/814).
+    assert len(calls) <= 202
     assert {pattern for _, pattern in calls} == {str(ledger.parent / "*/*.bean")}
 
 

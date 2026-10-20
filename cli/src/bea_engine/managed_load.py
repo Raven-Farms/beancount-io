@@ -1856,6 +1856,18 @@ def export_portable(
                 f"{claimed_by} matches that path. Choose a directory outside the ledger's includes. "
                 "Nothing was written."
             )
+    # So may a directory the export creates: `-o txns/p.bean` under
+    # `include "txns/*.bean"` made a directory the glob then read as an
+    # include, and every later load failed on it (w5/814).
+    directories = {parent for dest in planned for parent in dest.parents if parent.is_relative_to(target)}
+    for directory in sorted(directories):
+        claimed_by = None if directory.exists() else claim(directory.resolve())
+        if claimed_by is not None:
+            raise UsageError(
+                f"Cannot export: the directory {directory} would become part of the ledger being exported — its "
+                f"include pattern {claimed_by} matches that path. Choose a directory outside the ledger's includes. "
+                "Nothing was written."
+            )
     # And an export writes inside the directory it was given, or nowhere.
     for dest in planned:
         if not dest.resolve().is_relative_to(resolved_target):
