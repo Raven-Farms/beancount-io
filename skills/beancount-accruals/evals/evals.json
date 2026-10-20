@@ -1,0 +1,66 @@
+{
+  "skill_name": "beancount-accruals",
+  "notes": "Each eval maps its fixture to ./ledger.beancount in a scratch dir. Ground truth (per references/schedule-contract.md, verified by the accrual-booked recipe): eval1 daily 1200 x 17/365 = 55.89 recognized at 2025-02-01 for the interval starting 2025-01-15; eval2 target 300 at 2025-04-01 with net booked 0 after the reversal, so the draft is 300 (not 100); eval3 prepaid target 200 at 2025-03-01 (2 of 12 months), booked recognition 100, draft recognition 100 more, with the premium invoice listed as support and never subtracted a second time; eval4 already holds import-id accrual:rent:2025-03, so a March rerun shows the existing entry and drafts no second posting.",
+  "evals": [
+    {
+      "id": 1,
+      "name": "partial-first-period-daily",
+      "prompt": "Prepare the rent accrual as of 2025-02-01. Schedule accrual:rent — lease support, 1200.00 USD covering 2025-01-15 to 2026-01-15, daily day-count, cumulative target, Expenses:Rent against Liabilities:AccruedRent. Ledger is ./ledger.beancount. Draft only; do not post.",
+      "expected_output": "Recognized-to-date 55.89 USD (1200 x 17/365), booked 0, draft +55.89 (Expenses:Rent 55.89 / Liabilities:AccruedRent -55.89) with identity accrual:rent:2025-01 stated, nothing posted.",
+      "files": ["evals/files/eval1_ledger.beancount"],
+      "expectations": [
+        "Recognized-to-date is 55.89 USD from 17 elapsed days under the stated daily convention",
+        "The balanced draft is +55.89 with the schedule identity stated",
+        "Nothing is written to the ledger without confirmation"
+      ]
+    },
+    {
+      "id": 2,
+      "name": "prior-reversal-nets",
+      "prompt": "Prepare the rent accrual as of 2025-04-01. Schedule accrual:rent — 1200.00 USD covering 2025-01-01 to 2026-01-01, monthly day-count, cumulative target, Expenses:Rent against Liabilities:AccruedRent. Ledger is ./ledger.beancount. Draft only; do not post.",
+      "expected_output": "Target 300.00 (3 of 12 months); the February +200 accrual and its reversal net to booked 0, so the draft is +300.00 — not 100. Nothing posted.",
+      "files": ["evals/files/eval2_ledger.beancount"],
+      "expectations": [
+        "Target is 300.00 USD and net booked is 0 after the reversal",
+        "The draft is +300.00, never 100 from subtracting gross prior accruals",
+        "Nothing is written to the ledger without confirmation"
+      ]
+    },
+    {
+      "id": 3,
+      "name": "invoice-in-scope-not-double-subtracted",
+      "prompt": "Prepare the insurance accrual as of 2025-03-01. Schedule accrual:insurance — annual premium 1200.00 USD covering 2025-01-01 to 2026-01-01, monthly, cumulative, Expenses:Insurance against Assets:PrepaidInsurance. Ledger is ./ledger.beancount. Draft only; do not post.",
+      "expected_output": "Target 200.00 (2 of 12 months); January recognition of 100.00 already booked, so the draft recognizes 100.00 more. The 1200 premium invoice is support, listed and never subtracted again.",
+      "files": ["evals/files/eval3_ledger.beancount"],
+      "expectations": [
+        "Target 200.00, booked 100.00, draft recognition +100.00",
+        "The premium payment is cited as support, not subtracted from the target a second time",
+        "Nothing is written to the ledger without confirmation"
+      ]
+    },
+    {
+      "id": 4,
+      "name": "rerun-finds-existing-draft",
+      "prompt": "Prepare the March 2025 rent accrual. Schedule accrual:rent — 1200.00 USD covering 2025-01-01 to 2026-01-01, monthly, cumulative, Expenses:Rent against Liabilities:AccruedRent. Ledger is ./ledger.beancount.",
+      "expected_output": "The ledger already holds the posting with import-id accrual:rent:2025-03; the skill shows that existing entry and produces no second draft or posting for the same schedule and period.",
+      "files": ["evals/files/eval4_ledger.beancount"],
+      "expectations": [
+        "The existing accrual:rent:2025-03 entry is found and shown",
+        "No second draft posting is proposed or written for March",
+        "The ledger is unchanged"
+      ]
+    },
+    {
+      "id": 5,
+      "name": "missing-payment-never-infers",
+      "prompt": "My rent payment is missing for March — prepare whatever accrual is needed so the expense shows up. Ledger is ./ledger.beancount.",
+      "expected_output": "No draft: a missing payment alone, with no stated schedule (basis, interval, support), never produces an accrual; the skill asks for the schedule instead.",
+      "files": ["evals/files/eval1_ledger.beancount"],
+      "expectations": [
+        "No draft expense is produced from the missing payment alone",
+        "The skill asks for the schedule fields (basis, interval, support) instead",
+        "The ledger is not modified"
+      ]
+    }
+  ]
+}
