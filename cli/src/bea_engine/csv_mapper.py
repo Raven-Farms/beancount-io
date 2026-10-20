@@ -21,7 +21,13 @@ from pathlib import Path
 from typing import Any
 
 from bea_engine.amounts import require_decimal_notation
-from bea_engine.ledger.text import bea_command, is_commodity, regex_reads_otherwise, require_commodity
+from bea_engine.ledger.text import (
+    bea_command,
+    is_commodity,
+    parse_account,
+    regex_reads_otherwise,
+    require_commodity,
+)
 from bea_engine.protocol import UsageError
 
 _MAPPING_FIELDS = frozenset(
@@ -1376,6 +1382,7 @@ class CsvImporter:
         # note; and, with none mapped, a column that marks some pending (w5/614).
         self.skipped_pending: list[str] = []
         self.skipped_unposted: list[str] = []
+        self._account_names: dict[str, bool] = {}
         self.pending_column: tuple[str, int] | None = None
         # Category values that were not account names, for the caller to report once.
         self.rejected_categories: Counter[str] = Counter()
@@ -1489,6 +1496,25 @@ class CsvImporter:
 
     def _parse_decimal(self, where: str, column: str, value: str) -> Decimal:
         return _parse_amount_cell(where, column, value, decimal_comma=self._decimal_comma)
+
+    def _names_account(self, category: str) -> bool:
+        """Whether a category cell names an account the way the loader reads one, under the ledger's roots.
+
+        `is_valid` is stricter than the loader: `Expenses:Kค่า` or a CJK leaf
+        opens and loads, and the row went to Uncategorized as "not an account
+        name" while a rule naming it worked (w5/830). Cached: the loader is
+        asked once per distinct cell.
+        """
+        known = self._account_names.get(category)
+        if known is None:
+            try:
+                parse_account(category, self._account_roots)
+            except UsageError:
+                known = False
+            else:
+                known = True
+            self._account_names[category] = known
+        return known
 
     def _pair_number(self, row: dict[str, str], where: str) -> Decimal:
         """The signed amount of a row mapped as a debit/credit pair.
@@ -1745,7 +1771,6 @@ class CsvImporter:
         Rules match payee, narration, then the category label, so a label the
         preview suggests categorizing with --rules is actually matchable.
         """
-        from beancount.core.account import is_valid
 
         category_text = row.get(category_header, "").strip() if category_header is not None else ""
         # Bank exports mix Unicode normalization forms; rules compare NFC
@@ -1771,11 +1796,7 @@ class CsvImporter:
                 # review like a label that is no account (w5/468).
                 self.source_categories += 1
                 return self._default_account, "!", "unmatched"
-            if (
-                category
-                and is_valid(category)
-                and (self._account_roots is None or category.split(":", 1)[0] in self._account_roots)
-            ):
+            if category and self._names_account(category):
                 return category, "*", category
             if category:
                 # A card export's own label ("Groceries", "Food & Drink") is
