@@ -59,6 +59,10 @@ vi.mock("../ledger-layout-background-queries", () => ({
   LedgerLayoutBackgroundQueries: () => null,
 }));
 
+vi.mock("../ledger-layout-loading", () => ({
+  LedgerLayoutLoading: () => <div data-testid="ledger-loading" />,
+}));
+
 vi.mock("../layout-header", () => ({
   LayoutHeader: () => null,
 }));
@@ -191,4 +195,69 @@ describe("LedgerLayout pending outlet", () => {
       }
     },
   );
+});
+
+/**
+ * A successful write evicts the cached ledger and it reloads. The layout must
+ * keep the same ledger's page mounted meanwhile — replacing it unmounted the
+ * page and dropped keyboard focus to the body (w4/238).
+ */
+describe("LedgerLayout while its ledger reloads", () => {
+  const ledger = (fullName: string) => ({
+    id: fullName,
+    name: fullName.split("/")[1],
+    fullName,
+    options: {},
+    favaOptions: {},
+  });
+
+  beforeEach(() => {
+    const pathname = "/ledger/open_ledger/minimax/accounts";
+    const state = {
+      isLoading: false,
+      location: { pathname, search: {} },
+      matches: [{ pathname, search: {} }],
+    };
+    useRouterState.mockImplementation(
+      ({ select }: { select: (s: unknown) => unknown }) =>
+        select({ ...state, pendingMatches: [state.location] }),
+    );
+    useParams.mockReturnValue({
+      ledgerOwner: "open_ledger",
+      ledgerName: "minimax",
+    });
+    useLocation.mockReturnValue({ pathname });
+  });
+  afterEach(cleanup);
+
+  it("keeps the mounted page through a same-ledger reload", () => {
+    useQuery.mockReturnValue({
+      data: { getLedger: ledger("open_ledger/minimax") },
+      loading: false,
+      refetch: vi.fn(),
+    });
+    const { rerender } = render(<LedgerLayout />);
+    const outlet = screen.getByTestId("ledger-outlet");
+
+    useQuery.mockReturnValue({
+      data: undefined,
+      previousData: { getLedger: ledger("open_ledger/minimax") },
+      loading: true,
+      refetch: vi.fn(),
+    });
+    rerender(<LedgerLayout />);
+    expect(screen.getByTestId("ledger-outlet")).toBe(outlet);
+  });
+
+  it("never shows another ledger's data while switching", () => {
+    useQuery.mockReturnValue({
+      data: undefined,
+      previousData: { getLedger: ledger("open_ledger/other") },
+      loading: true,
+      refetch: vi.fn(),
+    });
+    render(<LedgerLayout />);
+    expect(screen.queryByTestId("ledger-outlet")).not.toBeInTheDocument();
+    expect(screen.getByTestId("ledger-loading")).toBeInTheDocument();
+  });
 });

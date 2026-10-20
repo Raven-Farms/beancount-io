@@ -63,6 +63,7 @@ vi.mock("@/common/components/billing/failed-renewal-banner", () => ({
   FailedRenewalBanner: () => null,
 }));
 vi.mock("@apollo/client/react", () => ({
+  useApolloClient: () => ({ refetchQueries: async () => [] }),
   useQuery: (query: unknown) => ({
     data:
       query === GetLedgerDocument

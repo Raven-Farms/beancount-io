@@ -64,14 +64,26 @@ export function LedgerLayout() {
     },
   });
 
-  const { data, error, refetch, loading } = useQuery(GetLedgerDocument, {
-    variables: {
-      ledgerId: ledgerId,
+  const { data, previousData, error, refetch, loading } = useQuery(
+    GetLedgerDocument,
+    {
+      variables: {
+        ledgerId: ledgerId,
+      },
+      fetchPolicy: "cache-first",
     },
-    fetchPolicy: "cache-first",
-  });
+  );
 
-  const currentLedger = data?.getLedger;
+  // A write's cache clear evicts this query and it reloads. Keep showing the
+  // same ledger meanwhile instead of replacing the whole subtree with the
+  // loading shell, which unmounted the page and dropped keyboard focus
+  // (w4/238). Apollo's previousData is only reused for this same ledger.
+  const previousLedger = previousData?.getLedger;
+  const currentLedger =
+    data?.getLedger ??
+    (previousLedger?.fullName.toLowerCase() === ledgerId.toLowerCase()
+      ? previousLedger
+      : undefined);
 
   const handleBackToDashboard = () => {
     void navigate({ to: "/ledger" });
@@ -98,13 +110,16 @@ export function LedgerLayout() {
 
   // If no data yet, show loading skeleton
   // This ensures server and client render the same thing during initial load
-  if (loading || !currentLedger) {
+  // Cached data under a pending access read still never mounts the route
+  // (Smart Import / Upload Receipt access); only the evicted-and-reloading
+  // case above keeps the page this session already showed.
+  if (!currentLedger || (loading && data?.getLedger)) {
     return <LedgerLayoutLoading />;
   }
 
   return (
     <LedgerProvider
-      ledgerData={data.getLedger}
+      ledgerData={currentLedger}
       ledgerName={ledgerName}
       ledgerOwner={ledgerOwner}
     >
