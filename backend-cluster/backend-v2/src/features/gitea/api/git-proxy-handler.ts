@@ -537,11 +537,14 @@ export function setGitProxyHandler(
           return;
         }
 
-        const passwordValid = await layers.database.models.user.verifyPassword(
-          layers.database.db,
-          user.id,
-          password,
-        );
+        // AUTH_PASSWORD_ENABLED=false: an app password no longer opens git.
+        const passwordValid =
+          config.passwordAuthEnabled !== false &&
+          (await layers.database.models.user.verifyPassword(
+            layers.database.db,
+            user.id,
+            password,
+          ));
         if (!passwordValid) {
           proxyLogger.warn("Git proxy auth failed: invalid password", {
             email: username,

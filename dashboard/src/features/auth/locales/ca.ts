@@ -746,6 +746,11 @@ const caAuth: Record<string, TranslationEntry> = {
     message: "Aquest compte està bloquejat.",
     description: "Login notice: the account is blocked",
   },
+  "auth.googleOnlySignUp": {
+    message: "Els comptes nous es creen continuant amb Google.",
+    description:
+      "Sign-up page notice when password sign-up is turned off on the server",
+  },
 };
 
 export default caAuth;

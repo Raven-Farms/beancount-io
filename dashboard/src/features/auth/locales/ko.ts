@@ -731,6 +731,11 @@ const koAuth: Record<string, TranslationEntry> = {
     message: "이 계정은 차단되었습니다.",
     description: "Login notice: the account is blocked",
   },
+  "auth.googleOnlySignUp": {
+    message: "새 계정은 Google로 계속하면 생성됩니다.",
+    description:
+      "Sign-up page notice when password sign-up is turned off on the server",
+  },
 };
 
 export default koAuth;

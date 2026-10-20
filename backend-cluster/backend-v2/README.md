@@ -125,6 +125,12 @@ allows CORS from those hosts. A self-host on another domain sets:
     `/api-gateway/auth/google/start` and `/api-gateway/auth/google/callback`
     (anonymous rate-limit budget). Offboarding: when an address is reassigned
     in Workspace, block or delete the old user first.
+- `AUTH_PASSWORD_ENABLED` (default `true`): `false` turns off every password
+  path: password sign-in, sign-up with an emailed code, forgot/reset password,
+  and email+password git access through the proxy. `/api-gateway/auth/providers`
+  reports `password: false`, so the dashboard shows only the other methods. The
+  one-time-token sign-in (used by the admin `login-as` break-glass) stays
+  available.
 
 Production OAuth requires `OAUTH_JWKS`, a complete private P-256/ES256 signing
 JWKS provided by the deployment secret manager. It must never be committed or

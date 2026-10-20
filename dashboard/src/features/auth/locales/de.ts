@@ -745,6 +745,11 @@ const deAuth: Record<string, TranslationEntry> = {
     message: "Dieses Konto ist gesperrt.",
     description: "Login notice: the account is blocked",
   },
+  "auth.googleOnlySignUp": {
+    message: "Neue Konten werden erstellt, indem du mit Google fortfährst.",
+    description:
+      "Sign-up page notice when password sign-up is turned off on the server",
+  },
 };
 
 export default deAuth;

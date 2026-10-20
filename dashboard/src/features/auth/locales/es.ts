@@ -749,6 +749,11 @@ const esAuth: Record<string, TranslationEntry> = {
     message: "Esta cuenta está bloqueada.",
     description: "Login notice: the account is blocked",
   },
+  "auth.googleOnlySignUp": {
+    message: "Las cuentas nuevas se crean al continuar con Google.",
+    description:
+      "Sign-up page notice when password sign-up is turned off on the server",
+  },
 };
 
 export default esAuth;

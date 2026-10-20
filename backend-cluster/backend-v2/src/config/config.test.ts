@@ -6,6 +6,7 @@ import {
   getOAuthPublicUrl,
   parseCookieDomain,
   parseGoogleAuthConfig,
+  parsePasswordAuthEnabled,
   parseCorsAllowedOrigins,
   parseSignupAllowedDomains,
   parseSignupAllowedEmails,
@@ -424,6 +425,25 @@ describe("config", () => {
           GOOGLE_HOSTED_DOMAINS: "*.example.com",
         }),
       ).toThrow(/GOOGLE_HOSTED_DOMAINS/);
+    });
+  });
+
+  describe("parsePasswordAuthEnabled (AUTH_PASSWORD_ENABLED)", () => {
+    it("defaults to on", () => {
+      expect(parsePasswordAuthEnabled(undefined)).toBe(true);
+      expect(parsePasswordAuthEnabled("")).toBe(true);
+      expect(parsePasswordAuthEnabled("TRUE")).toBe(true);
+      expect(config.passwordAuthEnabled).toBe(true);
+    });
+    it("turns off only for false", () => {
+      expect(parsePasswordAuthEnabled(" false ")).toBe(false);
+    });
+    it("rejects anything else at boot", () => {
+      for (const bad of ["0", "no", "off", "yes"]) {
+        expect(() => parsePasswordAuthEnabled(bad)).toThrow(
+          /AUTH_PASSWORD_ENABLED/,
+        );
+      }
     });
   });
 });

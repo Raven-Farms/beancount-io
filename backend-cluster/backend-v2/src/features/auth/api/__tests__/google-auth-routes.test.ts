@@ -37,6 +37,7 @@ function memoryStore(): GoogleStateStore & {
 async function setup(
   opts: {
     google?: boolean;
+    passwordAuthEnabled?: boolean;
     signIn?: jest.Mock;
     tokenResponse?: (nonce: string) => Promise<Response>;
   } = {},
@@ -80,6 +81,7 @@ async function setup(
     authSession: { signInWithGoogle },
     config: {
       env: "production",
+      passwordAuthEnabled: opts.passwordAuthEnabled ?? true,
       dashboard: { url: DASHBOARD },
       jwt: { secret: "x", expMins: 60, cookieDomain: null },
       googleAuth:
@@ -143,11 +145,21 @@ describe("Google sign-in routes", () => {
     s = await setup();
     expect(await (await s.get("/api-gateway/auth/providers")).json()).toEqual({
       google: true,
+      password: true,
     });
     await new Promise((resolve) => s.server.close(resolve));
     s = await setup({ google: false });
     expect(await (await s.get("/api-gateway/auth/providers")).json()).toEqual({
       google: false,
+      password: true,
+    });
+  });
+
+  it("reports password sign-in as off when AUTH_PASSWORD_ENABLED is false", async () => {
+    s = await setup({ passwordAuthEnabled: false });
+    expect(await (await s.get("/api-gateway/auth/providers")).json()).toEqual({
+      google: true,
+      password: false,
     });
   });
 

@@ -1,11 +1,11 @@
-import { useEffect, useState } from "react";
 import { Button } from "@/common/components/ui/button";
 import { useTranslations } from "@/common/hooks/use-translations";
 import { getSafeRedirectPath } from "@/common/lib/auth/auth";
+import { useAuthProviders } from "@/features/auth/hooks/use-auth-providers";
 
 /**
  * "Continue with Google", shown only when the backend reports Google as
- * configured (GET /api-gateway/auth/providers). Both requests go to the
+ * configured (GET /api-gateway/auth/providers, via useAuthProviders). Both requests go to the
  * dashboard's own origin: Google returns to DASHBOARD_URL/api-gateway/auth/
  * google/callback, so the ceremony must start on the same host for its state
  * cookie to come back. A deployment that does not serve /api-gateway/ there
@@ -13,22 +13,8 @@ import { getSafeRedirectPath } from "@/common/lib/auth/auth";
  */
 export function GoogleSignInButton({ next }: { next?: string }) {
   const { t } = useTranslations();
-  const [available, setAvailable] = useState(false);
-
-  useEffect(() => {
-    let active = true;
-    fetch("/api-gateway/auth/providers", { credentials: "omit" })
-      .then((res) => (res.ok ? res.json() : null))
-      .then((body: { google?: unknown } | null) => {
-        if (active) setAvailable(body?.google === true);
-      })
-      .catch(() => undefined);
-    return () => {
-      active = false;
-    };
-  }, []);
-
-  if (!available) return null;
+  const { google } = useAuthProviders();
+  if (!google) return null;
 
   // Default to the page the visitor is on (e.g. an OAuth consent page), so
   // the ceremony returns them there.

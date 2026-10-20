@@ -734,6 +734,11 @@ const enAuth: Record<string, TranslationEntry> = {
     message: "This account is blocked.",
     description: "Login notice: the account is blocked",
   },
+  "auth.googleOnlySignUp": {
+    message: "New accounts are created by continuing with Google.",
+    description:
+      "Sign-up page notice when password sign-up is turned off on the server",
+  },
 };
 
 export default enAuth;

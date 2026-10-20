@@ -741,6 +741,11 @@ const ruAuth: Record<string, TranslationEntry> = {
     message: "Эта учётная запись заблокирована.",
     description: "Login notice: the account is blocked",
   },
+  "auth.googleOnlySignUp": {
+    message: "Новые учётные записи создаются при входе через Google.",
+    description:
+      "Sign-up page notice when password sign-up is turned off on the server",
+  },
 };
 
 export default ruAuth;

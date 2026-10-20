@@ -723,6 +723,11 @@ const zhAuth: Record<string, TranslationEntry> = {
     message: "此账户已被封禁。",
     description: "Login notice: the account is blocked",
   },
+  "auth.googleOnlySignUp": {
+    message: "新账户通过使用 Google 继续来创建。",
+    description:
+      "Sign-up page notice when password sign-up is turned off on the server",
+  },
 };
 
 export default zhAuth;
