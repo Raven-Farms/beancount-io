@@ -16,7 +16,7 @@ import-id: "<source>:<stable-id>"
 
 Other tools may use their own source prefixes (e.g. a bank-feed integration writing `plaid:<txn-id>`); the exact-match layer treats every `import-id` value as an opaque string, so foreign prefixes dedup correctly without this skill knowing them. `bea import` follows this convention: native bank IDs become `bank:<id>` (`fitid` becomes `ofx:<id>`), rows without one become `csv:sha256:<16-hex>` with the normalization above, and pre-release `bea_import_id` entries still match.
 
-Migration prefixes (used by `beancount-migrate`, normative here): `mint:sha256:<16-hex>`, `monarch:sha256:<16-hex>`, `qbo:sha256:<16-hex>`, and `<source>:sha256:<16-hex>` (a lowercase source name such as `ynab:` or `actual:`) for a source without its own reference. `bea import` matches the digest under any of them. The hash is computed with exactly the normalization below, using the source's raw-description field (each migrate per-source reference names it). This is what lets a post-migration `beancount-import` run dedup against migrated history.
+Migration prefixes (used by `beancount-migrate`, normative here): `mint:sha256:<16-hex>`, `monarch:sha256:<16-hex>`, `qbo:sha256:<16-hex>`, and `<source>:sha256:<16-hex>` (a lowercase source name such as `ynab:` or `actual:`) for a source without its own reference. `bea import` matches the digest under any of them. The hash is computed with exactly the normalization below, using the source's raw-description field (each migrate per-source reference names it) — always the four-field form: app-assigned merchant and name columns (QBO `Name`, Monarch `Merchant`) are excluded, because the bank export a later import reads carries only the raw description, so hashing app-only fields would never match. This is what lets a post-migration `beancount-import` run dedup against migrated history.
 
 ## Hash normalization (the `csv:sha256` form)
 
@@ -37,7 +37,7 @@ Hash input is the UTF-8 string:
 <date>|<amount>|<payee>|<description>|<source-account>
 ```
 
-Otherwise `STARBUCKS / CARD PURCHASE` and `PEETS COFFEE / CARD PURCHASE` for the same amount on the same day share one input and only the occurrence suffix tells them apart — and a re-downloaded export may list them in the other order. A row whose only text is its description keeps the four-field form.
+Otherwise `STARBUCKS / CARD PURCHASE` and `PEETS COFFEE / CARD PURCHASE` for the same amount on the same day share one input and only the occurrence suffix tells them apart — and a re-downloaded export may list them in the other order. A row whose only text is its description keeps the four-field form. This five-field form is for imports, whose later re-downloads carry both fields; migration ids never take it (see above).
 
 Take the SHA-256 hex digest, keep the **first 16 hex chars** (64 bits — collision-safe at personal-ledger scale, short enough to read).
 

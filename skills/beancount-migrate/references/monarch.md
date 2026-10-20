@@ -11,7 +11,7 @@ Parsing rules:
 
 - **Dates are ISO** (`YYYY-MM-DD`) — no ambiguity.
 - **Amounts are signed**: negative = money out, positive = money in, from the account's perspective. Verify once against a recognizable row, then map to ledger signs.
-- **`Merchant`** → payee; **`Original Statement`** → narration when different, and the `import-id` hash input.
+- **`Merchant`** → payee; **`Original Statement`** → narration when different, and the `import-id` hash input (four-field form — `Merchant` is never hashed: bank exports don't carry it).
 - **`Account`** — drives account mapping; one file covers all accounts.
 - **Split transactions** may appear as several rows sharing the date, account and `Original Statement` with different categories. Ask whether each group is one split purchase and convert it per mapping.md's "Split purchases" (one transaction, one id over the total).
 - **Transfers**: category `Transfer` (Monarch also auto-pairs "Credit Card Payment" under Transfer in most setups). Both sides appear; pair per mapping.md.

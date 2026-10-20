@@ -85,7 +85,7 @@ When the user says the rows are separate purchases (two identical receipts on on
 
 ## import-id on migrated entries
 
-Every converted entry carries `import-id` metadata using the `beancount-import` skill's convention (see that skill's `references/dedup.md`): native row ID if the export has one, else `<source>:sha256:<16-hex>` over the same normalized `date|amount|description|source-account` input (e.g. `mint:sha256:…`). A merged transfer pair records the second row's id as `import-id-2`. This makes migration and ongoing imports one continuous, deduplicated history: the user's first `beancount-import` run after migrating won't double-book overlap rows.
+Every converted entry carries `import-id` metadata using the `beancount-import` skill's convention (see that skill's `references/dedup.md`): native row ID if the export has one, else `<source>:sha256:<16-hex>` over the same normalized four-field `date|amount|description|source-account` input (e.g. `mint:sha256:…`) — never hash an app-assigned merchant/name column as a fifth field (see dedup.md). A merged transfer pair records the second row's id as `import-id-2`. This makes migration and ongoing imports one continuous, deduplicated history: the user's first `beancount-import` run after migrating won't double-book overlap rows.
 
 ## Generic CSV path (unknown source)
 
