@@ -10,6 +10,7 @@ import {
 import { AllowAnonymous, Authenticated } from "@/server/graphql/authenticated";
 import { IContext } from "@/server/graphql/context";
 import { ILedgerWorkflow } from "@/features/ledger/workflow/ledger-workflow";
+import type { LedgerSetup } from "@/features/ledger/setup/build-ledger";
 import {
   BcioOptions,
   FavaOptions,
@@ -42,7 +43,7 @@ export class LedgerQueryResolver {
   ): Promise<LedgerSetupPreview> {
     return this.workflow.previewLedgerSetup({
       identity: ctx.getCurrentIdentity(),
-      setup,
+      setup: setup as LedgerSetup,
     });
   }
 

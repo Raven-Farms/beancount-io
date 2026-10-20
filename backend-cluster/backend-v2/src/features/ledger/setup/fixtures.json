@@ -657,7 +657,6 @@
         "accounts": [
           {
             "name": "Assets:Cash",
-            "kind": "cash",
             "openingState": "known",
             "amount": "100"
           }
@@ -682,7 +681,6 @@
         "accounts": [
           {
             "name": "Assets:Cash",
-            "kind": "cash",
             "openingState": "zero"
           }
         ]
@@ -704,7 +702,6 @@
         "accounts": [
           {
             "name": "Assets:Cash",
-            "kind": "cash",
             "openingState": "unknown"
           }
         ]
@@ -729,7 +726,6 @@
         "accounts": [
           {
             "name": "Liabilities:CreditCard",
-            "kind": "card",
             "openingState": "known",
             "amount": "-30"
           }

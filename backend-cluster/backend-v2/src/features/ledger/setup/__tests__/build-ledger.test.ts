@@ -17,7 +17,6 @@ describe("buildLedgerFiles (w3/m53/t002)", () => {
         accounts: [
           {
             name: "Assets:Cash",
-            kind: "cash",
             openingState: "known",
             amount: "100",
           },
@@ -85,7 +84,7 @@ describe("buildLedgerFiles (w3/m53/t002)", () => {
 
   it("refuses invalid explicit values and creates nothing", () => {
     expect(() =>
-      buildLedgerFiles({ preset: "nope@1" }, "2026-01-01"),
+      buildLedgerFiles({ preset: "nope@1" as never }, "2026-01-01"),
     ).toThrow(ValidationError);
     expect(() =>
       buildLedgerFiles(

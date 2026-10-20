@@ -1,6 +1,7 @@
 import { requestPlatform } from "@/server/api/request-platform";
 import { z } from "@/shared/zod-openapi-setup";
 import { LedgerTemplate } from "@/features/ledger/workflow/ledger-workflow.types";
+import { setupCatalog, type PresetId } from "@/features/ledger/setup";
 import { v1Route } from "@/server/rest/v1-route";
 import { json } from "@/server/rest/v1-schemas";
 import { ledgerPathSchema, ledgerIdOf } from "./schemas";
@@ -18,16 +19,12 @@ const description = z
 const ledgerSetupInput = z
   .object({
     preset: z
-      .enum([
-        "personal@1",
-        "freelance@1",
-        "business@1",
-        "portfolio@1",
-        "rental@1",
-        "shared-expenses@1",
-        "community@1",
-        "blank@1",
-      ])
+      .enum(
+        setupCatalog.presets.map((preset) => preset.id) as [
+          PresetId,
+          ...PresetId[],
+        ],
+      )
       .describe("Setup preset id (ADR021)."),
     title: z.string().max(200).optional(),
     operatingCurrency: z.string().regex(/^[A-Z]{3}$/).optional(),
@@ -40,7 +37,6 @@ const ledgerSetupInput = z
         z
           .object({
             name: z.string(),
-            kind: z.string().optional(),
             currency: z.string().regex(/^[A-Z]{3}$/).optional(),
             openingState: z.enum(["unknown", "zero", "known"]).optional(),
             amount: z.string().regex(/^-?\d+(\.\d+)?$/).optional(),

@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import datetime
 import errno
+import json
 import os
 from decimal import MAX_PREC, Decimal, localcontext
 from pathlib import Path
@@ -52,16 +53,7 @@ def answer(
     liability accounts. The file must not already exist; creation is atomic
     (`claim_new_file` of a validated candidate) so a race never overwrites.
     """
-    file = expand_path(file, "--file")
-    if not file.is_absolute():
-        file = file.resolve()
-    try:
-        present = file.exists() or file.is_symlink()
-    except OSError:
-        # Unstatable, so uncreatable: creation below reports it (w5/793, w5/795).
-        present = False
-    if present:
-        raise ConflictError(f"Already exists: {file}. Choose a new path; init never overwrites a ledger.")
+    file = _prepare_new_file(file)
 
     currency = currency.strip().upper()
     try:
@@ -69,21 +61,7 @@ def answer(
     except ValueError as exc:
         raise UsageError(f"--date must be a date in YYYY-MM-DD form, not {date!r}.") from exc
 
-    balances: dict[str, Decimal] = {}
-    for balance in opening_balances or []:
-        parts = balance.split()
-        if len(parts) != 2 or parts[0] not in ACCOUNTS or not parts[0].startswith(("Assets:", "Liabilities:")):
-            raise UsageError(
-                "Opening balance must be 'ACCOUNT NUMBER' for one of the template's asset/liability accounts."
-            )
-        account, number = parts
-        if account in balances:
-            raise UsageError(f"Opening balance specified twice for {account}.")
-        try:
-            amount = parse_decimal_number(number)
-        except ValueError as exc:
-            raise UsageError(str(exc)) from exc
-        balances[account] = amount
+    balances = _parse_opening_balances(opening_balances, list(ACCOUNTS), "template's")
 
     content = f'option "title" "Personal ledger"\noption "operating_currency" "{currency}"\n\n'
     content += "; Add more accounts with bea add open. Amounts on credit accounts are negative.\n"
@@ -171,13 +149,45 @@ _CURRENCIES_PATH = Path(__file__).with_name("setup_currencies.json")
 
 
 def _load_catalog() -> dict[str, Any]:
-    import json
-
     return json.loads(_CATALOG_PATH.read_text(encoding="utf-8"))  # type: ignore[no-any-return]
 
 
-def preset_ids() -> list[str]:
-    return [preset["id"] for preset in _load_catalog()["presets"]]
+def _load_currencies() -> dict[str, Any]:
+    return json.loads(_CURRENCIES_PATH.read_text(encoding="utf-8"))  # type: ignore[no-any-return]
+
+
+def _parse_opening_balances(
+    opening_balances: list[str] | None, allowed: list[str] | tuple[str, ...], noun: str
+) -> dict[str, Decimal]:
+    balances: dict[str, Decimal] = {}
+    for balance in opening_balances or []:
+        parts = balance.split()
+        if len(parts) != 2 or parts[0] not in allowed or not parts[0].startswith(("Assets:", "Liabilities:")):
+            raise UsageError(
+                f"Opening balance must be 'ACCOUNT NUMBER' for one of the {noun} asset/liability accounts."
+            )
+        account, number = parts
+        if account in balances:
+            raise UsageError(f"Opening balance specified twice for {account}.")
+        try:
+            balances[account] = parse_decimal_number(number)
+        except ValueError as exc:
+            raise UsageError(str(exc)) from exc
+    return balances
+
+
+def _prepare_new_file(file: Path) -> Path:
+    file = expand_path(file, "--file")
+    if not file.is_absolute():
+        file = file.resolve()
+    try:
+        present = file.exists() or file.is_symlink()
+    except OSError:
+        # Unstatable, so uncreatable: creation below reports it (w5/793, w5/795).
+        present = False
+    if present:
+        raise ConflictError(f"Already exists: {file}. Choose a new path; init never overwrites a ledger.")
+    return file
 
 
 def answer_preset(
@@ -196,13 +206,7 @@ def answer_preset(
     against Equity:OpeningBalances and asserts on the boundary, and the
     accounts open the day before the boundary when such a posting exists.
     """
-    import json
-
-    file = expand_path(file, "--file")
-    if not file.is_absolute():
-        file = file.resolve()
-    if file.exists() or file.is_symlink():
-        raise ConflictError(f"Already exists: {file}. Choose a new path; init never overwrites a ledger.")
+    file = _prepare_new_file(file)
 
     catalog = _load_catalog()
     presets = {entry["id"]: entry for entry in catalog["presets"]}
@@ -210,7 +214,7 @@ def answer_preset(
     if entry is None:
         raise UsageError(f"Unknown preset {preset!r}. Choose one of: {', '.join(sorted(presets))}.")
 
-    currencies = json.loads(_CURRENCIES_PATH.read_text(encoding="utf-8"))
+    currencies = _load_currencies()
     currency = currency.strip().upper()
     if currency not in currencies["supportedCurrencies"]:
         raise UsageError(f"Unsupported operating currency {currency!r} for a preset ledger.")
@@ -221,20 +225,7 @@ def answer_preset(
         raise UsageError(f"--date must be a date in YYYY-MM-DD form, not {date!r}.") from exc
 
     accounts = [account["name"] for account in entry["accounts"]]
-    balances: dict[str, Decimal] = {}
-    for balance in opening_balances or []:
-        parts = balance.split()
-        if len(parts) != 2 or parts[0] not in accounts or not parts[0].startswith(("Assets:", "Liabilities:")):
-            raise UsageError(
-                "Opening balance must be 'ACCOUNT NUMBER' for one of the preset's asset/liability accounts."
-            )
-        account, number = parts
-        if account in balances:
-            raise UsageError(f"Opening balance specified twice for {account}.")
-        try:
-            balances[account] = parse_decimal_number(number)
-        except ValueError as exc:
-            raise UsageError(str(exc)) from exc
+    balances = _parse_opening_balances(opening_balances, accounts, "preset's")
 
     open_day = day - datetime.timedelta(days=1) if balances else day
     lines = [

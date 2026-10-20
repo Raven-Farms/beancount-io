@@ -59,8 +59,8 @@ def create_ledger(
     currency: str | None = None,
     date: str | None = None,
 ) -> LedgerInfo:
-    # A fresh requestId on every create (ADR021): a retry of this command's
-    # request inside the server's 24-hour window returns the original ledger
+    # A requestId on every create (ADR021): if this request is retried in
+    # flight with the same id, the server returns the original ledger
     # instead of creating a second one.
     from uuid import uuid4
 

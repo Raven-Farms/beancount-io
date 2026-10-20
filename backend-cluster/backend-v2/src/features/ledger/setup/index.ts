@@ -2,8 +2,17 @@ import catalogJson from "./catalog.json";
 import currenciesJson from "./currencies.json";
 import fixturesJson from "./fixtures.json";
 
-type CapabilityState = "enabled" | "declined" | "deferred";
-type OpeningState = "unknown" | "zero" | "known";
+export type CapabilityState = "enabled" | "declined" | "deferred";
+export type OpeningState = "unknown" | "zero" | "known";
+export type PresetId =
+  | "personal@1"
+  | "freelance@1"
+  | "business@1"
+  | "portfolio@1"
+  | "rental@1"
+  | "shared-expenses@1"
+  | "community@1"
+  | "blank@1";
 
 interface SetupCatalogAccount {
   name: string;

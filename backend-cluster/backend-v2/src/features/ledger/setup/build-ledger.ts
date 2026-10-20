@@ -1,22 +1,28 @@
 import { ValidationError } from "@/shared/errors";
-import { presetById, setupCatalog, setupCurrencies } from "./index";
+import {
+  presetById,
+  setupCatalog,
+  setupCurrencies,
+  type CapabilityState,
+  type OpeningState,
+  type PresetId,
+} from "./index";
 
 
 interface SetupAccountSelection {
   name: string;
-  kind?: string;
   currency?: string;
-  openingState?: string;
+  openingState?: OpeningState;
   /** Decimal string, required when `openingState` is "known". */
   amount?: string;
 }
 
 export interface LedgerSetup {
-  preset: string;
+  preset: PresetId;
   title?: string;
   operatingCurrency?: string;
   historyStart?: string;
-  capabilities?: Record<string, string>;
+  capabilities?: Record<string, CapabilityState>;
   accounts?: SetupAccountSelection[];
 }
 
@@ -34,11 +40,6 @@ const dayBefore = (date: string): string => {
   return parsed.toISOString().slice(0, 10);
 };
 
-/**
- * Pure builder: turns a setup specification (ADR021) into ledger files.
- * Throws `ValidationError` for any invalid explicit value; nothing is
- * created by callers when it throws.
- */
 export interface LedgerSetupPreview {
   preset: string;
   operatingCurrency: string;
@@ -54,7 +55,11 @@ export function buildLedgerFiles(
   return previewLedgerSetup(setup, today).files;
 }
 
-/** Preview a setup without creating anything: the files plus their summary. */
+/**
+ * Pure builder: turns a setup specification (ADR021) into the files it
+ * would create plus their summary, without creating anything. Throws
+ * `ValidationError` for any invalid explicit value.
+ */
 export function previewLedgerSetup(
   setup: LedgerSetup,
   today: string = new Date().toISOString().slice(0, 10),
@@ -74,7 +79,7 @@ export function previewLedgerSetup(
 
   const capabilities = setup.capabilities ?? {};
   for (const [id, state] of Object.entries(capabilities)) {
-    if (!(setupCatalog.capabilityStates as string[]).includes(state)) {
+    if (!setupCatalog.capabilityStates.includes(state)) {
       fail(`Invalid capability state "${state}" for "${id}"`);
     }
     if (!preset.optionalQuestions.some((question) => question.id === id)) {
@@ -112,7 +117,7 @@ export function previewLedgerSetup(
       );
     }
     const openingState = selection.openingState ?? "unknown";
-    if (!(setupCatalog.openingStates as string[]).includes(openingState)) {
+    if (!setupCatalog.openingStates.includes(openingState)) {
       fail(`Invalid opening state "${openingState}" for "${selection.name}"`);
     }
     if (openingState === "known") {
@@ -157,9 +162,11 @@ export function previewLedgerSetup(
   const accounts = [...selected.values()].sort((a, b) =>
     a.name.localeCompare(b.name),
   );
+  const opened = new Set<string>();
   for (const account of accounts) {
     const currency = account.currency ?? operatingCurrency;
     lines.push(`${openDate} open ${account.name} ${currency}`);
+    opened.add(account.name);
     if (account.openingState === "unknown") {
       lines.push(`  ${openingStatusKey}: "unknown"`);
     } else if (account.openingState === "zero") {
@@ -168,9 +175,9 @@ export function previewLedgerSetup(
     if (account.openingState === "known" && account.amount) {
       const amount = account.amount;
       const counter = account.name === OPENING_EQUITY ? null : OPENING_EQUITY;
-      if (counter && !selected.has(counter)) {
+      if (counter && !opened.has(counter)) {
         lines.push(`${openDate} open ${counter} ${currency}`);
-        selected.set(counter, { name: counter });
+        opened.add(counter);
       }
       if (counter) {
         const negated = amount.startsWith("-") ? amount.slice(1) : `-${amount}`;
@@ -194,13 +201,7 @@ export function previewLedgerSetup(
     lines.push(...assertions, "");
   }
 
-  const openedAccounts = [
-    ...new Set(
-      lines
-        .map((line) => line.match(/^\d{4}-\d{2}-\d{2} open (\S+)/)?.[1])
-        .filter((name): name is string => Boolean(name)),
-    ),
-  ].sort();
+  const openedAccounts = [...opened].sort();
   return {
     preset: preset.id,
     operatingCurrency,

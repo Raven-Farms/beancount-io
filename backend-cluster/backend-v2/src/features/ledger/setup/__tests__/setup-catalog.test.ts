@@ -1,4 +1,6 @@
+import "reflect-metadata";
 import { presetById, setupCatalog, setupCurrencies, setupFixtures } from "..";
+import { LedgerSetupPreset } from "@/features/ledger/api/resolvers/ledger-resolver.types";
 
 const EXPECTED_PRESETS = [
   "personal@1",
@@ -20,6 +22,12 @@ describe("setup catalog (w3/m53/t001)", () => {
       expect(preset.version).toBe(1);
       expect(presetById(preset.id)).toBe(preset);
     }
+  });
+
+  it("keeps the GraphQL preset enum in parity with the catalog", () => {
+    expect(Object.values(LedgerSetupPreset).sort()).toEqual(
+      [...EXPECTED_PRESETS].sort(),
+    );
   });
 
   it("keeps the zero-to-two optional-question budget per preset", () => {

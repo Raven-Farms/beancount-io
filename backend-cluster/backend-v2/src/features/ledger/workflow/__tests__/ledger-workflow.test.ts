@@ -522,7 +522,7 @@ describe("LedgerWorkflow", () => {
         const input = {
           name: "setup-ledger",
           requestId: "req-1",
-          setup: { preset: "blank@1" },
+          setup: { preset: "blank@1" as const },
         };
         const first = await withStore.createLedger({
           identity: IDENTITY,

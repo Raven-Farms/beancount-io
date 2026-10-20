@@ -109,8 +109,9 @@ def ledger_create(
                 CreateLedgerBodySetupType0Preset,
             )
 
-            known = ", ".join(sorted(str(member) for member in CreateLedgerBodySetupType0Preset))
-            if preset not in {str(member) for member in CreateLedgerBodySetupType0Preset}:
+            members = {str(member) for member in CreateLedgerBodySetupType0Preset}
+            if preset not in members:
+                known = ", ".join(sorted(members))
                 raise UsageError(f"--preset {preset!r}: Unknown preset. Choose one of: {known}. Nothing was created.")
         ledger = manager.create_ledger(
             client,

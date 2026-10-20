@@ -75,7 +75,7 @@ import {
   type LedgerSetup,
   type LedgerSetupPreview,
 } from "@/features/ledger/setup/build-ledger";
-import { CACHE_KEYS } from "@/shared/cache";
+import { CACHE_KEYS, TTL, type CacheHelper } from "@/shared/cache";
 import { operationNotAllowedFromCause } from "@/features/ledger/utils/operation-not-allowed-from-cause";
 import { filterNullish } from "@/shared/tools";
 import { processBatch } from "@/shared/batch-processor";
@@ -332,6 +332,12 @@ function readCatalog(
     : readPage({ page: args.page, limit: args.limit });
 }
 
+interface CreateRequestRecord {
+  requestHash: string;
+  status: "in-progress" | "done";
+  ledger?: LedgerData;
+}
+
 export class LedgerWorkflow implements ILedgerWorkflow {
   constructor(
     private readonly favaClientFactory: IFavaClientFactory,
@@ -349,7 +355,7 @@ export class LedgerWorkflow implements ILedgerWorkflow {
     /** Strict store for creation idempotency records (ADR021); optional so
      * requestId-less creation works in consumers that do not wire Redis. */
     private readonly createIdempotencyStore?: Pick<
-      import("@/shared/cache").CacheHelper,
+      CacheHelper,
       "getStrict" | "setStrict"
     >,
   ) {}
@@ -514,30 +520,28 @@ export class LedgerWorkflow implements ILedgerWorkflow {
       // while the first attempt runs reports in-progress instead of creating
       // a second ledger. Records expire after 24 hours.
       const store = this.createIdempotencyStore;
-      const requestKey =
+      const idempotency =
         input.requestId && store
-          ? CACHE_KEYS.ledger.createRequestByUserAndId(userId, input.requestId)
+          ? {
+              store,
+              key: CACHE_KEYS.ledger.createRequestByUserAndId(
+                userId,
+                input.requestId,
+              ),
+              hash: JSON.stringify({
+                name: input.name,
+                description: input.description ?? null,
+                private: input.private ?? null,
+                template: input.template ?? null,
+                setup: input.setup ?? null,
+              }),
+            }
           : null;
-      const requestHash = requestKey
-        ? JSON.stringify({
-            name: input.name,
-            description: input.description ?? null,
-            private: input.private ?? null,
-            template: input.template ?? null,
-            setup: input.setup ?? null,
-          })
-        : null;
-      if (requestKey && requestHash && store) {
-        const raw = await store.getStrict<string>(requestKey);
-        const record = raw
-          ? (JSON.parse(raw) as {
-              requestHash: string;
-              status: "in-progress" | "done";
-              ledger?: LedgerData;
-            })
-          : null;
+      if (idempotency) {
+        const raw = await idempotency.store.getStrict<string>(idempotency.key);
+        const record = raw ? (JSON.parse(raw) as CreateRequestRecord) : null;
         if (record) {
-          if (record.requestHash !== requestHash) {
+          if (record.requestHash !== idempotency.hash) {
             throw new ValidationError(
               "requestId was already used with a different creation request",
               "requestId",
@@ -551,10 +555,10 @@ export class LedgerWorkflow implements ILedgerWorkflow {
             "A creation with this requestId is still in progress",
           );
         }
-        await store.setStrict(
-          requestKey,
-          JSON.stringify({ requestHash, status: "in-progress" }),
-          24 * 60 * 60 * 1000,
+        await idempotency.store.setStrict(
+          idempotency.key,
+          JSON.stringify({ requestHash: idempotency.hash, status: "in-progress" }),
+          TTL.HOUR_24,
         );
       }
 
@@ -575,11 +579,15 @@ export class LedgerWorkflow implements ILedgerWorkflow {
         platform,
       });
 
-      if (requestKey && requestHash && store) {
-        await store.setStrict(
-          requestKey,
-          JSON.stringify({ requestHash, status: "done", ledger }),
-          24 * 60 * 60 * 1000,
+      if (idempotency) {
+        await idempotency.store.setStrict(
+          idempotency.key,
+          JSON.stringify({
+            requestHash: idempotency.hash,
+            status: "done",
+            ledger,
+          }),
+          TTL.HOUR_24,
         );
       }
       return ledger;

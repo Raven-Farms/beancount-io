@@ -47,9 +47,6 @@ export class LedgerSetupAccountInput {
   name: string;
 
   @Field(() => String, { nullable: true })
-  kind?: string;
-
-  @Field(() => String, { nullable: true })
   currency?: string;
 
   @Field(() => LedgerOpeningState, { nullable: true })
