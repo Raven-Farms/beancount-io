@@ -43,7 +43,7 @@
 - [268 — Preserve an existing UTF-8 BOM when saving text files](./268.md) — minor; dashboard QA, 2026-10-20.
 - [269 — Preserve Markdown blocks without a language label](./269.md) — minor; dashboard QA, 2026-10-20.
 - [270 — Remove the unsupported blank transaction status](./270.md) — minor; dashboard QA, 2026-10-20.
-- [271 — Distinguish a real event type all from All Types](./271.md) — minor; dashboard QA, 2026-10-20.
+- [271 — Keep authored event types distinct and named](./271.md) — minor; dashboard QA, 2026-10-20.
 - [272 — Validate saved BQL history before rendering](./272.md) — minor; dashboard QA, 2026-10-20; controlled corrupted-cache recovery.
 - [273 — Show the active command-picker option in forced colors](./273.md) — minor; dashboard QA, 2026-10-20.
 - [274 — Preserve account-search focus through retry](./274.md) — minor; dashboard QA, 2026-10-20.
@@ -51,12 +51,14 @@
 - [276 — Refuse lossy text-file editing for unsupported byte encodings](./276.md) — minor; dashboard QA, 2026-10-20.
 - [277 — Preserve years below 100 in CSV import date displays](./277.md) — minor; dashboard QA, 2026-10-20.
 - [278 — Refuse CSV decoding that replaces source characters](./278.md) — minor; dashboard QA, 2026-10-20.
+- [279 — Accept supported combining marks and titlecase initials in Open Account](./279.md) — minor; dashboard QA, 2026-10-20.
+- [280 — Freeze import configuration while its submitted batch is pending](./280.md) — minor; dashboard QA, 2026-10-20.
 
 ## Milestones
 
-- [ ] **m37** — [Resolve README file links from their source path](./m37/README.md) (6 tasks) ← dashboard QA, 2026-10-20; minor, rendered file-link context and native hrefs.
+- [ ] **m37** — [Resolve README file and image references from their source path](./m37/README.md) (7 tasks) ← dashboard QA, 2026-10-20; minor, rendered file/image context and native hrefs.
 
-- [ ] **m36** — [Preserve commit and profile activity timestamps through hydration](./m36/README.md) (7 tasks) ← dashboard QA, 2026-10-20; minor, commit/profile focus and commit browser-zone names.
+- [ ] **m36** — [Preserve commit and profile activity timestamps through hydration](./m36/README.md) (7 tasks) ← dashboard QA, 2026-10-20; minor, commit/profile focus and exact browser-zone attributes.
 
 - [ ] **m35** — [Keep form fields usable when suggestions fail](./m35/README.md) (6 tasks) ← dashboard QA, 2026-10-20; minor, four form suggestion wrappers.
 
