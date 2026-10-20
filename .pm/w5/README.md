@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [804 — A defaulted currency gets FX advice for an exchange the user never made](./804.md)
 - [805 — Posting slips: {{240}} refused as not one token, empty label dropped, bulk shorthand wording](./805.md)
 - [806 — A Fava collapse-pattern/insert-entry regex raising OverflowError or RecursionError blocks reports (gap in w5/091)](./806.md)
 - [807 — A misspelled fiscal-year-end option silently makes FY2026 the calendar year (gap in w5/147)](./807.md)
