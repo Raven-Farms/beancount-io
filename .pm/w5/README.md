@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [774 — An overlay is still the root with a forecast plugin, a repeated Fava option, above a leaf, and in hints (incomplete fix of w5/578)](./774.md)
 - [775 — Two roots including one leaf: writes are judged by whichever sorts first (w5/578 addendum not implemented)](./775.md)
 - [776 — With a managed price include, BEANCOUNT_DISABLE_LOAD_CACHE and check --no-cache cannot bypass a stale cache (new with w5/576)](./776.md)
 - [777 — beancount-migrate derives the opening from today's balance but asserts it at the export's end; post-export activity is absorbed silently](./777.md)
