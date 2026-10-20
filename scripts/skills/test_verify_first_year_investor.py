@@ -152,6 +152,16 @@ class VerifyFirstYearInvestorTests(unittest.TestCase):
         self.ledger.write_text(FINAL_LEDGER.replace('price VTI 300.00', 'price VTI 310.00'))
         self.assertEqual(self.run_verify('year_end'), 1)
 
+    def test_snapshot_works_before_the_first_commit(self):
+        fresh = self.root / 'fresh'
+        fresh.mkdir()
+        (fresh / 'main.bean').write_text(FINAL_LEDGER)
+        subprocess.run(['git', '-C', str(fresh), 'init', '-q'], check=True, capture_output=True)
+        out = self.root / 'fresh-snap.json'
+        self.assertEqual(verify.main(['snapshot', '--workspace', str(fresh),
+                                      '--output', str(out)]), 0)
+        self.assertIsNone(json.loads(out.read_text())['head'])
+
     def test_unknown_checkpoint_and_snapshot_inside_workspace_fail(self):
         self.assertEqual(self.run_verify('nonsense'), 1)
         code = verify.main(['snapshot', '--workspace', str(self.workspace),

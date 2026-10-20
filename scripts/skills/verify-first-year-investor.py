@@ -75,7 +75,10 @@ def capture(workspace, ledger):
                 visit(path)
 
     visit(workspace)
-    head = git(workspace, 'rev-parse', '--verify', 'HEAD').decode().strip()
+    head_probe = subprocess.run(['git', '-C', str(workspace), 'rev-parse', '--verify', 'HEAD'],
+                                cwd=workspace, env={**os.environ, 'GIT_OPTIONAL_LOCKS': '0'},
+                                capture_output=True, check=False, timeout=90)
+    head = head_probe.stdout.decode().strip() if head_probe.returncode == 0 else None
     index = Path(git(workspace, 'rev-parse', '--git-path', 'index').decode().strip())
     if not index.is_absolute():
         index = workspace / index
