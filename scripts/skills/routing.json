@@ -112,7 +112,7 @@
     },
     {
       "id": "import-pdf-no-csv",
-      "prompt": "Import my June statement PDF into my ledger — my bank has no CSV export.",
+      "prompt": "Import my June statement PDF into my ledger \u2014 my bank has no CSV export.",
       "expected": "beancount-import",
       "confusable": [
         "beancount-reconcile",
@@ -517,7 +517,7 @@
     },
     {
       "id": "i18n-zh-ask-groceries",
-      "prompt": "我上个月在食品杂货上花了多少钱？",
+      "prompt": "\u6211\u4e0a\u4e2a\u6708\u5728\u98df\u54c1\u6742\u8d27\u4e0a\u82b1\u4e86\u591a\u5c11\u94b1\uff1f",
       "expected": "beancount-ask",
       "confusable": [
         "beancount-close"
@@ -526,7 +526,7 @@
     },
     {
       "id": "i18n-zh-import-csv",
-      "prompt": "把这个银行 CSV 导入我的账本：./chase-may.csv",
+      "prompt": "\u628a\u8fd9\u4e2a\u94f6\u884c CSV \u5bfc\u5165\u6211\u7684\u8d26\u672c\uff1a./chase-may.csv",
       "expected": "beancount-import",
       "confusable": [
         "beancount-reconcile"
@@ -535,7 +535,7 @@
     },
     {
       "id": "i18n-zh-add-groceries",
-      "prompt": "记录昨天在 Trader Joe's 用支票账户支付的 54.20 美元食品杂货。",
+      "prompt": "\u8bb0\u5f55\u6628\u5929\u5728 Trader Joe's \u7528\u652f\u7968\u8d26\u6237\u652f\u4ed8\u7684 54.20 \u7f8e\u5143\u98df\u54c1\u6742\u8d27\u3002",
       "expected": "beancount-add",
       "confusable": [
         "beancount-import"
@@ -544,7 +544,7 @@
     },
     {
       "id": "i18n-zh-reconcile-statement",
-      "prompt": "把我的支票账户和这份对账单核对一下：./may-statement.csv",
+      "prompt": "\u628a\u6211\u7684\u652f\u7968\u8d26\u6237\u548c\u8fd9\u4efd\u5bf9\u8d26\u5355\u6838\u5bf9\u4e00\u4e0b\uff1a./may-statement.csv",
       "expected": "beancount-reconcile",
       "confusable": [
         "beancount-import",
@@ -554,7 +554,7 @@
     },
     {
       "id": "i18n-zh-hosted-dining",
-      "prompt": "我的账本托管在 Beancount.io 上，并通过它的 MCP 服务器连接。我上个月在餐饮上花了多少？",
+      "prompt": "\u6211\u7684\u8d26\u672c\u6258\u7ba1\u5728 Beancount.io \u4e0a\uff0c\u5e76\u901a\u8fc7\u5b83\u7684 MCP \u670d\u52a1\u5668\u8fde\u63a5\u3002\u6211\u4e0a\u4e2a\u6708\u5728\u9910\u996e\u4e0a\u82b1\u4e86\u591a\u5c11\uff1f",
       "expected": "none",
       "confusable": [
         "beancount-ask"
@@ -563,7 +563,7 @@
     },
     {
       "id": "i18n-ja-ask-groceries",
-      "prompt": "先月、食料品にいくら使いましたか？",
+      "prompt": "\u5148\u6708\u3001\u98df\u6599\u54c1\u306b\u3044\u304f\u3089\u4f7f\u3044\u307e\u3057\u305f\u304b\uff1f",
       "expected": "beancount-ask",
       "confusable": [
         "beancount-close"
@@ -572,7 +572,7 @@
     },
     {
       "id": "i18n-ja-import-csv",
-      "prompt": "この銀行の CSV を台帳にインポートしてください：./chase-may.csv",
+      "prompt": "\u3053\u306e\u9280\u884c\u306e CSV \u3092\u53f0\u5e33\u306b\u30a4\u30f3\u30dd\u30fc\u30c8\u3057\u3066\u304f\u3060\u3055\u3044\uff1a./chase-may.csv",
       "expected": "beancount-import",
       "confusable": [
         "beancount-reconcile"
@@ -581,7 +581,7 @@
     },
     {
       "id": "i18n-ja-add-groceries",
-      "prompt": "昨日 Trader Joe's で当座預金口座から支払った 54.20 ドルの食料品を記録してください。",
+      "prompt": "\u6628\u65e5 Trader Joe's \u3067\u5f53\u5ea7\u9810\u91d1\u53e3\u5ea7\u304b\u3089\u652f\u6255\u3063\u305f 54.20 \u30c9\u30eb\u306e\u98df\u6599\u54c1\u3092\u8a18\u9332\u3057\u3066\u304f\u3060\u3055\u3044\u3002",
       "expected": "beancount-add",
       "confusable": [
         "beancount-import"
@@ -590,7 +590,7 @@
     },
     {
       "id": "i18n-ja-reconcile-statement",
-      "prompt": "この明細書と私の当座預金口座を照合してください：./may-statement.csv",
+      "prompt": "\u3053\u306e\u660e\u7d30\u66f8\u3068\u79c1\u306e\u5f53\u5ea7\u9810\u91d1\u53e3\u5ea7\u3092\u7167\u5408\u3057\u3066\u304f\u3060\u3055\u3044\uff1a./may-statement.csv",
       "expected": "beancount-reconcile",
       "confusable": [
         "beancount-import",
@@ -600,7 +600,7 @@
     },
     {
       "id": "i18n-ja-hosted-dining",
-      "prompt": "台帳は Beancount.io にホストされ、その MCP サーバーに接続しています。先月、外食にいくら使いましたか？",
+      "prompt": "\u53f0\u5e33\u306f Beancount.io \u306b\u30db\u30b9\u30c8\u3055\u308c\u3001\u305d\u306e MCP \u30b5\u30fc\u30d0\u30fc\u306b\u63a5\u7d9a\u3057\u3066\u3044\u307e\u3059\u3002\u5148\u6708\u3001\u5916\u98df\u306b\u3044\u304f\u3089\u4f7f\u3044\u307e\u3057\u305f\u304b\uff1f",
       "expected": "none",
       "confusable": [
         "beancount-ask"
@@ -609,7 +609,7 @@
     },
     {
       "id": "i18n-de-ask-groceries",
-      "prompt": "Wie viel habe ich letzten Monat für Lebensmittel ausgegeben?",
+      "prompt": "Wie viel habe ich letzten Monat f\u00fcr Lebensmittel ausgegeben?",
       "expected": "beancount-ask",
       "confusable": [
         "beancount-close"
@@ -627,7 +627,7 @@
     },
     {
       "id": "i18n-de-add-groceries",
-      "prompt": "Erfasse gestern einen Einkauf bei Trader Joe's über $54.20, bezahlt vom Girokonto.",
+      "prompt": "Erfasse gestern einen Einkauf bei Trader Joe's \u00fcber $54.20, bezahlt vom Girokonto.",
       "expected": "beancount-add",
       "confusable": [
         "beancount-import"
@@ -646,7 +646,7 @@
     },
     {
       "id": "i18n-de-hosted-dining",
-      "prompt": "Mein Hauptbuch liegt auf Beancount.io und ich bin über dessen MCP-Server verbunden. Wie viel habe ich letzten Monat für Essengehen ausgegeben?",
+      "prompt": "Mein Hauptbuch liegt auf Beancount.io und ich bin \u00fcber dessen MCP-Server verbunden. Wie viel habe ich letzten Monat f\u00fcr Essengehen ausgegeben?",
       "expected": "none",
       "confusable": [
         "beancount-ask"
@@ -655,7 +655,7 @@
     },
     {
       "id": "i18n-es-ask-groceries",
-      "prompt": "¿Cuánto gasté en supermercado el mes pasado?",
+      "prompt": "\u00bfCu\u00e1nto gast\u00e9 en supermercado el mes pasado?",
       "expected": "beancount-ask",
       "confusable": [
         "beancount-close"
@@ -692,7 +692,7 @@
     },
     {
       "id": "i18n-es-hosted-dining",
-      "prompt": "Mi libro está alojado en Beancount.io y estoy conectado a través de su servidor MCP. ¿Cuánto gasté en restaurantes el mes pasado?",
+      "prompt": "Mi libro est\u00e1 alojado en Beancount.io y estoy conectado a trav\u00e9s de su servidor MCP. \u00bfCu\u00e1nto gast\u00e9 en restaurantes el mes pasado?",
       "expected": "none",
       "confusable": [
         "beancount-ask"
@@ -701,7 +701,7 @@
     },
     {
       "id": "i18n-fr-ask-groceries",
-      "prompt": "Combien ai-je dépensé en courses le mois dernier ?",
+      "prompt": "Combien ai-je d\u00e9pens\u00e9 en courses le mois dernier ?",
       "expected": "beancount-ask",
       "confusable": [
         "beancount-close"
@@ -719,7 +719,7 @@
     },
     {
       "id": "i18n-fr-add-groceries",
-      "prompt": "Enregistre un achat de courses de 54,20 $ chez Trader Joe's hier, payé depuis le compte courant.",
+      "prompt": "Enregistre un achat de courses de 54,20 $ chez Trader Joe's hier, pay\u00e9 depuis le compte courant.",
       "expected": "beancount-add",
       "confusable": [
         "beancount-import"
@@ -728,7 +728,7 @@
     },
     {
       "id": "i18n-fr-reconcile-statement",
-      "prompt": "Rapproche mon compte courant avec ce relevé : ./may-statement.csv",
+      "prompt": "Rapproche mon compte courant avec ce relev\u00e9 : ./may-statement.csv",
       "expected": "beancount-reconcile",
       "confusable": [
         "beancount-import",
@@ -738,7 +738,7 @@
     },
     {
       "id": "i18n-fr-hosted-dining",
-      "prompt": "Mon grand livre est hébergé sur Beancount.io et je suis connecté via son serveur MCP. Combien ai-je dépensé au restaurant le mois dernier ?",
+      "prompt": "Mon grand livre est h\u00e9berg\u00e9 sur Beancount.io et je suis connect\u00e9 via son serveur MCP. Combien ai-je d\u00e9pens\u00e9 au restaurant le mois dernier ?",
       "expected": "none",
       "confusable": [
         "beancount-ask"
@@ -803,7 +803,7 @@
     },
     {
       "id": "trade-cash-dividend",
-      "prompt": "VTI paid me a $45 cash dividend in my brokerage account — record it",
+      "prompt": "VTI paid me a $45 cash dividend in my brokerage account \u2014 record it",
       "expected": "beancount-trade",
       "confusable": [
         "beancount-add"
@@ -817,7 +817,7 @@
       "confusable": [
         "beancount-add"
       ],
-      "why": "A split rewrites lot units at unchanged total cost — a trade procedure."
+      "why": "A split rewrites lot units at unchanged total cost \u2014 a trade procedure."
     },
     {
       "id": "trade-lot-transfer",
@@ -868,7 +868,7 @@
     },
     {
       "id": "import-opening-lots",
-      "prompt": "Here is my broker's cost-basis export — set up my existing holdings in my new ledger",
+      "prompt": "Here is my broker's cost-basis export \u2014 set up my existing holdings in my new ledger",
       "expected": "beancount-import",
       "confusable": [
         "beancount-migrate",
@@ -878,7 +878,7 @@
     },
     {
       "id": "property-buy-house",
-      "prompt": "I bought a house for $500,000 with 20% down and a $400,000 mortgage — record it",
+      "prompt": "I bought a house for $500,000 with 20% down and a $400,000 mortgage \u2014 record it",
       "expected": "beancount-property",
       "confusable": [
         "beancount-add"
@@ -896,7 +896,7 @@
     },
     {
       "id": "property-mortgage-payment",
-      "prompt": "Record this month's mortgage payment: $2,400 — $600 principal, $1,500 interest, $300 escrow",
+      "prompt": "Record this month's mortgage payment: $2,400 \u2014 $600 principal, $1,500 interest, $300 escrow",
       "expected": "beancount-property",
       "confusable": [
         "beancount-add"
@@ -905,7 +905,7 @@
     },
     {
       "id": "property-sell-rental",
-      "prompt": "I sold my rental house for $650,000; the mortgage payoff was $399,400 — record the sale",
+      "prompt": "I sold my rental house for $650,000; the mortgage payoff was $399,400 \u2014 record the sale",
       "expected": "beancount-property",
       "confusable": [
         "beancount-trade",
@@ -924,7 +924,7 @@
     },
     {
       "id": "trade-swap-crypto",
-      "prompt": "I swapped 0.2 BTC for 4 ETH — record the swap (it was worth $12,000)",
+      "prompt": "I swapped 0.2 BTC for 4 ETH \u2014 record the swap (it was worth $12,000)",
       "expected": "beancount-trade",
       "confusable": [
         "beancount-add",
@@ -939,7 +939,7 @@
       "confusable": [
         "beancount-add"
       ],
-      "why": "Receipts become dated lots against income, like a vest — not generic income entries."
+      "why": "Receipts become dated lots against income, like a vest \u2014 not generic income entries."
     },
     {
       "id": "none-live-crypto-price",
@@ -950,6 +950,34 @@
         "beancount-trade"
       ],
       "why": "A live market quote, not a ledger question or a trade to record."
+    },
+    {
+      "id": "rollforward-prepaid-why",
+      "prompt": "Why is my prepaid insurance balance what it is at the end of January?",
+      "expected": "beancount-roll-forward",
+      "confusable": [
+        "beancount-ask",
+        "beancount-reconcile"
+      ],
+      "why": "Opening-to-closing explanation of one balance-sheet account."
+    },
+    {
+      "id": "rollforward-loan",
+      "prompt": "Roll my loan balance forward for last quarter and show every movement.",
+      "expected": "beancount-roll-forward",
+      "confusable": [
+        "beancount-ask"
+      ],
+      "why": "Period roll-forward of a liability account."
+    },
+    {
+      "id": "ask-one-entry-not-rollforward",
+      "prompt": "What was that one charge on my card on March 3?",
+      "expected": "beancount-ask",
+      "confusable": [
+        "beancount-roll-forward"
+      ],
+      "why": "A single-entry question, not a balance explanation."
     }
   ]
 }

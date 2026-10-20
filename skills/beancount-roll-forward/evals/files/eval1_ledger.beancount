@@ -1,0 +1,41 @@
+option "operating_currency" "USD"
+
+2025-12-01 open Assets:Checking USD
+2025-12-01 open Assets:PrepaidInsurance USD
+2025-12-01 open Assets:BrokerCash USD
+2025-12-01 open Assets:Brokerage
+2025-12-01 open Liabilities:Loan USD
+2025-12-01 open Expenses:Insurance USD
+2025-12-01 open Expenses:Interest USD
+2025-12-01 open Income:Dividends USD
+2025-12-01 open Equity:OpeningBalances USD
+
+2025-12-31 * "Opening balances"
+  Assets:Checking            10000.00 USD
+  Assets:PrepaidInsurance     1200.00 USD
+  Assets:BrokerCash           2000.00 USD
+  Liabilities:Loan           -5000.00 USD
+  Equity:OpeningBalances     -8200.00 USD
+
+2026-01-05 * "Annual premium top-up"
+  Assets:PrepaidInsurance      600.00 USD
+  Assets:Checking             -600.00 USD
+
+2026-01-10 * "January insurance recognition"
+  Expenses:Insurance           150.00 USD
+  Assets:PrepaidInsurance     -150.00 USD
+
+2026-01-15 * "Loan payment"
+  Liabilities:Loan             400.00 USD
+  Expenses:Interest             50.00 USD
+  Assets:Checking             -450.00 USD
+
+2026-01-20 * "Buy ACME"
+  Assets:Brokerage              10 ACME {100.00 USD}
+  Assets:BrokerCash          -1000.00 USD
+
+2026-01-25 * "ACME dividend"
+  Assets:BrokerCash             25.00 USD
+  Income:Dividends             -25.00 USD
+
+2026-02-01 price ACME 110.00 USD

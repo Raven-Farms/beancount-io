@@ -19,6 +19,7 @@ The suite shares [command recipes](beancount-init/references/bea-cli.md) that se
 | [beancount-reconcile](beancount-reconcile/SKILL.md) | Compare an account with a bank or broker statement. |
 | [beancount-migrate](beancount-migrate/SKILL.md) | Migrate transaction history from another finance app. |
 | [beancount-ask](beancount-ask/SKILL.md) | Answer ledger questions with reproducible queries. |
+| [beancount-roll-forward](beancount-roll-forward/SKILL.md) | Explain one balance-sheet account's movement over a period, opening to closing. |
 | [beancount-close](beancount-close/SKILL.md) | Reconcile and close an accounting period. |
 | [beancount-options](beancount-options/SKILL.md) | Record options trades and lifecycle events. |
 

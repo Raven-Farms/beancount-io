@@ -167,6 +167,7 @@ class TestInstall(Workspace):
                 "beancount-options",
                 "beancount-property",
                 "beancount-reconcile",
+                "beancount-roll-forward",
                 "beancount-trade",
             ],
         )
@@ -1410,6 +1411,41 @@ class TestBeaRecipes(unittest.TestCase):
             for account, balance in rows
         }
         self.assertEqual(balances, {"Assets:Checking": [("2814.25", "USD")]})
+
+    def test_rollforward_ties_out_per_account_and_currency(self):
+        fixture = SUITE / "beancount-roll-forward" / "evals" / "files" / "eval1_ledger.beancount"
+        self.ledger.write_text(fixture.read_text(encoding="utf-8"))
+        period = {"<start>": "2026-01-01", "<end>": "2026-02-01"}
+
+        def balance(recipe, account):
+            rows = self.query_recipe(recipe, **{"<account>": account}, **period)
+            return [(lot["units"]["number"], lot["units"]["currency"]) for lot in rows[0][0]]
+
+        def movements(account):
+            rows = self.query_recipe("rollforward-movements", **{"<account>": account}, **period)
+            return [(row[0], row[3]["number"]) for row in rows]
+
+        # Prepaid: 1200 + 600 - 150 = 1650 by both routes.
+        self.assertEqual(balance("rollforward-opening", "Assets:PrepaidInsurance"), [("1200.00", "USD")])
+        self.assertEqual(
+            movements("Assets:PrepaidInsurance"),
+            [("2026-01-05", "600.00"), ("2026-01-10", "-150.00")],
+        )
+        self.assertEqual(balance("rollforward-closing", "Assets:PrepaidInsurance"), [("1650.00", "USD")])
+        # Loan keeps its sign: -5000 + 400 = -4600 owed.
+        self.assertEqual(balance("rollforward-closing", "Liabilities:Loan"), [("-4600.00", "USD")])
+        # Brokerage cash: 2000 - 1000 + 25 = 1025; market route prices ACME at 110.
+        self.assertEqual(balance("rollforward-closing", "Assets:BrokerCash"), [("1025.00", "USD")])
+        self.assertEqual(balance("rollforward-value", "Assets:Brokerage"), [("1100.00", "USD")])
+        # A movement omitted from the report leaves a residual that is
+        # detected, never plugged: closing 1025 - (2000 - 1000) = 25.
+        rows = self.query_recipe(
+            "rollforward-movements", **{"<account>": "Assets:BrokerCash"},
+            **{"<start>": "2026-01-01", "<end>": "2026-01-21"},
+        )
+        reported = sum(Decimal(row[3]["number"]) for row in rows)
+        residual = Decimal("1025.00") - (Decimal("2000.00") + reported)
+        self.assertEqual(residual, Decimal("25.00"))
 
     def test_account_balances_read_each_balance_sheet_account_at_book_value(self):
         self.ledger.write_text(
