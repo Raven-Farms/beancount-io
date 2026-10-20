@@ -260,3 +260,64 @@ The new entries routed as labeled; the one miss is m50's
 `import-opening-lots` → none, correct in its own full run and in 3/3
 targeted reruns — variance, recorded as not settled. Codex reruns
 with w2/m52/t004 when usage returns (2026-11-17).
+
+## Thirteen-skill native comparison — 2026-10-20
+
+The before suite is `ac95106709fbcbdc9214048c75af258e2a9b71f2` (eleven skills, 103 prompts). The after snapshot is `2900080edb47ec810a7c2c087fe19936e5e01bf2` (thirteen skills), with those same 103 prompts plus ten roll-forward, accrual, variance, and near-miss prompts. All thirteen after descriptions still match the shipped body-fix commit `1537bc6bd`; the original eleven descriptions are identical between before and after. The tracked routing set now matches the scratch 113-prompt set exactly.
+
+Codex CLI 0.163.0 ran with explicit `gpt-6.1-sol`. The runner used real native clients in synthetic workspaces and stopped at the first observed skill read. A user-level skill outside this suite counts as `none`, with its actual name retained in results.
+
+| Measure | Before 1 | Before 2 | After 1 | After 2 |
+| --- | --- | --- | --- | --- |
+| Raw cohort, including infrastructure errors | 96/103 | 97/103 | 108/113 | 106/113 |
+| Infrastructure errors | 2 | 3 | 1 | 2 |
+| After replacing only failed infrastructure attempts with actual retries | 98/103 | 100/103 | 109/113 | 108/113 |
+| Same 103 original prompts after those retries | 98/103 | 100/103 | 99/103 | 98/103 |
+| Ten new prompts | — | — | 10/10 | 10/10 |
+
+The ten additions cover two roll-forward positives, an accrual-drafting positive, missing-payment and single-entry near misses, two variance questions routed to `beancount-ask`, an ordinary paid-rent entry routed to `beancount-add`, and two historical-balance lookups routed to `beancount-ask`. Both after cohorts route all ten correctly.
+
+The original harness treated native `Reconnecting... 2/5 (...)` notices as immediate failures. Eight such infrastructure observations were retained separately and retried after the runner was corrected to wait for native recovery. Only those eight cases were retried, with at most two native calls running; all eight then selected the expected skill. These replacements are recorded in separate `resolved-results.json` artifacts, preserving the initial failures and their source results.
+
+### Every remaining routing difference
+
+| Prompt | Before 1 / 2 | After 1 / 2 |
+| --- | --- | --- |
+| `import-pdf-no-csv` | external `pdf` / import | external `pdf` / external `pdf` |
+| `import-pdf-record-rows` | external `pdf` / import | external `pdf` / external `pdf` |
+| `import-pdf-credit-union` | external `pdf` / external `pdf` | external `pdf` / external `pdf` |
+| `reconcile-amex-pdf` | external `pdf` / external `pdf` | external `pdf` / external `pdf` |
+| `import-opening-lots` | trade / import | import / import |
+| `none-hosted-close-month` | none / close | none / none |
+| `reconcile-add-missing-assert` | reconcile / reconcile | reconcile / import |
+
+The sole prompt correct in both before cohorts with an after miss is `reconcile-add-missing-assert`. Three additional native turns per side all chose `beancount-reconcile` (6/6). Its one after miss therefore did not reproduce in the targeted comparison.
+
+Three additional paired native turns per side were run for each of `import-pdf-no-csv` and `import-pdf-record-rows` (12 calls, no infrastructure errors). For each prompt, before selected `beancount-import` 1/3 times and external `pdf` 2/3 times; after selected external `pdf` all 3/3 times. Including the original cohorts, each prompt is before 2/5 versus after 0/5 on the first-open metric. Both suites encounter the external-PDF collision, but the after sample is consistently worse and remains an investigation item. Import already explicitly supports PDF statement recording in its unchanged description and body. Because this runner stops at the first skill open, these observations do not establish whether the generic PDF helper would subsequently return to the ledger workflow.
+
+The common-prompt aggregate remains 198/206 before versus 197/206 after. The first-open result is worse for the two PDF prompts; the composition controls below test the subsequent workflow separately and do not alter these scores.
+
+### Provenance and limits
+
+The first three cohorts were interrupted by orchestration cleanup. Native runner console output preserved 36 before-1 choices, 27 before-2 choices, and 28 after-1 choices. Those observations retain prompt IDs and raw selected skill names; their original native shell-command evidence and per-prompt elapsed times are unavailable. Only the remaining 67, 76, and 85 prompts were resumed against the same snapshots and model. The fourth after cohort completed uninterrupted. The first three totals are combined cohort observations, rather than uninterrupted full native traces.
+
+Initial work began at 21:40:31 UTC. The resumed phases completed at 22:01:50, 22:02:55, and 22:04:23 UTC. The uninterrupted after cohort ran from 21:44:57 through 22:04:28 UTC. The six targeted reconciliation turns ran from 22:01:50 through approximately 22:02:48 UTC. The eight infrastructure retries ran from 22:04:29 through 22:05:14 UTC. The twelve paired PDF target calls ran from 22:07:34 through 22:08:36 UTC. Normal runners used two concurrent calls; the second before resume used four, and the retry phase used at most two calls total.
+
+Claude Code 2.1.304 was probed once against the current suite. Its observed default model was `claude-opus-5-5`; the real 3.4-second call returned `You've hit your weekly limit · resets 10am (America/Los_Angeles)` before a usable choice. Full Claude before/after routing remains unverified for this change. A separate native probe with the documented `sonnet` alias received the same account-level limit; no new login or account configuration is needed.
+
+Scratch evidence: `setup.json`, `comparison.json`, `extra-prompts.json`, the four cohorts' raw and resolved results, preserved console logs, targeted result folders, and `infrastructure-retry-status.json`. All are under `scripts/skills/tmp/w6-m6-resume/routing/`.
+
+### PDF helper composition controls
+
+Two additional full native Codex turns used the thirteen-skill suite with the original prompts, synthetic statement PDFs and fresh ledgers. They ran on Codex 0.163.0, `gpt-6.1-sol`, client-default reasoning, from 22:13:40 through 22:16:43 UTC. The only prompt addition was the setup fact giving the absolute published `bea` 0.3.1 executable. No desired skill or expected result was supplied. Unlike routing probes, these turns continued past the first skill read.
+
+| Original prompt | Ordered initial skill reads | Observed result |
+| --- | --- | --- |
+| `Record the transactions in ./may-statement.pdf in my ledger.` | external `pdf`, then `beancount-import` | Three rows, zero duplicates; next-day assertion 2026-06-01 |
+| `Import my June statement PDF into my ledger — my bank has no CSV export.` | `beancount-import`, then external `pdf` | Three rows, zero duplicates; next-day assertion 2026-07-01 |
+
+Both turns extracted salary +2,000 USD, groceries −50 USD and gas −25 USD, ran real ledger checks/queries through published `bea`, and checked the Decimal tie-out 1,000 + 1,925 = 2,925 USD. Their final responses presented the proposed import, flagged categories for confirmation, and explicitly left saving pending consent and a writable session. Both ledger hashes remained `df59249f92b00463a8c07a1daed5032eace50c1e18644a61b43d213c7c7f45e4`; the PDF hashes also stayed unchanged. May initially queried a nonexistent `units` column and recovered to `position`; the failed attempt is retained in its trace.
+
+These are composition controls, not completed write journeys: both sessions were read-only, and no approval or write was tested. Both agents also traversed ancestor `AGENTS.md` files despite their fresh nested Git roots; May read an older eight-skill catalog in the original checkout. The first two skill reads occurred before those ancestor reads, so the helper/import ordering is directly observed, while the later proposal has that additional instruction-context limitation. The controls show that opening the generic PDF helper can lead into the customer ledger workflow; they do not erase the poorer first-open sample or satisfy the missing Claude comparison. No customer description or routing scoring rule was changed to force a pass.
+
+Raw JSONL, final responses, exact prompts and before/after ledger snapshots are retained under `scripts/skills/tmp/w6-m6-resume/composition-runtime/runs/{may,june}/`, alongside setup/status and the synthetic PDFs under `composition/`. Temporary package/runtime caches were removed after both turns completed. Together with the preserved routing artifacts, this supports the next client/adoption review without claiming a regression-free routing gate.

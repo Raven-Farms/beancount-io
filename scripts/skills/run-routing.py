@@ -159,8 +159,15 @@ def codex_event(event: dict, meta: dict) -> tuple[list[str] | None, str | None]:
         if opened:
             meta["evidence"] = item.get("command", "")[:300]
             return list(dict.fromkeys(opened)), None
+    if event.get("type") == "turn.completed":
+        meta.pop("reconnecting", None)
     if event.get("type") in ("turn.failed", "error"):
         message = event.get("message") or event.get("error", {}).get("message")
+        # Native Codex emits these error events while it is still retrying.
+        # Let it recover; a failed turn or the watchdog remains a failure.
+        if event.get("type") == "error" and re.match(r"^Reconnecting\.\.\. \d+/\d+ \(", str(message)):
+            meta["reconnecting"] = str(message)[:300]
+            return None, None
         return None, str(message)[:300]
     return None, None
 
@@ -206,8 +213,13 @@ def run_one(client: str, entry: dict, workspace: Path, model: str | None, timeou
                 process.wait(timeout=10)
             except subprocess.TimeoutExpired:
                 process.kill()
+                process.wait()
+        if process.stdout is not None:
+            process.stdout.close()
     if not opened and error is None and time.monotonic() - started >= timeout:
         error = f"timeout after {timeout:.0f}s"
+    if not opened and error is None:
+        error = meta.get("reconnecting")
     result = {
         "id": entry["id"],
         "client": client,

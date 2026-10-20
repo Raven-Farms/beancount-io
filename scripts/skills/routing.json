@@ -997,6 +997,55 @@
         "beancount-accruals"
       ],
       "why": "A single described entry; an accrual is never inferred from absence alone."
+    },
+    {
+      "id": "ask-variance-expenses-periods",
+      "prompt": "Compare my actual June expenses with May in the local ledger, and show which categories explain the difference.",
+      "expected": "beancount-ask",
+      "confusable": [
+        "beancount-roll-forward",
+        "beancount-close"
+      ],
+      "why": "A read-only expense variance question across periods, not one balance-sheet roll-forward or a close."
+    },
+    {
+      "id": "ask-variance-budget-actual",
+      "prompt": "I have my monthly budget here and a local Beancount ledger. Compare June actual spending with the budget and explain the category variances.",
+      "expected": "beancount-ask",
+      "confusable": [
+        "beancount-accruals",
+        "beancount-roll-forward"
+      ],
+      "why": "A read-only budget-to-actual analytical request, not preparation of accrual drafts."
+    },
+    {
+      "id": "add-ordinary-rent-payment-not-accrual",
+      "prompt": "I paid my landlord $1,200 rent from checking today. Record this payment in my local ledger.",
+      "expected": "beancount-add",
+      "confusable": [
+        "beancount-accruals",
+        "beancount-property"
+      ],
+      "why": "An ordinary one-off described rent payment, without property management or schedule-based accrual preparation."
+    },
+    {
+      "id": "ask-historical-balance-only",
+      "prompt": "What was the balance of my savings account on June 30 in this local ledger? I only need that date’s balance.",
+      "expected": "beancount-ask",
+      "confusable": [
+        "beancount-roll-forward",
+        "beancount-reconcile"
+      ],
+      "why": "A point-in-time historical balance lookup, without an explanation of movement or statement comparison."
+    },
+    {
+      "id": "ask-historical-balances-two-dates",
+      "prompt": "Show my checking account balances on May 31 and June 30 from my local ledger; no movement schedule needed.",
+      "expected": "beancount-ask",
+      "confusable": [
+        "beancount-roll-forward"
+      ],
+      "why": "Two point-in-time balances rather than an opening-to-closing movement explanation."
     }
   ]
 }

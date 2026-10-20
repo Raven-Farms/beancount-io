@@ -221,6 +221,35 @@ class TestRunOne(unittest.TestCase):
         self.assertLess(result["seconds"], 5)
         self.assertIsNone(routing.result_label(result, SUITE))
 
+    def test_reconnecting_client_can_recover_and_choose_a_skill(self):
+        event = codex_command("cat .agents/skills/beancount-ask/SKILL.md", frontmatter("beancount-ask"))
+        self.fake(
+            "codex",
+            f"""
+            import json
+            print(json.dumps({{"type": "error", "message": "Reconnecting... 2/5 (workspace routing discovery timed out)"}}), flush=True)
+            print({json.dumps(json.dumps(event))}, flush=True)
+            """,
+        )
+        entry = {"id": "ask", "prompt": "q", "expected": "beancount-ask"}
+        result = routing.run_one("codex", entry, self.workspace, None, timeout=10)
+        self.assertEqual((result["opened"], result["error"]), (["beancount-ask"], None))
+
+    def test_reconnect_requires_a_completed_turn_before_counting_none(self):
+        notice = {"type": "error", "message": "Reconnecting... 2/5 (request timed out)"}
+        for ending, expected_error in (
+            ({"type": "turn.completed"}, None),
+            ({"type": "turn.failed", "error": {"message": "connection lost"}}, "connection lost"),
+            (None, notice["message"]),
+        ):
+            with self.subTest(ending=ending):
+                events = [notice] + ([ending] if ending else [])
+                stream = "\n".join(f"print({json.dumps(json.dumps(event))}, flush=True)" for event in events)
+                self.fake("codex", stream)
+                entry = {"id": "q", "prompt": "q", "expected": "none"}
+                result = routing.run_one("codex", entry, self.workspace, None, timeout=10)
+                self.assertEqual((result["opened"], result["error"]), ([], expected_error))
+
     def test_a_session_that_ends_without_a_skill_chose_none(self):
         self.fake("claude", 'import json\nprint(json.dumps({"type": "result", "is_error": False}))\n')
         entry = {"id": "q", "prompt": "q", "expected": "none"}

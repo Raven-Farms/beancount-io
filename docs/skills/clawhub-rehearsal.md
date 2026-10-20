@@ -163,4 +163,46 @@ The eleven suite 0.3.3 uploads remain accepted submissions. Owner-authorized, re
 
 The official [prepublication workflow](https://github.com/openclaw/clawhub/actions/workflows/prepublication-publish-checks.yml) also has queued dispatch jobs ([example](https://github.com/openclaw/clawhub/actions/runs/39496089732)). That is consistent with a service backlog; it does not identify the exact queued job for either submission. Source inspection finds that the public attempt lookup is package-only and manual rescanning does not finalize skill publication, so neither a 404 there nor a standalone scan is a supported skill-publication retry. No manual rescan, duplicate submission, upstream message or protection change was made.
 
-The current thirteen bundles have local preparation evidence only. The original eleven await promotion of their accepted versions; the two additions and later changed content await the remaining client/adoption gates before a protected publication and real registry-install verification. Do not repeat the accepted uploads to clear their review wait.
+The current thirteen bundles have local preparation evidence only. At that check the original eleven awaited promotion of their accepted versions; the two additions and later changed content await the remaining client/adoption gates before a protected publication and real registry-install verification. Do not repeat the accepted uploads to clear their review wait.
+
+Comparing all 119 authored files in the current thirteen bundles with the exact accepted 0.3.3 bundle trees gives this next-release scope:
+
+| After the existing submissions are promoted and client gates clear | Skills |
+| --- | --- |
+| First release | accruals, roll-forward |
+| Changed content | add, ask, close, trade |
+| Byte-identical to the accepted submission; skip publication | import, importer-author, init, migrate, options, property, reconcile |
+
+Add and trade inherit the variance recipe through their bundled shared references. Rebuild and compare again on the eventual release commit; this list is preparation evidence, not a new publication receipt.
+
+An earlier read-only check of the signed-in owner UI confirmed add1.0.2 is present in Versions while 1.0.1 remains **Latest**. The public [security audit](https://clawhub.ai/puncsky/skills/beancount-add/security-audit) displays **Review** for version **1.0.1**, with scope/validation findings largely concerning shared reference content; it is not a report for the pending 1.0.2 update. Those findings are not treated as malicious behavior or instructions to remove the approved workflow. No owner publication-retry control was exposed in the inspected version/audit views. The temporary browser tab was closed; no account setting or publication state was changed.
+
+A second native Claude probe with the documented `sonnet` model alias also returns first-party HTTP 429 `usage_limit_reached` before inference, with zero tokens and the same weekly-limit message. No account setting, credential or payment change was attempted.
+
+Hosted validation of `1537bc6bd` also passes: [complete skills CI, including published-minimum recipes](https://github.com/bex-co/beancount-io/actions/runs/39503812580), [all thirteen ClawHub dry runs](https://github.com/bex-co/beancount-io/actions/runs/39503812711), [agent guidance](https://github.com/bex-co/beancount-io/actions/runs/39503812598) and [secret scanning](https://github.com/bex-co/beancount-io/actions/runs/39503812635). The push workflow correctly skips the protected publication job; no additional submission is implied by green validation.
+
+During the real routing comparison, the runner treated Codex's nonterminal `Reconnecting... 2/5 (...)` JSON error notice as a final failure and killed the client before recovery. The runner now waits for recovery while retaining terminal-failure, unfinished-reconnect and watchdog errors. Fake-client stream regressions fail against the old implementation and pass after the correction; scoring and customer descriptions are unchanged. Failed original observations are preserved separately from the affected-case reruns.
+
+
+The [thirteen-skill native routing comparison](routing-rehearsal.md#thirteen-skill-native-comparison--2026-10-20) is now recorded with the raw infrastructure failures, affected-case reruns and remaining misses. The ten new/boundary prompts pass 20/20 across two Codex cohorts. The same 103 original prompts score 198/206 before and 197/206 after; two PDF prompts have poorer first-open results. Two additional complete client turns demonstrate PDF-helper/import composition, correct 2,925 USD tie-outs and confirmation-pending proposals with unchanged ledgers. Both are read-only and encountered ancestor guidance, so they do not establish completed write journeys or clear the first-open/Claude adoption questions. The fixed runner passes 53 checker/routing unit tests; all 136 installer/recipe/journey tests also pass. The remaining external gates and publication sequencing above still apply.
+
+
+## Nine synchronization updates promoted — 2026-10-20, 22:19 UTC
+
+A fresh anonymous check finds nine accepted 0.3.3 updates publicly promoted, with every authored file matching the exact submitted bundles. The earlier owner-UI observation above predates this promotion.
+
+| Public and byte-verified | Registry version |
+| --- | --- |
+| add, import, init, migrate, reconcile | 1.0.2 |
+| ask, importer-author, property, trade | 1.0.1 |
+| close, options | Still 1.0.0; submitted 1.0.1 remains pending |
+
+Close/options each still contain the older dedup reference. Scratch evidence is `scripts/skills/tmp/w6-review-check/sync-public-state.json`. No resubmission, manual rescan or publication-state change was made. This is partial promotion of the accepted eleven-skill release, not publication of the thirteen-skill source suite.
+
+Fresh anonymous OpenClaw 2026.10.5 (`1b58cb9`) installs of all nine promoted versions succeed with explicit version pins. All 76 installed authored files match the exact 0.3.3 submitted bundles; the host's generated `_meta.json` and `.clawhub/origin.json` are recorded separately. OpenClaw reports **Safe** for import and **Review** for the other eight versions, but permits every installation under its default policy, without force or warning-acknowledgment flags. This install result is distinct from the public API's moderation fields and does not claim a clean audit.
+
+A final targeted public check at 22:26 UTC still finds close/options at 1.0.0. Their submitted 1.0.1 versions remain the publication prerequisite; evidence is `scripts/skills/tmp/w6-review-check/remaining-public-state.json`.
+
+Fresh Hermes v0.22.2 (`d923a5eb487a`, `skills-guard-v10`) installs of the eight supported promoted skills also succeed without force: add, ask, import, importer-author, migrate, property, reconcile and trade. Their 69 authored files all match the exact submitted bundles, and each community-policy scan reports SAFE. Hermes has no version-selection flag; its owner-qualified ClawHub adapter resolves public latest, and byte comparison verifies the accepted versions. New anonymous homes/configs are used for both hosts. These are install/scanner checks, not new authenticated agent-query journeys.
+
+The fresh Hermes init negative control exits 1 with DANGEROUS and the same 18 policy findings; no init folder is installed and no force is attempted. Raw host results, per-file hashes, pins and the summary are retained under `scripts/skills/tmp/w6-m6-resume/promotion-install/`. Restored vendor runtimes and anonymous profiles/caches are removed after collection; the actual installed bundle trees remain as evidence.
