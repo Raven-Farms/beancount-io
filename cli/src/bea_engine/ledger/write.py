@@ -1217,11 +1217,20 @@ def lock_file(file: Path, *, deciding: bool = False) -> Iterator[None]:
                 fd, made = _open_lock(path)
             except OSError as exc:
                 try:
-                    in_the_way = _not_a_lock_file(os.stat(path).st_mode)
+                    found: int | None = os.stat(path).st_mode
                 except OSError:
-                    in_the_way = None
+                    found = None
+                in_the_way = None if found is None else _not_a_lock_file(found)
                 if in_the_way is not None:
                     raise AuthError(_lock_obstructed(path, in_the_way)) from exc
+                if found is not None:
+                    # The lock file is there and will not open — mode 000, or
+                    # root's after a `sudo bea` — which the directory message
+                    # blamed on a directory that was fine (w5/820).
+                    raise AuthError(
+                        f"Cannot take the write lock: the lock file {path} cannot be opened "
+                        f"({exc.strerror or exc}). Remove it, then retry. Nothing was written."
+                    ) from exc
                 # The filesystem refusing, not a broken ledger: exit 3 like the staging
                 # refusal below, whether the cache is read-only or a file is in the way.
                 raise AuthError(

@@ -124,7 +124,9 @@ def _config_available(file: Path, notes: list[str]) -> tuple[Path, str] | None:
     record = _config_record(file, reading=True)
     if _is_record(record):
         try:
-            text = record.read_text()
+            # Bytes: invalid UTF-8 is a corrupt record, which `read_text`
+            # raised as a pathless codec error that blocked the import (w5/820).
+            text = record.read_bytes()
         except OSError as exc:
             # Unreadable is not corrupt: it may still name the importer this
             # ledger relies on, so it is not guessed past (w5/215). But it is
@@ -135,7 +137,7 @@ def _config_available(file: Path, notes: list[str]) -> tuple[Path, str] | None:
                 "--config FILE (a Python importer) or --csv auto (the header row)."
             ) from exc
         try:
-            remembered: Path | None = Path(json.loads(text)["config"])
+            remembered: Path | None = Path(json.loads(text.decode("utf-8"))["config"])
         except (ValueError, KeyError, TypeError, RecursionError):
             # Corrupt memory selects nothing, as a moved importer does: stale
             # local state must not block an import (w1/105, w5/592).
@@ -441,7 +443,7 @@ def _stored_sources(record: Path) -> list[dict[str, Any]]:
     """
     try:
         data = json.loads(record.read_text())
-    except (OSError, ValueError):
+    except (OSError, ValueError, RecursionError):
         return []
     sources = data.get("sources") if isinstance(data, dict) else None
     if not isinstance(sources, list):
