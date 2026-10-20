@@ -52,6 +52,7 @@
 - [885 — Refuse non-regular ingest configs before reading them in AST preflight](./885.md) — minor CLI unattended-hang follow-up to 582 and 851; reproduced 2026-10-20.
 - [886 — Merge per-file import sign changes under the memory lock](./886.md) — major CLI opposite-sign booking race after parallel previews; reproduced 2026-10-20.
 - [887 — Render control-bearing success paths inertly and keep init hints replayable](./887.md) — minor CLI human-output/path-hint finding; reproduced 2026-10-20.
+- [888 — Keep the funded-close guard when check_drained skips a same-day assertion](./888.md) — minor CLI close-policy gap after w2/092; reproduced 2026-10-20.
 
 The 27 findings from the MCP QA auth sweep against the hosted endpoint (023–054, less the five under [Dropped](#dropped)) were fixed in `backend-cluster/backend-v2` and closed on 2026-10-02 and 2026-10-03; each note under [`done/`](./done/) records what shipped and in which commit. None has been re-observed against the hosted endpoint yet — the fixes reach it with the next backend deploy.
 
