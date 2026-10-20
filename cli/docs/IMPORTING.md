@@ -539,8 +539,9 @@ skills deduplicate against each other: the ledger itself is the dedup database.
   than `id`. A same-day repeat that differs only in its description is still one
   transaction and is written once. The same holds across exports, where a
   monthly autopay arrives one month per file. A ledger entry under the row's
-  native ID dated a week or more from it is a possible duplicate naming that
-  date, never a silent skip. A re-import is matched to the entry under that ID
+  native ID with the same source amounts, dated a week or more from it, is a
+  possible duplicate naming that date, never a silent skip; at different
+  amounts it is the conflict above, on any date. A re-import is matched to the entry under that ID
   dated nearest the row. Payee, narration, date, flag, and counter-account edits to an entry already in the ledger do
   not change that identity (generated ids: see below). For a native ID, a date
   moved by less than a week still matches. The preview's `ID` column names each row's

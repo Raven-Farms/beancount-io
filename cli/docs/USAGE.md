@@ -1161,7 +1161,9 @@ created only when a validated write succeeds; its parent directory must already
 exist. Previews, rejected writes, and duplicate-only imports leave it absent.
 New destinations are private (`0600` on POSIX). When `--file` names an included file anyway, a
 write (`add`, `import`, `ask`) that has no `--into` finds the ledger that
-includes it in the same or the parent directory and runs through that root
+includes it — searching the file's directory and up to three above it (stopping
+at a `.git` directory), each with its immediate subdirectories, opening at most
+64 candidate `.bean`/`.beancount` files — and runs through that root
 with `--into` set to the file: the entry still lands in the named file, but it
 is validated and deduplicated against the whole ledger, and a note says so (in
 `warnings`, or `notes` for import, under `--json`). Such a write is the root's:
@@ -1207,7 +1209,10 @@ writable `--into` file.
 Payees, narrations, lot labels, string metadata, and the string fields of
 `note`, `event`, and `custom` are written on one line: runs of CR/LF line breaks become spaces
 in single adds, bulk JSON, and imports, so a pasted multi-line value can never
-write a directive that breaks the file. A sale's lot label is the exception:
+write a directive that breaks the file. That applies to a value given as its own
+field — a bulk `cost.label`, a `--payee`. A posting fragment is refused instead:
+a `--posting` argument or a bulk `amount` containing a line break (a lot label
+spelled inside `{…}` included) exits with an error naming it, writing nothing. A sale's lot label is the exception:
 it selects an existing lot, so it is matched — and written — exactly as
 typed. Every other control character —
 `ESC`, the rest of the C0 range including tab, `DEL`, and C1 — is replaced by
@@ -1540,7 +1545,10 @@ Omit `units`/`amount` for a balancing posting; it carries no `cost`, so a
 `cost` without `units`/`amount` rejects its row. Supplying both forms or unknown
 fields — at the transaction or posting level, or inside `units`, `cost`,
 `price` and `price_total` — is rejected, and so is an `amount` whose text
-carries a cost or price beside an explicit `cost`, `price` or `price_total`.
+carries a cost beside an explicit `cost`, or a price beside an explicit
+`price` or `price_total`. A cost in one place and a price in the other combine:
+`"amount": "1 HOOL {100 USD}"` with `"price"`, or `"amount": "1 HOOL @@ 110 USD"`
+with `"cost"`, writes both annotations.
 Schema errors show a human row number, field path,
 and example; `bea add transactions --help` contains a complete minimal batch.
 An account name Beancount cannot read (`expenses:food`, `Expenses:Food Court`)
