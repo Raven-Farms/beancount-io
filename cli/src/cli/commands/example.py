@@ -24,7 +24,7 @@ from cli.output import (
     require_writable_destination,
     utf8_stdout,
 )
-from cli.paths import expand_path
+from cli.paths import expand_path, refuse_too_long_name
 from cli.utils import atomic_write
 
 _FORCE = "--force"
@@ -139,6 +139,7 @@ def example(ctx: typer.Context) -> None:
         # A `$VAR` the loader would expand can never be read back: refuse
         # it before anything is written, as `init` does (w5/579, w5/794).
         context.refuse_expanding_ledger_path(str(output))
+        refuse_too_long_name(output, "--output")
     # A directory is never a file to overwrite: the conflict and its
     # `--force` advice led to a directory refusal that --force cannot pass;
     # it now gets that refusal straight away (w5/353).

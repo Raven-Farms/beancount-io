@@ -1,5 +1,6 @@
 """User-supplied filesystem paths, checked before a command uses them."""
 
+import errno
 import os
 import re
 from pathlib import Path
@@ -35,6 +36,21 @@ def held_descriptor(path: Path | str) -> int | None:
     except OSError:
         return None
     return number
+
+
+def refuse_too_long_name(path: Path | str, named: str) -> None:
+    """Refuse a path the filesystem will not look up because a name in it is too long.
+
+    Since Python 3.12 `Path.exists()` raises ENAMETOOLONG instead of answering
+    False, so a 256-byte name given to `-f`, `-o` or `--into` died on a raw
+    `[Errno 63] File name too long`, exit 1 (w5/817). `named` says which
+    flag, or which source, supplied it.
+    """
+    try:
+        os.lstat(path)
+    except OSError as exc:
+        if exc.errno == errno.ENAMETOOLONG:
+            raise UsageError(f"{named} {path} has a name too long for the filesystem; choose a shorter one.") from None
 
 
 def expand_path(path: Path, source: str) -> Path:

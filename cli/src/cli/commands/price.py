@@ -18,6 +18,7 @@ from cli.engine import launch
 from cli.errors import LedgerError, UsageError, refuse_json, refuse_misplaced_global
 from cli.native_command import ForwardingCommand
 from cli.native_help import native_options
+from cli.paths import refuse_too_long_name
 
 #: `price`'s own verbs; anything else is forwarded to bean-price.
 _VERBS = {
@@ -230,6 +231,7 @@ def _export(args: list[str]) -> None:
         # to read; refuse it before anything is written, as `init`
         # does (w5/579, w5/794).
         context.refuse_expanding_ledger_path(output_dir)
+        refuse_too_long_name(output_dir, output_flag)
     argv = ["price-export", "--file", str(file)]
     if output_dir is not None:
         argv += ["--output", output_dir]

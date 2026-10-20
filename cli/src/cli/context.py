@@ -18,7 +18,7 @@ from typing import Any
 
 from cli.config import DEFAULT_ENTRY_FILE
 from cli.errors import UsageError
-from cli.paths import expand_path, is_descriptor_path
+from cli.paths import expand_path, is_descriptor_path, refuse_too_long_name
 
 _TRUE = {"1", "true", "yes", "on"}
 
@@ -158,6 +158,7 @@ class RunContext:
                 f"Ledger path '{candidate}' (from {source}) is a file descriptor, not a file. "
                 "Point --file at the ledger file."
             )
+        refuse_too_long_name(candidate, f"Ledger path (from {source})")
         try:
             link = candidate.is_symlink()
             present = candidate.exists()

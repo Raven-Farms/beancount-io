@@ -75,6 +75,13 @@ def destination(root: Path, into: Path | None = None) -> Path:
     if into is None:
         return root.resolve()
     target = root.parent / expand_path(into, "--into")
+    try:
+        os.lstat(target)
+    except OSError as exc:
+        # `exists()` raises this one since Python 3.12, which reached the
+        # user as `OSError: [Errno 63] File name too long` (w5/817).
+        if exc.errno == errno.ENAMETOOLONG:
+            raise UsageError(f"--into {into} has a name too long for the filesystem; choose a shorter one.") from None
     nfc = target.with_name(unicodedata.normalize("NFC", target.name))
     if not (target.exists() or target.is_symlink()):
         target = nfc

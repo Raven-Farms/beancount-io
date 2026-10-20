@@ -29,7 +29,7 @@ from cli import context
 from cli.config import package_version
 from cli.errors import AuthError, BeaError, LedgerError, UsageError, to_bea_error
 from cli.include_glob import check_glob
-from cli.paths import expand_path
+from cli.paths import expand_path, refuse_too_long_name
 from cli.utils import atomic_write, inert_text, single_line
 
 
@@ -1018,6 +1018,7 @@ def guard_output_destination(
     force: bool = False,
 ) -> None:
     """`guard_forwarded_output` for a destination the caller already parsed."""
+    refuse_too_long_name(destination, "--output")
     for ledger in ledgers:
         refuse_ledger_alias(destination, ledger)
     if not refuse_existing_ledger_file or force:
@@ -1044,6 +1045,7 @@ def check_output_destination(destination: Path, flag: str = "--output") -> None:
     path the caller supplied — never a downstream errno or temp-file rename.
     Call this before any temp file is created or any stream is opened.
     """
+    refuse_too_long_name(destination, flag)
     if destination.exists() and destination.is_dir():
         raise UsageError(f"{flag} must be a file path, not a directory ({destination}).")
     if not destination.parent.exists():
