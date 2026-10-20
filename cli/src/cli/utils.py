@@ -17,6 +17,7 @@ import typer
 from typer._click.types import ParamType
 
 from cli.errors import AuthError, LedgerError, UsageError
+from cli.paths import is_descriptor_path
 
 #: The engine twin (`bea_engine.ledger.text.CONTROL_CHARACTERS`) carries the
 #: same pattern and the full reasoning; neither side may import the other.
@@ -347,6 +348,16 @@ def parse_opt_date(date_str: str | None) -> Date | None:
     return parse_date(date_str)
 
 
+def writes_through_descriptor(path: Path | str) -> bool:
+    """Whether an output path names one of this process's descriptors: `/dev/fd/N`, `/dev/stderr`, `>(…)`.
+
+    Only the process holding a descriptor can write it: a child opening the
+    same name finds it closed, or finds its own descriptor of that number —
+    the engine's reply pipe — and nothing can be staged beside it (w5/853).
+    """
+    return is_descriptor_path(path) or str(path) in ("/dev/stdout", "/dev/stderr")
+
+
 def atomic_write(path: Path, content: str, *, export: bool = False) -> None:
     """Replace atomically; exports preserve modes and follow destination links.
 
@@ -354,6 +365,11 @@ def atomic_write(path: Path, content: str, *, export: bool = False) -> None:
     the umask, avoiding any process-wide mask change while other threads run.
     """
     if export:
+        if writes_through_descriptor(path):
+            # `--json -o /dev/stderr` staged a copy in /dev/fd/ and failed (w5/853).
+            with path.open("w", encoding="utf-8") as stream:
+                stream.write(content)
+            return
         path = path.resolve()
     try:
         status = path.stat()

@@ -291,7 +291,9 @@ documented. `query -o` and `format -o` overwrite an ordinary existing export
 file by the usual CLI convention; only ledger files are protected there.
 A device or FIFO destination is written through rather than replaced, so
 `query -o /dev/null` discards the result, and `query -o /dev/stdout` (or
-`/dev/fd/1`) prints it as `-o -` does.
+`/dev/fd/1`) prints it as `-o -` does. Any other descriptor `bea` holds —
+`-o >(cmd)`, `-o /dev/fd/3` with `3>file`, `-o /dev/stderr` — receives the
+result too, under `--json` as well; a closed one is refused naming `--output`.
 
 ## Exit codes
 

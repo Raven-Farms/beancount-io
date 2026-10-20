@@ -67,6 +67,17 @@ def success(message: str | None = None) -> None:
 STDOUT_PATHS = frozenset({"-", "/dev/stdout", "/dev/fd/1", "/proc/self/fd/1"})
 
 
+def write_descriptor(path: str, text: str) -> None:
+    """Write a result to a descriptor this process holds, naming `--output` when that fails."""
+    from cli.errors import UsageError
+
+    try:
+        with open(path, "w", encoding="utf-8") as stream:
+            stream.write(text)
+    except OSError as exc:
+        raise UsageError(f"Cannot write --output {path}: {exc.strerror or exc}.") from exc
+
+
 def write_data(text: str) -> None:
     """Write ledger text or a query result to stdout as UTF-8, whatever the locale.
 
