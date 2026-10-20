@@ -49,6 +49,11 @@ option "operating_currency" "{{CURRENCY}}"
 {{TAIL}}
 ```
 
+Investor and property opens confirmed in the skill's Step 3b are appended to
+this template in the same style, at `{{OPEN_DATE}}`, before `{{TAIL}}` — for
+example `{{OPEN_DATE}} open Assets:Brokerage {{CURRENCY}},VTI "FIFO"` (the
+booking method quoted, omitted for the STRICT default).
+
 With an opening balance, `{{TAIL}}` is a transaction named `Opening balances`
 on `{{OPEN_DATE}}`, posting the exact supplied amount to `Assets:Checking`
 and its negative to `Equity:OpeningBalances`, in `{{CURRENCY}}`. Preserve

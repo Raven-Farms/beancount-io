@@ -1,12 +1,12 @@
 # w2 · m53 — Onboard an investor household, and prove it with a first-year journey
 
-**Worker:** worker2 **Goal:** a new user with brokerage, crypto, and property accounts starts a ledger that already has the right accounts and booking methods, then follows one documented first-year journey — income, investments, a home, year-end gains — across the skills m49-m52 complete. **Status:** todo
+**Worker:** worker2 **Goal:** a new user with brokerage, crypto, and property accounts starts a ledger that already has the right accounts and booking methods, then follows one documented first-year journey — income, investments, a home, year-end gains — across the skills m49-m52 complete. **Status:** todo (t001 done)
 
 ## Tasks (in order)
 
 | id   | title | est | depends_on |
 | ---- | ----- | --- | ---------- |
-| t001 | Add an investor account checklist and booking-method guidance to beancount-init | 60m | — |
+| [t001](./done/t001.md) | Add an investor account checklist and booking-method guidance to beancount-init — **DONE** | 60m | — |
 | t002 | Write the first-year investor journey guide | 75m | t001, w2/m49/t001, w2/m50/t001, w2/m51/t003, w2/m52/t001 |
 | t003 | Rehearse the first-year journey on both clients and write its verifier | 75m | t002 |
 | t004 | Adoption surface | 30m | t003 |

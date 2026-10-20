@@ -59,7 +59,11 @@ ask for confirmation before continuing.
 Check `bea` as `references/bea-cli.md` describes (installed, and at the
 suite's minimum version) and remember BEA (yes/no). Ask for the operating
 currency (default `USD`) and an optional checking opening balance; call the
-answers CURRENCY and OPENING (empty when none). Detect FAVA: yes when the
+answers CURRENCY and OPENING (empty when none). Also ask which of these the
+household has — brokerage or retirement investment accounts, crypto
+wallets/exchanges, a property (and mortgage) — and the name to use for each;
+call the answers HOUSEHOLD (empty when none). They only shape Step 3b's
+proposed opens; nothing is opened on the strength of this answer alone. Detect FAVA: yes when the
 user asked for Fava / `make start` / "bootstrap fava", otherwise ask once
 (default **no** when BEA is yes; default **yes** only when BEA is no and they
 still want a browser — otherwise they can install `bea` later).
@@ -91,13 +95,50 @@ OPENING is non-empty. Then bind `ledger` to the new root's absolute path and
 run the check recipe in `references/bea-cli.md`.
 
 `bea init .` writes `./main.bean`, so on this path the file is exactly what
-`bea init` produced and no template is written by hand. Skip to Step 4 when
-FAVA is yes; otherwise Step 5.
+`bea init` produced and no template is written by hand. Continue to Step 3b
+when HOUSEHOLD is non-empty, then Step 4 when FAVA is yes; otherwise Step 5.
 
 When BEA is no, use the fourteen-account template in
 `references/compatibility.md`, with the same currency, open date and optional
 opening balance. Validate through the explicit developer path there; report
 an unvalidated result if no checker is available.
+
+## Step 3b — Investor and property accounts (only when HOUSEHOLD is non-empty)
+
+The starter accounts cover everyday money only, so an investor's first trade
+would stall on missing accounts. Propose the opens for exactly what the user
+named in Step 1 — show every `open` line, get one yes for the set, then
+write them dated OPEN_DATE (the `open` recipe, with `--currency` repeated
+per allowed commodity and, for investment accounts, `--booking` as chosen
+below; on the no-`bea` path append the same lines to the template in its
+style). Suggested shape, names from the user:
+
+- Each brokerage/retirement account: `Assets:<Name>` with the operating
+  currency plus the symbols they actually hold, and — once, shared by all —
+  `Income:Dividends` and `Income:CapitalGains` (operating currency) so a
+  first dividend or sale has somewhere to land.
+- Each crypto wallet/exchange: `Assets:Crypto:<Name>` with its coins (plus
+  the operating currency on an exchange that holds cash).
+- A property: `Assets:Property:<Name>` with its one property commodity,
+  `Assets:Escrow:<Name>`, `Liabilities:Mortgage:<Name>` when there is a
+  loan, `Income:Rent:<Name>` for a rental (the model beancount-property
+  uses; it can also propose these at purchase time).
+
+For every investment account, explain the **booking method** before writing
+it — it decides which lot an unnamed sell reduces, and changing it later
+rewrites gain history, so this is the cheap moment to choose. In plain
+terms: `STRICT` (the default when none is written) makes every sell name
+its exact lot, or the write is refused as ambiguous; `STRICT_WITH_SIZE`
+also matches a sell that exactly empties one lot; `FIFO` sells the oldest
+lot first, `LIFO` the newest, `HIFO` the highest-cost; `NONE` books no
+gain at all. **Average cost is not supported by the engine** — if the user
+asks for it (some tax regimes require it), say so plainly and let them pick
+another method now rather than discover it at their first sell. Write only
+the method they choose (`STRICT` may be left unwritten, as the default).
+
+After the opens, run the check recipe again. Balances and holdings
+themselves are not seeded here: existing positions come in through
+beancount-import's opening-lots path, and new trades through beancount-trade.
 
 ## Step 4 — Optional Fava browser setup
 
@@ -164,6 +205,8 @@ Print:
 - When BEA validated: `bea check` passed.
 - When FAVA: the port and `make start` → `http://localhost:<PORT>`.
 - Next steps: record an entry (beancount-add), import a bank export
-  (beancount-import), or ask a question (beancount-ask).
+  (beancount-import), or ask a question (beancount-ask); when Step 3b ran,
+  also: seed existing holdings (beancount-import's opening lots) or record
+  a trade (beancount-trade).
 
 Keep the report tight — one short line per item.
