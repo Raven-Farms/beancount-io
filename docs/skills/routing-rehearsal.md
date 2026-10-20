@@ -233,3 +233,19 @@ added `trade-batch-paycheck-buys`, `import-exchange-activity`, and
 2026-10-20T00:36:44Z: Claude Code 2.1.289 routed 95/95 as labeled
 (trade 7/7, import 15/15). Codex has not run the new entries (usage
 limit until 2026-11-17); w2/m50/t005 reruns there.
+
+## `beancount-property` added — 2026-10-20
+
+The suite gained an eleventh skill (w2/m51) and five routing entries
+(`property-buy-house`, `property-mortgage-payment`,
+`property-sell-rental`, `property-rent-received`, and the tenant-rent
+near-miss `property-add-rent-payment` → add); 100 prompts in all. One
+run, 2026-10-20T01:17:50Z: Claude Code 2.1.289 routed 99/100 —
+`beancount-property` 4/4, the one miss an older entry,
+`none-sell-for-tax-benefit` → beancount-ask, which routed correctly
+in the previous full run and in 3/3 targeted reruns the same day, so
+it is recorded as run variance rather than settled either way. (When
+ask does open for that prompt shape its answer is figures-only with
+advice declined — w2/m49/t003's eval 13 — so the miss costs a route,
+not a wrong action.) Codex has not run the property entries (usage
+limit until 2026-11-17); w2/m51/t006 reruns there.
