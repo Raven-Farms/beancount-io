@@ -1,6 +1,6 @@
 {
   "skill_name": "beancount-migrate",
-  "notes": "Each eval runs in an empty scratch dir with the fixture export copied in as ./export.csv. Validate with `bea check` when bea is installed; oracle/CI uses `uv run --project cli bean-check` separately. Do not `pip install beancount` as the customer path. eval1-3 are per-source happy paths (Mint, Monarch, QBO); eval4-6 are failure-mode checks; eval7 checks the identities later bank imports depend on (docs/examples/migration); eval8 states a card balance without a sign, which must be negated (or confirmed) before the derived opening; eval9 exports a split purchase as one row per category, which must become one transaction with one id over the total (balance delta surfaced, unmapped category never guessed, no conversion before mapping confirm). Fixture arithmetic: eval1 Chase flows sum +1935.81 (opening 1000.00 -> stated 2935.81), Amex flows +370.76 in ledger sign (opening -500.00 -> stated -129.24); eval2 Checking +1945.80 (opening 500.00 -> 2445.80), Savings +501.25 (opening 1000.00 -> 1501.25); eval11 states a balance newer than the export's last row, which must ask for the gap (or assert at the as-of date) instead of deriving 966.90.",
+  "notes": "Each eval runs in an empty scratch dir with the fixture export copied in as ./export.csv. Validate with `bea check` when bea is installed; oracle/CI uses `uv run --project cli bean-check` separately. Do not `pip install beancount` as the customer path. eval1-3 are per-source happy paths (Mint, Monarch, QBO); eval4-6 are failure-mode checks; eval7 checks the identities later bank imports depend on (docs/examples/migration); eval8 states a card balance without a sign, which must be negated (or confirmed) before the derived opening; eval9 exports a split purchase as one row per category, which must become one transaction with one id over the total (balance delta surfaced, unmapped category never guessed, no conversion before mapping confirm). Fixture arithmetic: eval1 Chase flows sum +1935.81 (opening 1000.00 -> stated 2935.81), Amex flows +370.76 in ledger sign (opening -500.00 -> stated -129.24); eval2 Checking +1945.80 (opening 500.00 -> 2445.80), Savings +501.25 (opening 1000.00 -> 1501.25); eval11 states a balance newer than the export's last row, which must ask for the gap (or assert at the as-of date) instead of deriving 966.90; eval12 pairs a card payment across two days, which must merge on the earlier row so the 1/15 Amex assertion passes.",
   "evals": [
     {
       "id": 1,
@@ -172,6 +172,21 @@
         "The skill asks for the as-of date of the stated 3412.70 balance, or states that a current balance post-dates the 1/12 export end, before deriving an opening",
         "No 966.90 opening is derived from the post-export balance",
         "The skill asks for the gap rows (1/13 to the balance date) to convert first, or pins the endpoint assertion at the stated as-of date",
+        "Mapping tables are presented and confirmation is requested before any conversion"
+      ]
+    },
+    {
+      "id": 12,
+      "name": "lagged-transfer-merges-on-earlier-row",
+      "prompt": "Here's my Mint export ./export.csv — migrate it to beancount. Balances from the app: Amex card owes 113.75.",
+      "expected_output": "The 1/14 Amex credit and the 1/15 Chase debit pair (same amount, opposite directions, within 3 days) and merge into one transaction dated 2026-01-14, the earlier row: dating it 1/15 would strand the Amex endpoint assertion (day after Amex's last row, 1/14) before the posting. The Amex opening is -500.00 and the 2026-01-15 assertion of -113.75 USD passes with no residual and no missing-rows blame.",
+      "files": [
+        "evals/files/eval12_mint_lag.csv"
+      ],
+      "expectations": [
+        "The lagged pair merges into one transaction dated 2026-01-14, the earlier row, not 2026-01-15",
+        "The Amex endpoint assertion is dated 2026-01-15 for -113.75 USD and passes",
+        "No Equity:Migration-Residual is booked and no missing-rows cause is blamed",
         "Mapping tables are presented and confirmation is requested before any conversion"
       ]
     }

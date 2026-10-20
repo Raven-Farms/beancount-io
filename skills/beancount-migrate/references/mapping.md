@@ -30,7 +30,7 @@ Pair rows where: both mapped as transfers, **same absolute amount**, **opposite 
 
 Greedy match closest-date-first; a transfer row with no partner (the counterparty account wasn't exported, or timing crossed the export boundary) is **unpaired**: convert it against `Equity:Transfers-Review` and list it in the report — totals still tie, the user resolves it later. Never drop it, never pair it with a non-transfer row.
 
-Merged-pair transaction text: payee = the **outflow side's** description; keep the counterparty's raw description as narration when it differs meaningfully. Record one row's hash as `import-id` and the other's as `import-id-2` (see dedup.md) so either account's later import exact-matches its side.
+Merged-pair transaction text: payee = the **outflow side's** description; keep the counterparty's raw description as narration when it differs meaningfully. Date the merged transaction on the **earlier** of the two rows: each account's endpoint assertion sits the day after its last row, so a pair dated on the later row strands the other account's assertion before the posting — a card payment credited 2026-01-14 and debited 2026-01-15 merges on 2026-01-14, or the 2026-01-15 assertion on the credited account fails on a correct migration. Record one row's hash as `import-id` and the other's as `import-id-2` (see dedup.md) so either account's later import exact-matches its side.
 
 ## Opening balances and the endpoint assertion
 
@@ -59,7 +59,7 @@ opening = current − Σ rows        opening = -500.00
 2026-07-16 balance Assets:Bank:Checking   3412.55 USD
 ```
 
-A failing endpoint assertion is the migration's smoke detector — it means rows are missing from the export, pending transactions aren't in it, or the stated balance was wrong. Report the delta with those candidate causes. Only with the user's explicit acceptance, book the residual to `Equity:Migration-Residual` so the assertion passes *visibly* — never invisibly massage amounts.
+A failing endpoint assertion is the migration's smoke detector — it means rows are missing from the export, pending transactions aren't in it, or the stated balance was wrong. Report the delta with those candidate causes. Only with the user's explicit acceptance, open `Equity:Migration-Residual` and book the residual to it so the assertion passes *visibly* — never invisibly massage amounts.
 
 ## Split purchases
 
