@@ -627,4 +627,41 @@ export const bg: Translations = {
   profilePhotoFromGravatar: "Снимка от Gravatar",
   profileUpdated: "Профилът е обновен",
   multiplePostings: "Няколко реда",
+  createLedgerNext: "Напред",
+  createLedgerBack: "Назад",
+  createLedgerStep: "Стъпка {{step}} от {{total}}",
+  createLedgerStartPreset: "Предварителна настройка",
+  createLedgerCurrency: "Оперативна валута",
+  createLedgerHistoryStart: "Книгите започват на",
+  createLedgerOpeningAccount: "Начална сметка",
+  createLedgerOpeningAmount: "Начално салдо (по избор)",
+  createLedgerOpeningNone: "Реши по-късно",
+  createLedgerReview: "Преглед",
+  createLedgerReviewDescription:
+    "Точно това ще бъде създадено. Върнете се, за да промените нещо.",
+  createLedgerAccounts: "Сметки",
+  createLedgerAmountInvalid: "Въведете сума като 100 или -30.50",
+  createLedgerPresetPersonal: "Лична книга",
+  createLedgerPresetPersonalOutcome:
+    "Запишете покупка и разберете ефекта ѝ върху оставащите пари.",
+  createLedgerPresetFreelance: "Книга на свободна практика",
+  createLedgerPresetFreelanceOutcome:
+    "Запишете приходи от клиенти или вижте какво дължи неплатил клиент.",
+  createLedgerPresetBusiness: "Фирмена книга",
+  createLedgerPresetBusinessOutcome:
+    "Създайте начална позиция и разграничете финансиране от приходи.",
+  createLedgerPresetPortfolio: "Портфейлна книга",
+  createLedgerPresetPortfolioOutcome:
+    "Запишете покупка и проверете единици, записи за придобиване и движение на пари.",
+  createLedgerPresetRental: "Книга за наеми",
+  createLedgerPresetRentalOutcome:
+    "Запишете постъпления и разграничете наем от възвръщаем депозит.",
+  createLedgerPresetShared: "Книга за споделени разходи",
+  createLedgerPresetSharedOutcome: "Запишете аванс и вижте кой на кого дължи.",
+  createLedgerPresetCommunity: "Книга на общност",
+  createLedgerPresetCommunityOutcome:
+    "Обяснете вноски, проектни разходи и оставащи средства.",
+  createLedgerPresetBlank: "Празна книга",
+  createLedgerPresetBlankOutcome:
+    "Добавете избрана структура, без да премахвате нежелани категории.",
 };

@@ -637,4 +637,42 @@ export const es: Translations = {
   profilePhotoFromGravatar: "Foto de Gravatar",
   profileUpdated: "Perfil actualizado",
   multiplePostings: "Varios apuntes",
+  createLedgerNext: "Siguiente",
+  createLedgerBack: "Atrás",
+  createLedgerStep: "Paso {{step}} de {{total}}",
+  createLedgerStartPreset: "Preajuste",
+  createLedgerCurrency: "Moneda de operación",
+  createLedgerHistoryStart: "Los libros comienzan el",
+  createLedgerOpeningAccount: "Cuenta de apertura",
+  createLedgerOpeningAmount: "Saldo inicial (opcional)",
+  createLedgerOpeningNone: "Decidir más tarde",
+  createLedgerReview: "Revisar",
+  createLedgerReviewDescription:
+    "Esto es exactamente lo que se creará. Vuelva atrás para cambiar algo.",
+  createLedgerAccounts: "Cuentas",
+  createLedgerAmountInvalid: "Ingrese un monto como 100 o -30.50",
+  createLedgerPresetPersonal: "Libro personal",
+  createLedgerPresetPersonalOutcome:
+    "Registre una compra y entienda su efecto en el dinero restante.",
+  createLedgerPresetFreelance: "Libro de autónomo",
+  createLedgerPresetFreelanceOutcome:
+    "Registre ingresos de clientes o vea lo que un cliente impago aún debe.",
+  createLedgerPresetBusiness: "Libro de empresa",
+  createLedgerPresetBusinessOutcome:
+    "Establezca una posición inicial y distinga financiación de ingresos.",
+  createLedgerPresetPortfolio: "Libro de cartera",
+  createLedgerPresetPortfolioOutcome:
+    "Registre una compra y verifique unidades, registros de adquisición y movimiento de efectivo.",
+  createLedgerPresetRental: "Libro de alquiler",
+  createLedgerPresetRentalOutcome:
+    "Registre recibos y distinga el alquiler de un depósito reembolsable.",
+  createLedgerPresetShared: "Libro de gastos compartidos",
+  createLedgerPresetSharedOutcome:
+    "Registre un anticipo y vea quién debe a quién.",
+  createLedgerPresetCommunity: "Libro de comunidad",
+  createLedgerPresetCommunityOutcome:
+    "Explique contribuciones, gastos de proyectos y fondos restantes.",
+  createLedgerPresetBlank: "Libro en blanco",
+  createLedgerPresetBlankOutcome:
+    "Añada una estructura elegida sin eliminar categorías no deseadas.",
 };

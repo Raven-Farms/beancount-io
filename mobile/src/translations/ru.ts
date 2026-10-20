@@ -637,4 +637,42 @@ export const ru: Translations = {
   profilePhotoFromGravatar: "Фото из Gravatar",
   profileUpdated: "Профиль обновлён",
   multiplePostings: "Несколько проводок",
+  createLedgerNext: "Далее",
+  createLedgerBack: "Назад",
+  createLedgerStep: "Шаг {{step}} из {{total}}",
+  createLedgerStartPreset: "Шаблон",
+  createLedgerCurrency: "Операционная валюта",
+  createLedgerHistoryStart: "Книги начинаются с",
+  createLedgerOpeningAccount: "Счёт открытия",
+  createLedgerOpeningAmount: "Начальный остаток (необязательно)",
+  createLedgerOpeningNone: "Решить позже",
+  createLedgerReview: "Проверка",
+  createLedgerReviewDescription:
+    "Будет создано именно это. Вернитесь, чтобы что-то изменить.",
+  createLedgerAccounts: "Счета",
+  createLedgerAmountInvalid: "Введите сумму, например 100 или -30.50",
+  createLedgerPresetPersonal: "Личная книга",
+  createLedgerPresetPersonalOutcome:
+    "Запишите покупку и поймите её влияние на остаток денег.",
+  createLedgerPresetFreelance: "Книга фрилансера",
+  createLedgerPresetFreelanceOutcome:
+    "Запишите доход от клиентов или посмотрите, сколько должен неоплативший клиент.",
+  createLedgerPresetBusiness: "Книга бизнеса",
+  createLedgerPresetBusinessOutcome:
+    "Создайте начальную позицию и отличайте финансирование от выручки.",
+  createLedgerPresetPortfolio: "Портфельная книга",
+  createLedgerPresetPortfolioOutcome:
+    "Запишите покупку и проверьте единицы, записи о приобретении и движение денег.",
+  createLedgerPresetRental: "Книга аренды",
+  createLedgerPresetRentalOutcome:
+    "Запишите поступления и отличайте аренду от возвратного залога.",
+  createLedgerPresetShared: "Книга общих расходов",
+  createLedgerPresetSharedOutcome:
+    "Запишите аванс и посмотрите, кто кому должен.",
+  createLedgerPresetCommunity: "Книга сообщества",
+  createLedgerPresetCommunityOutcome:
+    "Объясните взносы, проектные расходы и оставшиеся средства.",
+  createLedgerPresetBlank: "Пустая книга",
+  createLedgerPresetBlankOutcome:
+    "Добавьте выбранную структуру, не удаляя ненужные категории.",
 };

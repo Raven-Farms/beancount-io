@@ -635,4 +635,42 @@ export const uk: Translations = {
   profilePhotoFromGravatar: "Фото з Gravatar",
   profileUpdated: "Профіль оновлено",
   multiplePostings: "Кілька проведень",
+  createLedgerNext: "Далі",
+  createLedgerBack: "Назад",
+  createLedgerStep: "Крок {{step}} з {{total}}",
+  createLedgerStartPreset: "Шаблон",
+  createLedgerCurrency: "Операційна валюта",
+  createLedgerHistoryStart: "Книги починаються з",
+  createLedgerOpeningAccount: "Рахунок відкриття",
+  createLedgerOpeningAmount: "Початковий залишок (необов’язково)",
+  createLedgerOpeningNone: "Вирішити пізніше",
+  createLedgerReview: "Перевірка",
+  createLedgerReviewDescription:
+    "Буде створено саме це. Поверніться, щоб щось змінити.",
+  createLedgerAccounts: "Рахунки",
+  createLedgerAmountInvalid: "Введіть суму, наприклад 100 або -30.50",
+  createLedgerPresetPersonal: "Особиста книга",
+  createLedgerPresetPersonalOutcome:
+    "Запишіть покупку та зрозумійте її вплив на залишок грошей.",
+  createLedgerPresetFreelance: "Книга фрилансера",
+  createLedgerPresetFreelanceOutcome:
+    "Запишіть дохід від клієнтів або подивіться, скільки винен неоплачений клієнт.",
+  createLedgerPresetBusiness: "Книга бізнесу",
+  createLedgerPresetBusinessOutcome:
+    "Створіть початкову позицію та відрізняйте фінансування від виручки.",
+  createLedgerPresetPortfolio: "Портфельна книга",
+  createLedgerPresetPortfolioOutcome:
+    "Запишіть покупку та перевірте одиниці, записи про придбання і рух грошей.",
+  createLedgerPresetRental: "Книга оренди",
+  createLedgerPresetRentalOutcome:
+    "Запишіть надходження та відрізняйте оренду від поверненої застави.",
+  createLedgerPresetShared: "Книга спільних витрат",
+  createLedgerPresetSharedOutcome:
+    "Запишіть аванс і подивіться, хто кому винен.",
+  createLedgerPresetCommunity: "Книга спільноти",
+  createLedgerPresetCommunityOutcome:
+    "Поясніть внески, проектні витрати та залишки коштів.",
+  createLedgerPresetBlank: "Порожня книга",
+  createLedgerPresetBlankOutcome:
+    "Додайте обрану структуру, не видаляючи непотрібні категорії.",
 };

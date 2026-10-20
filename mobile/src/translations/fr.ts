@@ -640,4 +640,42 @@ export const fr: Translations = {
   profilePhotoFromGravatar: "Photo depuis Gravatar",
   profileUpdated: "Profil mis à jour",
   multiplePostings: "Plusieurs écritures",
+  createLedgerNext: "Suivant",
+  createLedgerBack: "Retour",
+  createLedgerStep: "Étape {{step}} sur {{total}}",
+  createLedgerStartPreset: "Préréglage",
+  createLedgerCurrency: "Devise de fonctionnement",
+  createLedgerHistoryStart: "Les livres commencent le",
+  createLedgerOpeningAccount: "Compte d'ouverture",
+  createLedgerOpeningAmount: "Solde d'ouverture (facultatif)",
+  createLedgerOpeningNone: "Décider plus tard",
+  createLedgerReview: "Vérifier",
+  createLedgerReviewDescription:
+    "Voici exactement ce qui sera créé. Revenez en arrière pour modifier.",
+  createLedgerAccounts: "Comptes",
+  createLedgerAmountInvalid: "Saisissez un montant comme 100 ou -30.50",
+  createLedgerPresetPersonal: "Livre personnel",
+  createLedgerPresetPersonalOutcome:
+    "Enregistrez un achat et comprenez son effet sur l'argent restant.",
+  createLedgerPresetFreelance: "Livre de freelance",
+  createLedgerPresetFreelanceOutcome:
+    "Enregistrez des revenus clients ou voyez ce qu'un client impayé doit encore.",
+  createLedgerPresetBusiness: "Livre d'entreprise",
+  createLedgerPresetBusinessOutcome:
+    "Établissez une position d'ouverture et distinguez financement et revenu.",
+  createLedgerPresetPortfolio: "Livre de portefeuille",
+  createLedgerPresetPortfolioOutcome:
+    "Enregistrez un achat et vérifiez quantités, acquisitions et mouvements de trésorerie.",
+  createLedgerPresetRental: "Livre de location",
+  createLedgerPresetRentalOutcome:
+    "Enregistrez les reçus et distinguez le loyer d'un dépôt remboursable.",
+  createLedgerPresetShared: "Livre de dépenses partagées",
+  createLedgerPresetSharedOutcome:
+    "Enregistrez une avance et voyez qui doit à qui.",
+  createLedgerPresetCommunity: "Livre de communauté",
+  createLedgerPresetCommunityOutcome:
+    "Expliquez contributions, dépenses de projets et fonds restants.",
+  createLedgerPresetBlank: "Livre vierge",
+  createLedgerPresetBlankOutcome:
+    "Ajoutez une structure choisie sans supprimer de catégories indésirables.",
 };

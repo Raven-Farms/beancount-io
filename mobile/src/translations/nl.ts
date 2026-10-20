@@ -629,4 +629,42 @@ export const nl: Translations = {
   profilePhotoFromGravatar: "Foto van Gravatar",
   profileUpdated: "Profiel bijgewerkt",
   multiplePostings: "Meerdere boekingen",
+  createLedgerNext: "Volgende",
+  createLedgerBack: "Terug",
+  createLedgerStep: "Stap {{step}} van {{total}}",
+  createLedgerStartPreset: "Voorinstelling",
+  createLedgerCurrency: "Operationele valuta",
+  createLedgerHistoryStart: "Boeken beginnen op",
+  createLedgerOpeningAccount: "Openingsrekening",
+  createLedgerOpeningAmount: "Openingssaldo (optioneel)",
+  createLedgerOpeningNone: "Later beslissen",
+  createLedgerReview: "Controleren",
+  createLedgerReviewDescription:
+    "Dit is precies wat er wordt gemaakt. Ga terug om iets te wijzigen.",
+  createLedgerAccounts: "Rekeningen",
+  createLedgerAmountInvalid: "Voer een bedrag in zoals 100 of -30.50",
+  createLedgerPresetPersonal: "Persoonlijk grootboek",
+  createLedgerPresetPersonalOutcome:
+    "Leg een aankoop vast en begrijp het effect op uw resterende geld.",
+  createLedgerPresetFreelance: "Freelance grootboek",
+  createLedgerPresetFreelanceOutcome:
+    "Leg klantinkomsten vast of zie wat een onbetaalde klant nog schuldig is.",
+  createLedgerPresetBusiness: "Zakelijk grootboek",
+  createLedgerPresetBusinessOutcome:
+    "Bepaal een openingspositie en onderscheid financiering van omzet.",
+  createLedgerPresetPortfolio: "Portefeuille grootboek",
+  createLedgerPresetPortfolioOutcome:
+    "Leg een aankoop vast en controleer eenheden, aanschafgegevens en geldstroom.",
+  createLedgerPresetRental: "Verhuur grootboek",
+  createLedgerPresetRentalOutcome:
+    "Leg ontvangsten vast en onderscheid huur van een terugbetaalbare borg.",
+  createLedgerPresetShared: "Grootboek voor gedeelde uitgaven",
+  createLedgerPresetSharedOutcome:
+    "Leg een voorschot vast en zie wie aan wie schuldig is.",
+  createLedgerPresetCommunity: "Gemeenschaps grootboek",
+  createLedgerPresetCommunityOutcome:
+    "Verklaar bijdragen, projectuitgaven en resterende fondsen.",
+  createLedgerPresetBlank: "Leeg grootboek",
+  createLedgerPresetBlankOutcome:
+    "Voeg een gekozen structuur toe zonder ongewenste categorieën te verwijderen.",
 };

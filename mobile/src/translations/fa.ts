@@ -618,4 +618,42 @@ export const fa: Translations = {
   profilePhotoFromGravatar: "عکس از Gravatar",
   profileUpdated: "نمایه به‌روزرسانی شد",
   multiplePostings: "چند ثبت",
+  createLedgerNext: "بعدی",
+  createLedgerBack: "بازگشت",
+  createLedgerStep: "گام {{step}} از {{total}}",
+  createLedgerStartPreset: "پیش‌تنظیم",
+  createLedgerCurrency: "ارز عملیاتی",
+  createLedgerHistoryStart: "دفاتر از تاریخ",
+  createLedgerOpeningAccount: "حساب افتتاحیه",
+  createLedgerOpeningAmount: "موجودی افتتاحیه (اختیاری)",
+  createLedgerOpeningNone: "تصمیم‌گیری در آینده",
+  createLedgerReview: "بازبینی",
+  createLedgerReviewDescription:
+    "دقیقاً همین ایجاد خواهد شد. برای تغییر به عقب برگردید.",
+  createLedgerAccounts: "حساب‌ها",
+  createLedgerAmountInvalid: "مبلغی مانند 100 یا -30.50 وارد کنید",
+  createLedgerPresetPersonal: "دفتر شخصی",
+  createLedgerPresetPersonalOutcome:
+    "خریدی ثبت کنید و اثرش بر پول باقی‌مانده را ببینید.",
+  createLedgerPresetFreelance: "دفتر فریلنسری",
+  createLedgerPresetFreelanceOutcome:
+    "درآمد مشتری ثبت کنید یا ببینید مشتری پرداخت‌نکرده چقدر بدهکار است.",
+  createLedgerPresetBusiness: "دفتر کسب‌وکار",
+  createLedgerPresetBusinessOutcome:
+    "موضع افتتاحیه بسازید و تأمین مالی را از درآمد جدا کنید.",
+  createLedgerPresetPortfolio: "دفتر پورتفولیو",
+  createLedgerPresetPortfolioOutcome:
+    "خریدی ثبت کنید و واحدها، سوابق تحصیل و حرکت پول را بررسی کنید.",
+  createLedgerPresetRental: "دفتر اجاره",
+  createLedgerPresetRentalOutcome:
+    "رسیدها را ثبت کنید و اجاره را از ودیعه قابل استرداد جدا کنید.",
+  createLedgerPresetShared: "دفتر هزینه‌های مشترک",
+  createLedgerPresetSharedOutcome:
+    "پیش‌پرداختی ثبت کنید و ببینید چه کسی به چه کسی بدهکار است.",
+  createLedgerPresetCommunity: "دفتر جامعه",
+  createLedgerPresetCommunityOutcome:
+    "مشارکت‌ها، هزینه‌های پروژه و وجوه باقی‌مانده را توضیح دهید.",
+  createLedgerPresetBlank: "دفتر خالی",
+  createLedgerPresetBlankOutcome:
+    "ساختار دلخواه بیفزایید بدون حذف دسته‌های ناخواسته.",
 };

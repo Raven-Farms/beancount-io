@@ -7,11 +7,8 @@ export type Scalars = {
   Boolean: { input: boolean; output: boolean; }
   Int: { input: number; output: number; }
   Float: { input: number; output: number; }
-  /** A date-time string at UTC, such as 2007-12-03T10:15:30Z, compliant with the `date-time` format outlined in section 5.6 of the RFC 3339 profile of the ISO 8601 standard for representation of dates and times using the Gregorian calendar.This scalar is serialized to a string in ISO 8601 format and parsed from a string in ISO 8601 format. */
   DateTimeISO: { input: unknown; output: unknown; }
-  /** The `JSON` scalar type represents JSON values as specified by [ECMA-404](http://www.ecma-international.org/publications/files/ECMA-ST/ECMA-404.pdf). */
   JSON: { input: unknown; output: unknown; }
-  /** The `JSONObject` scalar type represents JSON objects as specified by [ECMA-404](http://www.ecma-international.org/publications/files/ECMA-ST/ECMA-404.pdf). */
   JSONObject: { input: Record<string, number | string>; output: Record<string, number | string>; }
 };
 
@@ -190,6 +187,15 @@ export enum BudgetInterval {
   Quarterly = 'QUARTERLY',
   Weekly = 'WEEKLY',
   Yearly = 'YEARLY'
+}
+
+/** Why a subscriber cancels, when they say. */
+export enum CancellationReason {
+  MissingFeatures = 'MISSING_FEATURES',
+  Other = 'OTHER',
+  SwitchedService = 'SWITCHED_SERVICE',
+  TooExpensive = 'TOO_EXPENSIVE',
+  Unused = 'UNUSED'
 }
 
 export type CategorySuggestion = {
@@ -877,6 +883,13 @@ export type LedgerOpenInput = {
   date: Scalars['String']['input'];
 };
 
+/** Whether an account's opening balance is unknown, zero, or known */
+export enum LedgerOpeningState {
+  Known = 'KNOWN',
+  Unknown = 'UNKNOWN',
+  Zero = 'ZERO'
+}
+
 export type LedgerOptions = {
   __typename?: 'LedgerOptions';
   accountCurrentConversions: Scalars['String']['output'];
@@ -918,6 +931,45 @@ export type LedgerPriceInput = {
   amount: LedgerAmountInput;
   currency: Scalars['String']['input'];
   date: Scalars['String']['input'];
+};
+
+export type LedgerSetupAccountInput = {
+  /** Decimal amount; required when openingState is KNOWN. */
+  amount?: InputMaybe<Scalars['String']['input']>;
+  currency?: InputMaybe<Scalars['String']['input']>;
+  name: Scalars['String']['input'];
+  openingState?: InputMaybe<LedgerOpeningState>;
+};
+
+export type LedgerSetupInput = {
+  accounts?: InputMaybe<Array<LedgerSetupAccountInput>>;
+  /** Per optional question: enabled, declined, or deferred, keyed by question id. */
+  capabilities?: InputMaybe<Scalars['JSONObject']['input']>;
+  historyStart?: InputMaybe<Scalars['String']['input']>;
+  operatingCurrency?: InputMaybe<Scalars['String']['input']>;
+  preset: LedgerSetupPreset;
+  title?: InputMaybe<Scalars['String']['input']>;
+};
+
+/** Versioned starter preset from the setup catalog (ADR021) */
+export enum LedgerSetupPreset {
+  Blank = 'BLANK',
+  Business = 'BUSINESS',
+  Community = 'COMMUNITY',
+  Freelance = 'FREELANCE',
+  Personal = 'PERSONAL',
+  Portfolio = 'PORTFOLIO',
+  Rental = 'RENTAL',
+  SharedExpenses = 'SHARED_EXPENSES'
+}
+
+export type LedgerSetupPreview = {
+  __typename?: 'LedgerSetupPreview';
+  accounts: Array<Scalars['String']['output']>;
+  files: Scalars['JSONObject']['output'];
+  historyStart: Scalars['String']['output'];
+  operatingCurrency: Scalars['String']['output'];
+  preset: Scalars['String']['output'];
 };
 
 /** Template used to populate a newly created ledger */
@@ -986,8 +1038,12 @@ export type Mutation = {
   approvePullRequest: PullRequestResult;
   /** Add one or more entries to a specific ledger (atomic) */
   bulkEntries: AddLedgerEntryResponse;
+  /** Cancels the plan change scheduled for the end of the paid period; the current plan continues unchanged. Requires a full signed-in session. */
+  cancelScheduledPlanChange: SubscriptionActionResult;
   /** Schedules your subscription to cancel. Requires a full signed-in session. */
   cancelSubscription: SubscriptionActionResult;
+  /** Applies an upgrade or a switch to yearly at the previewed proration time, and schedules a downgrade or a switch to monthly for the end of the paid period. Requires a full signed-in session. */
+  changePlan: PlanChangeResult;
   /** Authorize the pending CLI session a user code names. Issues a JWT for the CLI and stores it for the matching device code to collect. */
   confirmCliAuthSession: ConfirmCliAuthSessionResponse;
   /** Retrieve and consume the token from an authorized CLI auth session. Single-use, and only redeemable by the device code the session was created with. */
@@ -1054,6 +1110,8 @@ export type Mutation = {
   rejectPullRequest: PullRequestResult;
   /** Rename a file in a specific ledger */
   renameLedgerFile: RenameLedgerFileResponse;
+  /** Request an email ownership code to continue password sign-in */
+  requestSignInRecovery: RequestSignInRecoveryResponse;
   /** Reset user password using a token from the password reset email */
   resetPassword: ResetPasswordResponse;
   /** Resumes your subscription. Requires a full signed-in session. */
@@ -1063,6 +1121,8 @@ export type Mutation = {
   /** Send a password reset link to the user's email */
   sendForgotPasswordLink: SendForgotPasswordLinkResponse;
   signIn: TokenAuthResponse;
+  /** Sign in with a one-use email ownership code and the correct password */
+  signInWithEmailCode: TokenAuthResponse;
   signInWithOneTimeToken: TokenAuthResponse;
   /** Start signup by creating an OTP session. Sends a verification code to the user's email. */
   signUp: SignUpResponse;
@@ -1134,9 +1194,22 @@ export type MutationBulkEntriesArgs = {
 };
 
 
+export type MutationCancelScheduledPlanChangeArgs = {
+  clientId: Scalars['String']['input'];
+};
+
+
 export type MutationCancelSubscriptionArgs = {
   clientId: Scalars['String']['input'];
+  reason?: InputMaybe<CancellationReason>;
   subscriptionId: Scalars['String']['input'];
+};
+
+
+export type MutationChangePlanArgs = {
+  clientId: Scalars['String']['input'];
+  priceId: Scalars['String']['input'];
+  prorationDate?: InputMaybe<Scalars['Int']['input']>;
 };
 
 
@@ -1164,6 +1237,8 @@ export type MutationCreateLedgerArgs = {
   description?: InputMaybe<Scalars['String']['input']>;
   name: Scalars['String']['input'];
   private?: InputMaybe<Scalars['Boolean']['input']>;
+  requestId?: InputMaybe<Scalars['String']['input']>;
+  setup?: InputMaybe<LedgerSetupInput>;
   template?: InputMaybe<LedgerTemplate>;
 };
 
@@ -1332,6 +1407,12 @@ export type MutationRenameLedgerFileArgs = {
 };
 
 
+export type MutationRequestSignInRecoveryArgs = {
+  email: Scalars['String']['input'];
+  returnTo?: InputMaybe<Scalars['String']['input']>;
+};
+
+
 export type MutationResetPasswordArgs = {
   newPassword: Scalars['String']['input'];
   token: Scalars['String']['input'];
@@ -1355,6 +1436,14 @@ export type MutationSendForgotPasswordLinkArgs = {
 
 
 export type MutationSignInArgs = {
+  email: Scalars['String']['input'];
+  password: Scalars['String']['input'];
+};
+
+
+export type MutationSignInWithEmailCodeArgs = {
+  challengeId: Scalars['String']['input'];
+  code: Scalars['String']['input'];
   email: Scalars['String']['input'];
   password: Scalars['String']['input'];
 };
@@ -1510,6 +1599,12 @@ export type ParsedRow = {
   payee: Scalars['String']['output'];
 };
 
+export type PaymentMethodSummary = {
+  __typename?: 'PaymentMethodSummary';
+  brand: Scalars['String']['output'];
+  last4: Scalars['String']['output'];
+};
+
 export type Permission = {
   __typename?: 'Permission';
   admin: Scalars['Boolean']['output'];
@@ -1660,6 +1755,90 @@ export type PlaintextJournalResponse = {
   content: Scalars['String']['output'];
 };
 
+export enum PlanChangeEffect {
+  Checkout = 'CHECKOUT',
+  Immediate = 'IMMEDIATE',
+  Scheduled = 'SCHEDULED'
+}
+
+export enum PlanChangeKind {
+  Downgrade = 'DOWNGRADE',
+  New = 'NEW',
+  Split = 'SPLIT',
+  ToMonthly = 'TO_MONTHLY',
+  ToYearly = 'TO_YEARLY',
+  Upgrade = 'UPGRADE'
+}
+
+/** What choosing a price would do, before anything changes. Amounts are in the currency's minor unit (cents). */
+export type PlanChangePreview = {
+  __typename?: 'PlanChangePreview';
+  /** For SPLIT: the higher tier on the current billing cycle, applied now. */
+  alternativePriceId?: Maybe<Scalars['String']['output']>;
+  amountDueToday: Scalars['Int']['output'];
+  creditApplied: Scalars['Int']['output'];
+  currency: Scalars['String']['output'];
+  currentPriceId?: Maybe<Scalars['String']['output']>;
+  effect?: Maybe<PlanChangeEffect>;
+  effectiveAt?: Maybe<Scalars['DateTimeISO']['output']>;
+  kind?: Maybe<PlanChangeKind>;
+  limitChanges: Array<PlanLimitChange>;
+  nextAmount: Scalars['Int']['output'];
+  nextChargeAt?: Maybe<Scalars['DateTimeISO']['output']>;
+  paymentMethod?: Maybe<PaymentMethodSummary>;
+  /** Unix seconds. Pass it to changePlan so the charge matches this preview. */
+  prorationDate?: Maybe<Scalars['Int']['output']>;
+  refusal?: Maybe<PlanChangeRefusal>;
+  /** The scheduled change this choice would replace. */
+  replacesScheduledChange?: Maybe<ScheduledPlanChange>;
+  targetPriceId: Scalars['String']['output'];
+  /** Whether this choice withdraws a pending cancellation. */
+  withdrawsCancellation: Scalars['Boolean']['output'];
+};
+
+export enum PlanChangeRefusal {
+  CurrentPlan = 'CURRENT_PLAN',
+  MultipleSubscriptions = 'MULTIPLE_SUBSCRIPTIONS',
+  NoSubscription = 'NO_SUBSCRIPTION',
+  PastDue = 'PAST_DUE',
+  SameTierAndCycle = 'SAME_TIER_AND_CYCLE',
+  ScheduledChange = 'SCHEDULED_CHANGE'
+}
+
+export type PlanChangeResult = {
+  __typename?: 'PlanChangeResult';
+  /** With REQUIRES_ACTION: confirm the payment with Stripe.js. */
+  clientSecret?: Maybe<Scalars['String']['output']>;
+  currentPeriodEnd?: Maybe<Scalars['DateTimeISO']['output']>;
+  /** With SCHEDULED: when the new price takes over. Nothing is charged until then. */
+  effectiveAt?: Maybe<Scalars['DateTimeISO']['output']>;
+  /** Stripe's hosted page to pay or authenticate this change's invoice. */
+  hostedInvoiceUrl?: Maybe<Scalars['String']['output']>;
+  kind?: Maybe<PlanChangeKind>;
+  message?: Maybe<Scalars['String']['output']>;
+  newTier?: Maybe<Scalars['String']['output']>;
+  refusal?: Maybe<PlanChangeRefusal>;
+  status: PlanChangeStatus;
+  subscriptionId?: Maybe<Scalars['String']['output']>;
+};
+
+export enum PlanChangeStatus {
+  Active = 'ACTIVE',
+  Failed = 'FAILED',
+  Refused = 'REFUSED',
+  RequiresAction = 'REQUIRES_ACTION',
+  Scheduled = 'SCHEDULED'
+}
+
+export type PlanLimitChange = {
+  __typename?: 'PlanLimitChange';
+  /** -1 means unlimited. */
+  from: Scalars['Int']['output'];
+  limit: Scalars['String']['output'];
+  /** -1 means unlimited. */
+  to: Scalars['Int']['output'];
+};
+
 export type Posting = {
   __typename?: 'Posting';
   account: Scalars['String']['output'];
@@ -1778,7 +1957,7 @@ export type Query = {
   getLedgerAssetDownloadUrl: LedgerAssetDownloadUrlResult;
   /** Get the filter options of a specific ledger */
   getLedgerAttributes: LedgerAttributes;
-  /** Get the balance sheet of a specific ledger */
+  /** Get the balance sheet of a specific ledger, including report-only current earnings in equity and its interval series under the configured account names */
   getLedgerBalanceSheet: BalanceSheetData;
   getLedgerCollaboratorPermission: LedgerCollaborator;
   /** Get the commodities of a specific ledger */
@@ -1809,15 +1988,17 @@ export type Query = {
   getLedgerLinks: Array<Scalars['String']['output']>;
   /** Status of every managed price include the ledger names: feed pair and source, serving revision, observed/fetched/next-refresh times, freshness and the last refresh error. Empty when the ledger has none. */
   getLedgerManagedPrices: Array<ManagedPriceSource>;
-  /** Get the transactions for a narration */
-  getLedgerNarrationTransactions: Transaction;
+  /** Get the most recent transaction for a narration, or null when none matches */
+  getLedgerNarrationTransactions?: Maybe<Transaction>;
   getLedgerNarrations: Array<Scalars['String']['output']>;
+  /** Get the effective beancount options of a ledger: title, account-root names, conversion and earnings accounts, comma rendering, and operating currencies */
+  getLedgerOptions: LedgerOptions;
   /** Get the overview of a specific ledger */
   getLedgerOverview: LedgerOverview;
   /** Get the accounts for a payee */
   getLedgerPayeeAccounts: Array<Scalars['String']['output']>;
-  /** Get the transactions for a payee */
-  getLedgerPayeeTransactions: Transaction;
+  /** Get the most recent transaction for a payee, or null when none matches */
+  getLedgerPayeeTransactions?: Maybe<Transaction>;
   /** Get the payees of a specific ledger */
   getLedgerPayees: Array<Scalars['String']['output']>;
   /** Get plaintext journal in beancount format */
@@ -1871,6 +2052,10 @@ export type Query = {
   listPublicKeys: Array<PublicKey>;
   /** List all user owned ledgers for the current user */
   listUserOwnedLedgers: Array<Ledger>;
+  /** Preview a ledger setup (ADR021) without creating anything: the files, account list, and validation result the specification would produce. */
+  previewLedgerSetup: LedgerSetupPreview;
+  /** Previews switching your plan to a price: the kind of change, when it takes effect, and what is charged today. Requires a full signed-in session. */
+  previewPlanChange: PlanChangePreview;
   /** Execute a shell query on a ledger */
   queryShell?: Maybe<QueryResult>;
   /** Execute a shell query on a ledger and return plain text output */
@@ -2116,6 +2301,11 @@ export type QueryGetLedgerNarrationsArgs = {
 };
 
 
+export type QueryGetLedgerOptionsArgs = {
+  ledgerId: Scalars['String']['input'];
+};
+
+
 export type QueryGetLedgerOverviewArgs = {
   account?: InputMaybe<Scalars['String']['input']>;
   conversion?: Scalars['String']['input'];
@@ -2321,6 +2511,17 @@ export type QueryListUserOwnedLedgersArgs = {
 };
 
 
+export type QueryPreviewLedgerSetupArgs = {
+  setup: LedgerSetupInput;
+};
+
+
+export type QueryPreviewPlanChangeArgs = {
+  clientId: Scalars['String']['input'];
+  priceId: Scalars['String']['input'];
+};
+
+
 export type QueryQueryShellArgs = {
   ledgerId: Scalars['String']['input'];
   query: Scalars['String']['input'];
@@ -2460,14 +2661,27 @@ export type RepositoryListResponse = {
   total: Scalars['Float']['output'];
 };
 
+export type RequestSignInRecoveryResponse = {
+  __typename?: 'RequestSignInRecoveryResponse';
+  success: Scalars['Boolean']['output'];
+};
+
 export type ResetPasswordResponse = {
   __typename?: 'ResetPasswordResponse';
   success: Scalars['Boolean']['output'];
 };
 
+/** A plan change that takes effect at the end of the paid period. Nothing is charged until then. */
+export type ScheduledPlanChange = {
+  __typename?: 'ScheduledPlanChange';
+  effectiveAt: Scalars['DateTimeISO']['output'];
+  priceId: Scalars['String']['output'];
+};
+
 export type SearchUser = {
   __typename?: 'SearchUser';
-  email: Scalars['String']['output'];
+  /** The match's email, returned only when the keyword was that email */
+  email?: Maybe<Scalars['String']['output']>;
   username: Scalars['String']['output'];
 };
 
@@ -2510,6 +2724,12 @@ export type Subscription = {
   currentPeriodStart: Scalars['DateTimeISO']['output'];
   id: Scalars['ID']['output'];
   items: Array<SubscriptionItem>;
+  /** With past_due: when Stripe next retries the failed renewal. The plan is kept until it stops retrying. */
+  nextPaymentAttempt?: Maybe<Scalars['DateTimeISO']['output']>;
+  /** The card renewals and plan changes charge, when known. */
+  paymentMethod?: Maybe<PaymentMethodSummary>;
+  /** The change scheduled for the end of the paid period; cancelScheduledPlanChange undoes it. */
+  scheduledChange?: Maybe<ScheduledPlanChange>;
   status: Scalars['String']['output'];
 };
 
@@ -2690,7 +2910,6 @@ export type UserProfile = {
 
 export type UserProfileResponse = {
   __typename?: 'UserProfileResponse';
-  /** Uploaded avatar, falling back to the email's Gravatar */
   avatarUrl?: Maybe<Scalars['String']['output']>;
   email: Scalars['String']['output'];
   emailReportStatus?: Maybe<ReportStatus>;

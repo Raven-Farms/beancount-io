@@ -74,6 +74,8 @@ export type CreateLedgerMutationVariables = Exact<{
   private?: boolean | null | undefined;
   description?: string | null | undefined;
   template?: Types.LedgerTemplate | null | undefined;
+  setup?: Types.LedgerSetupInput | null | undefined;
+  requestId?: string | null | undefined;
 }>;
 
 
@@ -377,6 +379,13 @@ export type ParseReceiptMutationVariables = Exact<{
 
 
 export type ParseReceiptMutation = { parseReceipt: { date: string | null, payee: string, description: string, amount: number, sourceAccount: string | null, targetAccount: string | null } };
+
+export type PreviewLedgerSetupQueryVariables = Exact<{
+  setup: Types.LedgerSetupInput;
+}>;
+
+
+export type PreviewLedgerSetupQuery = { previewLedgerSetup: { preset: string, operatingCurrency: string, historyStart: string, accounts: Array<string>, files: Record<string, number | string> } };
 
 export type QueryShellQueryVariables = Exact<{
   ledgerId: string;
@@ -803,12 +812,14 @@ export type CancelSubscriptionMutationHookResult = ReturnType<typeof useCancelSu
 export type CancelSubscriptionMutationResult = Apollo.MutationResult<CancelSubscriptionMutation>;
 export type CancelSubscriptionMutationOptions = Apollo.BaseMutationOptions<CancelSubscriptionMutation, CancelSubscriptionMutationVariables>;
 export const CreateLedgerDocument = gql`
-    mutation CreateLedger($name: String!, $private: Boolean, $description: String, $template: LedgerTemplate) {
+    mutation CreateLedger($name: String!, $private: Boolean, $description: String, $template: LedgerTemplate, $setup: LedgerSetupInput, $requestId: String) {
   createLedger(
     name: $name
     private: $private
     description: $description
     template: $template
+    setup: $setup
+    requestId: $requestId
   ) {
     id
     name
@@ -845,6 +856,8 @@ export type CreateLedgerMutationFn = Apollo.MutationFunction<CreateLedgerMutatio
  *      private: // value for 'private'
  *      description: // value for 'description'
  *      template: // value for 'template'
+ *      setup: // value for 'setup'
+ *      requestId: // value for 'requestId'
  *   },
  * });
  */
@@ -2562,6 +2575,53 @@ export function useParseReceiptMutation(baseOptions?: Apollo.MutationHookOptions
 export type ParseReceiptMutationHookResult = ReturnType<typeof useParseReceiptMutation>;
 export type ParseReceiptMutationResult = Apollo.MutationResult<ParseReceiptMutation>;
 export type ParseReceiptMutationOptions = Apollo.BaseMutationOptions<ParseReceiptMutation, ParseReceiptMutationVariables>;
+export const PreviewLedgerSetupDocument = gql`
+    query PreviewLedgerSetup($setup: LedgerSetupInput!) {
+  previewLedgerSetup(setup: $setup) {
+    preset
+    operatingCurrency
+    historyStart
+    accounts
+    files
+  }
+}
+    `;
+
+/**
+ * __usePreviewLedgerSetupQuery__
+ *
+ * To run a query within a React component, call `usePreviewLedgerSetupQuery` and pass it any options that fit your needs.
+ * When your component renders, `usePreviewLedgerSetupQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = usePreviewLedgerSetupQuery({
+ *   variables: {
+ *      setup: // value for 'setup'
+ *   },
+ * });
+ */
+export function usePreviewLedgerSetupQuery(baseOptions: Apollo.QueryHookOptions<PreviewLedgerSetupQuery, PreviewLedgerSetupQueryVariables> & ({ variables: PreviewLedgerSetupQueryVariables; skip?: boolean; } | { skip: boolean; }) ) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<PreviewLedgerSetupQuery, PreviewLedgerSetupQueryVariables>(PreviewLedgerSetupDocument, options);
+      }
+export function usePreviewLedgerSetupLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<PreviewLedgerSetupQuery, PreviewLedgerSetupQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<PreviewLedgerSetupQuery, PreviewLedgerSetupQueryVariables>(PreviewLedgerSetupDocument, options);
+        }
+// @ts-ignore
+export function usePreviewLedgerSetupSuspenseQuery(baseOptions?: Apollo.SuspenseQueryHookOptions<PreviewLedgerSetupQuery, PreviewLedgerSetupQueryVariables>): Apollo.UseSuspenseQueryResult<PreviewLedgerSetupQuery, PreviewLedgerSetupQueryVariables>;
+export function usePreviewLedgerSetupSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<PreviewLedgerSetupQuery, PreviewLedgerSetupQueryVariables>): Apollo.UseSuspenseQueryResult<PreviewLedgerSetupQuery | undefined, PreviewLedgerSetupQueryVariables>;
+export function usePreviewLedgerSetupSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<PreviewLedgerSetupQuery, PreviewLedgerSetupQueryVariables>) {
+          const options = baseOptions === Apollo.skipToken ? baseOptions : {...defaultOptions, ...baseOptions}
+          return Apollo.useSuspenseQuery<PreviewLedgerSetupQuery, PreviewLedgerSetupQueryVariables>(PreviewLedgerSetupDocument, options);
+        }
+export type PreviewLedgerSetupQueryHookResult = ReturnType<typeof usePreviewLedgerSetupQuery>;
+export type PreviewLedgerSetupLazyQueryHookResult = ReturnType<typeof usePreviewLedgerSetupLazyQuery>;
+export type PreviewLedgerSetupSuspenseQueryHookResult = ReturnType<typeof usePreviewLedgerSetupSuspenseQuery>;
+export type PreviewLedgerSetupQueryResult = Apollo.QueryResult<PreviewLedgerSetupQuery, PreviewLedgerSetupQueryVariables>;
 export const QueryShellDocument = gql`
     query QueryShell($ledgerId: String!, $query: String!) {
   queryShell(ledgerId: $ledgerId, query: $query) {

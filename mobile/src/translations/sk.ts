@@ -642,4 +642,42 @@ export const sk: Translations = {
   profilePhotoFromGravatar: "Fotka z Gravataru",
   profileUpdated: "Profil bol aktualizovaný",
   multiplePostings: "Viacero zápisov",
+  createLedgerNext: "Ďalej",
+  createLedgerBack: "Späť",
+  createLedgerStep: "Krok {{step}} z {{total}}",
+  createLedgerStartPreset: "Predvoľba",
+  createLedgerCurrency: "Prevádzková mena",
+  createLedgerHistoryStart: "Knihy začínajú dňa",
+  createLedgerOpeningAccount: "Otvárací účet",
+  createLedgerOpeningAmount: "Počiatočný zostatok (voliteľné)",
+  createLedgerOpeningNone: "Rozhodnúť neskôr",
+  createLedgerReview: "Kontrola",
+  createLedgerReviewDescription:
+    "Presne toto sa vytvorí. Vráťte sa, ak chcete niečo zmeniť.",
+  createLedgerAccounts: "Účty",
+  createLedgerAmountInvalid: "Zadajte sumu ako 100 alebo -30.50",
+  createLedgerPresetPersonal: "Osobná kniha",
+  createLedgerPresetPersonalOutcome:
+    "Zaznamenajte nákup a pochopte jeho vplyv na zostávajúce peniaze.",
+  createLedgerPresetFreelance: "Kniha na voľnej nohe",
+  createLedgerPresetFreelanceOutcome:
+    "Zaznamenajte príjmy od zákazníkov alebo zistite, koľko dlží nezaplatený zákazník.",
+  createLedgerPresetBusiness: "Firemná kniha",
+  createLedgerPresetBusinessOutcome:
+    "Vytvorte otváraciu pozíciu a odlíšte financovanie od výnosov.",
+  createLedgerPresetPortfolio: "Portfóliová kniha",
+  createLedgerPresetPortfolioOutcome:
+    "Zaznamenajte nákup a overte jednotky, záznamy o nadobudnutí a pohyb peňazí.",
+  createLedgerPresetRental: "Kniha nájmu",
+  createLedgerPresetRentalOutcome:
+    "Zaznamenajte príjmy a odlíšte nájom od vratnej zálohy.",
+  createLedgerPresetShared: "Kniha spoločných výdavkov",
+  createLedgerPresetSharedOutcome:
+    "Zaznamenajte preddavok a pozrite, kto komu dlží.",
+  createLedgerPresetCommunity: "Kniha komunity",
+  createLedgerPresetCommunityOutcome:
+    "Vysvetlite príspevky, projektové výdavky a zostávajúce prostriedky.",
+  createLedgerPresetBlank: "Prázdna kniha",
+  createLedgerPresetBlankOutcome:
+    "Pridajte zvolenú štruktúru bez odstraňovania nechcených kategórií.",
 };

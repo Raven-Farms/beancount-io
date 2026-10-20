@@ -640,4 +640,42 @@ export const de: Translations = {
   profilePhotoFromGravatar: "Foto von Gravatar",
   profileUpdated: "Profil aktualisiert",
   multiplePostings: "Mehrere Buchungen",
+  createLedgerNext: "Weiter",
+  createLedgerBack: "Zurück",
+  createLedgerStep: "Schritt {{step}} von {{total}}",
+  createLedgerStartPreset: "Vorlage",
+  createLedgerCurrency: "Betriebswährung",
+  createLedgerHistoryStart: "Bücher beginnen am",
+  createLedgerOpeningAccount: "Eröffnungskonto",
+  createLedgerOpeningAmount: "Eröffnungssaldo (optional)",
+  createLedgerOpeningNone: "Später entscheiden",
+  createLedgerReview: "Überprüfen",
+  createLedgerReviewDescription:
+    "Genau das wird erstellt. Gehen Sie zurück, um etwas zu ändern.",
+  createLedgerAccounts: "Konten",
+  createLedgerAmountInvalid: "Geben Sie einen Betrag wie 100 oder -30.50 ein",
+  createLedgerPresetPersonal: "Persönliches Buch",
+  createLedgerPresetPersonalOutcome:
+    "Erfassen Sie einen Kauf und verstehen Sie seine Wirkung auf Ihr Guthaben.",
+  createLedgerPresetFreelance: "Freiberufler-Buch",
+  createLedgerPresetFreelanceOutcome:
+    "Erfassen Sie Kundeneinnahmen oder sehen Sie, was ein unbezahlter Kunde noch schuldet.",
+  createLedgerPresetBusiness: "Geschäftsbuch",
+  createLedgerPresetBusinessOutcome:
+    "Richten Sie eine Eröffnungsposition ein und unterscheiden Sie Finanzierung von Umsatz.",
+  createLedgerPresetPortfolio: "Portfolio-Buch",
+  createLedgerPresetPortfolioOutcome:
+    "Erfassen Sie einen Kauf und prüfen Sie Stückzahlen, Anschaffungsnachweise und Geldbewegung.",
+  createLedgerPresetRental: "Mietbuch",
+  createLedgerPresetRentalOutcome:
+    "Erfassen Sie Einnahmen und unterscheiden Sie Miete von einer rückzahlbaren Kaution.",
+  createLedgerPresetShared: "Buch für gemeinsame Ausgaben",
+  createLedgerPresetSharedOutcome:
+    "Erfassen Sie einen Vorschuss und sehen Sie, wer wem schuldet.",
+  createLedgerPresetCommunity: "Gemeinschaftsbuch",
+  createLedgerPresetCommunityOutcome:
+    "Erklären Sie Beiträge, Projektausgaben und verbleibende Mittel.",
+  createLedgerPresetBlank: "Leeres Buch",
+  createLedgerPresetBlankOutcome:
+    "Fügen Sie eine gewählte Struktur hinzu, ohne unerwünschte Kategorien zu entfernen.",
 };

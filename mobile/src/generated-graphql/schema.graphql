@@ -169,6 +169,15 @@ enum BudgetInterval {
   YEARLY
 }
 
+"""Why a subscriber cancels, when they say."""
+enum CancellationReason {
+  MISSING_FEATURES
+  OTHER
+  SWITCHED_SERVICE
+  TOO_EXPENSIVE
+  UNUSED
+}
+
 type CategorySuggestion {
   confidence: Float!
   reasoning: String
@@ -823,6 +832,13 @@ input LedgerOpenInput {
   date: String!
 }
 
+"""Whether an account's opening balance is unknown, zero, or known"""
+enum LedgerOpeningState {
+  KNOWN
+  UNKNOWN
+  ZERO
+}
+
 type LedgerOptions {
   accountCurrentConversions: String!
   accountCurrentEarnings: String!
@@ -864,6 +880,46 @@ input LedgerPriceInput {
   amount: LedgerAmountInput!
   currency: String!
   date: String!
+}
+
+input LedgerSetupAccountInput {
+  """Decimal amount; required when openingState is KNOWN."""
+  amount: String
+  currency: String
+  name: String!
+  openingState: LedgerOpeningState
+}
+
+input LedgerSetupInput {
+  accounts: [LedgerSetupAccountInput!]
+  """
+  Per optional question: enabled, declined, or deferred, keyed by question id.
+  """
+  capabilities: JSONObject
+  historyStart: String
+  operatingCurrency: String
+  preset: LedgerSetupPreset!
+  title: String
+}
+
+"""Versioned starter preset from the setup catalog (ADR021)"""
+enum LedgerSetupPreset {
+  BLANK
+  BUSINESS
+  COMMUNITY
+  FREELANCE
+  PERSONAL
+  PORTFOLIO
+  RENTAL
+  SHARED_EXPENSES
+}
+
+type LedgerSetupPreview {
+  accounts: [String!]!
+  files: JSONObject!
+  historyStart: String!
+  operatingCurrency: String!
+  preset: String!
 }
 
 """Template used to populate a newly created ledger"""
@@ -948,16 +1004,34 @@ type Mutation {
   """Add one or more entries to a specific ledger (atomic)"""
   bulkEntries(
     """
-    Record unbalanced transactions deliberately instead of refusing them with UNBALANCED
+    Record entries deliberately even when they are unbalanced (UNBALANCED) or would add bean-check errors such as a second open for an open account (VALIDATION_FAILED), instead of refusing them
     """
     allowInvalid: Boolean
     entries: [AddEntryInput!]!
     ledgerId: String!
   ): AddLedgerEntryResponse!
   """
+  Cancels the plan change scheduled for the end of the paid period; the current plan continues unchanged. Requires a full signed-in session.
+  """
+  cancelScheduledPlanChange(clientId: String!): SubscriptionActionResult!
+  """
   Schedules your subscription to cancel. Requires a full signed-in session.
   """
-  cancelSubscription(clientId: String!, subscriptionId: String!): SubscriptionActionResult!
+  cancelSubscription(
+    clientId: String!
+    """The subscriber's optional reason, recorded with Stripe."""
+    reason: CancellationReason
+    subscriptionId: String!
+  ): SubscriptionActionResult!
+  """
+  Applies an upgrade or a switch to yearly at the previewed proration time, and schedules a downgrade or a switch to monthly for the end of the paid period. Requires a full signed-in session.
+  """
+  changePlan(
+    clientId: String!
+    priceId: String!
+    """The prorationDate from previewPlanChange."""
+    prorationDate: Int
+  ): PlanChangeResult!
   """
   Authorize the pending CLI session a user code names. Issues a JWT for the CLI and stores it for the matching device code to collect.
   """
@@ -975,9 +1049,29 @@ type Mutation {
   """
   Create a new ledger for the current user. STARTER (the default, including null) contains options and accounts without transactions or opening balances; SAMPLE contains demonstration transactions. Existing ledgers are unchanged.
   """
-  createLedger(description: String, name: String!, private: Boolean, template: LedgerTemplate): Ledger!
+  createLedger(
+    description: String
+    name: String!
+    """
+    true or omitted keeps the ledger visible only to its owner and collaborators; false makes it public, readable by anyone.
+    """
+    private: Boolean
+    """
+    Client-generated idempotency identifier: a retry with the same id and request returns the original ledger.
+    """
+    requestId: String
+    """Setup specification (ADR021); mutually exclusive with template."""
+    setup: LedgerSetupInput
+    template: LedgerTemplate
+  ): Ledger!
   """Create a new file in a specific ledger"""
-  createLedgerFile(content: String!, ledgerId: String!, message: String, path: String!): LedgerFileContent!
+  createLedgerFile(
+    """Base64-encoded file content, at most 1 MiB (1,048,576 decoded bytes)."""
+    content: String!
+    ledgerId: String!
+    message: String
+    path: String!
+  ): LedgerFileContent!
   createOneTimeToken: CreateOneTimeTokenResponse!
   """Create a Plaid Link token for connecting bank accounts"""
   createPlaidLinkToken(ledgerId: String!): PlaidLinkToken!
@@ -1072,6 +1166,8 @@ type Mutation {
   rejectPullRequest(ledgerName: String!, ledgerOwner: String!, prNumber: Int!): PullRequestResult!
   """Rename a file in a specific ledger"""
   renameLedgerFile(ledgerId: String!, message: String, newPath: String!, oldPath: String!, updateIncludes: Boolean): RenameLedgerFileResponse!
+  """Request an email ownership code to continue password sign-in"""
+  requestSignInRecovery(email: String!, returnTo: String): RequestSignInRecoveryResponse!
   """Reset user password using a token from the password reset email"""
   resetPassword(newPassword: String!, token: String!): ResetPasswordResponse!
   """Resumes your subscription. Requires a full signed-in session."""
@@ -1081,6 +1177,8 @@ type Mutation {
   """Send a password reset link to the user's email"""
   sendForgotPasswordLink(email: String!): SendForgotPasswordLinkResponse!
   signIn(email: String!, password: String!): TokenAuthResponse!
+  """Sign in with a one-use email ownership code and the correct password"""
+  signInWithEmailCode(challengeId: String!, code: String!, email: String!, password: String!): TokenAuthResponse!
   signInWithOneTimeToken(token: String!): TokenAuthResponse!
   """
   Start signup by creating an OTP session. Sends a verification code to the user's email.
@@ -1109,11 +1207,28 @@ type Mutation {
   """Unstar a specific ledger"""
   unstarLedger(ledgerId: String!): StarLedgerResponse!
   """Update a specific ledger"""
-  updateLedger(description: String, ledgerId: String!, name: String, private: Boolean): Ledger!
+  updateLedger(
+    description: String
+    ledgerId: String!
+    name: String
+    """
+    true makes the ledger visible only to its owner and collaborators; false makes it public, readable by anyone; omitted leaves it as it is.
+    """
+    private: Boolean
+  ): Ledger!
   """Update a source slice for a specific journal entry"""
   updateLedgerEntrySourceSlice(input: UpdateSourceSliceInput!, ledgerId: String!): UpdateSourceSliceResponse!
   """Update an existing file in a specific ledger"""
-  updateLedgerFile(content: String!, ledgerId: String!, message: String, path: String!, sha: String!): LedgerFileContent!
+  updateLedgerFile(
+    """
+    Base64-encoded full replacement content, at most 1 MiB (1,048,576 decoded bytes).
+    """
+    content: String!
+    ledgerId: String!
+    message: String
+    path: String!
+    sha: String!
+  ): LedgerFileContent!
   """Update the currency used for a Plaid account's transactions"""
   updatePlaidAccountCurrency(accountId: String!, currency: String!, ledgerId: String!): Boolean!
   """Update the ledger account mapping for a Plaid account"""
@@ -1161,6 +1276,11 @@ type ParsedRow {
   date: String!
   description: String!
   payee: String!
+}
+
+type PaymentMethodSummary {
+  brand: String!
+  last4: String!
 }
 
 type Permission {
@@ -1304,6 +1424,93 @@ type PlaintextJournalResponse {
   content: String!
 }
 
+enum PlanChangeEffect {
+  CHECKOUT
+  IMMEDIATE
+  SCHEDULED
+}
+
+enum PlanChangeKind {
+  DOWNGRADE
+  NEW
+  SPLIT
+  TO_MONTHLY
+  TO_YEARLY
+  UPGRADE
+}
+
+"""
+What choosing a price would do, before anything changes. Amounts are in the currency's minor unit (cents).
+"""
+type PlanChangePreview {
+  """For SPLIT: the higher tier on the current billing cycle, applied now."""
+  alternativePriceId: String
+  amountDueToday: Int!
+  creditApplied: Int!
+  currency: String!
+  currentPriceId: String
+  effect: PlanChangeEffect
+  effectiveAt: DateTimeISO
+  kind: PlanChangeKind
+  limitChanges: [PlanLimitChange!]!
+  nextAmount: Int!
+  nextChargeAt: DateTimeISO
+  paymentMethod: PaymentMethodSummary
+  """
+  Unix seconds. Pass it to changePlan so the charge matches this preview.
+  """
+  prorationDate: Int
+  refusal: PlanChangeRefusal
+  """The scheduled change this choice would replace."""
+  replacesScheduledChange: ScheduledPlanChange
+  targetPriceId: String!
+  """Whether this choice withdraws a pending cancellation."""
+  withdrawsCancellation: Boolean!
+}
+
+enum PlanChangeRefusal {
+  CURRENT_PLAN
+  MULTIPLE_SUBSCRIPTIONS
+  NO_SUBSCRIPTION
+  PAST_DUE
+  SAME_TIER_AND_CYCLE
+  SCHEDULED_CHANGE
+}
+
+type PlanChangeResult {
+  """With REQUIRES_ACTION: confirm the payment with Stripe.js."""
+  clientSecret: String
+  currentPeriodEnd: DateTimeISO
+  """
+  With SCHEDULED: when the new price takes over. Nothing is charged until then.
+  """
+  effectiveAt: DateTimeISO
+  """Stripe's hosted page to pay or authenticate this change's invoice."""
+  hostedInvoiceUrl: String
+  kind: PlanChangeKind
+  message: String
+  newTier: String
+  refusal: PlanChangeRefusal
+  status: PlanChangeStatus!
+  subscriptionId: String
+}
+
+enum PlanChangeStatus {
+  ACTIVE
+  FAILED
+  REFUSED
+  REQUIRES_ACTION
+  SCHEDULED
+}
+
+type PlanLimitChange {
+  """-1 means unlimited."""
+  from: Int!
+  limit: String!
+  """-1 means unlimited."""
+  to: Int!
+}
+
 type Posting {
   account: String!
   amount: String!
@@ -1440,7 +1647,9 @@ type Query {
   getLedgerAssetDownloadUrl(filename: String!, ledgerRepoId: Int!): LedgerAssetDownloadUrlResult!
   """Get the filter options of a specific ledger"""
   getLedgerAttributes(ledgerId: String!): LedgerAttributes!
-  """Get the balance sheet of a specific ledger"""
+  """
+  Get the balance sheet of a specific ledger, including report-only current earnings in equity and its interval series under the configured account names
+  """
   getLedgerBalanceSheet(account: String, conversion: String! = "USD", filter: String, interval: String! = "monthly", ledgerId: String!, time: String): BalanceSheetData!
   getLedgerCollaboratorPermission(collaborator: String!, ledgerId: String!): LedgerCollaborator!
   """Get the commodities of a specific ledger"""
@@ -1473,15 +1682,21 @@ type Query {
   Status of every managed price include the ledger names: feed pair and source, serving revision, observed/fetched/next-refresh times, freshness and the last refresh error. Empty when the ledger has none.
   """
   getLedgerManagedPrices(ledgerId: String!): [ManagedPriceSource!]!
-  """Get the transactions for a narration"""
-  getLedgerNarrationTransactions(ledgerId: String!, narration: String!): Transaction!
+  """
+  Get the most recent transaction for a narration, or null when none matches
+  """
+  getLedgerNarrationTransactions(ledgerId: String!, narration: String!): Transaction
   getLedgerNarrations(ledgerId: String!): [String!]!
+  """
+  Get the effective beancount options of a ledger: title, account-root names, conversion and earnings accounts, comma rendering, and operating currencies
+  """
+  getLedgerOptions(ledgerId: String!): LedgerOptions!
   """Get the overview of a specific ledger"""
   getLedgerOverview(account: String, conversion: String! = "USD", filter: String, interval: String! = "monthly", ledgerId: String!, time: String): LedgerOverview!
   """Get the accounts for a payee"""
   getLedgerPayeeAccounts(ledgerId: String!, payee: String!): [String!]!
-  """Get the transactions for a payee"""
-  getLedgerPayeeTransactions(ledgerId: String!, payee: String!): Transaction!
+  """Get the most recent transaction for a payee, or null when none matches"""
+  getLedgerPayeeTransactions(ledgerId: String!, payee: String!): Transaction
   """Get the payees of a specific ledger"""
   getLedgerPayees(ledgerId: String!): [String!]!
   """Get plaintext journal in beancount format"""
@@ -1588,6 +1803,14 @@ type Query {
   listPublicKeys(limit: Float, page: Float): [PublicKey!]!
   """List all user owned ledgers for the current user"""
   listUserOwnedLedgers(limit: Float, page: Float): [Ledger!]!
+  """
+  Preview a ledger setup (ADR021) without creating anything: the files, account list, and validation result the specification would produce.
+  """
+  previewLedgerSetup(setup: LedgerSetupInput!): LedgerSetupPreview!
+  """
+  Previews switching your plan to a price: the kind of change, when it takes effect, and what is charged today. Requires a full signed-in session.
+  """
+  previewPlanChange(clientId: String!, priceId: String!): PlanChangePreview!
   """Execute a shell query on a ledger"""
   queryShell(ledgerId: String!, query: String!): QueryResult
   """Execute a shell query on a ledger and return plain text output"""
@@ -1684,12 +1907,25 @@ type RepositoryListResponse {
   total: Float!
 }
 
+type RequestSignInRecoveryResponse {
+  success: Boolean!
+}
+
 type ResetPasswordResponse {
   success: Boolean!
 }
 
+"""
+A plan change that takes effect at the end of the paid period. Nothing is charged until then.
+"""
+type ScheduledPlanChange {
+  effectiveAt: DateTimeISO!
+  priceId: String!
+}
+
 type SearchUser {
-  email: String!
+  """The match's email, returned only when the keyword was that email"""
+  email: String
   username: String!
 }
 
@@ -1727,6 +1963,16 @@ type Subscription {
   currentPeriodStart: DateTimeISO!
   id: ID!
   items: [SubscriptionItem!]!
+  """
+  With past_due: when Stripe next retries the failed renewal. The plan is kept until it stops retrying.
+  """
+  nextPaymentAttempt: DateTimeISO
+  """The card renewals and plan changes charge, when known."""
+  paymentMethod: PaymentMethodSummary
+  """
+  The change scheduled for the end of the paid period; cancelScheduledPlanChange undoes it.
+  """
+  scheduledChange: ScheduledPlanChange
   status: String!
 }
 
@@ -1889,7 +2135,6 @@ type UserProfile {
 }
 
 type UserProfileResponse {
-  """Uploaded avatar, falling back to the email's Gravatar"""
   avatarUrl: String
   email: String!
   emailReportStatus: ReportStatus

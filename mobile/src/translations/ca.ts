@@ -640,4 +640,42 @@ export const ca: Translations = {
   profilePhotoFromGravatar: "Foto de Gravatar",
   profileUpdated: "Perfil actualitzat",
   multiplePostings: "Diversos apunts",
+  createLedgerNext: "Següent",
+  createLedgerBack: "Enrere",
+  createLedgerStep: "Pas {{step}} de {{total}}",
+  createLedgerStartPreset: "Configuració predefinida",
+  createLedgerCurrency: "Moneda d'operació",
+  createLedgerHistoryStart: "Els llibres comencen el",
+  createLedgerOpeningAccount: "Compte d'obertura",
+  createLedgerOpeningAmount: "Saldo inicial (opcional)",
+  createLedgerOpeningNone: "Decidir més tard",
+  createLedgerReview: "Revisar",
+  createLedgerReviewDescription:
+    "Això és exactament el que es crearà. Torneu enrere per canviar res.",
+  createLedgerAccounts: "Comptes",
+  createLedgerAmountInvalid: "Introduïu un import com 100 o -30.50",
+  createLedgerPresetPersonal: "Llibre personal",
+  createLedgerPresetPersonalOutcome:
+    "Registreu una compra i enteneu el seu efecte en els diners restants.",
+  createLedgerPresetFreelance: "Llibre d'autònom",
+  createLedgerPresetFreelanceOutcome:
+    "Registreu ingressos de clients o vegeu què deu un client impagat.",
+  createLedgerPresetBusiness: "Llibre d'empresa",
+  createLedgerPresetBusinessOutcome:
+    "Establiu una posició inicial i distingiu finançament d'ingressos.",
+  createLedgerPresetPortfolio: "Llibre de cartera",
+  createLedgerPresetPortfolioOutcome:
+    "Registreu una compra i verifiqueu unitats, adquisicions i moviment d'efectiu.",
+  createLedgerPresetRental: "Llibre de lloguer",
+  createLedgerPresetRentalOutcome:
+    "Registreu rebuts i distingiu el lloguer d'un dipòsit reemborsable.",
+  createLedgerPresetShared: "Llibre de despeses compartides",
+  createLedgerPresetSharedOutcome:
+    "Registreu una bestreta i vegeu qui deu a qui.",
+  createLedgerPresetCommunity: "Llibre de comunitat",
+  createLedgerPresetCommunityOutcome:
+    "Expliqueu contribucions, despeses de projectes i fons restants.",
+  createLedgerPresetBlank: "Llibre en blanc",
+  createLedgerPresetBlankOutcome:
+    "Afegiu una estructura triada sense eliminar categories no desitjades.",
 };

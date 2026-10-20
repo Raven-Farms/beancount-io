@@ -18,6 +18,11 @@ function screen(refreshFails: boolean) {
     createElement: () => null,
     useMemo: (fn: () => unknown) => fn(),
     useEffect: () => {},
+    useState: (initial: unknown) => [
+      typeof initial === "function" ? (initial as () => unknown)() : initial,
+      () => {},
+    ],
+    useRef: (initial: unknown) => ({ current: initial }),
   };
   const exports: { CreateLedgerScreen?: () => void } = {};
   vm.runInNewContext(
@@ -62,17 +67,66 @@ function screen(refreshFails: boolean) {
                     description: "",
                     private: true,
                     template: "STARTER",
+                    currency: "USD",
+                    historyStart: "2026-01-01",
+                    openingAccount: "",
+                    openingAmount: "",
                   });
                 return submit;
               },
               setError: () => events.push("form-error"),
-              watch: () => "new",
+              reset: () => {},
+              getValues: () => ({
+                name: "new",
+                description: "",
+                private: true,
+                template: "STARTER",
+                currency: "USD",
+                historyStart: "2026-01-01",
+                openingAccount: "",
+                openingAmount: "",
+              }),
+              trigger: async () => true,
+              watch: (field?: string) =>
+                field
+                  ? "new"
+                  : {
+                      name: "new",
+                      description: "",
+                      private: true,
+                      template: "STARTER",
+                      currency: "USD",
+                      historyStart: "2026-01-01",
+                      openingAccount: "",
+                      openingAmount: "",
+                    },
               formState: { errors: {}, isSubmitting: false },
             }),
+          };
+        if (id === "@react-native-async-storage/async-storage")
+          return {
+            getItem: async () => null,
+            setItem: async () => {},
+            removeItem: async () => {},
+          };
+        if (id === "expo-localization")
+          return { getLocales: () => [{ regionCode: "US" }] };
+        if (id === "./setup-presets")
+          return {
+            SETUP_PRESETS: [
+              { id: "PERSONAL", titleKey: "t", outcomeKey: "o", accounts: [] },
+            ],
+            suggestCurrency: () => "USD",
           };
         if (id === "@/generated-graphql/graphql")
           return {
             LedgerTemplate: { Sample: "SAMPLE" },
+            LedgerSetupPreset: { Personal: "PERSONAL" },
+            LedgerOpeningState: { Known: "KNOWN" },
+            usePreviewLedgerSetupLazyQuery: () => [
+              async () => ({ data: undefined }),
+              { data: undefined, loading: false, error: undefined },
+            ],
             useCreateLedgerMutation: () => [
               async () => {
                 events.push("created");

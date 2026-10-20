@@ -1,0 +1,9 @@
+query PreviewLedgerSetup($setup: LedgerSetupInput!) {
+  previewLedgerSetup(setup: $setup) {
+    preset
+    operatingCurrency
+    historyStart
+    accounts
+    files
+  }
+}

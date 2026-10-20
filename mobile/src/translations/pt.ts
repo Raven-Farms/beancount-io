@@ -639,4 +639,42 @@ export const pt: Translations = {
   profilePhotoFromGravatar: "Foto do Gravatar",
   profileUpdated: "Perfil atualizado",
   multiplePostings: "Vários lançamentos",
+  createLedgerNext: "Próximo",
+  createLedgerBack: "Voltar",
+  createLedgerStep: "Passo {{step}} de {{total}}",
+  createLedgerStartPreset: "Predefinição",
+  createLedgerCurrency: "Moeda de operação",
+  createLedgerHistoryStart: "Os livros começam em",
+  createLedgerOpeningAccount: "Conta de abertura",
+  createLedgerOpeningAmount: "Saldo inicial (opcional)",
+  createLedgerOpeningNone: "Decidir depois",
+  createLedgerReview: "Revisar",
+  createLedgerReviewDescription:
+    "É exatamente isto que será criado. Volte para alterar algo.",
+  createLedgerAccounts: "Contas",
+  createLedgerAmountInvalid: "Insira um valor como 100 ou -30.50",
+  createLedgerPresetPersonal: "Livro pessoal",
+  createLedgerPresetPersonalOutcome:
+    "Registre uma compra e entenda seu efeito no dinheiro restante.",
+  createLedgerPresetFreelance: "Livro de freelancer",
+  createLedgerPresetFreelanceOutcome:
+    "Registre receitas de clientes ou veja o que um cliente inadimplente ainda deve.",
+  createLedgerPresetBusiness: "Livro de empresa",
+  createLedgerPresetBusinessOutcome:
+    "Estabeleça uma posição inicial e distinga financiamento de receita.",
+  createLedgerPresetPortfolio: "Livro de carteira",
+  createLedgerPresetPortfolioOutcome:
+    "Registre uma compra e verifique unidades, aquisições e movimentação de caixa.",
+  createLedgerPresetRental: "Livro de aluguel",
+  createLedgerPresetRentalOutcome:
+    "Registre recibos e distinga aluguel de um depósito reembolsável.",
+  createLedgerPresetShared: "Livro de despesas compartilhadas",
+  createLedgerPresetSharedOutcome:
+    "Registre um adiantamento e veja quem deve a quem.",
+  createLedgerPresetCommunity: "Livro de comunidade",
+  createLedgerPresetCommunityOutcome:
+    "Explique contribuições, gastos de projetos e fundos restantes.",
+  createLedgerPresetBlank: "Livro em branco",
+  createLedgerPresetBlankOutcome:
+    "Adicione uma estrutura escolhida sem remover categorias indesejadas.",
 };

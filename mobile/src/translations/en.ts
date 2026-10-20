@@ -583,6 +583,43 @@ export const en = {
   createLedgerTierLimit:
     "The ledger limit has been reached. Another ledger cannot be created.",
   createLedgerGenericError: "Couldn't create the ledger. Please try again.",
+  createLedgerNext: "Next",
+  createLedgerBack: "Back",
+  createLedgerStep: "Step {{step}} of {{total}}",
+  createLedgerStartPreset: "Preset",
+  createLedgerCurrency: "Operating currency",
+  createLedgerHistoryStart: "Books begin",
+  createLedgerOpeningAccount: "Opening account",
+  createLedgerOpeningAmount: "Opening balance (optional)",
+  createLedgerOpeningNone: "Decide later",
+  createLedgerReview: "Review",
+  createLedgerReviewDescription:
+    "This is exactly what will be created. Go back to change anything.",
+  createLedgerAccounts: "Accounts",
+  createLedgerAmountInvalid: "Enter an amount like 100 or -30.50.",
+  createLedgerPresetPersonal: "Personal ledger",
+  createLedgerPresetPersonalOutcome:
+    "Record a purchase and understand its effect on money remaining.",
+  createLedgerPresetFreelance: "Freelance ledger",
+  createLedgerPresetFreelanceOutcome:
+    "Record customer income or see what an unpaid customer still owes.",
+  createLedgerPresetBusiness: "Business ledger",
+  createLedgerPresetBusinessOutcome:
+    "Establish an opening position and distinguish funding from revenue.",
+  createLedgerPresetPortfolio: "Portfolio ledger",
+  createLedgerPresetPortfolioOutcome:
+    "Record a purchase and verify units, acquisition records, and cash movement.",
+  createLedgerPresetRental: "Rental ledger",
+  createLedgerPresetRentalOutcome:
+    "Record receipts and distinguish rent from a refundable deposit.",
+  createLedgerPresetShared: "Shared expenses ledger",
+  createLedgerPresetSharedOutcome: "Record an advance and see who owes whom.",
+  createLedgerPresetCommunity: "Community ledger",
+  createLedgerPresetCommunityOutcome:
+    "Explain contributions, project spending, and funds remaining.",
+  createLedgerPresetBlank: "Blank ledger",
+  createLedgerPresetBlankOutcome:
+    "Add a chosen structure without removing unwanted categories.",
   createLedgerDrawerRow: "New ledger",
   createLedgerEmptyTitle: "No ledgers yet",
   createLedgerEmptyBody: "Create a book or discover public examples.",
