@@ -1,6 +1,6 @@
 # w6 · m6 — Publish the ledger skills to ClawHub for OpenClaw and Hermes Agent
 
-**Worker:** worker1 **Goal:** An OpenClaw or Hermes Agent user installs any `beancount-*` skill by name from ClawHub, and it works on its own without a Git checkout or this repository's link installer. **Status:** blocked (t001–t006 done; publication needs a token and the licensing change on main; Hermes init awaits host-policy compatibility)
+**Worker:** worker1 **Goal:** An OpenClaw or Hermes Agent user installs any `beancount-*` skill by name from ClawHub, and it works on its own without a Git checkout or this repository's link installer. **Status:** blocked (t001–t006 done and on main; eleven licensed bundle dry runs pass; publication needs a token; Hermes init awaits host-policy compatibility)
 
 **Research date:** 2026-10-16. Sources: ClawHub's quickstart, how-it-works, and skill-format pages at `docs.openclaw.ai/clawhub/`; Hermes Agent's skills page at `hermes-agent.nousresearch.com/docs/user-guide/features/skills`. Re-check the CLI flags against `clawhub --help` and `hermes skills --help` before relying on them.
 
@@ -31,7 +31,7 @@
 
 ## Blocked
 
-- **Milestone / t007 (2026-10-19)** — t001–t006 are complete. PR #181 shipped the workflow at `387cca812`; the reviewed `clawhub-publish` environment permits only `main`. The owner has approved MIT-0 and the existing ClawHub publisher is `puncsky`. **Unblock:** merge the licensing/package changes, supply the `CLAWHUB_TOKEN` environment secret, rebuild and dry-run the release commit, and dispatch the first publication. `CLAWHUB_OWNER=puncsky` and `CLAWHUB_MIT0_APPROVED=true` are the corresponding environment variables. **Who can clear it:** the repository maintainer and publishing operator. No token or live listing has been created by this work.
+- **Milestone / t007 (2026-10-19)** — t001–t006 are complete and on main. PR #182 shipped MIT-0 packaging at `6d10a0748`; that revision's hosted ClawHub run passes all eleven bundles. The reviewed `clawhub-publish` environment permits only `main`, with `CLAWHUB_OWNER=puncsky` and `CLAWHUB_MIT0_APPROVED=true` verified. **Unblock:** supply the `CLAWHUB_TOKEN` environment secret and dispatch first publication from the validated main revision. Rebuild and dry-run again if the skill contents change before release. **Who can clear it:** the publishing operator, or the assistant after the pending credential-creation confirmation. No token or live listing has been created by this work; no further PR or merge is required.
 
 - **t008 (2026-10-19)** — Hermes v0.22.2 rejects init's intentional ledger `AGENTS.md` creation. The product behavior is retained by the release decision above. **Unblock:** compatible host-policy support for the existing init workflow, plus t007's live registry bundles, permits the complete host install and first-query rehearsal. **Who can clear it:** the Hermes maintainer for host policy and the publishing operator for t007. Local scanner preflights remain distinct from live moderation and installation acceptance.
 
@@ -135,3 +135,9 @@ On main baseline `318cc0a7f` with this change, all eleven rebuilt bundles contai
 | beancount-trade | 8 | would-publish | safe |
 
 GitHub environment read-back confirms `CLAWHUB_OWNER=puncsky` and `CLAWHUB_MIT0_APPROVED=true`. The existing signed-in ClawHub account's API tokens settings explicitly show **No API tokens**, and GitHub lists no `CLAWHUB_TOKEN` secret. A labeled token form is prepared; no credential has been created. Creating persistent CLI access is the remaining operator action, followed by first publication from the reviewed main revision.
+
+## Licensing merged and main validated — 2026-10-19
+
+PR #182 merged at `6d10a07482bf271d596ab8dcf60783cff8f80cc9`. The [main ClawHub run](https://github.com/bex-co/beancount-io/actions/runs/39371492602) builds and dry-runs all eleven licensed bundles successfully; its publish job is skipped. [Agent guidance](https://github.com/bex-co/beancount-io/actions/runs/39371492583) and [secret scanning](https://github.com/bex-co/beancount-io/actions/runs/39371492628) also pass. The merge prerequisite is cleared.
+
+Fresh environment and account read-backs still show no GitHub publishing secret and no ClawHub API tokens. The existing confirmation request covers creating `beancount-io-github-actions` for `puncsky` and storing it only as the protected environment's `CLAWHUB_TOKEN`; it remains unanswered. That confirmation is for new persistent account access, separately from ordinary code shipping. Further repository changes ship directly to main under the owner's instruction.
