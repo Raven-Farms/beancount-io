@@ -1632,6 +1632,15 @@ class CsvImporter:
                 if self._mapping.sign == "ledger":
                     number = _negated(number)
                 currency = self._constant_currency or self._cell(row, where, "currency") or self._currency
+                if not currency and self._known_currencies is not None and not self._known_currencies:
+                    # `currency=CODE` is refused on a ledger that knows no
+                    # commodity, so advising it first sent the next run into
+                    # that refusal (w5/841).
+                    raise UsageError(
+                        f"{where}: no currency column, and the ledger knows no commodity yet. Open "
+                        f"{self._account} for one currency first: bea add open --account {self._account} "
+                        "--currency CODE --date YYYY-MM-DD."
+                    )
                 if not currency:
                     raise UsageError(
                         f"{where}: no currency column and the ledger has no single operating currency. "
