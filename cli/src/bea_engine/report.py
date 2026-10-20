@@ -13,7 +13,7 @@ from __future__ import annotations
 import dataclasses
 import re
 import unicodedata
-from collections.abc import Callable, Iterable, Iterator, Mapping, Sequence
+from collections.abc import Callable, Collection, Iterable, Iterator, Mapping, Sequence
 from datetime import date, timedelta
 from decimal import Decimal
 from pathlib import Path
@@ -153,6 +153,7 @@ def _balances(
         pruned = {name: _prune_tree(tree, matches, closed) for name, tree in sections.items()}
     # Valuation covers only the accounts being shown: an unrelated unpriced
     # holding must not make a USD checking balance fail.
+    previous = _summary_pair(filtered.ledger)
     metadata = (
         _metadata(filtered, resolved_conversion, ledger_errors)
         # `_metadata` judges emptiness by a report `--account`, which balance
@@ -171,7 +172,7 @@ def _balances(
                 (filtered.end_date, balance)
                 for tree in pruned.values()
                 if tree is not None
-                for balance in _tree_balances(tree)
+                for balance in _tree_balances(tree, previous)
             ),
             allow_errors,
             filtered.ledger,
@@ -201,7 +202,10 @@ def _overview(
         filtered.ledger.root_accounts,
     )
     trees = tuple(sections[name] for name in ("assets", "liabilities", "income", "expenses"))
-    balances = [(filtered.end_date, balance) for tree in trees if tree is not None for balance in _tree_balances(tree)]
+    previous = _summary_pair(filtered.ledger)
+    balances = [
+        (filtered.end_date, balance) for tree in trees if tree is not None for balance in _tree_balances(tree, previous)
+    ]
     for series in (data.assets_data, data.liabilities_data, data.income_interval_data, data.expenses_interval_data):
         balances.extend((point.date, point.balance) for point in series)
     valuation = _valuation(conversion, balances, allow_errors, filtered.ledger, ledger_errors)
@@ -242,7 +246,10 @@ def _income_statement(
         filtered.ledger.root_accounts,
     )
     trees = (sections["income"], sections["expenses"])
-    balances = [(filtered.end_date, balance) for tree in trees if tree is not None for balance in _tree_balances(tree)]
+    previous = _summary_pair(filtered.ledger)
+    balances = [
+        (filtered.end_date, balance) for tree in trees if tree is not None for balance in _tree_balances(tree, previous)
+    ]
     for series in (data.income_data, data.expenses_data):
         balances.extend((point.date, point.balance) for point in series)
     valuation = _valuation(conversion, balances, allow_errors, filtered.ledger, ledger_errors)
@@ -322,7 +329,10 @@ def _balance_sheet(
         filtered.ledger.root_accounts,
     )
     trees = (sections["assets"], sections["liabilities"], sections["equity"])
-    balances = [(filtered.end_date, balance) for tree in trees if tree is not None for balance in _tree_balances(tree)]
+    previous = _summary_pair(filtered.ledger)
+    balances = [
+        (filtered.end_date, balance) for tree in trees if tree is not None for balance in _tree_balances(tree, previous)
+    ]
     balances.append((filtered.end_date, earnings))
     # The equity lines are as-of figures like the headline: only a commodity
     # still unvalued at the report date withholds them, not an earlier row's gap.
@@ -368,13 +378,14 @@ def _trial_balance(filtered: Any, conversion: str, allow_errors: bool, ledger_er
         name: getattr(data, f"{name}_hierarchy") for name in ("assets", "liabilities", "equity", "income", "expenses")
     }
     sections = _prune_sections(sections, filtered.account, filtered.ledger.root_accounts)
+    previous = _summary_pair(filtered.ledger)
     metadata = _metadata(filtered, conversion, ledger_errors) | _valuation(
         conversion,
         (
             (filtered.end_date, balance)
             for tree in sections.values()
             if tree is not None
-            for balance in _tree_balances(tree)
+            for balance in _tree_balances(tree, previous)
         ),
         allow_errors,
         filtered.ledger,
@@ -845,10 +856,43 @@ def _summary_series_json(series: Iterable[Any], conversion: str) -> list[dict[st
     ]
 
 
-def _tree_balances(node: Any) -> Iterable[Mapping[str, Decimal]]:
-    yield node.balance
-    for child in node.children:
-        yield from _tree_balances(child)
+def _summary_pair(ledger: Any) -> frozenset[str]:
+    """The clamp's summary accounts, judged by their combined balance (w5/790).
+
+    Only the transfer pair: previous conversions are never clamp-written,
+    and current conversions stay judged alone as a displayed row.
+    """
+    from beancount.parser.options import get_previous_accounts
+
+    earnings, balances, _conversions = get_previous_accounts(ledger.options)  # type: ignore[no-untyped-call]
+    return frozenset({earnings, balances})
+
+
+def _tree_balances(node: Any, previous: Collection[str] = ()) -> Iterable[Mapping[str, Decimal]]:
+    """Per-node own balances, except the clamp's summary pair judged combined.
+
+    A time clamp summarizes pre-period activity into the previous-earnings
+    and previous-balances accounts as offsetting legs of its transfers, so
+    each leg alone can hold a foreign currency nothing still holds. Judging
+    the legs one by one refused a period that values cleanly in total; their
+    combined balance is judged instead (w5/790).
+    """
+    if not previous:
+        yield node.balance
+        for child in node.children:
+            yield from _tree_balances(child)
+        return
+    net: dict[str, Decimal] = {}
+    stack = [node]
+    while stack:
+        current = stack.pop()
+        if current.account in previous:
+            for currency, amount in current.balance.items():
+                net[currency] = net.get(currency, Decimal(0)) + amount
+        else:
+            yield current.balance
+        stack.extend(current.children)
+    yield net
 
 
 def _sum(*balances: Mapping[str, Decimal]) -> Any:
