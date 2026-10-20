@@ -1,6 +1,6 @@
 ---
 name: beancount-property
-description: Record buying a home or rental property and its monthly mortgage payments in a local Beancount ledger through bea — the property as a priced lot, its mortgage liability, escrow, and closing costs split exactly as the closing statement states, and each payment's principal/interest/escrow split read from the loan statement and tied to its printed new balance — proposed first and written only after confirmation. Skip paying rent as a tenant (beancount-add), bank or loan statement files (beancount-import), statement comparison (beancount-reconcile), tax treatment and depreciation advice, and ledgers hosted on Beancount.io.
+description: Record buying, holding, and selling a home or rental property in a local Beancount ledger through bea — the property as a priced lot, its mortgage liability, escrow, and closing costs split exactly as the closing statement states; each mortgage payment's split read from the loan statement and tied to its printed new balance; rent and deposits per property; and a sale whose gain the booking produces — proposed first and written only after confirmation. Skip paying rent as a tenant (beancount-add), bank or loan statement files (beancount-import), statement comparison (beancount-reconcile), tax treatment and depreciation advice, and ledgers hosted on Beancount.io.
 metadata:
   openclaw:
     homepage: 'https://github.com/bex-co/beancount-io/tree/main/skills'
@@ -55,7 +55,7 @@ Accounts that do not exist yet are proposed as `open`s in the same proposal — 
 
 ## Scope
 
-**Does:** one described property purchase per run — price, down payment, loan, closing costs, escrow seed — and described monthly mortgage payments (with escrow disbursements) for a property the ledger already holds, appended to an existing file the root ledger includes.
+**Does:** one described property event per run — a purchase (price, down payment, loan, closing costs, escrow seed), monthly mortgage payments with escrow disbursements, rent and security deposits for a rental, and a sale closing the lot and its mortgage — appended to an existing file the root ledger includes.
 
 **Does not:** pay rent as a tenant or record everyday entries (`beancount-add`), read statement or export files (`beancount-import`), compare accounts to statements (`beancount-reconcile`), record stock/crypto trades (`beancount-trade`), advise on tax treatment or depreciation, appraise a property, or compute an amortization schedule. Closing-cost tax roles are split exactly as the user states them.
 
@@ -156,11 +156,42 @@ Also run the already-recorded check (same total on the paying account within ±3
 
 Report the mortgage balance and escrow balance after the write, read back from the ledger.
 
+## Rent, deposits, and property expenses
+
+Per property, so its net can be asked later (`Income:Rent:<Name>` against that property's expenses):
+
+- **Rent received:** cash in against `Income:Rent:<Name>` (propose its `open` on first use). Partial or late rent records the amount actually received; what is owed is not booked unless the user keeps a receivable account and says so.
+- **Security deposit:** money held for the tenant is a liability while held, never income — in: cash against `Liabilities:Deposits:<Name>`; returned: the reverse; a kept portion moves to the account the user states (income or against a stated repair expense), shown as its own leg.
+- **Property expenses** (repairs, insurance, tax not via escrow): the user's existing expense accounts by default; a per-property subtree (`Expenses:Property:<Name>`) only when they ask for per-property reporting. Capital improvements the user wants in basis are added units of cost to the lot only as they state them — shown as a basis change, never decided here.
+
+## Selling a property
+
+One described sale: date, sale price, the mortgage **payoff amount as stated** on the closing disclosure, closing costs itemized as stated, any escrow refund, and the account receiving the net cash.
+
+**Gates before proposing (engine-computed, quoted):**
+
+1. The ledger's mortgage balance (queried as of the sale date) equals the stated payoff, sign aside. A gap means a missing payment or a payoff that includes interest to a later date — show both figures and ask; never plug the difference into the gain.
+2. `sale price = net cash + payoff + closing costs` (escrow refund is separate money back, not part of the price). Show both sides; a gap is a missing figure, asked about.
+
+**The entry** — the lot leaves at the sale price and the booking produces the gain (the gains leg carries no amount; never type a gain figure):
+
+```
+2027-06-01 * "Sell Oak St (closing disclosure)"
+  Assets:Property:OakSt        -1 OAKST {510000.00 USD, 2026-02-01} @ 650000.00 USD
+  Assets:Checking             240600.00 USD
+  Liabilities:Mortgage:OakSt  399400.00 USD
+  Expenses:ClosingCosts        10000.00 USD
+  Income:CapitalGains                  ; booking produces the gain
+```
+
+An escrow balance the servicer refunds is its own transfer entry as stated (`Assets:Escrow:<Name>` down, receiving account up). After the write and the root check, read back and report: property units zero, mortgage zero, escrow zero (or the stated remainder), and the gain the booking produced. Closing the now-empty accounts is a separate user request through `beancount-add`'s close flow (zero-balance first) — never done as part of the sale.
+
 ## What NOT to do
 
 - Don't write anything without an explicit yes.
 - Don't split a closing cost's role (capitalized vs expensed) for the user, and don't move a figure between roles to make the arithmetic tie.
 - Don't amortize, appraise, or estimate a value; a later valuation is a `price` the user supplies (beancount-add's price refresh). A mortgage split is never derived from a rate and a balance — printed figures or a question.
-- Don't treat escrow as an expense or as already-spent money.
+- Don't treat escrow as an expense or as already-spent money, and don't book a held security deposit as income.
+- Don't plug a payoff-versus-balance gap into a sale's gain, and don't close the property's accounts as part of a sale.
 - Don't invent accounts; only the opens approved in the proposal.
 - Don't edit, move, or delete existing entries, and don't touch `option`, `plugin`, or `include` directives.

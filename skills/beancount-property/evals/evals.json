@@ -43,6 +43,35 @@
         "No amortization math is presented as the split",
         "Nothing is written to the ledger"
       ]
+    },
+    {
+      "id": 4,
+      "name": "rent-and-deposit-not-income-twice",
+      "prompt": "For the OakSt rental in ./ledger.beancount: my tenant paid April rent of $1,800 on 2026-04-05, and back on 2026-03-15 they paid a $1,800 security deposit. Record both into Assets:Checking.",
+      "expected_output": "Rent booked against a per-property rent income account (Income:Rent:OakSt, its open proposed since it does not exist yet); the deposit booked as a liability (Liabilities:Deposits:OakSt or as proposed), explicitly not income. Both shown in one proposal; nothing written before confirmation.",
+      "files": [
+        "evals/files/eval4_ledger.beancount"
+      ],
+      "expectations": [
+        "Rent goes to a per-property rent income account (open proposed if missing)",
+        "The security deposit is a liability while held, not income",
+        "Nothing is written before confirmation"
+      ]
+    },
+    {
+      "id": 5,
+      "name": "sale-closes-lot-and-mortgage",
+      "prompt": "I sold OakSt on 2027-06-01 for $650,000. The closing disclosure: mortgage payoff $399,400, closing costs $10,000 (to Expenses:ClosingCosts), net cash to Assets:Checking, and the $2,100 escrow balance refunded to checking too. Record the sale in ./ledger.beancount.",
+      "expected_output": "Gates shown: ledger mortgage -399400.00 equals the stated payoff; 650000 = 240600 net cash + 399400 + 10000. Sale entry reduces the 510000.00 lot @ 650000 with the gains leg inferred (booking produces 140000.00), escrow refund as its own transfer. After the yes: property 0 units, mortgage 0, escrow 0, check passes. Accounts are not closed as part of the sale.",
+      "files": [
+        "evals/files/eval5_ledger.beancount"
+      ],
+      "expectations": [
+        "Both gates (payoff equals ledger balance; price arithmetic) are shown before proposing",
+        "The gain is booking-produced (140000.00), never typed as a figure",
+        "After writing, property/mortgage/escrow balances are zero and accounts remain open",
+        "Nothing is written before confirmation"
+      ]
     }
   ]
 }
