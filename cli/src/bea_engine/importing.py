@@ -1033,7 +1033,21 @@ def _importer(config: Path, source: Path, name: str | None) -> Any:
         if not named:
             raise UsageError(f"No importer named {name!r}; available: {', '.join(selectors) or '(none)'}.")
         chosen = named
-    matches = [pair for pair in chosen if pair[1].identify(str(source))]
+    matches = []
+    for selector, importer in chosen:
+        try:
+            claimed = importer.identify(str(source))
+        except EngineError:
+            raise
+        except Exception as exc:
+            # A raising identify is a bug in that importer, not a declined
+            # claim: name it and the phase, as an extract failure does (w5/780).
+            raise LedgerError(
+                f"Importer {selector} identify() raised {type(exc).__name__}: {exc}.",
+                traceback=_traceback(exc),
+            ) from exc
+        if claimed:
+            matches.append((selector, importer))
     if not matches:
         selected = f"Importer {name!r} does not recognize" if name else "No configured importer recognizes"
         raise UsageError(f"{selected} {source.name}. Check --config and the export format.")

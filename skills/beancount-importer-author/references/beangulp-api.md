@@ -32,9 +32,13 @@ class Importer(csvbase.Importer):
         super().__init__(account, currency)
 
     def identify(self, filepath):
-        # narrow: header signature, not just extension
-        with open(filepath) as f:
-            return f.readline().strip() == "Date,Description,Amount"
+        # narrow: header signature, not just extension; guarded, so another
+        # importer's Latin-1 file answers False instead of crashing the runner
+        try:
+            with open(filepath, encoding=self.encoding) as f:
+                return f.readline().strip() == "Date,Description,Amount"
+        except (OSError, UnicodeError):
+            return False
 ```
 
 Column descriptors handle parsing/order; `csvbase.Importer` provides `extract` (and emits a `balance` directive when the file has a balance column — `balance = csvbase.Amount("Balance")`). Subclass hooks: `metadata()`, `finalize()` for per-row tweaks (e.g. attach `import-id` metadata from a row's native ID — follow the grammar in beancount-import's `references/dedup.md` so importer output dedups against skill-imported history).

@@ -3,7 +3,9 @@
 ;; Name: 
 
 2026-04-03 * "TRADER JOES #123 SEATTLE WA"
+  import-id: "csv:sha256:a8362f899f1ef12a"
   Assets:Bank:Checking  -33.20 USD
 
 2026-04-18 * "SHELL OIL 5551 KIRKLAND WA"
+  import-id: "csv:sha256:99d7aab6b18d28d8"
   Assets:Bank:Checking  -40.00 USD
