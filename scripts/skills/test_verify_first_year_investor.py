@@ -182,6 +182,25 @@ class VerifyFirstYearInvestorTests(unittest.TestCase):
         self.git('commit', '-qm', 'close: 2026-06 — 1 tied, 5 not tied')
         self.assertEqual(self.run_verify('closed_june', '--before', str(before2)), 0)
 
+    def test_closed_june_as_the_first_commit(self):
+        fresh = self.root / 'first-commit'
+        fresh.mkdir()
+        (fresh / 'main.bean').write_text(FINAL_LEDGER)
+        subprocess.run(['git', '-C', str(fresh), 'init', '-q'], check=True, capture_output=True)
+        subprocess.run(['git', '-C', str(fresh), 'config', 'commit.gpgsign', 'false'],
+                       check=True, capture_output=True)
+        subprocess.run(['git', '-c', 'user.name=Fixture Tester', '-c', 'user.email=fixture@example.invalid',
+                        '-C', str(fresh), 'add', 'main.bean'], check=True, capture_output=True)
+        before = self.root / 'first-commit-before.json'
+        self.assertEqual(verify.main(['snapshot', '--workspace', str(fresh),
+                                      '--output', str(before)]), 0)
+        subprocess.run(['git', '-c', 'user.name=Fixture Tester', '-c', 'user.email=fixture@example.invalid',
+                        '-C', str(fresh), 'commit', '-qm', 'close: 2026-06 — 1 tied, 5 not tied'],
+                       check=True, capture_output=True)
+        self.assertEqual(verify.main(['verify', '--workspace', str(fresh),
+                                      '--checkpoint', 'closed_june', '--bea', BEA,
+                                      '--before', str(before)]), 0)
+
 
 if __name__ == '__main__':
     unittest.main()
