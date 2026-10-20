@@ -1412,6 +1412,40 @@ class TestBeaRecipes(unittest.TestCase):
         }
         self.assertEqual(balances, {"Assets:Checking": [("2814.25", "USD")]})
 
+    def test_accrual_calculation_handles_booked_reversed_and_negative(self):
+        # The ADR020 worked case: 1200 over 12 months, monthly, cumulative;
+        # three months elapsed -> target 300. Draft = target - net booked.
+        def ledger_with(postings):
+            self.ledger.write_text(
+                'option "operating_currency" "USD"\n'
+                "2025-01-01 open Liabilities:AccruedRent USD\n"
+                "2025-01-01 open Expenses:Rent USD\n"
+                "2025-01-01 open Assets:Checking USD\n"
+                + postings
+            )
+
+        def booked():
+            rows = self.query_recipe(
+                "accrual-booked", **{"<accrual-account>": "Liabilities:AccruedRent", "<as-of>": "2025-04-01"}
+            )
+            return Decimal(rows[0][0][0]["units"]["number"]) if rows and rows[0][0] else Decimal("0")
+
+        target = Decimal("1200") * 3 / 12
+        # $200 still booked -> draft 100.
+        ledger_with('2025-02-01 * "Accrual" \n  Expenses:Rent 200 USD\n  Liabilities:AccruedRent -200 USD\n')
+        self.assertEqual(booked(), Decimal("-200"))
+        self.assertEqual(target - abs(booked()), Decimal("100"))
+        # $200 reversed -> booked nets to zero -> draft 300, not 100.
+        ledger_with(
+            '2025-02-01 * "Accrual" \n  Expenses:Rent 200 USD\n  Liabilities:AccruedRent -200 USD\n'
+            '2025-03-01 * "Reversal" \n  Liabilities:AccruedRent 200 USD\n  Expenses:Rent -200 USD\n'
+        )
+        self.assertEqual(booked(), Decimal("0"))
+        self.assertEqual(target - abs(booked()), Decimal("300"))
+        # Over-booked 400 -> draft -100 (direction reverses).
+        ledger_with('2025-02-01 * "Accrual" \n  Expenses:Rent 400 USD\n  Liabilities:AccruedRent -400 USD\n')
+        self.assertEqual(target - abs(booked()), Decimal("-100"))
+
     def test_variance_recipes_list_contributing_postings(self):
         fixture = SUITE / "beancount-ask" / "evals" / "files" / "eval1_ledger.beancount"
         self.ledger.write_text(fixture.read_text(encoding="utf-8"))
