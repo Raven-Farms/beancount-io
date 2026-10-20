@@ -71,7 +71,6 @@
 - [833 — list document paths are relative to their include with no source, so two attachments list identically](./833.md)
 - [834 — list --details spells TABs as \\x09 and drops line breaks, unlike the ledger](./834.md)
 - [835 — list --tag/--link repeated are an undocumented AND; the refusal advice then finds nothing](./835.md)
-- [836 — An explicit list --limit 50 still says "pass --limit for more" (gap in w3/325)](./836.md)
 
 The 27 findings from the MCP QA auth sweep against the hosted endpoint (023–054, less the five under [Dropped](#dropped)) were fixed in `backend-cluster/backend-v2` and closed on 2026-10-02 and 2026-10-03; each note under [`done/`](./done/) records what shipped and in which commit. None has been re-observed against the hosted endpoint yet — the fixes reach it with the next backend deploy.
 
