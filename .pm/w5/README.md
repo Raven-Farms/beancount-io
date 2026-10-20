@@ -41,6 +41,7 @@
 - [874 — Give usable CSV currency advice for an already-open unrestricted account](./874.md) — minor CLI onboarding follow-up to 841; reproduced 2026-10-20.
 - [875 — Preserve quotes and backslashes in preset ledger titles](./875.md) — minor CLI title-serialization finding; reproduced 2026-10-20.
 - [876 — Retain confirmed zero opening balances in preset creation](./876.md) — minor CLI gap against completed m53's opening-state contract; reproduced 2026-10-20.
+- [877 — Match preset creation summaries to actual account counts and opening dates](./877.md) — minor CLI success-output finding; reproduced 2026-10-20.
 
 The 27 findings from the MCP QA auth sweep against the hosted endpoint (023–054, less the five under [Dropped](#dropped)) were fixed in `backend-cluster/backend-v2` and closed on 2026-10-02 and 2026-10-03; each note under [`done/`](./done/) records what shipped and in which commit. None has been re-observed against the hosted endpoint yet — the fixes reach it with the next backend deploy.
 
