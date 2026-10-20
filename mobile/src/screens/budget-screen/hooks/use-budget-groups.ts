@@ -34,10 +34,8 @@ export function useBudgetGroups(ledgerId?: string, refreshSignal = 0) {
   const { data, loading, error, refetch } = useGetLedgerJournalQuery({
     variables: budgetJournalVariables(ledgerId!),
     skip: !ledgerId,
-    // Budget directives change rarely, and this query now runs on every Home
-    // mount for the panel. `refreshSignal` and pull-to-refresh still force a
-    // network read when the user asks for one.
-    fetchPolicy: "cache-first",
+    // The client's cache-and-network default: a budget removed outside the
+    // app must not linger on Home from the persisted cache (w21/006).
   });
 
   useEffect(() => {

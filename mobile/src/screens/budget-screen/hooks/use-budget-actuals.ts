@@ -61,7 +61,6 @@ export function useBudgetActuals({
 }) {
   const { data, loading, error } = useGetLedgerIntervalTotalsQuery({
     variables: budgetTotalsVariables({ ledgerId, group, time }),
-    fetchPolicy: "cache-first",
   });
 
   const series: BudgetSeriesPoint[] = useMemo(() => {

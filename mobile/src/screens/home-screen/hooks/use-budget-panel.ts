@@ -92,16 +92,21 @@ export function useBudgetPanel({
     Promise.all(
       priced.map(async (group) => {
         const { end } = currentPeriodRange(group.interval);
-        const items = await client
-          .query<
-            GetLedgerIntervalTotalsQuery,
-            GetLedgerIntervalTotalsQueryVariables
-          >({
-            query: GetLedgerIntervalTotalsDocument,
-            variables: budgetTotalsVariables({ ledgerId, group, time }),
-            fetchPolicy: "cache-first",
-          })
-          .then(({ data }) => data?.getLedgerIntervalTotals ?? [])
+        const totals = (fetchPolicy: "network-only" | "cache-only") =>
+          client
+            .query<
+              GetLedgerIntervalTotalsQuery,
+              GetLedgerIntervalTotalsQueryVariables
+            >({
+              query: GetLedgerIntervalTotalsDocument,
+              variables: budgetTotalsVariables({ ledgerId, group, time }),
+              fetchPolicy,
+            })
+            .then(({ data }) => data?.getLedgerIntervalTotals ?? []);
+        // Current totals first: the persisted cache holds the last session's
+        // spending (w21/006). Offline, that cache is still better than nothing.
+        const items = await totals("network-only")
+          .catch(() => totals("cache-only"))
           // One unreachable account shouldn't blank the whole panel; it ranks
           // as unspent and the page surfaces the error in full.
           .catch(() => []);

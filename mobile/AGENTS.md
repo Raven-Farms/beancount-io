@@ -190,6 +190,10 @@ import { themeVar } from "@/common/vars";
 const currentTheme = useReactiveVar(themeVar);
 ```
 
+### Fetch policies — revalidate the persisted cache
+
+The Apollo cache is persisted and restored before first render, so the client's default watch-query policy is `cache-and-network` (`src/common/apollo/default-options.ts`). Cached rows render at once, offline too, and the network replaces them. Don't set `cache-first` on a ledger read; a cold start would then show the last session's data. Use `network-only` or `no-cache` only where a read must skip the cache. `default-options.test.ts` proves the cold-start behavior against a real client, and `fetch-policies.test.ts` pins the screens to it.
+
 ### Generated GraphQL
 
 `src/generated-graphql/` is produced by `yarn codegen` (config in `codegen.ts`, `apollo.config.json`) and ignored by ESLint. Re-run codegen after schema changes; never hand-edit.
