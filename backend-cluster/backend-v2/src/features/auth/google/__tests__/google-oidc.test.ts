@@ -58,6 +58,7 @@ describe("verifyGoogleIdToken", () => {
     ["wrong issuer", { iss: "https://evil.example" }, "google_failed"],
     ["expired", { exp: Math.floor(Date.now() / 1000) - 600 }, "google_failed"],
     ["missing iat", { iat: undefined }, "google_failed"],
+    ["missing exp", { exp: undefined }, "google_failed"],
     ["missing sub", { sub: undefined }, "google_failed"],
     ["empty sub", { sub: "" }, "google_failed"],
     ["missing nonce", { nonce: undefined }, "google_failed"],
