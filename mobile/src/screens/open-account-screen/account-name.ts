@@ -58,6 +58,28 @@ export function splitPrefillAccountName(
 }
 
 /**
+ * The sub-path field's text with a typed root moved into the selector. The
+ * app shows accounts by full name everywhere, so a pasted
+ * `Assets:Bank:Checking` used to compose into `Assets:Assets:Bank:Checking`
+ * (w21/004). Only a root followed by `:` is peeled — a bare `Assets` may still
+ * be the start of a component — and the rest stays verbatim, so validation
+ * still refuses what the user actually typed. Text without a leading root is
+ * returned unchanged under the current root.
+ */
+export function peelTypedRoot(
+  typed: string,
+  currentRoot: AccountRootPrefix,
+): { rootPrefix: AccountRootPrefix; subPath: string } {
+  const lower = typed.trimStart().toLowerCase();
+  const root = ACCOUNT_ROOT_PREFIXES.find((candidate) =>
+    lower.startsWith(`${candidate.toLowerCase()}:`),
+  );
+  return root
+    ? splitPrefillAccountName(typed, root)
+    : { rootPrefix: currentRoot, subPath: typed };
+}
+
+/**
  * Whether a subcomponent's initial character is one Beancount accepts.
  *
  * Allowed: a Unicode uppercase letter ("Épargne"), a digit ("401k"), and a

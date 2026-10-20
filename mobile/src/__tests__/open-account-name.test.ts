@@ -1,7 +1,10 @@
+import fs from "fs";
+import path from "path";
 import {
   ACCOUNT_ROOT_PREFIXES,
   composeAccountName,
   openAccountSubmitState,
+  peelTypedRoot,
   splitPrefillAccountName,
   typedSubPathIssue,
   type AccountNameValidationReason,
@@ -353,5 +356,82 @@ describe("openAccountSubmitState", () => {
       canSubmit: false,
       alreadyOpen: false,
     });
+  });
+});
+
+// A full name typed or pasted into the sub-path used to compose under the
+// selected root again: `Assets:Assets:Bank:Checking` (w21/004).
+describe("peelTypedRoot", () => {
+  it("moves a typed root into the selector for every root", () => {
+    for (const root of ACCOUNT_ROOT_PREFIXES) {
+      expect(peelTypedRoot(`${root}:Bank:Checking`, "Assets")).toEqual({
+        rootPrefix: root,
+        subPath: "Bank:Checking",
+      });
+    }
+  });
+
+  it("composes the real name, so the already-open check sees it", () => {
+    const typed = peelTypedRoot("Assets:Bank:Checking", "Assets");
+    const account = composeAccountName(typed.rootPrefix, typed.subPath);
+    expect(account).toBe("Assets:Bank:Checking");
+    expect(
+      openAccountSubmitState({
+        account,
+        nameOk: true,
+        openAccounts: ["Assets:Bank:Checking"],
+        busy: false,
+      }),
+    ).toEqual({ alreadyOpen: true, canSubmit: false });
+  });
+
+  it("matches the root in any case and keeps the rest verbatim", () => {
+    expect(peelTypedRoot("assets:Bank:X", "Expenses")).toEqual({
+      rootPrefix: "Assets",
+      subPath: "Bank:X",
+    });
+    // Lowercase components stay for validation to refuse.
+    expect(peelTypedRoot("Liabilities:creditCard", "Assets")).toEqual({
+      rootPrefix: "Liabilities",
+      subPath: "creditCard",
+    });
+  });
+
+  it("switches the selector as soon as a root and colon are typed", () => {
+    expect(peelTypedRoot("Expenses:", "Assets")).toEqual({
+      rootPrefix: "Expenses",
+      subPath: "",
+    });
+  });
+
+  it("leaves a root name later in the path, or with no colon yet, alone", () => {
+    expect(peelTypedRoot("Bank:Assets", "Liabilities")).toEqual({
+      rootPrefix: "Liabilities",
+      subPath: "Bank:Assets",
+    });
+    expect(peelTypedRoot("Assets", "Equity")).toEqual({
+      rootPrefix: "Equity",
+      subPath: "Assets",
+    });
+    expect(peelTypedRoot("AssetsHeld:Gold", "Assets")).toEqual({
+      rootPrefix: "Assets",
+      subPath: "AssetsHeld:Gold",
+    });
+  });
+});
+
+describe("Open Account sub-path field", () => {
+  it("peels a typed root on every change", () => {
+    const source = fs.readFileSync(
+      path.join(
+        __dirname,
+        "..",
+        "screens",
+        "open-account-screen",
+        "open-account-screen.tsx",
+      ),
+      "utf8",
+    );
+    expect(source.includes("peelTypedRoot(value, rootPrefix)")).toBe(true);
   });
 });

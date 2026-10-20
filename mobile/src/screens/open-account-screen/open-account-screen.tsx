@@ -39,6 +39,7 @@ import {
   ACCOUNT_ROOT_PREFIXES,
   composeAccountName,
   typedSubPathIssue,
+  peelTypedRoot,
   splitPrefillAccountName,
   type AccountNameValidationReason,
   type AccountRootPrefix,
@@ -397,7 +398,9 @@ export function OpenAccountScreenComponent(): JSX.Element {
                 testID="open-account-name-input"
                 value={subPath}
                 onChangeText={(value) => {
-                  setSubPath(value);
+                  const typed = peelTypedRoot(value, rootPrefix);
+                  setRootPrefix(typed.rootPrefix);
+                  setSubPath(typed.subPath);
                   setSubmitError(null);
                 }}
                 style={styles.input}
