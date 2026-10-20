@@ -26,7 +26,7 @@
 - [270 — Remove the unsupported blank transaction status](./270.md) — minor; dashboard QA, 2026-10-20.
 - [271 — Keep authored event types distinct and named](./271.md) — minor; dashboard QA, 2026-10-20.
 - [272 — Validate saved BQL history before rendering](./272.md) — minor; dashboard QA, 2026-10-20; controlled corrupted-cache recovery.
-- [273 — Show the active command-picker option in forced colors](./273.md) — minor; dashboard QA, 2026-10-20.
+- [273 — Keep active picker options identifiable in forced colors](./273.md) — minor; dashboard QA, 2026-10-20; CommandItem and shared Combobox.
 - [274 — Preserve account-search focus through retry](./274.md) — minor; dashboard QA, 2026-10-20.
 - [275 — Distinguish failed ledger-switcher reads from empty results](./275.md) — minor; dashboard QA, 2026-10-20.
 - [276 — Refuse lossy text-file editing for unsupported byte encodings](./276.md) — minor; dashboard QA, 2026-10-20.
