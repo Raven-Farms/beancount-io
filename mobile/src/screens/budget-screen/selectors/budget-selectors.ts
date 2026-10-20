@@ -283,6 +283,32 @@ export function groupBudgetEntries(
     );
 }
 
+/**
+ * The period-end dates after `lastDate`'s period, through the period that
+ * contains `today`. An all-time totals query returns only periods with
+ * postings, so a budget active since the last one lost its recent, unspent
+ * periods — and the card reported an old month as the current one (w21/010).
+ * Bounded: an unwindowed query never reaches back past the ledger's first
+ * posting, and each step advances by one whole period.
+ */
+export function periodsThrough(
+  lastDate: string,
+  interval: string,
+  today: string,
+): string[] {
+  const ends: string[] = [];
+  let previous = lastDate;
+  let start = nextIntervalStartISO(lastDate, interval);
+  // A malformed date comes back unchanged; only ever step forward.
+  while (start > previous && start <= today) {
+    const next = nextIntervalStartISO(start, interval);
+    ends.push(addDaysISO(next, -1));
+    previous = start;
+    start = next;
+  }
+  return ends;
+}
+
 /** A history entry with its "300 USD" amount already split into value+currency. */
 export type PreparedBudgetHistory = ReadonlyArray<
   BudgetHistoryEntry & ParsedBudgetAmount

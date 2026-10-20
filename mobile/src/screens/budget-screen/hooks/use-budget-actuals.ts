@@ -4,6 +4,7 @@ import { resolveCurrencyBalance } from "@/common/balance-util";
 import { getFormatDate } from "@/common/format-util";
 import {
   budgetForInterval,
+  periodsThrough,
   prepareBudgetHistory,
   type BudgetGroup,
 } from "@/screens/budget-screen/selectors/budget-selectors";
@@ -70,14 +71,26 @@ export function useBudgetActuals({
     const history = prepareBudgetHistory(group.budgetHistory);
     // Actuals stop at today, so the budget they are measured against does too.
     const today = getFormatDate(new Date());
-    return items.map((item) => ({
-      date: item.date,
-      actual: resolveCurrencyBalance(item.balance, currency) * direction,
+    const point = (date: string, actual: number) => ({
+      date,
+      actual: actual * direction,
       budget:
-        budgetForInterval(item.date, group.interval, history, today) *
-        direction,
-    }));
-  }, [data, currency, direction, group.interval, group.budgetHistory]);
+        budgetForInterval(date, group.interval, history, today) * direction,
+    });
+    const points = items.map((item) =>
+      point(item.date, resolveCurrencyBalance(item.balance, currency)),
+    );
+    // A windowed range ends today on the server. All time ends at the last
+    // posting, so carry it on through today with the periods nothing was
+    // spent in, as YTD and 1Y show them (w21/010).
+    const last = items[items.length - 1];
+    if (time === undefined && last) {
+      for (const date of periodsThrough(last.date, group.interval, today)) {
+        points.push(point(date, 0));
+      }
+    }
+    return points;
+  }, [data, currency, direction, group.interval, group.budgetHistory, time]);
 
   return { series, loading, error };
 }
