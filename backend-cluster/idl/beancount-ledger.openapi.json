@@ -8973,6 +8973,10 @@
             "type": "array",
             "title": "Entries",
             "description": "List of entries to delete"
+          },
+          "allowInvalid": {
+            "type": "boolean",
+            "description": "Delete the entries even when that would add bean-check errors (NEW_LEDGER_ERRORS), instead of refusing it."
           }
         },
         "type": "object",
@@ -9017,6 +9021,10 @@
             "type": "string",
             "title": "Sha256Sum",
             "description": "SHA256 hash of the current entry source for validation"
+          },
+          "allowInvalid": {
+            "type": "boolean",
+            "description": "Delete the entry even when that would add bean-check errors (NEW_LEDGER_ERRORS), instead of refusing it."
           }
         },
         "type": "object",
@@ -12299,7 +12307,10 @@
             "description": "Formatted query output as plain text"
           },
           "rowCount": {
-            "type": ["integer", "null"],
+            "type": [
+              "integer",
+              "null"
+            ],
             "minimum": 0,
             "title": "Row Count",
             "description": "Canonical rows from the same query execution, independent of rendered text lines. Omitted or null when unknown."
@@ -13875,6 +13886,10 @@
             "type": "string",
             "title": "New Content",
             "description": "New content for the entry"
+          },
+          "allowInvalid": {
+            "type": "boolean",
+            "description": "Commit the edit even when it would add bean-check errors (NEW_LEDGER_ERRORS), instead of refusing it."
           }
         },
         "type": "object",

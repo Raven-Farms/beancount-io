@@ -2,8 +2,10 @@ import { parseLedgerId } from "@/shared/str";
 import {
   BadUserInputError,
   ConflictError,
+  NewLedgerErrorsError,
   NotFoundError,
   OperationNotAllowedError,
+  type LedgerWriteAction,
 } from "@/shared/errors";
 import type {
   DirectiveType,
@@ -61,6 +63,8 @@ import {
   type LedgerFileTransform,
 } from "@/features/ledger/operations/commit-ledger-files";
 import type { DirectiveLimitOptions } from "@/core/directive-limit";
+import { toBeancountErrorsPublic } from "@/features/ledger/service/ledger-data-mappers";
+import { newLedgerErrors } from "@/features/ledger/utils/new-ledger-errors";
 import type { CacheHelper } from "@/shared/cache";
 import { logger } from "@/shared/logger";
 
@@ -478,6 +482,35 @@ export class LedgerJournalService implements ILedgerJournalService {
   }
 
   /**
+   * Refuse a source-slice write that would leave the ledger with bean-check
+   * errors it did not have, as structured adds are refused (w0/m2, w21/m1).
+   * The transforms run over the loaded files, so nothing is committed; the
+   * commit re-applies them to fresh content under CAS. Errors the ledger
+   * already had never block, and a clean projection skips the second parse.
+   */
+  private async assertNoNewErrors(
+    loaded: LoadedLedgerWithManagedPrices,
+    transforms: Map<string, LedgerFileTransform>,
+    action: LedgerWriteAction,
+  ): Promise<void> {
+    const { files, entryPoint, repoPaths } = loaded;
+    const projected: FileMap = { ...files };
+    for (const [path, transform] of transforms) {
+      projected[path] = await transform(files[path] ?? null);
+    }
+    const errorsOf = async (fileMap: FileMap) =>
+      toBeancountErrorsPublic(
+        (await parseLedgerFiles(fileMap, entryPoint, { repoPaths })).errors,
+      );
+    const after = await errorsOf(projected);
+    if (after.length === 0) return;
+    const introduced = newLedgerErrors(await errorsOf(files), after);
+    if (introduced.length > 0) {
+      throw new NewLedgerErrorsError(introduced, action);
+    }
+  }
+
+  /**
    * Commit source-slice edits (delete/replace) with optimistic-concurrency
    * safety: each transform re-locates + re-applies against the FRESH file
    * content immediately before the commit, and retries on a concurrent-write
@@ -790,10 +823,12 @@ export class LedgerJournalService implements ILedgerJournalService {
     userId: string;
     entryHash: string;
     sha256sum: string;
+    /** Commit even when the delete adds bean-check errors. */
+    allowInvalid?: boolean;
   }): Promise<DeleteSliceResult> {
-    const { ledgerId, userId, entryHash, sha256sum } = params;
-    const { files, entryPoint, repoPaths, managedPricePaths } =
-      await this.loadFileMap(ledgerId, userId);
+    const { ledgerId, userId, entryHash, sha256sum, allowInvalid } = params;
+    const loaded = await this.loadFileMap(ledgerId, userId);
+    const { files, entryPoint, repoPaths, managedPricePaths } = loaded;
     const sourceEntryHash = await this.resolveSourceEntryId(
       files,
       entryPoint,
@@ -811,24 +846,23 @@ export class LedgerJournalService implements ILedgerJournalService {
       sourceEntryHash,
       sha256sum,
     );
-    await this.commitTransforms(
-      ledgerId,
-      userId,
-      new Map([
-        [
-          found.file,
-          makeDeleteTransform(found.file, [
-            {
-              base: parseEntryId(sourceEntryHash).base,
-              localOccurrence: found.localOccurrence,
-              sha256sum,
-              startLine: found.startLine,
-            },
-          ]),
-        ],
-      ]),
-      "Delete entry",
-    );
+    const transforms = new Map([
+      [
+        found.file,
+        makeDeleteTransform(found.file, [
+          {
+            base: parseEntryId(sourceEntryHash).base,
+            localOccurrence: found.localOccurrence,
+            sha256sum,
+            startLine: found.startLine,
+          },
+        ]),
+      ],
+    ]);
+    if (!allowInvalid) {
+      await this.assertNoNewErrors(loaded, transforms, "delete");
+    }
+    await this.commitTransforms(ledgerId, userId, transforms, "Delete entry");
     return { message: "Entry deleted successfully", entryHash };
   }
 
@@ -836,10 +870,12 @@ export class LedgerJournalService implements ILedgerJournalService {
     ledgerId: string;
     userId: string;
     entries: { entryHash: string; sha256sum: string }[];
+    /** Commit even when the deletes add bean-check errors. */
+    allowInvalid?: boolean;
   }): Promise<DeleteMultiSlicesResult> {
-    const { ledgerId, userId, entries } = params;
-    const { files, entryPoint, repoPaths, managedPricePaths } =
-      await this.loadFileMap(ledgerId, userId);
+    const { ledgerId, userId, entries, allowInvalid } = params;
+    const loaded = await this.loadFileMap(ledgerId, userId);
+    const { files, entryPoint, repoPaths, managedPricePaths } = loaded;
     const snapshot = await parseLedgerFiles(files, entryPoint, { repoPaths });
     const sourceIds = sourceEntryIds(snapshot.directives);
     const sourceHashes = entries.map(
@@ -894,6 +930,9 @@ export class LedgerJournalService implements ILedgerJournalService {
       ),
     );
 
+    if (!allowInvalid) {
+      await this.assertNoNewErrors(loaded, transforms, "delete");
+    }
     await this.commitTransforms(ledgerId, userId, transforms, "Delete entries");
     return {
       message: `Deleted ${deletedHashes.length} entries successfully`,
@@ -907,10 +946,13 @@ export class LedgerJournalService implements ILedgerJournalService {
     entryHash: string;
     sha256sum: string;
     newContent: string;
+    /** Commit even when the edit adds bean-check errors. */
+    allowInvalid?: boolean;
   }): Promise<UpdateSliceResult> {
-    const { ledgerId, userId, entryHash, sha256sum, newContent } = params;
-    const { files, entryPoint, repoPaths, managedPricePaths } =
-      await this.loadFileMap(ledgerId, userId);
+    const { ledgerId, userId, entryHash, sha256sum, newContent, allowInvalid } =
+      params;
+    const loaded = await this.loadFileMap(ledgerId, userId);
+    const { files, entryPoint, repoPaths, managedPricePaths } = loaded;
     const sourceEntryHash = await this.resolveSourceEntryId(
       files,
       entryPoint,
@@ -926,29 +968,29 @@ export class LedgerJournalService implements ILedgerJournalService {
       sha256sum,
     );
     const applied: { current?: AppliedReplace } = {};
-    await this.commitTransforms(
-      ledgerId,
-      userId,
-      new Map([
-        [
+    const transforms = new Map([
+      [
+        found.file,
+        makeReplaceTransform(
           found.file,
-          makeReplaceTransform(
-            found.file,
-            {
-              base: parseEntryId(sourceEntryHash).base,
-              localOccurrence: found.localOccurrence,
-              sha256sum,
-              startLine: found.startLine,
-            },
-            newContent,
-            (result) => {
-              applied.current = result;
-            },
-          ),
-        ],
-      ]),
-      "Update entry",
-    );
+          {
+            base: parseEntryId(sourceEntryHash).base,
+            localOccurrence: found.localOccurrence,
+            sha256sum,
+            startLine: found.startLine,
+          },
+          newContent,
+          (result) => {
+            applied.current = result;
+          },
+        ),
+      ],
+    ]);
+    // The projection's application is overwritten by the commit's own run.
+    if (!allowInvalid) {
+      await this.assertNoNewErrors(loaded, transforms, "update");
+    }
+    await this.commitTransforms(ledgerId, userId, transforms, "Update entry");
     // The entry's identity is content-derived, so the edit almost always
     // changed it. Resolve the NEW hash from the committed content so a client
     // can keep the edited entry on screen; fall back to echoing the request

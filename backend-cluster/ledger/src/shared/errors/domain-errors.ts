@@ -120,13 +120,24 @@ export class UnbalancedTransactionError extends DomainError {
   }
 }
 
+/** Which write a {@link NewLedgerErrorsError} refused. */
+export type LedgerWriteAction = "add" | "update" | "delete";
+
+const LEDGER_WRITE_SUBJECT: Record<LedgerWriteAction, string> = {
+  add: "adding these entries",
+  update: "this edit",
+  delete: "this deletion",
+};
+
 /**
  * A structured write whose entries would leave the ledger with bean-check
  * errors it did not have — a second `open` for an account already open, a
  * balance against an account never opened (w0/m2). Carries the
  * `NEW_LEDGER_ERRORS` code, the count and each new error as `message (file:line)`
  * so clients can refuse without parsing prose. `allowInvalid` records the
- * entries deliberately, as the text-append route already allows.
+ * entries deliberately, as the text-append route already allows. Source-slice
+ * edits and deletes refuse the same way (w21/m1); `details.action` says which
+ * write it was so a client can word the refusal.
  */
 export class NewLedgerErrorsError extends DomainError {
   constructor(
@@ -134,6 +145,7 @@ export class NewLedgerErrorsError extends DomainError {
       message: string;
       source?: { filename: string; lineno: number } | null;
     }[],
+    action: LedgerWriteAction = "add",
   ) {
     const detail = newErrors
       .map((error) =>
@@ -145,10 +157,10 @@ export class NewLedgerErrorsError extends DomainError {
     const noun = newErrors.length === 1 ? "error" : "errors";
     super(
       ErrorCategory.BAD_USER_INPUT,
-      `adding these entries would introduce ${newErrors.length} new bean-check ${noun}: ${detail}`,
+      `${LEDGER_WRITE_SUBJECT[action]} would introduce ${newErrors.length} new bean-check ${noun}: ${detail}`,
       {
         code: "NEW_LEDGER_ERRORS",
-        details: { count: newErrors.length, detail },
+        details: { count: newErrors.length, detail, action },
       },
     );
   }

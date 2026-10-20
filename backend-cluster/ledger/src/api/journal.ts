@@ -121,6 +121,7 @@ export function setJournalHandler(router: Router): void {
       entry_hash: string;
       sha256sum: string;
       new_content: string;
+      allowInvalid?: boolean | null;
     };
     const result = await journal.updateSourceSlice({
       ledgerId: ledgerIdOf(ctx),
@@ -128,6 +129,7 @@ export function setJournalHandler(router: Router): void {
       entryHash: body.entry_hash,
       sha256sum: body.sha256sum,
       newContent: body.new_content,
+      allowInvalid: body.allowInvalid === true,
     });
     ctx.body = successResponse({
       // Python fava-slim template: f"Updated entry {entry_hash}"
@@ -144,12 +146,14 @@ export function setJournalHandler(router: Router): void {
     const body = (ctx.request.body ?? {}) as {
       entry_hash: string;
       sha256sum: string;
+      allowInvalid?: boolean | null;
     };
     const result = await journal.deleteSourceSlice({
       ledgerId: ledgerIdOf(ctx),
       userId: "",
       entryHash: body.entry_hash,
       sha256sum: body.sha256sum,
+      allowInvalid: body.allowInvalid === true,
     });
     ctx.body = successResponse({
       // Python fava-slim template: f"Deleted entry {entry_hash}"
@@ -163,10 +167,12 @@ export function setJournalHandler(router: Router): void {
     const { journal } = servicesForRequest(ctx);
     const body = (ctx.request.body ?? {}) as {
       entries: { entry_hash: string; sha256sum: string }[];
+      allowInvalid?: boolean | null;
     };
     const result = await journal.deleteMultiSourceSlices({
       ledgerId: ledgerIdOf(ctx),
       userId: "",
+      allowInvalid: body.allowInvalid === true,
       entries: (body.entries ?? []).map((e) => ({
         entryHash: e.entry_hash,
         sha256sum: e.sha256sum,

@@ -44,4 +44,5 @@ export {
   OperationNotAllowedError,
   PremiumRequiredError,
   NewLedgerErrorsError,
+  type LedgerWriteAction,
 } from "./domain-errors";
