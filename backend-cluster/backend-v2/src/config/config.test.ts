@@ -393,6 +393,14 @@ describe("config", () => {
       expect(g?.clientId).toBe(id);
       expect([...(g?.hostedDomains ?? [])]).toEqual(["example.com"]);
     });
+    it("accepts Google's numeric-only client ID form", () => {
+      expect(
+        parseGoogleAuthConfig({
+          GOOGLE_CLIENT_ID: "407408718192.apps.googleusercontent.com",
+          GOOGLE_CLIENT_SECRET: "s",
+        })?.clientId,
+      ).toBe("407408718192.apps.googleusercontent.com");
+    });
     it("requires both client settings, a real client ID, and a client for hosted domains", () => {
       expect(() => parseGoogleAuthConfig({ GOOGLE_CLIENT_ID: id })).toThrow(
         /both/,

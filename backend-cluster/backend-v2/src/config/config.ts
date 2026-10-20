@@ -97,7 +97,7 @@ export function parseGoogleAuthConfig(env: {
       "Set both GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET, or neither",
     );
   }
-  if (!/^[0-9]+-[a-z0-9]+\.apps\.googleusercontent\.com$/.test(clientId)) {
+  if (!/^[0-9]+(?:-[a-z0-9]+)?\.apps\.googleusercontent\.com$/.test(clientId)) {
     throw new Error("GOOGLE_CLIENT_ID is not a Google OAuth client ID");
   }
   return { clientId, clientSecret, hostedDomains };
