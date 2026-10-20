@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { Link } from "@tanstack/react-router";
 import {
   Activity,
   ArrowUpRight,
@@ -9,7 +8,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/common/components/ui/button";
 import { useFormatRelativeTime } from "@/common/hooks/use-date-locale";
-import { useHydrated } from "@/common/hooks/use-hydrated";
+import { Link, useHydrated } from "@tanstack/react-router";
 import { useTranslations } from "@/common/hooks/use-translations";
 import type {
   UserActivityFeedItem,

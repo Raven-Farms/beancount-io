@@ -7,7 +7,7 @@ import {
   TooltipTrigger,
 } from "@/common/components/ui/tooltip";
 import { useFormatRelativeTime } from "@/common/hooks/use-date-locale";
-import { useHydrated } from "@/common/hooks/use-hydrated";
+import { useHydrated } from "@tanstack/react-router";
 import { useTranslations } from "@/common/hooks/use-translations";
 import { toast } from "sonner";
 

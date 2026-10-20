@@ -9,7 +9,8 @@ import { ProfileActivity } from "../profile-activity";
 
 vi.unmock("@/common/hooks/use-translations");
 vi.unmock("react-i18next");
-vi.mock("@tanstack/react-router", () => ({
+vi.mock("@tanstack/react-router", async (importOriginal) => ({
+  ...(await importOriginal<object>()),
   Link: ({
     children,
     className,

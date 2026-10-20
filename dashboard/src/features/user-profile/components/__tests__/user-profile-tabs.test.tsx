@@ -10,6 +10,7 @@ import type {
 // Mock TanStack Router
 const mockNavigate = vi.fn();
 vi.mock("@tanstack/react-router", () => ({
+  useHydrated: () => true,
   Link: ({ children, to, params, ...props }: any) => (
     <a
       href={`${to}/${params?.ledgerOwner || params?.username || ""}/${params?.ledgerName || ""}`}
