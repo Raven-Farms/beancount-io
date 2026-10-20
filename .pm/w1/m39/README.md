@@ -77,4 +77,4 @@ This milestone ships before that page changes, so every task keeps that contract
 
 ## Dropped
 
-- ~~**t016**~~ — Operator: GA4 Measurement Protocol secret and stream ID in production — dropped 2026-10-20: the user chose to record `purchase` in the browser; the server-side reporter it would have switched on is retired by [w2/m54/t003](../../w2/m54/done/t003.md).
+- ~~**t016**~~ — Operator: GA4 Measurement Protocol secret and stream ID in production — dropped 2026-10-20: the user chose to record `purchase` in the browser; the server-side reporter it would have switched on is retired by [w2/m54/t003](../../w2/blocked/m54/done/t003.md).

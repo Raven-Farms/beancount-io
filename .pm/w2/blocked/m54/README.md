@@ -1,6 +1,6 @@
 # w2 · m54 — A purchase ends on a confirmation that celebrates it, and analytics counts it in the browser
 
-**Worker:** worker2 **Goal:** Every successful payment — a new subscription through Stripe Checkout or an upgrade charged inside Billing — ends in the dashboard on a confirmation that says what the customer now has, celebrates it once, and records one GA4 `purchase` from the browser. Checkout no longer returns to the marketing pricing page, and the dormant server-side purchase reporter is retired so there is one purchase source. **Status:** todo (t001–t010 done)
+**Worker:** worker2 **Goal:** Every successful payment — a new subscription through Stripe Checkout or an upgrade charged inside Billing — ends in the dashboard on a confirmation that says what the customer now has, celebrates it once, and records one GA4 `purchase` from the browser. Checkout no longer returns to the marketing pricing page, and the dormant server-side purchase reporter is retired so there is one purchase source. **Status:** blocked (t001–t010 done; t011 waits for the deploy)
 
 ## Tasks (in order)
 
@@ -31,7 +31,11 @@
 
 ## Source + Goal linkage
 
-- **Source:** user decisions on 2026-10-20: after payment, land on the dashboard confirmation; record GA purchases client-side rather than through the Measurement Protocol; add a confetti celebration. This replaces the open half of [w1/m39/t003](../../w1/m39/done/t003.md) and supersedes w1/m39/t016 and w1/178 (both dropped). Research recap: Stripe recommends a custom success page that carries `{CHECKOUT_SESSION_ID}` while fulfillment stays on webhooks, which the confirmation already does.
+- **Source:** user decisions on 2026-10-20: after payment, land on the dashboard confirmation; record GA purchases client-side rather than through the Measurement Protocol; add a confetti celebration. This replaces the open half of [w1/m39/t003](../../../w1/m39/done/t003.md) and supersedes w1/m39/t016 and w1/178 (both dropped). Research recap: Stripe recommends a custom success page that carries `{CHECKOUT_SESSION_ID}` while fulfillment stays on webhooks, which the confirmation already does.
 - **Goal linkage:** **A2 — Frictionless onboarding.** The moment after paying is when a new subscriber starts using what they bought. Today Checkout drops them on a marketing page that neither confirms the payment nor leads back into the product, and the confirmation built for them is unreachable.
 - **Expected outcome:** every buyer lands in the product knowing the payment worked and with one obvious next step; the purchase funnel (`checkout_started` → `purchase`) is measurable without operator setup. Adoption surface is included because the change is reader-facing (dashboard copy, event taxonomy, backend environment variables).
 - **Why now:** the confirmation (w1/m39/t008) and the way-back memory (w1/m39/t009) shipped; only the return URL and a purchase signal stood between them and every paying customer.
+
+## Blocked
+
+**t011 is blocked:** the production check needs this milestone deployed. Everything else is on `main` (a83111079, 6378b7d88, 59771a0ab, ac0299bbb, abcb700fa). **Unblock:** the operator deploys backend-v2 first — it carries migration `0025_drop_reported_purchases.sql` and the new GraphQL fields (`createSubscriptionSession(returnTo)`, `PlanChangeResult.invoiceId/amountCharged/currency`, `Subscription.latestInvoice`) — and then the dashboard, whose queries select those fields and fail against an older backend. Proving a counted `purchase` also needs a small real charge, with the user's go-ahead, watched in GA4 Realtime or DebugView by someone with GA access. Cleared by the operator and the user.

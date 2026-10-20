@@ -36,7 +36,7 @@ m39–m40 were materialized on 2026-10-18 from [PRFAQ005](../../docs/prfaqs/PRFA
 
 ## Dropped
 
-- ~~**178**~~ — Give the server-side `purchase` its traffic source — dropped 2026-10-20: purchases are recorded in the browser, which carries the traffic source natively, and the server-side reporter is retired ([w2/m54](../w2/m54/README.md)).
+- ~~**178**~~ — Give the server-side `purchase` its traffic source — dropped 2026-10-20: purchases are recorded in the browser, which carries the traffic source natively, and the server-side reporter is retired ([w2/m54](../w2/blocked/m54/README.md)).
 
 - ~~**m28**~~ — Read-after-delete consistency for hosted slice deletes — dropped 2026-09-16: proposed by `/pm-brainstorm for w1` as a promotion of `w1/033`, but never materialized as open work. Triage the same day established that every layer of the delete path in this monorepo already applies synchronously — backend-v2 awaits the ledger-service call, the ledger service awaits a Gitea CAS commit with bounded retry, reads resolve live HEAD per load, and backend-v2 caches no journal or context read — so there is no async-apply code here to fix and no in-monorepo change can be proven against the acceptance. The work is still wanted and waits with its full record and **Unblock:** condition at [blocked/033](./blocked/033.md), which needs hosted diagnosis naming the lagging layer. Promoting it into a milestone would have duplicated that note and put unbuildable work in the open tree.
 
