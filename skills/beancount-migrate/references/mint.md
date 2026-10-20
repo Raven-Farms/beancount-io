@@ -16,6 +16,6 @@ Parsing rules:
 - **Transfer categories**: `Transfer`, `Credit Card Payment` (also `Transfer for Cash Spending`, `Cash & ATM` for some users — show the category list and let the user mark transfer-ish ones). Pair per mapping.md.
 - **`Labels`/`Notes`** — carry into the narration or as `label:`/`note:` metadata if non-empty; drop if empty.
 - Mint categories are a fixed taxonomy (~90 categories) plus user-defined ones; the mapping table will typically be 20–40 distinct values in practice.
-- **No balances anywhere in the file** — opening-balance math per mapping.md is mandatory.
+- **No balances anywhere in the file** — opening-balance math per mapping.md is mandatory. The export ends at download (or the 2024 shutdown for old files) while any stated balance is newer, so the as-of gap rule always applies: never derive an opening from a post-export balance.
 - **Split transactions** may appear as several rows sharing the date, account and `Original Description` with different categories and amounts. Ask whether each group is one split purchase and convert it per mapping.md's "Split purchases" (one transaction, one id over the total).
 - Duplicates: Mint aggregation sometimes double-recorded a transaction (same date/amount/description, same account). Flag exact duplicate rows and ask, don't auto-drop — some are legitimate (two identical coffees).
