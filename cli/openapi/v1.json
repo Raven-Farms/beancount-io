@@ -1371,9 +1371,6 @@
                             "name": {
                               "type": "string"
                             },
-                            "kind": {
-                              "type": "string"
-                            },
                             "currency": {
                               "type": "string",
                               "pattern": "^[A-Z]{3}$"
@@ -5415,9 +5412,6 @@
                           "type": "object",
                           "properties": {
                             "name": {
-                              "type": "string"
-                            },
-                            "kind": {
                               "type": "string"
                             },
                             "currency": {
@@ -10809,7 +10803,7 @@
     "/api-gateway/v1/ledgers/{owner}/{name}/entry-source/delete": {
       "post": {
         "summary": "Delete one entry source slice",
-        "description": "Modify entry source using the current sha256sum from entry context. Ledger content-write authority is checked before delegation. Stale source hashes are refused by the ledger service. An update returns the entry's new hash — the request's entryHash is stale after the commit. An update that would take a free ledger past its directive limit is refused with RESOURCE_LIMIT_REACHED, naming the limit and the projected count; deletes always pass. No preview.",
+        "description": "Modify entry source using the current sha256sum from entry context. Ledger content-write authority is checked before delegation. Stale source hashes are refused by the ledger service. An update returns the entry's new hash — the request's entryHash is stale after the commit. An update or delete that would add bean-check errors the ledger did not have — deleting an entry a balance assertion depends on, re-dating it past one — is refused with VALIDATION_FAILED, naming each new error in newLedgerErrors; errors the ledger already had never block, and `allowInvalid: true` commits anyway. An update that would take a free ledger past its directive limit is refused with RESOURCE_LIMIT_REACHED, naming the limit and the projected count; deletes always pass. No preview.",
         "tags": [
           "Ledger v1"
         ],
@@ -10858,6 +10852,10 @@
                   },
                   "sha256sum": {
                     "type": "string"
+                  },
+                  "allowInvalid": {
+                    "type": "boolean",
+                    "description": "Commit even when the write would add bean-check errors (VALIDATION_FAILED with newLedgerErrors), instead of refusing it."
                   }
                 },
                 "required": [
@@ -10988,7 +10986,7 @@
     "/api-gateway/v1/ledgers/{owner}/{name}/entry-source/delete-many": {
       "post": {
         "summary": "Delete multiple entry source slices",
-        "description": "Modify entry source using the current sha256sum from entry context. Ledger content-write authority is checked before delegation. Stale source hashes are refused by the ledger service. An update returns the entry's new hash — the request's entryHash is stale after the commit. An update that would take a free ledger past its directive limit is refused with RESOURCE_LIMIT_REACHED, naming the limit and the projected count; deletes always pass. No preview.",
+        "description": "Modify entry source using the current sha256sum from entry context. Ledger content-write authority is checked before delegation. Stale source hashes are refused by the ledger service. An update returns the entry's new hash — the request's entryHash is stale after the commit. An update or delete that would add bean-check errors the ledger did not have — deleting an entry a balance assertion depends on, re-dating it past one — is refused with VALIDATION_FAILED, naming each new error in newLedgerErrors; errors the ledger already had never block, and `allowInvalid: true` commits anyway. An update that would take a free ledger past its directive limit is refused with RESOURCE_LIMIT_REACHED, naming the limit and the projected count; deletes always pass. No preview.",
         "tags": [
           "Ledger v1"
         ],
@@ -11050,6 +11048,10 @@
                       ],
                       "additionalProperties": false
                     }
+                  },
+                  "allowInvalid": {
+                    "type": "boolean",
+                    "description": "Commit even when the write would add bean-check errors (VALIDATION_FAILED with newLedgerErrors), instead of refusing it."
                   }
                 },
                 "required": [
@@ -11179,7 +11181,7 @@
     "/api-gateway/v1/ledgers/{owner}/{name}/entry-source": {
       "put": {
         "summary": "Update an entry source slice",
-        "description": "Modify entry source using the current sha256sum from entry context. Ledger content-write authority is checked before delegation. Stale source hashes are refused by the ledger service. An update returns the entry's new hash — the request's entryHash is stale after the commit. An update that would take a free ledger past its directive limit is refused with RESOURCE_LIMIT_REACHED, naming the limit and the projected count; deletes always pass. No preview.",
+        "description": "Modify entry source using the current sha256sum from entry context. Ledger content-write authority is checked before delegation. Stale source hashes are refused by the ledger service. An update returns the entry's new hash — the request's entryHash is stale after the commit. An update or delete that would add bean-check errors the ledger did not have — deleting an entry a balance assertion depends on, re-dating it past one — is refused with VALIDATION_FAILED, naming each new error in newLedgerErrors; errors the ledger already had never block, and `allowInvalid: true` commits anyway. An update that would take a free ledger past its directive limit is refused with RESOURCE_LIMIT_REACHED, naming the limit and the projected count; deletes always pass. No preview.",
         "tags": [
           "Ledger v1"
         ],
@@ -11228,6 +11230,10 @@
                   },
                   "sha256sum": {
                     "type": "string"
+                  },
+                  "allowInvalid": {
+                    "type": "boolean",
+                    "description": "Commit even when the write would add bean-check errors (VALIDATION_FAILED with newLedgerErrors), instead of refusing it."
                   },
                   "newContent": {
                     "type": "string"

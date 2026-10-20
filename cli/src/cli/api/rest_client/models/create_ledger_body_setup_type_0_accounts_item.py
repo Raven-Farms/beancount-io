@@ -18,22 +18,18 @@ class CreateLedgerBodySetupType0AccountsItem:
     """
     Attributes:
         name (str):
-        kind (str | Unset):
         currency (str | Unset):
         opening_state (CreateLedgerBodySetupType0AccountsItemOpeningState | Unset):
         amount (str | Unset):
     """
 
     name: str
-    kind: str | Unset = UNSET
     currency: str | Unset = UNSET
     opening_state: CreateLedgerBodySetupType0AccountsItemOpeningState | Unset = UNSET
     amount: str | Unset = UNSET
 
     def to_dict(self) -> dict[str, Any]:
         name = self.name
-
-        kind = self.kind
 
         currency = self.currency
 
@@ -50,8 +46,6 @@ class CreateLedgerBodySetupType0AccountsItem:
                 "name": name,
             }
         )
-        if kind is not UNSET:
-            field_dict["kind"] = kind
         if currency is not UNSET:
             field_dict["currency"] = currency
         if opening_state is not UNSET:
@@ -66,8 +60,6 @@ class CreateLedgerBodySetupType0AccountsItem:
         d = dict(src_dict)
         name = d.pop("name")
 
-        kind = d.pop("kind", UNSET)
-
         currency = d.pop("currency", UNSET)
 
         _opening_state = d.pop("openingState", UNSET)
@@ -81,7 +73,6 @@ class CreateLedgerBodySetupType0AccountsItem:
 
         create_ledger_body_setup_type_0_accounts_item = cls(
             name=name,
-            kind=kind,
             currency=currency,
             opening_state=opening_state,
             amount=amount,
