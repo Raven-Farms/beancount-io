@@ -44,7 +44,7 @@
 - [877 — Match preset creation summaries to actual account counts and opening dates](./877.md) — minor CLI success-output finding; reproduced 2026-10-20.
 - [878 — Validate preset currencies before unrelated prompts and retry invalid answers](./878.md) — minor CLI PTY onboarding finding; reproduced 2026-10-20.
 - [879 — Refuse portable exports that cannot enumerate required plugin resource directories](./879.md) — minor CLI snapshot-integrity follow-up to 868; reproduced 2026-10-20.
-- [880 — Include runtime-imported plugin helpers in exports served from a load cache](./880.md) — minor CLI snapshot-integrity follow-up to 327; reproduced 2026-10-20.
+- [880 — Include cached runtime helpers and namespace-package resources in plugin exports](./880.md) — minor CLI dependency-inventory follow-up to 327; reproduced 2026-10-20.
 - [881 — Deduplicate stable import IDs on source transactions omitted by a view plugin](./881.md) — major CLI duplicate-booking finding; reproduced 2026-10-20.
 - [882 — Pair transfer counterparts one-to-one across ID and date matchers](./882.md) — major CLI duplicate-booking / skipped-deposit follow-up to 821; reproduced 2026-10-20.
 - [883 — Render valid account components containing non-ASCII spaces in treeify](./883.md) — minor CLI grammar follow-up to 137; reproduced 2026-10-20.
