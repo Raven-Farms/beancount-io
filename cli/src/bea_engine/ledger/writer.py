@@ -345,7 +345,13 @@ def _append(
     )
 
 
-def format_transaction(directive: TransactionHeader) -> str:
+def format_transaction(directive: TransactionHeader, *, loaded: bool = False) -> str:
+    """A transaction model as Beancount text.
+
+    `loaded` renders an entry the ledger already holds as it holds it: the
+    write sanitizer turned a TAB into a literal `\\x09` and a line break into
+    a space, so `list --details` showed strings that parse back as others (w5/834).
+    """
     postings = []
     for p in directive.postings:
         # The schema forbids price and price_total together; a total travels
@@ -383,6 +389,8 @@ def format_transaction(directive: TransactionHeader) -> str:
         links=frozenset(directive.links),
         postings=postings,
     )
+    if loaded:
+        return str(DirectivePrinter()(entry))  # type: ignore[no-untyped-call]
     return str(format_entry(entry))
 
 

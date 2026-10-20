@@ -127,7 +127,7 @@ def answer(
         # for explicitly because it is the expensive part of the answer.
         from bea_engine.ledger.writer import format_transaction
 
-        data["rendered"] = [format_transaction(item) for item in items]
+        data["rendered"] = [format_transaction(item, loaded=True) for item in items]
     return data
 
 

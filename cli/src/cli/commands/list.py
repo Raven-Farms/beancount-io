@@ -14,6 +14,7 @@ Beancount syntax the helper already produced.
 from __future__ import annotations
 
 import re
+import sys
 from collections.abc import Callable
 from dataclasses import dataclass
 from enum import StrEnum
@@ -422,7 +423,9 @@ def _run(name: str, spec: _Spec, limit: int, allow_errors: bool, *, details: boo
             if item.get("source"):
                 suffix = " (generated)" if item.get("generated") else ""
                 typer.echo(single_line(f"{item['source']['filename']}:{item['source']['lineno']}{suffix}"))
-            typer.echo(inert_text(rendered))
+            # A terminal shows control characters inert; a redirect gets the
+            # ledger's own strings, so the text parses back (w5/834).
+            typer.echo(inert_text(rendered) if sys.stdout is not None and sys.stdout.isatty() else rendered)
     elif name == "transaction":
         account = fold_account(filters.get("account") or "")
         amounts = "MATCHING POSTING AMOUNTS" if account else "POSTING AMOUNTS"
