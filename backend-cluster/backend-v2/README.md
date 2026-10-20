@@ -112,8 +112,10 @@ allows CORS from those hosts. A self-host on another domain sets:
   with Google (OIDC authorization code flow with PKCE and nonce). Off unless
   both client values are set.
   - Register a Web OAuth client with the redirect URI
-    `${DASHBOARD_URL}/api-gateway/auth/google/callback`. The dashboard host must
-    serve `/api-gateway/`, and `AUTH_COOKIE_DOMAIN` must suit that host.
+    `${DASHBOARD_URL}/api-gateway/auth/google/callback`. The dashboard host
+    must route `/api-gateway/auth/*` to the backend (the `deploy/docker`
+    Caddyfiles do). The session cookie is set there, so with a separate API
+    host set `AUTH_COOKIE_DOMAIN` to the shared parent domain.
   - Google accounts link to users **by verified email**, which Google is
     authoritative for: Workspace (`hd`) and gmail.com accounts only.
   - `GOOGLE_HOSTED_DOMAINS` restricts sign-in to those Workspace domains.
