@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [771 — check_drained close hint blames the parent for a subaccount's money; following it leaves wrong books](./771.md)
 - [772 — A backdated close (or late open) blames the existing entry, cites a line past EOF, and suggests --allow-errors](./772.md)
 - [773 — Closed-account hints: add open never names the close, doctor says reopen, duplicate close is bare or misblamed](./773.md)
 - [774 — An overlay is still the root with a forecast plugin, a repeated Fava option, above a leaf, and in hints (incomplete fix of w5/578)](./774.md)
