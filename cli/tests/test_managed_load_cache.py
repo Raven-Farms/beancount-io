@@ -9,6 +9,7 @@ ledger's files and the feed revisions in use.
 
 from __future__ import annotations
 
+import os
 import time
 from pathlib import Path
 from typing import Any
@@ -92,3 +93,29 @@ def test_a_refreshed_feed_is_parsed_again(feed_server: str, tmp_path: Path, pars
     assert "115000.00" in {
         str(entry.amount.number) for entry in refreshed.entries if hasattr(entry, "amount") and entry.amount
     }
+
+
+def test_disable_variable_forces_a_fresh_managed_load_and_removes_the_cache(
+    feed_server: str, tmp_path: Path, parses: list[str], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """`BEANCOUNT_DISABLE_LOAD_CACHE` bypasses the `.managed` cache like upstream's (w5/776)."""
+    ledger = tmp_path / "main.bean"
+    ledger.write_text(_managed_ledger(feed_server) + TXNS)
+    _read(ledger, feed_server)
+    assert len(parses) == 1
+    assert list((tmp_path / "xdg-cache").rglob("*.managed"))
+
+    before = ledger.stat()
+    ledger.write_text(_managed_ledger(feed_server) + TXNS.replace("Expenses:Food", "Expenses:Fodo"))
+    os.utime(ledger, ns=(before.st_atime_ns, before.st_mtime_ns))
+    stale = _read(ledger, feed_server, offline=True)
+
+    assert len(parses) == 1, parses
+    assert [error.message for error in stale.errors] == []
+
+    monkeypatch.setenv("BEANCOUNT_DISABLE_LOAD_CACHE", "1")
+    fresh = _read(ledger, feed_server, offline=True)
+
+    assert len(parses) == 2, parses
+    assert any("Expenses:Fodo" in error.message for error in fresh.errors)
+    assert list((tmp_path / "xdg-cache").rglob("*.managed")) == []

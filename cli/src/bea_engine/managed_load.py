@@ -571,7 +571,16 @@ def _managed_cache_file(entry: Path) -> Path | None:
 
     if not loader.PICKLE_CACHE_FILENAME:
         return None
-    return Path(f"{pickle_cache_of(entry)}.managed")
+    path = Path(f"{pickle_cache_of(entry)}.managed")
+    if os.getenv("BEANCOUNT_DISABLE_LOAD_CACHE") is not None:
+        # Mirror the loader's delete_cache_function: bypass the cache and
+        # remove the stale file, so the next read cannot serve it (w5/776).
+        try:
+            path.unlink(missing_ok=True)
+        except OSError:
+            pass
+        return None
+    return path
 
 
 def _managed_fingerprint(

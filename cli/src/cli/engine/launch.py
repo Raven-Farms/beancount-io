@@ -491,7 +491,13 @@ def _candidate_bin_dirs() -> list[Path]:
     return directories
 
 
-def helper_json(args: Sequence[str], *, stdin: str | None = None, writes: bool = False) -> dict[str, Any]:
+def helper_json(
+    args: Sequence[str],
+    *,
+    stdin: str | None = None,
+    writes: bool = False,
+    env_extra: dict[str, str] | None = None,
+) -> dict[str, Any]:
     """Run a helper command and return its result, raising what it reports instead.
 
     The frontend renders: this hands back `data` from the envelope and turns a
@@ -511,6 +517,8 @@ def helper_json(args: Sequence[str], *, stdin: str | None = None, writes: bool =
     request and then answers.
     """
     command, env = helper_command()
+    if env_extra:
+        env = {**(env if env is not None else os.environ), **env_extra}
     completed = _run_helper([*command, *args], env, stdin, writes=writes)
 
     envelope = _parse(completed, args, writes=writes)

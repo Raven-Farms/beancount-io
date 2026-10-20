@@ -49,8 +49,12 @@ def check(ctx: typer.Context) -> None:
         # NFC and NFD spellings of one account as two accounts, and cannot
         # fetch URL includes, so these closures run the helper check in both
         # modes; bean-check-only flags cannot be forwarded to a run that
-        # never starts upstream.
+        # never starts upstream. `--no-cache` alone is honoured by bea
+        # itself, through the helper with the load cache disabled (w5/776).
         if ctx.args:
+            if _only_disables_cache(list(ctx.args)):
+                launch.helper_json(["check", "--file", str(file)], env_extra=_CACHE_DISABLED)
+                raise typer.Exit(0)
             tokens = " ".join(ctx.args)
             reason, advice = compat
             raise UsageError(f"bea check cannot pass bean-check options ({tokens}) for this ledger: {reason}. {advice}")
@@ -61,6 +65,10 @@ def check(ctx: typer.Context) -> None:
         # bean-check-only flags (-v, --auto, …) are not implemented on bea-engine
         # check — refuse them up front as usage, not as a false "engine did not answer".
         if ctx.args:
+            if _only_disables_cache(list(ctx.args)):
+                data = launch.helper_json(["check", "--file", str(file)], env_extra=_CACHE_DISABLED)
+                output.emit(data, target=output.file_target(file))
+                return
             tokens = " ".join(ctx.args)
             raise UsageError(
                 f"bea --json check does not accept bean-check options ({tokens}). "
@@ -250,6 +258,14 @@ _UNDECODABLE = "Cannot decode '"
 
 
 _CACHE_FLAG = "--cache-filename"
+
+#: Disabling the load cache for one helper run, as `--no-cache` asks (w5/776).
+_CACHE_DISABLED = {"BEANCOUNT_DISABLE_LOAD_CACHE": "1"}
+
+
+def _only_disables_cache(args: list[str]) -> bool:
+    """Whether the arguments only turn the load cache off, which bea honours itself."""
+    return bool(args) and all(arg in ("--no-cache", "-C") for arg in args)
 
 
 def _enables_auto(args: list[str]) -> bool:
