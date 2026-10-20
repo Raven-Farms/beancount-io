@@ -2,7 +2,69 @@
 
 **Worker:** worker1 — general-purpose adoption worker; accepts the next highest-impact milestone across packages, topics, and A1/A2/A3 rather than owning a permanent specialty. Existing milestones retain their historical order and source.
 
+## Inbox
+
+- [232 — Apply the newer same-date budget target](./232.md) — major; dashboard QA, 2026-10-20.
+- [233 — Report Budget deletion read/write failures](./233.md) — minor; dashboard QA, 2026-10-20.
+- [234 — Execute BQL against current ledger data](./234.md) — major; dashboard QA, 2026-10-20.
+- [235 — Load Budget directives beyond the first journal page](./235.md) — major; dashboard QA, 2026-10-20.
+- [236 — Name the out-of-date ledger Refresh action](./236.md) — minor; dashboard QA, 2026-10-20.
+- [237 — Keep public-page context through header sign-in](./237.md) — minor; dashboard QA, 2026-10-20.
+- [238 — Return Accounts and Journal focus after successful writes](./238.md) — minor; dashboard QA, 2026-10-20.
+- [239 — Keep invalid date drafts after valid edits](./239.md) — minor; dashboard QA, 2026-10-20.
+- [240 — Name file-view Edit at narrow widths](./240.md) — minor; dashboard QA, 2026-10-20.
+- [241 — Complete file saves without discarding newer edits](./241.md) — major; dashboard QA, 2026-10-20, pending-edit loss reproduced.
+- [242 — Name Documents, Collaborators, Errors and Import Preview tables](./242.md) — minor; dashboard QA, 2026-10-20, populated/loading/empty controls scoped.
+- [243 — Keep narrow Documents columns readable](./243.md) — minor; dashboard QA, 2026-10-20.
+- [244 — Preserve fragments in native guest sign-in links](./244.md) — minor; dashboard QA, 2026-10-20.
+- [245 — Name imported amounts with their normalized preview value](./245.md) — minor; dashboard QA, 2026-10-20.
+- [246 — Keep loaded history pages while selecting a commit](./246.md) — minor; dashboard QA, 2026-10-20.
+- [247 — Keep Create File from discarding edits accepted while pending](./247.md) — major; dashboard QA, 2026-10-20.
+- [248 — Preserve committed file writes when folder refresh fails](./248.md) — minor; dashboard QA, 2026-10-20, Upload and Create File.
+- [249 — Compose filter changes while report reads are pending](./249.md) — minor; dashboard QA, 2026-10-20.
+- [250 — Protect standalone entry source drafts when leaving](./250.md) — minor; dashboard QA, 2026-10-20.
+- [251 — Follow the new entry identity after a source save](./251.md) — minor; dashboard QA, 2026-10-20.
+- [252 — Expose filtered active options in account and ledger pickers](./252.md) — minor; dashboard QA, 2026-10-20, both cmdk consumers live-reproduced.
+- [253 — Preserve query cards and focus when history reorders](./253.md) — minor; dashboard QA, 2026-10-20.
+- [254 — Preserve BQL source precision in chart tooltips](./254.md) — minor; dashboard QA, 2026-10-20.
+- [255 — Keep input focus after accepting a combobox suggestion](./255.md) — minor; dashboard QA, 2026-10-20.
+- [256 — Preserve unsaved New Entry fields across type changes](./256.md) — minor; dashboard QA, 2026-10-20.
+- [257 — Offer an in-place retry when General Settings cannot load](./257.md) — minor; dashboard QA, 2026-10-20.
+- [258 — Use the SVG MIME type in file previews](./258.md) — minor; dashboard QA, 2026-10-20.
+- [259 — Reject new drops while an upload batch is pending](./259.md) — minor; dashboard QA, 2026-10-20, DOM drop coverage.
+- [260 — Allow downloading existing zero-byte files](./260.md) — minor; dashboard QA, 2026-10-20.
+- [261 — Keep switch states visible in forced colors](./261.md) — minor; dashboard QA, 2026-10-20.
+- [262 — Keep Journal, Account, Overview and Files row focus visible in forced colors](./262.md) — minor; dashboard QA, 2026-10-20.
+- [263 — Resolve file jumps with tab-separated Git headers](./263.md) — minor; dashboard QA, 2026-10-20.
+- [264 — Make Try Again recover failed ledger child pages](./264.md) — minor; dashboard QA, 2026-10-20.
+- [265 — Keep financial text and private paths out of GA4 automatic events](./265.md) — major; dashboard QA, 2026-10-20; stream-editor completion dependency.
+- [266 — Disable import and receipt file pickers until hydration](./266.md) — minor; dashboard QA, 2026-10-20.
+- [267 — Keep Trial Balance reconciliation independent of display signs](./267.md) — major; dashboard QA, 2026-10-20.
+- [268 — Preserve an existing UTF-8 BOM when saving text files](./268.md) — minor; dashboard QA, 2026-10-20.
+- [269 — Preserve Markdown blocks without a language label](./269.md) — minor; dashboard QA, 2026-10-20.
+- [270 — Remove the unsupported blank transaction status](./270.md) — minor; dashboard QA, 2026-10-20.
+- [271 — Distinguish a real event type all from All Types](./271.md) — minor; dashboard QA, 2026-10-20.
+- [272 — Validate saved BQL history before rendering](./272.md) — minor; dashboard QA, 2026-10-20; controlled corrupted-cache recovery.
+- [273 — Show the active command-picker option in forced colors](./273.md) — minor; dashboard QA, 2026-10-20.
+- [274 — Preserve account-search focus through retry](./274.md) — minor; dashboard QA, 2026-10-20.
+- [275 — Distinguish failed ledger-switcher reads from empty results](./275.md) — minor; dashboard QA, 2026-10-20.
+- [276 — Refuse lossy text-file editing for unsupported byte encodings](./276.md) — minor; dashboard QA, 2026-10-20.
+- [277 — Preserve years below 100 in CSV import date displays](./277.md) — minor; dashboard QA, 2026-10-20.
+- [278 — Refuse CSV decoding that replaces source characters](./278.md) — minor; dashboard QA, 2026-10-20.
+
 ## Milestones
+
+- [ ] **m37** — [Resolve README file links from their source path](./m37/README.md) (6 tasks) ← dashboard QA, 2026-10-20; minor, rendered file-link context and native hrefs.
+
+- [ ] **m36** — [Preserve commit and profile activity timestamps through hydration](./m36/README.md) (7 tasks) ← dashboard QA, 2026-10-20; minor, commit/profile focus and commit browser-zone names.
+
+- [ ] **m35** — [Keep form fields usable when suggestions fail](./m35/README.md) (6 tasks) ← dashboard QA, 2026-10-20; minor, four form suggestion wrappers.
+
+- [ ] **m34** — [Resolve multiline entry sources without splitting quoted strings](./m34/README.md) (6 tasks) ← dashboard QA, 2026-10-20; minor, ledger source resolution.
+
+- [ ] **m33** — [Keep New Entry drafts safe during submission](./m33/README.md) (6 tasks) ← dashboard QA, 2026-10-20; major, pending edits and late completion.
+
+- [ ] **m32** — [Preserve valid ledger dates across browser timezones](./m32/README.md) (6 tasks) ← dashboard QA, 2026-10-20; minor, shared picker and seven form integrations.
 
 - [x] **m31** — [Bound authentication abuse without losing account recovery](./done/m31/README.md) (11 tasks) ← user-approved rate-limit review and `$pm` / `$loopx w4`, 2026-10-19
 
@@ -88,4 +150,4 @@ Blocked milestones live under `blocked/` with their reason and unblock condition
 
 ## Blocked inbox follow-up
 
-- [ ] [096 — Verify protected-route login history](./blocked/096.md) — blocked on a native-toolbar Back reproduction; automated traversal alone is insufficient.
+- [ ] [096 — Verify protected-route login history](./blocked/096.md) — blocked on a current protected-query trigger and native-toolbar Back reproduction; original Import/History triggers retired, automated traversal alone is insufficient.
