@@ -6,12 +6,49 @@ import { Command as CommandPrimitive } from "cmdk";
 import { cn } from "@/common/lib/utils/utils.ts";
 import { Dialog, DialogContent } from "@/common/components/ui/dialog.tsx";
 
+/**
+ * cmdk 1.1.1 refreshes the input's aria-activedescendant only when the
+ * selected value changes, so a filter that leaves the already-selected item
+ * as the only row never announces it (dip/cmdk#413; w4/252). Keep the input
+ * pointing at the row cmdk itself renders as selected, whenever that row or
+ * its selection changes. cmdk's own attribute agrees once it catches up.
+ */
+function useActiveDescendantSync(root: React.RefObject<HTMLDivElement | null>) {
+  React.useEffect(() => {
+    const element = root.current;
+    if (!element || typeof MutationObserver === "undefined") return;
+    const sync = () => {
+      const input = element.querySelector<HTMLInputElement>("[cmdk-input]");
+      if (!input) return;
+      const selected = element.querySelector<HTMLElement>(
+        '[cmdk-item][aria-selected="true"]',
+      );
+      const id = selected?.id ?? null;
+      if (input.getAttribute("aria-activedescendant") === id) return;
+      if (id) input.setAttribute("aria-activedescendant", id);
+      else input.removeAttribute("aria-activedescendant");
+    };
+    sync();
+    const observer = new MutationObserver(sync);
+    observer.observe(element, {
+      subtree: true,
+      childList: true,
+      attributes: true,
+      attributeFilter: ["aria-selected", "aria-activedescendant", "id"],
+    });
+    return () => observer.disconnect();
+  }, [root]);
+}
+
 function Command({
   className,
   ...props
 }: React.ComponentPropsWithoutRef<typeof CommandPrimitive>) {
+  const root = React.useRef<HTMLDivElement | null>(null);
+  useActiveDescendantSync(root);
   return (
     <CommandPrimitive
+      ref={root}
       className={cn(
         "flex h-full w-full flex-col overflow-hidden rounded-md bg-popover text-popover-foreground",
         className,
