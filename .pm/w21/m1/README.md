@@ -1,6 +1,6 @@
 # w21 · m1 — Entry edits and deletes refuse changes that would break the ledger
 
-**Worker:** worker1 **Goal:** editing or deleting an existing entry can't silently add a bean-check error. Since w0/m2, adding an entry is refused unless the caller passes `allowInvalid`. The edit and delete source-slice writes still commit whatever they are given, and the native app then reports plain success. **Status:** in progress (t001–t005 done)
+**Worker:** worker1 **Goal:** editing or deleting an existing entry can't silently add a bean-check error. Since w0/m2, adding an entry is refused unless the caller passes `allowInvalid`. The edit and delete source-slice writes still commit whatever they are given, and the native app then reports plain success. **Status:** in progress (t001–t006 done)
 
 ## Tasks (in order)
 
@@ -11,7 +11,7 @@
 | t003 | Mobile Edit Transaction, Delete and the file editor say what a write broke — **DONE** | 45m | t001 |
 | t004 | Adoption surface — **DONE** | 20m | t002, t003 |
 | t005 | Simplify — **DONE** | 15m | t004 |
-| t006 | Test coverage | 30m | t004, t005 |
+| t006 | Test coverage — **DONE** | 30m | t004, t005 |
 | t007 | Closeout | 10m | t006 |
 
 ## Definition of done

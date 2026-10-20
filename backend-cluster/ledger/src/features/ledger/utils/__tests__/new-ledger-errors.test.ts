@@ -1,4 +1,5 @@
-import { newLedgerErrors } from "../new-ledger-errors";
+import { newLedgerErrors, refuseNewLedgerErrors } from "../new-ledger-errors";
+import { NewLedgerErrorsError } from "@/shared/errors";
 
 const at = (message: string, filename: string, lineno: number) => ({
   message,
@@ -42,5 +43,66 @@ describe("newLedgerErrors", () => {
 
   it("finds nothing new for a clean write", () => {
     expect(newLedgerErrors([], [])).toEqual([]);
+  });
+});
+
+describe("newLedgerErrors after an edit or delete", () => {
+  it("does not count an existing error the write moved to another line", () => {
+    // Deleting a block above it shifts the duplicate open up (w21/m1).
+    const before = [
+      at("Duplicate open directive for Assets:Cash", "main.bean", 90),
+    ];
+    const after = [
+      at("Duplicate open directive for Assets:Cash", "main.bean", 87),
+    ];
+    expect(newLedgerErrors(before, after)).toEqual([]);
+  });
+
+  it("keeps the same message in another file apart", () => {
+    const before = [
+      at("Duplicate open directive for Assets:Cash", "a.bean", 3),
+    ];
+    const after = [at("Duplicate open directive for Assets:Cash", "b.bean", 3)];
+    expect(newLedgerErrors(before, after)).toEqual(after);
+  });
+});
+
+describe("refuseNewLedgerErrors", () => {
+  const balance = at(
+    "Balance failed for Assets:Cash: expected 49.75 USD, got 73.25 USD",
+    "main.bean",
+    84,
+  );
+
+  it("never reads today's errors for a clean projection", async () => {
+    const before = jest.fn(async () => []);
+    await refuseNewLedgerErrors([], before, "delete");
+    expect(before).not.toHaveBeenCalled();
+  });
+
+  it("refuses an introduced error, naming the write", async () => {
+    await expect(
+      refuseNewLedgerErrors([balance], async () => [], "delete"),
+    ).rejects.toMatchObject({
+      constructor: NewLedgerErrorsError,
+      message:
+        "this deletion would introduce 1 new bean-check error: Balance failed for Assets:Cash: expected 49.75 USD, got 73.25 USD (main.bean:84)",
+      metadata: {
+        code: "NEW_LEDGER_ERRORS",
+        details: { count: 1, action: "delete" },
+      },
+    });
+  });
+
+  it("lets a write through that leaves only errors the ledger had", async () => {
+    await expect(
+      refuseNewLedgerErrors([balance], async () => [balance], "update"),
+    ).resolves.toBeUndefined();
+  });
+
+  it("words a structured add as before", async () => {
+    await expect(
+      refuseNewLedgerErrors([balance], async () => [], "add"),
+    ).rejects.toThrow(/^adding these entries would introduce 1 new/);
   });
 });
