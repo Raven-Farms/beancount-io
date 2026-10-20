@@ -1033,8 +1033,8 @@ without a Beancount.io login and never formats or commits them automatically.
 | `--details` | Transactions: render Beancount syntax with every posting, cost/price, metadata, and source location |
 | `--flag` | Transactions: select a flag, such as `!` for entries needing review; applied before the limit. |
 | `--search TEXT` | Transactions: case-insensitive substring over payee and narration; every run of spaces, tabs and line breaks, in the entry or the term, compares as one space, so the text the table shows matches however it spaced a line break. Repeatable (AND — every term must match a row), applied before the limit. |
-| `--tag TAG` | Transactions: tag with or without `#`; repeatable. |
-| `--link LINK` | Transactions: link with or without `^`; repeatable. |
+| `--tag TAG` | Transactions: tag with or without `#`, matched case-sensitively. Repeatable (AND — a row must carry every tag given). |
+| `--link LINK` | Transactions: link with or without `^`, matched case-sensitively. Repeatable (AND — a row must carry every link given). |
 | `--from-date` | Only directives on or after this date (`YYYY-MM-DD`) |
 | `--to-date` | Only directives on or before this date (`YYYY-MM-DD`) |
 | `--account / -a` | Case-insensitive substring account filter (`transaction`, `note`, `balance`, `open`, `close`, `document`, `pad`). Matching ignores Unicode normalization, so the NFC and NFD spellings of one account name find each other, and folds Turkish `İ`/`ı` to `i` like `--search` and `bea balance` do. |

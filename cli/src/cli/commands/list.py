@@ -313,7 +313,8 @@ def _refuse_non_token(flag: str, value: str, sigil: str) -> None:
     noun = "tags" if flag == "--tag" else "links"
     raise UsageError(
         f"{flag}: {value!r} is not one tag or link; use only ASCII letters, digits and - _ / . after an optional "
-        f"leading {sigil}.{_several(value, f'repeat {flag} for several {noun}')}"
+        # Repeats are ANDed: "repeat --tag for several tags" then found nothing (w5/835).
+        f"leading {sigil}.{_several(value, f'repeat {flag} to require several {noun} on one transaction')}"
     )
 
 
@@ -600,8 +601,14 @@ def transactions(
             help="Case-insensitive text in payee or narration; repeatable (AND — every term must match)",
         ),
     ] = None,
-    tag: Annotated[list[str] | None, typer.Option("--tag", help="Tag with or without '#'; repeatable")] = None,
-    link: Annotated[list[str] | None, typer.Option("--link", help="Link with or without '^'; repeatable")] = None,
+    tag: Annotated[
+        list[str] | None,
+        typer.Option("--tag", help="Tag with or without '#', case-sensitive; repeat to require every tag"),
+    ] = None,
+    link: Annotated[
+        list[str] | None,
+        typer.Option("--link", help="Link with or without '^', case-sensitive; repeat to require every link"),
+    ] = None,
     allow_errors: AllowErrorsOpt = False,
     on_disk: OnDiskOpt = False,
     details: Annotated[

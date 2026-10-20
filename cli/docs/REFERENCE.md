@@ -847,8 +847,8 @@ Usage: bea list transaction [OPTIONS]
 | `--account, -a` | str |  | Filter by account (case-insensitive substring) |
 | `--flag` | str |  | Transaction flag, e.g. '!' for entries to review |
 | `--search` | str (repeatable) |  | Case-insensitive text in payee or narration; repeatable (AND — every term must match) |
-| `--tag` | str (repeatable) |  | Tag with or without '#'; repeatable |
-| `--link` | str (repeatable) |  | Link with or without '^'; repeatable |
+| `--tag` | str (repeatable) |  | Tag with or without '#', case-sensitive; repeat to require every tag |
+| `--link` | str (repeatable) |  | Link with or without '^', case-sensitive; repeat to require every link |
 | `--allow-errors` | flag |  | Report partial data with errors on stderr; opts strict reads into partial answers |
 | `--on-disk` | flag |  | Only directives written in a ledger file (hide plugin-synthesized rows) |
 | `--details` | flag |  | Render Beancount syntax with every posting, metadata, and source location |
