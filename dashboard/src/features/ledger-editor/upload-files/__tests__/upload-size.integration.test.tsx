@@ -60,6 +60,7 @@ async function setup({
   dir = "FY2024/帳簿 exports",
   canWrite = true,
   failFirstUpload = false,
+  failRefresh = false,
 } = {}) {
   access.canWrite = canWrite;
   const requests: Array<{ name: string; variables: Record<string, unknown> }> =
@@ -99,6 +100,11 @@ async function setup({
               },
             });
           } else if (operation.operationName === "GetLedgerDirContent") {
+            // The first read is the page's own; later ones refresh after writes.
+            if (failRefresh && mutations.length > 0) {
+              observer.error(new Error("Synthetic refresh failure"));
+              return;
+            }
             observer.next({ data: { getLedgerDirContent: [] } });
           } else {
             observer.error(
@@ -266,10 +272,9 @@ describe("upload size enforcement with native files and readers", () => {
         // The page reads the folder first to flag names that already exist.
         "GetLedgerDirContent",
         "CreateLedgerFile",
-        "GetLedgerDirContent",
         "CreateLedgerFile",
-        "GetLedgerDirContent",
         "CreateLedgerFile",
+        // One folder read after the batch, separate from the writes (w4/248).
         "GetLedgerDirContent",
       ]);
       expect(
@@ -277,7 +282,7 @@ describe("upload size enforcement with native files and readers", () => {
           .filter(({ name }) => name === "GetLedgerDirContent")
           .map(({ variables }) => variables),
       ).toEqual(
-        Array.from({ length: 4 }, () => ({
+        Array.from({ length: 2 }, () => ({
           ledgerId: "alice/books",
           dirPath: dir,
         })),
@@ -437,5 +442,21 @@ describe("upload size enforcement with native files and readers", () => {
     };
     expect(mutations).toEqual([expected, expected]);
     expect(reads.mock.calls.map(([read]) => read)).toEqual([file, file]);
+  });
+
+  it("finishes a batch whose writes landed even when the folder refresh fails (w4/248)", async () => {
+    const { picker, upload, mutations } = await setup({ failRefresh: true });
+    const user = userEvent.setup();
+    await user.upload(picker(), [
+      new File(["a\n"], "refetch-a.txt", { type: "text/plain" }),
+      new File(["b\n"], "refetch-b.txt", { type: "text/plain" }),
+    ]);
+    await user.click(upload());
+    await screen.findByRole("heading", { name: "Files destination" });
+    expect(mutations.map((m) => String(m.path).split("/").at(-1))).toEqual([
+      "refetch-a.txt",
+      "refetch-b.txt",
+    ]);
+    expect(screen.queryByText(/wasn't uploaded/)).toBeNull();
   });
 });

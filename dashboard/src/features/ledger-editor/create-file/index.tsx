@@ -4,6 +4,7 @@ import { getLedgerFilesRootPath } from "@/common/hooks/use-file-navigate";
 import { useMemo, useRef, useState } from "react";
 import { useParams, useNavigate, useBlocker } from "@tanstack/react-router";
 import { useMutation, useQuery } from "@apollo/client/react";
+import { useRefreshDirectory } from "@/features/ledger-editor/shared/hooks/use-refresh-directory";
 import { Card, CardContent } from "@/common/components/ui/card";
 import { Button } from "@/common/components/ui/button";
 import { Input } from "@/common/components/ui/input";
@@ -61,6 +62,7 @@ const CreateFilePage = () => {
   const allowNavigationRef = useRef(false);
   const savingRef = useRef(false);
 
+  const refreshDirectory = useRefreshDirectory(ledgerId, dirPath);
   const [createFileMutation] = useMutation(CreateLedgerFileDocument);
   const { data: dirData } = useQuery(GetLedgerDirContentDocument, {
     variables: {
@@ -158,18 +160,11 @@ const CreateFilePage = () => {
           content: base64Encode(content), // Encode content to base64 with UTF-8 support
           message: t("ledgerEditor.createFileCommit", { path: fullPath }),
         },
-        refetchQueries: [
-          {
-            query: GetLedgerDirContentDocument,
-            variables: {
-              ledgerId,
-              dirPath: dirPath || null,
-            },
-          },
-        ],
-        awaitRefetchQueries: true,
       });
 
+      // The file is written; refreshing its folder is a separate read that
+      // cannot turn this into a failed create (w4/248).
+      await refreshDirectory();
       // Navigate back to files view after successful creation
       allowNavigationRef.current = true;
       navigateToTree();

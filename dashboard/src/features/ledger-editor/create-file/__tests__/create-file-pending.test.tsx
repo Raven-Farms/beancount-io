@@ -10,6 +10,7 @@ import { describe, expect, it, vi, beforeEach } from "vitest";
 const create = vi.hoisted(() => ({
   mutate: vi.fn(),
   navigate: vi.fn(),
+  refresh: vi.fn(async () => ({ data: undefined })),
 }));
 
 const blockerState = vi.hoisted(() => ({
@@ -38,6 +39,10 @@ vi.mock("@tanstack/react-router", () => ({
 }));
 
 vi.mock("@apollo/client/react", () => ({
+  useApolloClient: () => ({
+    query: create.refresh,
+    cache: { evict: () => true, gc: () => [] },
+  }),
   useMutation: () => [create.mutate],
   useQuery: () => ({ data: undefined }),
 }));
@@ -100,6 +105,7 @@ vi.mock("@/common/components/related-links", () => ({
 
 vi.mock("sonner", () => ({ toast: { error: vi.fn() } }));
 
+import { toast } from "sonner";
 import CreateFilePage from "../index";
 
 /**
@@ -156,5 +162,15 @@ describe("CreateFilePage while creating", () => {
     expect(text()).toHaveValue("retry revision\n");
     expect(create.navigate).not.toHaveBeenCalled();
     expect(blockerState.shouldBlockFn?.()).toBe(true);
+  });
+
+  it("completes a create whose folder refresh fails afterwards (w4/248)", async () => {
+    create.mutate.mockResolvedValue({ data: {} });
+    create.refresh.mockRejectedValueOnce(new Error("refresh offline"));
+    await draftAndSave();
+
+    await waitFor(() => expect(create.navigate).toHaveBeenCalledTimes(1));
+    expect(create.mutate).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(toast.error)).not.toHaveBeenCalled();
   });
 });

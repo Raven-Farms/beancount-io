@@ -5,6 +5,7 @@ import { useState, useRef, useId, useMemo } from "react";
 import type { DragEvent } from "react";
 import { useParams, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery } from "@apollo/client/react";
+import { useRefreshDirectory } from "@/features/ledger-editor/shared/hooks/use-refresh-directory";
 import { Card, CardContent } from "@/common/components/ui/card";
 import { Button } from "@/common/components/ui/button";
 import { Input } from "@/common/components/ui/input";
@@ -88,6 +89,7 @@ const UploadFilesPage = () => {
     [dirData],
   );
 
+  const refreshDirectory = useRefreshDirectory(ledgerId, dirPath);
   const [createFileMutation] = useMutation<
     CreateLedgerFileMutation,
     CreateLedgerFileMutationVariables
@@ -167,16 +169,6 @@ const UploadFilesPage = () => {
             content: content,
             message: `${message} - ${file.name}`,
           },
-          refetchQueries: [
-            {
-              query: GetLedgerDirContentDocument,
-              variables: {
-                ledgerId,
-                dirPath: dirPath || null,
-              },
-            },
-          ],
-          awaitRefetchQueries: true,
         });
       } catch (error) {
         const failure = {
@@ -185,6 +177,8 @@ const UploadFilesPage = () => {
           uploaded,
         };
         setUploadFailure(failure);
+        // Files already written must count for the existing-name check.
+        if (uploaded.length > 0) void refreshDirectory();
         toast.error(
           t("ledgerEditor.uploadStoppedAt", {
             fileName: failure.fileName,
@@ -198,6 +192,8 @@ const UploadFilesPage = () => {
       setSelectedFiles((prev) => prev.filter((staged) => staged !== file));
     }
 
+    // Only after every write: a failed folder read is not a failed upload.
+    await refreshDirectory();
     setIsUploading(false);
     void navigate({
       to: "/ledger/$ledgerOwner/$ledgerName/files/tree/$branch/$",
