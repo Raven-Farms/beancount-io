@@ -94,7 +94,6 @@
 - [852 — Four gaps: --search vs table spacing, sys.exit hint in importer methods, price export -oDIR, posting filename: message](./852.md)
 - [853 — query -o /dev/fd/N or >(cmd) fails with Bad file descriptor; -o /dev/fd/3 corrupts the engine reply](./853.md)
 - [854 — Query export slips: spreadsheet-safe misses tag/link and header cells, empty PRINT -o writes options, -o empty](./854.md)
-- [855 — A Python importer posting with a cost but no units is written with its cost silently dropped, and exit 0 books USD into the stock account (gap in w5/638)](./855.md)
 
 The 27 findings from the MCP QA auth sweep against the hosted endpoint (023–054, less the five under [Dropped](#dropped)) were fixed in `backend-cluster/backend-v2` and closed on 2026-10-02 and 2026-10-03; each note under [`done/`](./done/) records what shipped and in which commit. None has been re-observed against the hosted endpoint yet — the fixes reach it with the next backend deploy.
 
