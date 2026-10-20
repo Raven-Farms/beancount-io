@@ -74,7 +74,6 @@
 - [836 — An explicit list --limit 50 still says "pass --limit for more" (gap in w3/325)](./836.md)
 - [837 — From a deleted cwd, any refusal with a printed remedy dies with a bare FileNotFoundError (regression from w5/619)](./837.md)
 - [838 — Three printed remedies still drop --file or --json (add commodity, query .tables/.help, check FILE)](./838.md)
-- [839 — Misplaced-option hints still dead-end: doctor list-options, doctor -f before the op, price forward --json](./839.md)
 
 The 27 findings from the MCP QA auth sweep against the hosted endpoint (023–054, less the five under [Dropped](#dropped)) were fixed in `backend-cluster/backend-v2` and closed on 2026-10-02 and 2026-10-03; each note under [`done/`](./done/) records what shipped and in which commit. None has been re-observed against the hosted endpoint yet — the fixes reach it with the next backend deploy.
 
