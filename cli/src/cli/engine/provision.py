@@ -25,6 +25,7 @@ extra into the managed engine venv and records it so repairs re-apply it.
 
 from __future__ import annotations
 
+import errno
 import hashlib
 import json
 import os
@@ -40,7 +41,7 @@ from typing import Any
 
 from cli import context, output
 from cli.engine import paths
-from cli.errors import AuthError, ConflictError, EngineError, UsageError
+from cli.errors import AuthError, BeaError, ConflictError, EngineError, UsageError
 from cli.paths import expand_path
 
 UV_ENV = "BEA_UV"
@@ -352,9 +353,13 @@ def feature_status() -> dict[str, Any]:
     enabled = set() if override is not None else enabled_features(root)
     features: dict[str, Any] = {}
     for name, spec in sorted(optional_features().items()):
+        try:
+            present: bool | None = feature_available(name)
+        except ProbeNotRun:
+            present = None
         features[name] = {
             "enabled": name in enabled,
-            "present": feature_available(name),
+            "present": present,
             "license": spec.get("license"),
             "notes": spec.get("notes"),
             "requirements": list(spec.get("requirements") or []),
@@ -414,6 +419,26 @@ def _feature_present(root: Path, name: str) -> bool:
     return _packages_importable(paths.venv_python(root), _feature_packages(name))
 
 
+#: What a refused spawn's errno says about the limit behind it.
+SPAWN_LIMITS = {
+    errno.EMFILE: "the open-file limit is reached (ulimit -n)",
+    errno.ENFILE: "the system's open-file table is full",
+    errno.EAGAIN: "the process limit is reached (ulimit -u)",
+    errno.ENOMEM: "there is not enough memory to start it",
+}
+
+
+class ProbeNotRun(BeaError):
+    """A probe a process or descriptor limit kept from starting: it says nothing about the engine.
+
+    Read as a failed probe, a working engine was called damaged, with advice
+    to delete it, and its features absent (w5/815).
+    """
+
+    def __init__(self, exc: OSError) -> None:
+        super().__init__(f"the check could not start ({exc.strerror}: {SPAWN_LIMITS[exc.errno or 0]})")
+
+
 def _packages_importable(python: Path, packages: list[str]) -> bool:
     if not packages:
         return False
@@ -424,7 +449,11 @@ def _packages_importable(python: Path, packages: list[str]) -> bool:
     # and a folder of that name made the feature look installed (w5/174).
     try:
         completed = subprocess.run([str(python), "-P", "-c", probe], capture_output=True, text=True, check=False)
-    except (OSError, ValueError):
+    except OSError as exc:
+        if exc.errno in SPAWN_LIMITS:
+            raise ProbeNotRun(exc) from exc
+        return False
+    except ValueError:
         return False
     # The import must say so itself: `/usr/bin/true` exits 0 having run
     # nothing, and its features read as present (w5/481).

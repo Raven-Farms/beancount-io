@@ -45,14 +45,22 @@ def engine_status() -> None:
     # and an override that cannot run the engine read as serving while every
     # local command sent the user back here (w5/481).
     probed = source.tier in ("managed", "override") and source.python is not None
-    failure = launch.engine_load_failure(source.python) if probed and source.python else None
+    unchecked: str | None = None
+    try:
+        failure = launch.engine_load_failure(source.python) if probed and source.python else None
+    except provision.ProbeNotRun as exc:
+        # A limit kept the probe from starting: unknown, never "damaged" with
+        # advice to delete an engine every command still runs (w5/815).
+        failure, unchecked = None, str(exc)
     reason = f"it cannot load the engine ({failure})" if failure is not None else None
     if failure is None and source.tier == "override" and source.python is not None:
         # Native tools are run from beside the override, so loading the engine
         # is not enough: `check` and `example` failed where status said usable (w5/647).
         failure = reason = launch.native_tools_problem(source.python)
     if probed:
-        status["usable"] = failure is None
+        status["usable"] = None if unchecked is not None else failure is None
+    if unchecked is not None:
+        status["unchecked"] = unchecked
     if failure is not None:
         status["damaged" if source.tier == "managed" else "unusable"] = failure
     damaged = failure if source.tier == "managed" else None
@@ -63,6 +71,8 @@ def engine_status() -> None:
     override = status.get("python_override")
     if override:
         typer.echo(f"Engine interpreter override: {override}")
+        if unchecked is not None:
+            typer.echo(f"Usable: unknown — {unchecked}.")
         if reason is not None:
             typer.echo(f"Usable: no — {reason}. Correct or unset {paths.PYTHON_ENV}; local commands fail until then.")
     else:
@@ -72,6 +82,8 @@ def engine_status() -> None:
                 f"Provisioned: damaged — the engine cannot load ({damaged}). "
                 f"Remove {paths.engine_root()} and rerun; bea provisions a fresh engine."
             )
+        elif status["provisioned"] and unchecked is not None:
+            typer.echo(f"Provisioned: yes; whether it loads is unknown — {unchecked}.")
         elif status["provisioned"]:
             typer.echo("Provisioned: yes")
         elif paths.engine_root().exists():
@@ -87,7 +99,7 @@ def engine_status() -> None:
     typer.echo("Optional features:")
     for name, info in features.items():
         state = "enabled" if info.get("enabled") else "disabled"
-        present = "present" if info.get("present") else "absent"
+        present = "unknown" if info.get("present") is None else "present" if info.get("present") else "absent"
         typer.echo(f"  {name}: {state}, {present} ({info.get('license')})")
         notes = info.get("notes")
         if notes:

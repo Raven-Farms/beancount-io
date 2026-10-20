@@ -276,7 +276,11 @@ def require_feature(name: str) -> None:
     if name not in known:
         choices = ", ".join(sorted(known)) or "(none)"
         raise UsageError(f"Unknown engine feature '{name}'. Choose one of: {choices}.")
-    if provision.feature_available(name):
+    try:
+        if provision.feature_available(name):
+            return
+    except provision.ProbeNotRun:
+        # Not known to be missing: the command itself reports what it meets.
         return
     override = paths.python_override()
     if override is not None:
@@ -975,7 +979,8 @@ def engine_load_failure(python: Path) -> str | None:
 
     The probe must say so itself: `/bin/echo` or a stale wrapper exits 0
     without running anything, and a writer then reported an unknown outcome
-    (exit 4) for a write that never started (w5/309).
+    (exit 4) for a write that never started (w5/309). A probe a process or
+    descriptor limit keeps from starting raises `provision.ProbeNotRun`.
     """
     sentinel = "bea-engine-loaded"
     try:
@@ -987,7 +992,12 @@ def engine_load_failure(python: Path) -> str | None:
             text=True,
             check=False,
         )
-    except (OSError, ValueError) as exc:
+    except OSError as exc:
+        if exc.errno in provision.SPAWN_LIMITS:
+            # The probe never ran, so it says nothing about the engine (w5/815).
+            raise provision.ProbeNotRun(exc) from exc
+        return str(exc) or type(exc).__name__
+    except ValueError as exc:
         return str(exc) or type(exc).__name__
     if probe.returncode == 0 and probe.stdout.strip().endswith(sentinel):
         return None
@@ -1016,7 +1026,11 @@ def refuse_unusable_engine(completed: subprocess.CompletedProcess[str] | None = 
     source = resolve_engine()
     if source.tier not in ("override", "managed") or source.python is None:
         return
-    reason = engine_load_failure(source.python)
+    try:
+        reason = engine_load_failure(source.python)
+    except provision.ProbeNotRun:
+        # Unknown is not damaged: the caller reports what happened.
+        return
     if reason is None:
         return
     if source.tier == "override":
@@ -1575,15 +1589,6 @@ def _signal_hint(number: int) -> str:
     return "Nothing in bea sends this signal, so it came from outside: an out-of-memory killer, a timeout, or a kill."
 
 
-#: What a refused spawn's errno says about the limit behind it.
-_SPAWN_LIMITS = {
-    errno.EMFILE: "the open-file limit is reached (ulimit -n)",
-    errno.ENFILE: "the system's open-file table is full",
-    errno.EAGAIN: "the process limit is reached (ulimit -u)",
-    errno.ENOMEM: "there is not enough memory to start it",
-}
-
-
 def _popen(command: list[str], **options: Any) -> subprocess.Popen[Any]:
     """`subprocess.Popen`, naming what could not be started, and why, when a limit refuses it.
 
@@ -1601,7 +1606,7 @@ def _popen(command: list[str], **options: Any) -> subprocess.Popen[Any]:
 
 
 def _spawn_failure(command: Sequence[str], exc: OSError) -> BeaError | None:
-    limit = _SPAWN_LIMITS.get(exc.errno) if exc.errno is not None else None
+    limit = provision.SPAWN_LIMITS.get(exc.errno) if exc.errno is not None else None
     if limit is None:
         return None
     what = "the Beancount engine" if "bea_engine" in command else Path(command[0]).name
