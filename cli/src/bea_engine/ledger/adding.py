@@ -430,6 +430,8 @@ def _balance(
     conflict = _balance_conflict(before, date, account, number, currency, tolerance)
     if conflict is not None and not request.get("force"):
         raise _conflict_refusal(conflict, account, date, number, currency, tolerance)
+    if pad_from is None and not request.get("force"):
+        _refuse_used_pad_fill(before, date, account, number, currency, tolerance, before_options)
     if pad_from is None:
         # The snapshot the checks above read: a writer that landed since then
         # is a conflict, not a second assertion appended beside it (w5/115).
@@ -531,13 +533,27 @@ def _balance(
             raise
         pad_at = f"{cover.meta.get('filename')}:{cover.meta.get('lineno')}"
         if cover.source_account != source_account:
+            used = any(
+                isinstance(entry, Balance) and entry.account == account and cover.date < entry.date < date
+                for entry in loaded
+            )
+            if used:
+                # The plain path refuses a used pad's silent fill too, so
+                # dropping --pad-from is no remedy here (w5/796).
+                advice = (
+                    f"That pad already has an assertion after it; fix the amount, record the missing "
+                    f"transaction, pass --pad-from {cover.source_account} to pad explicitly, or edit that "
+                    f"pad first."
+                )
+            else:
+                advice = (
+                    f"Add the balance without --pad-from to let that pad insert {_plain(difference)} {currency} "
+                    f"from {cover.source_account}, or edit that pad first."
+                )
             raise protocol.LedgerError(
                 f"The existing pad at {pad_at} ({cover.date} from {cover.source_account}) already fills this "
                 f"assertion, so a pad from {source_account} would go unused; nothing was written.",
-                details=[
-                    f"Add the balance without --pad-from to let that pad insert {_plain(difference)} {currency} "
-                    f"from {cover.source_account}, or edit that pad first."
-                ],
+                details=[advice],
             ) from exc
         result = _appended(file, directive, allow_errors=allow_errors, into=into, snapshot=snapshot) | {"pad": None}
         warnings = list(result.get("warnings") or [])
@@ -665,6 +681,56 @@ def _balance_tolerance(balance: Any, options: dict[str, Any]) -> Decimal:
 
     tolerance: Decimal = get_balance_tolerance(balance, options)  # type: ignore[no-untyped-call]
     return tolerance
+
+
+def _refuse_used_pad_fill(
+    entries: list[Any],
+    date: Any,
+    account: str,
+    number: Decimal,
+    currency: str,
+    tolerance: Decimal | None,
+    options: dict[str, Any],
+) -> None:
+    """Refuse an assertion a non-staged pad would silently pad (w5/796).
+
+    Upstream keeps a pad active for every currency it has not yet padded,
+    so a pad consumed by an earlier assertion still pads a new currency's
+    gap without a word. A staged pad — none of the account's balances
+    between it and this assertion yet — completes silently, as the two-step
+    intends. A balance in this currency between them already consumed it,
+    so the assertion fails on its own and needs no refusal.
+    """
+    from beancount.core.amount import Amount as BcAmount
+    from beancount.core.data import Balance
+
+    cover = _covering_pad(entries, account, date)
+    if cover is None:
+        return
+    held = write.book_units(entries, account, currency, date)
+    candidate = Balance({}, date, account, BcAmount(number, currency), tolerance, None)
+    if abs(number - held) <= _balance_tolerance(candidate, options):
+        return
+    between = [
+        entry
+        for entry in entries
+        if isinstance(entry, Balance) and entry.account == account and cover.date < entry.date < date
+    ]
+    if not between:
+        return
+    if any(entry.amount.currency == currency for entry in between):
+        return
+    pad_at = f"{cover.meta.get('filename')}:{cover.meta.get('lineno')}"
+    difference = number - held
+    raise protocol.LedgerError(
+        f"{account} holds {_plain(held)} {currency} but asserts {_plain(number)}; the pad at {pad_at} "
+        f"({cover.date} from {cover.source_account}) would silently insert the {_plain(difference)} "
+        f"{currency} difference. Nothing was written.",
+        details=[
+            "Record the missing transaction or fix the amount; pass "
+            f"--pad-from {cover.source_account} to pad explicitly, or --force to record the padded assertion."
+        ],
+    )
 
 
 def _covering_pad(entries: list[Any], account: str, date: datetime.date) -> Any | None:
