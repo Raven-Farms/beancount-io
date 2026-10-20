@@ -1077,6 +1077,12 @@ def _load_fresh(entry: Path, snapshot: LedgerSnapshot) -> tuple[Any, Any, Any]:
     still holds a decomposed payee, a BOM's syntax error and plugin errors
     without their configs; served here, an NFC literal stopped matching until
     a ledger file changed (w5/220). Only a cache this function wrote is trusted.
+
+    And a plugin whose output depends on today's date breaks the promise
+    without any file changing: `fava.plugins.amortize_over` books only the
+    parts dated on or before today, so a cache written yesterday hides
+    today's amortization row until a ledger file changes (w5/782). The mark
+    carries the load's local day, and a cache from an earlier day loads again.
     """
     from beancount import loader
 
@@ -1086,7 +1092,7 @@ def _load_fresh(entry: Path, snapshot: LedgerSnapshot) -> tuple[Any, Any, Any]:
     # `os.path` probes: the cache is an optimisation, and `Path.is_file`
     # raised EACCES from an untraversable `load-cache` directory, failing
     # every read and write with a bare PermissionError (w5/312).
-    if os.path.isfile(cache) and (not _engine_wrote(cache) or _plugins_changed(cache)):
+    if os.path.isfile(cache) and (not _engine_wrote(cache) or _plugins_changed(cache) or _day_changed(cache)):
         _drop(cache)
     cached = os.path.exists(cache)
     entries, errors, options = loader.load_file(str(entry))
@@ -1151,13 +1157,20 @@ def _mark_engine_cache(cache: Path, options: Any) -> None:
     on the ledger files alone, so after a local plugin was edited, removed or
     left the module path, `check` still said valid and every read served the
     old plugin's output (w5/326). The unpickler stops at the pickled load, so
-    the trailing record is invisible to every other reader of the file.
+    the trailing record is invisible to every other reader of the file. The
+    record also carries the load's local day, so a new day reloads a cache
+    whose plugin output may depend on today's date (w5/782).
     """
     if not os.path.isfile(cache) or _engine_wrote(cache):
         return
     names = sorted({str(name) for name, _config in options.get("plugin") or ()})
     paths = [str(directory) for directory in options.get("pythonpath") or ()]
-    record = {"names": names, "pythonpath": paths, "modules": _plugin_fingerprint(names, paths)}
+    record = {
+        "names": names,
+        "pythonpath": paths,
+        "modules": _plugin_fingerprint(names, paths),
+        "date": date.today().isoformat(),
+    }
     try:
         with cache.open("ab") as stream:
             stream.write(_PLUGIN_RECORD + json.dumps(record).encode("utf-8") + _ENGINE_CACHE_MARK)
@@ -1211,6 +1224,20 @@ def _plugins_changed(cache: Path) -> bool:
         return bool(record["modules"] != _plugin_fingerprint(record["names"], record["pythonpath"]))
     except (OSError, ValueError, KeyError, TypeError):
         return True
+
+
+def _day_changed(cache: Path) -> bool:
+    """Whether the cached load ran on an earlier local day than today.
+
+    A record that predates the day carries no date to compare; it loads again.
+    """
+    try:
+        record = _plugin_record(cache)
+    except (OSError, ValueError):
+        return True
+    if not isinstance(record, dict):
+        return True
+    return bool(record.get("date") != date.today().isoformat())
 
 
 def _plugin_defined(errors: Any) -> bool:

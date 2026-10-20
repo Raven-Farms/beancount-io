@@ -254,7 +254,10 @@ of a cached load resolved and its file's size and modification time, so
 editing a plugin beside the ledger, removing it, or running without the
 `PYTHONPATH` that found it reloads instead of serving the old plugin's output;
 a load whose errors are types a local plugin defined is not cached at all.
-A cached load that still matches the disk is served as before.
+The record also carries the load's local day: a plugin whose output depends
+on today's date (`amortize_over`, `forecast`) would otherwise serve
+yesterday's rows, so a cache written on an earlier day loads again.
+A cached load written today that still matches the disk is served as before.
 Nor does it record who loaded it: `bea` reads a ledger BOM-stripped and
 NFC-normalized, Beancount's own tools read the bytes as they are. So `bea`'s
 reads serve only a cache they wrote themselves and load again over one left by
