@@ -164,6 +164,7 @@ class TestInstall(Workspace):
                 "beancount-init",
                 "beancount-migrate",
                 "beancount-options",
+                "beancount-property",
                 "beancount-reconcile",
                 "beancount-trade",
             ],

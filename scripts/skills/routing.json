@@ -875,6 +875,24 @@
         "beancount-trade"
       ],
       "why": "Seeding opening lots from a holdings export, not a finance-app migration or a new trade."
+    },
+    {
+      "id": "property-buy-house",
+      "prompt": "I bought a house for $500,000 with 20% down and a $400,000 mortgage — record it",
+      "expected": "beancount-property",
+      "confusable": [
+        "beancount-add"
+      ],
+      "why": "A property purchase books the home as a lot plus its mortgage and escrow, not an everyday entry."
+    },
+    {
+      "id": "property-add-rent-payment",
+      "prompt": "I paid $1,800 rent for my apartment",
+      "expected": "beancount-add",
+      "confusable": [
+        "beancount-property"
+      ],
+      "why": "Paying rent as a tenant is an everyday expense, not property ownership."
     }
   ]
 }

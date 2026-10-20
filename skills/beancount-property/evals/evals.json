@@ -1,0 +1,20 @@
+{
+  "skill_name": "beancount-property",
+  "evals": [
+    {
+      "id": 1,
+      "name": "purchase-split-closing-costs",
+      "prompt": "I bought a house (call it OakSt, commodity OAKST) on 2026-02-01 for $500,000: $115,000 cash from Assets:Checking and a $400,000 mortgage. Closing costs: $10,000 title/transfer capitalized into basis, $2,000 in fees expensed to Expenses:ClosingCosts, and a $3,000 escrow seed. Record it in ./ledger.beancount.",
+      "expected_output": "Proposal opens Assets:Property:OakSt (OAKST), Assets:Escrow:OakSt, Liabilities:Mortgage:OakSt and books the purchase: 1 OAKST {510000.00 USD} (500000 price + 10000 capitalized), escrow seed 3000.00, expensed fees 2000.00, cash -115000.00, mortgage -400000.00, with the 515000 = 115000 + 400000 tie-out shown. Nothing written before confirmation; after the yes the check passes and the mortgage balance is -400000.00.",
+      "files": [
+        "evals/files/eval1_ledger.beancount"
+      ],
+      "expectations": [
+        "The property lot's basis is 510000.00 (capitalized costs included) and the 2000.00 fees are a separate expense leg",
+        "The closing arithmetic tie-out (515000 both sides) is shown in the proposal",
+        "New accounts are proposed as opens, not silently created or assumed",
+        "Nothing is written before confirmation"
+      ]
+    }
+  ]
+}
