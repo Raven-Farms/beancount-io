@@ -4,7 +4,6 @@
 
 ## Inbox
 
-- [236 — Name the out-of-date ledger Refresh action](./236.md) — minor; dashboard QA, 2026-10-20.
 - [237 — Keep public-page context through header sign-in](./237.md) — minor; dashboard QA, 2026-10-20.
 - [238 — Return Accounts and Journal focus after successful writes](./238.md) — minor; dashboard QA, 2026-10-20.
 - [239 — Keep invalid date drafts after valid edits](./239.md) — minor; dashboard QA, 2026-10-20.
