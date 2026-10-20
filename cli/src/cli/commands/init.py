@@ -18,7 +18,7 @@ import typer
 
 from cli import context, output
 from cli.amounts import parse_decimal_number
-from cli.errors import ConflictError, UsageError
+from cli.errors import AuthError, ConflictError, UsageError
 from cli.paths import expand_path
 from cli.utils import parse_date
 
@@ -58,6 +58,45 @@ def _currency(value: str) -> str:
     if not _CURRENCY_SYMBOL.fullmatch(currency):
         raise typer.BadParameter(f"Invalid operating currency: {currency!r}. Use a symbol such as USD or EUR.")
     return currency
+
+
+def _refuse_uncreatable(file: Path) -> None:
+    """Refuse, before the first question, a ledger whose directory cannot be made or written.
+
+    The engine's creation check said so only after all three prompts were
+    answered (w5/813); its messages are repeated here so the refusal reads
+    the same either way.
+    """
+    parent = file.parent
+    try:
+        blocker = next((path for path in (parent, *parent.parents) if os.path.lexists(path)), None)
+        if blocker is None:
+            return
+        try:
+            os.stat(blocker)
+        except FileNotFoundError:
+            raise UsageError(
+                f"Cannot create a ledger in {parent}: {blocker} is a broken symbolic link to "
+                f"{os.readlink(blocker)}. Reconnect what it points to, or choose another directory. "
+                "Nothing was written."
+            ) from None
+        if not blocker.is_dir():
+            raise UsageError(
+                f"Cannot create a ledger in {parent}: {blocker} is a file, not a directory. "
+                "Choose another directory. Nothing was written."
+            )
+        if os.access(blocker, os.W_OK | os.X_OK):
+            return
+    except OSError:
+        # Unstatable: the engine's creation check reports it (w5/793, w5/795).
+        return
+    if blocker == parent:
+        raise AuthError(
+            f"Cannot stage a copy of {file.name} in {parent}: the directory is not writable. bea validates a "
+            "write on a staged copy beside each changed file; make the directory writable before retrying. "
+            "Nothing was written."
+        )
+    raise AuthError(f"Cannot create {parent}: the directory {blocker} is not writable. Nothing was written.")
 
 
 def _preset_accounts(preset: str) -> tuple[str, ...]:
@@ -185,9 +224,15 @@ def init(
         # and nothing can be created under it either, so the engine's
         # creation check reports it (w5/793, w5/795).
         pass
+    _refuse_uncreatable(file)
     # Every option is checked before the first question, naming itself: a bad
     # `--date` or `--opening-balance` was refused only after the prompts were
     # answered, as `Invalid value: …` with no option named (w5/588).
+    if currency is not None:
+        try:
+            currency = _currency(currency)
+        except typer.BadParameter as exc:
+            raise UsageError(f"--currency {currency!r}: {exc.message}") from None
     given_day = None
     if date is not None:
         try:
