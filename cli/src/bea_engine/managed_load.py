@@ -1923,28 +1923,44 @@ def export_portable(
             )
     written: list[str] = []
     at = time.time() if now is None else now
+    # Every file is staged before any lands, and they all land in one
+    # commit. Replaced one at a time, a stop between two files left the
+    # snapshot half-written with nothing said, and the retry demanded
+    # `--force` (w5/826); a stop or failure while staging now leaves the
+    # destination as it was, directories included.
+    created: list[Path] = []
+    staged: list[tuple[Path, Path, Path]] = []
     try:
-        root_mode = _permission_bits(entry)
-        for path, original in snapshot.contents.items():
-            if path in duplicates:
-                continue
-            dest = destinations[path]
-            _write_export(
-                dest,
-                _rewrite_export_includes(
+        with ExitStack() as copies:
+            root_mode = _permission_bits(entry)
+            for path, original in snapshot.contents.items():
+                if path in duplicates:
+                    continue
+                dest = destinations[path]
+                content = _rewrite_export_includes(
                     original, path, snapshot.patterns, destinations, by_target, repeats, duplicates, refused
-                ),
-                _permission_bits(path),
-            )
-            written.append(str(dest))
-        for dest, document in attachments.items():
-            _write_export(dest, Path(document).read_bytes(), _permission_bits(Path(document)))
-            written.append(str(dest))
-        for source in loaded.sources:
-            dest = feed_files[source.url]
-            _write_export(dest, _export_feed_text(source, at).encode("utf-8"), root_mode)
-            written.append(str(dest))
-    except OSError as exc:
+                )
+                staged.append((dest, *_stage_export(dest, content, _permission_bits(path), created, copies)))
+            for dest, document in attachments.items():
+                content = Path(document).read_bytes()
+                staged.append((dest, *_stage_export(dest, content, _permission_bits(Path(document)), created, copies)))
+            for source in loaded.sources:
+                dest = feed_files[source.url]
+                content = _export_feed_text(source, at).encode("utf-8")
+                staged.append((dest, *_stage_export(dest, content, root_mode, created, copies)))
+            from bea_engine import stopping
+
+            with stopping.committing():
+                for dest, copy, final in staged:
+                    os.replace(copy, final)
+                    written.append(str(dest))
+    except BaseException as exc:
+        if not written:
+            for directory in reversed(created):
+                with contextlib.suppress(OSError):
+                    directory.rmdir()
+        if not isinstance(exc, OSError):
+            raise
         # The checks above cannot see everything (a full disk, a directory
         # locked mid-run), so a failed write still says how far it got.
         done = (
@@ -2252,38 +2268,39 @@ def _permission_bits(path: Path) -> int:
     return stat.S_IMODE(path.stat().st_mode)
 
 
-def _write_export(dest: Path, content: bytes, mode: int) -> None:
-    """Write one exported file no more readable than its source (w5/316).
+def _stage_export(dest: Path, content: bytes, mode: int, created: list[Path], copies: ExitStack) -> tuple[Path, Path]:
+    """Stage one exported file beside `dest`, no more readable than its source (w5/316).
 
     `write_bytes` and `copyfile` applied the umask: a `0600` ledger, its
     includes and its receipts came out `0644` beside the private originals,
-    under directories at `0755`. New directories are created `0700`; the file
-    is created private and then given its source's bits, so it is never
-    briefly open to others.
+    under directories at `0755`. New directories are created `0700` and
+    appended to `created`; the file is created private and then given its
+    source's bits, so it is never briefly open to others. Returns the staged
+    copy and the path it replaces; `copies` removes the copy unless it was
+    moved into place.
     """
+    from bea_engine import stopping
+
+    stopping.check()
     missing = [parent for parent in [dest.parent, *dest.parent.parents] if not parent.exists()]
     for parent in reversed(missing):
         parent.mkdir(mode=0o700)
+        created.append(parent)
     # Staged beside it and renamed into place: written in place, a write that
     # failed partway (a full disk, a size limit) left a truncated copy under
     # "Nothing was written", and the retry was refused as an overwrite
     # (w5/409). A destination link is followed, as before.
     final = dest.resolve() if dest.is_symlink() else dest
     staged = final.with_name(f".bea-{secrets.token_hex(8)}.tmp")
-    from bea_engine import stopping
-
-    with stopping.staged(staged):
-        fd = os.open(staged, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
-        try:
-            with os.fdopen(fd, "wb") as stream:
-                os.fchmod(stream.fileno(), mode)
-                stream.write(content)
-                stream.flush()
-                os.fsync(stream.fileno())
-            with stopping.committing():
-                os.replace(staged, final)
-        finally:
-            staged.unlink(missing_ok=True)
+    copies.callback(staged.unlink, missing_ok=True)
+    copies.enter_context(stopping.staged(staged))
+    fd = os.open(staged, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+    with os.fdopen(fd, "wb") as stream:
+        os.fchmod(stream.fileno(), mode)
+        stream.write(content)
+        stream.flush()
+        os.fsync(stream.fileno())
+    return staged, final
 
 
 def _rewrite_export_includes(
