@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 from pathlib import Path
 from typing import Any
 
@@ -34,6 +35,7 @@ def answer(
 ) -> dict[str, Any]:
     """Validate (and optionally append) raw directive text against a ledger."""
     entries = _parse_directives(text)
+    _refuse_documents_outside(text, entries, file, into)
     snapshot = _snapshot_for(file, token)
     target = ledger_write.destination(file, into)
     warnings = ledger_write.validate_append(
@@ -57,6 +59,34 @@ def answer(
         }
     ledger_write.append(file, [text], allow_errors=allow_errors, into=into, snapshot=snapshot, one_entry_each=False)
     return {"written": len(entries), "target": str(target), "warnings": warnings}
+
+
+def _refuse_documents_outside(text: str, entries: list[Any], file: Path, into: Path | None) -> None:
+    """Refuse a `document` naming a file outside the ledger's folder, before anything looks for it.
+
+    Validation reports a missing document file, so the answer told the model
+    whether any path on the machine exists — one bit per call, with nothing
+    shown to the user (w5/848). Outside the folder is refused the same way
+    whether or not the file is there.
+    """
+    from beancount.core.data import Document
+    from beancount.parser import parser
+
+    if not any(isinstance(entry, Document) for entry in entries):
+        return
+    folder = Path(file).resolve().parent
+    # Parsed as the file it lands in, so a relative path resolves beside it
+    # as the loader will resolve it, not against this process's directory.
+    located, _, _ = parser.parse_string(text, report_filename=str(ledger_write.destination(file, into)))
+    for entry in located:
+        if not isinstance(entry, Document):
+            continue
+        named = Path(os.path.expanduser(str(entry.filename))).resolve()
+        if not named.is_relative_to(folder):
+            raise protocol.UsageError(
+                "Write rejected: an AI-proposed document must name a file inside the ledger's folder; "
+                "this one is outside it. Move the file into the ledger's folder first."
+            )
 
 
 def _parse_directives(text: str) -> list[Any]:

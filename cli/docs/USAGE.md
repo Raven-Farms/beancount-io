@@ -2037,7 +2037,11 @@ character is refused rather than rewritten, so no AI-proposed write can leave on
 in a ledger file. Use `ask --into FILE` for an included destination. The write
 tool accepts dated directives; configure plugins, options and includes
 separately. Noninteractive
-sessions do not write ledger entries. The interactive session draws its prompt
+sessions do not write ledger entries: a proposed write is skipped before it is
+validated, so the model is told the same thing whatever the text names and
+learns nothing about local files from it. In an interactive session an
+AI-proposed `document` must name a file inside the ledger's folder; one outside
+it is refused before anything checks whether it exists. The interactive session draws its prompt
 and approval panel on the terminal, so with stdout redirected it exits **2**
 instead; save one answer with `bea ask QUESTION --print > FILE` — the saved
 text keeps every character, never wrapped or cut. AI write permission is separate from

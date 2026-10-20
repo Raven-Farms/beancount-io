@@ -628,6 +628,11 @@ def make_agent(
             perm = ctx.deps.write_permission
             if perm.deny_all:
                 return "Write denied (you denied all writes this session)."
+            if not perm.approve_all and perm.confirm_fn is None:
+                # Before the dry run, not after: its answer told the model
+                # whether any path exists — "File does not exist" against
+                # "Write skipped" — one bit per call, with no one watching (w5/848).
+                return "Write skipped (non-interactive mode does not support writes)."
             argv = ["append", "--file", str(ctx.deps.file), "--text", "-"]
             if ctx.deps.into is not None:
                 argv += ["--into", str(ctx.deps.into)]
