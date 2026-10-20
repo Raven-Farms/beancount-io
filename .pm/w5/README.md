@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [797 — add balance --pad-from blames a consumed pad as "already fills"; its remedy then fails (gap in w1/116)](./797.md)
 - [798 — import --apply --allow-errors writes a pad-only batch that leaves check failing (incomplete fix of w5/081)](./798.md)
 - [799 — Pad hints: staged-pad hint loops, pad-leg currency hint, self-pad accepted](./799.md)
 - [800 — A posting with a cost but no commodity (3 {80}) is written as 3 USD {80}, exit 0 (incomplete fix of w5/098)](./800.md)
