@@ -664,6 +664,16 @@ const jaUserSettings: Record<string, TranslationEntry> = {
     message: "元のページに戻る",
     description: "Button that returns to the page where the purchase began",
   },
+  "userSettings.startUsingPlan": {
+    message: "{plan} を使い始める",
+    description:
+      "Primary button on the checkout confirmation when the purchase did not start at an in-product prompt; opens the ledgers. {plan} is the plan name, e.g. Premium",
+  },
+  "userSettings.checkoutCanceled": {
+    message: "お支払いはキャンセルされました。請求は発生していません。",
+    description:
+      "Notice on Billing after the customer leaves Stripe Checkout without paying",
+  },
   "userSettings.viewBilling": {
     message: "お支払い情報を見る",
     description:

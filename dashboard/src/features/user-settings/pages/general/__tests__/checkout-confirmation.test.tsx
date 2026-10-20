@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, render, renderHook, screen } from "@testing-library/react";
+import * as locales from "@/i18n/locales";
 import { CheckoutConfirmation } from "../checkout-confirmation";
 import {
   CONFIRMATION_TIMEOUT_MS,
@@ -49,6 +50,7 @@ describe("useCheckoutConfirmation", () => {
 describe("CheckoutConfirmation", () => {
   const base = {
     planLabel: "Premium · Yearly",
+    planName: "Premium",
     renewal: { date: "Oct 17, 2027", amount: "$143.88" },
     unlocked: "5 ledgers",
     t,
@@ -71,13 +73,22 @@ describe("CheckoutConfirmation", () => {
     expect(
       screen.getByRole("link", { name: "userSettings.backToWork" }),
     ).toHaveAttribute("href", "/ledger/alice/books");
+    // The way back replaces, not joins, the default next step.
+    expect(
+      screen.queryByRole("link", { name: /userSettings.startUsingPlan/ }),
+    ).not.toBeInTheDocument();
   });
 
-  it("offers only Billing when there is nowhere to return to", () => {
+  it("leads into the product when there is nowhere to return to", () => {
     render(<CheckoutConfirmation {...base} state="done" returnTo={null} />);
     expect(
       screen.queryByRole("link", { name: "userSettings.backToWork" }),
     ).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("link", {
+        name: 'userSettings.startUsingPlan:{"plan":"Premium"}',
+      }),
+    ).toHaveAttribute("href", "/ledger");
     expect(
       screen.getByRole("button", { name: "userSettings.viewBilling" }),
     ).toBeInTheDocument();
@@ -92,4 +103,48 @@ describe("CheckoutConfirmation", () => {
     screen.getByRole("button", { name: "userSettings.refresh" }).click();
     expect(base.onRefresh).toHaveBeenCalled();
   });
+});
+
+describe("CheckoutConfirmation in other languages", () => {
+  const ALL = locales as unknown as Record<string, Record<string, string>>;
+  /** The app's translator for one language, placeholders filled in. */
+  const translator =
+    (lang: string) => (key: string, params?: Record<string, string | number>) =>
+      Object.entries(params ?? {}).reduce(
+        (message, [name, value]) => message.replace(`{${name}}`, String(value)),
+        ALL[lang][key] ?? key,
+      );
+
+  it.each(["zh", "fa"])(
+    "leads into the product in %s with the plan named in that language",
+    (lang) => {
+      const t = translator(lang);
+      const plan = t("aiAgent.premiumTier");
+      render(
+        <CheckoutConfirmation
+          state="done"
+          planLabel={plan}
+          planName={plan}
+          renewal={null}
+          unlocked={null}
+          returnTo={null}
+          t={t}
+          onRefresh={vi.fn()}
+          onDismiss={vi.fn()}
+        />,
+      );
+
+      const link = screen.getByRole("link", {
+        name: t("userSettings.startUsingPlan", { plan }),
+      });
+      expect(link).toHaveAttribute("href", "/ledger");
+      expect(link.textContent).toContain(plan);
+      expect(link.textContent).not.toBe(
+        translator("en")("userSettings.startUsingPlan", { plan }),
+      );
+      expect(t("userSettings.checkoutCanceled")).not.toBe(
+        translator("en")("userSettings.checkoutCanceled"),
+      );
+    },
+  );
 });

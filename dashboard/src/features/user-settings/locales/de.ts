@@ -683,6 +683,16 @@ const deUserSettings: Record<string, TranslationEntry> = {
     message: "Zurück zur vorherigen Seite",
     description: "Button that returns to the page where the purchase began",
   },
+  "userSettings.startUsingPlan": {
+    message: "{plan} jetzt nutzen",
+    description:
+      "Primary button on the checkout confirmation when the purchase did not start at an in-product prompt; opens the ledgers. {plan} is the plan name, e.g. Premium",
+  },
+  "userSettings.checkoutCanceled": {
+    message: "Der Bezahlvorgang wurde abgebrochen. Es wurde nichts berechnet.",
+    description:
+      "Notice on Billing after the customer leaves Stripe Checkout without paying",
+  },
   "userSettings.viewBilling": {
     message: "Abrechnung anzeigen",
     description:

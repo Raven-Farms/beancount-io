@@ -701,6 +701,16 @@ const ukUserSettings: Record<string, TranslationEntry> = {
     message: "Повернутися на попередню сторінку",
     description: "Button that returns to the page where the purchase began",
   },
+  "userSettings.startUsingPlan": {
+    message: "Почати користуватися {plan}",
+    description:
+      "Primary button on the checkout confirmation when the purchase did not start at an in-product prompt; opens the ledgers. {plan} is the plan name, e.g. Premium",
+  },
+  "userSettings.checkoutCanceled": {
+    message: "Оплату скасовано. Кошти не списано.",
+    description:
+      "Notice on Billing after the customer leaves Stripe Checkout without paying",
+  },
   "userSettings.viewBilling": {
     message: "Відкрити оплату",
     description:

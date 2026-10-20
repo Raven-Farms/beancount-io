@@ -701,6 +701,16 @@ const ruUserSettings: Record<string, TranslationEntry> = {
     message: "Вернуться к предыдущей странице",
     description: "Button that returns to the page where the purchase began",
   },
+  "userSettings.startUsingPlan": {
+    message: "Начать работу с {plan}",
+    description:
+      "Primary button on the checkout confirmation when the purchase did not start at an in-product prompt; opens the ledgers. {plan} is the plan name, e.g. Premium",
+  },
+  "userSettings.checkoutCanceled": {
+    message: "Оплата отменена. Деньги не списаны.",
+    description:
+      "Notice on Billing after the customer leaves Stripe Checkout without paying",
+  },
   "userSettings.viewBilling": {
     message: "Открыть оплату",
     description:

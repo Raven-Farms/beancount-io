@@ -1,4 +1,6 @@
+import { useEffect, useRef } from "react";
 import { Navigate, useNavigate, useSearch } from "@tanstack/react-router";
+import { toast } from "sonner";
 import { PageSEO } from "@/common/components/seo/page-seo";
 import { useTranslations } from "@/common/hooks/use-translations";
 import { useReactNativeContext } from "@/common/providers/react-native-bridge-provider/react-native-bridge-context";
@@ -15,6 +17,20 @@ export default function BillingSettingsPage() {
   const { isReactNative } = useReactNativeContext();
   const search = useSearch({ from: "/settings/billing" });
   const navigate = useNavigate();
+  const canceled = search.checkout === "canceled";
+  const canceledShown = useRef(false);
+  // An abandoned Checkout: say nothing was charged once, then drop the flag
+  // so a refresh does not repeat it.
+  useEffect(() => {
+    if (!canceled || canceledShown.current) return;
+    canceledShown.current = true;
+    toast.info(t("userSettings.checkoutCanceled"));
+    void navigate({
+      to: "/settings/billing",
+      search: (prev) => ({ ...prev, checkout: undefined }),
+      replace: true,
+    });
+  }, [canceled, navigate, t]);
   if (isReactNative) return <Navigate to="/settings/general" replace />;
   return (
     <>

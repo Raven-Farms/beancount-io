@@ -12,8 +12,10 @@ const {
   mockPreview,
   mockTrack,
   mockToast,
+  mockCelebrate,
 } = vi.hoisted(() => ({
   mockTrack: vi.fn(),
+  mockCelebrate: vi.fn(),
   mockToast: {
     success: vi.fn(),
     error: vi.fn(),
@@ -62,6 +64,9 @@ vi.mock("../bank-approval", () => ({
   approveBankPayment: mockApproveBankPayment,
 }));
 vi.mock("sonner", () => ({ toast: mockToast }));
+vi.mock("@/features/user-settings/lib/celebrate", () => ({
+  celebrate: mockCelebrate,
+}));
 vi.mock("@/common/analytics", () => ({ track: mockTrack }));
 vi.mock("@/common/lib/errors/error-message", () => ({
   useErrorMessage: () => () => "error",
@@ -483,6 +488,56 @@ describe("PlanChangeSheet", () => {
       expect(mockToast.dismiss).toHaveBeenCalledWith("waiting");
     });
 
+    const purchases = () =>
+      mockTrack.mock.calls.filter(([event]) => event === "purchase");
+
+    it("counts the approved charge as one purchase and celebrates it", async () => {
+      mockChangePlan.mockResolvedValue(
+        requiresAction({
+          invoiceId: "in_approved",
+          amountPaid: 95000,
+          currency: "usd",
+        }),
+      );
+      mockApproveBankPayment.mockResolvedValue("approved");
+      const { onClose } = renderSheet();
+
+      await confirm();
+
+      await waitFor(() => expect(onClose).toHaveBeenCalled());
+      expect(purchases()).toEqual([
+        [
+          "purchase",
+          expect.objectContaining({
+            transaction_id: "in_approved",
+            value: 950,
+            currency: "USD",
+          }),
+        ],
+      ]);
+      expect(mockCelebrate).toHaveBeenCalledTimes(1);
+    });
+
+    it("counts and celebrates nothing when the bank refuses", async () => {
+      mockChangePlan.mockResolvedValue(
+        requiresAction({
+          invoiceId: "in_refused",
+          amountPaid: 95000,
+          currency: "usd",
+        }),
+      );
+      mockApproveBankPayment.mockResolvedValue("declined");
+      renderSheet();
+
+      await confirm();
+
+      expect(
+        await screen.findByText("userSettings.planChangeFailed"),
+      ).toBeInTheDocument();
+      expect(purchases()).toEqual([]);
+      expect(mockCelebrate).not.toHaveBeenCalled();
+    });
+
     it("says nothing changed when the bank refuses, and offers another card", async () => {
       mockChangePlan.mockResolvedValue(requiresAction());
       mockApproveBankPayment.mockResolvedValue("declined");
@@ -651,6 +706,11 @@ describe("PlanChangeSheet", () => {
       // useChangePlan refetches the plan itself; a second refetch is waste.
       expect(onChanged).not.toHaveBeenCalled();
       expect(onClose).toHaveBeenCalled();
+      // Nothing was charged: not a purchase, nothing to celebrate.
+      expect(
+        mockTrack.mock.calls.filter(([event]) => event === "purchase"),
+      ).toEqual([]);
+      expect(mockCelebrate).not.toHaveBeenCalled();
       expect(
         mockTrack.mock.calls.filter(
           ([event]) => event === "plan_change_scheduled",

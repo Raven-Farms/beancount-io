@@ -681,6 +681,16 @@ const bgUserSettings: Record<string, TranslationEntry> = {
     message: "Обратно към предишната страница",
     description: "Button that returns to the page where the purchase began",
   },
+  "userSettings.startUsingPlan": {
+    message: "Започнете да използвате {plan}",
+    description:
+      "Primary button on the checkout confirmation when the purchase did not start at an in-product prompt; opens the ledgers. {plan} is the plan name, e.g. Premium",
+  },
+  "userSettings.checkoutCanceled": {
+    message: "Плащането беше отказано. Нищо не е таксувано.",
+    description:
+      "Notice on Billing after the customer leaves Stripe Checkout without paying",
+  },
   "userSettings.viewBilling": {
     message: "Към плащанията",
     description:

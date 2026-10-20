@@ -33,6 +33,12 @@ query GetSubscriptionStatus {
         last4
       }
       nextPaymentAttempt
+      latestInvoice {
+        id
+        amountPaid
+        currency
+        billingReason
+      }
       scheduledChange {
         priceId
         effectiveAt

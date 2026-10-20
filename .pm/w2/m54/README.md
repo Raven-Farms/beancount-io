@@ -1,6 +1,6 @@
 # w2 · m54 — A purchase ends on a confirmation that celebrates it, and analytics counts it in the browser
 
-**Worker:** worker2 **Goal:** Every successful payment — a new subscription through Stripe Checkout or an upgrade charged inside Billing — ends in the dashboard on a confirmation that says what the customer now has, celebrates it once, and records one GA4 `purchase` from the browser. Checkout no longer returns to the marketing pricing page, and the dormant server-side purchase reporter is retired so there is one purchase source. **Status:** todo (t001, t002, t003 done)
+**Worker:** worker2 **Goal:** Every successful payment — a new subscription through Stripe Checkout or an upgrade charged inside Billing — ends in the dashboard on a confirmation that says what the customer now has, celebrates it once, and records one GA4 `purchase` from the browser. Checkout no longer returns to the marketing pricing page, and the dormant server-side purchase reporter is retired so there is one purchase source. **Status:** todo (t001–t007 done)
 
 ## Tasks (in order)
 
@@ -9,10 +9,10 @@
 | t001 | Return Checkout to the dashboard confirmation, and dashboard-started checkouts to Billing on cancel — **DONE** | 40m | — |
 | t002 | Report the invoice an immediate plan change charged — **DONE** | 30m | — |
 | t003 | Retire the server-side Measurement Protocol `purchase` reporter — **DONE** | 35m | — |
-| t004 | Confirmation lands from Checkout: session id, cancelled notice, "Start using" when there is no way back | 40m | t001 |
-| t005 | Record one client-side GA4 `purchase` per paid transaction | 40m | t002, t003, t004 |
-| t006 | Celebrate a successful payment with confetti, once, and never for reduced motion | 35m | t004, t005 |
-| t007 | Translate the new confirmation and cancel copy into every dashboard locale | 25m | t004, t006 |
+| t004 | Confirmation lands from Checkout: session id, cancelled notice, "Start using" when there is no way back — **DONE** | 40m | t001 |
+| t005 | Record one client-side GA4 `purchase` per paid transaction — **DONE** | 40m | t002, t003, t004 |
+| t006 | Celebrate a successful payment with confetti, once, and never for reduced motion — **DONE** | 35m | t004, t005 |
+| t007 | Translate the new confirmation and cancel copy into every dashboard locale — **DONE** | 25m | t004, t006 |
 | t008 | Verify adoption surfaces for the purchase changes | 20m | t005, t006, t007 |
 | t009 | Run `/simplify` over the milestone diff | 30m | t008 |
 | t010 | Prove return paths, purchase counting and the celebration with meaningful tests | 35m | t008, t009 |

@@ -2,12 +2,6 @@ import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
-/**
- * Importing `@stripe/stripe-js` injects Stripe's script from js.stripe.com, so
- * one static import would make every page that bundles it fetch Stripe.js.
- * Only a payment that needs the bank's approval should (w1/175).
- */
-
 /** Every source file under `dir`, recursively. */
 function sources(dir: string): string[] {
   return readdirSync(dir).flatMap((name) => {
@@ -17,16 +11,26 @@ function sources(dir: string): string[] {
   });
 }
 
-describe("Stripe.js stays out of the page bundles", () => {
-  it("is only ever imported dynamically or for types", () => {
+const escape = (text: string) => text.replace(/[.*+?^${}()|[\]\\/]/g, "\\$&");
+
+describe("packages that only a rare moment needs stay out of the page bundles", () => {
+  it.each([
+    // Importing it injects Stripe's script from js.stripe.com; only a payment
+    // that needs the bank's approval should fetch it (w1/175).
+    ["@stripe/stripe-js"],
+    // Only a confirmed payment celebrates (w2/m54).
+    ["canvas-confetti"],
+  ])("%s is only ever imported dynamically or for types", (pkg) => {
     const files = sources(join(process.cwd(), "src"));
     const importers = files.filter((file) =>
-      readFileSync(file, "utf8").includes("@stripe/stripe-js"),
+      readFileSync(file, "utf8").includes(pkg),
+    );
+    const staticImport = new RegExp(
+      `^import\\s+(?!type\\b)[^;]*from\\s+["']${escape(pkg)}["']`,
+      "m",
     );
     const staticImports = importers.filter((file) =>
-      /^import\s+(?!type\b)[^;]*from\s+["']@stripe\/stripe-js["']/m.test(
-        readFileSync(file, "utf8"),
-      ),
+      staticImport.test(readFileSync(file, "utf8")),
     );
 
     expect(files.length).toBeGreaterThan(500);

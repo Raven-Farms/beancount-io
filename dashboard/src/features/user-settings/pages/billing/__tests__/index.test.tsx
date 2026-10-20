@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import BillingSettingsPage from "../index";
 
@@ -19,6 +19,8 @@ vi.mock("@tanstack/react-router", () => ({
   useNavigate: () => mockNavigate,
 }));
 vi.mock("@/common/components/seo/page-seo", () => ({ PageSEO: () => null }));
+const mockToast = vi.hoisted(() => ({ info: vi.fn() }));
+vi.mock("sonner", () => ({ toast: mockToast }));
 vi.mock("@/common/hooks/use-translations", () => ({
   useTranslations: () => ({ t: (key: string) => key }),
 }));
@@ -53,6 +55,45 @@ vi.mock("../../general/subscription-section", () => ({
 }));
 
 describe("BillingSettingsPage", () => {
+  beforeEach(() => {
+    mockToast.info.mockClear();
+    mockNavigate.mockClear();
+  });
+
+  it("says once that an abandoned Checkout charged nothing, then drops the flag", () => {
+    mockSearch.value = { checkout: "canceled", from: "deep_link" };
+    try {
+      const { rerender } = render(<BillingSettingsPage />);
+      rerender(<BillingSettingsPage />);
+
+      expect(mockToast.info).toHaveBeenCalledTimes(1);
+      expect(mockToast.info).toHaveBeenCalledWith(
+        "userSettings.checkoutCanceled",
+      );
+      expect(mockNavigate).toHaveBeenCalledTimes(1);
+      const [{ search, replace }] = mockNavigate.mock.calls[0] as [
+        {
+          search: (prev: Record<string, unknown>) => Record<string, unknown>;
+          replace: boolean;
+        },
+      ];
+      expect(replace).toBe(true);
+      expect(search(mockSearch.value)).toEqual({
+        checkout: undefined,
+        from: "deep_link",
+      });
+    } finally {
+      mockSearch.value = {};
+    }
+  });
+
+  it("says nothing about a cancel on an ordinary visit", () => {
+    render(<BillingSettingsPage />);
+
+    expect(mockToast.info).not.toHaveBeenCalled();
+    expect(mockNavigate).not.toHaveBeenCalled();
+  });
+
   it("shows the billing heading and the subscription section on the web", () => {
     render(<BillingSettingsPage />);
 

@@ -9,6 +9,11 @@ import { ArrowUp, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/common/components/ui/button";
 import { track, type BillingSurface } from "@/common/analytics";
+import { celebrate } from "@/features/user-settings/lib/celebrate";
+import {
+  recordPaidTransaction,
+  type PaidTransaction,
+} from "@/features/user-settings/lib/paid-transaction";
 import { planValue } from "@/common/lib/subscription/plan-change";
 import {
   Dialog,
@@ -64,6 +69,8 @@ import {
   collaboratorsLine,
   ledgersLine,
 } from "./tier-quota-summary";
+
+type PaidCharge = Omit<PaidTransaction, "priceId">;
 
 export interface PlanChangeTarget {
   tier: SubscriptionTier;
@@ -233,7 +240,9 @@ export function PlanChangeSheet({
   const [splitChoice, setSplitChoice] = useState<SplitChoice>("later");
   const targetLabel = target ? planLabel(t, target.tier, target.cycle) : "";
 
-  const landed = () => {
+  /** A paid change landed: count and celebrate the charge, then close. */
+  const landed = (charge: PaidCharge, priceId: string) => {
+    if (recordPaidTransaction({ ...charge, priceId })) void celebrate();
     toast.success(
       t("userSettings.subscriptionUpgraded"),
       returnTo
@@ -295,7 +304,7 @@ export function PlanChangeSheet({
         );
         onClose();
       } else if (result?.status === "ACTIVE") {
-        landed();
+        landed(result, chosen.targetPriceId);
       } else if (result?.status === "REQUIRES_ACTION") {
         if (params) track("payment_action_required", params);
         const approval = result.clientSecret
@@ -305,7 +314,7 @@ export function PlanChangeSheet({
           if (params) track("payment_action_completed", params);
           // Paid either way: a failed refetch only delays what Billing shows.
           await refetchPlan().catch(() => {});
-          landed();
+          landed(result, chosen.targetPriceId);
         } else if (approval === "declined") {
           if (params) track("payment_action_failed", params);
           setOutcome({ type: "failed" });

@@ -692,6 +692,16 @@ const frUserSettings: Record<string, TranslationEntry> = {
     message: "Revenir où vous étiez",
     description: "Button that returns to the page where the purchase began",
   },
+  "userSettings.startUsingPlan": {
+    message: "Commencer à utiliser {plan}",
+    description:
+      "Primary button on the checkout confirmation when the purchase did not start at an in-product prompt; opens the ledgers. {plan} is the plan name, e.g. Premium",
+  },
+  "userSettings.checkoutCanceled": {
+    message: "Le paiement a été annulé. Rien n'a été facturé.",
+    description:
+      "Notice on Billing after the customer leaves Stripe Checkout without paying",
+  },
   "userSettings.viewBilling": {
     message: "Voir la facturation",
     description:

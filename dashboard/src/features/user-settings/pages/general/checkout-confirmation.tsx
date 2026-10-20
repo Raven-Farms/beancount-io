@@ -5,6 +5,7 @@ import type { ConfirmationState } from "./use-checkout-confirmation";
 export function CheckoutConfirmation({
   state,
   planLabel,
+  planName,
   renewal,
   unlocked,
   returnTo,
@@ -15,6 +16,8 @@ export function CheckoutConfirmation({
   state: ConfirmationState;
   /** "Premium · Yearly" */
   planLabel: string;
+  /** "Premium" */
+  planName: string;
   renewal: { date: string; amount: string } | null;
   unlocked: string | null;
   returnTo: string | null;
@@ -69,11 +72,16 @@ export function CheckoutConfirmation({
         </p>
       )}
       <div className="flex flex-wrap gap-2 pt-1">
-        {returnTo && (
-          <Button asChild size="sm">
+        {/* A full load, so every query reads the new plan's limits. */}
+        <Button asChild size="sm">
+          {returnTo ? (
             <a href={returnTo}>{t("userSettings.backToWork")}</a>
-          </Button>
-        )}
+          ) : (
+            <a href="/ledger">
+              {t("userSettings.startUsingPlan", { plan: planName })}
+            </a>
+          )}
+        </Button>
         <Button size="sm" variant="outline" onClick={onDismiss}>
           {t("userSettings.viewBilling")}
         </Button>

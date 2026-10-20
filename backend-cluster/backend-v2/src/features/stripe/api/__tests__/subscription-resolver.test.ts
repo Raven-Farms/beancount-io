@@ -350,6 +350,46 @@ describe("SubscriptionResolver", () => {
       expect(result.subscriptions[0]?.nextPaymentAttempt).toBeNull();
     });
 
+    it("reports what the latest invoice collected, so a $0 Checkout is not counted as a sale", async () => {
+      mockStripeService.listSubscriptions.mockResolvedValue([
+        liveSubscription("active", {
+          latest_invoice: {
+            id: "in_first",
+            status: "paid",
+            amount_paid: 0,
+            currency: "usd",
+            billing_reason: "subscription_create",
+            next_payment_attempt: null,
+          },
+        }),
+      ]);
+
+      const result = await resolver.subscriptionStatus(
+        mockContext,
+        selecting("subscriptions"),
+      );
+
+      expect(result.subscriptions[0]?.latestInvoice).toEqual({
+        id: "in_first",
+        amountPaid: 0,
+        currency: "usd",
+        billingReason: "subscription_create",
+      });
+    });
+
+    it("gives no latest invoice when the listing did not expand it", async () => {
+      mockStripeService.listSubscriptions.mockResolvedValue([
+        liveSubscription("active", { latest_invoice: "in_unexpanded" }),
+      ]);
+
+      const result = await resolver.subscriptionStatus(
+        mockContext,
+        selecting("subscriptions"),
+      );
+
+      expect(result.subscriptions[0]?.latestInvoice).toBeNull();
+    });
+
     it("reports a subscription's scheduled plan change", async () => {
       const end = Math.floor(Date.now() / 1000) + 86_400;
       mockStripeService.listSubscriptions.mockResolvedValue([

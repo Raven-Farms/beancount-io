@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { CreditCard, Loader2, AlertCircle } from "lucide-react";
 import {
   Card,
@@ -45,6 +45,9 @@ import {
   rememberReturnPath,
   takeReturnPath,
 } from "@/features/user-settings/lib/billing-return";
+import { celebrate } from "@/features/user-settings/lib/celebrate";
+import { recordPaidTransaction } from "@/features/user-settings/lib/paid-transaction";
+import { CheckoutReturnTo } from "@/graphql/definitions";
 import { UsageOverview } from "./subscription-usage-overview";
 import { PlanPicker } from "./subscription-plan-picker";
 import { PayYearlyOffer } from "./subscription-pay-yearly";
@@ -176,6 +179,7 @@ export function SubscriptionSection({
         variables: {
           clientId: stripePlanConfig.clientId,
           priceId: cyclePrice(target.tier, target.cycle).priceId,
+          returnTo: CheckoutReturnTo.Billing,
         },
       });
       const result = response.data?.createSubscriptionSession;
@@ -234,6 +238,27 @@ export function SubscriptionSection({
       void refetchUserLimits();
     },
   );
+  // Checkout's first invoice, counted and celebrated once it is confirmed.
+  const checkoutInvoice =
+    checkoutReturned &&
+    confirmation === "done" &&
+    currentSubscription?.latestInvoice?.billingReason === "subscription_create"
+      ? currentSubscription.latestInvoice
+      : null;
+  const checkoutPriceId = currentPrice?.id;
+  useEffect(() => {
+    if (!checkoutInvoice || !checkoutPriceId) return;
+    if (
+      recordPaidTransaction({
+        invoiceId: checkoutInvoice.id,
+        amountPaid: checkoutInvoice.amountPaid,
+        currency: checkoutInvoice.currency,
+        priceId: checkoutPriceId,
+      })
+    ) {
+      void celebrate();
+    }
+  }, [checkoutInvoice, checkoutPriceId]);
   const planLabel = [
     t(planLabelKey(tier)),
     currentInterval
@@ -266,6 +291,7 @@ export function SubscriptionSection({
           <CheckoutConfirmation
             state={confirmation}
             planLabel={planLabel}
+            planName={t(planLabelKey(tier))}
             renewal={
               renewalDate && currentPrice
                 ? {

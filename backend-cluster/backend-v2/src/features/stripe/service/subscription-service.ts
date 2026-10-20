@@ -78,6 +78,16 @@ interface SubscriptionView {
   scheduledChange: ScheduledChangeView | null;
   /** With `past_due`: when Stripe next retries the failed renewal. */
   nextPaymentAttempt: Date | null;
+  latestInvoice: SubscriptionInvoiceView | null;
+}
+
+/** What the subscription's latest invoice collected, discounts applied. */
+interface SubscriptionInvoiceView {
+  id: string;
+  /** Minor units. */
+  amountPaid: number;
+  currency: string;
+  billingReason: string | null;
 }
 
 export interface CustomerSubscriptionStatusView {
@@ -110,6 +120,20 @@ export interface TierQuotaView {
 }
 
 /** A past-due renewal's next retry, for the failed-renewal banner. */
+/** The latest invoice, when the listing expanded it (the full view does). */
+function latestInvoice(
+  subscription: Stripe.Subscription,
+): SubscriptionInvoiceView | null {
+  const invoice = subscription.latest_invoice;
+  if (!invoice || typeof invoice === "string" || !invoice.id) return null;
+  return {
+    id: invoice.id,
+    amountPaid: invoice.amount_paid,
+    currency: invoice.currency,
+    billingReason: invoice.billing_reason ?? null,
+  };
+}
+
 function retryDate(subscription: Stripe.Subscription): Date | null {
   const retry = pastDueRetry(subscription);
   return retry === null ? null : new Date(retry * 1000);
@@ -400,6 +424,7 @@ export class SubscriptionService implements ISubscriptionService {
             SUBSCRIPTION_CONFIG[subscription.clientId]?.plans ?? [],
           ),
           nextPaymentAttempt: retryDate(subscription),
+          latestInvoice: latestInvoice(subscription),
         } satisfies SubscriptionView;
       }),
     );

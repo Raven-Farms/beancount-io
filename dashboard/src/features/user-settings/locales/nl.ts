@@ -680,6 +680,16 @@ const nlUserSettings: Record<string, TranslationEntry> = {
     message: "Terug naar waar je was",
     description: "Button that returns to the page where the purchase began",
   },
+  "userSettings.startUsingPlan": {
+    message: "Aan de slag met {plan}",
+    description:
+      "Primary button on the checkout confirmation when the purchase did not start at an in-product prompt; opens the ledgers. {plan} is the plan name, e.g. Premium",
+  },
+  "userSettings.checkoutCanceled": {
+    message: "Het afrekenen is geannuleerd. Er is niets in rekening gebracht.",
+    description:
+      "Notice on Billing after the customer leaves Stripe Checkout without paying",
+  },
   "userSettings.viewBilling": {
     message: "Facturering bekijken",
     description:

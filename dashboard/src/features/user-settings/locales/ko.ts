@@ -664,6 +664,16 @@ const koUserSettings: Record<string, TranslationEntry> = {
     message: "이전 페이지로 돌아가기",
     description: "Button that returns to the page where the purchase began",
   },
+  "userSettings.startUsingPlan": {
+    message: "{plan} 사용 시작하기",
+    description:
+      "Primary button on the checkout confirmation when the purchase did not start at an in-product prompt; opens the ledgers. {plan} is the plan name, e.g. Premium",
+  },
+  "userSettings.checkoutCanceled": {
+    message: "결제가 취소되었습니다. 청구된 금액은 없습니다.",
+    description:
+      "Notice on Billing after the customer leaves Stripe Checkout without paying",
+  },
   "userSettings.viewBilling": {
     message: "결제 정보 보기",
     description:

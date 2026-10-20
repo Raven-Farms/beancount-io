@@ -221,13 +221,29 @@ export interface AnalyticsEvents {
    * and is leaving for Stripe Checkout (`createSubscriptionSession`), the
    * single checkout entry point. `target_tier` is the plan being purchased and
    * `surface` is where the change started. It is the funnel stage below
-   * `upgrade_prompt_clicked`: intent → checkout_started → `purchase` (fired
-   * server-side from the Stripe webhook). An existing subscriber's in-place
+   * `upgrade_prompt_clicked`: intent → checkout_started → `purchase` (sent
+   * from the browser once the payment is confirmed). An existing subscriber's in-place
    * change (`changePlan`) is not a checkout; it is `plan_change_confirmed`.
    * `target_tier` is distinct from the standard `plan_tier`, which is the
    * actor's *current* tier.
    */
   checkout_started: { target_tier: PlanTier; surface: BillingSurface };
+  /**
+   * GA4's recommended purchase: an invoice the customer paid us for a plan,
+   * from Checkout's confirmation or an immediate upgrade in the change sheet.
+   * The one event that carries money (what the customer paid us, never a
+   * ledger amount). Sent once per invoice from this browser; a $0 invoice is
+   * not a purchase.
+   */
+  purchase: {
+    /** The Stripe invoice id; GA4 deduplicates purchases on it. */
+    transaction_id: string;
+    /** Major units, discounts applied. */
+    value: number;
+    /** ISO 4217, upper case. */
+    currency: string;
+    items: PurchaseItem[];
+  };
   /**
    * The monthly/yearly switch above Billing's plan rows changed. Yearly is the
    * default, so this counts the readers who look at monthly first (PRFAQ005
@@ -270,6 +286,17 @@ export interface AnalyticsEvents {
   cancel_confirmed: { from: PlanValue; reason?: CancelReason };
   /** A pending cancellation was withdrawn with Resume. */
   subscription_resumed: { from: PlanValue };
+}
+
+/** The plan line of a `purchase`, in GA4's item shape. */
+export interface PurchaseItem {
+  /** The Stripe price id. */
+  item_id: string;
+  /** The plan, e.g. "premium". */
+  item_name: string;
+  item_variant: "month" | "year";
+  price: number;
+  quantity: 1;
 }
 
 export type AnalyticsEventName = keyof AnalyticsEvents;

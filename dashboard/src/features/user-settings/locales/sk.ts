@@ -699,6 +699,16 @@ const skUserSettings: Record<string, TranslationEntry> = {
     message: "Späť na predchádzajúcu stránku",
     description: "Button that returns to the page where the purchase began",
   },
+  "userSettings.startUsingPlan": {
+    message: "Začnite používať {plan}",
+    description:
+      "Primary button on the checkout confirmation when the purchase did not start at an in-product prompt; opens the ledgers. {plan} is the plan name, e.g. Premium",
+  },
+  "userSettings.checkoutCanceled": {
+    message: "Platba bola zrušená. Nič vám nebolo účtované.",
+    description:
+      "Notice on Billing after the customer leaves Stripe Checkout without paying",
+  },
   "userSettings.viewBilling": {
     message: "Zobraziť fakturáciu",
     description:

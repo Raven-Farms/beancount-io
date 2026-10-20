@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { CheckoutReturnTo } from "@/graphql/definitions";
 import { SubscriptionSection } from "../subscription-section";
 import {
   MOCK_TIER_QUOTAS,
@@ -40,8 +41,14 @@ const {
   mockUseAllTierQuotas: vi.fn(),
 }));
 
-const { mockTrack } = vi.hoisted(() => ({ mockTrack: vi.fn() }));
+const { mockTrack, mockCelebrate } = vi.hoisted(() => ({
+  mockTrack: vi.fn(),
+  mockCelebrate: vi.fn(),
+}));
 vi.mock("@/common/analytics", () => ({ track: mockTrack }));
+vi.mock("@/features/user-settings/lib/celebrate", () => ({
+  celebrate: mockCelebrate,
+}));
 
 vi.mock("@apollo/client/react", () => ({
   useLazyQuery: () => [
@@ -402,6 +409,7 @@ describe("Plan row", () => {
         variables: {
           clientId: "beancount-web-prod",
           priceId: PRICES.premiumYearly,
+          returnTo: CheckoutReturnTo.Billing,
         },
       });
     });
@@ -437,6 +445,7 @@ describe("Plan row", () => {
         variables: {
           clientId: "beancount-web-prod",
           priceId: PRICES.growthMonthly,
+          returnTo: CheckoutReturnTo.Billing,
         },
       });
     });
@@ -650,6 +659,91 @@ describe("Pay yearly offer", () => {
 });
 
 describe("Checkout return", () => {
+  /** A Premium subscriber whose latest invoice is the given one. */
+  function returnedWith(latestInvoice: {
+    id: string;
+    amountPaid: number;
+    billingReason: string;
+  }) {
+    premiumSubscriber();
+    const data = structuredClone(mockActiveSubscriptionData);
+    data.subscriptionStatus.subscriptions[0].latestInvoice = {
+      __typename: "SubscriptionInvoice",
+      currency: "usd",
+      ...latestInvoice,
+    };
+    showSubscription(data);
+  }
+  const purchases = () =>
+    mockTrack.mock.calls.filter(([event]) => event === "purchase");
+
+  it("counts Checkout's first invoice once it is recorded, and celebrates it once", () => {
+    returnedWith({
+      id: "in_checkout",
+      amountPaid: 1499,
+      billingReason: "subscription_create",
+    });
+
+    const { rerender } = render(<SubscriptionSection checkoutReturned />);
+    rerender(<SubscriptionSection checkoutReturned />);
+
+    expect(purchases()).toEqual([
+      [
+        "purchase",
+        expect.objectContaining({
+          transaction_id: "in_checkout",
+          value: 14.99,
+          currency: "USD",
+        }),
+      ],
+    ]);
+    expect(mockCelebrate).toHaveBeenCalledTimes(1);
+  });
+
+  it.each([
+    ["a fully discounted Checkout", 0, "subscription_create"],
+    ["a renewal invoice", 1499, "subscription_cycle"],
+  ])("counts and celebrates nothing for %s", (_label, amountPaid, reason) => {
+    returnedWith({
+      id: `in_${reason}_${amountPaid}`,
+      amountPaid,
+      billingReason: reason,
+    });
+
+    render(<SubscriptionSection checkoutReturned />);
+
+    expect(purchases()).toEqual([]);
+    expect(mockCelebrate).not.toHaveBeenCalled();
+  });
+
+  it("counts nothing on an ordinary Billing visit, even right after a purchase", () => {
+    returnedWith({
+      id: "in_visit",
+      amountPaid: 1499,
+      billingReason: "subscription_create",
+    });
+
+    render(<SubscriptionSection />);
+
+    expect(purchases()).toEqual([]);
+    expect(mockCelebrate).not.toHaveBeenCalled();
+  });
+
+  it("counts nothing while the webhook has not recorded the subscription", () => {
+    setUserLimits("FREE");
+    showSubscription(mockNoSubscriptionData);
+
+    render(<SubscriptionSection checkoutReturned />);
+
+    expect(
+      within(screen.getByTestId("checkout-confirmation")).getByText(
+        "userSettings.checkoutConfirming",
+      ),
+    ).toBeInTheDocument();
+    expect(purchases()).toEqual([]);
+    expect(mockCelebrate).not.toHaveBeenCalled();
+  });
+
   it("remembers where a purchase began and offers the way back once it is recorded", async () => {
     const user = userEvent.setup();
     setUserLimits("FREE");

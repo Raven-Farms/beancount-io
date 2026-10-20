@@ -98,6 +98,23 @@ class ScheduledPlanChange {
   effectiveAt!: Date;
 }
 
+@ObjectType("SubscriptionInvoice")
+class SubscriptionInvoice {
+  @Field(() => ID)
+  id!: string;
+
+  @Field(() => Int, {
+    description: "Collected, in minor units, discounts applied.",
+  })
+  amountPaid!: number;
+
+  @Field()
+  currency!: string;
+
+  @Field(() => String, { nullable: true })
+  billingReason!: string | null;
+}
+
 @ObjectType("Subscription")
 class Subscription {
   @Field(() => ID)
@@ -146,6 +163,13 @@ class Subscription {
       "With past_due: when Stripe next retries the failed renewal. The plan is kept until it stops retrying.",
   })
   nextPaymentAttempt?: Date | null;
+
+  @Field(() => SubscriptionInvoice, {
+    nullable: true,
+    description:
+      "The latest invoice and what it collected, discounts applied; on the full subscription view.",
+  })
+  latestInvoice?: SubscriptionInvoice | null;
 }
 
 @ObjectType("CustomerSubscriptionStatus")
