@@ -111,6 +111,110 @@ const zhDashboardPage: Record<string, TranslationEntry> = {
     message: "名称为必填项",
     description: "Validation error when name is missing",
   },
+  "page.dashboard.presetPersonal": {
+    message: "个人账簿",
+    description: "Name of the personal setup preset",
+  },
+  "page.dashboard.presetPersonalOutcome": {
+    message: "记录一笔购买，了解其对剩余资金的影响。",
+    description: "Outcome of the personal setup preset",
+  },
+  "page.dashboard.presetFreelance": {
+    message: "自由职业账簿",
+    description: "Name of the freelance setup preset",
+  },
+  "page.dashboard.presetFreelanceOutcome": {
+    message: "记录客户收入，或查看未付款客户还欠多少。",
+    description: "Outcome of the freelance setup preset",
+  },
+  "page.dashboard.presetBusiness": {
+    message: "企业账簿",
+    description: "Name of the business setup preset",
+  },
+  "page.dashboard.presetBusinessOutcome": {
+    message: "建立期初头寸，区分融资与收入。",
+    description: "Outcome of the business setup preset",
+  },
+  "page.dashboard.presetPortfolio": {
+    message: "投资组合账簿",
+    description: "Name of the portfolio setup preset",
+  },
+  "page.dashboard.presetPortfolioOutcome": {
+    message: "记录一笔买入，核对单位、取得记录和现金流动。",
+    description: "Outcome of the portfolio setup preset",
+  },
+  "page.dashboard.presetRental": {
+    message: "租赁账簿",
+    description: "Name of the rental setup preset",
+  },
+  "page.dashboard.presetRentalOutcome": {
+    message: "记录收款，区分租金与可退押金。",
+    description: "Outcome of the rental setup preset",
+  },
+  "page.dashboard.presetShared": {
+    message: "共同支出账簿",
+    description: "Name of the shared expenses setup preset",
+  },
+  "page.dashboard.presetSharedOutcome": {
+    message: "记录一笔垫付，查看谁欠谁。",
+    description: "Outcome of the shared expenses setup preset",
+  },
+  "page.dashboard.presetCommunity": {
+    message: "社区账簿",
+    description: "Name of the community setup preset",
+  },
+  "page.dashboard.presetCommunityOutcome": {
+    message: "说明会费、项目支出和剩余资金。",
+    description: "Outcome of the community setup preset",
+  },
+  "page.dashboard.presetBlank": {
+    message: "空白账簿",
+    description: "Name of the blank setup preset",
+  },
+  "page.dashboard.presetBlankOutcome": {
+    message: "添加所选结构，无需删除不需要的类别。",
+    description: "Outcome of the blank setup preset",
+  },
+  "page.dashboard.setupAmountInvalid": {
+    message: "输入如 100 或 -30.50 的金额",
+    description: "Validation error for the opening balance amount",
+  },
+  "page.dashboard.setupCurrency": {
+    message: "运营货币",
+    description: "Label for the currency field in staged ledger creation",
+  },
+  "page.dashboard.setupHistoryStart": {
+    message: "账簿开始日期",
+    description: "Label for the history start date in staged ledger creation",
+  },
+  "page.dashboard.setupOpeningAccount": {
+    message: "开户账户",
+    description: "Label for the first account in staged ledger creation",
+  },
+  "page.dashboard.setupOpeningAmount": {
+    message: "期初余额（可选）",
+    description: "Label for the optional opening balance in staged creation",
+  },
+  "page.dashboard.setupOpeningNone": {
+    message: "稍后决定",
+    description: "Choice to skip the opening balance in staged creation",
+  },
+  "page.dashboard.setupReview": {
+    message: "检查",
+    description: "Heading for the review step in staged ledger creation",
+  },
+  "page.dashboard.setupReviewDescription": {
+    message: "将创建的正是这些内容。返回可修改。",
+    description: "Description for the review step in staged ledger creation",
+  },
+  "page.dashboard.setupAccounts": {
+    message: "账户",
+    description: "Label for the account list in the creation review step",
+  },
+  "page.dashboard.setupStep": {
+    message: "第 {step} 步，共 {total} 步",
+    description: "Progress label in staged ledger creation",
+  },
   "page.dashboard.noLedgersFound": {
     message: "未找到账本",
     description: "Message when user has no ledgers",

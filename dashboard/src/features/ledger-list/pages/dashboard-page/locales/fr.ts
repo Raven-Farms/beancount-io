@@ -115,6 +115,117 @@ const frDashboardPage: Record<string, TranslationEntry> = {
     message: "Le nom est requis",
     description: "Validation error when name is missing",
   },
+  "page.dashboard.presetPersonal": {
+    message: "Livre personnel",
+    description: "Name of the personal setup preset",
+  },
+  "page.dashboard.presetPersonalOutcome": {
+    message:
+      "Enregistrez un achat et comprenez son effet sur l'argent restant.",
+    description: "Outcome of the personal setup preset",
+  },
+  "page.dashboard.presetFreelance": {
+    message: "Livre de freelance",
+    description: "Name of the freelance setup preset",
+  },
+  "page.dashboard.presetFreelanceOutcome": {
+    message:
+      "Enregistrez des revenus clients ou voyez ce qu'un client impayé doit encore.",
+    description: "Outcome of the freelance setup preset",
+  },
+  "page.dashboard.presetBusiness": {
+    message: "Livre d'entreprise",
+    description: "Name of the business setup preset",
+  },
+  "page.dashboard.presetBusinessOutcome": {
+    message:
+      "Établissez une position d'ouverture et distinguez financement et revenu.",
+    description: "Outcome of the business setup preset",
+  },
+  "page.dashboard.presetPortfolio": {
+    message: "Livre de portefeuille",
+    description: "Name of the portfolio setup preset",
+  },
+  "page.dashboard.presetPortfolioOutcome": {
+    message:
+      "Enregistrez un achat et vérifiez quantités, acquisitions et mouvements de trésorerie.",
+    description: "Outcome of the portfolio setup preset",
+  },
+  "page.dashboard.presetRental": {
+    message: "Livre de location",
+    description: "Name of the rental setup preset",
+  },
+  "page.dashboard.presetRentalOutcome": {
+    message:
+      "Enregistrez les reçus et distinguez le loyer d'un dépôt remboursable.",
+    description: "Outcome of the rental setup preset",
+  },
+  "page.dashboard.presetShared": {
+    message: "Livre de dépenses partagées",
+    description: "Name of the shared expenses setup preset",
+  },
+  "page.dashboard.presetSharedOutcome": {
+    message: "Enregistrez une avance et voyez qui doit à qui.",
+    description: "Outcome of the shared expenses setup preset",
+  },
+  "page.dashboard.presetCommunity": {
+    message: "Livre de communauté",
+    description: "Name of the community setup preset",
+  },
+  "page.dashboard.presetCommunityOutcome": {
+    message: "Expliquez contributions, dépenses de projets et fonds restants.",
+    description: "Outcome of the community setup preset",
+  },
+  "page.dashboard.presetBlank": {
+    message: "Livre vierge",
+    description: "Name of the blank setup preset",
+  },
+  "page.dashboard.presetBlankOutcome": {
+    message:
+      "Ajoutez une structure choisie sans supprimer de catégories indésirables.",
+    description: "Outcome of the blank setup preset",
+  },
+  "page.dashboard.setupAmountInvalid": {
+    message: "Saisissez un montant comme 100 ou -30.50",
+    description: "Validation error for the opening balance amount",
+  },
+  "page.dashboard.setupCurrency": {
+    message: "Devise de fonctionnement",
+    description: "Label for the currency field in staged ledger creation",
+  },
+  "page.dashboard.setupHistoryStart": {
+    message: "Les livres commencent le",
+    description: "Label for the history start date in staged ledger creation",
+  },
+  "page.dashboard.setupOpeningAccount": {
+    message: "Compte d'ouverture",
+    description: "Label for the first account in staged ledger creation",
+  },
+  "page.dashboard.setupOpeningAmount": {
+    message: "Solde d'ouverture (facultatif)",
+    description: "Label for the optional opening balance in staged creation",
+  },
+  "page.dashboard.setupOpeningNone": {
+    message: "Décider plus tard",
+    description: "Choice to skip the opening balance in staged creation",
+  },
+  "page.dashboard.setupReview": {
+    message: "Vérifier",
+    description: "Heading for the review step in staged ledger creation",
+  },
+  "page.dashboard.setupReviewDescription": {
+    message:
+      "Voici exactement ce qui sera créé. Revenez en arrière pour modifier.",
+    description: "Description for the review step in staged ledger creation",
+  },
+  "page.dashboard.setupAccounts": {
+    message: "Comptes",
+    description: "Label for the account list in the creation review step",
+  },
+  "page.dashboard.setupStep": {
+    message: "Étape {step} sur {total}",
+    description: "Progress label in staged ledger creation",
+  },
   "page.dashboard.noLedgersFound": {
     message: "Aucun grand livre trouvé",
     description: "Message when user has no ledgers",

@@ -100,6 +100,110 @@ const koDashboardPage: Record<string, TranslationEntry> = {
     message: "이름은 필수입니다",
     description: "Validation error when name is missing",
   },
+  "page.dashboard.presetPersonal": {
+    message: "개인 장부",
+    description: "Name of the personal setup preset",
+  },
+  "page.dashboard.presetPersonalOutcome": {
+    message: "구매를 기록하고 남은 돈에 미치는 영향을 파악하세요.",
+    description: "Outcome of the personal setup preset",
+  },
+  "page.dashboard.presetFreelance": {
+    message: "프리랜서 장부",
+    description: "Name of the freelance setup preset",
+  },
+  "page.dashboard.presetFreelanceOutcome": {
+    message: "고객 수입을 기록하거나 미지급 고객의 잔액을 확인하세요.",
+    description: "Outcome of the freelance setup preset",
+  },
+  "page.dashboard.presetBusiness": {
+    message: "사업 장부",
+    description: "Name of the business setup preset",
+  },
+  "page.dashboard.presetBusinessOutcome": {
+    message: "개설 포지션을 마련하고 자금 조달과 매출을 구분하세요.",
+    description: "Outcome of the business setup preset",
+  },
+  "page.dashboard.presetPortfolio": {
+    message: "포트폴리오 장부",
+    description: "Name of the portfolio setup preset",
+  },
+  "page.dashboard.presetPortfolioOutcome": {
+    message: "매수를 기록하고 수량, 취득 기록, 현금 이동을 확인하세요.",
+    description: "Outcome of the portfolio setup preset",
+  },
+  "page.dashboard.presetRental": {
+    message: "임대 장부",
+    description: "Name of the rental setup preset",
+  },
+  "page.dashboard.presetRentalOutcome": {
+    message: "영수증을 기록하고 임대료와 환불 가능한 보증금을 구분하세요.",
+    description: "Outcome of the rental setup preset",
+  },
+  "page.dashboard.presetShared": {
+    message: "공동 지출 장부",
+    description: "Name of the shared expenses setup preset",
+  },
+  "page.dashboard.presetSharedOutcome": {
+    message: "대납을 기록하고 누가 누구에게 빚졌는지 확인하세요.",
+    description: "Outcome of the shared expenses setup preset",
+  },
+  "page.dashboard.presetCommunity": {
+    message: "커뮤니티 장부",
+    description: "Name of the community setup preset",
+  },
+  "page.dashboard.presetCommunityOutcome": {
+    message: "기여금, 프로젝트 지출, 남은 자금을 설명하세요.",
+    description: "Outcome of the community setup preset",
+  },
+  "page.dashboard.presetBlank": {
+    message: "빈 장부",
+    description: "Name of the blank setup preset",
+  },
+  "page.dashboard.presetBlankOutcome": {
+    message: "원치 않는 카테고리를 제거하지 않고 선택한 구조를 추가하세요.",
+    description: "Outcome of the blank setup preset",
+  },
+  "page.dashboard.setupAmountInvalid": {
+    message: "100 또는 -30.50 같은 금액을 입력하세요",
+    description: "Validation error for the opening balance amount",
+  },
+  "page.dashboard.setupCurrency": {
+    message: "운영 통화",
+    description: "Label for the currency field in staged ledger creation",
+  },
+  "page.dashboard.setupHistoryStart": {
+    message: "장부 시작일",
+    description: "Label for the history start date in staged ledger creation",
+  },
+  "page.dashboard.setupOpeningAccount": {
+    message: "개설 계정",
+    description: "Label for the first account in staged ledger creation",
+  },
+  "page.dashboard.setupOpeningAmount": {
+    message: "개설 잔액 (선택 사항)",
+    description: "Label for the optional opening balance in staged creation",
+  },
+  "page.dashboard.setupOpeningNone": {
+    message: "나중에 결정",
+    description: "Choice to skip the opening balance in staged creation",
+  },
+  "page.dashboard.setupReview": {
+    message: "검토",
+    description: "Heading for the review step in staged ledger creation",
+  },
+  "page.dashboard.setupReviewDescription": {
+    message: "정확히 이 내용이 생성됩니다. 변경하려면 뒤로 가세요.",
+    description: "Description for the review step in staged ledger creation",
+  },
+  "page.dashboard.setupAccounts": {
+    message: "계정",
+    description: "Label for the account list in the creation review step",
+  },
+  "page.dashboard.setupStep": {
+    message: "{total}단계 중 {step}단계",
+    description: "Progress label in staged ledger creation",
+  },
   "page.dashboard.nameInvalid": {
     message:
       "라틴 문자(A–Z)나 숫자를 하나 이상 사용하세요. 이름은 장부의 웹 주소가 됩니다.",

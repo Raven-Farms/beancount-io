@@ -115,6 +115,111 @@ const faDashboardPage: Record<string, TranslationEntry> = {
     message: "نام الزامی است",
     description: "Validation error when name is missing",
   },
+  "page.dashboard.presetPersonal": {
+    message: "دفتر شخصی",
+    description: "Name of the personal setup preset",
+  },
+  "page.dashboard.presetPersonalOutcome": {
+    message: "خریدی ثبت کنید و اثرش بر پول باقی‌مانده را ببینید.",
+    description: "Outcome of the personal setup preset",
+  },
+  "page.dashboard.presetFreelance": {
+    message: "دفتر فریلنسری",
+    description: "Name of the freelance setup preset",
+  },
+  "page.dashboard.presetFreelanceOutcome": {
+    message:
+      "درآمد مشتری ثبت کنید یا ببینید مشتری پرداخت‌نکرده چقدر بدهکار است.",
+    description: "Outcome of the freelance setup preset",
+  },
+  "page.dashboard.presetBusiness": {
+    message: "دفتر کسب‌وکار",
+    description: "Name of the business setup preset",
+  },
+  "page.dashboard.presetBusinessOutcome": {
+    message: "موضع افتتاحیه بسازید و تأمین مالی را از درآمد جدا کنید.",
+    description: "Outcome of the business setup preset",
+  },
+  "page.dashboard.presetPortfolio": {
+    message: "دفتر پورتفولیو",
+    description: "Name of the portfolio setup preset",
+  },
+  "page.dashboard.presetPortfolioOutcome": {
+    message: "خریدی ثبت کنید و واحدها، سوابق تحصیل و حرکت پول را بررسی کنید.",
+    description: "Outcome of the portfolio setup preset",
+  },
+  "page.dashboard.presetRental": {
+    message: "دفتر اجاره",
+    description: "Name of the rental setup preset",
+  },
+  "page.dashboard.presetRentalOutcome": {
+    message: "رسیدها را ثبت کنید و اجاره را از ودیعه قابل استرداد جدا کنید.",
+    description: "Outcome of the rental setup preset",
+  },
+  "page.dashboard.presetShared": {
+    message: "دفتر هزینه‌های مشترک",
+    description: "Name of the shared expenses setup preset",
+  },
+  "page.dashboard.presetSharedOutcome": {
+    message: "پیش‌پرداختی ثبت کنید و ببینید چه کسی به چه کسی بدهکار است.",
+    description: "Outcome of the shared expenses setup preset",
+  },
+  "page.dashboard.presetCommunity": {
+    message: "دفتر جامعه",
+    description: "Name of the community setup preset",
+  },
+  "page.dashboard.presetCommunityOutcome": {
+    message: "مشارکت‌ها، هزینه‌های پروژه و وجوه باقی‌مانده را توضیح دهید.",
+    description: "Outcome of the community setup preset",
+  },
+  "page.dashboard.presetBlank": {
+    message: "دفتر خالی",
+    description: "Name of the blank setup preset",
+  },
+  "page.dashboard.presetBlankOutcome": {
+    message: "ساختار دلخواه بیفزایید بدون حذف دسته‌های ناخواسته.",
+    description: "Outcome of the blank setup preset",
+  },
+  "page.dashboard.setupAmountInvalid": {
+    message: "مبلغی مانند 100 یا -30.50 وارد کنید",
+    description: "Validation error for the opening balance amount",
+  },
+  "page.dashboard.setupCurrency": {
+    message: "ارز عملیاتی",
+    description: "Label for the currency field in staged ledger creation",
+  },
+  "page.dashboard.setupHistoryStart": {
+    message: "دفاتر از تاریخ",
+    description: "Label for the history start date in staged ledger creation",
+  },
+  "page.dashboard.setupOpeningAccount": {
+    message: "حساب افتتاحیه",
+    description: "Label for the first account in staged ledger creation",
+  },
+  "page.dashboard.setupOpeningAmount": {
+    message: "موجودی افتتاحیه (اختیاری)",
+    description: "Label for the optional opening balance in staged creation",
+  },
+  "page.dashboard.setupOpeningNone": {
+    message: "تصمیم‌گیری در آینده",
+    description: "Choice to skip the opening balance in staged creation",
+  },
+  "page.dashboard.setupReview": {
+    message: "بازبینی",
+    description: "Heading for the review step in staged ledger creation",
+  },
+  "page.dashboard.setupReviewDescription": {
+    message: "دقیقاً همین ایجاد خواهد شد. برای تغییر به عقب برگردید.",
+    description: "Description for the review step in staged ledger creation",
+  },
+  "page.dashboard.setupAccounts": {
+    message: "حساب‌ها",
+    description: "Label for the account list in the creation review step",
+  },
+  "page.dashboard.setupStep": {
+    message: "گام {step} از {total}",
+    description: "Progress label in staged ledger creation",
+  },
   "page.dashboard.noLedgersFound": {
     message: "دفتری یافت نشد",
     description: "Message when user has no ledgers",

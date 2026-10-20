@@ -31,6 +31,10 @@ vi.mock("@tanstack/react-router", () => ({
 }));
 
 vi.mock("@apollo/client/react", () => ({
+  useLazyQuery: () => [
+    async () => ({ data: undefined }),
+    { data: undefined, loading: false, error: undefined },
+  ],
   useQuery: vi.fn(),
   useMutation: vi.fn(),
   useApolloClient: vi.fn(() => ({
@@ -408,10 +412,13 @@ describe("DashboardSidebar", () => {
       const user = userEvent.setup();
       await user.click(screen.getByTestId("create-ledger-btn"));
 
+      // Staged flow: start (defaults accepted) -> details -> review -> create.
+      await user.click(screen.getByRole("button", { name: "Next" }));
       const nameInput = await screen.findByLabelText("Ledger Name");
       await user.tripleClick(nameInput);
       await user.keyboard(name);
-      await user.click(screen.getByRole("button", { name: "Save" }));
+      await user.click(screen.getByRole("button", { name: "Next" }));
+      await user.click(screen.getByRole("button", { name: "Create Ledger" }));
       return user;
     }
     it("creates the ledger, toasts, closes the dialog, and navigates to it", async () => {
@@ -435,6 +442,7 @@ describe("DashboardSidebar", () => {
             name: "new-ledger",
             description: undefined,
             private: true,
+            requestId: expect.any(String),
           },
         });
       });

@@ -114,6 +114,113 @@ const ruDashboardPage: Record<string, TranslationEntry> = {
     message: "Имя обязательно",
     description: "Validation error when name is missing",
   },
+  "page.dashboard.presetPersonal": {
+    message: "Личная книга",
+    description: "Name of the personal setup preset",
+  },
+  "page.dashboard.presetPersonalOutcome": {
+    message: "Запишите покупку и поймите её влияние на остаток денег.",
+    description: "Outcome of the personal setup preset",
+  },
+  "page.dashboard.presetFreelance": {
+    message: "Книга фрилансера",
+    description: "Name of the freelance setup preset",
+  },
+  "page.dashboard.presetFreelanceOutcome": {
+    message:
+      "Запишите доход от клиентов или посмотрите, сколько должен неоплативший клиент.",
+    description: "Outcome of the freelance setup preset",
+  },
+  "page.dashboard.presetBusiness": {
+    message: "Книга бизнеса",
+    description: "Name of the business setup preset",
+  },
+  "page.dashboard.presetBusinessOutcome": {
+    message:
+      "Создайте начальную позицию и отличайте финансирование от выручки.",
+    description: "Outcome of the business setup preset",
+  },
+  "page.dashboard.presetPortfolio": {
+    message: "Портфельная книга",
+    description: "Name of the portfolio setup preset",
+  },
+  "page.dashboard.presetPortfolioOutcome": {
+    message:
+      "Запишите покупку и проверьте единицы, записи о приобретении и движение денег.",
+    description: "Outcome of the portfolio setup preset",
+  },
+  "page.dashboard.presetRental": {
+    message: "Книга аренды",
+    description: "Name of the rental setup preset",
+  },
+  "page.dashboard.presetRentalOutcome": {
+    message: "Запишите поступления и отличайте аренду от возвратного залога.",
+    description: "Outcome of the rental setup preset",
+  },
+  "page.dashboard.presetShared": {
+    message: "Книга общих расходов",
+    description: "Name of the shared expenses setup preset",
+  },
+  "page.dashboard.presetSharedOutcome": {
+    message: "Запишите аванс и посмотрите, кто кому должен.",
+    description: "Outcome of the shared expenses setup preset",
+  },
+  "page.dashboard.presetCommunity": {
+    message: "Книга сообщества",
+    description: "Name of the community setup preset",
+  },
+  "page.dashboard.presetCommunityOutcome": {
+    message: "Объясните взносы, проектные расходы и оставшиеся средства.",
+    description: "Outcome of the community setup preset",
+  },
+  "page.dashboard.presetBlank": {
+    message: "Пустая книга",
+    description: "Name of the blank setup preset",
+  },
+  "page.dashboard.presetBlankOutcome": {
+    message: "Добавьте выбранную структуру, не удаляя ненужные категории.",
+    description: "Outcome of the blank setup preset",
+  },
+  "page.dashboard.setupAmountInvalid": {
+    message: "Введите сумму, например 100 или -30.50",
+    description: "Validation error for the opening balance amount",
+  },
+  "page.dashboard.setupCurrency": {
+    message: "Операционная валюта",
+    description: "Label for the currency field in staged ledger creation",
+  },
+  "page.dashboard.setupHistoryStart": {
+    message: "Книги начинаются с",
+    description: "Label for the history start date in staged ledger creation",
+  },
+  "page.dashboard.setupOpeningAccount": {
+    message: "Счёт открытия",
+    description: "Label for the first account in staged ledger creation",
+  },
+  "page.dashboard.setupOpeningAmount": {
+    message: "Начальный остаток (необязательно)",
+    description: "Label for the optional opening balance in staged creation",
+  },
+  "page.dashboard.setupOpeningNone": {
+    message: "Решить позже",
+    description: "Choice to skip the opening balance in staged creation",
+  },
+  "page.dashboard.setupReview": {
+    message: "Проверка",
+    description: "Heading for the review step in staged ledger creation",
+  },
+  "page.dashboard.setupReviewDescription": {
+    message: "Будет создано именно это. Вернитесь, чтобы что-то изменить.",
+    description: "Description for the review step in staged ledger creation",
+  },
+  "page.dashboard.setupAccounts": {
+    message: "Счета",
+    description: "Label for the account list in the creation review step",
+  },
+  "page.dashboard.setupStep": {
+    message: "Шаг {step} из {total}",
+    description: "Progress label in staged ledger creation",
+  },
   "page.dashboard.noLedgersFound": {
     message: "Книги не найдены",
     description: "Message when user has no ledgers",
