@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [790 — A -t period holding no foreign currency is refused for a missing price left by an earlier settled trade](./790.md)
 - [791 — query --source with $VAR in the path silently queries the expanded (other) ledger; -o replaces the export](./791.md)
 - [792 — Descriptor paths after w5/582: --rules /dev/stdin is remembered as /dev/fd/0; /dev/fd/N files get misleading errors](./792.md)
 - [793 — A ledger in an untraversable directory gives raw Errno 13, exit 1, not the documented exit 2](./793.md)
