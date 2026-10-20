@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [799 — Pad hints: staged-pad hint loops, pad-leg currency hint, self-pad accepted](./799.md)
 - [800 — A posting with a cost but no commodity (3 {80}) is written as 3 USD {80}, exit 0 (incomplete fix of w5/098)](./800.md)
 - [801 — add transaction --json answers that add transactions cannot replay (units-less, # interpolation)](./801.md)
 - [802 — @@ 100USD (glued currency) is written as a repeating unit price (gap in w5/059)](./802.md)
