@@ -36,6 +36,9 @@ interface DatePickerProps {
   onChange: (date: string | undefined) => void;
   required?: boolean;
   className?: string;
+  /** From FormControl: the form's own error state and message ids. */
+  "aria-invalid"?: boolean | "true" | "false";
+  "aria-describedby"?: string;
 }
 
 /**
@@ -51,6 +54,8 @@ export function DatePicker({
   onChange,
   required = false,
   className = "",
+  "aria-invalid": formInvalid,
+  "aria-describedby": describedBy,
 }: DatePickerProps) {
   const { t } = useTranslations();
   // Same resolved locale as the calendar popup: one source for both halves
@@ -72,6 +77,14 @@ export function DatePicker({
   };
   // Keep the typed draft while the parent echoes an invalid/empty value.
   const [isEditing, setIsEditing] = React.useState(false);
+  // The draft was published as `undefined` (invalid, or cleared). Whatever
+  // value the form echoes back — react-hook-form hands back its default — is
+  // not an answer to it, so the draft stays until the user changes it or
+  // picks a date. Keying on value identity alone lost the draft after an
+  // earlier valid edit (w4/239). The first value seen while held is that
+  // echo; a later, different value is a deliberate reset and still lands.
+  const [heldDraft, setHeldDraft] = React.useState(false);
+  const echoRef = React.useRef<{ value: string | undefined } | null>(null);
 
   // The draft as last typed, read by the sync effect without re-running it.
   const draftRef = React.useRef(inputValue);
@@ -96,6 +109,17 @@ export function DatePicker({
     syncedValueRef.current = value;
     syncedPatternRef.current = displayPattern;
     const draft = draftRef.current.trim();
+    if (heldDraft) {
+      if (echoRef.current === null || echoRef.current.value === value) {
+        echoRef.current = { value };
+        return;
+      }
+      echoRef.current = null;
+      setHeldDraft(false);
+      setInputValue(formatIsoDate(value, displayPattern));
+      showMonthOf(value);
+      return;
+    }
     if (
       !valueChanged &&
       draft.length > 0 &&
@@ -108,7 +132,7 @@ export function DatePicker({
     // mid-edit draft is left untouched until blur or commit.
     setInputValue(formatIsoDate(value, displayPattern));
     showMonthOf(value);
-  }, [value, displayPattern, isEditing]);
+  }, [value, displayPattern, isEditing, heldDraft]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const next = e.target.value;
@@ -116,12 +140,16 @@ export function DatePicker({
     setInputValue(next);
 
     const parsed = parseStrictCalendarDate(next, displayPattern);
+    setHeldDraft(parsed === undefined);
+    echoRef.current = null;
     onChange(parsed);
     showMonthOf(parsed);
   };
 
   const commitDate = (date: string | undefined) => {
     setIsEditing(false);
+    setHeldDraft(false);
+    echoRef.current = null;
     onChange(date);
     setInputValue(formatIsoDate(date, displayPattern));
     showMonthOf(date);
@@ -172,9 +200,13 @@ export function DatePicker({
             }
           }}
           required={required}
+          aria-describedby={describedBy}
           aria-invalid={
-            inputValue.trim().length > 0 &&
-            !parseStrictCalendarDate(inputValue, displayPattern)
+            formInvalid === true ||
+            formInvalid === "true" ||
+            (inputValue.trim().length > 0 &&
+              !parseStrictCalendarDate(inputValue, displayPattern)) ||
+            (required && heldDraft && !isEditing && !inputValue.trim())
               ? true
               : undefined
           }

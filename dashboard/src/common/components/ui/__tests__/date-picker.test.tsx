@@ -324,3 +324,113 @@ describe("DatePicker in a timezone that skipped a day", () => {
     expect(onValue).toHaveBeenLastCalledWith(local);
   });
 });
+
+/**
+ * The same real react-hook-form wiring with a schema-backed submit state and
+ * a deliberate reset, for the valid-then-invalid and cleared sequences
+ * (w4/239).
+ */
+function ValidatedFormDatePicker({ resetTo }: { resetTo?: string }) {
+  const form = useForm<{ date: string | undefined }>({
+    defaultValues: { date: "2026-10-20" },
+    mode: "onChange",
+  });
+  const valid = form.watch("date") !== undefined;
+  return (
+    <form>
+      <Controller
+        control={form.control}
+        name="date"
+        rules={{ required: true }}
+        render={({ field, fieldState }) => (
+          <DatePicker
+            id="date"
+            value={field.value}
+            onChange={(next) => field.onChange(next)}
+            aria-invalid={fieldState.invalid}
+            aria-describedby="date-error"
+            required
+          />
+        )}
+      />
+      <button type="submit" disabled={!valid}>
+        Submit
+      </button>
+      {resetTo && (
+        <button type="button" onClick={() => form.reset({ date: resetTo })}>
+          Reset
+        </button>
+      )}
+    </form>
+  );
+}
+
+describe("DatePicker draft after an earlier valid edit (w4/239)", () => {
+  it.each([
+    ["a different day", "10/22/2026"],
+    ["the original day", "10/20/2026"],
+  ])("keeps an invalid draft typed after %s", async (_case, firstEdit) => {
+    const user = userEvent.setup();
+    render(<ValidatedFormDatePicker />);
+    const input = screen.getByRole("textbox");
+
+    await user.clear(input);
+    await user.type(input, firstEdit);
+    await user.tab();
+    expect(screen.getByRole("button", { name: "Submit" })).toBeEnabled();
+
+    await user.clear(input);
+    await user.type(input, "02/30/2026");
+    await user.tab();
+
+    expect(input).toHaveValue("02/30/2026");
+    expect(input).toHaveAttribute("aria-invalid", "true");
+    expect(input).toHaveAttribute("aria-describedby", "date-error");
+    expect(screen.getByRole("button", { name: "Submit" })).toBeDisabled();
+  });
+
+  it("leaves a cleared required date empty and invalid", async () => {
+    const user = userEvent.setup();
+    render(<ValidatedFormDatePicker />);
+    const input = screen.getByRole("textbox");
+
+    await user.clear(input);
+    await user.type(input, "10/22/2026");
+    await user.clear(input);
+    await user.tab();
+
+    expect(input).toHaveValue("");
+    expect(input).toHaveAttribute("aria-invalid", "true");
+    expect(screen.getByRole("button", { name: "Submit" })).toBeDisabled();
+  });
+
+  it("recovers through Today", async () => {
+    const user = userEvent.setup();
+    render(<ValidatedFormDatePicker />);
+    const input = screen.getByRole("textbox");
+    await user.clear(input);
+    await user.type(input, "02/30/2026");
+    await user.tab();
+
+    await user.click(screen.getByRole("button", { name: "Select date" }));
+    await user.click(screen.getByRole("button", { name: "Today" }));
+    expect(input).not.toHaveValue("02/30/2026");
+    expect(input).not.toHaveAttribute("aria-invalid");
+    expect(screen.getByRole("button", { name: "Submit" })).toBeEnabled();
+  });
+
+  it("still applies a deliberate reset over a held invalid draft", async () => {
+    const user = userEvent.setup();
+    render(<ValidatedFormDatePicker resetTo="2026-12-01" />);
+    const input = screen.getByRole("textbox");
+    await user.clear(input);
+    await user.type(input, "10/22/2026");
+    await user.clear(input);
+    await user.type(input, "02/30/2026");
+    await user.tab();
+
+    await user.click(screen.getByRole("button", { name: "Reset" }));
+    expect(input).toHaveValue("12/01/2026");
+    expect(input).not.toHaveAttribute("aria-invalid");
+  });
+});
