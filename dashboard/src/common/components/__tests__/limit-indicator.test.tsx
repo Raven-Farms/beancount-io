@@ -322,4 +322,16 @@ describe("LimitIndicator", () => {
       expect(screen.queryByText("Upgrade to unlock")).not.toBeInTheDocument();
     });
   });
+
+  describe("Unlimited (-1)", () => {
+    it.each(["ledgers", "collaborators"] as const)(
+      "renders nothing for unlimited %s",
+      (limitType) => {
+        const { container } = render(
+          <LimitIndicator used={5} max={-1} limitType={limitType} />,
+        );
+        expect(container).toBeEmptyDOMElement();
+      },
+    );
+  });
 });

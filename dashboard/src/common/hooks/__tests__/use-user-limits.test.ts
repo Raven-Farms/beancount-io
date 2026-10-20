@@ -214,6 +214,39 @@ describe("useUserLimits", () => {
     });
   });
 
+  describe("ENTERPRISE tier user (unlimited)", () => {
+    it("should not be at the ledger limit when ledgersMax is -1", () => {
+      const mockData: GetCurrentUserQuery = {
+        userProfile: {
+          id: "123",
+          email: "test@example.com",
+          username: "testuser",
+          tier: "ENTERPRISE",
+          limits: {
+            ledgersUsed: 5,
+            ledgersMax: -1,
+            collaboratorsPerLedgerMax: -1,
+            maxDirectives: -1,
+          },
+          avatarUrl: null,
+          locale: null,
+        },
+      };
+
+      mockUseQuery.mockReturnValue({
+        data: mockData,
+        loading: false,
+        error: undefined,
+        refetch: vi.fn(),
+      });
+
+      const { result } = renderHook(() => useUserLimits());
+
+      expect(result.current.isEnterprise).toBe(true);
+      expect(result.current.isAtLedgerLimit).toBe(false);
+    });
+  });
+
   describe("default values", () => {
     it("should default to FREE tier when no data", () => {
       mockUseQuery.mockReturnValue({
