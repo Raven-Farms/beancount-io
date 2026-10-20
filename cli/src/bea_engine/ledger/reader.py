@@ -48,6 +48,7 @@ from bea_engine.ledger.models import (
     PriceDirective,
     SourceLocation,
     TransactionHeader,
+    Units,
 )
 from bea_engine.ledger.text import fold_account
 
@@ -283,6 +284,10 @@ def _to_amount(bc_amount: Any) -> Amount:
     return Amount(number=Decimal(str(bc_amount.number)), currency=bc_amount.currency)
 
 
+def _to_units(bc_amount: Any) -> Units:
+    return Units(number=Decimal(str(bc_amount.number)), currency=bc_amount.currency)
+
+
 def metadata_to_json(meta: dict[str, Any] | None) -> dict[str, Any]:
     from beancount.core.amount import Amount as BcAmount
 
@@ -317,7 +322,7 @@ def _to_transaction(entry: Any, shared: frozenset[tuple[str, int]] = frozenset()
         postings.append(
             Posting(
                 account=p.account,
-                units=_to_amount(p.units),
+                units=_to_units(p.units) if p.units is not None else None,
                 cost=cost,
                 price=price,
                 flag=p.flag,

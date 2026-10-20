@@ -124,6 +124,23 @@ class Amount(BaseModel):
     currency: Commodity
 
 
+class Units(BaseModel):
+    """A posting's units, whose number Beancount interpolates when left null.
+
+    `add transaction --json` reports a number-less posting (`HOOL {100 USD}`)
+    with a null number, and the round-trip guarantee needs bulk input to read
+    it back: null interpolates, exactly as the flag spelling does (w5/801).
+    The key stays required — an omitted number is a typo, while an explicit
+    null says the number was left open — and the currency with it: the flag
+    path defaults the currency before answering, so an answer never leaves
+    that open. Prices and every other amount keep a required number.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+    number: AmountNumber | None
+    currency: Commodity
+
+
 class Cost(BaseModel):
     """A lot's cost constraint: any of a per-unit number, a total, a currency.
 
@@ -158,7 +175,7 @@ class Cost(BaseModel):
 class Posting(BaseModel):
     model_config = ConfigDict(extra="forbid")
     account: str
-    units: Amount | None = None
+    units: Units | None = None
     cost: Cost | None = None
     price: Amount | None = None
     price_total: Amount | None = None

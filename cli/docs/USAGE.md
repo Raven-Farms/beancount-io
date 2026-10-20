@@ -1613,7 +1613,11 @@ instead of relaxing to `{}`, and the JSON answer reports the same constraint —
 `number`, `number_total`, `currency`, `date` and `label`, with `null` for the
 parts you left open — so it can be fed straight back to
 `bea add transactions`. In bulk input a `cost` with a `number_total` and a `null`
-`number` is that total cost. JSON remains useful for batches and metadata.
+`number` is that total cost, and `units` with a `null` `number` leaves the
+number for booking to interpolate, as the `--posting` spelling does
+(`HOOL {100 USD}`); only one posting per row may leave its number open, and
+the `amount` shorthand cannot spell one — use structured `units`. JSON
+remains useful for batches and metadata.
 Open `Assets:Brokerage` in AAPL and `Assets:Cash` in USD before applying this purchase:
 
 ```json

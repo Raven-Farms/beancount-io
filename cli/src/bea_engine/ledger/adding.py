@@ -1195,7 +1195,7 @@ def _transaction(
                 meta[writer.TOTAL_PRICE_META] = total
         normalized.append(posting._replace(units=units, meta=meta))
     if elided > 1:
-        raise protocol.UsageError("Only one posting may omit its amount; supply amounts for the other postings.")
+        raise protocol.UsageError(_ONE_ELIDED)
     if elided == 1 and _inferred_leg_is_zero(normalized):
         raise protocol.UsageError(f"{_ZERO_NET_INFERRED} Nothing was written.")
     entry = entry._replace(postings=normalized, meta=write.metadata_for_write(entry.meta))
@@ -1233,6 +1233,12 @@ _ZERO_NET_INFERRED = (
     "Beancount drops that leg from list/query. Supply an explicit amount "
     "(for example 'Assets:Cash 0 USD') or use nonzero postings."
 )
+_ONE_ELIDED = "Only one posting may omit its amount; supply amounts for the other postings."
+
+
+def _amountless_postings(directive: Any) -> int:
+    """Postings whose number booking must infer: no units, or units with a null number (w5/801)."""
+    return sum(1 for posting in directive.postings if posting.units is None or posting.units.number is None)
 
 
 def _directive_infers_zero(directive: Any) -> bool:
@@ -1245,7 +1251,7 @@ def _directive_infers_zero(directive: Any) -> bool:
     from beancount.core.data import Transaction
     from beancount.parser import parser
 
-    if sum(1 for posting in directive.postings if posting.units is None) != 1:
+    if _amountless_postings(directive) != 1:
         return False
     entries, errors, _ = parser.parse_string(writer.format_transaction(directive))
     # Renamed roots read as invalid here, which used to skip this guard entirely.
@@ -1726,10 +1732,15 @@ def _transactions(
         )
 
     # The single add's lost-leg refusal holds for every row too: a zero
-    # inferred posting would be written, then dropped by every read.
+    # inferred posting would be written, then dropped by every read. So does
+    # its one-elided-posting rule: two number-less legs each infer zero, a
+    # ghost transaction the checks pass (w5/801).
     kept: list[tuple[int, Any]] = []
     for index, directive in valid:
-        if _directive_infers_zero(directive):
+        if _amountless_postings(directive) > 1:
+            rejected.append(f"Row {index + 1}: {_ONE_ELIDED}")
+            rejected_rows.append(index)
+        elif _directive_infers_zero(directive):
             rejected.append(f"Row {index + 1}: {_ZERO_NET_INFERRED}")
             rejected_rows.append(index)
         else:
@@ -1886,11 +1897,14 @@ def _same_day_purchases_first(valid: list[tuple[int, Any]], *, file: Path | None
     from collections import Counter, defaultdict
 
     def lots(directive: Any, negative: bool) -> set[tuple[str, str]]:
+        # A null units number interpolates at booking, so its sign is unknown
+        # here; it books no reorder either way (w5/801).
         return {
             (posting.account, posting.units.currency)
             for posting in directive.postings
             if posting.cost is not None
             and posting.units is not None
+            and posting.units.number is not None
             and (posting.units.number < 0) == negative
             and posting.units.number != 0
         }

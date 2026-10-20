@@ -8,7 +8,7 @@ import unicodedata
 from collections.abc import Callable
 from decimal import Context, Decimal
 from pathlib import Path
-from typing import Any, NamedTuple
+from typing import Any, NamedTuple, cast
 
 from beancount.core import account as beancount_account
 from beancount.core.amount import Amount as BcAmount
@@ -372,7 +372,13 @@ def format_transaction(directive: TransactionHeader, *, loaded: bool = False) ->
         postings.append(
             Posting(
                 account=p.account,
-                units=BcAmount(p.units.number, p.units.currency) if p.units else None,
+                # A null number interpolates at booking, as the flag spelling
+                # does; the printer reads MISSING, not None (w5/801).
+                units=BcAmount(
+                    cast(Decimal, p.units.number if p.units.number is not None else MISSING), p.units.currency
+                )
+                if p.units
+                else None,
                 cost=cost,
                 price=price,
                 flag=p.flag,
