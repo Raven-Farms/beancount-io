@@ -189,11 +189,19 @@ export const selectTransactionAmount = (
   }
   if (max === null) return null;
 
-  const value = parseFloat(max.units.number);
+  // With no Assets or Liabilities posting (an Income → Expenses statement, a
+  // padding entry between equity accounts) nothing moved in or out, so like a
+  // transfer the size is the largest leg and the value stays zero: the row
+  // and the detail hero both render it unsigned and neutral (w21/003). Its
+  // sign used to be whichever leg was largest, which read as money in or out.
   const currency = max.units.currency;
   return {
-    text: formatAmount(value, currency, amountScale(max.units.number)),
-    value,
+    text: formatAmount(
+      Math.abs(parseFloat(max.units.number)),
+      currency,
+      amountScale(max.units.number),
+    ),
+    value: 0,
     currency,
   };
 };

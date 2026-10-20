@@ -43,14 +43,14 @@ const selectHeroAmount = (t: JournalTransaction) =>
   selectHeroAmountWithLabel(t, MIXED);
 
 describe("selectHeroAmount", () => {
-  it("nets cash postings for an expense (unsigned, not positive)", () => {
+  it("nets cash postings for an expense (signed out, not positive)", () => {
     const hero = selectHeroAmount(
       txn([
         posting("Expenses:Food:Coffee", "4.50"),
         posting("Assets:Checking", "-4.50"),
       ]),
     );
-    expect(hero.text).toBe("$4.50");
+    expect(hero.text).toBe("-$4.50");
     expect(hero.isPositive).toBe(false);
   });
 
@@ -65,15 +65,17 @@ describe("selectHeroAmount", () => {
     expect(hero.isPositive).toBe(true);
   });
 
-  it("falls back to the largest posting when no cash accounts exist", () => {
+  it("shows the largest posting unsigned and neutral when no cash accounts exist", () => {
+    // Income → Expenses has no in/out direction; it used to read "+" in green
+    // here while its row read otherwise (w21/003).
     const hero = selectHeroAmount(
       txn([
         posting("Expenses:Food", "30.00"),
         posting("Income:Gifts", "-30.00"),
       ]),
     );
-    expect(hero.text).toBe("+$30.00");
-    expect(hero.isPositive).toBe(true);
+    expect(hero.text).toBe("$30.00");
+    expect(hero.isPositive).toBe(null);
   });
 
   it("formats non-USD currencies with a suffix", () => {
@@ -83,7 +85,7 @@ describe("selectHeroAmount", () => {
         posting("Assets:Cash", "-90.00", "EUR"),
       ]),
     );
-    expect(hero.text).toBe("90.00 EUR");
+    expect(hero.text).toBe("-90.00 EUR");
   });
 
   it("returns empty for a transaction without postings", () => {
@@ -101,7 +103,7 @@ describe("selectHeroAmount", () => {
         posting("Assets:Vanguard:Cash", "-3177.39"),
       ]),
     );
-    expect(hero).toEqual({ text: "$3,177.39", isPositive: false });
+    expect(hero).toEqual({ text: "-$3,177.39", isPositive: false });
   });
 
   function costed(account: string, number: string): JournalPosting {

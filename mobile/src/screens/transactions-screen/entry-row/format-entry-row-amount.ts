@@ -6,11 +6,11 @@ import {
 
 /**
  * The signed amount a transaction row shows: `+` for money in, `-` for money
- * out, and unsigned when the entry has no direction (a zero, or a transfer
- * between two cash accounts).
+ * out, and unsigned when the entry has no direction (a zero, a transfer
+ * between two cash accounts, or an entry with no cash posting at all).
  *
- * `text` is the unsigned figure from `formatAmount`, so the sign is added here,
- * at the row, the way the transaction detail hero adds it. Without it a
+ * `text` is the unsigned figure from `formatAmount`, so the sign is added here;
+ * the transaction detail hero signs through this same function. Without it a
  * negative entry read exactly like a positive one, and the rows under a
  * merchant stopped adding up to the total shown above them.
  */

@@ -3,6 +3,7 @@ import {
   isMixedPostingsAmount,
   selectTransactionAmount,
 } from "../../transactions-screen/utils/transaction-display-utils";
+import { formatEntryRowAmount } from "../../transactions-screen/entry-row/format-entry-row-amount";
 
 // Beancount/Fava reserve these flags for entries synthesized by reports or
 // plugins. They are not standalone source directives, so asking the source
@@ -23,8 +24,8 @@ export function hasEditableSource(txn: JournalTransaction): boolean {
   return !GENERATED_TRANSACTION_FLAGS.has(txn.flag);
 }
 
-/** Headline amount for the detail screen, matching the list rows' convention:
- * `+` prefix for cash inflows, unsigned otherwise. */
+/** Headline amount for the detail screen, signed exactly as the list row is:
+ * `+` for money in, `-` for money out, unsigned with no direction. */
 export type HeroAmount = {
   text: string;
   isPositive: boolean | null;
@@ -52,7 +53,7 @@ export function selectHeroAmount(
 
   const { text, value } = amount;
   return {
-    text: value > 0 ? `+${text}` : text,
+    text: formatEntryRowAmount(text, value),
     isPositive: value > 0 ? true : value < 0 ? false : null,
   };
 }

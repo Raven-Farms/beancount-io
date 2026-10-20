@@ -425,15 +425,6 @@ const TransactionDetailImpl = ({
   const title = selectTransactionTitle(entry) || t("transaction");
   const isPending = entry.flag === "!";
   const formattedDate = formatLedgerDate(entry.date.slice(0, 10), locale);
-  const hasCashPosting = entry.postings.some(
-    (posting) =>
-      posting.account.startsWith("Assets:") ||
-      posting.account.startsWith("Liabilities:"),
-  );
-  const displayHeroAmount =
-    hero.isPositive === false && hero.text && hasCashPosting
-      ? `-${hero.text}`
-      : hero.text;
   const iconPostings = entry.postings.map((posting) => ({
     account: posting.account,
     amount: Number.parseFloat(posting.units.number),
@@ -529,7 +520,7 @@ const TransactionDetailImpl = ({
               },
             ]}
           >
-            {displayHeroAmount}
+            {hero.text}
           </AmountText>
           {entry.payee && entry.narration ? (
             <Text style={styles.heroSubtitle}>{entry.narration}</Text>

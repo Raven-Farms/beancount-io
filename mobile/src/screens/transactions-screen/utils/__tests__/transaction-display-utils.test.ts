@@ -289,8 +289,46 @@ describe("selectTransactionAmount", () => {
         makePosting("Income:Gifts", "-30.00"),
       ],
     });
-    // Netting would read $0.00 — an Income → Expenses entry still moved $30.
-    expect(entryAmount(tx).value).toBe(30);
+    // Netting would read $0.00 — an Income → Expenses entry still moved $30,
+    // but in no direction: no money entered or left a cash account (w21/003).
+    expect(selectTransactionAmount(tx)).toEqual({
+      text: "$30.00",
+      value: 0,
+      currency: "USD",
+    });
+  });
+
+  it("gives an entry with no cash posting no direction, whichever leg is largest", () => {
+    // One income → many expenses used to read "-", many incomes → one
+    // expense "+": the sign of the largest leg (w21/003).
+    const statement = makeTransaction({
+      postings: [
+        makePosting("Income:Revenue", "-6760", "MUSD"),
+        makePosting("Expenses:Cost", "4000", "MUSD"),
+        makePosting("Expenses:Opex", "2760", "MUSD"),
+      ],
+    });
+    const gathered = makeTransaction({
+      postings: [
+        makePosting("Income:A", "-30.00"),
+        makePosting("Income:B", "-20.00"),
+        makePosting("Expenses:C", "50.00"),
+      ],
+    });
+    const padding = makeTransaction({
+      postings: [
+        makePosting("Equity:OtherComprehensiveIncome", "-42", "MUSD"),
+        makePosting("Equity:Adjustments", "42", "MUSD"),
+      ],
+    });
+    expect(entryAmount(statement)).toEqual({
+      text: "6,760.00 MUSD",
+      value: 0,
+      currency: "MUSD",
+    });
+    expect(entryAmount(gathered).value).toBe(0);
+    expect(entryAmount(gathered).text).toBe("$50.00");
+    expect(entryAmount(padding).value).toBe(0);
   });
 
   it("skips postings whose amount is not a finite number", () => {
