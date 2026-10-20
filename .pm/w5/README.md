@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [801 — add transaction --json answers that add transactions cannot replay (units-less, # interpolation)](./801.md)
 - [802 — @@ 100USD (glued currency) is written as a repeating unit price (gap in w5/059)](./802.md)
 - [803 — {100 # USD} beside an omitted amount crashes with AttributeError MISSING copy_sign](./803.md)
 - [804 — A defaulted currency gets FX advice for an exchange the user never made](./804.md)
