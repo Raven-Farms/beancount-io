@@ -1162,11 +1162,27 @@ def _transaction(
             # defaulting it wrote three dollars held at eighty dollars each,
             # exit 0 and a passing check (w5/098). A default that differs from
             # the rate's currency — an account opened for HOOL alone — stands.
-            rate = posting.cost if posting.cost is not None else posting.price
-            if rate is not None and getattr(rate, "currency", None) == choices[0]:
+            # A rate that names no currency cannot prove it differs: `3 {80}` and
+            # `3 {}` defaulted the same silent way, and a price beside a cost
+            # was never consulted at all (w5/800).
+            rate_currencies = [
+                getattr(rate, "currency", None) for rate in (posting.cost, posting.price) if rate is not None
+            ]
+            if rate_currencies and any(
+                currency is MISSING or currency is None or currency == choices[0] for currency in rate_currencies
+            ):
+                if any(currency == choices[0] for currency in rate_currencies):
+                    given = (
+                        f"gives a cost or price in {choices[0]} but no commodity, and "
+                        f"{posting.account} would default to {choices[0]} itself."
+                    )
+                else:
+                    given = (
+                        "gives a cost or price with no currency but no commodity, and "
+                        f"{posting.account} would default to {choices[0]}."
+                    )
                 raise protocol.UsageError(
-                    f"--posting {number} gives a cost or price in {choices[0]} but no commodity, and "
-                    f"{posting.account} would default to {choices[0]} itself. Name the commodity: "
+                    f"--posting {number} {given} Name the commodity: "
                     f"'{posting.account} NUMBER COMMODITY {{…}}' or '… NUMBER COMMODITY @ …'. Nothing was written."
                 )
             units = units._replace(currency=choices[0])

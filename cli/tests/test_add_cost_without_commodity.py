@@ -63,6 +63,30 @@ def test_a_rate_in_the_currency_it_would_default_to_is_refused(book: Path, posti
     assert book.read_text() == LEDGER
 
 
+@pytest.mark.parametrize(
+    "posting",
+    [
+        "Assets:Brokerage 3 {80}",
+        "Assets:Brokerage 3 {}",
+        "Assets:Brokerage 3 {80} @ 90 USD",
+        "Assets:Brokerage 3 {2026-01-01}",
+        'Assets:Brokerage 3 {"x"}',
+        "Assets:Brokerage 3 {{240}}",
+        "Assets:Checking 3 {80}",
+    ],
+    ids=["cost", "empty-cost", "cost-and-price", "date-cost", "label-cost", "total-cost", "sole-currency"],
+)
+def test_a_rate_without_a_currency_is_refused_too(book: Path, posting: str) -> None:
+    # w5/800: a rate that names no currency cannot prove it differs from the
+    # default, and a price beside a cost was never consulted at all.
+    result = _add(book, posting, "Assets:Checking -240.00 USD")
+
+    assert result.exit_code == 2, result.output
+    flat = " ".join(result.output.split())
+    assert "--posting 1" in flat and "Name the commodity" in flat
+    assert book.read_text() == LEDGER
+
+
 def test_the_commodity_written_out_still_adds_the_lot(book: Path) -> None:
     result = _add(book, "Assets:Brokerage 3 HOOL {80 USD}", "Assets:Checking")
 
