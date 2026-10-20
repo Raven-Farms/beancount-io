@@ -241,7 +241,9 @@ export const SUBSCRIPTION_CONFIG: SubscriptionConfigMap = {
     webhookSecret: config.stripe.webhookSecret,
     stripePubKey: config.stripe.publicKey,
     stripePriKey: config.stripe.privateKey,
-    successUrl: "https://beancount.io/pricing/?success=true",
+    // The dashboard confirmation; Stripe fills in the session id.
+    successUrl:
+      "https://beancount.io/settings/billing?checkout=success&session_id={CHECKOUT_SESSION_ID}",
     cancelUrl: "https://beancount.io/pricing",
     // The dashboard's Billing tab, where the plan is managed.
     portalReturnUrl: "https://beancount.io/settings/billing",

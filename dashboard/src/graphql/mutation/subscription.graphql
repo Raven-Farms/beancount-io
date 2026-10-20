@@ -58,6 +58,9 @@ mutation ChangePlan(
     newTier
     currentPeriodEnd
     effectiveAt
+    invoiceId
+    amountPaid
+    currency
   }
 }
 

@@ -51,6 +51,13 @@ export interface PlanChangeResultView {
   /** With SCHEDULED: when the new price takes over; nothing is charged now. */
   effectiveAt: Date | null;
   /**
+   * With ACTIVE or REQUIRES_ACTION: the invoice the change charges and its
+   * amount (minor units), so a client counts the purchase once.
+   */
+  invoiceId: string | null;
+  amountPaid: number | null;
+  currency: string | null;
+  /**
    * With SCHEDULED: what was scheduled, for the confirmation email. Not part
    * of the API; the service takes it off before answering.
    */
@@ -82,6 +89,9 @@ function result(
     newTier: null,
     currentPeriodEnd: null,
     effectiveAt: null,
+    invoiceId: null,
+    amountPaid: null,
+    currency: null,
     ...fields,
   };
 }
@@ -249,6 +259,19 @@ export async function applyPlanChange(
     !updated.pending_update &&
     updated.status === "active" &&
     updated.items.data.some((item) => item.price.id === targetPriceId);
+  const invoice =
+    updated.latest_invoice && typeof updated.latest_invoice === "object"
+      ? updated.latest_invoice
+      : null;
+  // `always_invoice` makes the proration the latest invoice; its amount due is
+  // what was paid once applied, and what the bank is asked to approve.
+  const charge = invoice?.id
+    ? {
+        invoiceId: invoice.id,
+        amountPaid: invoice.amount_due,
+        currency: invoice.currency,
+      }
+    : {};
   if (applied) {
     const periodEnd = subscriptionPeriodEnd([{ ...updated, clientId }]);
     if (periodEnd) {
@@ -270,13 +293,10 @@ export async function applyPlanChange(
       subscriptionId: updated.id,
       newTier: target.tier,
       currentPeriodEnd: periodEnd,
+      ...charge,
     });
   }
 
-  const invoice =
-    updated.latest_invoice && typeof updated.latest_invoice === "object"
-      ? updated.latest_invoice
-      : null;
   const intent = await invoicePaymentIntent(stripe, invoice);
   const hostedInvoiceUrl = invoice?.hosted_invoice_url ?? null;
   if (
@@ -292,6 +312,7 @@ export async function applyPlanChange(
       hostedInvoiceUrl,
       subscriptionId: updated.id,
       newTier: target.tier,
+      ...charge,
     });
   }
   return result("FAILED", {

@@ -12,7 +12,10 @@ import {
   registerEnumType,
 } from "type-graphql";
 import { type GraphQLResolveInfo, Kind } from "graphql";
-import type { ISubscriptionService } from "@/features/stripe/service/subscription-service";
+import type {
+  CheckoutReturnTo,
+  ISubscriptionService,
+} from "@/features/stripe/service/subscription-service";
 import type {
   PlanChangeEffect,
   PlanChangeKind,
@@ -235,6 +238,16 @@ registerEnumType(CancellationReasonValues, {
   description: "Why a subscriber cancels, when they say.",
 });
 
+const CheckoutReturnToValues: { [K in CheckoutReturnTo]: K } = {
+  PRICING: "PRICING",
+  BILLING: "BILLING",
+};
+registerEnumType(CheckoutReturnToValues, {
+  name: "CheckoutReturnTo",
+  description:
+    "Where a Checkout began, so an abandoned one returns there: the pricing page (the default) or Billing settings.",
+});
+
 @ObjectType("PlanLimitChange")
 class PlanLimitChange {
   @Field()
@@ -368,6 +381,26 @@ class PlanChangeResult {
       "With SCHEDULED: when the new price takes over. Nothing is charged until then.",
   })
   effectiveAt!: Date | null;
+
+  @Field(() => String, {
+    nullable: true,
+    description:
+      "With ACTIVE or REQUIRES_ACTION: the invoice this change charges, a stable id to count the purchase once.",
+  })
+  invoiceId!: string | null;
+
+  @Field(() => Int, {
+    nullable: true,
+    description:
+      "With ACTIVE or REQUIRES_ACTION: what that invoice charges, in the currency's minor unit (cents). Paid with ACTIVE; paid once the bank approves with REQUIRES_ACTION.",
+  })
+  amountPaid!: number | null;
+
+  @Field(() => String, {
+    nullable: true,
+    description: "With ACTIVE or REQUIRES_ACTION: the invoice's currency.",
+  })
+  currency!: string | null;
 }
 
 @ObjectType("TierQuotaItem")
@@ -492,11 +525,14 @@ export class SubscriptionResolver {
     @Arg("clientId") clientId: string,
     @Arg("priceId") priceId: string,
     @Ctx() context: IContext,
+    @Arg("returnTo", () => CheckoutReturnToValues, { nullable: true })
+    returnTo?: CheckoutReturnTo | null,
   ): Promise<SubscriptionSessionResult> {
     return this.subscriptions.createSubscriptionSession(
       context.getCurrentIdentity(),
       clientId,
       priceId,
+      returnTo ?? undefined,
     );
   }
 

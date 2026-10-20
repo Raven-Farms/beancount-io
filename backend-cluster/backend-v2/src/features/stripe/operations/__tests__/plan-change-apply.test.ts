@@ -107,6 +107,8 @@ function pendingUpdate(priceId: string): Stripe.Subscription {
     pending_update: { subscription_items: [{ price: { id: PREMIUM_YEARLY } }] },
     latest_invoice: {
       id: "in_1",
+      amount_due: 8480,
+      currency: "usd",
       hosted_invoice_url: "https://invoice.stripe.com/i/in_1",
       payments: {
         data: [{ payment: { type: "payment_intent", payment_intent: "pi_1" } }],
@@ -128,6 +130,12 @@ describe("applyPlanChange", () => {
               current_period_end: NEW_PERIOD_END,
             },
           ],
+        },
+        latest_invoice: {
+          id: "in_change",
+          amount_due: 12890,
+          currency: "usd",
+          status: "paid",
         },
       }),
     });
@@ -153,6 +161,10 @@ describe("applyPlanChange", () => {
       kind: "TO_YEARLY",
       newTier: "PREMIUM",
       currentPeriodEnd: new Date(NEW_PERIOD_END * 1000),
+      // The charge, so the client can count the purchase once.
+      invoiceId: "in_change",
+      amountPaid: 12890,
+      currency: "usd",
     });
     expect(paidCustomer.updatePeriodIfUnchanged).toHaveBeenCalledWith(
       {},
@@ -177,6 +189,10 @@ describe("applyPlanChange", () => {
       status: "REQUIRES_ACTION",
       clientSecret: "pi_1_secret",
       hostedInvoiceUrl: "https://invoice.stripe.com/i/in_1",
+      // What the bank is asked to approve, counted once it does.
+      invoiceId: "in_1",
+      amountPaid: 8480,
+      currency: "usd",
     });
     expect(paidCustomer.updatePeriodIfUnchanged).not.toHaveBeenCalled();
   });
@@ -190,7 +206,13 @@ describe("applyPlanChange", () => {
 
     const result = await apply(PREMIUM_YEARLY, NOW_SECONDS);
 
-    expect(result).toMatchObject({ status: "FAILED", clientSecret: null });
+    // Nothing was bought.
+    expect(result).toMatchObject({
+      status: "FAILED",
+      clientSecret: null,
+      invoiceId: null,
+      amountPaid: null,
+    });
     expect(paidCustomer.updatePeriodIfUnchanged).not.toHaveBeenCalled();
   });
 
@@ -232,6 +254,8 @@ describe("applyPlanChange", () => {
         status: "SCHEDULED",
         kind,
         effectiveAt: new Date(PERIOD_END * 1000),
+        invoiceId: null,
+        amountPaid: null,
       });
       expect(stripe.subscriptionSchedules.create).toHaveBeenCalledWith({
         from_subscription: "sub_1",

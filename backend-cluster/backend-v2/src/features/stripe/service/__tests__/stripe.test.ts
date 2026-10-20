@@ -117,7 +117,7 @@ describe("Stripe Configuration", () => {
 
       it("should have correct URLs", () => {
         expect(prodConfig.successUrl).toBe(
-          "https://beancount.io/pricing/?success=true",
+          "https://beancount.io/settings/billing?checkout=success&session_id={CHECKOUT_SESSION_ID}",
         );
         expect(prodConfig.cancelUrl).toBe("https://beancount.io/pricing");
         expect(prodConfig.webhook).toBe(

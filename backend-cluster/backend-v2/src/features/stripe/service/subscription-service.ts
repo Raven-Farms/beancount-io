@@ -125,6 +125,7 @@ export interface ISubscriptionService {
     identity: Identity,
     clientId: string,
     priceId: string,
+    returnTo?: CheckoutReturnTo,
   ): Promise<SubscriptionSessionResultView>;
   createStripePortalSession(
     identity: Identity,
@@ -163,16 +164,27 @@ export interface ISubscriptionService {
   ): Promise<SubscriptionActionResultView>;
 }
 
+/** Where the Checkout began, so an abandoned one returns there. */
+export type CheckoutReturnTo = "PRICING" | "BILLING";
+
 /**
- * Where a cancelled Checkout returns: the pricing page with the plan and cycle
+ * Where a cancelled Checkout returns. From the pricing page (the default, so
+ * its two-argument call is unchanged): back there with the plan and cycle
  * still chosen. The pricing page already reads `billing`; `plan` and
- * `checkout=canceled` are ignored until it reads them too.
+ * `checkout=canceled` are ignored until it reads them too. From the
+ * dashboard: Billing, which says nothing was charged.
  */
 function checkoutCancelUrl(
-  base: string,
+  clientConfig: { cancelUrl: string; portalReturnUrl: string },
   plan: { tier: SubscriptionTier; interval: "month" | "year" },
+  returnTo: CheckoutReturnTo,
 ): string {
-  const url = new URL(base);
+  if (returnTo === "BILLING") {
+    const billing = new URL(clientConfig.portalReturnUrl);
+    billing.searchParams.set("checkout", "canceled");
+    return billing.toString();
+  }
+  const url = new URL(clientConfig.cancelUrl);
   url.searchParams.set("plan", plan.tier.toLowerCase());
   url.searchParams.set(
     "billing",
@@ -407,6 +419,7 @@ export class SubscriptionService implements ISubscriptionService {
     identity: Identity,
     clientId: string,
     priceId: string,
+    returnTo: CheckoutReturnTo = "PRICING",
   ): Promise<SubscriptionSessionResultView> {
     await this.authorize(
       identity,
@@ -479,7 +492,7 @@ export class SubscriptionService implements ISubscriptionService {
         allow_promotion_codes: true,
         mode: planConfig.type,
         success_url: clientConfig.successUrl,
-        cancel_url: checkoutCancelUrl(clientConfig.cancelUrl, planConfig),
+        cancel_url: checkoutCancelUrl(clientConfig, planConfig, returnTo),
         metadata: { userId, clientId },
         ...(planConfig.type === "subscription"
           ? { subscription_data: { metadata: { userId, clientId } } }

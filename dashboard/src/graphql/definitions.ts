@@ -223,6 +223,12 @@ export type ChartItemV2 = {
   date: Scalars['String']['output'];
 };
 
+/** Where a Checkout began, so an abandoned one returns there: the pricing page (the default) or Billing settings. */
+export enum CheckoutReturnTo {
+  Billing = 'BILLING',
+  Pricing = 'PRICING'
+}
+
 export type CliAuthClientInfoInput = {
   /** Machine name the client runs on. */
   deviceLabel?: InputMaybe<Scalars['String']['input']>;
@@ -892,6 +898,13 @@ export type LedgerOpenInput = {
   date: Scalars['String']['input'];
 };
 
+/** Whether an account's opening balance is unknown, zero, or known */
+export enum LedgerOpeningState {
+  Known = 'KNOWN',
+  Unknown = 'UNKNOWN',
+  Zero = 'ZERO'
+}
+
 export type LedgerOptions = {
   __typename: 'LedgerOptions';
   accountCurrentConversions: Scalars['String']['output'];
@@ -933,6 +946,45 @@ export type LedgerPriceInput = {
   amount: LedgerAmountInput;
   currency: Scalars['String']['input'];
   date: Scalars['String']['input'];
+};
+
+export type LedgerSetupAccountInput = {
+  /** Decimal amount; required when openingState is KNOWN. */
+  amount?: InputMaybe<Scalars['String']['input']>;
+  currency?: InputMaybe<Scalars['String']['input']>;
+  name: Scalars['String']['input'];
+  openingState?: InputMaybe<LedgerOpeningState>;
+};
+
+export type LedgerSetupInput = {
+  accounts?: InputMaybe<Array<LedgerSetupAccountInput>>;
+  /** Per optional question: enabled, declined, or deferred, keyed by question id. */
+  capabilities?: InputMaybe<Scalars['JSONObject']['input']>;
+  historyStart?: InputMaybe<Scalars['String']['input']>;
+  operatingCurrency?: InputMaybe<Scalars['String']['input']>;
+  preset: LedgerSetupPreset;
+  title?: InputMaybe<Scalars['String']['input']>;
+};
+
+/** Versioned starter preset from the setup catalog (ADR021) */
+export enum LedgerSetupPreset {
+  Blank = 'BLANK',
+  Business = 'BUSINESS',
+  Community = 'COMMUNITY',
+  Freelance = 'FREELANCE',
+  Personal = 'PERSONAL',
+  Portfolio = 'PORTFOLIO',
+  Rental = 'RENTAL',
+  SharedExpenses = 'SHARED_EXPENSES'
+}
+
+export type LedgerSetupPreview = {
+  __typename: 'LedgerSetupPreview';
+  accounts: Array<Scalars['String']['output']>;
+  files: Scalars['JSONObject']['output'];
+  historyStart: Scalars['String']['output'];
+  operatingCurrency: Scalars['String']['output'];
+  preset: Scalars['String']['output'];
 };
 
 /** Template used to populate a newly created ledger */
@@ -1200,6 +1252,8 @@ export type MutationCreateLedgerArgs = {
   description?: InputMaybe<Scalars['String']['input']>;
   name: Scalars['String']['input'];
   private?: InputMaybe<Scalars['Boolean']['input']>;
+  requestId?: InputMaybe<Scalars['String']['input']>;
+  setup?: InputMaybe<LedgerSetupInput>;
   template?: InputMaybe<LedgerTemplate>;
 };
 
@@ -1244,6 +1298,7 @@ export type MutationCreateStripePortalSessionArgs = {
 export type MutationCreateSubscriptionSessionArgs = {
   clientId: Scalars['String']['input'];
   priceId: Scalars['String']['input'];
+  returnTo?: InputMaybe<CheckoutReturnTo>;
 };
 
 
@@ -1768,13 +1823,19 @@ export enum PlanChangeRefusal {
 
 export type PlanChangeResult = {
   __typename: 'PlanChangeResult';
+  /** With ACTIVE or REQUIRES_ACTION: what that invoice charges, in the currency's minor unit (cents). Paid with ACTIVE; paid once the bank approves with REQUIRES_ACTION. */
+  amountPaid: Maybe<Scalars['Int']['output']>;
   /** With REQUIRES_ACTION: confirm the payment with Stripe.js. */
   clientSecret: Maybe<Scalars['String']['output']>;
+  /** With ACTIVE or REQUIRES_ACTION: the invoice's currency. */
+  currency: Maybe<Scalars['String']['output']>;
   currentPeriodEnd: Maybe<Scalars['DateTimeISO']['output']>;
   /** With SCHEDULED: when the new price takes over. Nothing is charged until then. */
   effectiveAt: Maybe<Scalars['DateTimeISO']['output']>;
   /** Stripe's hosted page to pay or authenticate this change's invoice. */
   hostedInvoiceUrl: Maybe<Scalars['String']['output']>;
+  /** With ACTIVE or REQUIRES_ACTION: the invoice this change charges, a stable id to count the purchase once. */
+  invoiceId: Maybe<Scalars['String']['output']>;
   kind: Maybe<PlanChangeKind>;
   message: Maybe<Scalars['String']['output']>;
   newTier: Maybe<Scalars['String']['output']>;
@@ -2013,6 +2074,8 @@ export type Query = {
   listPublicKeys: Array<PublicKey>;
   /** List all user owned ledgers for the current user */
   listUserOwnedLedgers: Array<Ledger>;
+  /** Preview a ledger setup (ADR021) without creating anything: the files, account list, and validation result the specification would produce. */
+  previewLedgerSetup: LedgerSetupPreview;
   /** Previews switching your plan to a price: the kind of change, when it takes effect, and what is charged today. Requires a full signed-in session. */
   previewPlanChange: PlanChangePreview;
   /** Execute a shell query on a ledger */
@@ -2467,6 +2530,11 @@ export type QueryListPublicKeysArgs = {
 export type QueryListUserOwnedLedgersArgs = {
   limit?: InputMaybe<Scalars['Float']['input']>;
   page?: InputMaybe<Scalars['Float']['input']>;
+};
+
+
+export type QueryPreviewLedgerSetupArgs = {
+  setup: LedgerSetupInput;
 };
 
 
@@ -3359,7 +3427,7 @@ export type ChangePlanMutationVariables = Exact<{
 }>;
 
 
-export type ChangePlanMutation = { changePlan: { __typename: 'PlanChangeResult', status: PlanChangeStatus, kind: PlanChangeKind | null, refusal: PlanChangeRefusal | null, message: string | null, clientSecret: string | null, hostedInvoiceUrl: string | null, subscriptionId: string | null, newTier: string | null, currentPeriodEnd: string | null, effectiveAt: string | null } };
+export type ChangePlanMutation = { changePlan: { __typename: 'PlanChangeResult', status: PlanChangeStatus, kind: PlanChangeKind | null, refusal: PlanChangeRefusal | null, message: string | null, clientSecret: string | null, hostedInvoiceUrl: string | null, subscriptionId: string | null, newTier: string | null, currentPeriodEnd: string | null, effectiveAt: string | null, invoiceId: string | null, amountPaid: number | null, currency: string | null } };
 
 export type CancelScheduledPlanChangeMutationVariables = Exact<{
   clientId: Scalars['String']['input'];
@@ -4021,7 +4089,7 @@ export const CancelSubscriptionDocument = {"kind":"Document","definitions":[{"ki
 export const ResumeSubscriptionDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"mutation","name":{"kind":"Name","value":"ResumeSubscription"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"clientId"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"String"}}}},{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"subscriptionId"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"String"}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"resumeSubscription"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"clientId"},"value":{"kind":"Variable","name":{"kind":"Name","value":"clientId"}}},{"kind":"Argument","name":{"kind":"Name","value":"subscriptionId"},"value":{"kind":"Variable","name":{"kind":"Name","value":"subscriptionId"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"success"}},{"kind":"Field","name":{"kind":"Name","value":"message"}}]}}]}}]} as unknown as DocumentNode<ResumeSubscriptionMutation, ResumeSubscriptionMutationVariables>;
 export const CreateSubscriptionSessionDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"mutation","name":{"kind":"Name","value":"CreateSubscriptionSession"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"clientId"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"String"}}}},{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"priceId"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"String"}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"createSubscriptionSession"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"clientId"},"value":{"kind":"Variable","name":{"kind":"Name","value":"clientId"}}},{"kind":"Argument","name":{"kind":"Name","value":"priceId"},"value":{"kind":"Variable","name":{"kind":"Name","value":"priceId"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"success"}},{"kind":"Field","name":{"kind":"Name","value":"sessionId"}},{"kind":"Field","name":{"kind":"Name","value":"sessionUrl"}},{"kind":"Field","name":{"kind":"Name","value":"message"}}]}}]}}]} as unknown as DocumentNode<CreateSubscriptionSessionMutation, CreateSubscriptionSessionMutationVariables>;
 export const CreateStripePortalSessionDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"mutation","name":{"kind":"Name","value":"CreateStripePortalSession"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"clientId"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"String"}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"createStripePortalSession"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"clientId"},"value":{"kind":"Variable","name":{"kind":"Name","value":"clientId"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"success"}},{"kind":"Field","name":{"kind":"Name","value":"sessionId"}},{"kind":"Field","name":{"kind":"Name","value":"sessionUrl"}},{"kind":"Field","name":{"kind":"Name","value":"message"}}]}}]}}]} as unknown as DocumentNode<CreateStripePortalSessionMutation, CreateStripePortalSessionMutationVariables>;
-export const ChangePlanDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"mutation","name":{"kind":"Name","value":"ChangePlan"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"clientId"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"String"}}}},{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"priceId"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"String"}}}},{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"prorationDate"}},"type":{"kind":"NamedType","name":{"kind":"Name","value":"Int"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"changePlan"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"clientId"},"value":{"kind":"Variable","name":{"kind":"Name","value":"clientId"}}},{"kind":"Argument","name":{"kind":"Name","value":"priceId"},"value":{"kind":"Variable","name":{"kind":"Name","value":"priceId"}}},{"kind":"Argument","name":{"kind":"Name","value":"prorationDate"},"value":{"kind":"Variable","name":{"kind":"Name","value":"prorationDate"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"status"}},{"kind":"Field","name":{"kind":"Name","value":"kind"}},{"kind":"Field","name":{"kind":"Name","value":"refusal"}},{"kind":"Field","name":{"kind":"Name","value":"message"}},{"kind":"Field","name":{"kind":"Name","value":"clientSecret"}},{"kind":"Field","name":{"kind":"Name","value":"hostedInvoiceUrl"}},{"kind":"Field","name":{"kind":"Name","value":"subscriptionId"}},{"kind":"Field","name":{"kind":"Name","value":"newTier"}},{"kind":"Field","name":{"kind":"Name","value":"currentPeriodEnd"}},{"kind":"Field","name":{"kind":"Name","value":"effectiveAt"}}]}}]}}]} as unknown as DocumentNode<ChangePlanMutation, ChangePlanMutationVariables>;
+export const ChangePlanDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"mutation","name":{"kind":"Name","value":"ChangePlan"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"clientId"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"String"}}}},{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"priceId"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"String"}}}},{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"prorationDate"}},"type":{"kind":"NamedType","name":{"kind":"Name","value":"Int"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"changePlan"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"clientId"},"value":{"kind":"Variable","name":{"kind":"Name","value":"clientId"}}},{"kind":"Argument","name":{"kind":"Name","value":"priceId"},"value":{"kind":"Variable","name":{"kind":"Name","value":"priceId"}}},{"kind":"Argument","name":{"kind":"Name","value":"prorationDate"},"value":{"kind":"Variable","name":{"kind":"Name","value":"prorationDate"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"status"}},{"kind":"Field","name":{"kind":"Name","value":"kind"}},{"kind":"Field","name":{"kind":"Name","value":"refusal"}},{"kind":"Field","name":{"kind":"Name","value":"message"}},{"kind":"Field","name":{"kind":"Name","value":"clientSecret"}},{"kind":"Field","name":{"kind":"Name","value":"hostedInvoiceUrl"}},{"kind":"Field","name":{"kind":"Name","value":"subscriptionId"}},{"kind":"Field","name":{"kind":"Name","value":"newTier"}},{"kind":"Field","name":{"kind":"Name","value":"currentPeriodEnd"}},{"kind":"Field","name":{"kind":"Name","value":"effectiveAt"}},{"kind":"Field","name":{"kind":"Name","value":"invoiceId"}},{"kind":"Field","name":{"kind":"Name","value":"amountPaid"}},{"kind":"Field","name":{"kind":"Name","value":"currency"}}]}}]}}]} as unknown as DocumentNode<ChangePlanMutation, ChangePlanMutationVariables>;
 export const CancelScheduledPlanChangeDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"mutation","name":{"kind":"Name","value":"CancelScheduledPlanChange"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"clientId"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"String"}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"cancelScheduledPlanChange"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"clientId"},"value":{"kind":"Variable","name":{"kind":"Name","value":"clientId"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"success"}},{"kind":"Field","name":{"kind":"Name","value":"message"}}]}}]}}]} as unknown as DocumentNode<CancelScheduledPlanChangeMutation, CancelScheduledPlanChangeMutationVariables>;
 export const GenerateTempAssetUploadUrlDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"mutation","name":{"kind":"Name","value":"GenerateTempAssetUploadUrl"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"mimeType"}},"type":{"kind":"NamedType","name":{"kind":"Name","value":"String"}}},{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"filename"}},"type":{"kind":"NamedType","name":{"kind":"Name","value":"String"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"generateTempAssetUploadUrl"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"mimeType"},"value":{"kind":"Variable","name":{"kind":"Name","value":"mimeType"}}},{"kind":"Argument","name":{"kind":"Name","value":"filename"},"value":{"kind":"Variable","name":{"kind":"Name","value":"filename"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"uploadUrl"}},{"kind":"Field","name":{"kind":"Name","value":"objectKey"}},{"kind":"Field","name":{"kind":"Name","value":"expiresIn"}}]}}]}}]} as unknown as DocumentNode<GenerateTempAssetUploadUrlMutation, GenerateTempAssetUploadUrlMutationVariables>;
 export const FollowUserDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"mutation","name":{"kind":"Name","value":"FollowUser"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"username"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"String"}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"followUser"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"username"},"value":{"kind":"Variable","name":{"kind":"Name","value":"username"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"success"}},{"kind":"Field","name":{"kind":"Name","value":"isFollowing"}},{"kind":"Field","name":{"kind":"Name","value":"message"}}]}}]}}]} as unknown as DocumentNode<FollowUserMutation, FollowUserMutationVariables>;

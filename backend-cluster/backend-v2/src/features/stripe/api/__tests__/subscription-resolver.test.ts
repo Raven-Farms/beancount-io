@@ -1770,10 +1770,46 @@ describe("SubscriptionResolver", () => {
       expect(monthly[0].cancel_url).toBe(
         "https://beancount.io/pricing?plan=growth&billing=monthly&checkout=canceled",
       );
-      // The success return stays where the pricing page expects it until the
-      // dashboard confirmation takes over (w1/m39/t003).
+      // Stripe fills in the literal placeholder; percent-encoded braces would
+      // reach the confirmation unfilled.
       expect(yearly[0].success_url).toBe(
-        "https://beancount.io/pricing/?success=true",
+        "https://beancount.io/settings/billing?checkout=success&session_id={CHECKOUT_SESSION_ID}",
+      );
+    });
+
+    it("returns a Checkout cancelled from Billing to Billing, which says nothing was charged", async () => {
+      const create = jest.fn().mockResolvedValue({
+        id: "cs_2",
+        url: "https://checkout.stripe.com/session/2",
+      });
+      mockStripeService.getStripeInstance.mockReturnValue({
+        checkout: { sessions: { create } },
+      });
+      mockModels.paidCustomer.findByUserIdAndClientId.mockResolvedValue(null);
+
+      await resolver.createSubscriptionSession(
+        "beancount-web-prod",
+        "price_1US5htEqsEqs2tLVENCzLaZB",
+        mockContext,
+        "BILLING",
+      );
+      await resolver.createSubscriptionSession(
+        "beancount-web-prod",
+        "price_1US5htEqsEqs2tLVENCzLaZB",
+        mockContext,
+        null,
+      );
+
+      const [fromBilling, unspecified] = create.mock.calls;
+      expect(fromBilling[0].cancel_url).toBe(
+        "https://beancount.io/settings/billing?checkout=canceled",
+      );
+      expect(fromBilling[0].success_url).toBe(
+        "https://beancount.io/settings/billing?checkout=success&session_id={CHECKOUT_SESSION_ID}",
+      );
+      // An omitted or null argument is the pricing page's call.
+      expect(unspecified[0].cancel_url).toBe(
+        "https://beancount.io/pricing?plan=premium&billing=yearly&checkout=canceled",
       );
     });
 

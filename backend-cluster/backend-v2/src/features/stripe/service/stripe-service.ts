@@ -764,13 +764,13 @@ export class StripeService implements IStripeService {
         };
       }
 
-      // Validate that we have a valid return URL
-      const returnUrl = clientConfig.portalReturnUrl || clientConfig.successUrl;
+      // The Checkout success URL is no fallback: it is a confirmation page
+      // that expects a session id.
+      const returnUrl = clientConfig.portalReturnUrl;
       if (!returnUrl) {
-        logger.error(
-          "No valid return URL configured for client. Both portalReturnUrl and successUrl are empty.",
-          { clientId },
-        );
+        logger.error("No portal return URL configured for client", {
+          clientId,
+        });
         return {
           success: false,
           message:
