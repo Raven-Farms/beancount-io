@@ -1771,14 +1771,19 @@ falling back to the unfiltered default.
 
 A fiscal period (`--time FY2026`, `FY2026-Q1`, `fiscal_year`, `fiscal_quarter`)
 follows the ledger's `custom "fava-option" "fiscal-year-end" "MM-DD"`, and the
-calendar year when none is declared. If that option is declared but is not a
-real month and day (`"06-31"`, `"6-30"`), a fiscal period is refused (exit 1)
-naming the option's line, with or without `--allow-errors`, rather than
-reporting the calendar year under the fiscal label. Fiscal quarters need a
+calendar year when none is declared. As in Fava, a month from 13 to 24 is a
+year end in the following calendar year: `"15-31"` runs FY2026 from 2026-04-01
+through 2027-03-31, where `"03-31"` ends it on 2026-03-31. If that option is
+declared but is not a real month and day (`"06-31"`, `"6-30"`, `"00-31"`,
+`"99-31"`), a fiscal period is refused (exit 1) naming the option, with or
+without `--allow-errors`, rather than reporting another year under the fiscal
+label. Fiscal quarters need a
 fiscal year that starts on the first of a month: with a year end such as
 `"04-05"`, `FY2027-Q2` and `fiscal_quarter` exit **2** naming the option and
 its line, while `FY2027` still reports the whole year. Calendar periods are
-unaffected.
+unaffected. `fiscal-year-end` is the only Fava option bea reads: every other
+`custom "fava-option"` value, and every `fava-extension`, is ignored, and
+`bea check` does not validate them.
 
 A parent whose children cancel under the conversion — a long and a short lot at
 the same cost, two funds whose cost bases offset, or a 10.00 USD expense and its

@@ -544,6 +544,15 @@ def _require_fiscal_year_end(ledger: Any, file: Path, time: str, ledger_errors: 
         for error in ledger.fava_options_errors
         if error.entry.values and str(error.entry.values[0].value).replace("-", "_") == "fiscal_year_end"
     ]
+    # Fava reads months 13-24 as a year end in the following calendar year,
+    # but its parser takes any month modulo 12: "00-31" made FY2026 calendar
+    # 2025, and "99-31" moved it to 2033-34 (w5/809).
+    end = ledger.fava_options.fiscal_year_end
+    if not invalid and not 1 <= end.month <= 24:
+        invalid = [
+            f'"{end.month:02d}-{end.day:02d}" names month {end.month}; a fiscal year end is MM-DD with a month '
+            "from 01 to 12, or 13 to 24 for one that falls in the following calendar year."
+        ]
     if invalid:
         raise protocol.LedgerError(
             f"The ledger's fiscal-year-end option is invalid, so the fiscal period in --time {time!r} is undefined.",
