@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [783 — import --date-format without a year books rows in 1900 and advises re-dating the open to 1900](./783.md)
 - [784 — First use: text check and doctor install twice after a failure, and exit 1 with a stale failure after ready](./784.md)
 - [785 — A damaged engine still gives raw tracebacks from text check, doctor and example; engine enable reports success (incomplete fix of w5/320)](./785.md)
 - [786 — SIGTERM during first-use provisioning orphans uv and leaves a 25 MB partial engine (gap in w5/437)](./786.md)
