@@ -50,6 +50,8 @@
 - [278 — Refuse CSV decoding that replaces source characters](./278.md) — minor; dashboard QA, 2026-10-20.
 - [279 — Accept supported combining marks and titlecase initials in Open Account](./279.md) — minor; dashboard QA, 2026-10-20.
 - [280 — Freeze import configuration while its submitted batch is pending](./280.md) — minor; dashboard QA, 2026-10-20.
+- [281 — Reject unsupported file branch routes instead of serving main](./281.md) — minor; dashboard QA, 2026-10-20.
+- [282 — Keep Markdown fragment links aligned with sanitized authored IDs](./282.md) — minor; dashboard QA, 2026-10-20.
 
 ## Milestones
 
