@@ -3,6 +3,8 @@ import {
   ledgerCreateInput,
   ledgerUpdateInput,
   ledgerDeleteInput,
+  ledgerPreviewInput,
+  ledgerPreviewResultSchema,
   ledgerResultSchema,
 } from "@/features/ledger/api/rest/v1/lifecycle-handler";
 import {
@@ -17,6 +19,7 @@ import { mcpOutputSchema, toolOutputSchema } from "../tools/types";
  */
 export const LIFECYCLE_OPERATION_SCHEMAS = {
   create: ledgerCreateInput,
+  preview: ledgerPreviewInput,
   update: ledgerUpdateInput.extend({ ledger: ledgerSelection }),
   delete: ledgerDeleteInput.extend({ ledger: ledgerSelection }),
 } as const;
@@ -24,6 +27,9 @@ export const lifecycleToolOutput = mcpOutputSchema(
   toolOutputSchema(
     z.union([ledgerResultSchema, z.object({ ledgerId: z.string() })]),
   ),
+);
+export const previewToolOutput = mcpOutputSchema(
+  toolOutputSchema(ledgerPreviewResultSchema),
 );
 
 /** Each tool's handler, parsing the schema that tool publishes. */
@@ -34,6 +40,13 @@ export const LIFECYCLE_EXECUTORS = {
       identity: context.identity,
       input: LIFECYCLE_OPERATION_SCHEMAS.create.parse(input),
       platform: context.platform,
+    }),
+  }),
+  preview: async (context: McpRequestContext, input: unknown) => ({
+    ok: true,
+    result: await context.ledgerWorkflow.previewLedgerSetup({
+      identity: context.identity,
+      setup: LIFECYCLE_OPERATION_SCHEMAS.preview.parse(input).setup,
     }),
   }),
   update: async (context: McpRequestContext, input: unknown) => {

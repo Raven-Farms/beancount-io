@@ -685,6 +685,14 @@ const LEDGER_ADMIN_VERBS: readonly VerbEntry[] = [
     mcp: "createLedger",
   },
   {
+    verb: "Query.previewLedgerSetup",
+    gql: "Query.previewLedgerSetup",
+    class: "admin",
+    authorizationAction: AUTHORIZATION_ACTIONS.LEDGER_CREATE,
+    rest: "POST /api-gateway/v1/ledgers/preview",
+    mcp: "previewLedgerSetup",
+  },
+  {
     verb: "Mutation.updateLedger",
     gql: "Mutation.updateLedger",
     class: "admin",

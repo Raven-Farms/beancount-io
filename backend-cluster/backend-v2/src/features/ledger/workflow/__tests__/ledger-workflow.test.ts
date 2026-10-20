@@ -418,6 +418,176 @@ describe("LedgerWorkflow", () => {
         expect.objectContaining({ files: ledgerWithMultipleFilesTemplate }),
       );
     });
+
+    describe("setup and idempotent creation (w3/m53/t003)", () => {
+      const createdLedger = {
+        data: {
+          success: true,
+          data: {
+            id: 1,
+            name: "setup-ledger",
+            full_name: "testuser/setup-ledger",
+            description: null,
+            private: true,
+            empty: true,
+            size: 0,
+            created_at: "2024-01-01T00:00:00Z",
+            updated_at: "2024-01-01T00:00:00Z",
+          },
+        },
+      };
+
+      const workflowWithStore = () => {
+        const records = new Map<string, string>();
+        const store = {
+          getStrict: jest.fn(async (key: string) => records.get(key)),
+          setStrict: jest.fn(
+            async (key: string, value: string) => {
+              records.set(key, value);
+            },
+          ),
+        };
+        const config = { gitea: { hostName: "gitea", httpPort: 3000 } };
+        const withStore = new LedgerWorkflow(
+          favaClientFactory as never,
+          giteaClientFactory as never,
+          plaidClient as never,
+          stripe as never,
+          ledgerDataService as never,
+          models as never,
+          db as never,
+          config as never,
+          authorization as never,
+          store as never,
+        );
+        return { withStore, records };
+      };
+
+      beforeEach(() => {
+        mockFavaApiClient.ledgers.listUserLedgers.mockResolvedValue({
+          data: { success: true, data: [] },
+        });
+        mockFavaApiClient.ledgers.createLedger.mockResolvedValue(
+          createdLedger,
+        );
+      });
+
+      it("creates files from a setup specification", async () => {
+        const { withStore } = workflowWithStore();
+        await withStore.createLedger({
+          identity: IDENTITY,
+          input: {
+            name: "setup-ledger",
+            setup: {
+              preset: "personal@1",
+              operatingCurrency: "EUR",
+              historyStart: "2026-02-01",
+              accounts: [
+                {
+                  name: "Assets:Cash",
+                  openingState: "known",
+                  amount: "100",
+                },
+              ],
+            },
+          },
+        });
+        const files = mockFavaApiClient.ledgers.createLedger.mock.calls[0][0]
+          .files as Record<string, string>;
+        expect(files["main.bean"]).toContain(
+          'option "operating_currency" "EUR"',
+        );
+        expect(files["main.bean"]).toContain(
+          "2026-02-01 balance Assets:Cash 100 EUR",
+        );
+      });
+
+      it("refuses setup combined with template and creates nothing", async () => {
+        const { withStore } = workflowWithStore();
+        await expect(
+          withStore.createLedger({
+            identity: IDENTITY,
+            input: {
+              name: "setup-ledger",
+              template: LedgerTemplate.SAMPLE,
+              setup: { preset: "personal@1" },
+            },
+          }),
+        ).rejects.toThrow("mutually exclusive");
+        expect(mockFavaApiClient.ledgers.createLedger).not.toHaveBeenCalled();
+      });
+
+      it("returns the original ledger for a repeated requestId", async () => {
+        const { withStore } = workflowWithStore();
+        const input = {
+          name: "setup-ledger",
+          requestId: "req-1",
+          setup: { preset: "blank@1" },
+        };
+        const first = await withStore.createLedger({
+          identity: IDENTITY,
+          input,
+        });
+        const second = await withStore.createLedger({
+          identity: IDENTITY,
+          input,
+        });
+        expect(second).toEqual(first);
+        expect(
+          mockFavaApiClient.ledgers.createLedger,
+        ).toHaveBeenCalledTimes(1);
+      });
+
+      it("refuses the same requestId with a different request", async () => {
+        const { withStore } = workflowWithStore();
+        await withStore.createLedger({
+          identity: IDENTITY,
+          input: { name: "setup-ledger", requestId: "req-2" },
+        });
+        await expect(
+          withStore.createLedger({
+            identity: IDENTITY,
+            input: { name: "other-ledger", requestId: "req-2" },
+          }),
+        ).rejects.toThrow("requestId");
+        expect(
+          mockFavaApiClient.ledgers.createLedger,
+        ).toHaveBeenCalledTimes(1);
+      });
+
+      it("reports in-progress for a repeated requestId whose first attempt has not finished", async () => {
+        const { withStore, records } = workflowWithStore();
+        const input = { name: "setup-ledger", requestId: "req-3" };
+        // Seed the in-progress record the first attempt writes inside the lock.
+        const hash = JSON.stringify({
+          name: "setup-ledger",
+          description: null,
+          private: null,
+          template: null,
+          setup: null,
+        });
+        records.set(
+          `ledger:create_request:user:${USER_ID}:id:req-3`,
+          JSON.stringify({ requestHash: hash, status: "in-progress" }),
+        );
+        await expect(
+          withStore.createLedger({ identity: IDENTITY, input }),
+        ).rejects.toThrow("still in progress");
+        expect(mockFavaApiClient.ledgers.createLedger).not.toHaveBeenCalled();
+      });
+
+      it("previews a setup without creating anything", async () => {
+        const preview = await workflow.previewLedgerSetup({
+          identity: IDENTITY,
+          setup: { preset: "personal@1", operatingCurrency: "EUR" },
+        });
+        expect(preview.preset).toBe("personal@1");
+        expect(preview.operatingCurrency).toBe("EUR");
+        expect(preview.accounts).toContain("Assets:Cash");
+        expect(preview.files["main.bean"]).toContain("Assets:Cash");
+        expect(mockFavaApiClient.ledgers.createLedger).not.toHaveBeenCalled();
+      });
+    });
   });
 
   describe("deleteLedger", () => {

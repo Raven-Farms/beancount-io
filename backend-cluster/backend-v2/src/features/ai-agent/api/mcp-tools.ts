@@ -44,6 +44,7 @@ import {
 import {
   LIFECYCLE_OPERATION_SCHEMAS,
   lifecycleToolOutput,
+  previewToolOutput,
   LIFECYCLE_EXECUTORS,
 } from "./mcp-lifecycle";
 import {
@@ -752,10 +753,20 @@ export const MCP_TOOLS: readonly McpToolDescriptor[] = [
     // Open world: `private: false` publishes the ledger to anyone (w1/174).
     annotations: { ...APPEND, openWorldHint: true },
     description:
-      "Create a ledger owned by the authenticated user. Requires name; accepts description, private, and template: STARTER (default, including null) has options and accounts without transactions or opening balances; SAMPLE has demonstration transactions.",
+      "Create a ledger owned by the authenticated user. Requires name; accepts description, private, template (STARTER default, including null: options and accounts without transactions; SAMPLE: demonstration transactions), a setup specification (mutually exclusive with template), and a requestId for idempotent retries.",
     inputSchema: LIFECYCLE_OPERATION_SCHEMAS.create,
     outputSchema: lifecycleToolOutput,
     execute: LIFECYCLE_EXECUTORS.create,
+  },
+  {
+    name: "previewLedgerSetup",
+    title: "Preview Ledger Setup",
+    annotations: READ_ONLY,
+    description:
+      "Preview a ledger setup (ADR021) without creating anything: returns the files, account list, and validation result the specification would produce. Accepts the same setup object as createLedger.",
+    inputSchema: LIFECYCLE_OPERATION_SCHEMAS.preview,
+    outputSchema: previewToolOutput,
+    execute: LIFECYCLE_EXECUTORS.preview,
   },
   {
     name: "updateLedger",

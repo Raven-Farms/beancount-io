@@ -268,6 +268,7 @@ export function buildWorkflowLayer(input: {
     input.database.db,
     input.config,
     input.services.authorization,
+    input.clients.cacheHelper,
   );
   const ledgerCollaborators = new LedgerCollaboratorsWorkflow(
     input.clients.favaClientFactory,

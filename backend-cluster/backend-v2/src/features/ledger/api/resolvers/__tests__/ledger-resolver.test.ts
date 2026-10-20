@@ -27,6 +27,7 @@ describe("Ledger resolvers (delegation)", () => {
       getLegacyMetadata: jest.fn(),
       getLegacyJournal: jest.fn(),
       createLedger: jest.fn(),
+      previewLedgerSetup: jest.fn(),
       updateLedger: jest.fn(),
       deleteLedger: jest.fn(),
       createLedgerFile: jest.fn(),

@@ -1,14 +1,12 @@
 import { ValidationError } from "@/shared/errors";
 import { presetById, setupCatalog, setupCurrencies } from "./index";
 
-type CapabilityState = "enabled" | "declined" | "deferred";
-type OpeningState = "unknown" | "zero" | "known";
 
 interface SetupAccountSelection {
   name: string;
   kind?: string;
   currency?: string;
-  openingState?: OpeningState;
+  openingState?: string;
   /** Decimal string, required when `openingState` is "known". */
   amount?: string;
 }
@@ -18,7 +16,7 @@ export interface LedgerSetup {
   title?: string;
   operatingCurrency?: string;
   historyStart?: string;
-  capabilities?: Record<string, CapabilityState>;
+  capabilities?: Record<string, string>;
   accounts?: SetupAccountSelection[];
 }
 
@@ -41,10 +39,26 @@ const dayBefore = (date: string): string => {
  * Throws `ValidationError` for any invalid explicit value; nothing is
  * created by callers when it throws.
  */
+export interface LedgerSetupPreview {
+  preset: string;
+  operatingCurrency: string;
+  historyStart: string;
+  accounts: string[];
+  files: Record<string, string>;
+}
+
 export function buildLedgerFiles(
   setup: LedgerSetup,
   today: string = new Date().toISOString().slice(0, 10),
 ): Record<string, string> {
+  return previewLedgerSetup(setup, today).files;
+}
+
+/** Preview a setup without creating anything: the files plus their summary. */
+export function previewLedgerSetup(
+  setup: LedgerSetup,
+  today: string = new Date().toISOString().slice(0, 10),
+): LedgerSetupPreview {
   const preset =
     presetById(setup.preset) ?? fail(`Unknown preset "${setup.preset}"`);
 
@@ -60,7 +74,7 @@ export function buildLedgerFiles(
 
   const capabilities = setup.capabilities ?? {};
   for (const [id, state] of Object.entries(capabilities)) {
-    if (!setupCatalog.capabilityStates.includes(state)) {
+    if (!(setupCatalog.capabilityStates as string[]).includes(state)) {
       fail(`Invalid capability state "${state}" for "${id}"`);
     }
     if (!preset.optionalQuestions.some((question) => question.id === id)) {
@@ -98,7 +112,7 @@ export function buildLedgerFiles(
       );
     }
     const openingState = selection.openingState ?? "unknown";
-    if (!setupCatalog.openingStates.includes(openingState)) {
+    if (!(setupCatalog.openingStates as string[]).includes(openingState)) {
       fail(`Invalid opening state "${openingState}" for "${selection.name}"`);
     }
     if (openingState === "known") {
@@ -180,5 +194,18 @@ export function buildLedgerFiles(
     lines.push(...assertions, "");
   }
 
-  return { "main.bean": `${lines.join("\n")}\n` };
+  const openedAccounts = [
+    ...new Set(
+      lines
+        .map((line) => line.match(/^\d{4}-\d{2}-\d{2} open (\S+)/)?.[1])
+        .filter((name): name is string => Boolean(name)),
+    ),
+  ].sort();
+  return {
+    preset: preset.id,
+    operatingCurrency,
+    historyStart,
+    accounts: openedAccounts,
+    files: { "main.bean": `${lines.join("\n")}\n` },
+  };
 }

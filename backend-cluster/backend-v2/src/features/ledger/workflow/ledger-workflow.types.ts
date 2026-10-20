@@ -21,6 +21,8 @@ export interface CreateLedgerCommand {
   template?: LedgerTemplate | null;
   /** Setup specification (ADR021); mutually exclusive with `template`. */
   setup?: import("@/features/ledger/setup/build-ledger").LedgerSetup | null;
+  /** Client-generated idempotency identifier for creation retries (ADR021). */
+  requestId?: string | null;
 }
 
 export interface UpdateLedgerCommand {

@@ -1,11 +1,109 @@
-import { ArgsType, Field, ObjectType, registerEnumType } from "type-graphql";
+import {
+  ArgsType,
+  Field,
+  InputType,
+  ObjectType,
+  registerEnumType,
+} from "type-graphql";
 import { IsEnum, IsOptional, MaxLength, Matches } from "class-validator";
+import { GraphQLJSONObject } from "graphql-scalars";
 import { LedgerTemplate } from "@/features/ledger/workflow/ledger-workflow.types";
 
 registerEnumType(LedgerTemplate, {
   name: "LedgerTemplate",
   description: "Template used to populate a newly created ledger",
 });
+
+export enum LedgerSetupPreset {
+  PERSONAL = "personal@1",
+  FREELANCE = "freelance@1",
+  BUSINESS = "business@1",
+  PORTFOLIO = "portfolio@1",
+  RENTAL = "rental@1",
+  SHARED_EXPENSES = "shared-expenses@1",
+  COMMUNITY = "community@1",
+  BLANK = "blank@1",
+}
+
+registerEnumType(LedgerSetupPreset, {
+  name: "LedgerSetupPreset",
+  description: "Versioned starter preset from the setup catalog (ADR021)",
+});
+
+export enum LedgerOpeningState {
+  UNKNOWN = "unknown",
+  ZERO = "zero",
+  KNOWN = "known",
+}
+
+registerEnumType(LedgerOpeningState, {
+  name: "LedgerOpeningState",
+  description: "Whether an account's opening balance is unknown, zero, or known",
+});
+
+@InputType()
+export class LedgerSetupAccountInput {
+  @Field(() => String)
+  name: string;
+
+  @Field(() => String, { nullable: true })
+  kind?: string;
+
+  @Field(() => String, { nullable: true })
+  currency?: string;
+
+  @Field(() => LedgerOpeningState, { nullable: true })
+  openingState?: LedgerOpeningState;
+
+  @Field(() => String, {
+    nullable: true,
+    description: "Decimal amount; required when openingState is KNOWN.",
+  })
+  amount?: string;
+}
+
+@InputType()
+export class LedgerSetupInput {
+  @Field(() => LedgerSetupPreset)
+  preset: LedgerSetupPreset;
+
+  @Field(() => String, { nullable: true })
+  title?: string;
+
+  @Field(() => String, { nullable: true })
+  operatingCurrency?: string;
+
+  @Field(() => String, { nullable: true })
+  historyStart?: string;
+
+  @Field(() => GraphQLJSONObject, {
+    nullable: true,
+    description:
+      "Per optional question: enabled, declined, or deferred, keyed by question id.",
+  })
+  capabilities?: Record<string, string>;
+
+  @Field(() => [LedgerSetupAccountInput], { nullable: true })
+  accounts?: LedgerSetupAccountInput[];
+}
+
+@ObjectType()
+export class LedgerSetupPreview {
+  @Field(() => String)
+  preset: string;
+
+  @Field(() => String)
+  operatingCurrency: string;
+
+  @Field(() => String)
+  historyStart: string;
+
+  @Field(() => [String])
+  accounts: string[];
+
+  @Field(() => GraphQLJSONObject)
+  files: Record<string, string>;
+}
 
 @ObjectType()
 export class Permission {
@@ -120,6 +218,22 @@ export class CreateLedgerInput {
   @IsOptional()
   @IsEnum(LedgerTemplate)
   template?: LedgerTemplate;
+
+  @Field(() => LedgerSetupInput, {
+    nullable: true,
+    description:
+      "Setup specification (ADR021); mutually exclusive with template.",
+  })
+  @IsOptional()
+  setup?: LedgerSetupInput;
+
+  @Field(() => String, {
+    nullable: true,
+    description:
+      "Client-generated idempotency identifier: a retry with the same id and request returns the original ledger.",
+  })
+  @IsOptional()
+  requestId?: string;
 }
 
 @ArgsType()

@@ -15,6 +15,41 @@ const description = z
   .string()
   .nullish()
   .describe("A short description shown with the ledger.");
+const ledgerSetupInput = z
+  .object({
+    preset: z
+      .enum([
+        "personal@1",
+        "freelance@1",
+        "business@1",
+        "portfolio@1",
+        "rental@1",
+        "shared-expenses@1",
+        "community@1",
+        "blank@1",
+      ])
+      .describe("Setup preset id (ADR021)."),
+    title: z.string().max(200).optional(),
+    operatingCurrency: z.string().regex(/^[A-Z]{3}$/).optional(),
+    historyStart: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+    capabilities: z
+      .record(z.string(), z.enum(["enabled", "declined", "deferred"]))
+      .optional(),
+    accounts: z
+      .array(
+        z
+          .object({
+            name: z.string(),
+            kind: z.string().optional(),
+            currency: z.string().regex(/^[A-Z]{3}$/).optional(),
+            openingState: z.enum(["unknown", "zero", "known"]).optional(),
+            amount: z.string().regex(/^-?\d+(\.\d+)?$/).optional(),
+          })
+          .strict(),
+      )
+      .optional(),
+  })
+  .strict();
 export const ledgerCreateInput = z
   .object({
     name,
@@ -31,8 +66,20 @@ export const ledgerCreateInput = z
       .describe(
         "STARTER (the default) has options and accounts without transactions; SAMPLE has demonstration transactions.",
       ),
+    setup: ledgerSetupInput.nullish(),
+    requestId: z.string().min(1).max(200).nullish(),
   })
   .strict();
+export const ledgerPreviewInput = z
+  .object({ setup: ledgerSetupInput })
+  .strict();
+export const ledgerPreviewResultSchema = z.object({
+  preset: z.string(),
+  operatingCurrency: z.string(),
+  historyStart: z.string(),
+  accounts: z.array(z.string()),
+  files: z.record(z.string(), z.string()),
+});
 export const ledgerUpdateInput = z
   .object({
     name: name.nullish(),
@@ -78,6 +125,23 @@ export const LEDGER_LIFECYCLE_ROUTES = [
         identity,
         input: body,
         platform: requestPlatform(ctx.headers),
+      }),
+  }),
+  v1Route({
+    method: "post",
+    path: "/api-gateway/v1/ledgers/preview",
+    operationId: "previewLedgerSetup",
+    summary: "Preview a ledger setup without creating it",
+    description:
+      "Return the files, account list, and validation result a setup specification (ADR021) would create, without creating anything. Uses the same LEDGER_CREATE authority as creation.",
+    body: ledgerPreviewInput,
+    responses: {
+      200: json("Setup preview", ledgerPreviewResultSchema),
+    },
+    handler: async ({ layers }, { identity, body }) =>
+      layers.workflows.ledger.previewLedgerSetup({
+        identity,
+        setup: body.setup,
       }),
   }),
   v1Route({

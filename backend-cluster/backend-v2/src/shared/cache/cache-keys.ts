@@ -119,4 +119,14 @@ export const CACHE_KEYS = {
     /** The generated sitemap XML (single global document). */
     xml: () => "sitemap:xml",
   },
+
+  /**
+   * Ledger creation idempotency records (ADR021): a strict Redis-backed
+   * record per (user, requestId), expiring after 24 hours. This is
+   * persistence, not a cache — a dropped write must surface.
+   */
+  ledger: {
+    createRequestByUserAndId: (userId: string, requestId: string) =>
+      `ledger:create_request:user:${userId}:id:${requestId}`,
+  },
 } as const;

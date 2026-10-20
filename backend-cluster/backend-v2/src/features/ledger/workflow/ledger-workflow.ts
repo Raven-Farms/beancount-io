@@ -64,11 +64,16 @@ import {
 import { createLedger as createLedgerOperation } from "@/features/ledger/operations/create-ledger";
 import {
   BadUserInputError,
+  ConflictError,
   InternalServerError,
   NotFoundError,
   ValidationError,
 } from "@/shared/errors";
-import { buildLedgerFiles } from "@/features/ledger/setup/build-ledger";
+import {
+  buildLedgerFiles,
+  previewLedgerSetup,
+} from "@/features/ledger/setup/build-ledger";
+import { CACHE_KEYS } from "@/shared/cache";
 import { operationNotAllowedFromCause } from "@/features/ledger/utils/operation-not-allowed-from-cause";
 import { filterNullish } from "@/shared/tools";
 import { processBatch } from "@/shared/batch-processor";
@@ -159,6 +164,10 @@ export interface ILedgerWorkflow {
     input: CreateLedgerCommand;
     platform?: "web" | "mobile";
   }): Promise<LedgerData>;
+  previewLedgerSetup(params: {
+    identity: Identity;
+    setup: import("@/features/ledger/setup/build-ledger").LedgerSetup;
+  }): Promise<import("@/features/ledger/setup/build-ledger").LedgerSetupPreview>;
   updateLedger(params: {
     identity: Identity;
     ledgerId: string;
@@ -335,6 +344,12 @@ export class LedgerWorkflow implements ILedgerWorkflow {
     private readonly db: DbExecutor,
     private readonly config: Pick<AppConfig, "gitea">,
     private readonly authorization: IAuthorizationService,
+    /** Strict store for creation idempotency records (ADR021); optional so
+     * requestId-less creation works in consumers that do not wire Redis. */
+    private readonly createIdempotencyStore?: Pick<
+      import("@/shared/cache").CacheHelper,
+      "getStrict" | "setStrict"
+    >,
   ) {}
 
   private async authorizeContent(
@@ -491,13 +506,63 @@ export class LedgerWorkflow implements ILedgerWorkflow {
 
     const lockKey = LOCK_KEYS.LEDGER.create(userId);
     return lock.acquire(lockKey, async () => {
+      // Idempotent creation (ADR021): inside the per-user lock, a repeated
+      // requestId with the same request returns the original ledger, the
+      // same id with a different request is a validation error, and a repeat
+      // while the first attempt runs reports in-progress instead of creating
+      // a second ledger. Records expire after 24 hours.
+      const store = this.createIdempotencyStore;
+      const requestKey =
+        input.requestId && store
+          ? CACHE_KEYS.ledger.createRequestByUserAndId(userId, input.requestId)
+          : null;
+      const requestHash = requestKey
+        ? JSON.stringify({
+            name: input.name,
+            description: input.description ?? null,
+            private: input.private ?? null,
+            template: input.template ?? null,
+            setup: input.setup ?? null,
+          })
+        : null;
+      if (requestKey && requestHash && store) {
+        const raw = await store.getStrict<string>(requestKey);
+        const record = raw
+          ? (JSON.parse(raw) as {
+              requestHash: string;
+              status: "in-progress" | "done";
+              ledger?: LedgerData;
+            })
+          : null;
+        if (record) {
+          if (record.requestHash !== requestHash) {
+            throw new ValidationError(
+              "requestId was already used with a different creation request",
+              "requestId",
+            );
+          }
+          if (record.status === "done" && record.ledger) {
+            return record.ledger;
+          }
+          throw new ConflictError(
+            "Ledger creation",
+            "A creation with this requestId is still in progress",
+          );
+        }
+        await store.setStrict(
+          requestKey,
+          JSON.stringify({ requestHash, status: "in-progress" }),
+          24 * 60 * 60 * 1000,
+        );
+      }
+
       const { favaApiClient } =
         await this.favaClientFactory.getApiContext(userId);
 
       // Tier enforcement + Fava ledger creation lives in the cross-service
       // operation (still shared with the auth signup flow); the workflow owns
       // the lock + client provisioning around it.
-      return createLedgerOperation({
+      const ledger = await createLedgerOperation({
         favaApiClient,
         models: this.models,
         postgresDb: this.db,
@@ -507,7 +572,33 @@ export class LedgerWorkflow implements ILedgerWorkflow {
         userId,
         platform,
       });
+
+      if (requestKey && requestHash && store) {
+        await store.setStrict(
+          requestKey,
+          JSON.stringify({ requestHash, status: "done", ledger }),
+          24 * 60 * 60 * 1000,
+        );
+      }
+      return ledger;
     });
+  }
+
+  async previewLedgerSetup({
+    identity,
+    setup,
+  }: {
+    identity: Identity;
+    setup: import("@/features/ledger/setup/build-ledger").LedgerSetup;
+  }): Promise<
+    import("@/features/ledger/setup/build-ledger").LedgerSetupPreview
+  > {
+    await this.authorization.authorizeOrThrow({
+      principal: identity,
+      action: AUTHORIZATION_ACTIONS.LEDGER_CREATE,
+      resource: userResource(identity.userId),
+    });
+    return previewLedgerSetup(setup);
   }
 
   async updateLedger({
