@@ -1,0 +1,747 @@
+{
+  "source": "Conformance fixtures for the setup catalog: each pairs a setup specification with the accounts, opening records, and report values both engines (hosted builder, Python CLI) must produce before the preset is listed (ADR021)",
+  "fixtures": [
+    {
+      "id": "personal@1-clean",
+      "spec": {
+        "preset": "personal@1",
+        "title": "Personal ledger",
+        "operatingCurrency": "USD",
+        "historyStart": "2026-01-01",
+        "capabilities": {},
+        "accounts": [
+          {
+            "name": "Assets:Cash",
+            "openingState": "zero"
+          },
+          {
+            "name": "Assets:Bank",
+            "openingState": "zero"
+          },
+          {
+            "name": "Liabilities:CreditCard",
+            "openingState": "zero"
+          },
+          {
+            "name": "Liabilities:Loan",
+            "openingState": "zero"
+          },
+          {
+            "name": "Income:General",
+            "openingState": "zero"
+          },
+          {
+            "name": "Expenses:Food",
+            "openingState": "zero"
+          },
+          {
+            "name": "Expenses:Housing",
+            "openingState": "zero"
+          },
+          {
+            "name": "Expenses:Transport",
+            "openingState": "zero"
+          },
+          {
+            "name": "Expenses:Utilities",
+            "openingState": "zero"
+          },
+          {
+            "name": "Expenses:Health",
+            "openingState": "zero"
+          },
+          {
+            "name": "Expenses:Other",
+            "openingState": "zero"
+          },
+          {
+            "name": "Equity:OpeningBalances",
+            "openingState": "zero"
+          }
+        ]
+      },
+      "expected": {
+        "openedAccounts": [
+          "Assets:Cash",
+          "Assets:Bank",
+          "Liabilities:CreditCard",
+          "Liabilities:Loan",
+          "Income:General",
+          "Expenses:Food",
+          "Expenses:Housing",
+          "Expenses:Transport",
+          "Expenses:Utilities",
+          "Expenses:Health",
+          "Expenses:Other",
+          "Equity:OpeningBalances"
+        ],
+        "optionalAccountsNotOpened": [],
+        "transactions": 0,
+        "balanceAssertions": 0
+      }
+    },
+    {
+      "id": "personal@1-acceptance",
+      "spec": {
+        "preset": "personal@1",
+        "title": "Personal ledger",
+        "operatingCurrency": "USD",
+        "historyStart": "2026-01-01",
+        "capabilities": {
+          "ownership": "enabled"
+        },
+        "accounts": []
+      },
+      "expected": {
+        "scenario": {
+          "given": "Confirmed opening cash balance of 100 in the chosen currency",
+          "action": "Record a purchase of 12.50 from cash",
+          "expected": {
+            "Assets:Cash": "87.50",
+            "Expenses:Food": "12.50"
+          }
+        }
+      }
+    },
+    {
+      "id": "freelance@1-clean",
+      "spec": {
+        "preset": "freelance@1",
+        "title": "Freelance ledger",
+        "operatingCurrency": "USD",
+        "historyStart": "2026-01-01",
+        "capabilities": {},
+        "accounts": [
+          {
+            "name": "Assets:Bank",
+            "openingState": "zero"
+          },
+          {
+            "name": "Assets:Cash",
+            "openingState": "zero"
+          },
+          {
+            "name": "Liabilities:CreditCard",
+            "openingState": "zero"
+          },
+          {
+            "name": "Income:Services",
+            "openingState": "zero"
+          },
+          {
+            "name": "Expenses:Software",
+            "openingState": "zero"
+          },
+          {
+            "name": "Expenses:Supplies",
+            "openingState": "zero"
+          },
+          {
+            "name": "Expenses:Travel",
+            "openingState": "zero"
+          },
+          {
+            "name": "Expenses:Fees",
+            "openingState": "zero"
+          },
+          {
+            "name": "Equity:OwnerContributions",
+            "openingState": "zero"
+          },
+          {
+            "name": "Equity:OwnerDrawings",
+            "openingState": "zero"
+          }
+        ]
+      },
+      "expected": {
+        "openedAccounts": [
+          "Assets:Bank",
+          "Assets:Cash",
+          "Liabilities:CreditCard",
+          "Income:Services",
+          "Expenses:Software",
+          "Expenses:Supplies",
+          "Expenses:Travel",
+          "Expenses:Fees",
+          "Equity:OwnerContributions",
+          "Equity:OwnerDrawings"
+        ],
+        "optionalAccountsNotOpened": [
+          "Assets:AccountsReceivable"
+        ],
+        "transactions": 0,
+        "balanceAssertions": 0
+      }
+    },
+    {
+      "id": "freelance@1-acceptance",
+      "spec": {
+        "preset": "freelance@1",
+        "title": "Freelance ledger",
+        "operatingCurrency": "USD",
+        "historyStart": "2026-01-01",
+        "capabilities": {
+          "invoices": "enabled",
+          "client-projects": "enabled"
+        },
+        "accounts": []
+      },
+      "expected": {
+        "scenario": {
+          "given": "Invoice tracking enabled",
+          "action": "Invoice 1,000 then receive payment of 400",
+          "expected": {
+            "Assets:AccountsReceivable": "600",
+            "Assets:Bank": "400"
+          }
+        }
+      }
+    },
+    {
+      "id": "business@1-clean",
+      "spec": {
+        "preset": "business@1",
+        "title": "Business ledger",
+        "operatingCurrency": "USD",
+        "historyStart": "2026-01-01",
+        "capabilities": {},
+        "accounts": [
+          {
+            "name": "Assets:Bank",
+            "openingState": "zero"
+          },
+          {
+            "name": "Assets:Cash",
+            "openingState": "zero"
+          },
+          {
+            "name": "Income:Sales",
+            "openingState": "zero"
+          },
+          {
+            "name": "Income:Services",
+            "openingState": "zero"
+          },
+          {
+            "name": "Expenses:Operating",
+            "openingState": "zero"
+          },
+          {
+            "name": "Equity:Capital",
+            "openingState": "zero"
+          },
+          {
+            "name": "Equity:RetainedEarnings",
+            "openingState": "zero"
+          },
+          {
+            "name": "Equity:OpeningBalances",
+            "openingState": "zero"
+          }
+        ]
+      },
+      "expected": {
+        "openedAccounts": [
+          "Assets:Bank",
+          "Assets:Cash",
+          "Income:Sales",
+          "Income:Services",
+          "Expenses:Operating",
+          "Equity:Capital",
+          "Equity:RetainedEarnings",
+          "Equity:OpeningBalances"
+        ],
+        "optionalAccountsNotOpened": [
+          "Assets:AccountsReceivable",
+          "Liabilities:AccountsPayable",
+          "Assets:FixedAssets"
+        ],
+        "transactions": 0,
+        "balanceAssertions": 0
+      }
+    },
+    {
+      "id": "business@1-acceptance",
+      "spec": {
+        "preset": "business@1",
+        "title": "Business ledger",
+        "operatingCurrency": "USD",
+        "historyStart": "2026-01-01",
+        "capabilities": {
+          "invoices-bills": "enabled",
+          "fixed-assets": "enabled"
+        },
+        "accounts": []
+      },
+      "expected": {
+        "scenario": {
+          "given": "Capital contribution of 1,000 and a loan of 500",
+          "action": "Record both fundings",
+          "expected": {
+            "Assets:Bank": "1500",
+            "Liabilities:Loan": "500",
+            "Equity:Capital": "1000",
+            "Income:Sales": "0"
+          }
+        }
+      }
+    },
+    {
+      "id": "portfolio@1-clean",
+      "spec": {
+        "preset": "portfolio@1",
+        "title": "Portfolio ledger",
+        "operatingCurrency": "USD",
+        "historyStart": "2026-01-01",
+        "capabilities": {},
+        "accounts": [
+          {
+            "name": "Assets:BrokerCash",
+            "openingState": "zero"
+          },
+          {
+            "name": "Assets:Holdings",
+            "openingState": "zero"
+          },
+          {
+            "name": "Income:Dividends",
+            "openingState": "zero"
+          },
+          {
+            "name": "Income:Interest",
+            "openingState": "zero"
+          },
+          {
+            "name": "Expenses:Fees",
+            "openingState": "zero"
+          },
+          {
+            "name": "Equity:OpeningBalances",
+            "openingState": "zero"
+          }
+        ]
+      },
+      "expected": {
+        "openedAccounts": [
+          "Assets:BrokerCash",
+          "Assets:Holdings",
+          "Income:Dividends",
+          "Income:Interest",
+          "Expenses:Fees",
+          "Equity:OpeningBalances"
+        ],
+        "optionalAccountsNotOpened": [],
+        "transactions": 0,
+        "balanceAssertions": 0
+      }
+    },
+    {
+      "id": "portfolio@1-acceptance",
+      "spec": {
+        "preset": "portfolio@1",
+        "title": "Portfolio ledger",
+        "operatingCurrency": "USD",
+        "historyStart": "2026-01-01",
+        "capabilities": {
+          "existing-holdings": "enabled"
+        },
+        "accounts": []
+      },
+      "expected": {
+        "scenario": {
+          "given": "Broker cash funded",
+          "action": "Buy 10 units at 20 with a separately recorded fee of 2",
+          "expected": {
+            "Assets:Holdings:units": "10",
+            "cashOutflow": "202",
+            "acquisitionCost": "200",
+            "Expenses:Fees": "2"
+          }
+        }
+      }
+    },
+    {
+      "id": "rental@1-clean",
+      "spec": {
+        "preset": "rental@1",
+        "title": "Rental ledger",
+        "operatingCurrency": "USD",
+        "historyStart": "2026-01-01",
+        "capabilities": {},
+        "accounts": [
+          {
+            "name": "Assets:Bank",
+            "openingState": "zero"
+          },
+          {
+            "name": "Assets:Cash",
+            "openingState": "zero"
+          },
+          {
+            "name": "Income:Rent",
+            "openingState": "zero"
+          },
+          {
+            "name": "Expenses:Repairs",
+            "openingState": "zero"
+          },
+          {
+            "name": "Expenses:Insurance",
+            "openingState": "zero"
+          },
+          {
+            "name": "Expenses:Management",
+            "openingState": "zero"
+          },
+          {
+            "name": "Expenses:PropertyOther",
+            "openingState": "zero"
+          },
+          {
+            "name": "Liabilities:Deposits",
+            "openingState": "zero"
+          },
+          {
+            "name": "Equity:OpeningBalances",
+            "openingState": "zero"
+          }
+        ]
+      },
+      "expected": {
+        "openedAccounts": [
+          "Assets:Bank",
+          "Assets:Cash",
+          "Income:Rent",
+          "Expenses:Repairs",
+          "Expenses:Insurance",
+          "Expenses:Management",
+          "Expenses:PropertyOther",
+          "Liabilities:Deposits",
+          "Equity:OpeningBalances"
+        ],
+        "optionalAccountsNotOpened": [
+          "Liabilities:Loan"
+        ],
+        "transactions": 0,
+        "balanceAssertions": 0
+      }
+    },
+    {
+      "id": "rental@1-acceptance",
+      "spec": {
+        "preset": "rental@1",
+        "title": "Rental ledger",
+        "operatingCurrency": "USD",
+        "historyStart": "2026-01-01",
+        "capabilities": {
+          "multiple-properties": "enabled",
+          "property-loan": "enabled"
+        },
+        "accounts": []
+      },
+      "expected": {
+        "scenario": {
+          "given": "A tenant pays rent and a deposit",
+          "action": "Receive rent of 1,000 and a refundable deposit of 500",
+          "expected": {
+            "Assets:Bank": "1500",
+            "Income:Rent": "1000",
+            "Liabilities:Deposits": "500"
+          }
+        }
+      }
+    },
+    {
+      "id": "shared-expenses@1-clean",
+      "spec": {
+        "preset": "shared-expenses@1",
+        "title": "Shared expenses ledger",
+        "operatingCurrency": "USD",
+        "historyStart": "2026-01-01",
+        "capabilities": {},
+        "accounts": [
+          {
+            "name": "Assets:MemberReceivables",
+            "openingState": "zero"
+          },
+          {
+            "name": "Liabilities:MemberPayables",
+            "openingState": "zero"
+          },
+          {
+            "name": "Expenses:Shared",
+            "openingState": "zero"
+          },
+          {
+            "name": "Equity:OpeningBalances",
+            "openingState": "zero"
+          }
+        ]
+      },
+      "expected": {
+        "openedAccounts": [
+          "Assets:MemberReceivables",
+          "Liabilities:MemberPayables",
+          "Expenses:Shared",
+          "Equity:OpeningBalances"
+        ],
+        "optionalAccountsNotOpened": [
+          "Assets:SharedCash"
+        ],
+        "transactions": 0,
+        "balanceAssertions": 0
+      }
+    },
+    {
+      "id": "shared-expenses@1-acceptance",
+      "spec": {
+        "preset": "shared-expenses@1",
+        "title": "Shared expenses ledger",
+        "operatingCurrency": "USD",
+        "historyStart": "2026-01-01",
+        "capabilities": {
+          "shared-pot": "enabled",
+          "equal-split": "enabled"
+        },
+        "accounts": []
+      },
+      "expected": {
+        "scenario": {
+          "given": "Members A, B, and C split equally",
+          "action": "A pays a bill of 90 for all three, then B pays A 30",
+          "expected": {
+            "owedToA": "30",
+            "B:balance": "0",
+            "C:owes": "30",
+            "Expenses:Shared": "90"
+          }
+        }
+      }
+    },
+    {
+      "id": "community@1-clean",
+      "spec": {
+        "preset": "community@1",
+        "title": "Community ledger",
+        "operatingCurrency": "USD",
+        "historyStart": "2026-01-01",
+        "capabilities": {},
+        "accounts": [
+          {
+            "name": "Assets:Cash",
+            "openingState": "zero"
+          },
+          {
+            "name": "Assets:Bank",
+            "openingState": "zero"
+          },
+          {
+            "name": "Income:Dues",
+            "openingState": "zero"
+          },
+          {
+            "name": "Income:Contributions",
+            "openingState": "zero"
+          },
+          {
+            "name": "Income:Events",
+            "openingState": "zero"
+          },
+          {
+            "name": "Expenses:Projects",
+            "openingState": "zero"
+          },
+          {
+            "name": "Expenses:Events",
+            "openingState": "zero"
+          },
+          {
+            "name": "Expenses:Administration",
+            "openingState": "zero"
+          },
+          {
+            "name": "Equity:OpeningBalances",
+            "openingState": "zero"
+          }
+        ]
+      },
+      "expected": {
+        "openedAccounts": [
+          "Assets:Cash",
+          "Assets:Bank",
+          "Income:Dues",
+          "Income:Contributions",
+          "Income:Events",
+          "Expenses:Projects",
+          "Expenses:Events",
+          "Expenses:Administration",
+          "Equity:OpeningBalances"
+        ],
+        "optionalAccountsNotOpened": [],
+        "transactions": 0,
+        "balanceAssertions": 0
+      }
+    },
+    {
+      "id": "community@1-acceptance",
+      "spec": {
+        "preset": "community@1",
+        "title": "Community ledger",
+        "operatingCurrency": "USD",
+        "historyStart": "2026-01-01",
+        "capabilities": {
+          "project-funds": "enabled",
+          "member-tracking": "enabled"
+        },
+        "accounts": []
+      },
+      "expected": {
+        "scenario": {
+          "given": "The organization receives contributions and spends on an event",
+          "action": "Contributions of 500 and an event cost of 120",
+          "expected": {
+            "Assets:Bank": "380",
+            "Income:Contributions": "500",
+            "Expenses:Events": "120"
+          }
+        }
+      }
+    },
+    {
+      "id": "blank@1-clean",
+      "spec": {
+        "preset": "blank@1",
+        "title": "Blank ledger",
+        "operatingCurrency": "USD",
+        "historyStart": "2026-01-01",
+        "capabilities": {},
+        "accounts": []
+      },
+      "expected": {
+        "openedAccounts": [],
+        "optionalAccountsNotOpened": [],
+        "transactions": 0,
+        "balanceAssertions": 0
+      }
+    },
+    {
+      "id": "blank@1-acceptance",
+      "spec": {
+        "preset": "blank@1",
+        "title": "Blank ledger",
+        "operatingCurrency": "USD",
+        "historyStart": "2026-01-01",
+        "capabilities": {},
+        "accounts": []
+      },
+      "expected": {
+        "scenario": {
+          "given": "Initialization with no accounts",
+          "action": "Open own asset and opening-equity accounts and record a balance of 100",
+          "expected": {
+            "openedAccounts": "2",
+            "balance": "100"
+          }
+        }
+      }
+    },
+    {
+      "id": "personal@1-opening-known",
+      "spec": {
+        "preset": "personal@1",
+        "title": "Household",
+        "operatingCurrency": "EUR",
+        "historyStart": "2026-02-01",
+        "capabilities": {},
+        "accounts": [
+          {
+            "name": "Assets:Cash",
+            "kind": "cash",
+            "openingState": "known",
+            "amount": "100"
+          }
+        ]
+      },
+      "expected": {
+        "openingTransactionDate": "2026-01-31",
+        "balanceAssertionDate": "2026-02-01",
+        "balances": {
+          "Assets:Cash": "100 EUR"
+        }
+      }
+    },
+    {
+      "id": "personal@1-opening-zero",
+      "spec": {
+        "preset": "personal@1",
+        "title": "Household",
+        "operatingCurrency": "EUR",
+        "historyStart": "2026-02-01",
+        "capabilities": {},
+        "accounts": [
+          {
+            "name": "Assets:Cash",
+            "kind": "cash",
+            "openingState": "zero"
+          }
+        ]
+      },
+      "expected": {
+        "openingTransactionDate": null,
+        "balanceAssertionDate": null,
+        "verifiedZero": true
+      }
+    },
+    {
+      "id": "personal@1-opening-unknown",
+      "spec": {
+        "preset": "personal@1",
+        "title": "Household",
+        "operatingCurrency": "EUR",
+        "historyStart": "2026-02-01",
+        "capabilities": {},
+        "accounts": [
+          {
+            "name": "Assets:Cash",
+            "kind": "cash",
+            "openingState": "unknown"
+          }
+        ]
+      },
+      "expected": {
+        "openingTransactionDate": null,
+        "balanceAssertionDate": null,
+        "verifiedZero": false,
+        "metadata": {
+          "bcio_opening_balance_status": "unknown"
+        }
+      }
+    },
+    {
+      "id": "personal@1-opening-debt",
+      "spec": {
+        "preset": "personal@1",
+        "title": "Household",
+        "operatingCurrency": "USD",
+        "historyStart": "2026-02-01",
+        "capabilities": {},
+        "accounts": [
+          {
+            "name": "Liabilities:CreditCard",
+            "kind": "card",
+            "openingState": "known",
+            "amount": "-30"
+          }
+        ]
+      },
+      "expected": {
+        "openingTransactionDate": "2026-01-31",
+        "balanceAssertionDate": "2026-02-01",
+        "balances": {
+          "Liabilities:CreditCard": "-30 USD"
+        }
+      }
+    }
+  ]
+}
