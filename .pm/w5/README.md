@@ -85,7 +85,6 @@
 - [845 — Delimiter advice names the first separator, not the splitting one, and the wrong spelling (incomplete fix of w5/622)](./845.md)
 - [846 — Four gaps: doctor/treeify usage names, QIF/OFX under --csv auto, NaN-blamed decimal errors, repeated cloud list options](./846.md)
 - [847 — bea ask approval panel shows a zero-width char in an AI-written account invisibly; approving creates a lookalike account](./847.md)
-- [848 — bea ask write tool tells the model whether local paths exist, without approval, even in --print](./848.md)
 - [871 — An importer's statement balance with a wrong amount is silently padded by a used pad (follow-up to w5/796)](./871.md)
 
 The 27 findings from the MCP QA auth sweep against the hosted endpoint (023–054, less the five under [Dropped](#dropped)) were fixed in `backend-cluster/backend-v2` and closed on 2026-10-02 and 2026-10-03; each note under [`done/`](./done/) records what shipped and in which commit. None has been re-observed against the hosted endpoint yet — the fixes reach it with the next backend deploy.
