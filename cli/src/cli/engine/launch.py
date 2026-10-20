@@ -543,6 +543,11 @@ def helper_json(args: Sequence[str], *, stdin: str | None = None, writes: bool =
         if isinstance(result, dict):
             error.result = result
         error.traceback = trace
+        if completed.stderr.strip():
+            # The reroute note names the root that judged the write; dropped,
+            # a refusal never said (w5/775). Tracebacks travel in the
+            # envelope, so stderr holds only notes and plugin output.
+            output.engine_output(completed.stderr.rstrip())
         raise error
 
     if completed.stderr.strip():

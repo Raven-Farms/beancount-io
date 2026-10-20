@@ -92,7 +92,11 @@ def test_an_engine_failure_ends_its_sentence_before_the_debug_hint(monkeypatch: 
         "error": {"category": "validation", "message": "TypeError: no", "traceback": "Traceback ..."},
     }
     monkeypatch.setattr(launch, "helper_command", lambda: ([], {}))
-    monkeypatch.setattr(launch, "_run_helper", lambda *args, **kwargs: None)
+    monkeypatch.setattr(
+        launch,
+        "_run_helper",
+        lambda *args, **kwargs: subprocess.CompletedProcess(args=[], returncode=1, stdout="", stderr=""),
+    )
     monkeypatch.setattr(launch, "_parse", lambda *args, **kwargs: envelope)
 
     with pytest.raises(Exception) as caught:

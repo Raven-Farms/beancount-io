@@ -1915,6 +1915,20 @@ def including_root(file: Path) -> Path | None:
     leaf three directories down or reached through `../` was never found, and
     a case-variant path never matched on macOS (w5/347).
     """
+    return next(_scan_includers(file), None)
+
+
+def including_roots(file: Path) -> Iterator[Path]:
+    """Every nearby ledger that includes `file`, nearest directory first.
+
+    Lazily scanned: a caller that only needs to know there are two stops the
+    search at the second (w5/775).
+    """
+    return _scan_includers(file)
+
+
+def _scan_includers(file: Path) -> Iterator[Path]:
+    """Yield each nearby ledger whose include closure holds `file` (see `including_root`)."""
     target = file.resolve()
     directories: list[Path] = []
     for level, directory in enumerate([target.parent, *target.parent.parents]):
@@ -1942,7 +1956,7 @@ def including_root(file: Path) -> Path | None:
             continue
         for candidate in files:
             if opened >= _INCLUDER_CANDIDATES:
-                return None
+                return
             try:
                 info = candidate.stat()
                 # Regular files only, and not huge: a `.bean` FIFO left in a
@@ -1962,8 +1976,7 @@ def including_root(file: Path) -> Path | None:
             except (OSError, UsageError, ValueError):
                 continue
             if any(_same_file(path, target) for path in included if not _same_file(path, candidate)):
-                return candidate.resolve()
-    return None
+                yield candidate.resolve()
 
 
 def _same_file(left: Path, right: Path) -> bool:
@@ -1973,8 +1986,11 @@ def _same_file(left: Path, right: Path) -> bool:
         return False
 
 
-def defining_root(file: Path) -> Path | None:
+def defining_root(file: Path, first: Path | None = None) -> Path | None:
     """The highest includer that defines what `file` reads, or None for a root.
+
+    `first` forces the climb's first step, so each direct includer can be
+    climbed on its own when a leaf has more than one (w5/775).
 
     Each step up must define what the file below it reads, and the first
     overlay ends the climb: climbing past the nearest includer to the topmost
@@ -1988,7 +2004,12 @@ def defining_root(file: Path) -> Path | None:
     root: Path | None = None
     current = file
     seen = {file.resolve()}
-    while (above := including_root(current)) is not None and above.resolve() not in seen:
+    above = first
+    while True:
+        if above is None:
+            above = including_root(current)
+        if above is None or above.resolve() in seen:
+            break
         seen.add(above.resolve())
         try:
             around = LedgerSnapshot.capture(above).contents
@@ -1999,8 +2020,10 @@ def defining_root(file: Path) -> Path | None:
             if _step_adds_entries(around, own):
                 break
             current = above
+            above = None
             continue
         root, current = above, above
+        above = None
     return root
 
 
@@ -2122,9 +2145,25 @@ def write_through_root(file: Path, into: Path | None) -> tuple[Path, Path | None
     # what a balance or a close contradicts, what import dedupes against —
     # stayed out of the check (w5/346). Climb past pass-through intermediates
     # to the highest defining root, stopping below an overlay (w5/774).
-    root = defining_root(file)
-    if root is None:
+    tops: list[Path] = []
+    for first in including_roots(file):
+        top = defining_root(file, first=first)
+        if top is None or any(_same_file(top, known) for known in tops):
+            continue
+        tops.append(top)
+        if len(tops) > 1:
+            # Judged against whichever sorts first, a true balance was refused
+            # and a false one written; the refusal never said which root
+            # judged it. Ask instead (w5/775).
+            listed = ", ".join(str(top) for top in tops)
+            into_example = Path(os.path.relpath(file.resolve(), tops[0].parent))
+            raise UsageError(
+                f"{file.name} is included by more than one root ledger: {listed}. Say which ledger "
+                f"to check the write against: bea --file {tops[0]} <command> --into {into_example}."
+            )
+    if not tops:
         return file, into, None
+    root = tops[0]
     redirect = (
         f"{file.name} is included by {root}; the write goes to {file.name} and is checked against that whole ledger."
     )
