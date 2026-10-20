@@ -5,7 +5,6 @@
 ## Inbox
 
 - [243 — Keep narrow Documents columns readable](./blocked/243.md) — minor; dashboard QA, 2026-10-20. — **blocked:** fix shipped in `19547f970`; awaiting live 390px geometry check
-- [248 — Preserve committed file writes when folder refresh fails](./248.md) — minor; dashboard QA, 2026-10-20, Upload and Create File.
 - [249 — Compose filter changes while report reads are pending](./249.md) — minor; dashboard QA, 2026-10-20.
 - [250 — Protect standalone entry source drafts when leaving](./250.md) — minor; dashboard QA, 2026-10-20.
 - [251 — Follow the new entry identity after a source save](./251.md) — minor; dashboard QA, 2026-10-20.
