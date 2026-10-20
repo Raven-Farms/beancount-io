@@ -15,6 +15,10 @@
 | t007 | Test coverage | 45m | t005, t006 |
 | t008 | Closeout | 15m | t007 |
 
+## Blocked
+
+- **t004 onward (2026-10-20)** — t001–t003 are shipped (swaps, staking/airdrops, in-kind fees live in `beancount-trade`), and t004's Claude Code half passes (evals 4/4, routing 102/103 with the miss shown to be variance; evidence in [t004](./t004.md)). t004's acceptance requires both clients, and Codex returns its account usage-limit error until 2026-11-17, so t005–t008 wait behind it. **Unblock:** Codex usage returns (2026-11-17); rerun trade evals 11–14 and the 103-prompt routing set on Codex, close t004, then t005 (adoption) starts. **Who can clear it:** the operator (Codex usage).
+
 ## Definition of done
 
 - A swap disposes the named lot at a user-stated value with a booking-produced gain and opens the received lot at that value; no stated value, no entry.
