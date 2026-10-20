@@ -806,9 +806,7 @@ describe("LedgerForm draft resume (w3/m54/t006)", () => {
   it("resumes the step and requestId after leaving and returning", async () => {
     const user = userEvent.setup();
     const onSubmit = vi.fn().mockResolvedValue(undefined);
-    const first = render(
-      <LedgerForm onSubmit={onSubmit} onCancel={vi.fn()} />,
-    );
+    const first = render(<LedgerForm onSubmit={onSubmit} onCancel={vi.fn()} />);
     await user.click(screen.getByRole("button", { name: "Next" }));
     expect(screen.getByTestId("ledger-create-step")).toHaveTextContent(
       "Step 2 of 3",
