@@ -66,7 +66,9 @@ import {
   BadUserInputError,
   InternalServerError,
   NotFoundError,
+  ValidationError,
 } from "@/shared/errors";
+import { buildLedgerFiles } from "@/features/ledger/setup/build-ledger";
 import { operationNotAllowedFromCause } from "@/features/ledger/utils/operation-not-allowed-from-cause";
 import { filterNullish } from "@/shared/tools";
 import { processBatch } from "@/shared/batch-processor";
@@ -467,6 +469,12 @@ export class LedgerWorkflow implements ILedgerWorkflow {
       resource: userResource(identity.userId),
     });
     const userId = identity.userId;
+    if (input.setup && input.template) {
+      throw new ValidationError(
+        "setup and template are mutually exclusive",
+        "setup",
+      );
+    }
     const ledgerCreate: LedgerCreate = {
       name: input.name,
       description: input.description,
@@ -474,8 +482,9 @@ export class LedgerWorkflow implements ILedgerWorkflow {
       // private. Left unset, the repository host would create it public
       // (w1/173). Publishing takes an explicit `private: false`.
       private: input.private ?? true,
-      files:
-        input.template === LedgerTemplate.SAMPLE
+      files: input.setup
+        ? buildLedgerFiles(input.setup)
+        : input.template === LedgerTemplate.SAMPLE
           ? ledgerWithMultipleFilesTemplate
           : defaultLedgerTemplate,
     };

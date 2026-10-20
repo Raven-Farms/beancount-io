@@ -19,6 +19,8 @@ export interface CreateLedgerCommand {
   description?: string | null;
   private?: boolean | null;
   template?: LedgerTemplate | null;
+  /** Setup specification (ADR021); mutually exclusive with `template`. */
+  setup?: import("@/features/ledger/setup/build-ledger").LedgerSetup | null;
 }
 
 export interface UpdateLedgerCommand {
