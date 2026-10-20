@@ -50,6 +50,7 @@
 - [883 — Render valid account components containing non-ASCII spaces in treeify](./883.md) — minor CLI grammar follow-up to 137; reproduced 2026-10-20.
 - [884 — Check sufficient inventory before preserving a same-day batch sale's order](./884.md) — minor CLI bulk-ordering follow-up to 730 and 543; reproduced 2026-10-20.
 - [885 — Refuse non-regular ingest configs before reading them in AST preflight](./885.md) — minor CLI unattended-hang follow-up to 582 and 851; reproduced 2026-10-20.
+- [886 — Merge per-file import sign changes under the memory lock](./886.md) — major CLI opposite-sign booking race after parallel previews; reproduced 2026-10-20.
 
 The 27 findings from the MCP QA auth sweep against the hosted endpoint (023–054, less the five under [Dropped](#dropped)) were fixed in `backend-cluster/backend-v2` and closed on 2026-10-02 and 2026-10-03; each note under [`done/`](./done/) records what shipped and in which commit. None has been re-observed against the hosted endpoint yet — the fixes reach it with the next backend deploy.
 
