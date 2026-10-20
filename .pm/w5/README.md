@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [777 — beancount-migrate derives the opening from today's balance but asserts it at the export's end; post-export activity is absorbed silently](./777.md)
 - [778 — beancount-migrate endpoint assertion fails on a lagged card payment; review/residual accounts never opened](./778.md)
 - [779 — dedup.md hashes a separate payee column; migrate's QBO/Monarch references do not, so later bank imports double-book](./779.md)
 - [780 — importer-author identify() template crashes the runner on Latin-1 files; bea names no importer](./780.md)
