@@ -585,7 +585,8 @@ skills deduplicate against each other: the ledger itself is the dedup database.
   entries. New writes no longer carry the pre-release `bea_import_id` key, but
   existing entries with it still match on re-import.
 - A generated id matches by its digest under any source prefix
-  (`<source>:sha256:<16 hex>`, a lowercase source name). So a bank export
+  (`<source>:sha256:<16 hex>`, where the source name is a lowercase letter
+  followed by lowercase letters, digits, `-` or `_`, such as `lunch_money`). So a bank export
   overlapping history that `beancount-migrate` wrote as `monarch:sha256:…`
   (or `mint:`, `qbo:`, or the generic path's `ynab:`, `actual:` and the like)
   is skipped rather than written again. For each side of a merged transfer, the digest is found through

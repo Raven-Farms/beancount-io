@@ -1519,8 +1519,9 @@ def _identities(entry: Any, account: str, keys: list[str]) -> list[tuple[str, st
 # `bea import` writes `csv:`, beancount-migrate `mint:`/`monarch:`/`qbo:`, and
 # `<source>:` for any other source (`ynab:`, `actual:`). Listing four missed
 # the generic path, and every overlap row after such a migration was written
-# again (w5/601).
-_GENERATED_ID = re.compile(r"[a-z][a-z0-9-]*:sha256:([0-9a-f]{16})")
+# again (w5/601). A source name may hold `_` as well as `-` (`lunch_money:`),
+# and leaving it out wrote such a migration's overlap rows again (w5/823).
+_GENERATED_ID = re.compile(r"[a-z][a-z0-9_-]*:sha256:([0-9a-f]{16})")
 
 
 def _is_generated_identity(key: tuple[str, str, str]) -> bool:
