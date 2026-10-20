@@ -1,6 +1,6 @@
 ---
 name: beancount-trade
-description: Record a described stock, fund, or crypto trade or investment event in a local Beancount ledger through bea — a buy, a sell with its booking-produced gain, a cash or reinvested dividend, a split, a transfer between the user's own accounts, or an RSU/ESPP vest — with correct lots and cost basis, proposed first and written only after confirmation. Skip options contracts and their lifecycle (beancount-options), broker statement files (beancount-import), statement comparison (beancount-reconcile), performance questions (beancount-ask), everyday one-off entries (beancount-add), tax treatment, and ledgers hosted on Beancount.io.
+description: Record a described stock, fund, or crypto trade or investment event in a local Beancount ledger through bea — a buy, a sell with its booking-produced gain, a crypto swap, a cash or reinvested dividend, staking or airdrop receipts, a split, a transfer between the user's own accounts, or an RSU/ESPP vest — with correct lots and cost basis, proposed first and written only after confirmation. Skip options contracts and their lifecycle (beancount-options), broker statement files (beancount-import), statement comparison (beancount-reconcile), performance questions (beancount-ask), everyday one-off entries (beancount-add), tax treatment, and ledgers hosted on Beancount.io.
 metadata:
   openclaw:
     homepage: 'https://github.com/bex-co/beancount-io/tree/main/skills'
@@ -44,7 +44,7 @@ Write every approved event through the shared `transaction` recipe (`bea add tra
 
 ## Scope
 
-**Does:** described investment events — one, or a batch the user describes together (a paycheck cycle of buys) — buy, sell, a crypto-to-crypto swap, cash or reinvested dividend, split, transfer between the user's own accounts, RSU/ESPP vest — for stocks, funds, and crypto, appended to an existing file the root ledger includes. Also reports a year's realized gains read-only (`references/realized-gains.md`): every closed lot with its holding period, tied out against the booked gains.
+**Does:** described investment events — one, or a batch the user describes together (a paycheck cycle of buys) — buy, sell, a crypto-to-crypto swap, cash or reinvested dividend, staking and airdrop receipts, split, transfer between the user's own accounts, RSU/ESPP vest — for stocks, funds, and crypto, appended to an existing file the root ledger includes. Also reports a year's realized gains read-only (`references/realized-gains.md`): every closed lot with its holding period, tied out against the booked gains.
 
 **Does not:** record options contracts or their lifecycle (`beancount-options`), read broker statement files (`beancount-import`), compare against a statement (`beancount-reconcile`), answer performance questions (`beancount-ask`), record everyday entries (`beancount-add`), advise on tax treatment, or touch shorts, margin, and derivatives beyond options — refuse those by name. Never invent an account or a commodity the user did not name.
 
@@ -78,6 +78,7 @@ Reduce the request to an event list — one event, or every event in a described
 - **Split** — commodity, date, ratio (for example 3-for-1).
 - **Transfer** — source account, destination account, commodity, units, which lot.
 - **RSU/ESPP vest** — account, date, units, fair-market value per unit (or total).
+- **Staking reward / airdrop** — account, date received, commodity, units, fair value per unit (or total) as the user states it, and which existing income account it lands in.
 
 ### 3. Propose
 
@@ -97,6 +98,7 @@ Show, then ask. **Never write before an explicit yes** — the original request 
 - **Split.** Per held lot: reduce the old lot in full at its cost and date, add the post-split units at the **same total cost and same date** using total-cost form, which keeps the total exact where a per-unit price would round: `-10 VTI {260.00 USD, 2026-02-15}` / `30 VTI {{2600.00 USD, 2026-02-15}}` for 3-for-1. One such pair per lot, in one transaction.
 - **Transfer between the user's own accounts.** Reduce the lot in the source at its cost and date, add the same units at the same cost and date in the destination — no price, no gain leg: `-5 VTI {250.00 USD, 2026-01-15}` out of the source, `5 VTI {250.00 USD, 2026-01-15}` into the destination. The destination account must already exist and allow the commodity.
 - **RSU/ESPP vest.** Units at fair-market value against compensation income: `8 ACME {200.00 USD}` / `Income:Compensation` balancing (shown as −1600.00 of income). Show both sides and the total income; tax withholding and treatment are the user's — record only what they describe.
+- **Staking reward / airdrop.** The vest shape with the user's income account: units at the stated fair value — `0.01000000 ETH {3000.00 USD}` against `Income:Staking` balancing (30.00 of income). Each receipt is its own lot at its own received date; a run of small receipts the user describes together goes through the batch path like other explicit-cost events, one lot per receipt (never merged into one averaged lot). **No stated value, no entry:** ask what the receipt was worth when received — never seed a silent zero-cost lot and never look a price up from memory. Zero is booked only when the user explicitly says the receipt was worth zero (`100 XYZ {0 USD}` against a `0` income leg), and the proposal says that is what they stated.
 
 ```
 Target file: ./ledger.beancount

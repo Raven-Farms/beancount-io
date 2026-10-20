@@ -1,13 +1,13 @@
 # w2 · m52 — Record crypto-native events: swaps, staking, and network fees
 
-**Worker:** worker2 **Goal:** a crypto holder records a coin-to-coin swap, staking or airdrop income, and a wallet transfer that pays its network fee in-kind — each with lots and booking-produced gains intact. **Status:** todo (t001 done)
+**Worker:** worker2 **Goal:** a crypto holder records a coin-to-coin swap, staking or airdrop income, and a wallet transfer that pays its network fee in-kind — each with lots and booking-produced gains intact. **Status:** todo (t001–t002 done)
 
 ## Tasks (in order)
 
 | id   | title | est | depends_on |
 | ---- | ----- | --- | ---------- |
 | [t001](./done/t001.md) | Record a crypto-to-crypto swap as a priced sell and buy pair — **DONE** | 45m | w2/m45/t002 |
-| t002 | Record staking rewards and airdrops as income at fair value | 45m | t001 |
+| [t002](./done/t002.md) | Record staking rewards and airdrops as income at fair value — **DONE** | 45m | t001 |
 | t003 | Carry an in-kind network fee on own-wallet transfers | 45m | t001 |
 | t004 | Write evals, routing entries, and run them on both clients | 60m | t001, t002, t003 |
 | t005 | Adoption surface | 30m | t004 |
