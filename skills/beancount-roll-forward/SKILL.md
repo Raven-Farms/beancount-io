@@ -62,6 +62,6 @@ Run opening, movements, and the independently computed closing from the referenc
 
 - **The tie-out table**: opening, each signed movement named by counterparty/payee/narration, the movement total, and closing — each figure from a query, the query shown underneath.
 - **`Uncategorized` stays visible**: a movement that cannot be named is listed as its own bucket with date and amount, never dropped or netted.
-- **Cost basis is the default**; market value appears only as a separate labelled figure when prices cover the period end, and a missing price is named as a gap.
+- **Cost basis is the default**; keep market value separate and state the valuation date and price. If prices do not cover the period end, name that gap; when the user also asks what the holdings are worth, report an available later valuation with its actual date, without calling it period-end value (see the reference).
 - **Signs keep their meaning**: a liability's negative closing is stated as an amount owed.
 - **A gap is the report**: when independent closing ≠ opening + movements, say so with both figures and stop. Never invent a reconciling line; a missing entry is the user's or beancount-add's to record, not this skill's to fabricate.

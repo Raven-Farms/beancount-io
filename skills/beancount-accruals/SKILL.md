@@ -54,7 +54,7 @@ Local ledger files only (hosted ledgers: beancount-init's `references/bea-cli.md
 
 ### 2. Compute and check identity
 
-Run the contract's queries (`accrual-booked`, `accrual-postings`) for the as-of date. Before drafting, search the ledger for this run's identity (`accrual:<slug>:<period>`, carried as the entry's `import-id` on posting): if a posting with that identity already exists, the period is already drafted — show the existing entry and stop. A rerun must reproduce the identical draft, never a second posting. Externally sourced entries in scope are recognised by the same `import-id` convention and stay inside the booked evidence, never silently excluded.
+Resolve the accounting period separately from the as-of cutoff and day-count: monthly identities use `YYYY-MM` (as of February 1 closes January). Run the contract's queries (`accrual-booked`, `accrual-postings`) for recognized expense in that schedule's scope, not its prepaid or liability balance. Before drafting, search the ledger for this run's identity (`accrual:<slug>:<period>`, carried as the entry's `import-id` on posting): if a posting with that identity already exists, the period is already drafted — show the existing entry and stop. A rerun must reproduce the identical draft, never a second posting. Externally sourced recognition stays inside the booked evidence, never silently excluded.
 
 ### 3. Present the draft
 

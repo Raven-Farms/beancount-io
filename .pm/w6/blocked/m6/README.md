@@ -1,6 +1,6 @@
 # w6 · m6 — Publish the ledger skills to ClawHub for OpenClaw and Hermes Agent
 
-**Worker:** worker1 **Goal:** An OpenClaw or Hermes Agent user installs any `beancount-*` skill by name from ClawHub, and it works on its own without a Git checkout or this repository's link installer. **Status:** blocked (t001–t012 done; eleven 0.3.3 updates await registry promotion; new roll-forward release also depends on w3/m55 client evals/adoption)
+**Worker:** worker1 **Goal:** An OpenClaw or Hermes Agent user installs any `beancount-*` skill by name from ClawHub, and it works on its own without a Git checkout or this repository's link installer. **Status:** blocked (t001–t012 done; eleven 0.3.3 updates await registry promotion; current thirteen-skill release needs Claude reruns and w3/m55–m57 adoption gates)
 
 **Research date:** 2026-10-16. Sources: ClawHub's quickstart, how-it-works, and skill-format pages at `docs.openclaw.ai/clawhub/`; Hermes Agent's skills page at `hermes-agent.nousresearch.com/docs/user-guide/features/skills`. Re-check the CLI flags against `clawhub --help` and `hermes skills --help` before relying on them.
 
@@ -20,7 +20,7 @@
 | [t010](done/t010.md) | Adoption surface — **DONE** | 30m | t009 |
 | [t011](done/t011.md) | Simplify — **DONE** | 30m | t010 |
 | [t012](done/t012.md) | Test coverage — **DONE** | 45m | t010, t011 |
-| [t013](t013.md) | Closeout after the listings are live — **BLOCKED** (eleven 0.3.3 bundle updates await public promotion) | 15m | t008, t012, w3/m55/t002, w3/m55/t003 |
+| [t013](t013.md) | Closeout after the listings are live — **BLOCKED** (eleven 0.3.3 bundle updates await public promotion) | 15m | t008, t012, w3/m55/t002, w3/m55/t003, w3/m56/t002, w3/m56/t003, w3/m57/t003, w3/m57/t004 |
 
 ## Decisions — 2026-10-19
 
@@ -163,3 +163,7 @@ All five 1.0.1 updates are public by 18:23 UTC, and all eleven latest downloads 
 ## Concurrent twelfth skill — 2026-10-20
 
 Main adds `beancount-roll-forward` through active w3/m55 after the eleven-skill 0.3.3 dispatch. Its two-client evals/routing and adoption checks (t002/t003) are prerequisites for first registry publication; t013 records those dependencies. The catalog inventory/version repair advances the source plugin to 0.3.4 and passes structural, bundle and recipe checks. **Unblock:** the owning w3 worker completes those checks, the repository worker publishes and verifies roll-forward, and ClawHub promotes the eleven existing pending updates. No user input is needed.
+
+## Resume evidence — 2026-10-20
+
+The source inventory is now thirteen, including accruals and the later ask/close variance recipe. Suite 0.3.5 fixes catalog/version drift and the release checks' discovered valuation/recognition/identity gaps. Sixteen focused native Codex cases pass on `gpt-6.1-sol` with published bea 0.3.1; the former model's usage-limit failure is no longer a general Codex blocker. Claude Code now reports a weekly limit, so the changed instructions' Claude reruns and current routing/discovery remain pending. All thirteen final bundles dry-run successfully; Hermes allows twelve and retains init's documented policy conflict. Current owner reports show clean static analysis but absent remaining scanners for the two inspected pending versions, consistent with queued upstream prepublication work. See [t013](t013.md) and the [rehearsal](../../../../docs/skills/clawhub-rehearsal.md#thirteen-skill-release-preparation--2026-10-20) for exact evidence, limits and unblock conditions. No duplicate publication or new login was attempted.

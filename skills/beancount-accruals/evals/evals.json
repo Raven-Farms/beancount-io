@@ -61,6 +61,18 @@
         "The skill asks for the schedule fields (basis, interval, support) instead",
         "The ledger is not modified"
       ]
+    },
+    {
+      "id": 6,
+      "name": "settled-liability-not-recognized-again",
+      "prompt": "Prepare the rent accrual as of 2025-03-01. Schedule accrual:rent — lease support, 1200.00 USD covering 2025-01-01 to 2026-01-01, monthly day-count, cumulative target, Expenses:Rent against Liabilities:AccruedRent. Ledger is ./ledger.beancount. Draft only; do not post.",
+      "expected_output": "Target 200.00 USD and recognized expense already booked 200.00 USD. Paying the accrued liability does not reverse expense recognition, so required adjustment is zero and no additional expense draft is produced.",
+      "files": ["evals/files/eval6_ledger.beancount"],
+      "expectations": [
+        "Recognized-to-date target and already-booked expense are both 200.00 USD",
+        "The liability settlement is support, never treated as an expense reversal or a reason to accrue 200 again",
+        "Required adjustment is zero, no additional posting is proposed, and the ledger is unchanged"
+      ]
     }
   ]
 }

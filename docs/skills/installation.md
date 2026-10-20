@@ -1,6 +1,6 @@
 # Install the Beancount skills
 
-Install the twelve `beancount-*` ledger skills for Claude Code, Codex, or both, from any directory. You keep one Git checkout of the skills and link it into each agent's skill directory. Updating the checkout updates every agent, and the helper script never touches skills it did not install. [OpenClaw and Hermes Agent](#openclaw-and-hermes-agent) use standalone ClawHub bundles, with the availability and host limits below.
+Install the thirteen `beancount-*` ledger skills for Claude Code, Codex, or both, from any directory. You keep one Git checkout of the skills and link it into each agent's skill directory. Updating the checkout updates every agent, and the helper script never touches skills it did not install. [OpenClaw and Hermes Agent](#openclaw-and-hermes-agent) use standalone ClawHub bundles, with the availability and host limits below.
 
 Rehearsed on macOS with Claude Code and Codex (see [tested with](first-query.md#tested-with)). Linux uses the same commands but has not been rehearsed. Windows is not covered.
 
@@ -50,7 +50,7 @@ Check the files first. `verify` only reads, and it exits nonzero with one line p
 python3 "$SKILLS_SRC/scripts/skills/beancount-skills.py" verify ~/.claude/skills ~/.agents/skills
 ```
 
-Then ask each agent from your ledger directory. Both should name the same ten skills listed in the [skills catalog](../../skills/README.md).
+Then ask each agent from your ledger directory. Both should name the same thirteen skills listed in the [skills catalog](../../skills/README.md).
 
 ```sh
 claude -p "List the names of the skills available to you that start with beancount-, one per line, nothing else."
@@ -71,7 +71,7 @@ Next: get a first answer from a sample ledger with the [first-query walkthrough]
 
 ## Install from a standard channel instead
 
-The checkout-and-link install above is one way in. The standard skill channels also carry the suite, because it lives at the conventional `skills/<name>/SKILL.md` layout. A channel install **copies** the twelve skills into the agent's directory instead of linking a checkout, so there is no `verify` script afterwards: confirm with the client skill listing in step 3 and the [first-query walkthrough](first-query.md). Install the whole suite every time — the skills hand off to siblings and share one command contract. Each channel below was checked against the tool's current help (2026-10-19); the exact forms matter, for the reasons given.
+The checkout-and-link install above is one way in. The standard skill channels also carry the suite, because it lives at the conventional `skills/<name>/SKILL.md` layout. A channel install **copies** the thirteen skills into the agent's directory instead of linking a checkout, so there is no `verify` script afterwards: confirm with the client skill listing in step 3 and the [first-query walkthrough](first-query.md). Install the whole suite every time — the skills hand off to siblings and share one command contract. Each channel below was checked against the tool's current help (2026-10-19); the exact forms matter, for the reasons given.
 
 ### `npx skills` (skills.sh)
 
@@ -81,7 +81,7 @@ npx skills add bex-co/beancount-io -g -a claude-code codex -y
 npx skills update -g -y   # later updates
 ```
 
-Do **not** add `--skill '*'` or `--all`: in the current release (1.5.18, checked 2026-10-19) an explicit skill selection also installs this repository's internal development skills (29 skills instead of 10, recounted 2026-10-19 after `beancount-trade` joined the suite). The no-flag form above installs exactly the ten `beancount-*` skills. To remove: `npx skills remove -g` and select the ten `beancount-*` names (or pass them as arguments).
+Do **not** add `--skill '*'` or `--all`: explicit all-skill selection also included this repository's internal development skills in the 1.5.18 rehearsal (2026-10-19). The no-flag form above selects the customer `beancount-*` suite. To remove: `npx skills remove -g` and select the installed `beancount-*` names (or pass them as arguments).
 
 ### `gh skill`
 
@@ -90,7 +90,7 @@ gh skill install bex-co/beancount-io --all --pin main --agent claude-code --scop
 gh skill install bex-co/beancount-io --all --pin main --agent codex --scope user
 ```
 
-`--pin main` is required today, not decoration: without it, `gh` resolves this repository's *latest release* (a mobile-app tag from before the flat `skills/` layout) and reports "no standard skills found". Pinned skills are skipped by `gh skill update`, so update by re-running the install commands with `--force` added. There is no `gh skill remove`: run `gh skill list` to see the install directories, then delete the ten `beancount-*` folders from them.
+`--pin main` is required today, not decoration: without it, `gh` resolves this repository's *latest release* (a mobile-app tag from before the flat `skills/` layout) and reports "no standard skills found". Pinned skills are skipped by `gh skill update`, so update by re-running the install commands with `--force` added. There is no `gh skill remove`: run `gh skill list` to see the install directories, then delete the installed `beancount-*` folders from them.
 
 ### Plugin (both clients)
 
@@ -113,7 +113,7 @@ codex plugin add beancount-io@beancount-io
 codex plugin remove beancount-io@beancount-io     # remove
 ```
 
-Both manifests carry one shared suite version; a client delivers a new copy only when that version changes, and every shipped skill change bumps it. Confirm with each client's skill listing (step 3): the twelve skills appear under the `beancount-io:` namespace.
+Both manifests carry one shared suite version; a client delivers a new copy only when that version changes, and every shipped skill change bumps it. Confirm with each client's skill listing (step 3): the thirteen skills appear under the `beancount-io:` namespace.
 
 ### Hermes and raw GitHub folders
 
@@ -162,7 +162,7 @@ These commands were run on macOS with OpenClaw 2026.10.5 and Hermes v0.22.2. Bot
 
 The 0.3.2 wording fixes are public as registry 1.0.1 for add, import, init, migrate and reconcile; the other six listings remain at 1.0.0. All eleven downloads and OpenClaw installations match that submitted release. Later main changes were submitted as suite 0.3.3: five registry 1.0.2 updates and six 1.0.1 updates. All eleven new uploads await public promotion; the previous public versions remain available. See the [synchronization record](clawhub-rehearsal.md#suite-033-synchronization--2026-10-20) for release progress and host limits.
 
-The Git/plugin suite now also contains `beancount-roll-forward`, bringing its inventory to twelve. Its first registry release waits for the client evals and adoption checks in w3/m55; the registry evidence below covers the original eleven skills.
+The Git/plugin suite now also contains `beancount-roll-forward` and `beancount-accruals`, bringing its inventory to thirteen. Their first registry releases, plus later ask/close changes, wait for client evals and adoption checks in w3/m55–m57; the registry evidence below covers the original eleven skills. Native Codex 0.163.0 works with `gpt-6.1-sol`; the earlier `gpt-6-luna` usage-limit error does not establish a block for every model. Current release validation includes fixes for dated valuation and accrual recognition/identity. Claude Code currently reports its weekly usage limit, so its rerun of those fixes and the new routing checks remain pending. The accepted registry uploads remain pending and must not be repeated to clear that wait.
 
 Hermes's default search now finds all eleven published suite listings:
 
