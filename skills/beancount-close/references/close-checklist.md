@@ -40,7 +40,7 @@ SELECT coalesce(payee, narration) as merchant, year(date) as year, month(date) a
 WHERE account ~ '^Expenses:' GROUP BY merchant, year, month ORDER BY merchant, year, month
 ```
 
-Read the month-grid per merchant: present in all prior months of the window, absent in the close month, amounts steady (±20%) → **recurring gap** finding. Variable-amount recurrers (groceries, gas) are *not* gaps — mention only subscriptions-like patterns. For each gap ask: charge missing from import? cancelled? moved cards? The answer routes to `beancount-import` (missing data) or nothing (genuinely cancelled — note it).
+Read the month-grid per merchant: present in all prior months of the window, absent in the close month, amounts steady (±20%) → **recurring gap** finding. Variable-amount recurrers (groceries, gas) are *not* gaps — mention only subscriptions-like patterns. For each gap ask: charge missing from import? cancelled? moved cards? The answer routes to `beancount-import` (missing data), to a prefilled `beancount-add` proposal the close composes in-session when the user confirms the charge happened and separately approves that exact entry (the skill's Recurring completeness step), or to nothing (genuinely cancelled — note it).
 
 ## Flag sweep
 

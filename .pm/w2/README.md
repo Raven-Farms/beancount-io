@@ -71,7 +71,6 @@
 - [086 — Check that non-English ledger requests route to the right skill](./blocked/086.md) — **blocked:** 25 prompts added and routed 25/25 on one client; the Codex rerun waits for Codex usage
 - [087 — Decide whether to publish the skill suite from a slim public mirror repository](./blocked/087.md) — **blocked:** owner decision (repository, credential, portal identities)
 - [088 — Glama shows the hosted MCP connector at 0.0% uptime over 15 days](./blocked/088.md) — **blocked:** endpoint verified correct (ADR 007 401 + discovery); operator adds a QA test profile on Glama
-- [096 — Let beancount-close propose the recurring entry it already detects as missing](./096.md)
 
 ## Cross-queue promotions and follow-ups
 

@@ -6,7 +6,7 @@
       "id": 1,
       "name": "full-close-four-findings",
       "prompt": "Close June 2026 for me. Ledger ./ledger.beancount; my checking statement is ./statement.csv. I don't have the Amex statement handy.",
-      "expected_output": "The close runs all phases: checking reconciles via the beancount-reconcile flow (finds the missing 2026-06-25 CITY PARKING -12.00, appends it after confirm, assertion 2026-07-01 balance 7874.60 passes), Amex is reported unverified, the NETFLIX recurring gap (Apr+May present, June absent) is surfaced as a question, the ! flag on 2026-06-21 is listed. The close report shows Income 3000.00 / Expenses 203.60, bea check PASS, and a confirm-gated commit with subject 'close: 2026-06 — 1 tied, 1 not tied' and the report in the body.",
+      "expected_output": "The close runs all phases: checking reconciles via the beancount-reconcile flow (finds the missing 2026-06-25 CITY PARKING -12.00, appends it after confirm, assertion 2026-07-01 balance 7874.60 passes), Amex is reported unverified, the NETFLIX recurring gap (Apr+May present, June absent) is surfaced as a question, the ! flag on 2026-06-21 is listed. The close report shows Income 3000.00 / Expenses 203.60, bea check PASS, and a confirm-gated commit with subject 'close: 2026-06 \u2014 1 tied, 1 not tied' and the report in the body.",
       "files": [
         "evals/files/eval1_ledger.beancount",
         "evals/files/eval1_statement.csv"
@@ -14,7 +14,7 @@
       "expectations": [
         "The missing CITY PARKING -12.00 row is found via reconciliation and appended only after confirmation",
         "A balance assertion for Assets:Bank:Checking at 7874.60 USD dated 2026-07-01 (day-after rule) passes bea check",
-        "Liabilities:CreditCard:Amex is reported as unverified — not silently passed, not blocked on",
+        "Liabilities:CreditCard:Amex is reported as unverified \u2014 not silently passed, not blocked on",
         "The NETFLIX gap (present Apr and May at steady amount, absent June) is surfaced as a finding/question, and NO NETFLIX entry is fabricated",
         "The 2026-06-21 ! WHOLE FOODS entry is listed in the flag sweep",
         "The report states Income 3000.00 and Expenses 203.60 for June (post-reconcile), figures from shown queries",
@@ -45,23 +45,23 @@
       "id": 3,
       "name": "recurring-gap-not-fabricated",
       "prompt": "Close June 2026: ./ledger.beancount, checking statement ./statement.csv. By the way, I did NOT cancel Netflix.",
-      "expected_output": "The NETFLIX gap is surfaced; since the user says it wasn't cancelled, the skill concludes the June charge is missing from the ledger's data and routes the fix to importing the card's June export (beancount-import) or manual entry by the user — it does NOT invent a NETFLIX transaction itself.",
+      "expected_output": "The NETFLIX gap is surfaced; since the user says it wasn't cancelled, the skill concludes the June charge is missing from the ledger's data and offers the routes \u2014 import the card's June export (beancount-import), or record the single entry now from a prefilled proposal copied from the May occurrence. The user has approved no proposal, so NO NETFLIX transaction is written by this skill in this run, and the gap stays an open item in the close report.",
       "files": [
         "evals/files/eval1_ledger.beancount",
         "evals/files/eval1_statement.csv"
       ],
       "expectations": [
         "The NETFLIX Apr/May-present-June-absent pattern is detected and raised",
-        "Given 'not cancelled', the skill identifies the charge as missing data and names the import/manual route",
-        "No NETFLIX transaction is written by this skill",
+        "Given 'not cancelled', the skill identifies the charge as missing data and names the import route and/or offers the prefilled record-it-now proposal",
+        "No NETFLIX transaction is written without an explicit yes to that exact proposal",
         "The gap appears in the final close report as an open item"
       ]
     },
     {
       "id": 4,
       "name": "flag-sweep-carried",
-      "prompt": "Close June 2026 (./ledger.beancount, statement ./statement.csv). Leave the flagged Whole Foods entry as is for now — I'll check the receipt later.",
-      "expected_output": "The ! entry is listed in the sweep and, per the user's choice, carried — counted in the report ('Flags carried: 1') rather than resolved or dropped. The close completes.",
+      "prompt": "Close June 2026 (./ledger.beancount, statement ./statement.csv). Leave the flagged Whole Foods entry as is for now \u2014 I'll check the receipt later.",
+      "expected_output": "The ! entry is listed in the sweep and, per the user's choice, carried \u2014 counted in the report ('Flags carried: 1') rather than resolved or dropped. The close completes.",
       "files": [
         "evals/files/eval1_ledger.beancount",
         "evals/files/eval1_statement.csv"
@@ -89,7 +89,7 @@
     {
       "id": 6,
       "name": "decline-leaves-tree-clean",
-      "prompt": "Close June 2026 (./ledger.beancount, statement ./statement.csv). Go through everything but when you get to the commit, don't commit — I want to review first.",
+      "prompt": "Close June 2026 (./ledger.beancount, statement ./statement.csv). Go through everything but when you get to the commit, don't commit \u2014 I want to review first.",
       "expected_output": "All phases run, the report is produced, and per the user's standing instruction no commit is made. The working tree retains the reconciliation appends (which the user confirmed during the reconcile phase) as uncommitted changes; git log shows no new commit; the report remains available in the conversation.",
       "files": [
         "evals/files/eval1_ledger.beancount",
@@ -122,7 +122,7 @@
       "id": 8,
       "name": "three-accounts-two-statements",
       "prompt": "Close June 2026 for ./ledger.beancount. Statements: ./statement.csv is Checking (ends 950.00 USD on 2026-06-30) and ./savings.csv is Savings (ends 600.00 USD on 2026-06-30).",
-      "expected_output": "Three accounts are active in June (Checking, Savings, Amex). Checking and Savings reconcile tied from their statements; Amex — never mentioned by the user — is still named unverified with its June activity. The headline counts tied only (2 tied, 1 not tied) and never calls the close verified.",
+      "expected_output": "Three accounts are active in June (Checking, Savings, Amex). Checking and Savings reconcile tied from their statements; Amex \u2014 never mentioned by the user \u2014 is still named unverified with its June activity. The headline counts tied only (2 tied, 1 not tied) and never calls the close verified.",
       "files": [
         "evals/files/eval8_ledger.beancount",
         "evals/files/eval8_statement.csv",
@@ -139,15 +139,46 @@
       "id": 9,
       "name": "partly-covered-statement",
       "prompt": "Close June 2026 for ./ledger.beancount. The checking statement is ./statement.csv; it runs 2026-06-01 to 2026-06-20 and ends at 950.00 USD.",
-      "expected_output": "The statement ties over June 1–20 (the -50.00 row), but the close period runs to June 30 and the ledger has a -20.00 posting on 2026-06-25 outside the statement's span. Checking is reported as partly covered — not tied — and the headline counts 0 tied.",
+      "expected_output": "The statement ties over June 1\u201320 (the -50.00 row), but the close period runs to June 30 and the ledger has a -20.00 posting on 2026-06-25 outside the statement's span. Checking is reported as partly covered \u2014 not tied \u2014 and the headline counts 0 tied.",
       "files": [
         "evals/files/eval9_ledger.beancount",
         "evals/files/eval9_statement.csv"
       ],
       "expectations": [
-        "Assets:Bank:Checking is reported as partly covered (statement spans 2026-06-01…06-20 of the June close period), not tied",
+        "Assets:Bank:Checking is reported as partly covered (statement spans 2026-06-01\u202606-20 of the June close period), not tied",
         "The headline counts 0 tied and does not call the close verified",
         "The June 25 posting outside the statement span is visible in the account's evidence or findings"
+      ]
+    },
+    {
+      "id": 10,
+      "name": "recurring-gap-declined-writes-nothing",
+      "prompt": "Close June 2026: ./ledger.beancount, checking statement ./statement.csv. Netflix definitely charged in June too, but do NOT record anything for the gap \u2014 I'll import the card export later.",
+      "expected_output": "The NETFLIX gap is reported as an open finding routed to beancount-import; honoring the user's instruction, no prefilled entry is written (any add proposal is at most mentioned and dropped), the period figures exclude a June Netflix charge, and the close completes/reports with the gap open. No ledger entry for Netflix is created by the close.",
+      "files": [
+        "evals/files/eval1_ledger.beancount",
+        "evals/files/eval1_statement.csv"
+      ],
+      "expectations": [
+        "No NETFLIX (or other recurring-gap) transaction is written",
+        "The gap is in the close report as open, routed to import",
+        "The user's do-not-record instruction is honored without re-asking to write"
+      ]
+    },
+    {
+      "id": 11,
+      "name": "recurring-gap-recorded-on-approval",
+      "prompt": "Close June 2026: ./ledger.beancount, checking statement ./statement.csv. By the way, Netflix did charge $17.99 in June (same card as May) \u2014 if it's missing, propose recording it and I'll approve.",
+      "expected_output": "The NETFLIX gap is raised, and because the user confirmed the charge, a prefilled beancount-add proposal follows, copied from the May occurrence (same payee/accounts, 17.99, June date on May's day-of-month, shown for correction). Nothing is written until the user approves that exact proposal; after the yes the entry is written, the check re-run, the period figures refreshed, and the close report marks the gap recorded at the user's confirmation rather than open. The close's own commit still needs its own separate approval.",
+      "files": [
+        "evals/files/eval1_ledger.beancount",
+        "evals/files/eval1_statement.csv"
+      ],
+      "expectations": [
+        "A full prefilled proposal (payee, accounts, 17.99 amount, June date from the May pattern) is shown before any write",
+        "The entry is written only after the explicit yes to that proposal, and the ledger check passes after it",
+        "The close report marks the gap recorded at the user's confirmation (not silently healed, not left open)",
+        "Writing the entry does not by itself stage/commit the close"
       ]
     }
   ]

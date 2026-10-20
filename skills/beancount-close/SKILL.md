@@ -78,7 +78,11 @@ Every tied account now has a period-end `balance` assertion (reconcile appends t
 
 ### 4. Recurring completeness
 
-Find expected-but-missing entries: merchants (payee, or narration when the payee is empty) present in **each of the prior 2–3 months** with a steady amount but absent this period (query per `close-checklist.md`). Each gap is a **finding** for the user ("NETFLIX appeared Apr+May, absent in June — charge missing, subscription cancelled, or card changed?"). A real missing entry is recorded through `beancount-import` or `beancount-add`, never created by this skill.
+Find expected-but-missing entries: merchants (payee, or narration when the payee is empty) present in **each of the prior 2–3 months** with a steady amount but absent this period (query per `close-checklist.md`). Each gap is a **finding** for the user ("NETFLIX appeared Apr+May, absent in June — charge missing, subscription cancelled, or card changed?"). This skill never creates an entry on the strength of the pattern alone. When the user confirms the charge really happened, offer the routes: importing the missing export (`beancount-import`), or recording the single entry now — and only on their choice of the latter, compose `beancount-add`'s flow inside this session:
+
+- Read the most recent prior occurrence and prefill beancount-add's full proposal from it: same payee/narration, same source and counter accounts, the steady (most recent) amount, and the date — the occurrence's day-of-month in the close period, clamped to the month's length — each field shown so the user can correct it. Run add's checks too (duplicate ±3 days; a hit is shown and the user decides).
+- The write needs **its own explicit yes** to that proposal, separate from the close-commit yes. On yes, write through the shared `transaction` recipe and re-run the root check; then refresh the report's figures (the entry lands in the period) and mark the gap `recorded at your confirmation` in the report instead of open. On no — or when the user would rather import — nothing is written and the gap stays an open finding.
+- This composition needs `beancount-add` installed beside this skill; without it, say so (installation guide pointer, as for beancount-reconcile) and keep the gap a finding that names the import/manual route.
 
 ### 5. Flags
 
