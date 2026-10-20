@@ -1,6 +1,6 @@
 # w3 · m58 — Reconciliation exception register in `beancount-reconcile`, summarized by `beancount-close`
 
-**Worker:** worker3 **Goal:** reconciling items that stay open across periods keep a stable identity, age, and disposition, and close reports them as open — never as resolved. **Status:** todo
+**Worker:** worker3 **Goal:** reconciling items that stay open across periods keep a stable identity, age, and disposition, and close reports them as open — never as resolved. **Status:** blocked (t001 gated on w2/m48/t008)
 
 ## Tasks (in order)
 
@@ -26,3 +26,7 @@
 - **Goal linkage:** A1 — Agent-native accounting.
 - **Expected outcome:** users reconciling monthly stop re-discovering the same open items every period; agents carry them forward with their history intact. Signals: repeat reconcile invocations per account, eval pass rate on both clients.
 - **Why now:** it builds on w2/m48's coverage preflight (t001–t003 done); t001 is gated on m48's closeout so the two reconcile changes do not collide. Adoption surface is included (t003) because two customer skills change behavior.
+
+## Blocked
+
+- **t001** — gated on w2/m48/t008; w2/m48 is blocked on Codex quota. Unblock condition is written in t001.
