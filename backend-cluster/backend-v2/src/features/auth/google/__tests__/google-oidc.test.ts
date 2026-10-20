@@ -137,16 +137,31 @@ describe("authorizationUrl", () => {
   });
 });
 
+describe("PKCE", () => {
+  it("sends base64url(SHA-256(verifier)) as the S256 challenge", () => {
+    // Vector computed outside Node: python3 -c "import hashlib,base64;
+    // print(base64.urlsafe_b64encode(hashlib.sha256(b'v').digest()).rstrip(b'=').decode())"
+    const url = new URL(
+      authorizationUrl(config(), "https://books.example.com/cb", {
+        state: "s",
+        nonce: "n",
+        codeVerifier: "v",
+      }),
+    );
+    expect(url.searchParams.get("code_challenge")).toBe(
+      "TJRIXgwhrmxBzh3-e2v6zupato5AokdvUCCOUm9QYIA",
+    );
+  });
+});
+
 describe("completeGoogleSignIn", () => {
   it("exchanges the code with the verifier and secret, then verifies the token", async () => {
     const t = await googleTestKeys();
-    const fetch = jest
-      .fn()
-      .mockResolvedValue(
-        new Response(JSON.stringify({ id_token: await t.sign({}) }), {
-          status: 200,
-        }),
-      );
+    const fetch = jest.fn().mockResolvedValue(
+      new Response(JSON.stringify({ id_token: await t.sign({}) }), {
+        status: 200,
+      }),
+    );
     const identity = await completeGoogleSignIn(
       config(["example.com"]),
       "https://books.example.com/cb",

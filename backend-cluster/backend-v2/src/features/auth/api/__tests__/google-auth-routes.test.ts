@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import http from "node:http";
 import type { AddressInfo } from "node:net";
 import Koa from "koa";
@@ -44,20 +45,35 @@ async function setup(
   const store = memoryStore();
   const signInWithGoogle =
     opts.signIn ??
-    jest
-      .fn()
-      .mockResolvedValue({
-        token: "session-token",
-        expireAt: new Date(Date.now() + 3_600_000),
-      });
+    jest.fn().mockResolvedValue({
+      token: "session-token",
+      expireAt: new Date(Date.now() + 3_600_000),
+    });
   let lastNonce = "";
-  const fetch = jest.fn(async () =>
-    opts.tokenResponse
-      ? opts.tokenResponse(lastNonce)
-      : new Response(
-          JSON.stringify({ id_token: await t.sign({ nonce: lastNonce }) }),
-          { status: 200 },
-        ),
+  // Challenges sent to Google at /start; like Google, the fake token endpoint
+  // refuses a code exchange whose verifier does not hash to one of them.
+  const challenges = new Set<string>();
+  const fetch = jest.fn(
+    async (_url: string, init: { body: URLSearchParams }) => {
+      const verifier =
+        new URLSearchParams(init.body).get("code_verifier") ?? "";
+      const challenge = createHash("sha256")
+        .update(verifier)
+        .digest("base64url");
+      if (!challenges.has(challenge)) {
+        return new Response(JSON.stringify({ error: "invalid_grant" }), {
+          status: 400,
+        });
+      }
+      return opts.tokenResponse
+        ? opts.tokenResponse(lastNonce)
+        : new Response(
+            JSON.stringify({ id_token: await t.sign({ nonce: lastNonce }) }),
+            {
+              status: 200,
+            },
+          );
+    },
   );
   const router = new Router();
   setGoogleAuthRoutes(router, {
@@ -96,7 +112,7 @@ async function setup(
           redirect: "manual",
           headers: cookie ? { cookie } : {},
         });
-  return { server, base, get, store, signInWithGoogle, fetch };
+  return { server, base, get, store, signInWithGoogle, fetch, challenges };
 }
 
 const location = (res: Response) =>
@@ -113,6 +129,7 @@ async function start(
     `/api-gateway/auth/google/start?next=${encodeURIComponent(next)}`,
   );
   const state = location(res).searchParams.get("state") ?? "";
+  s.challenges.add(location(res).searchParams.get("code_challenge") ?? "");
   return { res, state, cookie: `bcio_google_state=${stateCookieOf(res)}` };
 }
 
@@ -187,6 +204,18 @@ describe("Google sign-in routes", () => {
       expect.any(String),
     );
     expect(s.store.records.size).toBe(0);
+  });
+
+  it("fails when the verifier does not match the challenge sent to Google", async () => {
+    s = await setup();
+    const { state, cookie } = await start(s);
+    s.challenges.clear(); // Google would only know a different challenge
+    const res = await s.get(
+      `/api-gateway/auth/google/callback?state=${state}&code=c`,
+      cookie,
+    );
+    expect(reasonOf(res)).toBe("google_failed");
+    expect(res.headers.get("set-cookie") ?? "").not.toMatch(/authSess/);
   });
 
   it("refuses a callback without the state cookie and spends nothing", async () => {
