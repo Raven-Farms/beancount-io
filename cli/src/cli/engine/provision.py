@@ -204,6 +204,13 @@ def enable_feature(name: str) -> tuple[bool, set[str]]:
     with provisioning_lock(root):
         if not paths.is_provisioned(root):
             provision(root)
+        else:
+            # A damaged base would record the feature into a broken engine
+            # (or blame the feature for not importing); refuse it as damaged
+            # instead (w5/785). Deferred: launch imports this module.
+            from cli.engine.launch import refuse_unusable_engine
+
+            refuse_unusable_engine()
 
         already = enabled_features(root)
         if name in already and _feature_present(root, name):

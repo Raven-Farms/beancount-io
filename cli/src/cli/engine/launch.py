@@ -68,7 +68,7 @@ from typing import Any, Literal, TextIO
 from cli import config, context, output
 from cli.auth.credentials import load_credentials
 from cli.engine import paths, provision
-from cli.errors import BY_CATEGORY, BeaError, ConflictError, SignalError, UsageError
+from cli.errors import BY_CATEGORY, BeaError, ConflictError, EngineError, SignalError, UsageError
 
 
 def run_engine_argv(argv: Sequence[str], *, interactive: bool = False) -> int:
@@ -80,7 +80,7 @@ def run_engine_argv(argv: Sequence[str], *, interactive: bool = False) -> int:
     """
     # Streamed commands have no answer envelope to prove that the program
     # served. A non-Python override can otherwise silently exit successfully.
-    _refuse_unusable_engine()
+    refuse_unusable_engine()
     command, env = helper_command()
     if not interactive:
         return _spawn([*command, *argv], env)
@@ -134,9 +134,16 @@ def run_native(
     process still hears it, and stops the child on its way out.
     """
     command = [str(native_command(name)), *args]
-    return _spawn(
+    code = _spawn(
         command, env if env is not None else _native_env(ledger), deaf_to_interrupt=True, renamed=_BEA_NAMES.get(name)
     )
+    if code != 0 and code <= 128:
+        # The streams are already upstream's; a damaged engine still gets its
+        # remedy named below them (w5/785). Codes above 128 are signal
+        # mappings and EPIPE, which say nothing about the engine's health;
+        # upstream's own failures (and a damaged import) exit 0-2.
+        refuse_unusable_engine()
+    return code
 
 
 #: The `bea` command each upstream program answers for. Its usage errors said
@@ -342,6 +349,21 @@ def engine_python() -> Path:
     return provision.ensure_engine()
 
 
+def _suggests_engine_damage(completed: subprocess.CompletedProcess[str]) -> bool:
+    """Whether a failed native run failed the way a damaged engine fails.
+
+    A broken interpreter dies on the import with a traceback; an invalid
+    ledger fails with upstream's own error lines, and a signal death says
+    nothing about the engine's health — not even when the runtime prints a
+    KeyboardInterrupt traceback on its way out. Only a positive exit with a
+    traceback pays for a probe — and the probe loads no ledger, so a
+    crashing user plugin still falls through to the caller's report (w5/785).
+    """
+    if completed.returncode <= 0:
+        return False
+    return "Traceback (most recent call last)" in (completed.stderr or "")
+
+
 def capture_native(
     name: str,
     args: Sequence[str],
@@ -357,9 +379,12 @@ def capture_native(
     and `bea format --check` compares the formatter's output against the file.
     Everything else should use `run_native` and let upstream own the streams.
     """
-    return run_captured(
+    completed = run_captured(
         [str(native_command(name)), *args], env=_native_env(ledger), pass_fds=pass_fds, input_text=input_text
     )
+    if _suggests_engine_damage(completed):
+        refuse_unusable_engine(completed)
+    return completed
 
 
 def check_native(
@@ -413,7 +438,7 @@ def capture_engine(argv: Sequence[str]) -> subprocess.CompletedProcess[str]:
     envelope, where `bea` has to read the answer before it can decide what the
     exit status should be.
     """
-    _refuse_unusable_engine()
+    refuse_unusable_engine()
     command, env = helper_command()
     return _run_helper([*command, *argv], env, None)
 
@@ -809,7 +834,7 @@ def _parse(completed: subprocess.CompletedProcess[str], args: Sequence[str], *, 
             except ValueError:
                 name = f"signal {number}"
         else:
-            _refuse_unusable_engine(completed)
+            refuse_unusable_engine(completed)
         if writes:
             # A writer that produced no envelope may or may not have written.
             # Exit 4 says exactly that, and stops a caller from retrying a
@@ -871,7 +896,7 @@ def engine_load_failure(python: Path) -> str | None:
     return lines[-1] if lines else "it is not a Python that loads the engine"
 
 
-def _refuse_unusable_engine(completed: subprocess.CompletedProcess[str] | None = None) -> None:
+def refuse_unusable_engine(completed: subprocess.CompletedProcess[str] | None = None) -> None:
     """Refuse an override or managed interpreter that cannot load the helper.
 
     An override without Beancount died on the helper's first import, which
@@ -893,17 +918,21 @@ def _refuse_unusable_engine(completed: subprocess.CompletedProcess[str] | None =
     if reason is None:
         return
     if source.tier == "override":
+        # The user's own environment: a native tool beside it may still work
+        # when only the helper's import fails, so this stays a plain BeaError
+        # the fail-open pre-checks swallow. A native crash still gets its
+        # remedy through the probe on the native failure itself (w5/785).
         message = (
             f"{paths.PYTHON_ENV}={source.python} names an environment that cannot run the Beancount engine "
             f"({reason}). Correct or unset {paths.PYTHON_ENV}, or run 'bea engine status' to see which engine "
             "would serve."
         )
-    else:
-        message = (
-            f"The managed Beancount engine at {source.location} is damaged and cannot load ({reason}). "
-            f"Remove {source.location} and rerun; bea provisions a fresh engine."
-        )
-    raise BeaError(message, traceback=(completed.stderr or None) if completed is not None else None) from None
+        raise BeaError(message, traceback=(completed.stderr or None) if completed is not None else None) from None
+    message = (
+        f"The managed Beancount engine at {source.location} is damaged and cannot load ({reason}). "
+        f"Remove {source.location} and rerun; bea provisions a fresh engine."
+    )
+    raise EngineError(message, traceback=(completed.stderr or None) if completed is not None else None) from None
 
 
 def helper_command() -> tuple[list[str], dict[str, str] | None]:

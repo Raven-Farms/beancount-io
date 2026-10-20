@@ -129,9 +129,10 @@ def check(ctx: typer.Context) -> None:
             loaded = launch.helper_json(["check", "--file", str(file), "--documents-only"])
         except BeaError as error:
             if isinstance(error, EngineError):
-                # Provisioning failed: bean-check needs the same engine, so
-                # falling through would install it twice and then report this
-                # stale failure after the retry succeeded (w5/784).
+                # The managed engine is missing or damaged: bean-check needs
+                # the same one, so falling through would install it twice and
+                # then report this stale failure after the retry succeeded
+                # (w5/784), or crash the same way (w5/785).
                 if as_json:
                     _emit_json_errors(file, [str(error), *error.details], error.exit_code)
                 raise

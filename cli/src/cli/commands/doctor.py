@@ -188,9 +188,9 @@ def _syntax_errors_of(filename: str) -> list[str]:
 
     A name that is not a readable file is upstream's to report, and a dead
     engine must not take the diagnostics tool down with it: both fail open to
-    the plain passthrough. A failure to provision the engine propagates
+    the plain passthrough. A missing or damaged managed engine propagates
     instead: the passthrough needs the same install and would fail the same
-    way, after doubling the wait (w5/784).
+    way, after doubling the wait (w5/784, w5/785).
     """
     if not Path(filename).is_file():
         return []
@@ -276,8 +276,8 @@ def _closure_syntax_errors_of(filename: str) -> list[str]:
     include fails them just as surely as an unparseable root: the loader logs
     the error and carries on with whatever it recovered. `lex` and `parse`
     read only the named file upstream, and keep using `_syntax_errors_of`.
-    Fails open exactly like that helper does, and propagates a provisioning
-    failure the same way.
+    Fails open exactly like that helper does, and propagates a missing or
+    damaged managed engine the same way.
     """
     root = Path(filename)
     if not root.is_file():

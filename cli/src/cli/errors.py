@@ -122,11 +122,14 @@ class ConflictError(BeaError):
 
 
 class EngineError(BeaError):
-    """The Beancount engine could not be provisioned.
+    """The managed Beancount engine is missing or damaged.
 
     A `BeaError` by category and exit code; the subclass exists so a fail-open
-    pre-check can tell a missing engine — which its fallback needs too, so
-    falling through would only install it twice — from a ledger finding (w5/784).
+    pre-check can tell an unusable managed engine — which its fallback needs
+    too, so falling through would only install it twice or crash the same
+    way — from a ledger finding (w5/784, w5/785). A broken `$BEA_ENGINE_PYTHON`
+    override stays a plain `BeaError`: the native tool beside it may still
+    work when only the helper's import fails.
     """
 
     category = "validation"

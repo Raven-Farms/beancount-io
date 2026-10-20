@@ -80,6 +80,9 @@ class TestEnableFeature:
         monkeypatch.setattr(provision, "_find_uv", lambda: "uv")
         monkeypatch.setattr(provision, "_run", fake_run)
         monkeypatch.setattr(provision, "_feature_present", lambda _root, _name: True)
+        # The fake venv stands in for a working engine; the base probe (w5/785)
+        # would find its empty interpreter cannot import the helper.
+        monkeypatch.setattr(launch, "engine_load_failure", lambda _python: None)
 
         changed, enabled = provision.enable_feature("beangulp")
 
@@ -105,6 +108,9 @@ class TestEnableFeature:
         monkeypatch.setattr(provision, "_find_uv", lambda: "uv")
         monkeypatch.setattr(provision, "_run", fake_run)
         monkeypatch.setattr(provision, "_feature_present", lambda _root, _name: True)
+        # The fake venv stands in for a working engine; the base probe (w5/785)
+        # would find its empty interpreter cannot import the helper.
+        monkeypatch.setattr(launch, "engine_load_failure", lambda _python: None)
 
         first_changed, first = provision.enable_feature("beanprice")
         steps.clear()
@@ -168,6 +174,9 @@ class TestEngineCommand:
         monkeypatch.setattr(provision, "_find_uv", lambda: "uv")
         monkeypatch.setattr(provision, "_run", lambda *_args, **_kwargs: None)
         monkeypatch.setattr(provision, "_feature_present", lambda _root, _name: True)
+        # The fake venv stands in for a working engine; the base probe (w5/785)
+        # would find its empty interpreter cannot import the helper.
+        monkeypatch.setattr(launch, "engine_load_failure", lambda _python: None)
 
         runner = CliRunner()
         status = runner.invoke(app, ["--json", "engine", "status"])
