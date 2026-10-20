@@ -2,6 +2,7 @@ import { describe, it, expect, vi, afterEach, beforeEach } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { LedgerForm } from "../ledger-form";
+import { ledgerFormTranslations } from "../../ledger-form-translations";
 import {
   LedgerTemplate,
   type CreateLedgerMutationVariables,
@@ -112,6 +113,22 @@ describe("LedgerForm", () => {
     // Check for buttons
     expect(screen.getByRole("button", { name: "Cancel" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Next" })).toBeInTheDocument();
+  });
+
+  it("should describe the Starter as empty books in every locale (w3/648)", () => {
+    render(<LedgerForm onSubmit={mockOnSubmit} onCancel={mockOnCancel} />);
+    expect(
+      screen.getByText("Empty books with a standard chart of accounts."),
+    ).toBeInTheDocument();
+    // The hosted Starter seeds no example transaction, so no locale's
+    // Starter copy may promise one.
+    const examplePromise =
+      /example|beispiel|ejemplo|exemple|exemplo|voorbeeld|vzorová|примерн|прикладна|サンプル|例|نمونه/i;
+    for (const languageMessages of Object.values(ledgerFormTranslations)) {
+      expect(
+        languageMessages["page.dashboard.starterTemplateDescription"].message,
+      ).not.toMatch(examplePromise);
+    }
   });
 
   async function throughDetails(user: ReturnType<typeof userEvent.setup>) {
