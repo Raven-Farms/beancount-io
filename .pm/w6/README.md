@@ -65,6 +65,7 @@ Prioritize the major correctness findings (PRINT/FROM/JOURNAL, authored location
 ## Inbox
 
 - [039](./blocked/039.md) — Recheck Hermes support for consent-gated ledger instruction scaffolding — **blocked:** needs a compatible Hermes host policy; retain the approved workflow and do not force installation.
+- [040](./blocked/040.md) — Recheck Hermes source-filtered ClawHub discovery — **blocked:** default search finds all eleven, but `--source clawhub` still returns none; needs a host/catalog correction.
 
 
 
