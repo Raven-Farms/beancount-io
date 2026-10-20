@@ -88,7 +88,13 @@ def bea_command(file: Path | str) -> str:
     import shlex
 
     target = Path(file)
-    cwd = Path.cwd()
+    try:
+        cwd = Path.cwd()
+    except OSError:
+        # A removed working directory: `Path.cwd()` raised, and the refusal
+        # this remedy belongs to was lost behind a bare FileNotFoundError
+        # (w5/837). The ledger's own path reaches it from anywhere.
+        return f"bea --file {shlex.quote(str(target))}"
     if not os.environ.get("BEA_FILE"):
         for name in ("main.bean", "main.beancount"):
             if os.path.lexists(cwd / name):
