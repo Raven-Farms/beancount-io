@@ -130,6 +130,10 @@ def example(ctx: typer.Context) -> None:
         launch.check_native(version, "bean-example")
         replay(version.stdout, sys.stdout)
         return
+    if output is not None:
+        # A `$VAR` the loader would expand can never be read back: refuse
+        # it before anything is written, as `init` does (w5/579, w5/794).
+        context.refuse_expanding_ledger_path(str(output))
     # A directory is never a file to overwrite: the conflict and its
     # `--force` advice led to a directory refusal that --force cannot pass;
     # it now gets that refusal straight away (w5/353).

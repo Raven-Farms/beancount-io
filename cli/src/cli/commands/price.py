@@ -209,6 +209,11 @@ def _export(args: list[str]) -> None:
             raise UsageError(f"bea price export takes only --output, --allow-errors and --force; got: {arg}.")
     current = context.current()
     file = current.entry_file()
+    if output_dir is not None:
+        # The export root holds a ledger every later command would refuse
+        # to read; refuse it before anything is written, as `init`
+        # does (w5/579, w5/794).
+        context.refuse_expanding_ledger_path(output_dir)
     argv = ["price-export", "--file", str(file)]
     if output_dir is not None:
         argv += ["--output", output_dir]
