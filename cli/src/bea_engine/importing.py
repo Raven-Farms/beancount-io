@@ -446,8 +446,13 @@ def answer(
             elsewhere = _issued_elsewhere(entry, account, roots[:2])
             if elsewhere and id(loaded) in declared:
                 counterparts.setdefault(_amounts_key(_fingerprint(entry, account)), []).append(entry)
+            # A transfer's `import-id-2` is its second balance-sheet leg's own
+            # id, so importing that account matches it exactly; scoped to the
+            # first leg's account, a migrated transfer's savings row was held
+            # as its other side, and `include` booked it twice (w5/818).
+            second = (entry.meta or {}).get("import-id-2") if elsewhere else None
             for identity in _identities(entry, account, keys):
-                if elsewhere and _is_native_identity(identity):
+                if elsewhere and _is_native_identity(identity) and identity != (account, "import-id", str(second)):
                     transfer_ids[identity] = entry
                 else:
                     identities[identity] = entry
@@ -1610,10 +1615,13 @@ def _issued_elsewhere(entry: Any, account: str, balance_roots: tuple[str, ...]) 
     another balance-sheet account is that account's import, a transfer, and
     its bank id is scoped there: checking's `1001` deduped savings' own
     `1001`, a different deposit, as an exact duplicate (w5/598). An income or
-    expense leg first is no such evidence: some importers list it first.
+    expense leg first is no such evidence: some importers list it first. Nor
+    is a first posting anywhere under `account`: a brokerage importer filed
+    under `Assets:Broker` lists its `Assets:Broker:HOOL` leg first, and its own
+    re-import was held as the other side of a transfer (w5/818).
     """
     first = entry.postings[0] if entry.postings else None
-    if first is None or any(first is leg for leg in _source_legs(entry, account)):
+    if first is None or first.account == account or first.account.startswith(f"{account}:"):
         return False
     return first.account.split(":", 1)[0] in balance_roots
 

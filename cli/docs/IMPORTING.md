@@ -537,7 +537,11 @@ skills deduplicate against each other: the ledger itself is the dedup database.
   before the ledger is read or the importer runs.
   IDs must be stable and unique within that account. A transfer written by
   importing one account (its first posting) keeps that account's ID even
-  though it also posts to the other account. Importing the other account never
+  though it also posts to the other account; its `import-id-2`, when it has
+  one, is the other account's own ID and matches that account's row exactly.
+  A first posting to `--account` or any account under it is the importer's
+  own, so a brokerage trade that lists `Assets:Broker:HOOL` first re-imports
+  under `Assets:Broker` as a duplicate. Importing the other account never
   takes that ID for one of its own rows. When the row has the same amount
   within a week, it is a possible duplicate ("on the other side of a transfer
   from …"), for banks that give both legs one reference; otherwise it is new.
