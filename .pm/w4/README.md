@@ -60,7 +60,7 @@
 
 - [ ] **m36** — [Preserve commit and profile activity timestamps through hydration](./m36/README.md) (7 tasks) ← dashboard QA, 2026-10-20; minor, commit/profile focus and exact browser-zone attributes.
 
-- [ ] **m35** — [Keep form fields usable when suggestions fail](./m35/README.md) (6 tasks) ← dashboard QA, 2026-10-20; minor, four form suggestion wrappers.
+- [ ] **m35** — [Keep form fields usable when suggestions fail](./blocked/m35/README.md) (6 tasks) ← dashboard QA, 2026-10-20; minor, four form suggestion wrappers. — **blocked:** fix shipped; awaiting deployed live failure/retry check
 
 - [ ] **m34** — [Resolve multiline entry sources without splitting quoted strings](./blocked/m34/README.md) (6 tasks) ← dashboard QA, 2026-10-20; minor, ledger source resolution. — **blocked:** fix shipped in `a0fa2e619`; awaiting deployed dashboard reopen check
 
