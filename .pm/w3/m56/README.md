@@ -1,6 +1,6 @@
 # w3 · m56 — Variance explanation in `beancount-ask`, reused by `beancount-close`
 
-**Worker:** worker3 **Goal:** period changes are explained from contributing postings under explicit user thresholds — with a supported driver or an honest "unresolved", never an invented cause. **Status:** todo
+**Worker:** worker3 **Goal:** period changes are explained from contributing postings under explicit user thresholds — with a supported driver or an honest "unresolved", never an invented cause. **Status:** blocked (t002 waits on Codex quota)
 
 ## Tasks (in order)
 
@@ -27,3 +27,7 @@
 - **Goal linkage:** A1 — Agent-native accounting.
 - **Expected outcome:** users asking their agent to explain a change get evidence or an explicit unknown, so ask answers stay trustworthy enough to act on. Signals: `beancount-ask` invocations, eval pass rate on both clients.
 - **Why now:** it extends a shipped skill on shipped query primitives, needs no blocked dependency, and close's commentary (w2/m48's review state) is more useful with it. Adoption surface is included (t003) because two customer skills change behavior.
+
+## Blocked
+
+- **t002** — close reuse shipped and Claude Code evals pass; the Codex runs are quota-blocked at the account level. Unblock condition is written in t002.
