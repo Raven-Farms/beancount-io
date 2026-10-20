@@ -116,6 +116,7 @@ def _install_source_locations() -> None:
     builder: Any = grammar.Builder
     if getattr(builder, "_bea_keeps_locations", False):
         return
+    builder.transaction = _keeping_posting_locations(builder.transaction)
     for name in _DIRECTIVES:
         setattr(builder, name, _keeping_location(getattr(builder, name)))
     builder.pushmeta = _refusing_location(builder.pushmeta, report=True)
@@ -153,6 +154,36 @@ def _keeping_location(method: Callable[..., Any]) -> Callable[..., Any]:
         return entry
 
     return directive
+
+
+def _keeping_posting_locations(method: Callable[..., Any]) -> Callable[..., Any]:
+    """Report a posting's own `filename:` or `lineno:` as reserved, at that posting, and keep its location.
+
+    The grammar fills each posting's location first, so the key read as a
+    second value: "Duplicate posting metadata field" for a key written once
+    (w5/852).
+    """
+    from beancount.core.data import Posting
+    from beancount.parser.grammar import KeyValue
+
+    @functools.wraps(method)
+    def transaction(self: Any, filename: str, lineno: int, *args: Any) -> Any:
+        *head, items = args
+        if items:
+            kept: list[Any] = []
+            posting = None
+            for item in items:
+                if isinstance(item, Posting):
+                    posting = item
+                elif isinstance(item, KeyValue) and posting is not None and item.key in LOCATION_KEYS:
+                    where = posting.meta or {}
+                    _reserved(self, where.get("filename", filename), where.get("lineno", lineno), item.key)
+                    continue
+                kept.append(item)
+            items = kept
+        return method(self, filename, lineno, *head, items)
+
+    return transaction
 
 
 def _refusing_location(method: Callable[..., Any], *, report: bool) -> Callable[..., Any]:

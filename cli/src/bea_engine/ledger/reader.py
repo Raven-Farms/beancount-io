@@ -395,11 +395,14 @@ def _search_key(text: str) -> str:
     The table shows a narration's line breaks as spaces, and import's
     duplicate matching reads them so, but the search compared the raw text:
     `Rent for January`, as the table prints it, matched nothing (w5/631).
+    Every run of blanks is one space, in the term as in the text: the table
+    keeps the blanks around a break (`Rent   for February`), and that search
+    found nothing while `rent for february` matched (w5/852).
     """
-    return fold_account(_LINE_BREAKS.sub(" ", text))
+    return fold_account(_BLANKS.sub(" ", text))
 
 
-_LINE_BREAKS = re.compile(r"[ \t]*[\r\n]+[ \t]*")
+_BLANKS = re.compile(r"[ \t\r\n]+")
 
 
 def list_notes(

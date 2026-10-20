@@ -208,6 +208,12 @@ def _export(args: list[str]) -> None:
             if not value.strip():
                 raise UsageError("bea price export --output needs a directory.")
             take_output("--output", value)
+        elif arg.startswith("-o") and len(arg) > 2:
+            # The attached spelling every Typer option accepts, `-o/abs/exp` (w5/852).
+            value = arg[2:]
+            if not value.strip():
+                raise UsageError(f"bea price export -o {value!r} is empty; name the directory to export into.")
+            take_output("-o", value)
         elif arg == "--allow-errors":
             allow_errors = True
         elif arg == "--force":

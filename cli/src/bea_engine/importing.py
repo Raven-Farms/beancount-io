@@ -69,6 +69,20 @@ def _exited(exc: SystemExit, logs: io.StringIO) -> EngineError:
     )
 
 
+def _method_exited(exc: SystemExit, method: str) -> LedgerError:
+    """An importer method that called `sys.exit`, named as the method it is.
+
+    The configuration's own `Ingest(CONFIG)()` hint was given for any exit,
+    though a method exiting has nothing to do with how the module runs (w5/852).
+    """
+    status = "" if exc.code is None else f" ({exc.code})"
+    return LedgerError(
+        f"Importer {method} called sys.exit{status}; an importer method must return its answer or raise an "
+        "exception, not exit.",
+        traceback=_traceback(exc),
+    )
+
+
 def _with_output(error: EngineError, logs: io.StringIO) -> EngineError:
     """Attach what the importer printed before it failed to the failure.
 
@@ -318,7 +332,11 @@ def answer(
                 importer = _importer(config, source, importer_name)
                 # NFC like the row accounts `_writable` normalizes, so an NFD
                 # source account still finds its own legs (w5/530).
-                account = unicodedata.normalize("NFC", str(importer.account(str(source))))
+                try:
+                    named = importer.account(str(source))
+                except SystemExit as exc:
+                    raise _method_exited(exc, f"{_name(importer)} account()") from exc
+                account = unicodedata.normalize("NFC", str(named))
                 entries = _extracted(importer, source, existing)
         except EngineError as exc:
             _with_output(exc, logs)
@@ -903,7 +921,10 @@ def _extracted(importer: Any, source: Path, existing: Any) -> list[Any]:
     """
     from beancount.core.data import ALL_DIRECTIVES
 
-    result = importer.extract(str(source), existing)
+    try:
+        result = importer.extract(str(source), existing)
+    except SystemExit as exc:
+        raise _method_exited(exc, f"{_name(importer)} extract()") from exc
     # One directive is a namedtuple, so `list()` took its fields for rows:
     # "row 1 is a dict" (w5/639).
     # Nor is a number a list: `list(0)` escaped as "'int' object is not iterable" (w5/857).
@@ -1083,6 +1104,8 @@ def _importer(config: Path, source: Path, name: str | None) -> Any:
             claimed = importer.identify(str(source))
         except EngineError:
             raise
+        except SystemExit as exc:
+            raise _method_exited(exc, f"{selector} identify()") from exc
         except Exception as exc:
             # A raising identify is a bug in that importer, not a declined
             # claim: name it and the phase, as an extract failure does (w5/780).

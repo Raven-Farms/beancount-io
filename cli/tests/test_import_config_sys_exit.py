@@ -73,18 +73,26 @@ def _bea(tmp_path: Path, config: str, *extra: str, json_output: bool = False) ->
 
 
 @pytest.mark.parametrize(
-    ("config", "status", "printed"),
-    [(AT_LOAD, "SystemExit: 2", "No such command 'import'."), (IN_EXTRACT, "SystemExit: 0", "done early")],
+    ("config", "said", "printed"),
+    [
+        (AT_LOAD, "Importer failed (SystemExit: 2): the configuration called sys.exit", "No such command"),
+        # An exit in a method is the method's, not the module's: no Ingest hint (w5/852).
+        (
+            IN_EXTRACT,
+            "Importer bank extract() called sys.exit (0); an importer method must return its answer or raise",
+            "done early",
+        ),
+    ],
     ids=["at-load", "in-extract"],
 )
 @pytest.mark.parametrize("apply", [False, True], ids=["preview", "apply"])
-def test_sys_exit_is_an_importer_failure(tmp_path: Path, config: str, status: str, printed: str, apply: bool) -> None:
+def test_sys_exit_is_an_importer_failure(tmp_path: Path, config: str, said: str, printed: str, apply: bool) -> None:
     result = _bea(tmp_path, config, *(["--apply"] if apply else []))
 
     assert result.returncode == 1, result.stderr
     stderr = " ".join(result.stderr.split())
-    assert f"Importer failed ({status}): the configuration called sys.exit" in stderr
-    assert HINT in stderr
+    assert said in stderr
+    assert (HINT in stderr) is (config == AT_LOAD)
     assert printed in stderr
     assert "did not answer" not in stderr and "outcome is unknown" not in stderr
     assert (tmp_path / "main.bean").read_text() == LEDGER
