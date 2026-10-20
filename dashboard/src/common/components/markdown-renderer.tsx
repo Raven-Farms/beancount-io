@@ -6,13 +6,22 @@ import rehypeSanitize from "rehype-sanitize";
 import { CodeBlock } from "@/common/components/code-block";
 import { ExternalLink } from "lucide-react";
 import type { Components } from "react-markdown";
-import { useMemo, type ComponentProps } from "react";
+import { useMemo, type ComponentProps, type ReactNode } from "react";
+import { LedgerImage } from "@/common/components/ledger-image";
+import { getLedgerFileBlobPath } from "@/common/hooks/use-file-navigate";
+import { resolveReadmeReference } from "@/common/lib/readme-reference";
 
 interface MarkdownRendererProps {
   content: string;
   className?: string;
   /** Nest a document under its containing page's heading, without editing it. */
   headingOffset?: number;
+  /**
+   * The ledger file this Markdown was read from. Its relative links then open
+   * the files they name and its relative images show those files' bytes,
+   * resolved from its folder (w4/m37). Other Markdown keeps authored URLs.
+   */
+  source?: { ledgerId: string; path: string };
 }
 
 const headingTags = ["h1", "h2", "h3", "h4", "h5", "h6"] as const;
@@ -136,15 +145,62 @@ const components: Components = {
   },
 };
 
+function sourceComponents({
+  ledgerId,
+  path,
+}: NonNullable<MarkdownRendererProps["source"]>): Components {
+  const Anchor = components.a as (props: ComponentProps<"a">) => ReactNode;
+  return {
+    a({ href, ...props }) {
+      delete props.node;
+      const target = resolveReadmeReference(href, path);
+      return (
+        <Anchor
+          {...props}
+          href={
+            target
+              ? getLedgerFileBlobPath(ledgerId, target.path, target.suffix)
+              : href
+          }
+        />
+      );
+    },
+    img({ src, alt, title, ...props }) {
+      delete props.node;
+      const target =
+        typeof src === "string" ? resolveReadmeReference(src, path) : null;
+      if (!target) return <img src={src} alt={alt} title={title} {...props} />;
+      return (
+        <LedgerImage
+          ledgerId={ledgerId}
+          path={target.path}
+          alt={alt}
+          title={title}
+        />
+      );
+    },
+  };
+}
+
 export function MarkdownRenderer({
   content,
   className,
   headingOffset = 0,
+  source,
 }: MarkdownRendererProps) {
+  const sourceLedgerId = source?.ledgerId;
+  const sourcePath = source?.path;
   const renderedComponents = useMemo<Components>(() => {
-    if (!headingOffset) return components;
+    const base =
+      sourceLedgerId !== undefined && sourcePath !== undefined
+        ? {
+            ...components,
+            ...sourceComponents({ ledgerId: sourceLedgerId, path: sourcePath }),
+          }
+        : components;
+    if (!headingOffset) return base;
     return {
-      ...components,
+      ...base,
       ...Object.fromEntries(
         headingTags.map((tag, index) => {
           const Heading =
@@ -166,7 +222,7 @@ export function MarkdownRenderer({
         }),
       ),
     };
-  }, [headingOffset]);
+  }, [headingOffset, sourceLedgerId, sourcePath]);
   return (
     <div
       className={`prose prose-sm dark:prose-invert max-w-full overflow-x-auto break-words ${className ?? ""}`}

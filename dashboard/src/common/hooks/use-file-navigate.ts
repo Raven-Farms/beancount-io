@@ -10,6 +10,17 @@ export function getLedgerFilesRootPath(
   return `/ledger/${ledgerOwner}/${ledgerName}/files/tree/${branch}`;
 }
 
+/** Canonical file view URL for a ledger path, each segment encoded. */
+export function getLedgerFileBlobPath(
+  ledgerId: string,
+  path: string,
+  suffix = "",
+): string {
+  const { ledgerOwner, ledgerName } = decodeLedgerId(ledgerId);
+  const encoded = path.split("/").map(encodeURIComponent).join("/");
+  return `/ledger/${ledgerOwner}/${ledgerName}/files/blob/main/${encoded}${suffix}`;
+}
+
 /**
  * Hook for navigating to files and directories using GitHub-style URLs
  *

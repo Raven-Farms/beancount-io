@@ -1,3 +1,5 @@
+import { imageMimeType } from "@/common/lib/image-mime-type";
+
 export const getParentPath = (filePath: string) => {
   return filePath.split("/").slice(0, -1).join("/");
 };
@@ -289,19 +291,8 @@ export const getMimeTypeFromExtension = (filename: string): string => {
     case "sh":
     case "bash":
       return "text/plain";
-    case "svg":
-      return "image/svg+xml";
-    case "png":
-      return "image/png";
-    case "jpg":
-    case "jpeg":
-      return "image/jpeg";
-    case "gif":
-      return "image/gif";
-    case "webp":
-      return "image/webp";
     default:
-      return "application/octet-stream";
+      return imageMimeType(filename) ?? "application/octet-stream";
   }
 };
 

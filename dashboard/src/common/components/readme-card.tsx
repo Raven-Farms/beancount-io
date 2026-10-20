@@ -83,7 +83,11 @@ export function ReadmeCard({
         </LedgerWritePermission>
       </div>
       <CardContent className="px-4 py-4">
-        <MarkdownRenderer content={content} headingOffset={headingOffset} />
+        <MarkdownRenderer
+          content={content}
+          headingOffset={headingOffset}
+          source={{ ledgerId, path }}
+        />
       </CardContent>
     </Card>
   );
