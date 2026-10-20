@@ -538,6 +538,14 @@ def _refuse_quarter_without_quarters(ledger: Any, entries: Any, time: str, ledge
     )
 
 
+def _near_fiscal_year_end(name: str) -> bool:
+    """Whether an option name is a misspelling of `fiscal-year-end`."""
+    from difflib import SequenceMatcher
+
+    letters = re.sub(r"[^a-z0-9]", "", name.casefold())
+    return SequenceMatcher(None, letters, "fiscalyearend").ratio() >= 0.8
+
+
 def _fiscal_year_end_declarations(entries: Iterable[Any]) -> list[Any]:
     """The ledger's `fiscal-year-end` Fava options, in file order."""
     return [
@@ -565,6 +573,18 @@ def _require_fiscal_year_end(ledger: Any, file: Path, time: str, ledger_errors: 
     declarations = _fiscal_year_end_declarations(ledger.all_entries_by_type.Custom)
     last = declarations[-1] if declarations else None
     invalid = [format_error(error, ledger_file=file) for error in ledger.fava_options_errors if error.entry is last]
+    problem = "is invalid"
+    if not declarations:
+        # bea reads no other Fava option, so a misspelled name is the usual
+        # way this one goes missing: `fiscal-year-ends` silently made FY2026
+        # the calendar year, though Fava flags the unknown option (w5/807).
+        problem = "looks misspelled"
+        invalid = [
+            f"{format_error(error, ledger_file=file).rstrip('.')}. It looks like fiscal-year-end, the only Fava "
+            "option bea reads."
+            for error in ledger.fava_options_errors
+            if error.entry.values and _near_fiscal_year_end(str(error.entry.values[0].value))
+        ]
     # Fava reads months 13-24 as a year end in the following calendar year,
     # but its parser takes any month modulo 12: "00-31" made FY2026 calendar
     # 2025, and "99-31" moved it to 2033-34 (w5/809).
@@ -576,7 +596,7 @@ def _require_fiscal_year_end(ledger: Any, file: Path, time: str, ledger_errors: 
         ]
     if invalid:
         raise protocol.LedgerError(
-            f"The ledger's fiscal-year-end option is invalid, so the fiscal period in --time {time!r} is undefined.",
+            f"The ledger's fiscal-year-end option {problem}, so the fiscal period in --time {time!r} is undefined.",
             details=[
                 *invalid,
                 'Declare the year end as MM-DD, such as "06-30", or name the period by calendar dates.',

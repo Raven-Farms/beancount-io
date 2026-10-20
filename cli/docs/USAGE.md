@@ -1779,7 +1779,8 @@ declared but is not a real month and day (`"06-31"`, `"6-30"`, `"00-31"`,
 without `--allow-errors`, rather than reporting another year under the fiscal
 label. With several declarations the last one is in effect, as in Fava: an
 invalid earlier line is passed over, and an invalid last one refuses fiscal
-periods. Fiscal quarters need a
+periods. So does a misspelled name such as `fiscal-year-ends` when no
+`fiscal-year-end` is declared, naming its line. Fiscal quarters need a
 fiscal year that starts on the first of a month: with a year end such as
 `"04-05"`, `FY2027-Q2` and `fiscal_quarter` exit **2** naming the option and
 its line, while `FY2027` still reports the whole year. Calendar periods are
