@@ -8,5 +8,4 @@
 
 ## Inbox
 
-- [002](./002.md) — Browse ledgers' search icon touches its placeholder text
 - [003](./003.md) — An entry with no cash posting reads "−6,760.00" in the list and "6,760.00" on its detail
