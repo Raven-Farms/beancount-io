@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [785 — A damaged engine still gives raw tracebacks from text check, doctor and example; engine enable reports success (incomplete fix of w5/320)](./785.md)
 - [786 — SIGTERM during first-use provisioning orphans uv and leaves a 25 MB partial engine (gap in w5/437)](./786.md)
 - [787 — First-use lock: unwritable data dir gives raw Errno 13 exit 1; a waiter on another install waits silently forever](./787.md)
 - [788 — First-run polish: no remedy on failed install, uninstall leaves the engine, PyPI license links 404](./788.md)
