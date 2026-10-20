@@ -60,7 +60,6 @@
 - [823 — A migrated digest with an underscore source name (lunch_money:) is not recognised; row rewritten (gap in w5/601)](./823.md)
 - [824 — A payee row meeting a payee-less entry on narration is told "Date, payee … match"](./824.md)
 - [825 — A stop 0–20 ms after a write commits still kills bea silently; retry duplicates; format -i keeps rewriting (regression of w5/606)](./825.md)
-- [826 — A stopped price export leaves a partial snapshot and dies silently; retry demands --force](./826.md)
 
 The 27 findings from the MCP QA auth sweep against the hosted endpoint (023–054, less the five under [Dropped](#dropped)) were fixed in `backend-cluster/backend-v2` and closed on 2026-10-02 and 2026-10-03; each note under [`done/`](./done/) records what shipped and in which commit. None has been re-observed against the hosted endpoint yet — the fixes reach it with the next backend deploy.
 
