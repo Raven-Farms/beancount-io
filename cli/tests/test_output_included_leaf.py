@@ -124,3 +124,29 @@ def test_leaf_output_climbs_through_intermediate_includers(tmp_path: Path, monke
     assert result.exit_code == 2, result.output
     assert "would overwrite the ledger" in result.output
     assert root.read_text() == 'include "a/b/c/section.bean"\n'
+
+
+@pytest.mark.parametrize("root_name", ["main.BEAN", "main.Beancount", "main.BeAn"])
+@pytest.mark.parametrize(
+    ("command", "destination"), [("format", "txns/copy.bean"), ("format", "root"), ("query", "root")]
+)
+def test_a_root_with_an_uppercase_suffix_is_protected_too(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, root_name: str, command: str, destination: str
+) -> None:
+    """The includer search globbed `*.bean` case-sensitively, so `main.BEAN` was overwritten (w5/865)."""
+    (tmp_path / "txns").mkdir()
+    root = tmp_path / root_name
+    leaf = tmp_path / "txns/2026.bean"
+    root.write_text(ROOT)
+    leaf.write_text(LEAF)
+    monkeypatch.chdir(tmp_path)
+    output = root_name if destination == "root" else destination
+    args = {"format": ["format", str(leaf)], "query": ["--file", str(leaf), "query", "PRINT"]}[command]
+
+    result = runner.invoke(app, [*args, "-o", output])
+
+    assert result.exit_code == 2, result.output
+    assert "would become part" in result.output or "would overwrite the ledger" in result.output
+    assert root.read_text() == ROOT
+    assert leaf.read_text() == LEAF
+    assert sorted(path.name for path in tmp_path.rglob("*") if path.is_file()) == sorted([root_name, "2026.bean"])

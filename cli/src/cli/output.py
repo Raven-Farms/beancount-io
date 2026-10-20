@@ -637,7 +637,7 @@ def _output_ledger_members(ledger: Path) -> list[Path]:
             if directory in searched:
                 continue
             searched.add(directory)
-            for candidate in sorted(directory.glob("*.bean")) + sorted(directory.glob("*.beancount")):
+            for candidate in _ledger_candidates(directory):
                 if opened >= 64:
                     return members
                 try:
@@ -664,6 +664,20 @@ def _output_ledger_members(ledger: Path) -> list[Path]:
                 except OSError:
                     continue
     return members
+
+
+def _ledger_candidates(directory: Path) -> list[Path]:
+    """The ledger files in a directory, `.bean` first, whatever case their suffix is spelled in.
+
+    `glob("*.bean")` matches case-sensitively on POSIX, even on a
+    case-insensitive volume, so a `main.BEAN` root was never examined and
+    format wrote over it, or into its include glob, with exit 0 (w5/865).
+    """
+    try:
+        entries = sorted(directory.iterdir())
+    except OSError:
+        return []
+    return [path for suffix in _LEDGER_SUFFIXES for path in entries if path.suffix.lower() == suffix]
 
 
 def _nearby_ledger_directories(source: Path) -> list[Path]:
