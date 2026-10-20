@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [787 — First-use lock: unwritable data dir gives raw Errno 13 exit 1; a waiter on another install waits silently forever](./787.md)
 - [788 — First-run polish: no remedy on failed install, uninstall leaves the engine, PyPI license links 404](./788.md)
 - [789 — The valuation/translation adjustment differs with and without -t: the FX gain moves to an Equity:Conversions line](./789.md)
 - [790 — A -t period holding no foreign currency is refused for a missing price left by an earlier settled trade](./790.md)
