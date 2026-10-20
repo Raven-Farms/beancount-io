@@ -209,7 +209,7 @@ def _cost_spec_text(cost: Any, dformat: Any) -> str:
         parts.append(" ".join(amounts))
     if cost.date:
         parts.append(cost.date.isoformat())
-    if cost.label:
+    if cost.label is not None:
         parts.append(f'"{cost.label}"')
     if cost.merge:
         parts.append("*")

@@ -1206,6 +1206,9 @@ def _transaction(
             units = units._replace(currency=choices[0])
             if from_operating:
                 operating_defaults[number] = allowed.get(posting.account) or None
+        # After the units are settled, so a missing commodity is named before a
+        # missing total currency on a doubly bare posting (w5/800 keeps `3 {{240}}`).
+        _refuse_currency_less_total(number, posting)
         # Parsed postings keep the input order, so the raw line with the `@@`
         # spelling sits at the same index; incomplete prices raised above.
         meta: dict[str, Any] = {}
@@ -1388,6 +1391,33 @@ def _refuse_missing_price(postings: list[str], number: int, posting: Any) -> Non
         need = f"the {total}price after {marker} needs a currency"
     example = f"'{posting.account} 10 HOOL {marker} 5.00 USD'"
     raise protocol.UsageError(f"--posting {number}: {need}: write {example}. Nothing was written.")
+
+
+def _refuse_currency_less_total(number: int, posting: Any) -> None:
+    """A total cost without a currency names the missing part (w5/805).
+
+    `{{240}}` parses, but the writer renders it as `{0 # 240}`, which needs a
+    currency and failed as "a value that is not one token". Bulk already
+    refuses the same shape ("a total cost needs currency", w5/384); the flag
+    path refuses it here, before anything is rendered or written. A per-unit
+    cost without a currency (`{80}`) and an interpolated total (`{100 # USD}`)
+    are not total costs and pass through.
+    """
+    from beancount.core.number import MISSING
+
+    from bea_engine import protocol
+
+    cost = posting.cost
+    if cost is None or cost.number_total is None or cost.number_total is MISSING:
+        return
+    if cost.currency is not MISSING:
+        return
+    total = format(cost.number_total, "f")
+    example = "'{{" + total + " USD}}'"
+    raise protocol.UsageError(
+        f"--posting {number}: the total cost {total} has no currency; a total cost needs one "
+        f"(for example {example}). Nothing was written."
+    )
 
 
 def _nfc(text: str) -> str:

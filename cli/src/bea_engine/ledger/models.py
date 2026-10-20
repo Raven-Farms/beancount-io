@@ -310,14 +310,22 @@ def _posting_fragment(amount: str) -> dict[str, Any]:
     if posting is None:
         refuse(errors[0].message if errors else "it is not a valid posting")
     units = posting.units
-    if units is MISSING or units.number is MISSING or units.currency is MISSING:
+    if units is MISSING or units.number is MISSING:
         refuse("no amount found")
+    if units.currency is MISSING:
+        refuse("no currency found")
     fields: dict[str, Any] = {
         "units": {"number": format(units.number, "f"), "currency": units.currency},
     }
     cost = posting.cost
     if cost is not None:
         if cost.number_total is not None and cost.number_total is not MISSING:
+            if cost.number_per is not None and cost.number_per is not MISSING and cost.number_per != 0:
+                raise ValueError(
+                    f"amount {amount!r} uses a per-unit cost with a total ('{{... # ...}}'), which the amount "
+                    'shorthand cannot express. Use "units" with a structured "cost" carrying "number", '
+                    '"number_total" and "currency".'
+                )
             raise ValueError(
                 f"amount {amount!r} uses a total cost '{{{{...}}}}', which the amount shorthand cannot express. "
                 'Split the lot into a per-unit cost \'{...}\', or use "units" with a structured "cost" '
