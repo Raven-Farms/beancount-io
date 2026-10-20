@@ -690,6 +690,50 @@ const enAuth: Record<string, TranslationEntry> = {
     message: "Manage ledgers and collaborators",
     description: "Description of the ledger admin mobile permission",
   },
+  "auth.continueWithGoogle": {
+    message: "Continue with Google",
+    description: "Button that starts Sign in with Google",
+  },
+  "auth.googleReason.unavailable": {
+    message: "Sign in with Google isn't available right now.",
+    description:
+      "Login notice: Google sign-in is not configured on this server",
+  },
+  "auth.googleReason.cancelled": {
+    message: "Google sign-in was cancelled.",
+    description: "Login notice: the user cancelled at Google's consent screen",
+  },
+  "auth.googleReason.state": {
+    message:
+      "Your Google sign-in expired or was started in another browser. Please try again.",
+    description:
+      "Login notice: the Google sign-in ceremony expired or came back to a different browser",
+  },
+  "auth.googleReason.failed": {
+    message: "Google sign-in failed. Please try again.",
+    description: "Login notice: Google sign-in failed for a technical reason",
+  },
+  "auth.googleReason.unverified": {
+    message: "That Google account's email address isn't verified.",
+    description:
+      "Login notice: Google reports the account's email as unverified",
+  },
+  "auth.googleReason.domain": {
+    message:
+      "That Google account isn't allowed here. Use your organization's Google account.",
+    description:
+      "Login notice: the Google account is outside the allowed Workspace domain",
+  },
+  "auth.googleReason.notAllowed": {
+    message:
+      "There's no account for that Google account yet, and sign-up for it hasn't been approved.",
+    description:
+      "Login notice: no account exists and sign-up for this address is not approved",
+  },
+  "auth.googleReason.blocked": {
+    message: "This account is blocked.",
+    description: "Login notice: the account is blocked",
+  },
 };
 
 export default enAuth;

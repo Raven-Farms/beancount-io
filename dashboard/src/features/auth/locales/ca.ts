@@ -701,6 +701,51 @@ const caAuth: Record<string, TranslationEntry> = {
     message: "Gestionar llibres i col·laboradors",
     description: "Description of the ledger admin mobile permission",
   },
+  "auth.continueWithGoogle": {
+    message: "Continua amb Google",
+    description: "Button that starts Sign in with Google",
+  },
+  "auth.googleReason.unavailable": {
+    message: "L'inici de sessió amb Google no està disponible ara mateix.",
+    description:
+      "Login notice: Google sign-in is not configured on this server",
+  },
+  "auth.googleReason.cancelled": {
+    message: "S'ha cancel·lat l'inici de sessió amb Google.",
+    description: "Login notice: the user cancelled at Google's consent screen",
+  },
+  "auth.googleReason.state": {
+    message:
+      "L'inici de sessió amb Google ha caducat o s'ha iniciat en un altre navegador. Torna-ho a provar.",
+    description:
+      "Login notice: the Google sign-in ceremony expired or came back to a different browser",
+  },
+  "auth.googleReason.failed": {
+    message: "No s'ha pogut iniciar la sessió amb Google. Torna-ho a provar.",
+    description: "Login notice: Google sign-in failed for a technical reason",
+  },
+  "auth.googleReason.unverified": {
+    message:
+      "L'adreça electrònica d'aquest compte de Google no està verificada.",
+    description:
+      "Login notice: Google reports the account's email as unverified",
+  },
+  "auth.googleReason.domain": {
+    message:
+      "Aquest compte de Google no està permès aquí. Fes servir el compte de Google de la teva organització.",
+    description:
+      "Login notice: the Google account is outside the allowed Workspace domain",
+  },
+  "auth.googleReason.notAllowed": {
+    message:
+      "Encara no hi ha cap compte per a aquest compte de Google i el registre no s'ha aprovat.",
+    description:
+      "Login notice: no account exists and sign-up for this address is not approved",
+  },
+  "auth.googleReason.blocked": {
+    message: "Aquest compte està bloquejat.",
+    description: "Login notice: the account is blocked",
+  },
 };
 
 export default caAuth;

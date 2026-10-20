@@ -697,6 +697,51 @@ const ukAuth: Record<string, TranslationEntry> = {
     message: "Керуйте бухгалтерськими книгами та співавторами",
     description: "Description of the ledger admin mobile permission",
   },
+  "auth.continueWithGoogle": {
+    message: "Продовжити з Google",
+    description: "Button that starts Sign in with Google",
+  },
+  "auth.googleReason.unavailable": {
+    message: "Вхід через Google зараз недоступний.",
+    description:
+      "Login notice: Google sign-in is not configured on this server",
+  },
+  "auth.googleReason.cancelled": {
+    message: "Вхід через Google скасовано.",
+    description: "Login notice: the user cancelled at Google's consent screen",
+  },
+  "auth.googleReason.state": {
+    message:
+      "Термін входу через Google минув, або його розпочато в іншому браузері. Спробуйте ще раз.",
+    description:
+      "Login notice: the Google sign-in ceremony expired or came back to a different browser",
+  },
+  "auth.googleReason.failed": {
+    message: "Не вдалося увійти через Google. Спробуйте ще раз.",
+    description: "Login notice: Google sign-in failed for a technical reason",
+  },
+  "auth.googleReason.unverified": {
+    message:
+      "Адресу електронної пошти цього облікового запису Google не підтверджено.",
+    description:
+      "Login notice: Google reports the account's email as unverified",
+  },
+  "auth.googleReason.domain": {
+    message:
+      "Цей обліковий запис Google тут не дозволено. Використовуйте обліковий запис Google вашої організації.",
+    description:
+      "Login notice: the Google account is outside the allowed Workspace domain",
+  },
+  "auth.googleReason.notAllowed": {
+    message:
+      "Для цього облікового запису Google ще немає акаунта, і реєстрацію не схвалено.",
+    description:
+      "Login notice: no account exists and sign-up for this address is not approved",
+  },
+  "auth.googleReason.blocked": {
+    message: "Цей акаунт заблоковано.",
+    description: "Login notice: the account is blocked",
+  },
 };
 
 export default ukAuth;

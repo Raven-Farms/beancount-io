@@ -703,6 +703,52 @@ const esAuth: Record<string, TranslationEntry> = {
     message: "Administrar libros de contabilidad y colaboradores.",
     description: "Description of the ledger admin mobile permission",
   },
+  "auth.continueWithGoogle": {
+    message: "Continuar con Google",
+    description: "Button that starts Sign in with Google",
+  },
+  "auth.googleReason.unavailable": {
+    message:
+      "El inicio de sesión con Google no está disponible en este momento.",
+    description:
+      "Login notice: Google sign-in is not configured on this server",
+  },
+  "auth.googleReason.cancelled": {
+    message: "Se canceló el inicio de sesión con Google.",
+    description: "Login notice: the user cancelled at Google's consent screen",
+  },
+  "auth.googleReason.state": {
+    message:
+      "El inicio de sesión con Google caducó o se inició en otro navegador. Vuelve a intentarlo.",
+    description:
+      "Login notice: the Google sign-in ceremony expired or came back to a different browser",
+  },
+  "auth.googleReason.failed": {
+    message: "No se pudo iniciar sesión con Google. Vuelve a intentarlo.",
+    description: "Login notice: Google sign-in failed for a technical reason",
+  },
+  "auth.googleReason.unverified": {
+    message:
+      "La dirección de correo de esa cuenta de Google no está verificada.",
+    description:
+      "Login notice: Google reports the account's email as unverified",
+  },
+  "auth.googleReason.domain": {
+    message:
+      "Esa cuenta de Google no está permitida aquí. Usa la cuenta de Google de tu organización.",
+    description:
+      "Login notice: the Google account is outside the allowed Workspace domain",
+  },
+  "auth.googleReason.notAllowed": {
+    message:
+      "Todavía no hay una cuenta para esa cuenta de Google y su registro no se ha aprobado.",
+    description:
+      "Login notice: no account exists and sign-up for this address is not approved",
+  },
+  "auth.googleReason.blocked": {
+    message: "Esta cuenta está bloqueada.",
+    description: "Login notice: the account is blocked",
+  },
 };
 
 export default esAuth;

@@ -695,6 +695,50 @@ const skAuth: Record<string, TranslationEntry> = {
     message: "Spravujte účtovné knihy a spolupracovníkov",
     description: "Description of the ledger admin mobile permission",
   },
+  "auth.continueWithGoogle": {
+    message: "Pokračovať cez Google",
+    description: "Button that starts Sign in with Google",
+  },
+  "auth.googleReason.unavailable": {
+    message: "Prihlásenie cez Google momentálne nie je dostupné.",
+    description:
+      "Login notice: Google sign-in is not configured on this server",
+  },
+  "auth.googleReason.cancelled": {
+    message: "Prihlásenie cez Google bolo zrušené.",
+    description: "Login notice: the user cancelled at Google's consent screen",
+  },
+  "auth.googleReason.state": {
+    message:
+      "Prihlásenie cez Google vypršalo alebo bolo spustené v inom prehliadači. Skúste to znova.",
+    description:
+      "Login notice: the Google sign-in ceremony expired or came back to a different browser",
+  },
+  "auth.googleReason.failed": {
+    message: "Prihlásenie cez Google zlyhalo. Skúste to znova.",
+    description: "Login notice: Google sign-in failed for a technical reason",
+  },
+  "auth.googleReason.unverified": {
+    message: "E-mailová adresa tohto účtu Google nie je overená.",
+    description:
+      "Login notice: Google reports the account's email as unverified",
+  },
+  "auth.googleReason.domain": {
+    message:
+      "Tento účet Google tu nie je povolený. Použite účet Google vašej organizácie.",
+    description:
+      "Login notice: the Google account is outside the allowed Workspace domain",
+  },
+  "auth.googleReason.notAllowed": {
+    message:
+      "Pre tento účet Google zatiaľ neexistuje účet a jeho registrácia nebola schválená.",
+    description:
+      "Login notice: no account exists and sign-up for this address is not approved",
+  },
+  "auth.googleReason.blocked": {
+    message: "Tento účet je zablokovaný.",
+    description: "Login notice: the account is blocked",
+  },
 };
 
 export default skAuth;

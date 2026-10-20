@@ -687,6 +687,50 @@ const koAuth: Record<string, TranslationEntry> = {
     message: "원장 및 협력자 관리",
     description: "Description of the ledger admin mobile permission",
   },
+  "auth.continueWithGoogle": {
+    message: "Google로 계속하기",
+    description: "Button that starts Sign in with Google",
+  },
+  "auth.googleReason.unavailable": {
+    message: "지금은 Google 로그인을 사용할 수 없습니다.",
+    description:
+      "Login notice: Google sign-in is not configured on this server",
+  },
+  "auth.googleReason.cancelled": {
+    message: "Google 로그인이 취소되었습니다.",
+    description: "Login notice: the user cancelled at Google's consent screen",
+  },
+  "auth.googleReason.state": {
+    message:
+      "Google 로그인이 만료되었거나 다른 브라우저에서 시작되었습니다. 다시 시도해 주세요.",
+    description:
+      "Login notice: the Google sign-in ceremony expired or came back to a different browser",
+  },
+  "auth.googleReason.failed": {
+    message: "Google 로그인에 실패했습니다. 다시 시도해 주세요.",
+    description: "Login notice: Google sign-in failed for a technical reason",
+  },
+  "auth.googleReason.unverified": {
+    message: "해당 Google 계정의 이메일 주소가 인증되지 않았습니다.",
+    description:
+      "Login notice: Google reports the account's email as unverified",
+  },
+  "auth.googleReason.domain": {
+    message:
+      "해당 Google 계정은 여기에서 허용되지 않습니다. 조직의 Google 계정을 사용하세요.",
+    description:
+      "Login notice: the Google account is outside the allowed Workspace domain",
+  },
+  "auth.googleReason.notAllowed": {
+    message:
+      "해당 Google 계정의 계정이 아직 없으며 가입이 승인되지 않았습니다.",
+    description:
+      "Login notice: no account exists and sign-up for this address is not approved",
+  },
+  "auth.googleReason.blocked": {
+    message: "이 계정은 차단되었습니다.",
+    description: "Login notice: the account is blocked",
+  },
 };
 
 export default koAuth;

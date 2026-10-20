@@ -695,6 +695,50 @@ const faAuth: Record<string, TranslationEntry> = {
     message: "دفتر کل و همکاران را مدیریت کنید",
     description: "Description of the ledger admin mobile permission",
   },
+  "auth.continueWithGoogle": {
+    message: "ادامه با Google",
+    description: "Button that starts Sign in with Google",
+  },
+  "auth.googleReason.unavailable": {
+    message: "ورود با Google در حال حاضر در دسترس نیست.",
+    description:
+      "Login notice: Google sign-in is not configured on this server",
+  },
+  "auth.googleReason.cancelled": {
+    message: "ورود با Google لغو شد.",
+    description: "Login notice: the user cancelled at Google's consent screen",
+  },
+  "auth.googleReason.state": {
+    message:
+      "ورود با Google منقضی شده یا در مرورگر دیگری آغاز شده است. لطفاً دوباره تلاش کنید.",
+    description:
+      "Login notice: the Google sign-in ceremony expired or came back to a different browser",
+  },
+  "auth.googleReason.failed": {
+    message: "ورود با Google ناموفق بود. لطفاً دوباره تلاش کنید.",
+    description: "Login notice: Google sign-in failed for a technical reason",
+  },
+  "auth.googleReason.unverified": {
+    message: "نشانی ایمیل این حساب Google تأیید نشده است.",
+    description:
+      "Login notice: Google reports the account's email as unverified",
+  },
+  "auth.googleReason.domain": {
+    message:
+      "این حساب Google در اینجا مجاز نیست. از حساب Google سازمان خود استفاده کنید.",
+    description:
+      "Login notice: the Google account is outside the allowed Workspace domain",
+  },
+  "auth.googleReason.notAllowed": {
+    message:
+      "هنوز حسابی برای این حساب Google وجود ندارد و ثبت‌نام آن تأیید نشده است.",
+    description:
+      "Login notice: no account exists and sign-up for this address is not approved",
+  },
+  "auth.googleReason.blocked": {
+    message: "این حساب مسدود شده است.",
+    description: "Login notice: the account is blocked",
+  },
 };
 
 export default faAuth;

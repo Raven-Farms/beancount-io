@@ -119,6 +119,7 @@ const ALLOWED_LATIN = [
   "Monaco",
   "Git",
   "GitHub",
+  "Google",
   // Literal repository metadata directory, not the lowercase word "git".
   "\\.git",
   "Mac",

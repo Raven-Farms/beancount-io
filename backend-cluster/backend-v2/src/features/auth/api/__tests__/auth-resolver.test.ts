@@ -53,6 +53,7 @@ describe("AuthResolver", () => {
       loginUser: jest.fn(),
       signInWithMagicLinkToken: jest.fn(),
       verifySignUpOtp: jest.fn(),
+      signInWithGoogle: jest.fn(),
     };
 
     resolver = new AuthResolver(mockAuthService, mockAuthSessionWorkflow);

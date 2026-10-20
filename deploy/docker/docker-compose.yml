@@ -150,6 +150,11 @@ services:
       # Who may sign up (comma-separated). Both empty = open signup.
       SIGNUP_ALLOWED_EMAILS: ${SIGNUP_ALLOWED_EMAILS:-}
       SIGNUP_ALLOWED_DOMAINS: ${SIGNUP_ALLOWED_DOMAINS:-}
+      # Sign in with Google (optional; both client values or neither).
+      # Redirect URI: https://<APP_DOMAIN>/api-gateway/auth/google/callback
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+      GOOGLE_HOSTED_DOMAINS: ${GOOGLE_HOSTED_DOMAINS:-}
       POSTGRES_BACKEND_URI: postgresql://${BACKEND_DB_USER:-beancount}:${BACKEND_DB_PASSWORD:?Set BACKEND_DB_PASSWORD in .env}@postgres-backend:5432/${BACKEND_DB_NAME:-beancount}
       REDIS_URI: redis://redis:6379
       FAVA_API_URL: http://ledger:8000

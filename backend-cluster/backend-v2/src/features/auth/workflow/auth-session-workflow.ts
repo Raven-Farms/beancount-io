@@ -7,6 +7,7 @@ import type {
   LoginUserParams,
   SignInWithOneTimeTokenParams,
 } from "@/features/auth/service/auth-service";
+import type { VerifiedGoogleIdentity } from "@/features/auth/google/google-oidc";
 import type { IUserProfileService } from "@/features/gitea/user-profile/service/user-profile-service";
 import { resolveSessionIdentity } from "@/server/api/identity";
 import { logger } from "@/shared/logger";
@@ -20,6 +21,10 @@ export interface IAuthSessionWorkflow {
     params: SignInWithOneTimeTokenParams,
   ): Promise<AuthResponse>;
   verifySignUpOtp(params: FinishSignupSessionParams): Promise<AuthResponse>;
+  signInWithGoogle(
+    identity: VerifiedGoogleIdentity,
+    ip: string,
+  ): Promise<AuthResponse>;
 }
 
 /** Complete authentication before applying the default community follow. */
@@ -27,7 +32,10 @@ export class AuthSessionWorkflow implements IAuthSessionWorkflow {
   constructor(
     private readonly authService: Pick<
       IAuthService,
-      "loginUser" | "signInWithMagicLinkToken" | "verifySignUpOtp"
+      | "loginUser"
+      | "signInWithMagicLinkToken"
+      | "verifySignUpOtp"
+      | "signInWithGoogle"
     >,
     private readonly userProfileService: Pick<
       IUserProfileService,
@@ -55,6 +63,15 @@ export class AuthSessionWorkflow implements IAuthSessionWorkflow {
     params: FinishSignupSessionParams,
   ): Promise<AuthResponse> {
     const result = await this.authService.verifySignUpOtp(params);
+    await this.followOpenLedger(result.token);
+    return result;
+  }
+
+  async signInWithGoogle(
+    identity: VerifiedGoogleIdentity,
+    ip: string,
+  ): Promise<AuthResponse> {
+    const result = await this.authService.signInWithGoogle(identity, ip);
     await this.followOpenLedger(result.token);
     return result;
   }

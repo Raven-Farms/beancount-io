@@ -697,6 +697,50 @@ const ruAuth: Record<string, TranslationEntry> = {
     message: "Управление реестрами и соавторами",
     description: "Description of the ledger admin mobile permission",
   },
+  "auth.continueWithGoogle": {
+    message: "Продолжить с Google",
+    description: "Button that starts Sign in with Google",
+  },
+  "auth.googleReason.unavailable": {
+    message: "Вход через Google сейчас недоступен.",
+    description:
+      "Login notice: Google sign-in is not configured on this server",
+  },
+  "auth.googleReason.cancelled": {
+    message: "Вход через Google был отменён.",
+    description: "Login notice: the user cancelled at Google's consent screen",
+  },
+  "auth.googleReason.state": {
+    message:
+      "Срок входа через Google истёк, или он был начат в другом браузере. Попробуйте ещё раз.",
+    description:
+      "Login notice: the Google sign-in ceremony expired or came back to a different browser",
+  },
+  "auth.googleReason.failed": {
+    message: "Не удалось войти через Google. Попробуйте ещё раз.",
+    description: "Login notice: Google sign-in failed for a technical reason",
+  },
+  "auth.googleReason.unverified": {
+    message: "Адрес электронной почты этого аккаунта Google не подтверждён.",
+    description:
+      "Login notice: Google reports the account's email as unverified",
+  },
+  "auth.googleReason.domain": {
+    message:
+      "Этот аккаунт Google здесь не разрешён. Используйте аккаунт Google вашей организации.",
+    description:
+      "Login notice: the Google account is outside the allowed Workspace domain",
+  },
+  "auth.googleReason.notAllowed": {
+    message:
+      "Для этого аккаунта Google ещё нет учётной записи, и регистрация не одобрена.",
+    description:
+      "Login notice: no account exists and sign-up for this address is not approved",
+  },
+  "auth.googleReason.blocked": {
+    message: "Эта учётная запись заблокирована.",
+    description: "Login notice: the account is blocked",
+  },
 };
 
 export default ruAuth;
