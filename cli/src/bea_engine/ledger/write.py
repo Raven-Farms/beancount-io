@@ -2633,7 +2633,7 @@ def validate_candidate(
             elif closing is not None:
                 # check_drained can inherit a close_tree close's pseudo-file;
                 # the assertion still comes from check_drained (w5/666).
-                hints.append(_drained_close_hint(error.entry, closing, error.message, options))
+                hints.append(_drained_close_hint(error.entry, closing, error.message, options, entries))
             elif origin := _plugin_origin(error.entry, "balance", filenames, original_lines):
                 # Nothing at that location is an assertion to edit (w5/222).
                 hints.append(
@@ -2897,12 +2897,51 @@ _MISSING_COMMODITY = re.compile(r"Missing Commodity directive for '([^']+)'")
 _ACCUMULATED = re.compile(r"accumulated (?P<amount>-?[\d.,]+ \S+)")
 
 
-def _drained_close_hint(balance: Any, closing: Any, message: str, options: dict[str, Any]) -> str:
+def _subtree_holders(entries: list[Any], account: str, currency: str, date: datetime.date) -> list[tuple[str, Decimal]]:
+    """Nonzero per-account holdings in `account`'s subtree when a `date` assertion runs.
+
+    The sibling `book_units` sums the subtree; this names who holds it, so a
+    `check_drained` refusal can say the money sits in a subaccount. Same-day
+    postings count: a drain dated on the close date clears the assertion.
+    """
+    from beancount.core.data import Transaction
+
+    prefix = f"{account}:"
+    totals: dict[str, Decimal] = {}
+    for entry in entries:
+        if not (isinstance(entry, Transaction) and entry.date <= date):
+            continue
+        for posting in entry.postings:
+            units = posting.units
+            if units is None or units.number is None or units.currency != currency:
+                continue
+            if posting.account == account or posting.account.startswith(prefix):
+                totals[posting.account] = totals.get(posting.account, Decimal(0)) + units.number
+    return [(name, total) for name, total in sorted(totals.items()) if total != 0]
+
+
+def _drained_close_hint(balance: Any, closing: Any, message: str, options: dict[str, Any], entries: list[Any]) -> str:
     """What the account still holds at its close, and how to get it to zero."""
     plugins = [str(name) for name, _ in options.get("plugin") or ()]
     plugin = "check_drained" if any(name.endswith("check_drained") for name in plugins) else "a plugin"
     held = _ACCUMULATED.search(message)
     holding = f"still holds {held.group('amount')}" if held else "is not empty"
+    holders = _subtree_holders(entries, balance.account, balance.amount.currency, closing.date)
+    subs = [name for name, _ in holders if name != balance.account]
+    if subs:
+        # Upstream's accumulated amount includes the subtree: telling the
+        # user to move it "out of" the parent posts a negative balance to a
+        # closed parent while the child keeps the money (w5/771).
+        breakdown = ", ".join(f"{name} {total} {balance.amount.currency}" for name, total in holders)
+        scope = "its subaccounts" if len(holders) == len(subs) else "the account and its subaccounts"
+        drain = f"Drain or close {' and '.join(subs)} first"
+        if len(holders) != len(subs):
+            drain = f"Drain {balance.account} and drain or close {' and '.join(subs)} first"
+        return (
+            f"This zero assertion is added by {plugin} for the close of {balance.account} on {closing.date}: "
+            f"the balance sits in {scope} ({breakdown}), which balance assertions include. {drain} "
+            f"(a drain posts on or before {closing.date}), then close {balance.account}."
+        )
     return (
         f"This zero assertion is added by {plugin} for the close of {balance.account} on {closing.date}: the "
         f"account {holding} then. Move that balance out of {balance.account} with a transaction dated on or "
