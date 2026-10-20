@@ -1,6 +1,6 @@
 # w21 · m1 — Entry edits and deletes refuse changes that would break the ledger
 
-**Worker:** worker1 **Goal:** editing or deleting an existing entry can't silently add a bean-check error. Since w0/m2, adding an entry is refused unless the caller passes `allowInvalid`. The edit and delete source-slice writes still commit whatever they are given, and the native app then reports plain success. **Status:** in progress (t001–t006 done)
+**Worker:** worker1 **Goal:** editing or deleting an existing entry can't silently add a bean-check error. Since w0/m2, adding an entry is refused unless the caller passes `allowInvalid`. The edit and delete source-slice writes still commit whatever they are given, and the native app then reports plain success. **Status:** blocked (t001–t006 done; t007 Closeout awaits the deployed check)
 
 ## Tasks (in order)
 
@@ -12,7 +12,7 @@
 | t004 | Adoption surface — **DONE** | 20m | t002, t003 |
 | t005 | Simplify — **DONE** | 15m | t004 |
 | t006 | Test coverage — **DONE** | 30m | t004, t005 |
-| t007 | Closeout | 10m | t006 |
+| t007 | Closeout — **blocked** | 10m | t006 |
 
 ## Definition of done
 
@@ -53,3 +53,30 @@
 ## Out of scope
 
 - Refusing raw `updateLedgerFile` saves. The file editor is the escape hatch for hand-repair and may need to pass through invalid states; it gets a warning, not a refusal.
+
+## Blocked
+
+**Blocked 2026-10-20** — t007 Closeout cannot run here, because the definition of done is observed on the deployed service and the native app.
+
+- **Shipped baseline:**
+  - `89e57bfbb` (ledger): source-slice update/delete/multi-delete project their transforms and refuse with `NEW_LEDGER_ERRORS` unless `allowInvalid`. The REST bodies and IDL take `allowInvalid`.
+  - `1a5e26adf` (backend-v2): GraphQL, REST v1 and MCP take `allowInvalid` and map the refusal to `VALIDATION_FAILED` + `newLedgerErrors`. Docs, tool descriptions, server instructions and the OpenAPI snapshot are updated.
+  - `fbbe4e0be` (mobile): delete keeps the detail screen with a dialog, Edit shows the refusal inline, and the file editor warns on a save that adds errors.
+  - `53633026c`: CLI spec sync.
+  - `a281d9ffb`: one shared refusal helper.
+  - `250c4d2f0`: tests.
+- **Verified here:**
+  - Ledger: 1393 tests, lint, typecheck and build. `source-slice-new-errors.test.ts` covers the delete and re-date repros with a stub engine, and its refusal cases fail when the guard is removed.
+  - backend-v2: 6285 tests including zero-debt surface parity, typecheck and lint. OpenAPI was regenerated and the diff reviewed. `source-slice-parity.test.ts` proves the refusal and the opt-out on REST, GraphQL and MCP, and all 18 cases fail without the change.
+  - Mobile: format, tsc, eslint, knip, and 2359 unit tests.
+  - CLI: lint, mypy, spec-check and docs-check. Nine pytest cases fail locally with or without these changes (signal-death, price-source limit, release-lock).
+  - Dashboard: no code change. It already renders `newLedgerErrors` refusals through `useErrorMessage`.
+- **Not verified:** the real rustledger engine on these writes, the deployed REST/GraphQL/MCP surfaces, and the native app. This worker has no deploy access and no simulator QA session.
+- **Blocker:** the definition of done needs the ledger service at `89e57bfbb` or later and backend-v2 at `1a5e26adf` or later deployed to `https://beancount.io`, and a native dev build that includes `fbbe4e0be`.
+- **Unblock:** after deploy, a QA run on the synthetic disposable ledger `mcp-agent-eval` (with `2026-08-29 balance Assets:Cash 49.75 USD`):
+  1. On GraphQL, REST and MCP, deleting the 2026-08-28 FARMERS MARKET entry and re-dating it to 2026-08-30 are each refused with `Balance failed for Assets:Cash …`, and the file sha is unchanged.
+  2. The same requests with `allowInvalid: true` commit.
+  3. In the native app, both repros keep the detail or editor screen with the refusal readable, and a file-editor save that breaks the assertion warns.
+  4. The fixture bytes are restored (sha256-checked, clean `getLedgerErrors`).
+
+  Then run `/pm done w21/m1/t007`. **Who:** the user (deploy) and the mobile/MCP QA loops.
