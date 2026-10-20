@@ -663,7 +663,7 @@ def _run_helper(
     stopped: list[int] = []
     committed = False
     with _forwarding_teardown(stopped, committed=lambda: committed) as attach:
-        with subprocess.Popen(
+        with _popen(
             command,
             env=env,
             stdin=subprocess.PIPE if stdin is not None else None,
@@ -1127,9 +1127,15 @@ def _spawn(
     """
     rename = (Path(command[0]).name, renamed) if renamed else None
     if _stream_is_captured(sys.stdout) or _stream_is_captured(sys.stderr):
-        captured = subprocess.run(
-            command, env=env, capture_output=True, encoding="utf-8", errors="replace", check=False
-        )
+        try:
+            captured = subprocess.run(
+                command, env=env, capture_output=True, encoding="utf-8", errors="replace", check=False
+            )
+        except OSError as exc:
+            failure = _spawn_failure(command, exc)
+            if failure is None:
+                raise
+            raise failure from exc
         output.replay(captured.stdout, sys.stdout)
         output.replay(_renamed(captured.stderr, rename), sys.stderr)
         returncode = captured.returncode
@@ -1190,7 +1196,7 @@ def _run_inherited(
     with (
         _stop_passed_on() as attach,
         _interrupt_withheld(deaf_to_interrupt) as hear_interrupts,
-        subprocess.Popen(command, env=env, stdout=stdout, stderr=stderr) as child,
+        _popen(command, env=env, stdout=stdout, stderr=stderr) as child,
     ):
         attach(child)
         try:
@@ -1269,7 +1275,7 @@ def run_captured(
     """
     with (
         _stop_passed_on() as attach,
-        subprocess.Popen(
+        _popen(
             command,
             env=env,
             stdin=subprocess.PIPE if input_text is not None else subprocess.DEVNULL if stdin_closed else None,
@@ -1560,7 +1566,46 @@ def _signal_hint(number: int) -> str:
             "Upstream's parser crashes this way on a zero divisor in an amount expression, such as "
             "'100/0 EUR'; searching the ledger for '/0' is the first thing to try."
         )
+    # The kernel sends these for a resource limit, which none of the outside
+    # causes below does (w5/816).
+    if number == getattr(signal, "SIGXCPU", None):
+        return "The process used up its CPU-time limit (ulimit -t, RLIMIT_CPU); raise the limit and retry."
+    if number == getattr(signal, "SIGXFSZ", None):
+        return "A file grew past the file-size limit (ulimit -f, RLIMIT_FSIZE); raise the limit and retry."
     return "Nothing in bea sends this signal, so it came from outside: an out-of-memory killer, a timeout, or a kill."
+
+
+#: What a refused spawn's errno says about the limit behind it.
+_SPAWN_LIMITS = {
+    errno.EMFILE: "the open-file limit is reached (ulimit -n)",
+    errno.ENFILE: "the system's open-file table is full",
+    errno.EAGAIN: "the process limit is reached (ulimit -u)",
+    errno.ENOMEM: "there is not enough memory to start it",
+}
+
+
+def _popen(command: list[str], **options: Any) -> subprocess.Popen[Any]:
+    """`subprocess.Popen`, naming what could not be started, and why, when a limit refuses it.
+
+    Every engine-backed command printed a bare `[Errno 24] Too many open
+    files` or `[Errno 35] Resource temporarily unavailable`, naming neither
+    the engine nor the limit (w5/816).
+    """
+    try:
+        return subprocess.Popen(command, **options)
+    except OSError as exc:
+        failure = _spawn_failure(command, exc)
+        if failure is None:
+            raise
+        raise failure from exc
+
+
+def _spawn_failure(command: Sequence[str], exc: OSError) -> BeaError | None:
+    limit = _SPAWN_LIMITS.get(exc.errno) if exc.errno is not None else None
+    if limit is None:
+        return None
+    what = "the Beancount engine" if "bea_engine" in command else Path(command[0]).name
+    return BeaError(f"Could not start {what} ({exc.strerror}: {limit}); nothing was run.")
 
 
 def _stream_is_captured(stream: Any) -> bool:
