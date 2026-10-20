@@ -142,6 +142,62 @@
         "Neither the buy nor the sell is written before the answer and confirmation",
         "No lot is picked silently for the sell"
       ]
+    },
+    {
+      "id": 11,
+      "name": "swap-partial-lot-stated-value",
+      "prompt": "I swapped 0.2 BTC for 4 ETH on 2026-04-01 in Assets:Crypto:Exchange (./ledger.beancount). The swap value was $12,000 total.",
+      "expected_output": "One transaction: -0.200000 BTC from the 40000.00 lot (2025-01-10) at @@ 12000.00, +4.000000 ETH at {3000.00 USD}, gains leg inferred (booking produces 4000.00). Proposed in full with the remaining 0.3 BTC lot stated; nothing written before confirmation.",
+      "files": [
+        "evals/files/eval11_ledger.beancount"
+      ],
+      "expectations": [
+        "The disposal uses the stated 12000.00 total value and the ETH lot's cost is that same value",
+        "The gain (4000.00) is shown as booking-produced, not typed",
+        "Nothing is written before confirmation"
+      ]
+    },
+    {
+      "id": 12,
+      "name": "swap-without-value-asks",
+      "prompt": "I swapped 0.2 BTC for 4 ETH yesterday in Assets:Crypto:Exchange (./ledger.beancount). Record it.",
+      "expected_output": "No value was stated for either side, so no entry is proposed with numbers: the skill asks what the swap was worth (a total value, or a per-unit price for either side to confirm) and writes nothing. It does not price either coin from memory or book an unrelated buy and sell.",
+      "files": [
+        "evals/files/eval11_ledger.beancount"
+      ],
+      "expectations": [
+        "A value for the swap is requested before any entry is proposed",
+        "No price is supplied from memory or market knowledge",
+        "Nothing is written to the ledger"
+      ]
+    },
+    {
+      "id": 13,
+      "name": "staking-receipts-dated-lots",
+      "prompt": "Record my ETH staking rewards in ./ledger.beancount (Assets:Crypto:Wallet, income to Income:Staking): 0.01 ETH on 2026-02-01 worth $29 total, 0.011 ETH on 2026-03-01 worth $33, and 0.009 ETH on 2026-04-01 worth $27.",
+      "expected_output": "Three separate lots, one per receipt date, at each stated fair value against Income:Staking (income shown per receipt and in total, 89.00), proposed together in full. The receipts are not merged into one averaged lot. Nothing written before confirmation.",
+      "files": [
+        "evals/files/eval13_ledger.beancount"
+      ],
+      "expectations": [
+        "Three lots at three dates with the stated per-receipt values (29/33/27), not one merged lot",
+        "Income lands in Income:Staking and the 89.00 total is shown",
+        "Nothing is written before confirmation"
+      ]
+    },
+    {
+      "id": 14,
+      "name": "transfer-with-priced-network-fee",
+      "prompt": "Move 0.2 BTC from Assets:Crypto:Exchange to Assets:Crypto:Wallet in ./ledger.beancount (2026-04-01). The network fee was 0.0005 BTC, worth $30 at the time.",
+      "expected_output": "One transaction: 0.2 BTC arrives in the wallet at the original lot (40000.00, 2025-01-10); the 0.0005 BTC fee leaves the same lot disposed at the stated $30 value with a 30.00 fees leg and the gains leg inferred (booking produces a 10.00 gain). Units reconcile explicitly: 0.2005 out = 0.2 in + 0.0005 fee. Nothing written before confirmation.",
+      "files": [
+        "evals/files/eval14_ledger.beancount"
+      ],
+      "expectations": [
+        "Moved units keep the 40000.00 cost and 2025-01-10 date; fee units leave the same lot",
+        "The fee disposition (disposed at stated $30, gain booking-produced) is explicit, units reconcile",
+        "Nothing is written before confirmation"
+      ]
     }
   ]
 }

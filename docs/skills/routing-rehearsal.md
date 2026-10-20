@@ -249,3 +249,14 @@ ask does open for that prompt shape its answer is figures-only with
 advice declined — w2/m49/t003's eval 13 — so the miss costs a route,
 not a wrong action.) Codex has not run the property entries (usage
 limit until 2026-11-17); w2/m51/t006 reruns there.
+
+## Crypto-native events in `beancount-trade` — 2026-10-20
+
+Trade's description gained swaps and staking/airdrop receipts
+(w2/m52), and the set gained `trade-swap-crypto`,
+`trade-staking-rewards`, and `none-live-crypto-price`; 103 prompts.
+One run, 2026-10-20T01:39:08Z: Claude Code 2.1.289 routed 102/103.
+The new entries routed as labeled; the one miss is m50's
+`import-opening-lots` → none, correct in its own full run and in 3/3
+targeted reruns — variance, recorded as not settled. Codex reruns
+with w2/m52/t004 when usage returns (2026-11-17).

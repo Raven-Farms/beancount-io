@@ -921,6 +921,35 @@
         "beancount-add"
       ],
       "why": "Rental income per property (deposit handling included), not a generic income entry."
+    },
+    {
+      "id": "trade-swap-crypto",
+      "prompt": "I swapped 0.2 BTC for 4 ETH — record the swap (it was worth $12,000)",
+      "expected": "beancount-trade",
+      "confusable": [
+        "beancount-add",
+        "beancount-options"
+      ],
+      "why": "A crypto-to-crypto swap is a priced disposal plus acquisition in one entry."
+    },
+    {
+      "id": "trade-staking-rewards",
+      "prompt": "Record my ETH staking rewards: 0.01 ETH on Feb 1 worth $29, 0.011 on Mar 1 worth $33",
+      "expected": "beancount-trade",
+      "confusable": [
+        "beancount-add"
+      ],
+      "why": "Receipts become dated lots against income, like a vest — not generic income entries."
+    },
+    {
+      "id": "none-live-crypto-price",
+      "prompt": "What's the current price of Bitcoin right now?",
+      "expected": "none",
+      "confusable": [
+        "beancount-ask",
+        "beancount-trade"
+      ],
+      "why": "A live market quote, not a ledger question or a trade to record."
     }
   ]
 }
