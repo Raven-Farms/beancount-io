@@ -8,5 +8,4 @@
 
 ## Inbox
 
-- [012](./012.md) — German, Dutch and Spanish mix formal and informal "you" across the mobile app
 - [013](./013.md) — A transaction deleted elsewhere still opens as if it exists, with "Error: Ledger resource not found" inside it
