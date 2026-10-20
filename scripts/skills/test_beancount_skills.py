@@ -437,6 +437,51 @@ class TestBundle(Workspace):
         self.assertEqual([p.name for p in out.iterdir()], ["keep"])
 
 
+class TestClawHubWorkflow(Workspace):
+    def test_validate_publishes_dry_runs_of_the_real_self_contained_bundles(self):
+        workflow = (SCRIPTS_DIR.parents[1] / ".github/workflows/publish-clawhub.yml").read_text()
+        validate = workflow.split("\n  validate:\n", 1)[1].split("\n  publish:\n", 1)[0]
+
+        def command(step: str) -> str:
+            match = re.search(
+                rf"^      - name: {re.escape(step)}\n        run: (.+)\n((?:          .*\n)*)",
+                validate, re.MULTILINE,
+            )
+            self.assertIsNotNone(match, f"missing runnable validation step: {step}")
+            return "\n".join(line[10:] for line in match[2].splitlines()) if match[1] == "|" else match[1]
+
+        package = self.root / "scripts/skills"
+        package.mkdir(parents=True)
+        shutil.copyfile(SCRIPTS_DIR / "beancount-skills.py", package / "beancount-skills.py")
+        self.copy_suite(self.root / "skills")
+        executable = self.root / "bin/clawhub"
+        executable.parent.mkdir()
+        executable.write_text("#!/usr/bin/env python3\nimport json, sys\nprint(json.dumps(sys.argv[1:]))\n")
+        executable.chmod(0o755)
+        env = {**os.environ, "PATH": os.pathsep.join((str(executable.parent), str(Path(sys.executable).parent), os.environ["PATH"]))}
+        env.pop("CLAWHUB_TOKEN", None)
+
+        for step in ("Build self-contained bundles", "Preview every bundle without credentials"):
+            result = subprocess.run(
+                ["bash", "-euc", command(step)], cwd=package, env=env, capture_output=True, text=True,
+            )
+            self.assertEqual(result.returncode, 0, result.stderr)
+        calls = [json.loads(line) for line in result.stdout.splitlines()]
+        names = skills.expected_skills()
+        self.assertCountEqual([Path(call[3]).name for call in calls], names)
+        for call in calls:
+            self.assertEqual(call[:3], ["--no-input", "skill", "publish"])
+            self.assertIn("--dry-run", call)
+            self.assertIn("--json", call)
+            folder = package / call[3]
+            self.assertEqual(call[call.index("--slug") + 1], folder.name)
+            self.assertTrue((folder / "SKILL.md").is_file())
+            self.assertEqual((folder / "LICENSE").read_bytes(), (SUITE / "LICENSE").read_bytes())
+            missing, _ = skills.missing_references(folder.parent, folder.name, names, [folder.name])
+            self.assertEqual(missing, {})
+            self.assertFalse((folder / "evals").exists())
+
+
 class TestUninstall(Workspace):
     def test_removes_only_links_into_this_checkout(self):
         run("install", self.dest)

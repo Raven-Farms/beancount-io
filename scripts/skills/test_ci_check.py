@@ -134,12 +134,12 @@ class TestSkillTrees(unittest.TestCase):
         return error.getvalue()
 
     def test_a_nested_name_cannot_stand_in_for_the_top_level_name(self):
-        err = self.check_frontmatter('description: d\nextra:\n  name: beancount-ask\n')
+        err = self.check_frontmatter('description: d\nmetadata:\n  name: beancount-ask\n')
         self.assertIn("frontmatter missing 'name'", err)
 
     def test_a_nested_name_does_not_overwrite_the_top_level_name(self):
         path = self.customer / "beancount-ask/SKILL.md"
-        path.write_text("---\nname: beancount-ask\ndescription: d\nextra:\n  name: other\n  description: ''\n---\n")
+        path.write_text("---\nname: beancount-ask\ndescription: d\nmetadata:\n  name: other\n  description: ''\n---\n")
         meta = ci_check.parse_frontmatter(path)
         self.assertEqual((meta["name"], meta["description"]), ("beancount-ask", "d"))
 
@@ -175,6 +175,13 @@ class TestSkillTrees(unittest.TestCase):
             "name: beancount-ask\ndescription: d\nmetadata:\n  openclaw: {requires: {}}\n"
         )
         self.assertIn("uses YAML this checker does not read", flow)
+
+    def test_inconsistent_metadata_indentation_is_rejected(self):
+        err = self.check_frontmatter(
+            "name: beancount-ask\ndescription: d\nmetadata:\n"
+            "  openclaw:\n    homepage: 'https://example.com'\n   hermes:\n    category: finance\n"
+        )
+        self.assertIn("inconsistent indentation", err)
 
     def test_a_development_skill_without_the_internal_flag_is_rejected(self):
         for frontmatter in (
