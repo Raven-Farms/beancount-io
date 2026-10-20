@@ -455,8 +455,18 @@ def _run(name: str, spec: _Spec, limit: int, allow_errors: bool, *, details: boo
             rows = [[*row, "generated" if marker else ""] for row, marker in zip(rows, generated, strict=True)]
         output.table(headers, rows)
     if truncated:
-        advice = "pass --limit for more" if limit == 50 else "raise --limit for more"
+        advice = "raise --limit for more" if _limit_was_given() else "pass --limit for more"
         output.note(f"Showing the first {limit}; {advice}.")
+
+
+def _limit_was_given() -> bool:
+    """Whether `--limit` was typed, whatever its value: an explicit `-l 50` was told to pass it (w5/836)."""
+    from typer._click.core import ParameterSource
+    from typer._click.globals import get_current_context
+
+    ctx = get_current_context(silent=True)
+    source = ctx.get_parameter_source("limit") if ctx is not None else None
+    return source is not None and source is not ParameterSource.DEFAULT
 
 
 def _account_command(name: str, spec: _Spec) -> Callable[..., None]:
