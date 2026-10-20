@@ -717,7 +717,7 @@ def _forward_directories(ctx: typer.Context) -> None:
 
 
 def _refuse_partial_load(op: str, ledger: str) -> None:
-    """Refuse an answer that would silently leave out what a syntax error hid.
+    """Refuse an answer that would silently leave out what a syntax error or a missing include hid.
 
     The loader skips an unparseable directive and carries on, so
     `missing-open` listed the opens of the entries it could parse with exit
@@ -727,6 +727,21 @@ def _refuse_partial_load(op: str, ledger: str) -> None:
     errors = _closure_syntax_errors_of(ledger)
     if errors:
         raise LedgerError(f"doctor {op} cannot load {ledger}: {errors[0]}", details=errors[1:])
+    # A missing include hides its directives just as surely: the opens it
+    # held were listed as missing, ready to append twice (w5/819).
+    root = Path(ledger)
+    missing = output.missing_includes(root) if root.is_file() else []
+    if missing:
+        problems = [
+            f'unreadable include "{item.include}" (included by {item.source}): {item.reason}'
+            if item.reason
+            else f'missing include "{item.include}" (included by {item.source})'
+            for item in missing
+        ]
+        raise LedgerError(
+            f"doctor {op} cannot load {ledger}: {problems[0]}; what it holds would be left out.",
+            details=problems[1:],
+        )
 
 
 def _forward_scoped(op: str, ctx: typer.Context) -> None:
