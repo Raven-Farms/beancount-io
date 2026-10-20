@@ -80,3 +80,51 @@ def test_different_ids_on_both_sides_are_named(tmp_path: Path, bea_config_dir: P
         row["reason"]
         == "Date, narration and source amount match; their bank IDs differ, which does not rule out a duplicate."
     )
+
+
+IMPORTER = """
+import datetime, hashlib
+from decimal import Decimal as D
+from beancount.core import amount, data
+
+def _id(row, n):
+    base = f"2026-10-04|-15.49|NETFLIX.COM|Liabilities:CreditCard" + (f"|{n}" if n else "")
+    return "csv:sha256:" + hashlib.sha256(base.encode()).hexdigest()[:16]
+
+class Card:
+    name = "card"
+    def identify(self, filepath):
+        return True
+    def account(self, filepath):
+        return "Liabilities:CreditCard"
+    def extract(self, filepath, existing):
+        rows = []
+        for n in range(2):
+            meta = data.new_metadata(filepath, n + 1)
+            meta["import-id"] = _id(None, n)
+            legs = [data.Posting(a, amount.Amount(D(v), "USD"), None, None, None, None)
+                    for a, v in (("Liabilities:CreditCard", "-15.49"), ("Expenses:Uncategorized", "15.49"))]
+            rows.append(data.Transaction(meta, datetime.date(2026, 10, 4), "*", None, "NETFLIX.COM",
+                                         data.EMPTY_SET, data.EMPTY_SET, legs))
+        return rows
+
+CONFIG = [Card()]
+"""
+
+
+def test_an_importers_generated_ids_are_no_bank_ids(tmp_path: Path, bea_config_dir: Path) -> None:
+    """Rows with importer-generated `csv:sha256:` ids were told "only one of them carries a bank ID" (w5/832)."""
+    (tmp_path / "main.bean").write_text(LEDGER)
+    (tmp_path / "n.csv").write_text("x\n")
+    (tmp_path / "imp.py").write_text(IMPORTER)
+
+    result = runner.invoke(
+        app,
+        ["--json", "--no-input", "--file", str(tmp_path / "main.bean"), "import", str(tmp_path / "n.csv")]
+        + ["--config", str(tmp_path / "imp.py")],
+    )
+
+    assert result.exit_code == 0, result.output
+    rows = json.loads(result.stdout)["data"]["rows"]
+    assert rows[1]["status"] == "possible_duplicate"
+    assert rows[1]["reason"].endswith("neither row has a bank ID.")

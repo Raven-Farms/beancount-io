@@ -594,7 +594,7 @@ def answer(
             elif (twin := _possible_twin(fingerprints, entry, account, fingerprint, owners, index)) is not None:
                 status, reason, match = (
                     "possible_duplicate",
-                    _twin_reason(entry, twin, batch_rows.get(id(twin)), ours=id_source != "hash", keys=keys),
+                    _twin_reason(entry, twin, batch_rows.get(id(twin)), keys=keys),
                     twin,
                 )
             elif (counterpart := _transfer_counterpart(counterparts, entry, account, fingerprint)) is not None:
@@ -1519,15 +1519,15 @@ def _is_generated_identity(key: tuple[str, str, str]) -> bool:
     return key[1] == "digest" or (key[1] == "import-id" and _GENERATED_ID.fullmatch(key[2]) is not None)
 
 
-def _twin_reason(entry: Any, twin: Any, earlier: int | None, *, ours: bool, keys: list[str]) -> str:
+def _twin_reason(entry: Any, twin: Any, earlier: int | None, *, keys: list[str]) -> str:
     """Why a row may repeat `twin`, naming only the bank IDs that exist.
 
     Two same-day charges with no ID column read "different bank IDs do not
-    rule out a duplicate", about IDs neither row had (w5/615).
+    rule out a duplicate", about IDs neither row had (w5/615). Both rows are
+    judged alike: an importer's own generated `csv:sha256:` id is no bank ID
+    on either side (w5/832).
     """
-    theirs = _native_import_id(twin.meta or {}, keys) is not None or (
-        bool(twin.meta.get("import-id")) and _GENERATED_ID.fullmatch(str(twin.meta["import-id"])) is None
-    )
+    ours, theirs = _carries_bank_id(entry.meta or {}, keys), _carries_bank_id(twin.meta or {}, keys)
     if ours and theirs:
         ids = "their bank IDs differ, which does not rule out a duplicate"
     elif ours or theirs:
@@ -1537,6 +1537,12 @@ def _twin_reason(entry: Any, twin: Any, earlier: int | None, *, ours: bool, keys
     named = "payee" if _match_text(entry.payee) else "narration"
     where = f" row {earlier} of this import" if earlier is not None else ""
     return f"Date, {named} and source amount match{where}; {ids}."
+
+
+def _carries_bank_id(meta: dict[str, Any], keys: list[str]) -> bool:
+    """Whether a row's metadata holds an ID a bank issued, not one generated from its content."""
+    stored = meta.get("import-id")
+    return _native_import_id(meta, keys) is not None or (bool(stored) and _GENERATED_ID.fullmatch(str(stored)) is None)
 
 
 def _is_native_identity(key: tuple[str, str, str]) -> bool:
