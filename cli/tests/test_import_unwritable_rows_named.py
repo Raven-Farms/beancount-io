@@ -178,3 +178,45 @@ def test_an_unwritable_row_stops_the_import_naming_it(
     assert result.exit_code == 1, result.output
     assert said in " ".join(result.stderr.split())
     assert "Directive " not in result.stderr and "Error: AttributeError" not in result.stderr
+
+
+def _apply(tmp_path: Path, rows: str, *flags: str) -> Any:
+    _import(tmp_path, rows)
+    return runner.invoke(
+        app,
+        [*flags, "--no-input", "--file", str(tmp_path / "main.bean"), "import", str(tmp_path / "bank.txt")]
+        + ["--config", str(tmp_path / "imp.py"), "--apply"],
+    )
+
+
+MIXED = 'txn(day(1), "r1", "-2.00", "2.00"), txn(day(2), "r2", "-4.00", "4.00", account="Expenses:Unopened"), ' + (
+    'txn(day(3), "r3", "-3.00", "3.50")'
+)
+
+
+@pytest.mark.parametrize("flags", [(), ("--json",)])
+def test_an_apply_refused_for_a_blocked_row_names_the_invalid_row_too(
+    tmp_path: Path, bea_config_dir: Path, flags: tuple[str, ...]
+) -> None:
+    """The blocked refusal raised first and listed row 2 alone; row 3's imbalance vanished (w5/858)."""
+    result = _apply(tmp_path, MIXED, *flags)
+
+    assert result.exit_code == 4, result.output
+    if flags:
+        error = json.loads(result.stderr)["error"]
+        message, details = error["message"], error["details"]
+    else:
+        message, details = " ".join(result.stderr.split()), result.stderr.splitlines()
+    assert "1 row is blocked" in message and "1 row would also leave the ledger invalid" in message
+    assert any("Row 2 (blocked):" in line for line in details)
+    assert any("Row 3: Transaction does not balance: (0.50 USD)" in line for line in details)
+    assert (tmp_path / "main.bean").read_text() == LEDGER
+
+
+def test_an_invalid_only_apply_keeps_its_exit_1(tmp_path: Path, bea_config_dir: Path) -> None:
+    result = _apply(tmp_path, UNBALANCED)
+
+    assert result.exit_code == 1, result.output
+    assert result.stderr.count("Row 3: Transaction does not balance: (0.50 USD)") == 1
+    assert "would also leave" not in result.stderr
+    assert (tmp_path / "main.bean").read_text() == LEDGER

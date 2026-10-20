@@ -844,9 +844,18 @@ def answer(
                 guidance += (
                     f" {blocked} rows are blocked by unopened accounts or currency mismatches; resolve them first."
                 )
+            # Invalid rows were dropped from the refusal it raised first, so
+            # fixing everything it listed met the next refusal (w5/858).
+            if validation_errors:
+                invalid = preview["invalid"]
+                if invalid:
+                    rows_word = "1 row would" if invalid == 1 else f"{invalid} rows would"
+                    guidance += f" {rows_word} also leave the ledger invalid; correct the source."
+                else:
+                    guidance += " The import would also leave the ledger invalid."
             raise ConflictError(
                 guidance,
-                details=review,
+                details=review + validation_errors,
                 ledger_errors=validation_warnings,
                 result=preview,
             )
