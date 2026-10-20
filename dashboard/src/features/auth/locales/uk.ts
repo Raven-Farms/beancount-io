@@ -747,6 +747,12 @@ const ukAuth: Record<string, TranslationEntry> = {
     description:
       "Sign-up page notice when password sign-up is turned off on the server",
   },
+  "auth.passwordAuthDisabled": {
+    message:
+      "Вхід за паролем на цьому сервері вимкнено. Продовжте через Google.",
+    description:
+      "Shown instead of a password form when password sign-in is turned off on the server",
+  },
 };
 
 export default ukAuth;

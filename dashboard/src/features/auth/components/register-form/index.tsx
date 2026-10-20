@@ -9,6 +9,8 @@ import { Label } from "@/common/components/ui/label";
 import { PasswordInput } from "@/features/auth/components/password-input";
 import { Alert, AlertDescription } from "@/common/components/ui/alert";
 import { useTranslations } from "@/common/hooks/use-translations";
+import { PasswordAuthDisabled } from "@/features/auth/components/google-sign-in-button/password-auth-disabled";
+import { useAuthProviders } from "@/features/auth/hooks/use-auth-providers";
 import { ScriptRequiredNotice } from "@/features/auth/components/script-required-notice";
 import { useHydrated } from "@/features/auth/lib/use-hydrated";
 import type { RegisterFormData } from "@/features/auth/hooks/use-register-form";
@@ -129,6 +131,13 @@ export function RegisterForm({
     .join(" ");
 
   const hydrated = useHydrated();
+  const { password: passwordEnabled } = useAuthProviders();
+
+  // AUTH_PASSWORD_ENABLED=false: accounts are created by continuing with
+  // Google (subject to the server's signup allowlist).
+  if (!passwordEnabled) {
+    return <PasswordAuthDisabled messageKey="auth.googleOnlySignUp" />;
+  }
 
   return (
     // Defence in depth: a native submission puts fields in a body, not

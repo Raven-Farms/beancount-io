@@ -753,6 +753,12 @@ const frAuth: Record<string, TranslationEntry> = {
     description:
       "Sign-up page notice when password sign-up is turned off on the server",
   },
+  "auth.passwordAuthDisabled": {
+    message:
+      "La connexion par mot de passe est désactivée sur ce serveur. Continuez plutôt avec Google.",
+    description:
+      "Shown instead of a password form when password sign-in is turned off on the server",
+  },
 };
 
 export default frAuth;

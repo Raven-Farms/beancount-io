@@ -131,6 +131,10 @@ allows CORS from those hosts. A self-host on another domain sets:
   reports `password: false`, so the dashboard shows only the other methods. The
   one-time-token sign-in (used by the admin `login-as` break-glass) stays
   available.
+  It governs the Beancount account password only: the git proxy's Gitea
+  credentials (each ledger's generated git password, or a Gitea access token,
+  sent with a Gitea username) are a separate per-ledger git credential and
+  keep working.
 
 Production OAuth requires `OAUTH_JWKS`, a complete private P-256/ES256 signing
 JWKS provided by the deployment secret manager. It must never be committed or

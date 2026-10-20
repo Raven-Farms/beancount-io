@@ -736,6 +736,12 @@ const koAuth: Record<string, TranslationEntry> = {
     description:
       "Sign-up page notice when password sign-up is turned off on the server",
   },
+  "auth.passwordAuthDisabled": {
+    message:
+      "이 서버에서는 비밀번호 로그인이 꺼져 있습니다. 대신 Google로 계속하세요.",
+    description:
+      "Shown instead of a password form when password sign-in is turned off on the server",
+  },
 };
 
 export default koAuth;
