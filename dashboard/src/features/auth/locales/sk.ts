@@ -739,6 +739,11 @@ const skAuth: Record<string, TranslationEntry> = {
     message: "Tento účet je zablokovaný.",
     description: "Login notice: the account is blocked",
   },
+  "auth.googleOnlySignUp": {
+    message: "Nové účty sa vytvárajú pokračovaním cez Google.",
+    description:
+      "Sign-up page notice when password sign-up is turned off on the server",
+  },
 };
 
 export default skAuth;

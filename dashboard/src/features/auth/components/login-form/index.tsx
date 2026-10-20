@@ -12,6 +12,7 @@ import { useTranslations } from "@/common/hooks/use-translations";
 import { ScriptRequiredNotice } from "@/features/auth/components/script-required-notice";
 import { useHydrated } from "@/features/auth/lib/use-hydrated";
 import { GoogleSignInButton } from "@/features/auth/components/google-sign-in-button";
+import { useAuthProviders } from "@/features/auth/hooks/use-auth-providers";
 
 type LoginFormData = {
   email: string;
@@ -69,6 +70,12 @@ export function LoginForm({
   });
 
   const hydrated = useHydrated();
+  const { password: passwordEnabled } = useAuthProviders();
+
+  // AUTH_PASSWORD_ENABLED=false on the backend: Google is the only way in.
+  if (!passwordEnabled) {
+    return <GoogleSignInButton next={googleNext} />;
+  }
 
   return (
     // Defence in depth: a native submission puts fields in a body, not

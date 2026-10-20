@@ -740,6 +740,11 @@ const jaAuth: Record<string, TranslationEntry> = {
     message: "このアカウントはブロックされています。",
     description: "Login notice: the account is blocked",
   },
+  "auth.googleOnlySignUp": {
+    message: "新しいアカウントは Google で続行すると作成されます。",
+    description:
+      "Sign-up page notice when password sign-up is turned off on the server",
+  },
 };
 
 export default jaAuth;

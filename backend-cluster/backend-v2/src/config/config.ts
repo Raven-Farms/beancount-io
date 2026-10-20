@@ -72,6 +72,16 @@ function parseDomainList(
   return domains;
 }
 
+/** AUTH_PASSWORD_ENABLED: unset or "true" = on, "false" = off; anything else fails at boot. */
+export function parsePasswordAuthEnabled(value: string | undefined): boolean {
+  const v = value?.trim().toLowerCase() ?? "";
+  if (v === "" || v === "true") return true;
+  if (v === "false") return false;
+  throw new Error(
+    `AUTH_PASSWORD_ENABLED: expected "true" or "false", got ${JSON.stringify(value)}`,
+  );
+}
+
 /** Both GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET, or neither. */
 export function parseGoogleAuthConfig(env: {
   GOOGLE_CLIENT_ID?: string;
@@ -359,6 +369,12 @@ export interface AppConfig {
   /** SIGNUP_ALLOWED_EMAILS / SIGNUP_ALLOWED_DOMAINS; both empty = open signup. */
   signup: SignupPolicy;
   googleAuth: GoogleAuthConfig | null;
+  /**
+   * AUTH_PASSWORD_ENABLED (default true). When false, password sign-in,
+   * sign-up with an emailed code, password reset and email+password git
+   * access are refused; accounts sign in another way (e.g. Google).
+   */
+  passwordAuthEnabled: boolean;
   sshProxy: SshProxyConfig;
   env: Environment;
   project: string;
@@ -527,6 +543,9 @@ export const config: AppConfig = {
       environment,
     ),
   },
+  passwordAuthEnabled: parsePasswordAuthEnabled(
+    process.env.AUTH_PASSWORD_ENABLED,
+  ),
   googleAuth: parseGoogleAuthConfig({
     GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID,
     GOOGLE_CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET,

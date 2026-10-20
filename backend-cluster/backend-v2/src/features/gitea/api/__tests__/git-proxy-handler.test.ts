@@ -197,6 +197,31 @@ describe("setGitProxyHandler", () => {
       );
     });
 
+    it("should refuse a correct app password when AUTH_PASSWORD_ENABLED is false", async () => {
+      setGitProxyHandler(router, mockServices, {
+        ...mockConfig,
+        passwordAuthEnabled: false,
+      } as AppConfig);
+
+      const basicAuth = Buffer.from("test@example.com:password123").toString(
+        "base64",
+      );
+      (ctx.get as jest.Mock).mockReturnValue(`Basic ${basicAuth}`);
+      (
+        mockServices.database.models.user.getByMail as jest.Mock
+      ).mockResolvedValue(mockUser);
+      (
+        mockServices.database.models.user.verifyPassword as jest.Mock
+      ).mockResolvedValue(true);
+
+      await registeredRoute!.handler(ctx);
+
+      expect(ctx.status).toBe(401);
+      expect(
+        mockServices.database.models.user.verifyPassword,
+      ).not.toHaveBeenCalled();
+    });
+
     it("should proxy request with translated credentials on successful auth", async () => {
       setGitProxyHandler(router, mockServices, mockConfig);
 

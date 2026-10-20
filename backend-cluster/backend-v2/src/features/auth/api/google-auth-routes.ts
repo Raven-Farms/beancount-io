@@ -24,7 +24,7 @@ import { getSafeRedirectPath } from "@/shared/safe-redirect-path";
 /**
  * Sign in with Google: the browser-facing half of the ceremony.
  *
- *   GET /api-gateway/auth/providers        { google: boolean } for the dashboard
+ *   GET /api-gateway/auth/providers        { google, password } for the dashboard
  *   GET /api-gateway/auth/google/start     -> Google (state, nonce, PKCE)
  *   GET /api-gateway/auth/google/callback  -> session cookie, then `next`
  *
@@ -34,17 +34,15 @@ import { getSafeRedirectPath } from "@/shared/safe-redirect-path";
  * to /auth/login?reason=<code>; details go to the log as categories only.
  */
 
-const GOOGLE_REASONS = [
-  "google_unavailable",
-  "google_cancelled",
-  "google_state",
-  "google_failed",
-  "google_unverified",
-  "google_domain",
-  "google_not_allowed",
-  "google_blocked",
-] as const;
-type GoogleReason = (typeof GOOGLE_REASONS)[number];
+type GoogleReason =
+  | "google_unavailable"
+  | "google_cancelled"
+  | "google_state"
+  | "google_failed"
+  | "google_unverified"
+  | "google_domain"
+  | "google_not_allowed"
+  | "google_blocked";
 
 const STATE_COOKIE = "bcio_google_state";
 const CEREMONY_PATH = "/api-gateway/auth/google";
@@ -52,7 +50,10 @@ const moduleLogger = logger.child({ module: "google-auth" });
 
 export interface GoogleAuthRouteDeps {
   authSession: Pick<IAuthSessionWorkflow, "signInWithGoogle">;
-  config: Pick<AppConfig, "env" | "googleAuth" | "dashboard" | "jwt">;
+  config: Pick<
+    AppConfig,
+    "env" | "googleAuth" | "dashboard" | "jwt" | "passwordAuthEnabled"
+  >;
   stateStore?: GoogleStateStore;
   oidc?: () => GoogleOidcDeps;
 }
@@ -104,7 +105,10 @@ export function setGoogleAuthRoutes(
 
   router.get("/api-gateway/auth/providers", (ctx) => {
     ctx.set("Cache-Control", "public, max-age=60");
-    ctx.body = { google: config.googleAuth !== null };
+    ctx.body = {
+      google: config.googleAuth !== null,
+      password: config.passwordAuthEnabled !== false,
+    };
   });
 
   router.get(`${CEREMONY_PATH}/start`, async (ctx) => {

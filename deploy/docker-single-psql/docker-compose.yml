@@ -158,6 +158,9 @@ services:
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
       GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
       GOOGLE_HOSTED_DOMAINS: ${GOOGLE_HOSTED_DOMAINS:-}
+      # AUTH_PASSWORD_ENABLED=false turns off password sign-in, sign-up with an
+      # emailed code, password reset and email+password git access.
+      AUTH_PASSWORD_ENABLED: ${AUTH_PASSWORD_ENABLED:-}
       # Same server as Gitea's database, different database and login role.
       POSTGRES_BACKEND_URI: postgresql://${BACKEND_DB_USER:-beancount}:${BACKEND_DB_PASSWORD:?Set BACKEND_DB_PASSWORD in .env}@postgres:5432/${BACKEND_DB_NAME:-beancount}
       REDIS_URI: redis://redis:6379

@@ -740,6 +740,11 @@ const nlAuth: Record<string, TranslationEntry> = {
     message: "Dit account is geblokkeerd.",
     description: "Login notice: the account is blocked",
   },
+  "auth.googleOnlySignUp": {
+    message: "Nieuwe accounts worden aangemaakt door door te gaan met Google.",
+    description:
+      "Sign-up page notice when password sign-up is turned off on the server",
+  },
 };
 
 export default nlAuth;

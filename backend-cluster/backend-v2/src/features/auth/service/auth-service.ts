@@ -164,7 +164,7 @@ export class AuthService implements IAuthService {
     private readonly favaClientFactory: IFavaClientFactory,
     private readonly config: Pick<
       AppConfig,
-      "favaApi" | "dashboard" | "gitea" | "signup"
+      "favaApi" | "dashboard" | "gitea" | "signup" | "passwordAuthEnabled"
     >,
   ) {}
 
@@ -202,6 +202,17 @@ export class AuthService implements IAuthService {
       ip,
     });
   };
+
+  // AUTH_PASSWORD_ENABLED=false turns off every password ceremony. Absent
+  // config (tests, older wiring) means on, as upstream behaves.
+  private assertPasswordAuthEnabled(): void {
+    if (this.config.passwordAuthEnabled === false) {
+      throw new ForbiddenError(
+        "Password sign-in is turned off on this server",
+        "password",
+      );
+    }
+  }
 
   // SIGNUP_ALLOWED_EMAILS / SIGNUP_ALLOWED_DOMAINS (see signup-policy.ts).
   private assertSignupAllowed(email: string): void {
@@ -296,6 +307,7 @@ export class AuthService implements IAuthService {
   };
 
   public loginUser = async (params: LoginUserParams): Promise<AuthResponse> => {
+    this.assertPasswordAuthEnabled();
     const { email, password } = params;
     // Reject overlong passwords before touching the database or bcrypt.
     // Use the same generic error as wrong password to avoid leaking signal.
@@ -387,6 +399,7 @@ export class AuthService implements IAuthService {
     email: string,
     ip?: string,
   ): Promise<void> => {
+    this.assertPasswordAuthEnabled();
     // Rate limit: 2 requests per minute per email
     checkRateLimit(`forgot-password:${email}`, {
       windowMs: 60000,
@@ -438,6 +451,7 @@ export class AuthService implements IAuthService {
     token: string,
     newPassword: string,
   ): Promise<void> => {
+    this.assertPasswordAuthEnabled();
     const emailToken = await this.models.emailToken.findOne(token);
     if (!emailToken) {
       throw new BadUserInputError("Invalid or expired token");
@@ -472,6 +486,7 @@ export class AuthService implements IAuthService {
   public createSignUpSession = async (
     params: CreateSignUpSessionParams,
   ): Promise<string> => {
+    this.assertPasswordAuthEnabled();
     const { email, password, firstName, lastName, username, ip } = params;
 
     const normalizedEmail = email.toLowerCase().trim();
@@ -607,6 +622,7 @@ export class AuthService implements IAuthService {
   public finishSignupSession = async (
     params: FinishSignupSessionParams,
   ): Promise<AuthResponse> => {
+    this.assertPasswordAuthEnabled();
     const { sessionId, otp } = params;
 
     const session =
@@ -655,6 +671,7 @@ export class AuthService implements IAuthService {
   public verifySignUpOtp = async (
     params: FinishSignupSessionParams,
   ): Promise<AuthResponse> => {
+    this.assertPasswordAuthEnabled();
     const { sessionId, otp } = params;
 
     const session =

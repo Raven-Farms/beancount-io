@@ -740,6 +740,11 @@ const bgAuth: Record<string, TranslationEntry> = {
     message: "Този акаунт е блокиран.",
     description: "Login notice: the account is blocked",
   },
+  "auth.googleOnlySignUp": {
+    message: "Новите акаунти се създават, като продължите с Google.",
+    description:
+      "Sign-up page notice when password sign-up is turned off on the server",
+  },
 };
 
 export default bgAuth;

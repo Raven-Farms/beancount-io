@@ -748,6 +748,11 @@ const frAuth: Record<string, TranslationEntry> = {
     message: "Ce compte est bloqué.",
     description: "Login notice: the account is blocked",
   },
+  "auth.googleOnlySignUp": {
+    message: "Les nouveaux comptes sont créés en continuant avec Google.",
+    description:
+      "Sign-up page notice when password sign-up is turned off on the server",
+  },
 };
 
 export default frAuth;

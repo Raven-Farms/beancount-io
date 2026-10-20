@@ -1,6 +1,7 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { GoogleSignInButton } from "../index";
+import { resetAuthProvidersForTests } from "@/features/auth/hooks/use-auth-providers";
 
 const providers = (body: unknown, ok = true) =>
   vi.spyOn(globalThis, "fetch").mockResolvedValue({
@@ -10,6 +11,7 @@ const providers = (body: unknown, ok = true) =>
 
 afterEach(() => {
   vi.restoreAllMocks();
+  resetAuthProvidersForTests();
 });
 
 describe("GoogleSignInButton", () => {

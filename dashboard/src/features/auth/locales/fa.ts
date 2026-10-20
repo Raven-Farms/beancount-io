@@ -739,6 +739,11 @@ const faAuth: Record<string, TranslationEntry> = {
     message: "این حساب مسدود شده است.",
     description: "Login notice: the account is blocked",
   },
+  "auth.googleOnlySignUp": {
+    message: "حساب‌های جدید با ادامه دادن با Google ایجاد می‌شوند.",
+    description:
+      "Sign-up page notice when password sign-up is turned off on the server",
+  },
 };
 
 export default faAuth;

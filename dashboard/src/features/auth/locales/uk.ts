@@ -742,6 +742,11 @@ const ukAuth: Record<string, TranslationEntry> = {
     message: "Цей акаунт заблоковано.",
     description: "Login notice: the account is blocked",
   },
+  "auth.googleOnlySignUp": {
+    message: "Нові акаунти створюються під час входу через Google.",
+    description:
+      "Sign-up page notice when password sign-up is turned off on the server",
+  },
 };
 
 export default ukAuth;
