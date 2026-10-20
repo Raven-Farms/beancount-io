@@ -298,12 +298,20 @@ def add(
 
 @contextmanager
 def _redirect_on_failure(redirect: str | None) -> Iterator[None]:
-    """Say a refused write was checked against the root, as the answer would have."""
+    """Say a refused write was checked against the root, as the answer would have.
+
+    In the failure itself: a note on the helper's stderr is shown only on
+    success, so a refused or partial write through an include never said it
+    was checked against the root (w5/828). A partial write's result carries it
+    in `warnings` too, as a whole one does.
+    """
     try:
         yield
-    except protocol.EngineError:
+    except protocol.EngineError as exc:
         if redirect is not None:
-            protocol.note(redirect)
+            exc.details = [*exc.details, redirect]
+            if isinstance(exc.result, dict):
+                exc.result["warnings"] = [redirect, *(exc.result.get("warnings") or [])]
         raise
 
 
