@@ -36,7 +36,6 @@
 
 ## Inbox
 
-- [788 — First-run polish: no remedy on failed install, uninstall leaves the engine, PyPI license links 404](./788.md)
 - [789 — The valuation/translation adjustment differs with and without -t: the FX gain moves to an Equity:Conversions line](./789.md)
 - [790 — A -t period holding no foreign currency is refused for a missing price left by an earlier settled trade](./790.md)
 - [791 — query --source with $VAR in the path silently queries the expanded (other) ledger; -o replaces the export](./791.md)
