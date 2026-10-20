@@ -7,6 +7,7 @@ import {
   TooltipTrigger,
 } from "@/common/components/ui/tooltip";
 import { useFormatRelativeTime } from "@/common/hooks/use-date-locale";
+import { useHydrated } from "@/common/hooks/use-hydrated";
 import { useTranslations } from "@/common/hooks/use-translations";
 import { toast } from "sonner";
 
@@ -34,11 +35,16 @@ export function CommitMetadata({
   const extendedMessage =
     messageParts.length > 1 ? messageParts.slice(1).join("\n").trim() : null;
   const commitDate = new Date(author.date);
-  const relativeTime = formatRelativeTime(commitDate);
+  // Until hydration the server's clock and zone are not the browser's: show
+  // the exact time in UTC on both sides, then the age and the browser-zone
+  // time in place, keeping this node and the reader's focus (w4/m36).
+  const hydrated = useHydrated();
   const exactTime = new Intl.DateTimeFormat(i18n.language, {
     dateStyle: "medium",
     timeStyle: "long",
+    timeZone: hydrated ? undefined : "UTC",
   }).format(commitDate);
+  const relativeTime = hydrated ? formatRelativeTime(commitDate) : exactTime;
   const shortSha = sha.substring(0, 7);
 
   useEffect(

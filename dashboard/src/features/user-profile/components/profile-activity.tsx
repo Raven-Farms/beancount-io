@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/common/components/ui/button";
 import { useFormatRelativeTime } from "@/common/hooks/use-date-locale";
+import { useHydrated } from "@/common/hooks/use-hydrated";
 import { useTranslations } from "@/common/hooks/use-translations";
 import type {
   UserActivityFeedItem,
@@ -24,8 +25,17 @@ export function ProfileActivity({
   activities: UserActivityFeedItem[];
   example?: UserRepository;
 }) {
-  const { t } = useTranslations();
+  const { t, i18n } = useTranslations();
   const formatRelativeTime = useFormatRelativeTime();
+  // Server and hydration renders share a UTC exact time; the age and the
+  // browser-zone title follow in place after hydration, so the profile and
+  // a focused control are kept rather than re-rendered (w4/m36).
+  const hydrated = useHydrated();
+  const exactTime = (date: Date, options: Intl.DateTimeFormatOptions) =>
+    date.toLocaleString(i18n.language, {
+      ...options,
+      timeZone: hydrated ? undefined : "UTC",
+    });
   const [expanded, setExpanded] = useState(false);
   const recent = [...activities].sort(
     (a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt),
@@ -114,10 +124,15 @@ export function ProfileActivity({
                     {!Number.isNaN(date.getTime()) && (
                       <time
                         dateTime={date.toISOString()}
-                        title={date.toLocaleString()}
+                        title={exactTime(date, {
+                          dateStyle: "medium",
+                          timeStyle: "long",
+                        })}
                         className="mt-1 block text-xs text-muted-foreground"
                       >
-                        {formatRelativeTime(date)}
+                        {hydrated
+                          ? formatRelativeTime(date)
+                          : exactTime(date, { dateStyle: "medium" })}
                       </time>
                     )}
                   </div>
