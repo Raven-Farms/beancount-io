@@ -9,6 +9,12 @@
 	handle /.well-known/* {
 		reverse_proxy backend-v2:4104
 	}
+	# Sign in with Google returns to the dashboard host (the OAuth redirect URI
+	# is DASHBOARD_URL/api-gateway/auth/google/callback), and the login page
+	# asks this host which sign-in methods exist.
+	handle /api-gateway/auth/* {
+		reverse_proxy backend-v2:4104
+	}
 	handle {
 		reverse_proxy dashboard:3000
 	}
