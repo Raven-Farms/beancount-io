@@ -91,3 +91,52 @@ def test_a_ledger_open_is_named_at_its_file(tmp_path: Path, bea_config_dir: Path
     assert row["status"] == "blocked"
     assert f"opens 2026-03-01 (at {ledger}:4), after this row's 2026-02-02." in row["reason"]
     assert ".bea-" not in row["reason"]
+
+
+def _linked_books(tmp_path: Path, *, leaf: bool) -> Path:
+    books = tmp_path / "books"
+    books.mkdir()
+    root = 'option "operating_currency" "USD"\n2026-01-01 open Assets:Bank USD\n'
+    (books / "main.bean").write_text(root + ('include "txns/2026.bean"\n' if leaf else ""))
+    if leaf:
+        (books / "txns").mkdir()
+        (books / "txns" / "2026.bean").write_text("; imported rows\n")
+    (books / "bank.txt").write_text("x\n")
+    (books / "imp.py").write_text(IMPORTER)
+    link = tmp_path / "books-link"
+    link.symlink_to(books)
+    return link
+
+
+def test_an_open_the_import_carries_is_its_row_through_a_linked_root(tmp_path: Path, bea_config_dir: Path) -> None:
+    """Through `books-link/` the reason cited `main.bean:<line>`, a line only the staged copy had (w5/856)."""
+    link = _linked_books(tmp_path, leaf=False)
+    before = (link / "main.bean").read_bytes()
+    args = ["--json", "--no-input", "--file", str(link / "main.bean"), "import", str(link / "bank.txt")]
+    args += ["--config", str(link / "imp.py")]
+
+    preview = runner.invoke(app, args)
+    applied = runner.invoke(app, [*args, "--apply"])
+
+    assert preview.exit_code == 0, preview.output
+    reason = json.loads(preview.stdout)["data"]["rows"][1]["reason"]
+    assert reason.startswith("Account 'Expenses:Dining' opens 2026-03-01 (row 1 of this import), after")
+    assert applied.exit_code == 4, applied.output
+    assert "(row 1 of this import)" in applied.stderr and "main.bean:" not in applied.stderr
+    assert (link / "main.bean").read_bytes() == before
+
+
+def test_an_open_the_import_carries_is_its_row_into_a_linked_include(tmp_path: Path, bea_config_dir: Path) -> None:
+    link = _linked_books(tmp_path, leaf=True)
+    before = (link / "txns" / "2026.bean").read_bytes()
+
+    result = runner.invoke(
+        app,
+        ["--json", "--no-input", "--file", str(link / "main.bean"), "import", str(link / "bank.txt")]
+        + ["--config", str(link / "imp.py"), "--into", "txns/2026.bean"],
+    )
+
+    assert result.exit_code == 0, result.output
+    reason = json.loads(result.stdout)["data"]["rows"][1]["reason"]
+    assert "(row 1 of this import)" in reason and "2026.bean:" not in reason
+    assert (link / "txns" / "2026.bean").read_bytes() == before

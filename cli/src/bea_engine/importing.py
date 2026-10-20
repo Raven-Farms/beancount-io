@@ -1755,12 +1755,18 @@ def _entries_after(
             entries, _, _ = managed_load.load_file(root)
     back = {str(copy): str(source) for copy, source in staged.items()}
     spans = list(zip(ledger_write.appended_spans(original, texts), rows, strict=True))
-    written = os.path.normpath(target)
+    # Every name the destination goes by: the load names it as the root was
+    # spelled, through a linked directory, while `target` is resolved, so no
+    # appended row matched and a blocked row cited a line only the staged
+    # copy has (w5/856).
+    written = {os.path.normpath(target)} | {
+        os.path.normpath(path) for path in snapshot.contents if snapshot._stands_for(path, target)
+    }
     result = []
     for entry in entries:
         entry = managed_load._remap_entry(entry, back)
         meta = getattr(entry, "meta", None) or {}
-        if os.path.normpath(str(meta.get("filename"))) == written and isinstance(meta.get("lineno"), int):
+        if os.path.normpath(str(meta.get("filename"))) in written and isinstance(meta.get("lineno"), int):
             row = next((row for (first, last), row in spans if first <= meta["lineno"] <= last), None)
             if row is not None:
                 entry = entry._replace(meta={**meta, _IMPORT_ROW: row})
