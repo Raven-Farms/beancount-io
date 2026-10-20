@@ -57,6 +57,7 @@ import {
 import { openTransactionDetail } from "@/screens/transaction-detail-screen/open-transaction-detail";
 import { AccountEntryRow } from "@/screens/account-detail-screen/components/account-entry-row";
 import { DateSectionHeader } from "@/screens/transactions-screen/date-section-header";
+import { AccountJournalListEmpty } from "./components/account-journal-empty";
 import { selectAccountDetailTarget } from "@/screens/account-detail-screen/select-account-detail-target";
 import { LEADING_TEXT_ALIGN } from "@/common/rtl";
 import { RouteLedgerUnavailable } from "@/components/route-ledger-unavailable";
@@ -88,16 +89,6 @@ const getStyles = (theme: ColorTheme) =>
       marginTop: 4,
       marginBottom: 8,
       paddingHorizontal: 16,
-    },
-    stateContainer: {
-      alignItems: "center",
-      justifyContent: "center",
-      paddingVertical: 40,
-    },
-    stateText: {
-      fontSize: fontSizes.md,
-      color: theme.black60,
-      textAlign: "center",
     },
     footer: {
       flexDirection: "row",
@@ -462,19 +453,10 @@ const AccountDetailScreenImpl = ({
           <ThemedRefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
         ListEmptyComponent={
-          isInitialLoading ? (
-            <View style={styles.stateContainer}>
-              <ActivityIndicator color={theme.primary} />
-            </View>
-          ) : journalError ? (
-            <View style={styles.stateContainer}>
-              <Text style={styles.stateText}>{t("journalLoadError")}</Text>
-            </View>
-          ) : (
-            <View style={styles.stateContainer}>
-              <Text style={styles.stateText}>{t("noEntries")}</Text>
-            </View>
-          )
+          <AccountJournalListEmpty
+            loading={isInitialLoading}
+            message={journalError ? t("journalLoadError") : t("noEntries")}
+          />
         }
         ListFooterComponent={
           isLoadingMore ? (
