@@ -1,6 +1,6 @@
 # w3 · m54 — Ledger creation: staged creation flow on dashboard and mobile
 
-**Worker:** worker3 **Goal:** the m53 setup specification becomes a staged, resumable creation flow on web and native, where accepting every default still reaches a valid private ledger unasked. **Status:** todo (t001–t002 done)
+**Worker:** worker3 **Goal:** the m53 setup specification becomes a staged, resumable creation flow on web and native, where accepting every default still reaches a valid private ledger unasked. **Status:** todo (t001–t002 done; t003 blocked — see Blocked)
 
 ## Tasks (in order)
 
@@ -28,3 +28,7 @@
 - **Goal linkage:** A2 — Frictionless onboarding.
 - **Expected outcome:** first-time users finish creation and record a first transaction instead of stalling on a four-field form that front-loads every decision. Signals: signup-to-first-transaction completion, creation-flow abandonment by stage.
 - **Why now:** sequenced directly after m53, whose specification, preview, and idempotent create this flow consumes; building UI first would hard-code a contract that does not exist yet. Adoption surface is included (t004) because both clients' creation journeys change.
+
+## Blocked
+
+- **t003** — the shipped demo separation (creation choice + in-ledger identity) is done; the remaining list-identification criterion waits on an API-visible demo flag on the ledger directory surfaces. Unblock condition is written in t003.
