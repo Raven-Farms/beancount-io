@@ -423,9 +423,12 @@ unchanged. A nonzero upstream status is never rewritten.
 
 Every operation that loads the ledger (all but `lex`, `parse` and
 `list-options`) first exits 1, without running upstream, on a ledger `bea check`
-rejects for a string that is not UTF-8 or for a plugin that cannot be imported
-or fails while running, with check's own one-line message. Upstream logs those
-and carries on, so its answer would describe a ledger other than yours.
+rejects for a string that is not UTF-8, for a plugin that cannot be imported
+or fails while running, or for a transaction booking cannot do the arithmetic
+for, with check's own one-line message. Upstream logs the first two and carries
+on, so its answer would describe a ledger other than yours, and dies on the
+third with a bare `DivisionByZero` or `InvalidOperation` traceback. A ledger
+with only other errors (an unopened account, a failed balance) still runs.
 
 Every operation reads a BOM-marked file, and NFC and NFD spellings of one
 account, as the rest of `bea` does: such a ledger runs the same upstream

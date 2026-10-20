@@ -129,7 +129,7 @@ def test_plugin_refusal_propagates_a_provisioning_failure(tmp_path: Path, monkey
     monkeypatch.setattr(doctor.launch, "helper_json", _fail_engine)
 
     with pytest.raises(EngineError):
-        doctor._refuse_plugin_failures("print-options", str(tmp_path / "main.bean"))
+        doctor._refuse_load_failures("print-options", str(tmp_path / "main.bean"))
 
     monkeypatch.setattr(doctor.launch, "helper_json", _fail_plain)
-    assert doctor._refuse_plugin_failures("print-options", str(tmp_path / "main.bean")) is None
+    assert doctor._refuse_load_failures("print-options", str(tmp_path / "main.bean")) is None

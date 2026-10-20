@@ -239,39 +239,32 @@ def _refuse_undecodable(ledger: str) -> None:
                 raise LedgerError(decode_error_message(member, exc)) from exc
 
 
-_PLUGIN_DIRECTIVE = re.compile(rb"^plugin[ \t]", re.MULTILINE)
-#: How `bea check` words a plugin that cannot be imported or crashes.
-_PLUGIN_FAILURES = ('Cannot import plugin "', '" failed while running: ')
+#: How `bea check` words a plugin that cannot be imported or crashes, and a
+#: transaction booking cannot do the arithmetic for.
+_LOAD_FAILURES = ('Cannot import plugin "', '" failed while running: ', "Beancount cannot book this transaction: ")
 
 
-def _refuse_plugin_failures(op: str, ledger: str) -> None:
-    """Refuse a ledger whose plugin cannot be imported or crashes, in check's one-line form.
+def _refuse_load_failures(op: str, ledger: str) -> None:
+    """Refuse a ledger upstream's load cannot report on honestly, in check's one-line form.
 
-    Upstream logs the traceback and carries on without the plugin, so
+    Upstream logs a plugin's traceback and carries on without the plugin, so
     `roundtrip` printed it and then "Congratulations" with exit 0, and
     `missing-open` answered for entries the plugin never ran on (w5/439).
-    Only a closure that declares a plugin pays for the check load.
+    And its booking raises on arithmetic it cannot do — a zero-unit posting at
+    a total cost, an inferred amount wider than 28 digits — so every loading
+    operation died on a bare `DivisionByZero` traceback where `check` names
+    the transaction (w5/859). Either needs a load to see, so every loading
+    operation pays for the check load; a ledger with other errors still runs,
+    since diagnosing those is what doctor is for.
     """
-    root = Path(ledger)
-    if not root.is_file():
-        return
-    declared = False
-    for member in output.ledger_closure(root):
-        if output.is_encrypted(member):
-            # Its decrypted text may declare a plugin. The helper can inspect
-            # that content; scanning ciphertext cannot establish its absence.
-            declared = True
-            continue
-        with contextlib.suppress(OSError):
-            declared = declared or bool(_PLUGIN_DIRECTIVE.search(member.read_bytes()))
-    if not declared:
+    if not Path(ledger).is_file():
         return
     try:
         launch.helper_json(["check", "--file", ledger])
     except EngineError:
         raise
     except BeaError as exc:
-        failures = [line for line in exc.details if any(mark in line for mark in _PLUGIN_FAILURES)]
+        failures = [line for line in exc.details if any(mark in line for mark in _LOAD_FAILURES)]
         if failures:
             raise LedgerError(f"doctor {op} cannot load {ledger}: {failures[0]}", details=failures[1:]) from None
 
@@ -805,7 +798,7 @@ def _register(op: str) -> None:
                 # helper refuses with `Duplicate include` (w5/433, w5/569).
                 launch.helper_json(["check", "--file", positionals[0]])
             _refuse_undecodable(positionals[0])
-            _refuse_plugin_failures(op, positionals[0])
+            _refuse_load_failures(op, positionals[0])
         forwarder(ctx)
 
 
