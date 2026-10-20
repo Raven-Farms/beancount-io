@@ -126,6 +126,37 @@ describe("MCP prompts", () => {
     }
   });
 
+  /**
+   * The import playbook said rejected rows are removed with
+   * `operation: "discard"`, an argument of the retired `manageBankImport`;
+   * no tool takes `operation` since the bank operations became tools of their
+   * own, so the call it prescribed would be refused (w5/m5/t004).
+   */
+  it("prescribes only arguments some tool accepts", () => {
+    const accepted = new Set(
+      MCP_TOOLS.flatMap((tool) =>
+        Object.keys(
+          (tool.inputSchema as unknown as { shape: Record<string, unknown> })
+            .shape,
+        ),
+      ),
+    );
+    for (const descriptor of MCP_PROMPTS) {
+      const text = descriptor.build({}, pinned);
+      for (const [, argument] of text.matchAll(/`([a-z][a-z_]*): [^`]*`/g)) {
+        expect({
+          prompt: descriptor.name,
+          argument,
+          accepted: accepted.has(argument),
+        }).toEqual({
+          prompt: descriptor.name,
+          argument,
+          accepted: true,
+        });
+      }
+    }
+  });
+
   it("points the import playbook at the bank resources it needs", () => {
     const text = prose(
       MCP_PROMPTS.find(
@@ -289,9 +320,7 @@ describe("MCP prompts", () => {
       const [, source] =
         descriptor
           .build({}, pinned)
-          .match(
-            /Playbook source: (skills\/[\w-]+\/SKILL\.md)/,
-          ) ?? [];
+          .match(/Playbook source: (skills\/[\w-]+\/SKILL\.md)/) ?? [];
       expect(source).toBeDefined();
       expect(existsSync(path.join(repoRoot, source as string))).toBe(true);
     }

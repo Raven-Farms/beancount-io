@@ -292,8 +292,8 @@ const categorizeImports = (
     "   `checkLedger`, and report the outcome with counts: written, skipped as duplicates,",
     "   left uncategorized.",
     "",
-    'Staged transactions the user rejects are removed with `operation: "discard"`, not left',
-    "to reappear on the next sync.",
+    "Staged transactions the user rejects are removed with `discardStagedBankTransactions`, not",
+    "left to reappear on the next sync.",
   ]
     .filter((line) => line !== "")
     .join("\n");
