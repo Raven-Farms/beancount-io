@@ -476,7 +476,7 @@ def account_predicate(value: str | None, roots: Sequence[str] = DEFAULT_ROOTS) -
     # its prefix sibling `Expenses:FoodTruck`, as an unanchored regex search
     # would (w5/292). Anything else — a single word, lower case, or a real
     # pattern — keeps the documented regular-expression search.
-    if account.is_valid(value) or value in roots:
+    if account.is_valid(value) or value in roots or _loads_as_account(value):
         # Beancount.io change: `has_component` searches for the components
         # anywhere in a name, so `Expenses:Travel` also matched
         # `Assets:Reimbursable:Expenses:Travel`, and a bare root, read as a
@@ -490,6 +490,18 @@ def account_predicate(value: str | None, roots: Sequence[str] = DEFAULT_ROOTS) -
     # for an invalid one the wrapper read `*Food*` as "component Foo, then
     # d*", silently dropping Expenses:FoodTruck (w5/502).
     return Match(value)
+
+
+def _loads_as_account(value: str) -> bool:
+    """Whether the loader reads `value` as an account `is_valid` refuses.
+
+    Beancount.io change: a CJK, Thai or combining-mark leaf (`Expenses:Food:中餐`)
+    loads and reports, but fell through to the unanchored search and pulled in
+    `Expenses:Food:中餐厅` (w5/829).
+    """
+    from bea_engine.ledger.text import _loads_as_account as loads
+
+    return loads(value)
 
 
 class AccountFilter(EntryFilter):
