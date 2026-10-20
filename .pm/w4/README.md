@@ -46,6 +46,7 @@
 - [282 — Keep Markdown fragment links aligned with sanitized authored IDs](./282.md) — minor; dashboard QA, 2026-10-20.
 - [283 — Resolve supported early-year statement periods without a 1900 offset](./283.md) — minor; dashboard QA, 2026-10-20.
 - [284 — Protect the Accounts Open Account draft while its write is pending](./284.md) — minor; dashboard QA, 2026-10-20.
+- [285 — Preserve skipped civil days in the shared ISO date display formatter](./285.md) — minor; dashboard QA, 2026-10-20.
 
 ## Milestones
 
