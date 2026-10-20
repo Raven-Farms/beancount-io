@@ -1412,6 +1412,25 @@ class TestBeaRecipes(unittest.TestCase):
         }
         self.assertEqual(balances, {"Assets:Checking": [("2814.25", "USD")]})
 
+    def test_variance_recipes_list_contributing_postings(self):
+        fixture = SUITE / "beancount-ask" / "evals" / "files" / "eval1_ledger.beancount"
+        self.ledger.write_text(fixture.read_text(encoding="utf-8"))
+        account = {"<account-re>": "^Expenses:Home:Electronics"}
+
+        def total(start, end):
+            rows = self.query_recipe("variance-total", **account, **{"<start>": start, "<end>": end})
+            return rows[0][0] if rows else None
+
+        # Electronics: nothing in April (zero comparator), 500.00 in May.
+        self.assertIsNone(total("2026-04-01", "2026-05-01"))
+        drivers = self.query_recipe(
+            "variance-drivers", **account, **{"<start>": "2026-05-01", "<end>": "2026-06-01"}
+        )
+        self.assertEqual(
+            [(row[0], row[1], row[3]["number"]) for row in drivers],
+            [("2026-05-28", "BEST BUY", "500.00")],
+        )
+
     def test_rollforward_ties_out_per_account_and_currency(self):
         fixture = SUITE / "beancount-roll-forward" / "evals" / "files" / "eval1_ledger.beancount"
         self.ledger.write_text(fixture.read_text(encoding="utf-8"))

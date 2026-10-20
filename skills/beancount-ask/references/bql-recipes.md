@@ -159,6 +159,31 @@ ORDER BY market DESC
 
 Cash in investment accounts is not a lot and appears in none of these; say whether the allocation is over invested lots only. Realized gains (closed lots) are beancount-trade's `references/realized-gains.md`; recording a trade is `beancount-trade`, and refreshing stale prices is the price workflow, not a query.
 
+## 9. Variance: why did this category change?
+
+A variance answer compares one account (or subtree) across two periods under a **threshold policy the user states** — there is no built-in percentage that makes a change "worth explaining". Ask for, or state and confirm: the absolute threshold, the relative threshold, whether both must trip (AND) or either (OR), the denominator (comparator period by default), and any always-comment accounts that are explained regardless. The old upstream habit of a universal 5% fallback is not a rule here.
+
+Run the same totals query for the current period and the comparator period (half-open bounds, as everywhere in this file):
+
+<!-- recipe: variance-total -->
+```sql
+SELECT sum(weight) AS total WHERE account ~ '<account-re>' AND date >= <start> AND date < <end>
+```
+
+Then the contributing postings behind the delta — every driver claim in the answer must trace to rows from this query, in both periods:
+
+<!-- recipe: variance-drivers -->
+```sql
+SELECT date, payee, narration, cost(position) AS amount WHERE account ~ '<account-re>' AND date >= <start> AND date < <end> ORDER BY date
+```
+
+Rules the prose must obey:
+
+- **Zero or negative comparator**: report the absolute delta and render the percentage as **not applicable** — never divide by a zero or negative base and never present the resulting number as a growth rate.
+- **A missing budget is missing**: when the user asks "versus budget" and the ledger holds no budget figures, say the budget is absent. An absent comparator is never rendered as zero (which would fabricate an infinite variance).
+- **Drivers need postings**: a claimed cause ("the jump is the BEST BUY purchase on 2026-05-28") cites its posting rows. Anything without posting evidence is labelled a **hypothesis**, and when the postings do not support an explanation the answer is **unresolved** — a posting's narration describes what was bought, never why.
+- **Bridges only with inputs**: a price/volume-style split is produced only when the ledger actually holds the quantities and prices it needs, and its components must sum to the actual delta; otherwise report the account/payee movement explanation and stop.
+
 ## Fava pointers
 
 Top expenses / burn → Income Statement (filtered by time); net worth → Balance Sheet / Net Worth chart; holdings → Holdings; per-payee history → Journal with `payee:"NETFLIX"` filter; account balances → Trial Balance. Give the user the Fava path when they want to browse rather than ask again.
