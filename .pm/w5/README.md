@@ -50,7 +50,6 @@
 - [816 — Spawn failures print a bare errno; SIGXCPU is blamed on an OOM killer, timeout or kill](./816.md)
 - [817 — A path component over 255 bytes gives raw Errno 63 for -f, -o and --into (gap in w5/410)](./817.md)
 - [818 — Re-imports broken by w5/598: own sub-account entries held as transfer duplicates; import-id-2 no longer matches (regression)](./818.md)
-- [819 — doctor missing-open/linked answer exit 0 on a partial load with a missing include (incomplete fix of w5/596)](./819.md)
 
 The 27 findings from the MCP QA auth sweep against the hosted endpoint (023–054, less the five under [Dropped](#dropped)) were fixed in `backend-cluster/backend-v2` and closed on 2026-10-02 and 2026-10-03; each note under [`done/`](./done/) records what shipped and in which commit. None has been re-observed against the hosted endpoint yet — the fixes reach it with the next backend deploy.
 
