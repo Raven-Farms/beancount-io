@@ -577,9 +577,12 @@ uncaught error; every other read reports it at that line too, and leaves
 that transaction out.
 `bea --debug check` keeps bean-check's traceback for ordinary exceptions;
 a terminating plugin is refused before bean-check can run it again.
-Metadata named `filename` or `lineno`, on a directive or in a `pushmeta`, is
-an error at its line under every option, `--debug` included: `Metadata key
-'filename' is reserved for Beancount's source location; choose another key.`
+Metadata named `filename` or `lineno`, on a directive, a posting or in a
+`pushmeta`, is an error at its line under every option, `--debug` included:
+`Metadata key 'filename' is reserved for Beancount's source location; choose
+another key.` It is added to the ledger's other errors, never in place of
+them: with bean-check's own options (`-C`, `-v`, its `--json`) bean-check
+still reports the rest, and the key joins its list.
 Beancount writes such a value over the entry's location without a word, so
 every read would place the entry in a file that does not exist. Reads keep the
 real location; rename the key, for example to `receipt:` or `statement:`.

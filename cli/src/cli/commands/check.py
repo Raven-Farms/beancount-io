@@ -123,6 +123,7 @@ def check(ctx: typer.Context) -> None:
     # appearing or vanishing has made stale, which bean-check would trust (w5/116);
     # its own finding still waits for bean-check to accept the ledger.
     portable: BeaError | None = None
+    added: list[str] = []
     root_hint: str | None = None
     if not _INFORMATIONAL & set(args):
         try:
@@ -159,6 +160,12 @@ def check(ctx: typer.Context) -> None:
             reserved = [str(line) for line in loaded.get("reserved_keys") or []]
             if current.debug:
                 failed, unbookable = [], []
+            if reserved and (args or as_json) and not (failed or unbookable):
+                # Not a crash: bean-check loads past the key, so with its own
+                # options it still reports the rest, and the key is added to
+                # its answer. Short-circuited, `-C`, `-v` and `--json` showed
+                # the key alone with the wrong count (w5/850).
+                added, reserved = reserved, []
             if failed or unbookable or reserved:
                 # bean-check reports a plugin that cannot load as a traceback at
                 # `<load>:0`, and a transaction booking cannot do the arithmetic
@@ -181,10 +188,14 @@ def check(ctx: typer.Context) -> None:
                 # native run would only load it again, every plugin twice (w5/430).
                 # Errors still come from bean-check, in its own words.
                 raise typer.Exit(0)
-    if as_json and portable is not None:
+    if as_json and (portable is not None or added):
         answer = launch.capture_native("bean-check", [*isolate, str(file), *args], ledger=file)
-        _merge_json_errors(file, answer, portable)
+        _merge_json_errors(file, answer, [*added, *(portable.details if portable is not None else [])])
     code = launch.run_native("bean-check", [*isolate, str(file), *args], ledger=file)
+    if added:
+        # After bean-check's own list, in its form: location, message, blank line.
+        sys.stderr.write("".join(f"{line}\n\n" for line in added))
+        code = code or 1
     if code != 0:
         # An included leaf fails on accounts its root opens; say which root
         # to check instead (w5/348).
@@ -221,8 +232,8 @@ def _emit_json_errors(file: Path, details: list[str], code: int) -> None:
     raise typer.Exit(code or 1)
 
 
-def _merge_json_errors(file: Path, completed: subprocess.CompletedProcess[str], finding: BeaError) -> None:
-    """bean-check's JSON answer with bea's portable-document finding added to its list."""
+def _merge_json_errors(file: Path, completed: subprocess.CompletedProcess[str], findings: list[str]) -> None:
+    """bean-check's JSON answer with bea's own findings added to its list: reserved keys, portable documents."""
     stdout = completed.stdout or ""
     sys.stderr.write(completed.stderr or "")
     code = launch.captured_status(completed)
@@ -233,7 +244,7 @@ def _merge_json_errors(file: Path, completed: subprocess.CompletedProcess[str], 
         # Not the shape documented: leave bean-check's words as they were.
         sys.stdout.write(stdout)
         raise typer.Exit(code or 1) from None
-    errors.extend(_json_error(file, detail) for detail in finding.details)
+    errors.extend(_json_error(file, detail) for detail in findings)
     typer.echo(json.dumps({**answer, "errors": errors}))
     raise typer.Exit(code or 1)
 
