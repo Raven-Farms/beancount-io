@@ -92,14 +92,19 @@ bea --json --no-input init "$directory" --currency "$currency" --date "$open_dat
 ```
 
 Add `--opening-balance "Assets:Checking OPENING"` to that command only when
-OPENING is non-empty. When the user names a purpose the setup catalog covers
+OPENING is non-empty. Check `bea init --help` before using setup-catalog
+options: published `bea` 0.3.1 has neither `--preset` nor `--title`. When
+`--preset` is listed and the user names a purpose the setup catalog covers
 (freelance work, a business, investments, a rental, shared expenses, a
 community organization), add `--preset <id>` with the matching preset
 (`freelance@1`, `business@1`, `portfolio@1`, `rental@1`,
 `shared-expenses@1`, `community@1`; `personal@1` is the household default and
-`blank@1` an empty chart) and `--title` when they gave the ledger a name;
-opening balances then name that preset's asset/liability accounts instead of
-`Assets:Checking`. Then bind `ledger` to the new root's absolute path and
+`blank@1` an empty chart). Add `--title` only when help lists it and a preset
+is selected; select `personal@1` when only a household ledger name was given.
+Opening balances then name that preset's asset/liability accounts instead of
+`Assets:Checking`. Without those options, use the base recipe and explain
+that this CLI creates the standard chart; Step 3b can add the user's approved
+investment/property accounts. Then bind `ledger` to the new root's absolute path and
 run the check recipe in `references/bea-cli.md`.
 
 `bea init .` writes `./main.bean`, so on this path the file is exactly what

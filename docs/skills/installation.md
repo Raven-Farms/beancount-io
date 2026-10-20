@@ -160,7 +160,7 @@ These commands were run on macOS with OpenClaw 2026.10.5 and Hermes v0.22.2. Bot
 
 **Release status, 2026-10-20:** all eleven 1.0.0 releases are public. The complete suite installs in one OpenClaw workspace. Ten skills install in Hermes; its scanner blocks `beancount-init` for the intended creation of ledger instruction files. Use the supported skills individually in Hermes, and keep the Git/link route above for the complete Claude Code/Codex suite. See the [per-skill results](clawhub-rehearsal.md#install-results).
 
-The subsequent 0.3.2 wording fixes have been submitted as registry 1.0.1 for add, import, init, migrate and reconcile. Reconcile 1.0.1 is public and installs in OpenClaw; the other four updates await public promotion and still expose 1.0.0 as latest at the final check. Ask and the other unchanged skills remain at 1.0.0. See the [synchronization record](clawhub-rehearsal.md#suite-032-synchronization--2026-10-20) for current limits and the submission run.
+The 0.3.2 wording fixes are public as registry 1.0.1 for add, import, init, migrate and reconcile; the other six listings remain at 1.0.0. All eleven downloads and OpenClaw installations match that submitted release. Later main changes are being synchronized as suite 0.3.3. See the [synchronization record](clawhub-rehearsal.md#suite-033-synchronization--2026-10-20) for release progress and host limits.
 
 Hermes's default search now finds all eleven suite listings:
 

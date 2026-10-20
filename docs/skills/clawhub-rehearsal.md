@@ -110,4 +110,14 @@ The current 0.3.2 bundles were independently rechecked with the pinned Hermes `s
 
 The bundle/workflow/checker regressions pass: 130 full installer/recipe/journey tests, 43 focused checks, and six deliberate mutations caught (missing license/reference closure, metadata overwrite/indentation, omitted dry-run flag and skipped workflow build). No customer descriptions changed. Temporary install profiles and vendor runtimes were removed after evidence was retained.
 
-**Closeout remains blocked:** ClawHub must promote the four remaining submitted 1.0.1 versions (add/import/init/migrate). Then recheck public latest versions and compare installed authored files with the release bundles, complete the supported-host install checks for all five changed bundles, and close w6/m6/t013. Do not republish pending submissions. Hermes's independent init and source-filtered-search limits stay in w6/039 and w6/040.
+**Review completed by 18:23 UTC:** all five 1.0.1 updates are public. Anonymous downloads of the eleven latest listings match all 105 authored files from the submitted release. The complete native OpenClaw workspace now contains those versions, with every authored file verified against the release bundles. No duplicate publication was needed. Hermes's independent init and source-filtered-search limits stay in w6/039 and w6/040.
+
+## Suite 0.3.3 synchronization — 2026-10-20
+
+Two later main commits updated init's setup-catalog instructions (`05658177b`) and migration source-name grammar (`a1d67f466`). Every standalone bundle contains the shared dedup reference, so all eleven need a registry update. The suite advances to 0.3.3; descriptions and routing are unchanged.
+
+The released `bea` 0.3.1 help does not list `--preset` or `--title`. Init now checks the installed command's help before using either, keeps the standard-chart recipe on 0.3.1, and adds a title only with a selected preset on a supporting CLI. No CLI dependency or engine was upgraded for this change. The native Hermes v0.22.2 community scanner still allows ten current bundles and rejects init with its retained 18 findings.
+
+Fresh native Hermes installs of the promoted 0.3.2 release verify all ten supported skills byte-for-byte; init is rejected with the same documented policy verdict. Default search again finds fourteen entries including the full suite, while explicit `--source clawhub` returns `[]`. No force or model credentials were used.
+
+Before the 0.3.3 synchronization: all 130 installer/recipe/journey tests, 37 checker tests, structural/fixture checks, the skill validator and agent-guidance checks pass. Two focused tests also pass against the published minimum bea 0.3.1 (historical init and empty managed-price reads). The existing price-status test now checks the checkout's empty `refused` field while preserving the published release's older shape. Temporary host profiles and vendor source were removed after retaining the install/scan evidence.

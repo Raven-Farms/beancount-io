@@ -1600,7 +1600,8 @@ class TestBeaRecipes(unittest.TestCase):
         # with empty sources and write nothing (the refresh path beancount-add
         # documents starts from exactly this read).
         before = self.ledger.read_bytes()
-        self.assertEqual(self.recipe("price-status"), {"sources": []})
+        expected_status = {"sources": []} if self.published else {"sources": [], "refused": []}
+        self.assertEqual(self.recipe("price-status"), expected_status)
         self.assertEqual(self.recipe("price-refresh"), {"sources": [], "changed": []})
         self.assertEqual(self.ledger.read_bytes(), before)
 
