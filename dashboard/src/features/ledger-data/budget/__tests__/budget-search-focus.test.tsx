@@ -29,7 +29,10 @@ vi.unmock("@/common/hooks/use-translations");
 vi.unmock("react-i18next");
 
 const { query } = vi.hoisted(() => ({ query: vi.fn() }));
-vi.mock("@apollo/client/react", () => ({ useQuery: query }));
+vi.mock("@apollo/client/react", () => ({
+  useQuery: query,
+  useApolloClient: () => ({ query: vi.fn() }),
+}));
 vi.mock("@/common/hooks/use-ledger", () => ({
   useLedger: () => ({
     primaryCurrency: "USD",
@@ -76,7 +79,10 @@ beforeEach(async () => {
   query.mockReset();
   query.mockImplementation((document: unknown) => {
     if (document === GetLedgerJournalDocument) {
-      return { data: { getLedgerJournal: { data: entries } }, loading: false };
+      return {
+        data: { getLedgerJournal: { total: entries.length, data: entries } },
+        loading: false,
+      };
     }
     if (document === GetLedgerIntervalTotalsDocument) {
       return {

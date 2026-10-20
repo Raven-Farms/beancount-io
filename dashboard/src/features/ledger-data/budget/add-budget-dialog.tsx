@@ -44,6 +44,7 @@ import {
   CurrencyCombobox,
 } from "@/common/components/ledger-comboboxes";
 import { DatePicker } from "@/common/components/ui/date-picker";
+import { budgetJournalVariables } from "./use-budget-entries";
 import { todayIsoDate } from "@/common/components/ui/date-picker-utils";
 
 const createBudgetSchema = (t: (key: string) => string) =>
@@ -104,10 +105,7 @@ export function AddBudgetDialog({
     refetchQueries: [
       {
         query: GetLedgerJournalDocument,
-        variables: {
-          ledgerId,
-          query: { directiveTypes: ["Custom"], customSubtypes: ["budget"] },
-        },
+        variables: budgetJournalVariables(ledgerId),
       },
     ],
     awaitRefetchQueries: true,

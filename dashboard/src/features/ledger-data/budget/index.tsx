@@ -1,11 +1,7 @@
 import { useMemo, useRef, useState } from "react";
 import { useParams } from "@tanstack/react-router";
-import { useQuery } from "@apollo/client/react";
 import { format, subYears } from "date-fns";
-import {
-  GetLedgerJournalDocument,
-  BudgetInterval,
-} from "@/graphql/definitions";
+import { BudgetInterval } from "@/graphql/definitions";
 import { createLedgerId } from "@/common/lib/utils/encode";
 import { PageHeader } from "@/common/components/page-header";
 import { Button } from "@/common/components/ui/button";
@@ -21,7 +17,8 @@ import { BudgetChartCard } from "./budget-chart-card";
 import { BudgetFilterPills } from "./budget-filter-pills";
 import { useLedger } from "@/common/hooks/use-ledger";
 import type { ConversionOption } from "@/common/types/chart";
-import type { BudgetEntry, BudgetGroup } from "./types";
+import type { BudgetGroup } from "./types";
+import { useBudgetEntries } from "./use-budget-entries";
 import { groupBudgetEntries } from "./budget-utils";
 import { LedgerWritePermission } from "@/common/components/ledger-permission/write";
 
@@ -164,31 +161,16 @@ export default function LedgerBudgetPage() {
     }
   }, [selectedTimeSpan, last12MonthsRange]);
 
-  const { data, loading, error } = useQuery(GetLedgerJournalDocument, {
-    variables: {
-      ledgerId,
-      query: {
-        directiveTypes: ["Custom"],
-        customSubtypes: ["budget"],
-      },
-    },
-    skip: !ledgerId,
-    fetchPolicy: "cache-and-network",
-  });
+  const { entries, loading, error, retry } = useBudgetEntries(ledgerId);
 
-  const entries = useMemo(
-    () =>
-      ((data?.getLedgerJournal?.data ?? []) as Record<string, unknown>[]).map(
-        (raw) => raw as unknown as BudgetEntry,
-      ),
-    [data?.getLedgerJournal?.data],
+  const budgetGroups = useMemo(
+    () => (entries ? groupBudgetEntries(entries) : null),
+    [entries],
   );
-
-  const budgetGroups = useMemo(() => groupBudgetEntries(entries), [entries]);
 
   const filteredGroups = useMemo(() => {
     const query = search.trim().toLowerCase();
-    return budgetGroups.filter((g) => {
+    return (budgetGroups ?? []).filter((g) => {
       const matchesSearch = !query || g.account.toLowerCase().includes(query);
       const matchesInterval =
         selectedInterval === "ALL" ||
@@ -227,6 +209,7 @@ export default function LedgerBudgetPage() {
       <QueryView
         loading={loading}
         error={error}
+        onRetry={retry}
         data={budgetGroups}
         loadingSlot={<BudgetLoadingSkeleton />}
         isEmpty={(groups) => groups.length === 0}

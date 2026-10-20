@@ -20,6 +20,8 @@ interface QueryViewProps<T> {
    * mapped to a localized, user-safe message (never the raw error.message).
    */
   errorMessage?: string;
+  /** Offered on the error state as a retry action. */
+  onRetry?: () => void;
   /** Returns true when data is present but logically empty (e.g. empty array). */
   isEmpty?: (data: NonNullable<T>) => boolean;
   /** Rendered when isEmpty returns true. */
@@ -34,6 +36,7 @@ export function QueryView<T>({
   data,
   loadingSlot,
   errorMessage,
+  onRetry,
   isEmpty,
   emptySlot,
   children,
@@ -47,7 +50,13 @@ export function QueryView<T>({
   }
 
   if (error) {
-    return <ReportErrorState message={errorMessage} error={error} />;
+    return (
+      <ReportErrorState
+        message={errorMessage}
+        error={error}
+        onRetry={onRetry}
+      />
+    );
   }
 
   if (data == null) {
