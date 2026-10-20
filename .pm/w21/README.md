@@ -8,6 +8,5 @@
 
 ## Inbox
 
-- [010](./010.md) — Budget's ALL range stops at the ledger's last posting, so it drops the current period that YTD and 1Y show
 - [011](./011.md) — Home's Spending card sums only the newest 200 transactions, so a busy month hides last month's spending
 - [012](./012.md) — German, Dutch and Spanish mix formal and informal "you" across the mobile app
