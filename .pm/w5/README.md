@@ -68,7 +68,6 @@
 - [830 — A CSV category cell naming a loader-valid account (Thai, CJK leaf) goes to Uncategorized (gap in w5/203)](./830.md)
 - [831 — Pending rows after w5/614: refusals lack the status= hint, inference reads left-out rows, hold/declined imported](./831.md)
 - [832 — Importer rows with generated csv:sha256 ids are told "only one of them carries a bank ID" (gap in w5/615)](./832.md)
-- [833 — list document paths are relative to their include with no source, so two attachments list identically](./833.md)
 
 The 27 findings from the MCP QA auth sweep against the hosted endpoint (023–054, less the five under [Dropped](#dropped)) were fixed in `backend-cluster/backend-v2` and closed on 2026-10-02 and 2026-10-03; each note under [`done/`](./done/) records what shipped and in which commit. None has been re-observed against the hosted endpoint yet — the fixes reach it with the next backend deploy.
 
