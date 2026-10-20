@@ -157,6 +157,7 @@ class TestInstall(Workspace):
         self.assertEqual(
             skills.expected_skills(),
             [
+                "beancount-accruals",
                 "beancount-add",
                 "beancount-ask",
                 "beancount-close",

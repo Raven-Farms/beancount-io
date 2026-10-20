@@ -978,6 +978,25 @@
         "beancount-roll-forward"
       ],
       "why": "A single-entry question, not a balance explanation."
+    },
+    {
+      "id": "accruals-prepare-period",
+      "prompt": "Prepare the accruals for June and draft the rent accrual from our lease schedule.",
+      "expected": "beancount-accruals",
+      "confusable": [
+        "beancount-close",
+        "beancount-add"
+      ],
+      "why": "Schedule-based period accrual drafts, not a full close or a one-off entry."
+    },
+    {
+      "id": "accruals-missing-payment-negative",
+      "prompt": "My rent payment is missing this month, record the expense for me.",
+      "expected": "beancount-add",
+      "confusable": [
+        "beancount-accruals"
+      ],
+      "why": "A single described entry; an accrual is never inferred from absence alone."
     }
   ]
 }
