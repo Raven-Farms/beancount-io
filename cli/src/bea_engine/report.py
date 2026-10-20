@@ -164,7 +164,9 @@ def _balances(
             # `"food cash"` (one, matching nothing) read the same (w5/341).
             "account_filters": list(accounts) if accounts else None,
             "account_filter_empty": (empty := bool(accounts) and all(tree is None for tree in pruned.values())),
-            "account_filter_periods": _period_terms(accounts) if empty else [],
+            "account_filter_periods": (
+                _period_terms(accounts, filtered.ledger.fava_options.fiscal_year_end) if empty else []
+            ),
         }
         | _valuation(
             resolved_conversion,
@@ -480,18 +482,20 @@ _FISCAL_FILTER_RE = re.compile(r"\bfy\d{4}|fiscal_(?:year|quarter)", re.IGNORECA
 _FISCAL_QUARTER_RE = re.compile(r"\bfy\d{4}-q\d|fiscal_quarter", re.IGNORECASE)
 
 
-def _period_terms(terms: Iterable[str]) -> list[str]:
+def _period_terms(terms: Iterable[str], fiscal_year_end: Any) -> list[str]:
     """The account filter terms `--time` reads as a period.
 
     `bea balance 2026-01` matched no account and said only so, with exit 0,
-    to a user used to another tool's period argument (w5/445).
+    to a user used to another tool's period argument (w5/445). Read with the
+    ledger's fiscal year end, as `--time` reads them: a fiscal quarter of a
+    year without quarters was suggested, then refused (w5/808).
     """
     from fava.util.date import parse_date
 
     periods = []
     for term in terms:
         try:
-            start, end = parse_date(term)
+            start, end = parse_date(term, fiscal_year_end)
         except (ValueError, OverflowError):
             continue
         if start is not None or end is not None:
@@ -506,29 +510,44 @@ def _refuse_quarter_without_quarters(ledger: Any, entries: Any, time: str, ledge
     explicit `FY2027-Q2` came back as `Failed to parse date`, which blamed
     the spelling of a period that does not exist (w5/329).
     """
+    from fava.util.date import parse_fye_string
+
     end = ledger.fava_options.fiscal_year_end
     if end.has_quarters():
         return
+    # The declaration in effect is the last valid one, as Fava reads them;
+    # the first was cited, and could name another year end (w5/808).
     declared = next(
         (
             entry
-            for entry in entries
-            if type(entry).__name__ == "Custom"
-            and entry.type == "fava-option"
-            and entry.values
-            and str(entry.values[0].value).replace("_", "-") == "fiscal-year-end"
+            for entry in reversed(_fiscal_year_end_declarations(entries))
+            if len(entry.values) > 1 and parse_fye_string(str(entry.values[1].value)) == end
         ),
         None,
     )
     where = f" at {declared.meta.get('filename')}:{declared.meta.get('lineno')}" if declared is not None else ""
     value = f"{end.month_of_year:02d}-{end.day:02d}"
+    year = re.search(r"\bfy(\d{4})", time, re.IGNORECASE)
+    whole = f"FY{year.group(1)}" if year is not None else "fiscal_year"
     raise protocol.UsageError(
         f"--time {time!r} names a fiscal quarter, but this ledger's fiscal year ends on {value} "
         f'(custom "fava-option" "fiscal-year-end"{where}), so it does not start on the first of a month and '
         "has no fiscal quarters.",
-        details=["Report the whole fiscal year (FY2027), or name the months by calendar dates."],
+        details=[f"Report the whole fiscal year ({whole}), or name the months by calendar dates."],
         ledger_errors=ledger_errors,
     )
+
+
+def _fiscal_year_end_declarations(entries: Iterable[Any]) -> list[Any]:
+    """The ledger's `fiscal-year-end` Fava options, in file order."""
+    return [
+        entry
+        for entry in entries
+        if type(entry).__name__ == "Custom"
+        and entry.type == "fava-option"
+        and entry.values
+        and str(entry.values[0].value).replace("_", "-") == "fiscal-year-end"
+    ]
 
 
 def _require_fiscal_year_end(ledger: Any, file: Path, time: str, ledger_errors: list[str]) -> None:
@@ -539,11 +558,13 @@ def _require_fiscal_year_end(ledger: Any, file: Path, time: str, ledger_errors: 
     December with nothing saying the declared year end was dropped. Only a
     fiscal filter reads the option; every other report is unaffected.
     """
-    invalid = [
-        format_error(error, ledger_file=file)
-        for error in ledger.fava_options_errors
-        if error.entry.values and str(error.entry.values[0].value).replace("-", "_") == "fiscal_year_end"
-    ]
+    # Only the last declaration states the year end in force: Fava keeps the
+    # last valid value, so an invalid line before a valid one refused a
+    # period the later line defined (w5/808). An invalid last line is still
+    # refused rather than silently falling back to an earlier one.
+    declarations = _fiscal_year_end_declarations(ledger.all_entries_by_type.Custom)
+    last = declarations[-1] if declarations else None
+    invalid = [format_error(error, ledger_file=file) for error in ledger.fava_options_errors if error.entry is last]
     # Fava reads months 13-24 as a year end in the following calendar year,
     # but its parser takes any month modulo 12: "00-31" made FY2026 calendar
     # 2025, and "99-31" moved it to 2033-34 (w5/809).
@@ -640,7 +661,9 @@ def _metadata(filtered: Any, conversion: str, ledger_errors: list[str], interval
         "account_filter_empty": (
             empty := bool(filtered.account) and all(isinstance(entry, Custom) for entry in filtered.entries)
         ),
-        "account_filter_periods": _period_terms([filtered.account]) if empty else [],
+        "account_filter_periods": (
+            _period_terms([filtered.account], filtered.ledger.fava_options.fiscal_year_end) if empty else []
+        ),
         "balance_signs": "beancount",
         "ledger_valid": not filtered.ledger.load_errors,
         "ledger_errors": ledger_errors,
