@@ -5,7 +5,6 @@
 ## Inbox
 
 - [243 — Keep narrow Documents columns readable](./blocked/243.md) — minor; dashboard QA, 2026-10-20. — **blocked:** fix shipped in `19547f970`; awaiting live 390px geometry check
-- [252 — Expose filtered active options in account and ledger pickers](./252.md) — minor; dashboard QA, 2026-10-20, both cmdk consumers live-reproduced.
 - [253 — Preserve query cards and focus when history reorders](./253.md) — minor; dashboard QA, 2026-10-20.
 - [254 — Preserve BQL source precision in chart tooltips](./254.md) — minor; dashboard QA, 2026-10-20.
 - [255 — Keep input focus after accepting a combobox suggestion](./255.md) — minor; dashboard QA, 2026-10-20.
