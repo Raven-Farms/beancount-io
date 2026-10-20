@@ -1867,9 +1867,11 @@ def export_portable(
     # standing where another needs a directory (an included file named
     # `_shared` beside an include from outside the tree) is on no disk yet, so
     # the loop above passes it and the second write fails after the first.
-    files = set(planned)
+    # Folded like the equal destinations above: a file `_SHARED` is in the way
+    # of the `_shared/` directory on a case-insensitive volume (w5/867).
+    files = {_name_key(dest): dest for dest in planned}
     for dest in planned:
-        inside = next((parent for parent in dest.parents if parent in files), None)
+        inside = next((files[key] for parent in dest.parents if (key := _name_key(parent)) in files), None)
         if inside is not None:
             raise UsageError(
                 f"Cannot export into {target}: the export would write {inside} as a file and {dest} inside it. "
