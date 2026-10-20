@@ -38,6 +38,7 @@
 
 - [872 — Preserve explicitly empty lot labels in transaction tables and query CSV](./872.md) — minor CLI output-fidelity follow-up to 805, 465 and 561; reproduced 2026-10-20.
 - [873 — Correct imported-balance padding refusals and their command remedy](./873.md) — minor CLI diagnostic follow-up to 871; reproduced 2026-10-20.
+- [874 — Give usable CSV currency advice for an already-open unrestricted account](./874.md) — minor CLI onboarding follow-up to 841; reproduced 2026-10-20.
 
 The 27 findings from the MCP QA auth sweep against the hosted endpoint (023–054, less the five under [Dropped](#dropped)) were fixed in `backend-cluster/backend-v2` and closed on 2026-10-02 and 2026-10-03; each note under [`done/`](./done/) records what shipped and in which commit. None has been re-observed against the hosted endpoint yet — the fixes reach it with the next backend deploy.
 
