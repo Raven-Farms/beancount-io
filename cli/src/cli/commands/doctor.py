@@ -11,8 +11,10 @@ import subprocess
 import sys
 import unicodedata
 from pathlib import Path
+from typing import Any
 
 import typer
+from typer.core import TyperGroup
 
 from cli import output
 from cli.config import DEFAULT_ENTRY_FILE_FALLBACKS
@@ -25,6 +27,7 @@ from cli.errors import (
     EngineError,
     LedgerError,
     UsageError,
+    placement_hint,
     refuse_json,
     refuse_misplaced_global,
 )
@@ -33,8 +36,40 @@ from cli.native_help import native_help, native_options
 from cli.paths import expand_path, held_descriptor, is_descriptor_path
 from cli.utils import decode_error_message, has_bom
 
+
+class _DoctorGroup(TyperGroup):
+    """Name where a bea option goes when it comes before the doctor operation.
+
+    `bea doctor -f main.bean lex` and `bea doctor --json lex` were read as an
+    operation named `-f` or `--json`: "No such command" (w5/839).
+    """
+
+    def resolve_command(self, ctx: Any, args: list[str]) -> Any:
+        first = args[0].split("=", 1)[0] if args else ""
+        if first.startswith("-") and first not in ("--help", "-h"):
+            _refuse_option_before_operation(first, args)
+        return super().resolve_command(ctx, args)
+
+
+def _refuse_option_before_operation(name: str, args: list[str]) -> None:
+    taken = 1 if "=" in args[0] else 2
+    value = args[0].split("=", 1)[1] if "=" in args[0] else (args[1] if len(args) > 1 else "FILE")
+    op = next((arg for arg in args[taken:] if arg in _OPS), None)
+    if name in ("-f", "--file"):
+        if op == "list-options":
+            raise UsageError(f"bea doctor list-options reads no ledger, so {name} does nothing here; drop it.")
+        example = shlex.join(["bea", "doctor", op or "lex", value])
+        raise UsageError(f"bea doctor operations take the ledger as an argument, not {name}: {example}")
+    if name == "--json":
+        raise UsageError("bea doctor has no JSON output; drop --json.")
+    hint = placement_hint(name)
+    if hint is not None:
+        raise UsageError(f"{name} is a bea option, not one of bea doctor's. {hint}")
+
+
 doctor_app = typer.Typer(
     name="doctor",
+    cls=_DoctorGroup,
     help=(
         "Beancount diagnostics (delegates to bean-doctor). Operations take the ledger file as a "
         "positional argument; --file, BEA_FILE, and ./main.bean do not apply."
@@ -778,7 +813,12 @@ def _register(op: str) -> None:
     def _cmd(ctx: typer.Context) -> None:
         assert forwarder is not None
         refuse_misplaced_global(
-            f"doctor {op}", list(ctx.args), native_options(f"doctor {op}"), reads="the ledger", json_output=False
+            f"doctor {op}",
+            list(ctx.args),
+            native_options(f"doctor {op}"),
+            # `list-options` reads no ledger: the form it was sent to was refused upstream (w5/839).
+            reads="" if op == "list-options" else "the ledger",
+            json_output=False,
         )
         _refuse_directory_ledger(op, list(ctx.args))
         # Every operation that loads its ledger starts upstream's loader, which

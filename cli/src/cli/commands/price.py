@@ -49,7 +49,10 @@ def price(ctx: typer.Context) -> None:
     file named `status` must be passed by path.
     """
     args = list(ctx.args)
-    refuse_misplaced_global("price", args, native_options("price"))
+    # Only status, refresh and export answer in JSON; `bea --json price FILE`,
+    # the form the forward was sent to, is refused (w5/839).
+    forwards = args[:1] not in (["status"], ["refresh"], ["export"])
+    refuse_misplaced_global("price", args, native_options("price"), json_output=not forwards)
     if args[:1] == ["status"]:
         _status(args[1:])
         return

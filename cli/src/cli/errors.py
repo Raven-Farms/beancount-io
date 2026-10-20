@@ -357,11 +357,9 @@ def _file_as_argument(command: str, args: list[str], index: int, reads: str) -> 
     if not given:
         value = args[index + 1] if index + 1 < len(args) else "FILE"
     rest = [*args[:index], *args[index + taken :]]
-    return (
-        f"bea {command} takes {reads} as an argument, not {name}: "
-        + shlex.join(["bea", *command.split(), value, *rest])
-        + "."
-    )
+    # No sentence period after the command: `… main.bean .` read `..` (w5/839).
+    suggested = shlex.join(["bea", *command.split(), value, *rest])
+    return f"bea {command} takes {reads} as an argument, not {name}: {suggested}"
 
 
 def to_bea_error(exc: BaseException | str) -> BeaError:

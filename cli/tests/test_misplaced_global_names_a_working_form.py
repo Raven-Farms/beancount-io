@@ -60,7 +60,8 @@ def test_file_on_a_command_that_takes_it_as_an_argument(books: Path, args: list[
 
     assert refused.returncode == 2, refused.stderr
     assert f"takes the {'file' if args[0] == 'treeify' else 'ledger'} as an argument" in refused.stderr
-    assert f": {suggested}." in refused.stderr
+    # No sentence period glued onto the command (w5/839).
+    assert refused.stderr.rstrip().endswith(f": {suggested}")
     assert _bea(books, *shlex.split(suggested)[1:]).returncode == 0
 
 
@@ -83,3 +84,49 @@ def test_file_on_example_is_called_meaningless(books: Path) -> None:
 
     assert refused.returncode == 2, refused.stderr
     assert "bea example reads no ledger, so -f does nothing here; drop it." in refused.stderr
+
+
+# ── gaps after w5/620 (w5/839) ───────────────────────────────────────────
+
+
+@pytest.mark.parametrize(
+    ("args", "said", "works"),
+    [
+        (
+            ["doctor", "list-options", "-f", "main.bean"],
+            "bea doctor list-options reads no ledger, so -f does nothing here; drop it.",
+            ["doctor", "list-options"],
+        ),
+        (
+            ["doctor", "-f", "main.bean", "lex"],
+            "bea doctor operations take the ledger as an argument, not -f: bea doctor lex main.bean",
+            ["doctor", "lex", "main.bean"],
+        ),
+        (
+            ["doctor", "--json", "lex", "main.bean"],
+            "bea doctor has no JSON output; drop --json.",
+            ["doctor", "lex", "main.bean"],
+        ),
+        (
+            ["doctor", "directories", "-f", "main.bean", "."],
+            "bea doctor directories takes the ledger as an argument, not -f: bea doctor directories main.bean .",
+            ["doctor", "directories", "main.bean", "."],
+        ),
+    ],
+    ids=["list-options", "file-before-op", "json-before-op", "no-glued-period"],
+)
+def test_the_hinted_doctor_form_runs(books: Path, args: list[str], said: str, works: list[str]) -> None:
+    refused = _bea(books, *args)
+
+    assert refused.returncode == 2, refused.stderr
+    assert said in " ".join(refused.stderr.split())
+    assert "No such command" not in refused.stderr
+    assert _bea(books, *works).returncode == 0
+
+
+def test_json_after_the_bean_price_forward_says_to_drop_it(books: Path) -> None:
+    refused = _bea(books, "price", "main.bean", "--json")
+
+    assert refused.returncode == 2, refused.stderr
+    assert "bea price has no JSON output; drop --json." in refused.stderr
+    assert "Place --json before the command" not in refused.stderr
