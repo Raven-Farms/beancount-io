@@ -1,6 +1,6 @@
 # w4 · m32 — Preserve valid ledger dates across browser timezones
 
-**Worker:** worker1 **Goal:** a valid Gregorian ledger date remains enterable regardless of whether the browser timezone ever observed that civil day **Status:** todo (t001–t004 done)
+**Worker:** worker1 **Goal:** a valid Gregorian ledger date remains enterable regardless of whether the browser timezone ever observed that civil day **Status:** blocked (t001–t004 done; t005 blocked on deployed-browser verification)
 
 ## Reproduced problem
 
@@ -62,3 +62,11 @@ Production `date-picker-DHE1-1Cn.js.map` serves `date-picker-utils.ts` SHA-256 `
 - **Expected outcome:** a person in a timezone with a skipped historical day can enter that valid ledger date without changing browser settings or switching to CSV.
 - **Why now:** strict local-Date validation leaves a reproducible gap after the earlier calendar fixes; changing the shared value contract requires coordinated caller verification.
 - **Adoption surface:** included because the shared control is exposed by seven entry workflows; review existing guidance without inventing a new public API or migration procedure.
+
+## Blocked
+
+**Blocked 2026-10-20** — t005's real-browser journeys (and therefore t006 Closeout) cannot run here.
+
+- **Shipped baseline:** `a48655dd6` — DatePicker and all seven forms carry `yyyy-MM-dd` civil days through a UTC-backed date; calendar grid via DayPicker `dateLib`. Automated regressions under `TZ=Pacific/Apia`/UTC/Los Angeles cover the parser, picker typing (ISO and localized), calendar selection of Dec 29/30/31, local Today, all seven form payloads, receipt prefill, invalid/leap/partial input, and react-hook-form draft retention; each Apia case fails against the prior local-Date parse. Dashboard format, lint, tests (6358) and build pass.
+- **Blocker:** the DoD's fresh UTC and Apia Chromium Journal journeys at 1440 and 390 widths need a deployed build of `a48655dd6` and a timezone-emulating browser; this worker's machine has no Chrome for Playwright and no authenticated stack.
+- **Unblock:** after `a48655dd6` (or later) is deployed, a QA run in fresh UTC and `Pacific/Apia` contexts confirms ISO and `12/30/2011` entry in Journal → New Entry → Transaction at desktop and 390px show `12/30/2011` with no invalid state, and the prepared BulkEntries payload carries `2011-12-30` (hold and abort the request; no production write needed). Also recheck the Apia CSV preview/Configure control. **Who:** the user or the dashboard QA loop (deploy is user-run).
