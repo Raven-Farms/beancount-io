@@ -4,7 +4,6 @@
 
 ## Inbox
 
-- [233 — Report Budget deletion read/write failures](./233.md) — minor; dashboard QA, 2026-10-20.
 - [234 — Execute BQL against current ledger data](./234.md) — major; dashboard QA, 2026-10-20.
 - [235 — Load Budget directives beyond the first journal page](./235.md) — major; dashboard QA, 2026-10-20.
 - [236 — Name the out-of-date ledger Refresh action](./236.md) — minor; dashboard QA, 2026-10-20.
