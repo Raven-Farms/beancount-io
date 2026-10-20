@@ -110,6 +110,7 @@ export const TextFileView = ({
   // scroll position and content, so there is nothing to reset here.
   const handleEditClick = useCallback(() => {
     if (!canEdit) return;
+    savedExitRef.current = false;
     onEnterEditMode();
   }, [canEdit, onEnterEditMode]);
 
@@ -136,23 +137,34 @@ export const TextFileView = ({
   // Keyboard ⌘S and the toolbar share this callback; a sync ref blocks a
   // second activation before React can flip isSaving (which only disables
   // the button, not the editor shortcut).
+  //
+  // While the write is pending the editor is read-only: an edit accepted then
+  // would be lost when the saved file reloads (w4/241). Once the write lands,
+  // the buffer is exactly what was saved, so its own exit is let past the
+  // unsaved-changes guard, which still compares against the pre-save file.
   const saveInFlightRef = useRef(false);
+  const [savePending, setSavePending] = useState(false);
+  const savedExitRef = useRef(false);
   const handleSaveClick = useCallback(
     async (contentOverride?: string) => {
       if (!canEdit) return;
       if (saveInFlightRef.current) return;
       saveInFlightRef.current = true;
+      savedExitRef.current = false;
+      setSavePending(true);
       try {
         const contentToSave = contentOverride ?? editedContent;
         if (contentToSave !== plainContent) {
           await onSave(contentToSave);
         }
+        savedExitRef.current = true;
         onExitEditMode();
       } catch {
         // Keep the draft and release the guard so the user can retry.
         // Parent save handlers already surface the failure (toast).
       } finally {
         saveInFlightRef.current = false;
+        setSavePending(false);
       }
     },
     [canEdit, editedContent, plainContent, onSave, onExitEditMode],
@@ -170,7 +182,7 @@ export const TextFileView = ({
 
   const handleEditorContentChange = useCallback(
     (value: string) => {
-      if (!canEdit) return;
+      if (!canEdit || saveInFlightRef.current) return;
       setEditedContent(value);
     },
     [canEdit],
@@ -191,7 +203,8 @@ export const TextFileView = ({
               onSave={handleSaveClick}
               onCancel={handleCancelEdit}
               onDiscard={handleDiscardEdit}
-              isSaving={isSaving}
+              isSaving={isSaving || savePending}
+              savedExitRef={savedExitRef}
             />
           ) : (
             <ViewModeActions
@@ -217,7 +230,7 @@ export const TextFileView = ({
               filename={filename}
               setEditedContent={handleEditorContentChange}
               lineNumber={normalizedLineNumber}
-              readOnly={!effectiveEditMode}
+              readOnly={!effectiveEditMode || savePending}
               onSave={handleSaveClick}
               onCancel={handleCancelEdit}
               onEditorMount={handleEditorMount}

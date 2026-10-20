@@ -44,6 +44,8 @@ export interface EditModeToolbarProps {
   /** Reset the draft buffer before confirming Leave without saving. */
   onDiscard: () => void;
   isSaving: boolean;
+  /** Set once a save has written exactly this buffer; its exit is not a loss. */
+  savedExitRef?: RefObject<boolean>;
 }
 
 /**
@@ -60,6 +62,7 @@ export function EditModeToolbar({
   onCancel,
   onDiscard,
   isSaving,
+  savedExitRef,
 }: EditModeToolbarProps) {
   const { t } = useTranslations();
   const isMac = useIsMac();
@@ -68,7 +71,7 @@ export function EditModeToolbar({
 
   // Block all navigation (route changes, query params, browser back/refresh) with unsaved changes
   const blocker = useBlocker({
-    shouldBlockFn: () => hasUnsavedChanges,
+    shouldBlockFn: () => hasUnsavedChanges && !savedExitRef?.current,
     enableBeforeUnload: () => hasUnsavedChanges,
     withResolver: true,
   });
