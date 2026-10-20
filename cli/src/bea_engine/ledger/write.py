@@ -2243,11 +2243,22 @@ def validate_candidate(
     tolerated: set[int] = set()
     before_errors: list[Any] | None = None
     existing_plugin_errors: set[int] | None = None
+
+    def _own_lifecycle_accounts() -> set[str]:
+        # Accounts this write itself opens or closes, walked only when an
+        # inactive-account error needs classifying: a valid ledger pays for
+        # no extra entries walk (w5/772).
+        return {
+            entry.account
+            for entry in entries
+            if isinstance(entry, Open | Close) and _proposed_entry(entry, filenames, original_lines)
+        }
+
     if allow_errors:
         _, before_errors, _ = managed_load.load_file(
             snapshot.root if snapshot else file, snapshot=snapshot, check_types=True
         )
-        tolerated = _preexisting_errors(errors, before_errors, filenames, original_lines)
+        tolerated = _preexisting_errors(errors, before_errors, filenames, original_lines, _own_lifecycle_accounts)
         existing_plugin_errors = tolerated
     accounts = [entry.account for entry in entries if isinstance(entry, Open)]
     # What the per-error hints below look up, each built on first use and then
@@ -2259,6 +2270,7 @@ def validate_candidate(
     closes_by_location: dict[tuple[Any, Any, Any], Any] | None = None
     cost_holders: dict[str, set[int]] | None = None
     first_inactive_dates: dict[str, Any] | None = None
+    last_inactive_dates: dict[str, Any] | None = None
     source_line_counts: dict[Path, int] = {}
     roots = ledger_roots(options)
     records: list[_ErrorRecord] = []
@@ -2329,7 +2341,9 @@ def validate_candidate(
                     before_errors = (
                         managed_load.load_file(root, snapshot=snapshot, check_types=True)[1] if root.exists() else []
                     )
-                existing_plugin_errors = _preexisting_errors(errors, before_errors, filenames, original_lines)
+                existing_plugin_errors = _preexisting_errors(
+                    errors, before_errors, filenames, original_lines, _own_lifecycle_accounts
+                )
             if index not in existing_plugin_errors:
                 hints.append(f"The proposed append (not written) triggers this error from plugin {plugin}.")
         if _unanchored(error) and (missing := _MISSING_COMMODITY.search(message)):
@@ -2418,18 +2432,21 @@ def validate_candidate(
                 word, state = ("open", "opened") if isinstance(entry, Open) else ("close", "closed")
                 if isinstance(entry, Open) and _proposed_entry(entry, filenames, original_lines):
                     if first_inactive_dates is None:
-                        first_inactive_dates = {}
-                        for inactive in errors:
-                            if "inactive account '" in inactive.message and inactive.entry is not None:
-                                name = inactive.message.split("inactive account '", 1)[1].split("'", 1)[0]
-                                first_inactive_dates[name] = min(
-                                    first_inactive_dates.get(name, inactive.entry.date), inactive.entry.date
-                                )
+                        first_inactive_dates, last_inactive_dates = _inactive_bounds(errors)
                     message += (
                         f" The proposed open would open {account} on {entry.date}; date it on or before "
                         f"{first_inactive_dates[account]}."
                     )
                     remedy = "correct the proposed open date"
+                    continue
+                if isinstance(entry, Close) and _proposed_entry(entry, filenames, original_lines):
+                    if last_inactive_dates is None:
+                        first_inactive_dates, last_inactive_dates = _inactive_bounds(errors)
+                    message += (
+                        f" The proposed close would close {account} on {entry.date}; date it on or after "
+                        f"{last_inactive_dates[account]}."
+                    )
+                    remedy = "correct the proposed close date"
                     continue
                 if isinstance(entry, Close) and (
                     closing_hint := _plugin_close_hint(entry, lifecycles, filenames, original_lines)
@@ -2672,7 +2689,7 @@ def validate_candidate(
                 before_errors = (
                     managed_load.load_file(root, snapshot=snapshot, check_types=True)[1] if root.exists() else []
                 )
-            if _preexisting_errors(type_errors, before_errors, filenames, original_lines):
+            if _preexisting_errors(type_errors, before_errors, filenames, original_lines, _own_lifecycle_accounts):
                 raise CandidateRejected(
                     f"The ledger already has {len(before_errors)} error(s); nothing was written. "
                     "Pass --allow-errors to tolerate existing errors; new errors are still refused.",
@@ -2689,7 +2706,9 @@ def validate_candidate(
                 before_errors = (
                     managed_load.load_file(root, snapshot=snapshot, check_types=True)[1] if root.exists() else []
                 )
-            if len(_preexisting_errors(errors, before_errors, filenames, original_lines)) == len(errors):
+            if len(
+                _preexisting_errors(errors, before_errors, filenames, original_lines, _own_lifecycle_accounts)
+            ) == len(errors):
                 # The write adds nothing wrong; the books were already broken,
                 # which is the case --allow-errors exists for. The repair hints
                 # for those errors stand; advice on dating a new assertion
@@ -3014,6 +3033,18 @@ def _average_inheritance_warnings(
     ]
 
 
+def _inactive_bounds(errors: list[Any]) -> tuple[dict[str, Any], dict[str, Any]]:
+    """First and last failing-entry dates per account named in inactive-account errors."""
+    first: dict[str, Any] = {}
+    last: dict[str, Any] = {}
+    for inactive in errors:
+        if "inactive account '" in inactive.message and inactive.entry is not None:
+            name = inactive.message.split("inactive account '", 1)[1].split("'", 1)[0]
+            first[name] = min(first.get(name, inactive.entry.date), inactive.entry.date)
+            last[name] = max(last.get(name, inactive.entry.date), inactive.entry.date)
+    return first, last
+
+
 def _proposed_entry(entry: Any, filenames: dict[Path, Path], original_lines: dict[Path, list[bytes]]) -> bool:
     """Whether the entry points into this write's unpersisted append."""
     path = Path(entry.meta.get("filename", ""))
@@ -3304,7 +3335,11 @@ def _error_key(error: Any, filenames: dict[Path, Path]) -> tuple[str, int | None
 
 
 def _preexisting_errors(
-    after: list[Any], before: list[Any], filenames: dict[Path, Path], original_lines: dict[Path, list[bytes]]
+    after: list[Any],
+    before: list[Any],
+    filenames: dict[Path, Path],
+    original_lines: dict[Path, list[bytes]],
+    own_accounts: Callable[[], set[str]] | None = None,
 ) -> set[int]:
     """Positions in `after` of the errors the ledger already had in `before`.
 
@@ -3342,7 +3377,17 @@ def _preexisting_errors(
     matched: set[int] = set()
     unmatched: list[tuple[int, tuple[str, int, str]]] = []
     unanchored: list[tuple[int, tuple[str, str]]] = []
+    own: set[str] | None = None
     for index, error in enumerate(after):
+        message = getattr(error, "message", "")
+        if own_accounts is not None and "inactive account '" in message:
+            if own is None:
+                own = own_accounts()
+            named = message.split("inactive account '", 1)[1].split("'", 1)[0]
+            if named in own:
+                # The write opens or closes this account, so the failure is
+                # its own dating, not a pre-existing error reworded (w5/772).
+                continue
         key = _error_key(error, filenames)
         if remaining.get(key):
             remaining[key].pop()
