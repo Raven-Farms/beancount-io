@@ -64,7 +64,7 @@ def test_a_cancelled_turn_shows_no_panel_and_writes_nothing(ledger: Path) -> Non
     agent = make_agent("model", base_url="http://127.0.0.1:9", api_key="test")
     deps = BqlDeps(
         file=ledger,
-        write_permission=WritePermission(confirm_fn=lambda d, t, w: (shown.append(d), "y")[1]),
+        write_permission=WritePermission(confirm_fn=lambda d, t, w, p: (shown.append(d), "y")[1]),
     )
     deps.cancel_event.set()
 
@@ -82,7 +82,7 @@ def test_a_cancel_during_the_first_panel_cancels_that_write_too(ledger: Path) ->
     agent = make_agent("model", base_url="http://127.0.0.1:9", api_key="test")
     deps = BqlDeps(file=ledger, write_permission=WritePermission())
 
-    def confirm(directive: str, _target: str, _warnings: list[str]) -> str:
+    def confirm(directive: str, _target: str, _warnings: list[str], _proposal: object) -> str:
         shown.append(directive)
         deps.cancel_event.set()
         return "y"
@@ -102,7 +102,7 @@ def test_a_cancel_during_a_later_dry_run_keeps_the_landed_write(ledger: Path, mo
     agent = make_agent("model", base_url="http://127.0.0.1:9", api_key="test")
     deps = BqlDeps(
         file=ledger,
-        write_permission=WritePermission(confirm_fn=lambda d, t, w: (shown.append(d), "y")[1]),
+        write_permission=WritePermission(confirm_fn=lambda d, t, w, p: (shown.append(d), "y")[1]),
     )
     real = launch.helper_json
     calls = 0

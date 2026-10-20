@@ -328,7 +328,7 @@ def test_ask_writes_are_validated_and_detect_edits_while_confirming(book: Path) 
     assert len(transactions(book)) == 1
     before = book.read_bytes()
 
-    def confirm(_directive, target, _warnings):
+    def confirm(_directive, target, _warnings, _proposal):
         # The callback is handed the destination the dry run resolved, which for
         # a single-file ledger is the root itself.
         assert Path(target) == book.resolve()

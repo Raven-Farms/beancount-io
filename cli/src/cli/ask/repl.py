@@ -104,7 +104,7 @@ def _make_session(hint: str, key_bindings: KeyBindings | None = None) -> PromptS
     )
 
 
-def _ask_write_permission() -> str:
+def _ask_write_permission(count: int = 1) -> str:
     """Arrow-key navigable selector. Returns y/n/a/d.
 
     It starts on "No", and each option's number and letter move the selection
@@ -120,7 +120,7 @@ def _ask_write_permission() -> str:
     from prompt_toolkit.styles import Style as PtStyle
 
     options = [
-        ("Yes", "y", "Append this directive to the ledger"),
+        ("Yes", "y", "Append this directive to the ledger" if count == 1 else f"Append these {count} directives"),
         ("No", "n", "Skip this write"),
         ("Yes to all", "a", "Approve all remaining writes this session"),
         ("Deny all", "d", "Reject all remaining writes this session"),
@@ -195,7 +195,7 @@ def _ask_write_permission() -> str:
     return app.run()
 
 
-def make_confirm_fn(active_status: list[Any]) -> Callable[[str, str, list[str]], str]:
+def make_confirm_fn(active_status: list[Any]) -> Callable[[str, str, list[str], dict[str, Any]], str]:
     """Return a callback that stops the spinner, shows the panel, and runs arrow-key selection.
 
     Everything on the panel comes from the engine's dry run of the write that is
@@ -210,15 +210,23 @@ def make_confirm_fn(active_status: list[Any]) -> Callable[[str, str, list[str]],
     unreadable.
     """
 
-    def confirm(directive: str, target: str, warnings: list[str]) -> str:
+    def confirm(directive: str, target: str, warnings: list[str], proposal: dict[str, Any] | None = None) -> str:
+        proposal = proposal or {}
+        count = int(proposal.get("count") or 1)
         if s := active_status[0]:
             s.stop()
         console.print()
         content = Text()
-        content.append("Allow the AI to append this directive to your ledger?\n\n", style="dim")
+        what = "this directive" if count == 1 else f"these {count} directives"
+        content.append(f"Allow the AI to append {what} to your ledger?\n\n", style="dim")
         content.append("File: ", style="dim")
-        content.append(f"{inert_text(target)}\n\n", style="bold")
-        content.append(inert_text(directive), style="green")
+        content.append(inert_text(target), style="bold")
+        if proposal.get("created"):
+            content.append(" (new file, created by this write)", style="dim")
+        content.append("\n\n")
+        # A new include starts with the root's `name_*` options; they are
+        # written too, so they are shown with what follows them.
+        content.append(inert_text(str(proposal.get("seed") or "")) + inert_text(directive), style="green")
         for warning in warnings:
             content.append(f"\n\nWarning: {inert_text(warning)}", style="yellow")
         console.print(
@@ -229,7 +237,7 @@ def make_confirm_fn(active_status: list[Any]) -> Callable[[str, str, list[str]],
                 padding=(0, 1),
             )
         )
-        result = _ask_write_permission()
+        result = _ask_write_permission(count)
         if s := active_status[0]:
             s.start()
         return result

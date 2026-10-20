@@ -40,7 +40,8 @@ def answer(
         file, [text], allow_errors=allow_errors, into=into, snapshot=snapshot, one_entry_each=False
     )
     if dry_run:
-        seeded = ledger_write.new_include_seed(snapshot, target) + snapshot.require_target(target, into=into)
+        seed = ledger_write.new_include_seed(snapshot, target)
+        seeded = seed + snapshot.require_target(target, into=into)
         return {
             "count": len(entries),
             "target": str(target),
@@ -49,6 +50,10 @@ def answer(
             # The aligned lines the commit appends, so a confirmation shows what
             # will be written rather than the proposal before alignment (w5/374).
             "text": ledger_write.appended_lines(seeded, [text]),
+            # A new include's file: the lines it starts with, written ahead of
+            # the text, and that it is created at all (w5/849).
+            "seed": seed.decode("utf-8"),
+            "created": not (target.exists() or target.is_symlink()),
         }
     ledger_write.append(file, [text], allow_errors=allow_errors, into=into, snapshot=snapshot, one_entry_each=False)
     return {"written": len(entries), "target": str(target), "warnings": warnings}

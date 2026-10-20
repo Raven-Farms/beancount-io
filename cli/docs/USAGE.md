@@ -2021,7 +2021,11 @@ atomically only if the root ledger and included files still match the preview.
 The confirmation names the file the write will actually change — with
 `--into FILE` that is the included destination, not the root ledger — and shows
 the directive as it will be appended, aligned as `bea format` leaves it (a
-model's tab indentation shows as the spaces that are written). Text still
+model's tab indentation shows as the spaces that are written). Its heading
+says how many directives it approves (`these 60 directives`), and so does the
+**Yes** option. A destination the write creates is marked `(new file, created
+by this write)`, with the `option "name_*"` lines it starts with shown above the
+directives, since they are written too. Text still
 carrying a control character in a string is escaped to a visible `\xNN`, so
 what is on screen is what will be written. The panel starts on **No**, so Enter alone
 declines. Arrows, `j`/`k`, the option numbers `1`–`4` and the letters `y`, `n`,

@@ -10,6 +10,7 @@ from contextlib import contextmanager
 from dataclasses import dataclass, field
 from datetime import date
 from pathlib import Path
+from typing import Any
 
 from pydantic_ai import Agent, AgentRunResult, ModelRetry, RunContext
 from pydantic_ai.exceptions import AgentRunError, ModelAPIError, ModelHTTPError, UsageLimitExceeded
@@ -22,7 +23,7 @@ from pydantic_ai.usage import UsageLimits
 
 from cli import output
 from cli.ask.results import format_result
-from cli.ask.skills import AgentSkill, build_skills_index_prompt
+from cli.ask.skills import MAX_BODY, AgentSkill, build_skills_index_prompt
 from cli.engine import launch
 from cli.errors import BeaError, LedgerError, error_from_status, redirect_error, request_id_from
 from cli.errors import server_message as _server_message
@@ -172,7 +173,7 @@ class WritePermission:
     deny_all: bool = False
     #: Called with the directive text and the append destination the engine's
     #: dry run resolved — never the root ledger, which `--into` makes wrong.
-    confirm_fn: Callable[[str, str, list[str]], str] | None = None
+    confirm_fn: Callable[[str, str, list[str], dict[str, Any]], str] | None = None
 
 
 @dataclass
@@ -651,8 +652,16 @@ def make_agent(
                 # proposal's tab indentation showed as `\x09` and was then written
                 # as aligned spaces (w5/374).
                 shown = preview.get("text")
+                # How many directives, and the lines a new include starts with:
+                # the panel said "this directive" over 60 transactions, and the
+                # seeded `option "name_*"` line was written unseen (w5/849).
+                proposal = {
+                    "count": int(preview.get("count") or 1),
+                    "seed": str(preview.get("seed") or ""),
+                    "created": bool(preview.get("created")),
+                }
                 answer = perm.confirm_fn(
-                    shown if isinstance(shown, str) else directive, str(preview["target"]), warnings
+                    shown if isinstance(shown, str) else directive, str(preview["target"]), warnings, proposal
                 )
                 if answer == "a":
                     perm.approve_all = True
@@ -686,7 +695,10 @@ def make_agent(
         if skill is None:
             available = ", ".join(ctx.deps.skills) or "none"
             return f"Skill '{name}' not found. Available skills: {available}."
-        return skill.body or "(no body content)"
+        body = skill.body or "(no body content)"
+        if len(body) > MAX_BODY:
+            return f"{body[:MAX_BODY]}\n\n[Skill body cut at {MAX_BODY:,} of {len(body):,} characters.]"
+        return body
 
     return agent
 

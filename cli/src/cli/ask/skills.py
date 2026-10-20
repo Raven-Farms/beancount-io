@@ -29,6 +29,10 @@ class AgentSkill:
 MAX_DESCRIPTION = 1024
 #: The whole skill index, for the same reason: thousands of small skills.
 MAX_INDEX = 32 * 1024
+#: A loaded skill body stays in the conversation and rides along on every
+#: later request; a 2 MB SKILL.md was returned whole (w5/849). The same size
+#: as a query result the model is shown.
+MAX_BODY = 12_000
 
 
 def _parse_skill(path: Path) -> AgentSkill | None:
