@@ -1,6 +1,6 @@
 # w2 · m50 — Import investment activity in bulk, with lots intact
 
-**Worker:** worker2 **Goal:** a user with a year of broker or exchange activity — or an existing portfolio to onboard — gets those events into the ledger as correct lots through one reviewed batch proposal, instead of dictating trades one at a time. **Status:** todo (t001–t002 done)
+**Worker:** worker2 **Goal:** a user with a year of broker or exchange activity — or an existing portfolio to onboard — gets those events into the ledger as correct lots through one reviewed batch proposal, instead of dictating trades one at a time. **Status:** todo (t001–t003 done)
 
 ## Tasks (in order)
 
@@ -8,7 +8,7 @@
 | ---- | ----- | --- | ---------- |
 | [t001](./done/t001.md) | Let beancount-trade propose many described events in one batch — **DONE** | 60m | w2/m45/t002 |
 | [t002](./done/t002.md) | Import a broker activity export as lots — **DONE** | 90m | t001 |
-| t003 | Import exchange activity and opening lots from a cost-basis export | 75m | t001 |
+| [t003](./done/t003.md) | Import exchange activity and opening lots from a cost-basis export — **DONE** | 75m | t001 |
 | t004 | Write evals, fixtures, and routing entries for bulk intake | 60m | t001, t002, t003 |
 | t005 | Run the evals and routing set on both clients | 45m | t004 |
 | t006 | Adoption surface | 30m | t005 |

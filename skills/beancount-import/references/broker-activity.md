@@ -99,3 +99,67 @@ one bad row rejects the whole batch and names it; never pass
 `--partial`. Events the batch schema cannot express (a total-cost
 `{{...}}` buy when the export gives only a net total) are written after
 the batch, one by one, with the native `transaction` recipe.
+
+## Crypto exchange activity CSV
+
+Exchange exports (Coinbase and kin) are the same shape with different
+column names: a type, an asset, a quantity, a spot/unit price, a
+subtotal, a fee, and a total. Confirm and store the mapping the same
+way (`format: broker-csv`; the account is the exchange account). Rules
+that differ from a stock broker's:
+
+- **Precision is data.** Quantities and prices keep the exact printed
+  precision (`0.01234567 BTC`), in the entries and in the hash input.
+- **Fees may be charged in the asset.** When the fee column is in the
+  traded asset, units acquired are the credited quantity and the fee's
+  value is inside the cash total — say so in the review; when it is a
+  separate cash amount, it is its own fees leg. Which one applies is
+  read from the row's arithmetic (subtotal ± fee = total), shown when
+  it does not add up.
+- **Reward/staking rows** book like a vest: units at the row's stated
+  value against an existing income account, one lot per receipt date.
+  A row with no stated value asks — never a silent zero-cost lot.
+- **Send/receive rows** are transfers only when the other side is the
+  user's own account and they confirm which; an external receive with
+  no stated nature (payment? gift? income?) is asked about, never
+  categorized by guess.
+- **Convert rows** are swaps: book them with beancount-trade's swap
+  procedure (disposal at stated value + acquisition at that value),
+  not as an independent buy and sell at unrelated prices.
+
+Symbols are taken as printed (`BTC`, `ETH`, also `USD` cash rows);
+a symbol the account's `open` does not allow stops the row like any
+commodity stop.
+
+## Opening lots from a holdings / cost-basis export
+
+Onboarding an existing portfolio: a holdings or cost-basis export
+prints lots as of a date — symbol, quantity, per-unit (or total) cost,
+and acquisition date, sometimes one row per lot, sometimes one row per
+symbol with a single blended cost. Take it as printed; never split a
+blended row into invented lots.
+
+- **One opening transaction** dated the export's as-of date (or the
+  ledger's start, confirmed with the user): each lot as
+  `N SYM {cost, acquisition-date}` into its account, any cash balance
+  row in the same entry, balanced against `Equity:Opening-Balances`
+  (propose its `open` if missing). The lot keeps its true acquisition
+  date inside the cost braces, so later sells reduce it with the right
+  holding period — the transaction date does not rewrite when the lot
+  was acquired.
+- **Tie-out before proposing:** recompute the staged totals per symbol
+  (units, and cost where printed) and compare with the export's own
+  totals row when it prints one; a disagreement stops the import with
+  both figures shown. The equity leg must equal the summed lot costs
+  plus seeded cash — shown, not just balanced by construction.
+- **Dedup:** each seeded lot carries the `csv:sha256` id whose date is
+  the opening transaction's (as-of) date, with the lot posting —
+  including its acquisition date inside the braces — as the hash amount
+  and the row's symbol text (as printed) as the description, against
+  the destination account — so re-running the
+  same holdings export is a Layer-1 no-op, and a later activity sell
+  resolves against the seeded lots by the ordinary lots-held read.
+- Lots with **unknown acquisition date or cost** are listed and asked
+  about; an unknown-cost lot is never seeded at zero or at today's
+  price. If the user cannot supply it, that symbol is left unseeded
+  and the gap is stated in the review.
