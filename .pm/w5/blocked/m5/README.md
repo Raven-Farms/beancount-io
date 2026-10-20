@@ -6,21 +6,14 @@
 
 ## Blocked
 
-**Blocked 2026-09-15 after implementation and live verification.** Two conditions this repository cannot satisfy on its own:
+**Blocked 2026-09-15 after implementation and live verification; narrowed 2026-10-20.** The deploy condition is cleared: on 2026-10-20 the drift check reported no difference between the deployed prompts and the working tree. Claude Code then passed all nine prompt journeys, including the two new `close-month` journeys ([2026-10-20 run](../../../../backend-cluster/backend-v2/evals/mcp-agent/baseline/2026-10-20-prompts.md)). Two conditions remain that this repository cannot satisfy:
 
-1. **Deploying the repairs.** Clients receive the deployed prompts and tools. Four repairs are merged but not deployed:
-   - the `close-month` status line
-   - the `categorize-imports` bank references and `ledger.admin` guidance
-   - prompt argument validation and playbook source lines
-   - `BAD_USER_INPUT` for missing required tool arguments
+1. **Codex measurement (t002, and the closeout's both-clients requirement).** Every Codex attempt on 2026-10-20 was incomplete. Codex CLI is signed in with a ChatGPT plan whose Codex usage limit was reached, and it refuses to run until 2026-11-17 15:36.
+   **Unblock:** Codex has quota again — after 2026-11-17, with a plan upgrade, or signed in with an API key — and `yarn mcp:agent-eval --client codex --journey <the nine prompt-* journeys>` is run and recorded. Who: whoever owns the Codex account, or time. The eval keys in the gitignored `backend-cluster/backend-v2/.env.mcp-eval.local` expire on 2026-10-27. After that, mint new ones from the QA account (credentials in the root `.env`), as on 2026-10-20.
+2. **Staged bank data for `categorize-imports` (t004).** Suggestions, previews, confirmed submission, and repeat-import deduplication all need staged transactions, and only a Plaid sync fills staging. The hosted deployment uses Plaid's production environment (its link tokens begin `link-production`), so sandbox credentials cannot link a test bank. `.pm/DO_NOT_DO.md` rules out a duplicate stack for MCP testing. Also, the 2026-10-20 correction to `categorize-imports` (`discardStagedBankTransactions` in place of the retired `operation: "discard"`) is merged but not deployed.
+   **Unblock:** a person who can share a real bank account's transactions links it, in the browser, to a dedicated eval ledger on the QA account. Keep it separate from `mcp-agent-eval`, whose `prompt-categorize-no-bank` journey needs no bank; `mcp-agent-eval-bank` fits the harness's naming rule. Then deploy backend-v2 and add the staged-import journeys. Who: the account owner, and whoever deploys.
 
-   `yarn mcp:agent-eval` reports the deployed `close-month` and `categorize-imports` prompts as differing from the working tree.
-   **Update 2026-10-20:** the user reports backend-v2 deployed. The repository cannot confirm it yet. The drift check and the journeys need the eval API keys, and the 2026-09-15 keys expired on 2026-09-22. The hosted endpoint answers 401 without one, and this machine's `bea cloud` session has expired. Two `close-month` journeys were added for t002 and are ready to run (see [Validation evidence](#validation-evidence-2026-10-20)).
-   **Unblock:** the QA account owner mints a short-lived read/write key and a read-only key, both pinned to `<owner>/mcp-agent-eval` ([Personal API key](../../../../backend-cluster/backend-v2/docs/mcp.md#personal-api-key)). Put them, with `BEANCOUNT_MCP_LEDGER`, as `BEANCOUNT_MCP_TOKEN` and `BEANCOUNT_MCP_READONLY_TOKEN` in the gitignored `backend-cluster/backend-v2/.env.mcp-eval.local`. Then rerun the prompt journeys until the drift note disappears, and record the results.
-2. **Staged bank data for `categorize-imports` (t004).** Suggestions, previews, confirmed submission, and repeat-import deduplication all need staged transactions on the QA account's eval ledger. Staged transactions require a linked bank, and linking happens in the browser. `.pm/DO_NOT_DO.md` rules out a duplicate stack for MCP testing.
-   **Unblock:** link a test bank to the QA account's eval ledger, then add staged-import journeys.
-
-t002 also leaves some `close-month` cases unexercised: statements, dated assertions, and a confirmed final write. Add those journeys when unblocked. When work can resume, move this directory back to `.pm/w5/m5/`.
+When work can resume, move this directory back to `.pm/w5/m5/`.
 
 ## Validation evidence (2026-10-20)
 
@@ -34,7 +27,13 @@ t002 also leaves some `close-month` cases unexercised: statements, dated asserti
   - A close write is scored as missing when one assertion is absent or has the wrong sign.
   Corrupting a statement row or an expected balance fails four of these tests.
 - **Native checks (backend-v2):** `yarn typecheck` passes. `yarn test` passes: 367 suites, 6252 tests. `yarn lint:deadcode` is clean. Prettier and ESLint are clean on the changed files.
-- **Not yet measured:** the journeys need the eval keys (Blocked item 1). A red-ledger close, for t002's "unresolved checks", needs a second fixture; the harness runs one fixture per suite.
+- **Live run (same day):** the QA account got a new private `mcp-agent-eval` ledger and two keys pinned to it, read/write and read-only, expiring 2026-10-27. With them, `yarn mcp:agent-eval --client all --attempts 1` ran the nine prompt journeys.
+  - No deployed prompt differs from the working tree.
+  - Claude Code passed 9/9, about USD 5.37 in all. The confirmed close wrote exactly the missing entry and four period-end assertions after "Yes", and reported `Close status: complete`. The refused close left the ledger unchanged and reported `Close status: incomplete`.
+  - Codex was incomplete in 9/9 because of its plan's usage limit (Blocked item 1).
+  - Details: [2026-10-20-prompts.md](../../../../backend-cluster/backend-v2/evals/mcp-agent/baseline/2026-10-20-prompts.md).
+- **Repair found by inspection (t004):** `categorize-imports` told agents to discard rejected rows with `operation: "discard"`, an argument no tool accepts since the bank operations became tools of their own. It now names `discardStagedBankTransactions`. `mcp-prompt-list.test.ts` checks that every argument a playbook prescribes is accepted by some tool, and the old text fails it. This repair is not deployed yet.
+- **Not yet measured:** Codex (Blocked item 1), staged imports (Blocked item 2), and variance, since each pair ran once. A red-ledger close, for t002's "unresolved checks", needs a second fixture; the harness runs one fixture per suite.
 
 ## Validation evidence (2026-09-15)
 
