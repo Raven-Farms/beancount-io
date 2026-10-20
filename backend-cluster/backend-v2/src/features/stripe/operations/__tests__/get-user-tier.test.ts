@@ -149,7 +149,7 @@ describe("subscription-bound tier", () => {
   });
   it("uses Organization quotas for the same live subscription despite historical test cache", async () => {
     expect(await getUserTierLimits(deps([sub([org])]))).toMatchObject({
-      maxLedgers: 100,
+      maxLedgers: 500,
       maxCollaboratorsPerLedger: 50,
     });
   });

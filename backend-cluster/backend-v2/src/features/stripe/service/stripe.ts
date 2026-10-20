@@ -57,7 +57,7 @@ export const TIER_LIMITS = {
     maxDirectives: -1, // Unlimited
   },
   [SubscriptionTier.ORGANIZATION]: {
-    maxLedgers: 100,
+    maxLedgers: 500,
     maxCollaboratorsPerLedger: 50,
     aiCfoTokensMax: 10_000_000,
     maxDirectives: -1, // Unlimited

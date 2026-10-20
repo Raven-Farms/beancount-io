@@ -177,7 +177,7 @@ describe("profile reads through actual adapters and exact-self authorization", (
       const profile = await (await f.rest()).json();
       expect(profile).toMatchObject({
         tier: "ORGANIZATION",
-        limits: { ledgersMax: 100, collaboratorsPerLedgerMax: 50 },
+        limits: { ledgersMax: 500, collaboratorsPerLedgerMax: 50 },
       });
       expect((await f.gql()).data?.userProfile).toEqual(profile);
       expect(await f.read()).toEqual(profile);

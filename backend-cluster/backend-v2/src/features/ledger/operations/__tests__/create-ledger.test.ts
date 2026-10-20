@@ -340,7 +340,7 @@ describe("createLedger operation", () => {
   });
 
   // PRFAQ005 question 21 item 6: the count read only the first 10 repositories
-  // the ledger service listed, so Growth's 20 and Organization's 100 never fired.
+  // the ledger service listed, so Growth's 20 and Organization's 500 never fired.
   describe("ledger limit across every listed page", () => {
     const repo = (fullName: string) => ({ full_name: fullName });
     /** The owner's own list as Gitea pages it, 50 per page. */
@@ -369,7 +369,7 @@ describe("createLedger operation", () => {
     it.each([
       [SubscriptionTier.PREMIUM, 5],
       [SubscriptionTier.GROWTH, 20],
-      [SubscriptionTier.ORGANIZATION, 100],
+      [SubscriptionTier.ORGANIZATION, 500],
     ])(
       "refuses a %s owner at %i owned ledgers, however many pages they span",
       async (tier, max) => {
