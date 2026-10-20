@@ -465,12 +465,17 @@ def native_command(name: str) -> Path:
     filename = f"{name}.exe" if sys.platform == "win32" else name
     for directory in _candidate_bin_dirs():
         executable = directory / filename
-        if executable.exists():
+        if native_tool_problem(executable) is None:
             return executable
 
     directory = paths.bin_dir_for(provision.ensure_engine())
     executable = directory / filename
-    if not executable.exists():
+    problem = native_tool_problem(executable)
+    if problem is not None:
+        # A directory or a file without execute permission is no tool either:
+        # it was returned for being there, and `check -v` died on a raw
+        # `[Errno 13] Permission denied` (w5/863).
+        found = f"no '{name}'" if problem == "missing" else f"a '{name}' that cannot run ({executable} is {problem})"
         # Which installation to blame depends on which one was consulted. Under
         # an override those are different places, and the managed engine named
         # by `engine_root()` is neither the thing that failed nor the thing that
@@ -480,11 +485,11 @@ def native_command(name: str) -> Path:
         override = paths.python_override()
         if override is not None:
             raise BeaError(
-                f"{paths.PYTHON_ENV}={override} names an environment with no '{name}' ({directory}). "
+                f"{paths.PYTHON_ENV}={override} names an environment with {found} ({directory}). "
                 f"Correct or unset {paths.PYTHON_ENV}, or run 'bea engine status' to see which engine would serve."
             )
         raise BeaError(
-            f"The engine environment has no '{name}' ({directory}). "
+            f"The engine environment has {found} ({directory}). "
             f"Remove {paths.engine_root()} and rerun to provision it again."
         )
     return executable
@@ -494,11 +499,37 @@ def native_command(name: str) -> Path:
 NATIVE_TOOLS = ("bean-check", "bean-doctor", "bean-example", "treeify")
 
 
-def missing_native_tools(python: Path) -> list[str]:
-    """The native tools absent beside `python`, where `native_command` looks for them under an override."""
+def native_tool_problem(executable: Path) -> str | None:
+    """Why `executable` cannot run as a native tool — `missing`, `a directory`, … — or None when it can.
+
+    Judged from the file alone; nothing is executed to find out.
+    """
+    try:
+        info = executable.stat()
+    except OSError:
+        return "missing"
+    if stat.S_ISDIR(info.st_mode):
+        return "a directory"
+    if not stat.S_ISREG(info.st_mode):
+        return "not a regular file"
+    if sys.platform != "win32" and not os.access(executable, os.X_OK):
+        return "not executable"
+    return None
+
+
+def native_tools_problem(python: Path) -> str | None:
+    """What stops the native tools beside `python` from running, where `native_command` looks under an override.
+
+    Present was taken for usable: a directory or a mode-644 script read as a
+    tool, so status said usable while `check -v` could not run it (w5/863).
+    """
     directory = paths.bin_dir_for(python)
     suffix = ".exe" if sys.platform == "win32" else ""
-    return [name for name in NATIVE_TOOLS if not (directory / f"{name}{suffix}").exists()]
+    problems = {name: native_tool_problem(directory / f"{name}{suffix}") for name in NATIVE_TOOLS}
+    missing = [name for name, problem in problems.items() if problem == "missing"]
+    broken = [f"{name} ({problem})" for name, problem in problems.items() if problem not in (None, "missing")]
+    parts = ([f"no {', '.join(missing)}"] if missing else []) + ([f"{', '.join(broken)} cannot run"] if broken else [])
+    return f"{'; '.join(parts)} beside {python} ({directory})" if parts else None
 
 
 def _candidate_bin_dirs() -> list[Path]:

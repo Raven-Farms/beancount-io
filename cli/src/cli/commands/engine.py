@@ -50,9 +50,7 @@ def engine_status() -> None:
     if failure is None and source.tier == "override" and source.python is not None:
         # Native tools are run from beside the override, so loading the engine
         # is not enough: `check` and `example` failed where status said usable (w5/647).
-        missing = launch.missing_native_tools(source.python)
-        if missing:
-            failure = reason = f"no {', '.join(missing)} beside {source.python} ({paths.bin_dir_for(source.python)})"
+        failure = reason = launch.native_tools_problem(source.python)
     if probed:
         status["usable"] = failure is None
     if failure is not None:

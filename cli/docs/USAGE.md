@@ -59,7 +59,10 @@ checkout's `cli/src` (development only). When none of those exists it reports
 `not provisioned; provisions on first use`. `--json` carries the same answer as
 `serving.tier` (`override`, `managed`, `checkout`, or `first-use`) and
 `serving.location`. A managed or override interpreter is probed, with the result
-in `usable`. A failed probe adds the reason in `unusable` for an override or
+in `usable`. An override is usable only when `bean-check`, `bean-doctor`,
+`bean-example` and `treeify` beside it can run: a missing tool, a directory, or
+a file without execute permission makes it unusable, naming each one. A failed
+probe adds the reason in `unusable` for an override or
 `damaged` for the managed engine. Status still exits **0**; inspect those fields
 before relying on the engine. Checkout and first-use status omit these probe fields.
 
