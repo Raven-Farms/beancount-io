@@ -948,7 +948,9 @@ implicitly, so one BQL cannot hash — `other_accounts`, `balance`, `meta` — i
 the same usage error (exit **2**), named with its type:
 `SELECT joinstr(other_accounts), count(*)` or `str(meta)` groups by its text.
 
-An empty result prints `(no rows)` on stderr. JSON mode keeps the usual
+An empty result prints `(no rows)` on stderr, as an empty `bea list` prints
+`No transactions found.` (or its type's notice) there, so a `> file` or `| head`
+never reads it as a row. JSON mode keeps the usual
 envelope with an empty `rows` array and no human notice.
 
 BQL's `CLOSE ON D` is exclusive, unlike the inclusive `--from-date` /

@@ -3735,6 +3735,10 @@ def appended_content(original: bytes, texts: list[str]) -> str:
     if not texts:
         return original.decode("utf-8")
     text = original.decode("utf-8")
+    if text == "\ufeff":
+        # A file holding only a byte-order mark is empty: the mark read as an
+        # unterminated line, and its first entry got two leading newlines (w5/843).
+        return text + appended_content(b"", texts)
     ending = _dominant_ending(original)
     from bea_engine.ledger.formatting import align_protected, posting_lines
 

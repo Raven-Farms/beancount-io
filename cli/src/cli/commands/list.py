@@ -406,7 +406,9 @@ def _run(name: str, spec: _Spec, limit: int, allow_errors: bool, *, details: boo
 
     output.utf8_stdout()
     if not items:
-        typer.echo(spec.empty)
+        # On stderr, as `query`'s `(no rows)` and `balance`'s notice are: on
+        # stdout a `| head` or `> file` read it as a row (w5/843).
+        typer.echo(spec.empty, err=True)
         return
     # A plugin can add rows the ledger file never declares. They read as
     # `generated`, and the column only exists when one does — a plugin-free
