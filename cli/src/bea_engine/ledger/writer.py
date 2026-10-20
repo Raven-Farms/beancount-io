@@ -338,8 +338,11 @@ def _append(
     allow_errors: bool = False,
     into: Path | None = None,
     snapshot: ledger_write.LedgerSnapshot | None = None,
+    stages_pad: bool = False,
 ) -> list[str]:
-    return ledger_write.append(file_path, list(texts), allow_errors=allow_errors, into=into, snapshot=snapshot)
+    return ledger_write.append(
+        file_path, list(texts), allow_errors=allow_errors, into=into, snapshot=snapshot, stages_pad=stages_pad
+    )
 
 
 def format_transaction(directive: TransactionHeader) -> str:
@@ -460,7 +463,7 @@ def write_pad(
     file_path: Path, directive: PadDirective, *, allow_errors: bool = False, into: Path | None = None
 ) -> list[str]:
     entry = Pad(meta={}, date=directive.date, account=directive.account, source_account=directive.source_account)
-    return _append(file_path, format_entry(entry), allow_errors=allow_errors, into=into)
+    return _append(file_path, format_entry(entry), allow_errors=allow_errors, into=into, stages_pad=True)
 
 
 def write_note(

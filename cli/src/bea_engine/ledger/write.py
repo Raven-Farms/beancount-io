@@ -3929,11 +3929,15 @@ def validate_append(
     into: Path | None = None,
     snapshot: LedgerSnapshot | None = None,
     one_entry_each: bool = True,
+    stages_pad: bool = False,
 ) -> list[str]:
     """Validate the append without writing; returns the errors `allow_errors` tolerated.
 
     Each text is one requested directive unless `one_entry_each` is off, which
     only raw directive text (`bea-engine append`) does: it counts its own.
+    `stages_pad` is the staged-pad carve-out, and only `add pad` passes it: a
+    pad-only batch from anywhere else — an import, a raw append — introduced
+    its unused pad like any other error (w5/798).
     """
     if one_entry_each:
         require_one_entry_each(texts)
@@ -3947,19 +3951,11 @@ def validate_append(
             target,
             allow_errors=allow_errors,
             snapshot=snapshot,
-            stages_pad=_only_pads(texts),
+            stages_pad=stages_pad,
             stages_open=_only_opens(texts),
         )
     snapshot.verify()
     return warnings + respelled_account_notes(texts, snapshot)
-
-
-_PAD_TEXT = re.compile(r"\s*\d{4}[-/]\d+[-/]\d+\s*pad\b")
-
-
-def _only_pads(texts: list[str]) -> bool:
-    """Whether a request appends pads and nothing else — the first half of the two-step pad flow."""
-    return bool(texts) and all(_PAD_TEXT.match(text) for text in texts)
 
 
 _OPEN_TEXT = re.compile(r"\s*\d{4}[-/]\d+[-/]\d+\s*open\b")
@@ -4129,8 +4125,11 @@ def append(
     pad_from: bool = False,
     pad_date_explicit: bool = False,
     validated: list[str] | None = None,
+    stages_pad: bool = False,
 ) -> list[str]:
     """Append `texts` to the ledger, validated and written under the lock.
+
+    `stages_pad` is the staged-pad carve-out, passed only by `add pad` (w5/798).
 
     `validated` is the answer `validate_append` already gave for these texts
     against this same `snapshot`. The snapshot is verified unchanged here, so
@@ -4186,7 +4185,7 @@ def append(
                     target,
                     allow_errors=allow_errors,
                     snapshot=snapshot,
-                    stages_pad=_only_pads(texts),
+                    stages_pad=stages_pad,
                     stages_open=_only_opens(texts),
                     pad_from=pad_from,
                     pad_date_explicit=pad_date_explicit,
