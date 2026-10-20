@@ -333,6 +333,8 @@ export const pt: Translations = {
     "Esta conta não está disponível no livro-razão selecionado.",
   transactionDetailUnavailable:
     "Esta transação não está disponível no livro-razão selecionado.",
+  transactionDetailRemoved:
+    "Esta transação foi alterada ou removida. Volte para ver a lista atual.",
   merchantDetailUnavailable:
     "Este comerciante não está disponível no livro-razão selecionado.",
   commitDetailUnavailable:

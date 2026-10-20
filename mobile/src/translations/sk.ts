@@ -333,6 +333,8 @@ export const sk: Translations = {
   accountDetailUnavailable: "Tento účet nie je vo zvolenej knihe dostupný.",
   transactionDetailUnavailable:
     "Táto transakcia nie je vo zvolenej knihe dostupná.",
+  transactionDetailRemoved:
+    "Táto transakcia bola zmenená alebo odstránená. Vráťte sa späť a pozrite si aktuálny zoznam.",
   merchantDetailUnavailable:
     "Tento obchodník nie je vo zvolenej knihe dostupný.",
   commitDetailUnavailable: "Táto zmena nie je vo zvolenej knihe dostupná.",

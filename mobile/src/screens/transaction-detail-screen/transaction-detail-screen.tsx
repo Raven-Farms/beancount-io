@@ -1,6 +1,6 @@
 import { useGuest } from "@/common/guest/guest-context";
 import { useLedgerAccess } from "@/common/hooks/use-ledger-access";
-import { useCallback, useMemo } from "react";
+import { useCallback, useEffect, useMemo } from "react";
 import {
   Alert,
   Pressable,
@@ -58,6 +58,7 @@ import {
   type TransactionMenuAction,
 } from "./selectors/select-transaction-detail";
 import { shouldShowTransactionWriteActions } from "./selectors/select-transaction-write-actions";
+import { isEntryGone } from "./selectors/select-entry-gone";
 import { deleteTransaction } from "./delete-transaction";
 import { ledgerWriteFailureMessage } from "@/common/ledger-refusal";
 import { i18n } from "@/translations";
@@ -354,6 +355,13 @@ const TransactionDetailImpl = ({
       : null;
   }, [stashedEntry, data]);
 
+  // Changed or removed elsewhere since the list loaded: refresh the lists
+  // behind this screen so the stale row is gone when the user goes back.
+  const entryGone = isEntryGone(error);
+  useEffect(() => {
+    if (entryGone) void invalidateLedgerData(client, "entries");
+  }, [entryGone, client]);
+
   const handlePressAccount = useCallback(
     (account: string) => {
       if (originAccount && account === originAccount) {
@@ -398,6 +406,17 @@ const TransactionDetailImpl = ({
       toast.showToast({ message: t("copied"), type: "text" });
     });
   }, [entryLinkUrl, toast, t]);
+
+  if (entryGone) {
+    // Not the cached copy, and no Share or Copy link to an entry that no
+    // longer exists (w21/013).
+    return (
+      <RouteLedgerUnavailable
+        title={t("transaction")}
+        message={t("transactionDetailRemoved")}
+      />
+    );
+  }
 
   if (!entry) {
     return (

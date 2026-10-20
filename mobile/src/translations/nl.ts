@@ -323,6 +323,8 @@ export const nl: Translations = {
     "Dit account is niet beschikbaar in het geselecteerde grootboek.",
   transactionDetailUnavailable:
     "Deze transactie is niet beschikbaar in het geselecteerde grootboek.",
+  transactionDetailRemoved:
+    "Deze transactie is gewijzigd of verwijderd. Ga terug om de actuele lijst te zien.",
   merchantDetailUnavailable:
     "Deze handelaar is niet beschikbaar in het geselecteerde grootboek.",
   commitDetailUnavailable:

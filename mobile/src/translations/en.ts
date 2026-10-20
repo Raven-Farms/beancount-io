@@ -317,6 +317,8 @@ export const en = {
     "This account isn't available in the selected ledger.",
   transactionDetailUnavailable:
     "This transaction isn't available in the selected ledger.",
+  transactionDetailRemoved:
+    "This transaction was changed or removed. Go back to see the current list.",
   merchantDetailUnavailable:
     "This merchant isn't available in the selected ledger.",
   commitDetailUnavailable:

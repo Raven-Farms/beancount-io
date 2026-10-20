@@ -293,6 +293,7 @@ export const zh: Translations = {
   noEntries: "暂无记录",
   accountDetailUnavailable: "所选账本中没有这个账户。",
   transactionDetailUnavailable: "所选账本中没有这笔交易。",
+  transactionDetailRemoved: "此交易已被更改或删除。返回即可查看最新列表。",
   merchantDetailUnavailable: "所选账本中没有这个商家。",
   commitDetailUnavailable: "所选账本中没有这项更改。",
   journalLoadError: "加载日记账失败：",
