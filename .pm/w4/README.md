@@ -4,7 +4,6 @@
 
 ## Inbox
 
-- [242 — Name Documents, Collaborators, Errors and Import Preview tables](./242.md) — minor; dashboard QA, 2026-10-20, populated/loading/empty controls scoped.
 - [243 — Keep narrow Documents columns readable](./243.md) — minor; dashboard QA, 2026-10-20.
 - [244 — Preserve fragments in native guest sign-in links](./244.md) — minor; dashboard QA, 2026-10-20.
 - [245 — Name imported amounts with their normalized preview value](./245.md) — minor; dashboard QA, 2026-10-20.
