@@ -59,3 +59,4 @@
 - [109](./109.md) — Notifications bell never tells VoiceOver its error count
 - [110](./110.md) — First New Transaction after relaunch pre-fills accounts from the stale persisted cache, even a deleted account
 - [111](./111.md) — At AX2 the drawer clips "Ledgers", "+ New" and every ledger name to the top half of the text
+- [112](./112.md) — Cash flow Sankey leaves refunds out of Savings, so Savings ≠ Net Profit and the VoiceOver summary contradicts itself
