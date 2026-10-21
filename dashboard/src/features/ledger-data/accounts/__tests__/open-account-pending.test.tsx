@@ -163,4 +163,20 @@ describe("Accounts Open Account while its write is pending", () => {
     expect(account()).toHaveValue("Assets:Qa-20261020:Open-Pending-B");
     expect(mutate).toHaveBeenCalledTimes(1);
   });
+
+  it("keeps the dialog and its draft through a composing Escape (w4/292)", () => {
+    render(<Harness />);
+    fireEvent.change(account(), {
+      target: { value: "Assets:Qa-20261020:東京" },
+    });
+
+    fireEvent.keyDown(account(), { key: "Escape", isComposing: true });
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+    expect(account()).toHaveValue("Assets:Qa-20261020:東京");
+
+    fireEvent.keyDown(account(), { key: "Escape", keyCode: 27 });
+    expect(screen.queryByRole("dialog")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "reopen" }));
+    expect(account()).toHaveValue("");
+  });
 });
