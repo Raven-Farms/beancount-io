@@ -1,0 +1,23 @@
+{
+  "checkedDateUTC": "2026-10-21",
+  "target": "MCPServers.org",
+  "submissionUrl": "https://mcpservers.org/submit",
+  "name": "Beancount.io",
+  "category": "Finance",
+  "description": "Query, edit, and reconcile hosted Beancount ledgers: BQL, reports, files and bank imports. Streamable HTTP with OAuth.",
+  "documentation": "https://github.com/bex-co/beancount-io/blob/main/backend-cluster/backend-v2/docs/mcp.md",
+  "registryName": "io.beancount/beancount",
+  "remote": true,
+  "endpoint": "https://beancount.io/api-gateway/mcp",
+  "authentication": "OAuth",
+  "plan": "Free",
+  "feeUSD": 0,
+  "dedupSearch": "https://mcpservers.org/search?query=beancount",
+  "dedupResult": "One unrelated StdioA/beancount-mcp record; no canonical hosted connector match in the live result",
+  "receiptHeading": "Submission Successful!",
+  "receiptText": "Your MCP server \"Beancount.io\" has been submitted successfully.",
+  "review": "Within 2 weeks; email on approval",
+  "state": "Submitted; pending moderation; no public listing URL or receipt ID exposed",
+  "contact": "Publisher public-profile contact supplied privately in form; omitted here",
+  "authenticatedConnection": "Not run through this directory; verify after publication"
+}

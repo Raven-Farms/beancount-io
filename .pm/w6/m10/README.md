@@ -1,6 +1,6 @@
 # w6 · m10 — List the connector in independent web directories
 
-**Worker:** worker1 **Goal:** People comparing accounting MCP servers find accurate, usable remote listings on the eligible independent directories. **Status:** todo
+**Worker:** worker1 **Goal:** People comparing accounting MCP servers find accurate, usable remote listings on the eligible independent directories. **Status:** todo (t001 submitted/free, blocked on moderation; t002 next)
 
 **Implementation estimate:** ~2h, excluding external review queues and the standing closing tasks.
 
@@ -8,7 +8,7 @@
 
 | id | title | est | depends_on |
 | --- | --- | --- | --- |
-| [t001](./t001.md) | Submit or correct MCPServers.org's free remote listing | 30m | w6/m8/t001 |
+| [t001](./t001.md) | Submit or correct MCPServers.org's free remote listing — **BLOCKED: submitted** | 30m | w6/m8/t001 |
 | [t002](./t002.md) | Submit or correct MCPMarket's free remote listing | 30m | w6/m8/t001 |
 | [t003](./t003.md) | Establish LobeHub eligibility and prepare its supported connector listing | 45m | w6/m8/t001 |
 | [t004](./t004.md) | Verify the independent-directory listings after moderation | 15m | t001, t002, t003 |
@@ -46,3 +46,7 @@
 - [MCPServers.org submission](https://mcpservers.org/submit)
 - [MCPMarket submission](https://mcpmarket.com/submit)
 - [LobeHub marketplace eligibility to verify](https://lobehub.com/mcp)
+
+## Blocked
+
+- **t001:** Free $0 submission succeeded on 2026-10-21; review advertised within two weeks. **Unblock:** moderator approval/public URL, then actual metadata/connection verification. **Owner:** MCPServers.org moderators, then repository worker. Do not duplicate the pending submission.
