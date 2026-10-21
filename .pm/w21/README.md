@@ -114,3 +114,5 @@
 - [164](./164.md) — Account balance chart skips postingless months and spaces points by index, inventing balances
 - [165](./165.md) — Home's budget panel ranks only the first 12 budgets alphabetically; an overspent 13th never appears
 - [166](./166.md) — One future-dated transaction moves every Reports range onto next month (1M on Oct 21 shows only November)
+- [167](./167.md) — Merchants: a pre-entered payment counts as paid; "Next" skips it and a missed bill isn't Overdue
+- [168](./168.md) — Budget ALL: one future entry makes every header describe next month at a $0 budget
