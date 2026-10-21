@@ -8,3 +8,4 @@
 
 ## Inbox
 
+- [015](./015.md) — Home's lower cards keep their old text measurements when text size changes with the app open
