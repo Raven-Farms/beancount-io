@@ -5,6 +5,7 @@ import { fonts, fontSizes, fontWeights } from "@/common/theme";
 import { AmountText } from "@/components/amount-text";
 import { ColorTheme } from "@/types/theme-props";
 import { LEADING_TEXT_ALIGN } from "@/common/rtl";
+import type { EntryBalanceRow } from "./format-entry-balances";
 
 const getStyles = (theme: ColorTheme) =>
   StyleSheet.create({
@@ -40,6 +41,13 @@ const getStyles = (theme: ColorTheme) =>
       flex: 1,
       textAlign: LEADING_TEXT_ALIGN,
     },
+    // One amount per line, so several currencies or lots stack instead of
+    // squeezing the account name (w21/092).
+    balanceAmounts: {
+      alignItems: "flex-end",
+      flexShrink: 0,
+      marginStart: 12,
+    },
     balanceAmount: {
       fontSize: fontSizes.sm,
       color: theme.text01,
@@ -49,7 +57,7 @@ const getStyles = (theme: ColorTheme) =>
 
 interface BalanceSectionProps {
   title: string;
-  balances: { account: string; amount: string }[];
+  balances: EntryBalanceRow[];
 }
 
 export const BalanceSection: React.FC<BalanceSectionProps> = ({
@@ -82,9 +90,17 @@ export const BalanceSection: React.FC<BalanceSectionProps> = ({
           >
             {balance.account}
           </Text>
-          <AmountText mono="regular" style={styles.balanceAmount}>
-            {balance.amount}
-          </AmountText>
+          <View style={styles.balanceAmounts}>
+            {balance.amounts.map((amount, line) => (
+              <AmountText
+                key={line}
+                mono="regular"
+                style={styles.balanceAmount}
+              >
+                {amount}
+              </AmountText>
+            ))}
+          </View>
         </View>
       ))}
     </View>

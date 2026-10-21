@@ -16,6 +16,7 @@ import {
 } from "@/generated-graphql/graphql";
 import { ColorTheme } from "@/types/theme-props";
 import { JournalDirectiveType } from "../types";
+import { formatEntryBalances } from "./format-entry-balances";
 import { BalanceSection } from "./balance-section";
 import { LoadingTile } from "@/components/loading-tile";
 
@@ -197,24 +198,6 @@ export const EntryContext: React.FC<EntryContextProps> = ({
       Boolean(contextData) || contextLoading || !entry?.entry_hash || !ledgerId,
   });
 
-  // Helper function to format balances for display
-  const formatBalances = (balances: Record<string, unknown>) => {
-    if (!balances || typeof balances !== "object") return [];
-
-    return Object.entries(balances).map(([account, amount]) => ({
-      account,
-      amount:
-        typeof amount === "object" &&
-        amount !== null &&
-        "number" in amount &&
-        "currency" in amount
-          ? `${(amount as { number: string; currency: string }).number} ${
-              (amount as { number: string; currency: string }).currency
-            }`
-          : String(amount),
-    }));
-  };
-
   const entryContext = contextData ?? data?.getLedgerEntryContext;
   const isLoading = contextLoading || (loading && !entryContext);
   const entryError = contextError ?? error;
@@ -222,12 +205,8 @@ export const EntryContext: React.FC<EntryContextProps> = ({
   const entryFilename = entryMeta?.filename ?? "";
   const entryLineNumber = entryMeta?.lineno ?? "";
 
-  const balancesBefore = entryContext?.balances_before
-    ? formatBalances(entryContext.balances_before as Record<string, unknown>)
-    : [];
-  const balancesAfter = entryContext?.balances_after
-    ? formatBalances(entryContext.balances_after as Record<string, unknown>)
-    : [];
+  const balancesBefore = formatEntryBalances(entryContext?.balances_before);
+  const balancesAfter = formatEntryBalances(entryContext?.balances_after);
   const hasBalances = balancesBefore.length > 0 || balancesAfter.length > 0;
 
   if (isLoading) {
