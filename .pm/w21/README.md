@@ -167,3 +167,8 @@
 - [310](./310.md) — Subfolder file named like a root file shows the root file's error in its banner
 - [311](./311.md) — GraphQL getLedgerErrors drops code and hint that REST/MCP return
 - [312](./312.md) — Editor error banner cuts long messages at two lines
+- [313](./313.md) — Notifications' Recent changes shows only the last 30 commits; no way to older history
+- [314](./314.md) — Commit listing silently caps limit at 50 (REST/GraphQL/MCP) and fetches unused stats/files
+- [315](./315.md) — In-app commits signed with Gitea username and real email (no full_name, no noreply)
+- [316](./316.md) — VoiceOver can't read or step through Home/account balance charts
+- [317](./317.md) — Balance chart's end dot and cursor jump ahead of the animating line on range change
