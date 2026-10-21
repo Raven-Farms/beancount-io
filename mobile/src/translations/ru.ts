@@ -468,6 +468,9 @@ export const ru: Translations = {
   commitDetailAuthor: "Автор",
   commitDetailStats: "Статистика",
   commitDetailFiles: "Файлы",
+  commitFileAdded: "Добавлен",
+  commitFileDeleted: "Удалён",
+  commitFileRenamedFrom: "Переименован из {{name}}",
   commitDetailDiff: "Изменения",
   commitDetailNoDiff: "Изменения недоступны.",
   commitDetailAdditions: {

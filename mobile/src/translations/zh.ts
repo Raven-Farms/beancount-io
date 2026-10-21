@@ -419,6 +419,9 @@ export const zh: Translations = {
   commitDetailAuthor: "作者",
   commitDetailStats: "统计",
   commitDetailFiles: "文件",
+  commitFileAdded: "已添加",
+  commitFileDeleted: "已删除",
+  commitFileRenamedFrom: "重命名自 {{name}}",
   commitDetailDiff: "差异",
   commitDetailNoDiff: "没有可显示的差异。",
   commitDetailAdditions: {

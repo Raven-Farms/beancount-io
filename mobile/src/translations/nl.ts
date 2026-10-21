@@ -463,6 +463,9 @@ export const nl: Translations = {
   commitDetailAuthor: "Auteur",
   commitDetailStats: "Statistieken",
   commitDetailFiles: "Bestanden",
+  commitFileAdded: "Toegevoegd",
+  commitFileDeleted: "Verwijderd",
+  commitFileRenamedFrom: "Hernoemd van {{name}}",
   commitDetailDiff: "Verschillen",
   commitDetailNoDiff: "Geen verschillen beschikbaar.",
   commitDetailAdditions: {

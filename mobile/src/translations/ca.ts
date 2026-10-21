@@ -472,6 +472,9 @@ export const ca: Translations = {
   commitDetailAuthor: "Autor",
   commitDetailStats: "Estadístiques",
   commitDetailFiles: "Fitxers",
+  commitFileAdded: "Afegit",
+  commitFileDeleted: "Suprimit",
+  commitFileRenamedFrom: "Canviat de nom des de {{name}}",
   commitDetailDiff: "Diferències",
   commitDetailNoDiff: "No hi ha diferències disponibles.",
   commitDetailAdditions: {

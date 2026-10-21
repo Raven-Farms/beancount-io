@@ -474,6 +474,9 @@ export const de: Translations = {
   commitDetailAuthor: "Autor",
   commitDetailStats: "Statistik",
   commitDetailFiles: "Dateien",
+  commitFileAdded: "Hinzugefügt",
+  commitFileDeleted: "Gelöscht",
+  commitFileRenamedFrom: "Umbenannt von {{name}}",
   commitDetailDiff: "Diff",
   commitDetailNoDiff: "Kein Diff verfügbar.",
   commitDetailAdditions: {

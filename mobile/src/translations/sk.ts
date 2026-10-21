@@ -471,6 +471,9 @@ export const sk: Translations = {
   commitDetailAuthor: "Autor",
   commitDetailStats: "Štatistika",
   commitDetailFiles: "Súbory",
+  commitFileAdded: "Pridaný",
+  commitFileDeleted: "Odstránený",
+  commitFileRenamedFrom: "Premenovaný z {{name}}",
   commitDetailDiff: "Rozdiely",
   commitDetailNoDiff: "Nie sú dostupné žiadne rozdiely.",
   commitDetailAdditions: {

@@ -3,6 +3,7 @@ import {
   isMissingCommitLookupError,
   stripCommitMetadata,
   parseFileStatsFromDiff,
+  commitFileChanges,
 } from "../commits-service";
 import {
   ForbiddenError,
@@ -396,6 +397,8 @@ index abc123..def456 100644
     expect(result.get("test.txt")).toEqual({
       additions: 1,
       deletions: 1,
+      status: "modified",
+      previousFilename: null,
     });
   });
 
@@ -423,10 +426,14 @@ index 333..444 100644
     expect(result.get("file1.txt")).toEqual({
       additions: 1,
       deletions: 0,
+      status: "modified",
+      previousFilename: null,
     });
     expect(result.get("file2.txt")).toEqual({
       additions: 0,
       deletions: 1,
+      status: "modified",
+      previousFilename: null,
     });
   });
 
@@ -449,6 +456,8 @@ index 0000000..abc123
     expect(result.get("new-file.txt")).toEqual({
       additions: 5,
       deletions: 0,
+      status: "added",
+      previousFilename: null,
     });
   });
 
@@ -469,6 +478,8 @@ index abc123..0000000
     expect(result.get("deleted.txt")).toEqual({
       additions: 0,
       deletions: 3,
+      status: "removed",
+      previousFilename: null,
     });
   });
 
@@ -487,6 +498,8 @@ index abc..def 100644
     expect(result.get("test.txt")).toEqual({
       additions: 1,
       deletions: 1,
+      status: "modified",
+      previousFilename: null,
     });
   });
 
@@ -509,6 +522,8 @@ index 111..222 100644
     expect(result.get("src/components/Button.tsx")).toEqual({
       additions: 1,
       deletions: 0,
+      status: "modified",
+      previousFilename: null,
     });
   });
 
@@ -538,6 +553,8 @@ index abc..def 100644
     expect(result.get("unchanged.txt")).toEqual({
       additions: 0,
       deletions: 0,
+      status: "modified",
+      previousFilename: null,
     });
   });
 
@@ -562,6 +579,8 @@ index abc..def 100644
     expect(result.get("large-file.txt")).toEqual({
       additions: 100,
       deletions: 50,
+      status: "modified",
+      previousFilename: null,
     });
   });
 
@@ -577,6 +596,8 @@ Binary files /dev/null and b/image.png differ`;
     expect(result.get("image.png")).toEqual({
       additions: 0,
       deletions: 0,
+      status: "added",
+      previousFilename: null,
     });
   });
 
@@ -595,6 +616,8 @@ index abc..def 100644
     expect(result.get("file with spaces.txt")).toEqual({
       additions: 1,
       deletions: 0,
+      status: "modified",
+      previousFilename: null,
     });
   });
 
@@ -618,6 +641,96 @@ index 111..222 100644
     expect(result.get("main.bean")).toEqual({
       additions: 2,
       deletions: 1,
+      status: "modified",
+      previousFilename: null,
     });
+  });
+});
+
+// w21/132: a rename read as two untouched files, and an empty file's
+// creation looked the same as its deletion.
+describe("commit file status", () => {
+  const rename = `diff --git a/qa-a.bean b/qa-c.bean
+similarity index 100%
+rename from qa-a.bean
+rename to qa-c.bean
+diff --git a/books.bean b/books.bean
+index 111..222 100644
+--- a/books.bean
++++ b/books.bean
+@@ -1 +1,2 @@
+ keep
+++++ a line that reads like a header
+`;
+
+  it("names a rename, and counts content that looks like a header", () => {
+    const stats = parseFileStatsFromDiff(rename);
+    expect([...stats.keys()]).toEqual(["qa-c.bean", "books.bean"]);
+    expect(stats.get("qa-c.bean")).toEqual({
+      additions: 0,
+      deletions: 0,
+      status: "renamed",
+      previousFilename: "qa-a.bean",
+    });
+    expect(stats.get("books.bean")?.additions).toBe(1);
+  });
+
+  it("collapses Gitea's removed + added pair into one renamed row", () => {
+    expect(
+      commitFileChanges(
+        [
+          { filename: "books.bean", status: "modified" },
+          { filename: "qa-a.bean", status: "removed" },
+          { filename: "qa-c.bean", status: "added" },
+        ],
+        parseFileStatsFromDiff(rename),
+      ),
+    ).toEqual([
+      {
+        filename: "books.bean",
+        additions: 1,
+        deletions: 0,
+        status: "modified",
+        previousFilename: null,
+      },
+      {
+        filename: "qa-c.bean",
+        additions: 0,
+        deletions: 0,
+        status: "renamed",
+        previousFilename: "qa-a.bean",
+      },
+    ]);
+  });
+
+  it("tells an empty file's creation from its deletion", () => {
+    const created = parseFileStatsFromDiff(
+      "diff --git a/qa/n.bean b/qa/n.bean\nnew file mode 100644\nindex 0000000..e69de29\n",
+    );
+    const deleted = parseFileStatsFromDiff(
+      "diff --git a/qa/n.bean b/qa/n.bean\ndeleted file mode 100644\nindex e69de29..0000000\n",
+    );
+    expect(created.get("qa/n.bean")?.status).toBe("added");
+    expect(deleted.get("qa/n.bean")?.status).toBe("removed");
+  });
+
+  it("reads a path containing ' b/' from its header", () => {
+    const stats = parseFileStatsFromDiff(
+      "diff --git a/x b/y.bean b/x b/y.bean\n--- a/x b/y.bean\n+++ b/x b/y.bean\n@@ -0,0 +1 @@\n+z\n",
+    );
+    expect([...stats.keys()]).toEqual(["x b/y.bean"]);
+  });
+
+  it("falls back to Gitea's status when the diff is unavailable", () => {
+    expect(
+      commitFileChanges(
+        [
+          { filename: "a.bean", status: "added" },
+          { filename: "b.bean", status: "deleted" },
+          { filename: "c.bean" },
+        ],
+        new Map(),
+      ).map((f) => f.status),
+    ).toEqual(["added", "removed", "modified"]);
   });
 });

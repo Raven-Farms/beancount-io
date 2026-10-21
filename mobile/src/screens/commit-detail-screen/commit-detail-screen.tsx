@@ -11,7 +11,12 @@ import { FadeInView } from "@/components/crossfade";
 import { LedgerGuard, useLedgerGuard } from "@/components/ledger-guard";
 import { RouteLedgerUnavailable } from "@/components/route-ledger-unavailable";
 import { bindRouteLedger, firstRouteParam } from "@/common/route-ledger";
-import { parseDiff, DiffLine } from "./diff-utils";
+import {
+  commitFileRows,
+  parseDiff,
+  type CommitFileRow,
+  DiffLine,
+} from "./diff-utils";
 import { LEADING_TEXT_ALIGN, letterSpacing, LTR_SOURCE } from "@/common/rtl";
 import {
   formatCommitAuthorLine,
@@ -19,6 +24,23 @@ import {
 } from "@/screens/notifications-screen/formatting";
 import { CardLoadFailure } from "@/components/card-load-failure";
 import { selectCardLoadState } from "@/common/apollo/card-load-state";
+
+/** "Added", "Deleted" or "Renamed from …"; nothing for an edited file. */
+function fileStatusText(
+  file: CommitFileRow,
+  t: ReturnType<typeof useTranslations>["t"],
+): string | null {
+  switch (file.status) {
+    case "added":
+      return t("commitFileAdded");
+    case "removed":
+      return t("commitFileDeleted");
+    case "renamed":
+      return t("commitFileRenamedFrom", { name: file.previousFilename ?? "" });
+    default:
+      return null;
+  }
+}
 
 const SKELETON_WIDTHS = [200, 160, 240, 180, 120, 220, 150, 190];
 
@@ -101,6 +123,14 @@ const getStyles = (theme: ColorTheme) =>
     fileStats: {
       fontSize: 12,
       color: theme.black80,
+    },
+    fileStatus: {
+      fontSize: 12,
+      color: theme.black80,
+      paddingHorizontal: 16,
+      marginTop: -6,
+      paddingBottom: 8,
+      textAlign: LEADING_TEXT_ALIGN,
     },
     diffContainer: {
       backgroundColor: theme.black10,
@@ -186,6 +216,7 @@ function CommitDetailScreenImpl({
 
   const commit = data?.getCommitDetails;
   const diffLines = commit?.diff ? parseDiff(commit.diff) : null;
+  const fileRows = commit ? commitFileRows(commit.files, commit.diff) : [];
   // The subject heads the summary; the body reflows below it rather than
   // keeping git's ~72-column hard wraps (w0/032).
   const message = splitCommitMessage(commit?.message ?? "");
@@ -250,7 +281,7 @@ function CommitDetailScreenImpl({
               <View style={styles.divider} />
 
               {/* Files */}
-              {commit.files.length > 0 && (
+              {fileRows.length > 0 && (
                 <>
                   <View style={styles.section}>
                     <Text
@@ -259,10 +290,17 @@ function CommitDetailScreenImpl({
                     >
                       {t("commitDetailFiles")}
                     </Text>
-                    {commit.files.map((f) => (
+                    {fileRows.map((f) => (
                       <View
                         key={f.filename}
-                        accessibilityLabel={`${f.filename}, +${f.additions} −${f.deletions}`}
+                        accessible
+                        accessibilityLabel={[
+                          f.filename,
+                          fileStatusText(f, t),
+                          `+${f.additions} −${f.deletions}`,
+                        ]
+                          .filter(Boolean)
+                          .join(", ")}
                       >
                         <View style={styles.fileRow}>
                           <Text
@@ -276,6 +314,11 @@ function CommitDetailScreenImpl({
                             +{f.additions} −{f.deletions}
                           </Text>
                         </View>
+                        {f.status !== "modified" && (
+                          <Text style={styles.fileStatus} numberOfLines={1}>
+                            {fileStatusText(f, t)}
+                          </Text>
+                        )}
                       </View>
                     ))}
                   </View>

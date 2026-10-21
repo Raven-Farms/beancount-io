@@ -470,6 +470,9 @@ export const en = {
   commitDetailAuthor: "Author",
   commitDetailStats: "Stats",
   commitDetailFiles: "Files",
+  commitFileAdded: "Added",
+  commitFileDeleted: "Deleted",
+  commitFileRenamedFrom: "Renamed from {{name}}",
   commitDetailDiff: "Diff",
   commitDetailNoDiff: "No diff available.",
   commitDetailAdditions: {

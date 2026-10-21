@@ -132,7 +132,7 @@ const userFields = "login fullName email";
 const authorFields = "name email date";
 const latestFields = `sha message author { ${userFields} } committer { ${userFields} } created`;
 const listFields = `sha message author { ${authorFields} } committer { ${authorFields} } shortSha`;
-const detailFields = `sha message author { ${authorFields} } committer { ${authorFields} } files { filename additions deletions } stats { additions deletions total } diff parents`;
+const detailFields = `sha message author { ${authorFields} } committer { ${authorFields} } files { filename additions deletions status previousFilename } stats { additions deletions total } diff parents`;
 const listItem = {
   sha: commit.sha,
   message: commit.commit.message,
@@ -186,7 +186,15 @@ const cases = [
       message: commit.commit.message,
       author,
       committer: author,
-      files: [{ filename: "main.bean", additions: 1, deletions: 1 }],
+      files: [
+        {
+          filename: "main.bean",
+          additions: 1,
+          deletions: 1,
+          status: "modified",
+          previousFilename: null,
+        },
+      ],
       stats: commit.stats,
       diff,
       parents: ["parent123"],
@@ -230,6 +238,45 @@ describe("commit reads through actual REST, GraphQL, and MCP adapters", () => {
             { format: "json" },
           ]);
       }
+    } finally {
+      await f.close();
+    }
+  });
+  it("reports a rename as one renamed file on every surface (w21/132)", async () => {
+    const f = await fixture();
+    f.history.mockResolvedValue({
+      data: [
+        {
+          ...commit,
+          files: [
+            { filename: "old.bean", status: "removed" },
+            { filename: "new.bean", status: "added" },
+          ],
+        },
+      ],
+    });
+    f.download.mockResolvedValue({
+      data: "diff --git a/old.bean b/new.bean\nsimilarity index 100%\nrename from old.bean\nrename to new.bean\n",
+    });
+    const files = [
+      {
+        filename: "new.bean",
+        additions: 0,
+        deletions: 0,
+        status: "renamed",
+        previousFilename: "old.bean",
+      },
+    ];
+    try {
+      const path = `commit-details?sha=${commit.sha}`;
+      const response = await f.rest(path);
+      expect((await response.json()).files).toEqual(files);
+      expect((await f.mcp(path)).files).toEqual(files);
+      const result = await f.gql(
+        `getCommitDetails(ledgerId: "alice/main", sha: "${commit.sha}") { files { filename additions deletions status previousFilename } }`,
+      );
+      expect(result.errors).toBeUndefined();
+      expect(result.data?.getCommitDetails).toEqual({ files });
     } finally {
       await f.close();
     }

@@ -462,6 +462,9 @@ export const bg: Translations = {
   commitDetailAuthor: "Автор",
   commitDetailStats: "Статистика",
   commitDetailFiles: "Файлове",
+  commitFileAdded: "Добавен",
+  commitFileDeleted: "Изтрит",
+  commitFileRenamedFrom: "Преименуван от {{name}}",
   commitDetailDiff: "Разлики",
   commitDetailNoDiff: "Няма налични разлики.",
   commitDetailAdditions: {

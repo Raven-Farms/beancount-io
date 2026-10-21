@@ -467,6 +467,9 @@ export const uk: Translations = {
   commitDetailAuthor: "Автор",
   commitDetailStats: "Статистика",
   commitDetailFiles: "Файли",
+  commitFileAdded: "Додано",
+  commitFileDeleted: "Видалено",
+  commitFileRenamedFrom: "Перейменовано з {{name}}",
   commitDetailDiff: "Зміни",
   commitDetailNoDiff: "Змін немає.",
   commitDetailAdditions: {

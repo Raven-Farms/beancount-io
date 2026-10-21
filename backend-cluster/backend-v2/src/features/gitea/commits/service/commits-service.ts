@@ -74,50 +74,126 @@ export function stripCommitMetadata(gitPatch: string): string {
   return gitPatch.substring(diffStartIndex);
 }
 
+export type CommitFileStatus = "added" | "removed" | "modified" | "renamed";
+
+export interface CommitFileStats {
+  additions: number;
+  deletions: number;
+  status: CommitFileStatus;
+  /** The path before a rename; null otherwise. */
+  previousFilename: string | null;
+}
+
+/** The path of a `diff --git a/<p> b/<p>` header whose two sides agree. */
+function headerPath(line: string): string {
+  const rest = line.slice("diff --git a/".length);
+  const half = (rest.length - 3) / 2;
+  if (Number.isInteger(half) && rest.slice(half, half + 3) === " b/") {
+    const path = rest.slice(0, half);
+    if (rest.slice(half + 3) === path) return path;
+  }
+  // A rename's sides differ; its `rename to` line names the new path.
+  return line.match(/ b\/(.+)$/)?.[1] ?? "";
+}
+
 /**
- * Parses a unified diff to extract per-file statistics (additions/deletions).
+ * Parses a unified diff to extract per-file statistics and what happened to
+ * each file. The extended headers say so even for an empty file, whose diff
+ * has no hunk at all: `new file mode`, `deleted file mode`, and a rename's
+ * `rename from` / `rename to` pair (w21/132).
  *
  * @param diff - Unified diff string (output from git diff)
- * @returns Map of filename to {additions, deletions} stats
+ * @returns Map of (new) filename to its stats, status and previous name
  */
 export function parseFileStatsFromDiff(
   diff: string,
-): Map<string, { additions: number; deletions: number }> {
-  const fileStats = new Map<string, { additions: number; deletions: number }>();
+): Map<string, CommitFileStats> {
+  const fileStats = new Map<string, CommitFileStats>();
 
   if (!diff || diff.trim() === "") {
     return fileStats;
   }
 
+  let current: CommitFileStats | null = null;
   let currentFile = "";
-  const lines = diff.split("\n");
+  let inHunk = false;
 
-  for (const line of lines) {
-    // Match file header: diff --git a/file.txt b/file.txt
-    if (line.startsWith("diff --git")) {
-      const match = line.match(/b\/(.+)$/);
-      if (match) {
-        currentFile = match[1];
-        fileStats.set(currentFile, { additions: 0, deletions: 0 });
+  for (const line of diff.split("\n")) {
+    if (line.startsWith("diff --git ")) {
+      currentFile = headerPath(line);
+      current = {
+        additions: 0,
+        deletions: 0,
+        status: "modified",
+        previousFilename: null,
+      };
+      fileStats.set(currentFile, current);
+      inHunk = false;
+    } else if (!current) {
+      continue;
+    } else if (!inHunk) {
+      if (line.startsWith("@@")) inHunk = true;
+      else if (line.startsWith("new file mode")) current.status = "added";
+      else if (line.startsWith("deleted file mode")) current.status = "removed";
+      else if (line.startsWith("rename from ")) {
+        current.status = "renamed";
+        current.previousFilename = line.slice("rename from ".length);
+      } else if (line.startsWith("rename to ")) {
+        fileStats.delete(currentFile);
+        currentFile = line.slice("rename to ".length);
+        fileStats.set(currentFile, current);
       }
-    }
-    // Count additions (lines starting with + but not +++)
-    else if (currentFile && line.startsWith("+") && !line.startsWith("+++")) {
-      const stats = fileStats.get(currentFile);
-      if (stats) {
-        stats.additions += 1;
-      }
-    }
-    // Count deletions (lines starting with - but not ---)
-    else if (currentFile && line.startsWith("-") && !line.startsWith("---")) {
-      const stats = fileStats.get(currentFile);
-      if (stats) {
-        stats.deletions += 1;
-      }
+    } else if (line.startsWith("+")) {
+      current.additions += 1;
+    } else if (line.startsWith("-")) {
+      current.deletions += 1;
     }
   }
 
   return fileStats;
+}
+
+/**
+ * A commit's files as one row per file. Gitea lists a rename as the removed
+ * old path plus the added new one, each with no line counts; the diff names
+ * the rename, so the two collapse into a single "renamed" row (w21/132).
+ */
+export function commitFileChanges(
+  files: readonly { filename?: string; status?: string }[],
+  diffStats: Map<string, CommitFileStats>,
+) {
+  const renamedFrom = new Set(
+    [...diffStats.values()].flatMap((stats) =>
+      stats.previousFilename ? [stats.previousFilename] : [],
+    ),
+  );
+  return files.flatMap((f) => {
+    const filename = f.filename || "";
+    const stats = diffStats.get(filename);
+    if (!stats && renamedFrom.has(filename)) return [];
+    return [
+      {
+        filename,
+        additions: stats?.additions ?? 0,
+        deletions: stats?.deletions ?? 0,
+        status: stats?.status ?? giteaFileStatus(f.status),
+        previousFilename: stats?.previousFilename ?? null,
+      },
+    ];
+  });
+}
+
+function giteaFileStatus(status: string | undefined): CommitFileStatus {
+  switch (status) {
+    case "added":
+    case "removed":
+    case "renamed":
+      return status;
+    case "deleted":
+      return "removed";
+    default:
+      return "modified";
+  }
 }
 
 export interface ListCommitsInput {
@@ -321,19 +397,7 @@ export class CommitsService implements ICommitsService {
               date: commit.commit.committer.date || "",
             }
           : undefined,
-        files: (commit.files || []).map((f) => {
-          const filename = f.filename || "";
-          const stats = diffStats.get(filename) || {
-            additions: 0,
-            deletions: 0,
-          };
-
-          return {
-            filename,
-            additions: stats.additions,
-            deletions: stats.deletions,
-          };
-        }),
+        files: commitFileChanges(commit.files || [], diffStats),
         stats: {
           additions: commit.stats?.additions || 0,
           deletions: commit.stats?.deletions || 0,

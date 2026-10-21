@@ -455,6 +455,9 @@ export const fa: Translations = {
   commitDetailAuthor: "نویسنده",
   commitDetailStats: "آمار",
   commitDetailFiles: "فایل‌ها",
+  commitFileAdded: "افزوده شد",
+  commitFileDeleted: "حذف شد",
+  commitFileRenamedFrom: "تغییر نام از {{name}}",
   commitDetailDiff: "تفاوت‌ها",
   commitDetailNoDiff: "تفاوتی در دسترس نیست.",
   commitDetailAdditions: {

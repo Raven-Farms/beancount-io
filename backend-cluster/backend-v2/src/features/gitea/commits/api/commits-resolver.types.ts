@@ -22,6 +22,18 @@ export class CommitFileChange {
 
   @Field(() => Int)
   deletions: number;
+
+  @Field(() => String, {
+    description:
+      "What the commit did to the file: added, removed, modified or renamed.",
+  })
+  status: string;
+
+  @Field(() => String, {
+    nullable: true,
+    description: "The path before a rename; null unless status is renamed.",
+  })
+  previousFilename: string | null;
 }
 
 @ObjectType()
