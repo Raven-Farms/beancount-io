@@ -26,18 +26,44 @@ interface MarkdownRendererProps {
 
 const headingTags = ["h1", "h2", "h3", "h4", "h5", "h6"] as const;
 
+interface HastNode {
+  type: string;
+  tagName?: string;
+  value?: string;
+  properties?: { className?: unknown };
+  children?: HastNode[];
+}
+
+function hastText(node: HastNode): string {
+  if (node.type === "text") return node.value ?? "";
+  return (node.children ?? []).map(hastText).join("");
+}
+
 const components: Components = {
-  pre({ children }) {
-    return <>{children}</>;
+  // A block is the parsed <pre>, whatever its language: an unlabelled fence
+  // or an indented block has no `language-` class, and treating that as
+  // inline collapsed the author's lines (w4/269). The `code` override below
+  // therefore only ever sees inline spans.
+  pre({ children, node }) {
+    const code = (node as HastNode | undefined)?.children?.find(
+      (child) => child.type === "element" && child.tagName === "code",
+    );
+    if (!code) return <pre>{children}</pre>;
+    const classes = code.properties?.className;
+    const languageClass = (Array.isArray(classes) ? classes : [])
+      .map(String)
+      .find((name) => name.startsWith("language-"));
+    return (
+      <CodeBlock
+        code={hastText(code).replace(/\n$/, "")}
+        language={languageClass?.slice("language-".length)}
+        inline={false}
+      />
+    );
   },
 
-  code({ className, children }) {
-    const match = /language-(\w+)/.exec(className || "");
-    const language = match ? match[1] : undefined;
-    const code = String(children).replace(/\n$/, "");
-    const inline = !className || !className.startsWith("language-");
-
-    return <CodeBlock code={code} language={language} inline={inline} />;
+  code({ children }) {
+    return <CodeBlock code={String(children)} inline />;
   },
 
   a({ children, href, ...props }) {
