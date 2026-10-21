@@ -1,5 +1,7 @@
 import { memo, useEffect, useRef, useState } from "react";
 import { createSingleFlight, type SingleFlight } from "@/common/single-flight";
+import { useAccountCloseDates } from "@/common/hooks/use-account-close-dates";
+import { isOpenOn } from "@/common/account-close-dates";
 import {
   Alert,
   AccessibilityInfo,
@@ -508,6 +510,7 @@ const MultiPostingsTransactionScreenComponent = () => {
   // A picked payee brings its usual accounts while the postings are still as
   // the form opened (w21/023). A receipt's parsed accounts are kept.
   const [seedPayee, setSeedPayee] = useState("");
+  const closeDates = useAccountCloseDates(ledgerId);
   const payeeHistory = useTwoPostingSuggestions({
     ledgerId: ledgerId ?? "",
     payee: seedPayee,
@@ -518,10 +521,18 @@ const MultiPostingsTransactionScreenComponent = () => {
       postings,
       initialDraft.postings,
       payeeHistory,
+      (account) => isOpenOn(account, date, closeDates),
     );
     if (seededPostings) setPostings(seededPostings);
     setSeedPayee("");
-  }, [seedPayee, payeeHistory, postings, initialDraft.postings]);
+  }, [
+    seedPayee,
+    payeeHistory,
+    postings,
+    initialDraft.postings,
+    date,
+    closeDates,
+  ]);
 
   useEffect(() => {
     if (!seeded && !metaLoading && assets.length > 0) {

@@ -263,6 +263,13 @@ export type GetLedgerIntervalTotalsQueryVariables = Exact<{
 
 export type GetLedgerIntervalTotalsQuery = { getLedgerIntervalTotals: Array<{ date: string, balance: Record<string, number | string> }> };
 
+export type LedgerAccountCloseDatesQueryVariables = Exact<{
+  ledgerId: string;
+}>;
+
+
+export type LedgerAccountCloseDatesQuery = { getLedgerAccountDirectives: Array<{ account: string, closedAt: string | null }> };
+
 export type LedgerDirectoryQueryVariables = Exact<{
   page: number;
   limit: number;
@@ -1886,6 +1893,50 @@ export type GetLedgerIntervalTotalsQueryHookResult = ReturnType<typeof useGetLed
 export type GetLedgerIntervalTotalsLazyQueryHookResult = ReturnType<typeof useGetLedgerIntervalTotalsLazyQuery>;
 export type GetLedgerIntervalTotalsSuspenseQueryHookResult = ReturnType<typeof useGetLedgerIntervalTotalsSuspenseQuery>;
 export type GetLedgerIntervalTotalsQueryResult = Apollo.QueryResult<GetLedgerIntervalTotalsQuery, GetLedgerIntervalTotalsQueryVariables>;
+export const LedgerAccountCloseDatesDocument = gql`
+    query LedgerAccountCloseDates($ledgerId: String!) {
+  getLedgerAccountDirectives(ledgerId: $ledgerId) {
+    account
+    closedAt
+  }
+}
+    `;
+
+/**
+ * __useLedgerAccountCloseDatesQuery__
+ *
+ * To run a query within a React component, call `useLedgerAccountCloseDatesQuery` and pass it any options that fit your needs.
+ * When your component renders, `useLedgerAccountCloseDatesQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useLedgerAccountCloseDatesQuery({
+ *   variables: {
+ *      ledgerId: // value for 'ledgerId'
+ *   },
+ * });
+ */
+export function useLedgerAccountCloseDatesQuery(baseOptions: Apollo.QueryHookOptions<LedgerAccountCloseDatesQuery, LedgerAccountCloseDatesQueryVariables> & ({ variables: LedgerAccountCloseDatesQueryVariables; skip?: boolean; } | { skip: boolean; }) ) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<LedgerAccountCloseDatesQuery, LedgerAccountCloseDatesQueryVariables>(LedgerAccountCloseDatesDocument, options);
+      }
+export function useLedgerAccountCloseDatesLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<LedgerAccountCloseDatesQuery, LedgerAccountCloseDatesQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<LedgerAccountCloseDatesQuery, LedgerAccountCloseDatesQueryVariables>(LedgerAccountCloseDatesDocument, options);
+        }
+// @ts-ignore
+export function useLedgerAccountCloseDatesSuspenseQuery(baseOptions?: Apollo.SuspenseQueryHookOptions<LedgerAccountCloseDatesQuery, LedgerAccountCloseDatesQueryVariables>): Apollo.UseSuspenseQueryResult<LedgerAccountCloseDatesQuery, LedgerAccountCloseDatesQueryVariables>;
+export function useLedgerAccountCloseDatesSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<LedgerAccountCloseDatesQuery, LedgerAccountCloseDatesQueryVariables>): Apollo.UseSuspenseQueryResult<LedgerAccountCloseDatesQuery | undefined, LedgerAccountCloseDatesQueryVariables>;
+export function useLedgerAccountCloseDatesSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<LedgerAccountCloseDatesQuery, LedgerAccountCloseDatesQueryVariables>) {
+          const options = baseOptions === Apollo.skipToken ? baseOptions : {...defaultOptions, ...baseOptions}
+          return Apollo.useSuspenseQuery<LedgerAccountCloseDatesQuery, LedgerAccountCloseDatesQueryVariables>(LedgerAccountCloseDatesDocument, options);
+        }
+export type LedgerAccountCloseDatesQueryHookResult = ReturnType<typeof useLedgerAccountCloseDatesQuery>;
+export type LedgerAccountCloseDatesLazyQueryHookResult = ReturnType<typeof useLedgerAccountCloseDatesLazyQuery>;
+export type LedgerAccountCloseDatesSuspenseQueryHookResult = ReturnType<typeof useLedgerAccountCloseDatesSuspenseQuery>;
+export type LedgerAccountCloseDatesQueryResult = Apollo.QueryResult<LedgerAccountCloseDatesQuery, LedgerAccountCloseDatesQueryVariables>;
 export const LedgerDirectoryDocument = gql`
     query LedgerDirectory($page: Float!, $limit: Float!) {
   listLedgers(page: $page, limit: $limit) {

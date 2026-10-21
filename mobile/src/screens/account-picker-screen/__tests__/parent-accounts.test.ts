@@ -50,9 +50,11 @@ describe("withParentAccounts", () => {
       path.join(__dirname, "..", "account-picker-screen.tsx"),
       "utf8",
     );
+    // Posting pickers get the opened accounts still open on the entry's date
+    // (w21/045); only the filter picker adds parents.
     expect(
       screen.includes(
-        'return type === "filter" ? withParentAccounts(opened) : opened;',
+        'return type === "filter"\n      ? withParentAccounts(opened)\n      : openOn(opened,',
       ),
     ).toBe(true);
   });

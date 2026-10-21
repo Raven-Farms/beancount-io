@@ -19,6 +19,9 @@ import {
 } from "@/common/theme";
 import { useLedgerAccess } from "@/common/hooks/use-ledger-access";
 import { useLedgerReadContext } from "@/common/hooks/use-ledger-read-context";
+import { useAccountCloseDates } from "@/common/hooks/use-account-close-dates";
+import { openOn } from "@/common/account-close-dates";
+import { getFormatDate } from "@/common/format-util";
 import { groupAccountsByRoot } from "@/common/ledger-meta-utils";
 import { splitAccountLeaf } from "@/common/account-util";
 import {
@@ -293,10 +296,15 @@ function AccountPickerScreenComponent(): JSX.Element {
 
   // Filtering by a category (`Expenses:Food`) is offered alongside the opened
   // accounts; every other picker chooses an account a posting can use (w21/036).
+  // A posting picker leaves out what is closed by the entry's date (w21/045);
+  // the filter keeps closed accounts, whose history is still searchable.
+  const closeDates = useAccountCloseDates(ledgerId);
   const accounts = useMemo(() => {
     const opened = accountOrderFor(type) === "from" ? assets : expenses;
-    return type === "filter" ? withParentAccounts(opened) : opened;
-  }, [type, assets, expenses]);
+    return type === "filter"
+      ? withParentAccounts(opened)
+      : openOn(opened, entryDate ?? getFormatDate(new Date()), closeDates);
+  }, [type, assets, expenses, entryDate, closeDates]);
 
   // Grouped once: the chips are its titles, and the browse list is a slice of
   // it — two derivations of "root of an account" would have to stay in sync.

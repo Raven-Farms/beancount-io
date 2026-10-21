@@ -1,0 +1,6 @@
+query LedgerAccountCloseDates($ledgerId: String!) {
+  getLedgerAccountDirectives(ledgerId: $ledgerId) {
+    account
+    closedAt
+  }
+}

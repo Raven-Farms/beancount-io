@@ -85,3 +85,31 @@ describe("seedPostingsFromPayee", () => {
     expect(source.includes("seedPostingsFromPayee(")).toBe(true);
   });
 });
+
+// w21/045: a payee whose usual card was paid off and closed autofilled that
+// card, and the save was refused.
+describe("seedPostingsFromPayee: closed usual accounts", () => {
+  const closedCard = (account: string) =>
+    account !== "Liabilities:CreditCard:Visa";
+
+  it("keeps the default on a side whose usual account is closed", () => {
+    const initial = opened();
+    expect(
+      accounts(
+        seedPostingsFromPayee(
+          initial,
+          initial,
+          history("TRADER JOES"),
+          closedCard,
+        ),
+      ),
+    ).toEqual(["Assets:Bank:Checking", "Expenses:Food:Groceries"]);
+  });
+
+  it("changes nothing when both usual accounts are closed", () => {
+    const initial = opened();
+    expect(
+      seedPostingsFromPayee(initial, initial, history("CITY BUS"), () => false),
+    ).toBe(null);
+  });
+});
