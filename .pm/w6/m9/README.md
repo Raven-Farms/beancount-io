@@ -1,6 +1,6 @@
 # w6 · m9 — Reach developer marketplaces and galleries
 
-**Worker:** worker1 **Goal:** Developers discover and connect the hosted MCP server through the supported Docker, Cursor, Cline, and GitHub/VS Code galleries. **Status:** todo (t001 done; t002 blocked on dedicated QA consent; t003 blocked on native QA and final publisher agreement; t004 blocked on native Cline QA rehearsal; t005 next)
+**Worker:** worker1 **Goal:** Developers discover and connect the hosted MCP server through the supported Docker, Cursor, Cline, and GitHub/VS Code galleries. **Status:** todo (t001 done; t002 blocked on dedicated QA consent; t003 blocked on native QA and final publisher agreement; t004 blocked on native Cline QA rehearsal; t005 blocked on operator inclusion request and native QA)
 
 **Implementation estimate:** ~4½h, excluding external review queues and the standing closing tasks.
 
@@ -12,7 +12,7 @@
 | [t002](./t002.md) | Prepare and submit Docker's remote MCP catalog entry — **BLOCKED** | 60m | t001 |
 | [t003](./t003.md) | Package the remote connection for Cursor's official and community marketplaces — **BLOCKED** | 60m | t001 |
 | [t004](./t004.md) | Prepare Cline's eligible marketplace submission and remote connection evidence — **BLOCKED** | 45m | t001 |
-| [t005](./t005.md) | Prepare GitHub inclusion and verify VS Code's discovery path | 45m | t001 |
+| [t005](./t005.md) | Prepare GitHub inclusion and verify VS Code's discovery path — **BLOCKED** | 45m | t001 |
 | [t006](./t006.md) | Verify publication and fresh discovery across eligible developer galleries | 30m | t002, t003, t004, t005 |
 | [t007](./t007.md) | Adoption surface | 30m | t006 |
 | [t008](./t008.md) | Simplify | 30m | t007 |
@@ -58,3 +58,5 @@
 - **t003:** format-validated MCP-only packages and both publisher logins are ready; native Cursor QA journey (existing w1/m34/t003), nested-repository submission shape and final official Publisher Terms approval remain. **Unblock:** complete those steps, then send/verify both separate submissions. **Owner:** QA/client account holder, publisher and platform reviewers.
 
 - **t004:** required icon/setup/issue payload is prepared; Cline is not rehearsed and required template confirmations stay unchecked. **Unblock:** dedicated QA/native Cline session, README-only setup and OAuth/query/preview/catalog-dedup evidence, then review. **Owner:** QA/client account holder, repository worker and Cline reviewers.
+
+- **t005:** concrete GitHub nomination is prepared and unsent; actual VS Code gallery/Copilot journey remains unverified under w1/m34/t003. **Unblock:** authorized operator request, curated acceptance and fresh native QA discovery/OAuth/query/preview. **Owner:** publisher, GitHub reviewers and QA/client account holder.
