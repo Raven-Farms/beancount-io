@@ -6,6 +6,7 @@
 
 ## Inbox
 
+- [030](./030.md) — `updateLedgerFiles`, append and include rewrites decode non-UTF-8 files leniently and commit U+FFFD over untouched bytes
 - [029](./029.md) — `renameLedgerFile` matches include lines literally: misses relative includes in subdirectories, falsely refuses, and with `updateIncludes` rewrites an unrelated include to a missing file
 - [028](./028.md) — two `old_string` edits to one file in one `updateLedgerFiles` call: preview shows both, commit silently keeps only the last
 - [027](./027.md) — a `.git` path segment reads as `SERVICE_UNAVAILABLE` on every surface and passes write dry runs
