@@ -1,9 +1,11 @@
+import { useEffect } from "react";
 import { useGetLedgerJournalQuery } from "@/generated-graphql/graphql";
 import {
   deriveTwoPostingSuggestions,
   type JournalEntryLike,
   type SideSuggestions,
 } from "@/common/suggestion-utils";
+import { twoPostingSuggestionsQuery } from "./two-posting-query";
 
 export interface UseTwoPostingSuggestionsArgs {
   ledgerId: string;
@@ -32,13 +34,21 @@ export function useTwoPostingSuggestions(
   const { ledgerId, payee } = args;
   const hasPayee = payee.trim().length > 0;
 
-  const { data, loading } = useGetLedgerJournalQuery({
-    variables: { ledgerId, query: { filter: payee, limit: 50 } },
+  const { data, loading, error } = useGetLedgerJournalQuery({
+    variables: { ledgerId, query: twoPostingSuggestionsQuery(payee) },
     skip: !hasPayee || !ledgerId,
     // network-only: account suggestions from history must be current, not a
     // persisted cold-start snapshot that could mis-fill the form.
     fetchPolicy: "network-only",
   });
+
+  // A failure still never blocks the form, but is no longer silent: a payee
+  // the filter refused looked like one with no history (w21/149).
+  useEffect(() => {
+    if (error && __DEV__) {
+      console.warn("Payee account suggestions failed:", error.message);
+    }
+  }, [error]);
 
   const entries = (data?.getLedgerJournal?.data ??
     []) as unknown as JournalEntryLike[];
