@@ -697,6 +697,7 @@ export const ca: Translations = {
   createLedgerHistoryStart: "Els llibres comencen el",
   createLedgerOpeningAccount: "Compte d'obertura",
   createLedgerOpeningAmount: "Saldo inicial (opcional)",
+  createLedgerReviewOpening: "Saldo inicial: {{account}} {{amount}}",
   createLedgerAmountOwed: "Import degut (opcional)",
   createLedgerOpeningNone: "Decidir més tard",
   createLedgerReview: "Revisar",

@@ -672,6 +672,7 @@ export const fa: Translations = {
   createLedgerHistoryStart: "دفاتر از تاریخ",
   createLedgerOpeningAccount: "حساب افتتاحیه",
   createLedgerOpeningAmount: "موجودی افتتاحیه (اختیاری)",
+  createLedgerReviewOpening: "موجودی افتتاحیه: {{account}} {{amount}}",
   createLedgerAmountOwed: "مبلغ بدهی (اختیاری)",
   createLedgerOpeningNone: "تصمیم‌گیری در آینده",
   createLedgerReview: "بازبینی",

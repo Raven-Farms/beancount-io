@@ -633,6 +633,7 @@ export const en = {
   createLedgerHistoryStart: "Books begin",
   createLedgerOpeningAccount: "Opening account",
   createLedgerOpeningAmount: "Opening balance (optional)",
+  createLedgerReviewOpening: "Opening balance: {{account}} {{amount}}",
   createLedgerAmountOwed: "Amount owed (optional)",
   createLedgerOpeningNone: "Decide later",
   createLedgerReview: "Review",

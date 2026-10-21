@@ -174,3 +174,20 @@ export function defaultHistoryStart(now: Date = new Date()): string {
 export function openingAmountValue(input: string): string | null {
   return input.trim() ? parseExactAmount(input) : "";
 }
+
+/**
+ * The opening line a setup writes: only for an account the chosen preset
+ * offers, and only with an amount. A typed amount under "Decide later" was
+ * dropped without a word, and an account picked under another preset was
+ * still sent: refused for Portfolio, written into a Blank ledger (w21/106).
+ */
+export function openingSelection(
+  presetAccounts: readonly { name: string; money?: boolean }[],
+  openingAccount: string,
+  amount: string,
+): { name: string; amount: string } | null {
+  const offered = presetAccounts.some(
+    (account) => account.money && account.name === openingAccount,
+  );
+  return offered && amount ? { name: openingAccount, amount } : null;
+}

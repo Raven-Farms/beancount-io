@@ -623,6 +623,7 @@ export const zh: Translations = {
   createLedgerHistoryStart: "账簿开始日期",
   createLedgerOpeningAccount: "开户账户",
   createLedgerOpeningAmount: "期初余额（可选）",
+  createLedgerReviewOpening: "期初余额：{{account}} {{amount}}",
   createLedgerAmountOwed: "欠款金额（可选）",
   createLedgerOpeningNone: "稍后决定",
   createLedgerReview: "检查",

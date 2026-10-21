@@ -680,6 +680,7 @@ export const bg: Translations = {
   createLedgerHistoryStart: "Книгите започват на",
   createLedgerOpeningAccount: "Начална сметка",
   createLedgerOpeningAmount: "Начално салдо (по избор)",
+  createLedgerReviewOpening: "Начално салдо: {{account}} {{amount}}",
   createLedgerAmountOwed: "Дължима сума (по избор)",
   createLedgerOpeningNone: "Реши по-късно",
   createLedgerReview: "Преглед",

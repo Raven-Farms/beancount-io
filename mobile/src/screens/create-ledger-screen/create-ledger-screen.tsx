@@ -33,6 +33,7 @@ import * as Localization from "expo-localization";
 import {
   defaultHistoryStart,
   openingAmountValue,
+  openingSelection,
   SETUP_PRESETS,
   suggestCurrency,
 } from "./setup-presets";
@@ -294,28 +295,46 @@ export function CreateLedgerScreen(): JSX.Element {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [directoryLoading, existingNames.join("|")]);
 
+  // Another preset or start offers other accounts, so an opening account
+  // chosen for the last one, and its amount, start over (w21/106).
+  const resetOpening = () => {
+    setValue("openingAccount", "");
+    setValue("openingAmount", "");
+  };
+  const chooseStart = (kind: typeof startKind) => {
+    if (kind !== startKind) resetOpening();
+    setStartKind(kind);
+  };
+  const choosePreset = (id: typeof presetId) => {
+    if (id !== presetId) resetOpening();
+    setPresetId(id);
+  };
+
   const preset = SETUP_PRESETS.find((entry) => entry.id === presetId);
   const moneyAccounts =
     preset?.accounts.filter((account) => account.money) ?? [];
 
   const buildSetup = (values: FormValues) => {
     if (!preset) return undefined;
-    const amount = openingAmountValue(values.openingAmount) ?? "";
+    const opening = openingSelection(
+      preset.accounts,
+      values.openingAccount,
+      openingAmountValue(values.openingAmount) ?? "",
+    );
     return {
       preset: preset.id,
       title: values.name,
       operatingCurrency: (values.currency || "USD").toUpperCase(),
       historyStart: values.historyStart || undefined,
-      accounts:
-        amount && values.openingAccount
-          ? [
-              {
-                name: values.openingAccount,
-                openingState: LedgerOpeningState.Known,
-                amount,
-              },
-            ]
-          : undefined,
+      accounts: opening
+        ? [
+            {
+              name: opening.name,
+              openingState: LedgerOpeningState.Known,
+              amount: opening.amount,
+            },
+          ]
+        : undefined,
     };
   };
 
@@ -335,6 +354,14 @@ export function CreateLedgerScreen(): JSX.Element {
     ? "createLedgerAmountOwed"
     : "createLedgerOpeningAmount";
   const slugPreview = ledgerSlugPreview(nameValue ?? "");
+  const openingAmountInput = watch("openingAmount");
+  const reviewOpening = preset
+    ? openingSelection(
+        preset.accounts,
+        openingAccountValue,
+        openingAmountValue(openingAmountInput) ?? "",
+      )
+    : null;
   const busy = loading || isSubmitting;
 
   // Field errors render on the form step, so a refused Create returns there;
@@ -456,7 +483,7 @@ export function CreateLedgerScreen(): JSX.Element {
               ).map(([kind, titleKey, hintKey]) => (
                 <Pressable
                   key={kind}
-                  onPress={() => setStartKind(kind)}
+                  onPress={() => chooseStart(kind)}
                   style={[
                     styles.templateRow,
                     startKind === kind ? styles.templateSelected : null,
@@ -472,7 +499,7 @@ export function CreateLedgerScreen(): JSX.Element {
             </View>
             <View style={styles.card} testID="setup-demo-option">
               <Pressable
-                onPress={() => setStartKind("sample")}
+                onPress={() => chooseStart("sample")}
                 style={[
                   styles.templateRow,
                   startKind === "sample" ? styles.templateSelected : null,
@@ -494,7 +521,7 @@ export function CreateLedgerScreen(): JSX.Element {
                 {SETUP_PRESETS.map((entry) => (
                   <Pressable
                     key={entry.id}
-                    onPress={() => setPresetId(entry.id)}
+                    onPress={() => choosePreset(entry.id)}
                     style={[
                       styles.templateRow,
                       presetId === entry.id ? styles.templateSelected : null,
@@ -655,36 +682,40 @@ export function CreateLedgerScreen(): JSX.Element {
                     <Text style={styles.templateTitle}>{option.label}</Text>
                   </Pressable>
                 ))}
-                <View style={[styles.row, styles.rowDivider]}>
-                  <Text style={styles.label}>{t(openingAmountLabelKey)}</Text>
-                  <Controller
-                    control={control}
-                    name="openingAmount"
-                    render={({ field: { onChange, onBlur, value } }) => (
-                      <TextInput
-                        value={value}
-                        onChangeText={onChange}
-                        onBlur={onBlur}
-                        // A keypad with a minus: the decimal pad had none,
-                        // so no balance could be entered as negative.
-                        keyboardType={
-                          Platform.OS === "ios"
-                            ? "numbers-and-punctuation"
-                            : "numeric"
-                        }
-                        placeholder="0"
-                        placeholderTextColor={theme.black40}
-                        style={styles.input}
-                        accessibilityLabel={t(openingAmountLabelKey)}
-                      />
-                    )}
-                  />
-                  {errors.openingAmount?.message ? (
-                    <Text style={styles.error}>
-                      {errors.openingAmount.message}
-                    </Text>
-                  ) : null}
-                </View>
+                {/* Only once an account is chosen: under "Decide later" a
+                    typed amount had nowhere to go (w21/106). */}
+                {openingAccountValue ? (
+                  <View style={[styles.row, styles.rowDivider]}>
+                    <Text style={styles.label}>{t(openingAmountLabelKey)}</Text>
+                    <Controller
+                      control={control}
+                      name="openingAmount"
+                      render={({ field: { onChange, onBlur, value } }) => (
+                        <TextInput
+                          value={value}
+                          onChangeText={onChange}
+                          onBlur={onBlur}
+                          // A keypad with a minus: the decimal pad had none,
+                          // so no balance could be entered as negative.
+                          keyboardType={
+                            Platform.OS === "ios"
+                              ? "numbers-and-punctuation"
+                              : "numeric"
+                          }
+                          placeholder="0"
+                          placeholderTextColor={theme.black40}
+                          style={styles.input}
+                          accessibilityLabel={t(openingAmountLabelKey)}
+                        />
+                      )}
+                    />
+                    {errors.openingAmount?.message ? (
+                      <Text style={styles.error}>
+                        {errors.openingAmount.message}
+                      </Text>
+                    ) : null}
+                  </View>
+                ) : null}
               </>
             ) : null}
           </View>
@@ -714,6 +745,14 @@ export function CreateLedgerScreen(): JSX.Element {
                         {account}
                       </Text>
                     ))}
+                    {reviewOpening ? (
+                      <Text style={styles.label}>
+                        {t("createLedgerReviewOpening", {
+                          account: reviewOpening.name,
+                          amount: reviewOpening.amount,
+                        })}
+                      </Text>
+                    ) : null}
                   </>
                 ) : null
               ) : null}
