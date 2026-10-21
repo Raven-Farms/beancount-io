@@ -15,3 +15,4 @@
 - [017](./017.md) — concurrent file writes: the loser gets `SERVICE_UNAVAILABLE` instead of the promised retry/`CONFLICT`
 - [018](./018.md) — `appendLedgerText` accepts `option`/`plugin`/`include` lines, silently reconfiguring the ledger
 - [019](./019.md) — ledger search silently accepts `order=sideways`, `limit=0`, negative ids
+- [020](./020.md) — BQL `BALANCES AT value` returns units; `BALANCES FROM <window>` fails "No matching lot" (rustledger 0.24.0)
