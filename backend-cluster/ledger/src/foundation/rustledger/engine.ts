@@ -8,6 +8,7 @@ import type {
   QueryResult,
 } from "@rustledger/wasm";
 import { restoreEntrySortOrder } from "./entry-sort-order";
+import { dropPaddingWithinTolerance } from "./pad-tolerance";
 import { loadRustledger } from "./loader";
 import { queryResultToRecords, type QueryRecordsResult } from "./mappers";
 import { buildSnapshotCacheKey, CoalescingLruCache } from "./snapshot-cache";
@@ -624,7 +625,16 @@ async function parseLedgerFilesUncached(
   errors = reportUrlIncludes(errors, files);
   errors = reportUndecodableSources(errors, files, entryPoint);
 
-  directives = mergePaddingTransactions(directives, paddingTransactions);
+  const padding = dropPaddingWithinTolerance(
+    directives,
+    paddingTransactions,
+    stripResult?.strippedFiles ?? scoped,
+  );
+  errors = [...errors, ...padding.errors];
+  directives = mergePaddingTransactions(
+    directives,
+    padding.paddingTransactions,
+  );
 
   const capturedSourceIds =
     applyTs || sourceDetails !== undefined

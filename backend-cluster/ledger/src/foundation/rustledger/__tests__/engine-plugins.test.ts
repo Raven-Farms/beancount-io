@@ -234,6 +234,31 @@ describe("parseLedgerFiles — plugin orchestration (stubbed WASM)", () => {
     expect(snapshot.directives).toEqual([deposit, padCash, paddingCash]);
   });
 
+  it("leaves padding inside the balance tolerance out and reports the pad (w21/135)", async () => {
+    const tolerant = {
+      ...balanceCash,
+      tolerance: "1000",
+    } as DirectiveJson;
+    parsedDirectives = [openCash, openEquity, padCash, tolerant];
+    rawPaddingTransactions = [paddingCash];
+
+    const snapshot = await parseLedgerFiles(
+      { "main.bean": "2017-01-02 pad Assets:Cash Equity:Opening" },
+      "main.bean",
+    );
+
+    expect(snapshot.directives).toEqual([
+      openCash,
+      openEquity,
+      padCash,
+      tolerant,
+    ]);
+    expect(snapshot.errors.map((error) => [error.code, error.line])).toEqual([
+      ["E2003", 1],
+    ]);
+    expect(snapshot.valid).toBe(false);
+  });
+
   it("strips the fava plugin before parse and applies the amortize transform", async () => {
     parsedDirectives = [amortizeTxn];
     const source = [
