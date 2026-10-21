@@ -1,5 +1,6 @@
 import { useCallback, useState } from "react";
 import { Upload, FileText, AlertCircle } from "lucide-react";
+import { useHydrated } from "@tanstack/react-router";
 import { Button } from "@/common/components/ui/button";
 import { Alert, AlertDescription } from "@/common/components/ui/alert";
 import { useTranslations } from "@/common/hooks/use-translations";
@@ -22,6 +23,7 @@ export function ReceiptUploadZone({
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [validationError, setValidationError] = useState<string | null>(null);
   const { t } = useTranslations();
+  const hydrated = useHydrated();
 
   const validateAndSelect = useCallback(
     (file: File) => {
@@ -94,10 +96,16 @@ export function ReceiptUploadZone({
           className="hidden"
           accept={ACCEPT}
           onChange={handleFileInput}
-          disabled={isUploading}
+          disabled={isUploading || !hydrated}
         />
 
-        <div className="cursor-pointer" onClick={handleChooseFile}>
+        {/* Server-rendered controls do nothing until their handlers attach;
+            say so rather than swallow the first click (w4/266). */}
+        <div
+          className={hydrated ? "cursor-pointer" : "pointer-events-none"}
+          aria-disabled={hydrated ? undefined : true}
+          onClick={hydrated ? handleChooseFile : undefined}
+        >
           {isUploading ? (
             <div className="space-y-4">
               <Upload className="w-12 h-12 mx-auto text-muted-foreground animate-pulse" />
@@ -118,6 +126,7 @@ export function ReceiptUploadZone({
                 type="button"
                 variant="outline"
                 size="sm"
+                disabled={!hydrated}
                 onClick={(e) => {
                   e.stopPropagation();
                   handleChooseFile();
@@ -141,6 +150,7 @@ export function ReceiptUploadZone({
                 type="button"
                 variant="outline"
                 size="sm"
+                disabled={!hydrated}
                 onClick={(e) => {
                   e.stopPropagation();
                   handleChooseFile();

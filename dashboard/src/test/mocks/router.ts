@@ -33,6 +33,8 @@ function MockLink({ to, search, onClick, ...props }: MockLinkProps) {
 /** `vi.mock("@tanstack/react-router", async () => (await import(…)).routerMock)` */
 export const routerMock = {
   Link: MockLink,
+  // Tests render after hydration; SSR-gated controls are already live.
+  useHydrated: () => true,
   useRouterState: <T>({
     select,
   }: {
