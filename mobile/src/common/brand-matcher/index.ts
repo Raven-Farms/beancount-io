@@ -218,6 +218,9 @@ function stripTransactionNoise(lowered: string): string {
  *
  * @returns The brand's domain string (e.g. "starbucks.com") or null if unrecognised.
  */
+/** A letter, digit or combining mark, in any script. */
+const WORD_CHAR = /[\p{L}\p{N}\p{M}]/u;
+
 export function matchBrand(text: string): string | null {
   if (!text) return null;
   const normalized = text.toLowerCase().trim();
@@ -232,12 +235,14 @@ export function matchBrand(text: string): string | null {
     const idx = normalized.indexOf(key);
     if (idx === -1) continue;
 
-    // Require word boundary: char before and after must be non-alphanumeric.
+    // Require word boundary: char before and after must be no letter, digit
+    // or combining mark in any script. ASCII-only, an accent was a boundary
+    // and "Café Amazonía" got the Amazon logo (w21/172).
     const charBefore = normalized[idx - 1];
     const charAfter = normalized[idx + key.length];
-    const boundaryBefore = idx === 0 || !/[a-z0-9]/.test(charBefore);
+    const boundaryBefore = idx === 0 || !WORD_CHAR.test(charBefore);
     const boundaryAfter =
-      idx + key.length === normalized.length || !/[a-z0-9]/.test(charAfter);
+      idx + key.length === normalized.length || !WORD_CHAR.test(charAfter);
 
     if (boundaryBefore && boundaryAfter) return BRAND_MAP[key];
   }
