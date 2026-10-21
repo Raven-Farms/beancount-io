@@ -8,7 +8,11 @@ import { useTranslations } from "@/common/hooks/use-translations";
 import { haptics } from "@/common/haptics";
 import { LedgerGuard, useLedgerGuard } from "@/components/ledger-guard";
 import { useReceiptWorkflow } from "./use-receipt-workflow";
-import { receiptErrorKey, shotFromLibraryResult } from "./receipt-utils";
+import {
+  receiptAmountText,
+  receiptErrorKey,
+  shotFromLibraryResult,
+} from "./receipt-utils";
 import { CameraView, type CapturedShot } from "./camera-view";
 import { PreviewView } from "./preview-view";
 import { CHROME } from "./chrome";
@@ -139,9 +143,7 @@ const ReceiptCaptureScreenImpl = () => {
           prefillNarration: phase.description,
           prefillSourceAccount: phase.sourceAccount,
           prefillTargetAccount: phase.targetAccount,
-          // Receipts are expenses; normalize so the form always seeds a clean
-          // positive total regardless of how the model signed it.
-          prefillAmount: Math.abs(phase.amount).toFixed(2),
+          prefillAmount: receiptAmountText(phase.amount),
         },
       });
     }, REVEAL_DWELL_MS);
@@ -198,7 +200,7 @@ const ReceiptCaptureScreenImpl = () => {
           phase.kind === "parsed"
             ? {
                 payee: phase.payee,
-                amount: Math.abs(phase.amount).toFixed(2),
+                amount: receiptAmountText(phase.amount),
                 date: phase.date,
               }
             : undefined
