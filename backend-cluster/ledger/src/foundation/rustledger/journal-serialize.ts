@@ -28,6 +28,7 @@ import {
   DocumentSubtype,
   TransactionSubtype,
 } from "@/foundation/ledger-api-types";
+import BigNumber from "bignumber.js";
 import { hashEntry } from "./entry-hash";
 import { perUnitFromTotalCostString } from "./total-cost";
 
@@ -49,9 +50,10 @@ import { perUnitFromTotalCostString } from "./total-cost";
  *   Python service additionally includes `filename`/`lineno` (kept by
  *   `sanitize_meta`, which only strips dunder keys). Those source-location keys
  *   are unavailable here.
- * - `Balance.diff_amount` is `null` in the common (passing-assertion) case, which
- *   matches; the failed-assertion diff is a beancount balance-check artifact
- *   rustledger's `DirectiveJson` does not expose.
+ * - `Balance.diff_amount` is `null` for a passing assertion, which matches. A
+ *   failed one is not on rustledger's `DirectiveJson`; its validator reports it
+ *   as an `E2001` error instead, which {@link failedBalanceDiffs} joins back
+ *   onto the directive as beancount's `actual − expected` (w21/087).
  * - `Balance` also carries the asserted `amount` and its explicit `tolerance`,
  *   which the Python `serialize_directive` dropped, so a journal row can show
  *   what was asserted (w3/556). The fields are additive.
@@ -198,6 +200,89 @@ function serializeCustomValue(
   return value.value;
 }
 
+// --- failed balance assertions --------------------------------------------
+
+/** `Balance failed for Assets:Cash: expected 50.00 USD, got 49.75 USD` (E2001). */
+const BALANCE_FAILED =
+  /^Balance failed for (\S+): expected (-?[\d.]+) (\S+), got (-?[\d.]+) (\S+)$/;
+
+/** `got − expected`, exactly, at the finer of the two written scales. */
+function subtractDecimal(got: string, expected: string): string {
+  const scale = Math.max(
+    new BigNumber(got).decimalPlaces() ?? 0,
+    new BigNumber(expected).decimalPlaces() ?? 0,
+    (got.split(".")[1] ?? "").length,
+    (expected.split(".")[1] ?? "").length,
+  );
+  return new BigNumber(got).minus(expected).toFixed(scale);
+}
+
+/** The same quantity however it was written: `50`, `50.0` and `50.00`. */
+function decimalKey(number: string): string {
+  return new BigNumber(number).toFixed();
+}
+
+/**
+ * Each failing Balance directive's `diff_amount` (actual − expected), joined
+ * from the validator's `E2001` errors, which name the account and both
+ * amounts but carry no date. A key (account, asserted amount) shared by more
+ * assertions than errors cannot say which of them failed, so those stay null
+ * rather than mark a passing assertion failed; otherwise errors pair with
+ * their assertions in source order.
+ */
+export function failedBalanceDiffs(
+  directives: readonly DirectiveJson[],
+  errors: readonly {
+    message: string;
+    code?: string | null;
+    file?: string | null;
+    line?: number | null;
+  }[],
+): Map<DirectiveJson, JournalAmountPublic> {
+  const failures = new Map<
+    string,
+    { at: [string, number]; diff: JournalAmountPublic }[]
+  >();
+  for (const error of errors) {
+    if (error.code !== "E2001") continue;
+    const match = BALANCE_FAILED.exec(error.message.trim());
+    if (!match) continue;
+    const [, account, expected, currency, got, gotCurrency] = match;
+    if (gotCurrency !== currency) continue;
+    const key = `${account}\u0000${decimalKey(expected)}\u0000${currency}`;
+    const list = failures.get(key) ?? [];
+    list.push({
+      at: [error.file ?? "", error.line ?? 0],
+      diff: { number: subtractDecimal(got, expected), currency },
+    });
+    failures.set(key, list);
+  }
+  const diffs = new Map<DirectiveJson, JournalAmountPublic>();
+  if (failures.size === 0) return diffs;
+
+  const assertions = new Map<string, DirectiveJson[]>();
+  for (const directive of directives) {
+    if (directive.type !== "balance") continue;
+    const key = `${directive.account}\u0000${decimalKey(directive.amount.number)}\u0000${directive.amount.currency}`;
+    if (!failures.has(key)) continue;
+    const list = assertions.get(key) ?? [];
+    list.push(directive);
+    assertions.set(key, list);
+  }
+  for (const [key, list] of failures) {
+    const candidates = assertions.get(key) ?? [];
+    if (candidates.length !== list.length) continue;
+    const ordered = [...list].sort(
+      (a, b) => a.at[0].localeCompare(b.at[0]) || a.at[1] - b.at[1],
+    );
+    const dated = [...candidates].sort((a, b) =>
+      a.date < b.date ? -1 : a.date > b.date ? 1 : 0,
+    );
+    dated.forEach((directive, i) => diffs.set(directive, ordered[i].diff));
+  }
+  return diffs;
+}
+
 // --- serializeDirective ---------------------------------------------------
 
 /**
@@ -206,7 +291,10 @@ function serializeCustomValue(
  * schema for) is not emitted by `getJournal`; if one is passed we serialize it
  * as a `Custom`-typed item so the union stays exhaustive.
  */
-export function serializeDirective(directive: DirectiveJson): JournalItem {
+export function serializeDirective(
+  directive: DirectiveJson,
+  balanceDiffs?: ReadonlyMap<DirectiveJson, JournalAmountPublic>,
+): JournalItem {
   const date = directive.date;
   const directive_type = DIRECTIVE_TYPE_BY_TAG[directive.type];
   const entry_hash = hashEntry(directive);
@@ -237,7 +325,7 @@ export function serializeDirective(directive: DirectiveJson): JournalItem {
         account: directive.account,
         amount: serializeAmount(directive.amount),
         tolerance: directive.tolerance ?? null,
-        diff_amount: null,
+        diff_amount: balanceDiffs?.get(directive) ?? null,
       };
     case "commodity":
       return {

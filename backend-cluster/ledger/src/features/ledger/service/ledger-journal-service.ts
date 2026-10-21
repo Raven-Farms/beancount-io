@@ -11,6 +11,7 @@ import type {
   TransactionSubtype,
   DocumentSubtype,
   CustomSubtype,
+  JournalAmountPublic,
 } from "@/foundation/ledger-api-types";
 import type { IGiteaClientFactory } from "@/foundation/clients/gitea-client-factory";
 import type { DirectiveJson, FileMap } from "@rustledger/wasm";
@@ -37,6 +38,7 @@ import {
   parseLedgerFiles,
   replaceSliceInFile,
   resolveEntryIdAtSource,
+  failedBalanceDiffs,
   serializeDirective,
   sliceSha256,
   splitIntoBlocks,
@@ -614,8 +616,15 @@ export class LedgerJournalService implements ILedgerJournalService {
    * back to the bare content hash for a directive absent from the id map (e.g. a
    * synthetic clamp entry), which is never a user-editable duplicate.
    */
-  private serialize(directive: DirectiveJson, entryId: string): JournalItem {
-    return { ...serializeDirective(directive), entry_hash: entryId };
+  private serialize(
+    directive: DirectiveJson,
+    entryId: string,
+    balanceDiffs?: ReadonlyMap<DirectiveJson, JournalAmountPublic>,
+  ): JournalItem {
+    return {
+      ...serializeDirective(directive, balanceDiffs),
+      entry_hash: entryId,
+    };
   }
 
   async getJournal(params: {
@@ -631,6 +640,11 @@ export class LedgerJournalService implements ILedgerJournalService {
     // (the same stream `getContext`/`findEntrySlice` resolve against), so a
     // duplicate's ID is stable regardless of how the journal is filtered/paged.
     const entryIds = buildEntryIdMap(snapshot.directives);
+    // A failed assertion's difference, from the validator (w21/087).
+    const balanceDiffs = failedBalanceDiffs(
+      snapshot.directives,
+      snapshot.errors,
+    );
 
     const filtered = await this.clampForJournal(snapshot.directives, {
       account: query?.account || undefined,
@@ -648,7 +662,9 @@ export class LedgerJournalService implements ILedgerJournalService {
           !(d.type === "transaction" && (d.flag === "C" || d.flag === "S")),
       )
       .reverse()
-      .map((d) => this.serialize(d, entryIds.get(d) ?? hashEntry(d)));
+      .map((d) =>
+        this.serialize(d, entryIds.get(d) ?? hashEntry(d), balanceDiffs),
+      );
 
     items = items.filter((item) =>
       matchesJournalDisplayFilters(item, query ?? {}),
@@ -675,7 +691,7 @@ export class LedgerJournalService implements ILedgerJournalService {
     const { ledgerId, userId, entryHash } = params;
     const { files, entryPoint, repoPaths, managedPrices } =
       await this.loadFileMap(ledgerId, userId);
-    const { directives } = await parseLedgerFiles(files, entryPoint, {
+    const { directives, errors } = await parseLedgerFiles(files, entryPoint, {
       repoPaths,
     });
     const entryIds = buildEntryIdMap(directives);
@@ -692,7 +708,11 @@ export class LedgerJournalService implements ILedgerJournalService {
 
     const balances = entryBalances(directives, entryHash);
     const serialized = (directive
-      ? this.serialize(directive, entryHash)
+      ? this.serialize(
+          directive,
+          entryHash,
+          failedBalanceDiffs(directives, errors),
+        )
       : {}) as unknown as Record<string, unknown>;
 
     return {
@@ -768,6 +788,10 @@ export class LedgerJournalService implements ILedgerJournalService {
     // Occurrence-disambiguated IDs over the full stream (as in getJournal), so
     // the account view's edit/delete links target the right duplicate.
     const entryIds = buildEntryIdMap(snapshot.directives);
+    const balanceDiffs = failedBalanceDiffs(
+      snapshot.directives,
+      snapshot.errors,
+    );
     // Clamp (not truncate) on `time` so the running balance carries the opening
     // balance into the window; honors the ledger's fiscal-year-end + clamp
     // account names.
@@ -798,6 +822,7 @@ export class LedgerJournalService implements ILedgerJournalService {
         entry: this.serialize(
           row.entry,
           entryIds.get(row.entry) ?? hashEntry(row.entry),
+          balanceDiffs,
         ),
         change: row.change,
         balance: row.balance,

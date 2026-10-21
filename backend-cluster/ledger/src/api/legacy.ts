@@ -7,7 +7,7 @@ import {
   loadCachedFileMapForRepo,
   type GiteaCommitClient,
 } from "@/foundation/clients/load-cached-ledger-file-map";
-import { parseLedgerFiles } from "@/foundation/rustledger";
+import { failedBalanceDiffs, parseLedgerFiles } from "@/foundation/rustledger";
 import { buildEntryIdMap } from "@/foundation/rustledger/entry-hash";
 import type { EntrySourceLocation } from "@/foundation/rustledger";
 import { runLegacyJournal } from "@/features/ledger/service/ledger-legacy-journal";
@@ -64,6 +64,7 @@ export function setLegacyHandler(router: Router): void {
         },
         entryIds,
         sourceLocations,
+        failedBalanceDiffs(snapshot.directives, snapshot.errors),
       );
       ctx.body = successResponse(result);
     },

@@ -10,6 +10,7 @@
  * entry ID is emitted instead. Parity suites mask `entry_hash` accordingly.
  */
 import type { DirectiveJson } from "@rustledger/wasm";
+import type { JournalAmountPublic } from "@/foundation/ledger-api-types";
 import {
   getDirectiveSourceId,
   type EntrySourceLocation,
@@ -102,6 +103,7 @@ function renderPositionString(posting: PostingJson): string {
 export function serialiseV1Directive(
   directive: DirectiveJson,
   sourceLocation?: EntrySourceLocation,
+  balanceDiff?: JournalAmountPublic,
 ): LegacyEntry {
   const type = DIRECTIVE_CLASS[directive.type];
   const meta: Record<string, unknown> = {
@@ -140,7 +142,8 @@ export function serialiseV1Directive(
           currency: directive.amount.currency,
         },
         tolerance: directive.tolerance ?? null,
-        diff_amount: null,
+        // A failed assertion's difference, from the validator (w21/087).
+        diff_amount: balanceDiff ?? null,
       };
     case "open":
       return {
@@ -236,6 +239,7 @@ export function runLegacyJournal(
   args: LegacyJournalArgs,
   entryIds: Map<DirectiveJson, string>,
   sourceLocations: Map<string, EntrySourceLocation>,
+  balanceDiffs?: ReadonlyMap<DirectiveJson, JournalAmountPublic>,
 ): LegacyEntry[] {
   const {
     first,
@@ -394,6 +398,7 @@ export function runLegacyJournal(
     const serialised = serialiseV1Directive(
       directive,
       sourceLocations.get(getDirectiveSourceId(directive) ?? entryId ?? ""),
+      balanceDiffs?.get(directive),
     );
     if (!detailed) return serialised;
     const cleanedMeta = { ...(serialised.meta as Record<string, unknown>) };
