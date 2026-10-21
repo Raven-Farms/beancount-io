@@ -175,7 +175,7 @@ export function BudgetGroupCard({
 }: BudgetGroupCardProps): JSX.Element {
   const styles = useThemeStyle(getStyles);
   const theme = useTheme().colorTheme;
-  const { t } = useTranslations();
+  const { t, locale } = useTranslations();
   // At AX2 the row left the account a few letters — "Ex…ing", "Ex…ries" —
   // so budgets could not be told apart (w21/027).
   const { fontScale } = useWindowDimensions();
@@ -203,7 +203,7 @@ export function BudgetGroupCard({
   // series.
   const chartSeries = {
     labels: series.map((point) =>
-      periodAxisLabel(point.date, group.interval, t),
+      periodAxisLabel(point.date, group.interval, t, locale),
     ),
     actuals: series.map((point) => point.actual),
     budgets: series.map((point) => point.budget),

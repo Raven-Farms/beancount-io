@@ -14,7 +14,6 @@
 
 - [064](./blocked/064.md) — A token refresh whose response is lost signs the user out on the next refresh (rotated token replayed → grant revoked) — **blocked:** needs an owner decision (ADR) on a refresh-token reuse grace window
 - [065](./blocked/065.md) — One early-year entry (e.g. 0050) makes the balance sheet 23,718 monthly points (3 MB) and the app stalls — **blocked:** needs an approach decision (per-pill fetch vs server downsample) and a simulator profile of the stall
-- [096](./096.md) — Weekly/daily budget chart labels are US month/day in every language
 - [097](./097.md) — Delete Budget alert is ungrammatical in de/nl/ru/uk/sk/bg (adverb used as adjective)
 - [098](./098.md) — Reports/Budget chart VoiceOver summaries ignore plural forms ("over 1 months")
 - [099](./099.md) — Accounts tab lists closed, emptied accounts as live "$0.00" rows

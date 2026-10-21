@@ -4,6 +4,7 @@
  * unit-testable.
  */
 import { utcDate } from "../../../common/calendar-date";
+import { formatLedgerMonthDay } from "../../../common/date-format";
 import { getFormatDate } from "../../../common/format-util";
 import { formatShortMoneyWithCurrency } from "../../../common/number-utils";
 import { formatTimeFilter } from "../../transactions-screen/filters/select-filter-query";
@@ -32,13 +33,14 @@ export function periodAxisLabel(
   date: string,
   interval: string,
   t: (key: string) => string,
+  locale = "en",
 ): string {
   const normalized = interval.toLowerCase();
   if (normalized === "yearly") {
     return date.slice(0, 4);
   }
   if (normalized === "weekly" || normalized === "daily") {
-    return `${Number(date.slice(5, 7))}/${Number(date.slice(8, 10))}`;
+    return formatLedgerMonthDay(date, locale);
   }
   return t(date.slice(5, 7));
 }

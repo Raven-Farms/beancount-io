@@ -88,6 +88,29 @@ export function formatLedgerDateShort(isoDate: string, locale: string): string {
 }
 
 /**
+ * A ledger date as numeric month and day in the locale's order — "3/2" in
+ * English, "02/03" in French, "2.3." in German — for a chart's weekly and
+ * daily ticks. A fixed US `month/day` read 3 February in day-first languages
+ * (w21/096). Same UTC / Gregorian rules as `formatLedgerDate`.
+ */
+export function formatLedgerMonthDay(isoDate: string, locale: string): string {
+  try {
+    const [year, month, day] = isoDate.split("-").map(Number);
+    const date = utcDate(year, month - 1, day);
+    if (isNaN(date.getTime())) {
+      return isoDate;
+    }
+    return date.toLocaleDateString(gregorian(locale), {
+      month: "numeric",
+      day: "numeric",
+      timeZone: "UTC",
+    });
+  } catch {
+    return isoDate;
+  }
+}
+
+/**
  * A timestamp in short form — "Aug 17, 2026" — for feed items, which carry a
  * real instant rather than a ledger day and so are shown in the device's zone.
  *
