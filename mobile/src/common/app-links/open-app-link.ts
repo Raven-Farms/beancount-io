@@ -58,6 +58,12 @@ export async function openAppLinkTarget(args: {
   target: AppLinkTarget;
   sourceUrl: string;
   isCurrentSession: () => boolean;
+  /**
+   * `push` for a link tapped inside the app, so Back returns to where it was;
+   * the ledger's own home is then the screen already showing. Incoming links
+   * replace.
+   */
+  navigation?: "replace" | "push";
 }): Promise<OpenAppLinkResult> {
   const { client, sourceUrl, isCurrentSession } = args;
   let target = args.target;
@@ -94,6 +100,10 @@ export async function openAppLinkTarget(args: {
   }
 
   ledgerVar(target.ledgerFullName);
+  if (args.navigation === "push") {
+    if (target.href !== "/") router.push(target.href as Href);
+    return { ok: true };
+  }
   await afterNavigatorReady();
   if (!isCurrentSession()) {
     return { ok: false, reason: "aborted" };

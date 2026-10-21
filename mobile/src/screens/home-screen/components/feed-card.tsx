@@ -17,7 +17,14 @@ import { DashboardCard } from "@/components/dashboard-card";
 import { useGetFeedQuery } from "@/generated-graphql/graphql";
 import { FeedSource } from "@/generated-graphql/types";
 import { formatFeedDate } from "@/common/date-format";
-import { feedQueryVariables, feedSourceLabelKey } from "./feed-logic";
+import {
+  feedQueryVariables,
+  feedRowAction,
+  feedSourceLabelKey,
+} from "./feed-logic";
+import { useApolloClient } from "@apollo/client";
+import { getServerUrl } from "@/common/vars/server-url";
+import { openAppLinkTarget } from "@/common/app-links/open-app-link";
 import { CardLoadFailure } from "@/components/card-load-failure";
 import { selectCardLoadState } from "@/common/apollo/card-load-state";
 
@@ -62,11 +69,20 @@ function FeedRow({ title, link, publishedAt, source, isFirst }: FeedRowProps) {
   const { fontScale } = useWindowDimensions();
   const styles = useThemeStyle(getStyles);
   const { t, locale } = useTranslations();
-  const isExternal = link.startsWith("http");
+  const client = useApolloClient();
+  const action = feedRowAction(link, getServerUrl());
 
   const handlePress = () => {
-    if (isExternal) {
-      Linking.openURL(link);
+    if (action?.kind === "external") {
+      void Linking.openURL(action.url);
+    } else if (action?.kind === "ledger") {
+      void openAppLinkTarget({
+        client,
+        target: action.target,
+        sourceUrl: action.sourceUrl,
+        isCurrentSession: () => true,
+        navigation: "push",
+      });
     }
   };
 
@@ -76,7 +92,9 @@ function FeedRow({ title, link, publishedAt, source, isFirst }: FeedRowProps) {
 
   return (
     <Pressable
-      onPress={handlePress}
+      onPress={action ? handlePress : undefined}
+      disabled={!action}
+      accessibilityRole={action ? "button" : undefined}
       style={[styles.row, isFirst && styles.firstRow]}
     >
       <Text key={`title-${fontScale}`} style={styles.title} numberOfLines={2}>

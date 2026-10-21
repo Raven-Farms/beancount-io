@@ -1,4 +1,9 @@
 import { FeedSource } from "../../../generated-graphql/types";
+import {
+  normalizeOrigin,
+  resolveAppLink,
+  type AppLinkTarget,
+} from "../../../common/app-links/resolve-app-link";
 
 export type FeedSourceLabelKey =
   "feedSourceLedger" | "feedSourceBlog" | "feedSourceRelease";
@@ -27,4 +32,26 @@ export function feedSourceLabelKey(source: FeedSource): FeedSourceLabelKey {
  */
 export function feedQueryVariables(limit: number, locale: string) {
   return { offset: 0, limit, locale };
+}
+
+export type FeedRowAction =
+  | { kind: "external"; url: string }
+  | { kind: "ledger"; target: AppLinkTarget; sourceUrl: string };
+
+/**
+ * What tapping a feed row does. Blog and release rows link out; ledger
+ * activity carries a relative `/ledger/<owner>/<name>[/commit/<sha>]` path,
+ * which the row ignored, so "Committed to …" rows looked tappable and did
+ * nothing (w21/137). Those open in the app as the same URL would. A row
+ * whose link resolves to nothing is not a button.
+ */
+export function feedRowAction(
+  link: string,
+  serverUrl: string,
+): FeedRowAction | null {
+  if (/^https?:\/\//.test(link)) return { kind: "external", url: link };
+  if (!link.startsWith("/ledger/")) return null;
+  const sourceUrl = `${normalizeOrigin(serverUrl)}${link}`;
+  const target = resolveAppLink(sourceUrl, { serverUrl });
+  return target ? { kind: "ledger", target, sourceUrl } : null;
 }

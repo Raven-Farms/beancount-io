@@ -11,6 +11,7 @@ import * as guard from "../../unsaved-edits-guard";
  */
 let ledger: string | null = "alice/books";
 const replaced: string[] = [];
+const pushed: unknown[] = [];
 function load() {
   const exports: Record<string, any> = {};
   const source = ts.transpileModule(
@@ -20,7 +21,10 @@ function load() {
   const modules: Record<string, unknown> = {
     "@apollo/client": {},
     "expo-router": {
-      router: { replace: (href: string) => replaced.push(href) },
+      router: {
+        replace: (href: string) => replaced.push(href),
+        push: (href: unknown) => pushed.push(href),
+      },
     },
     "react-native": {
       InteractionManager: { runAfterInteractions: (fn: () => void) => fn() },
@@ -168,5 +172,41 @@ describe("an app link with a differently-cased owner", () => {
         },
       ]),
     );
+  });
+});
+
+// w21/137: a link tapped inside the app pushes, so Back returns to Home; the
+// ledger's own home is Home itself.
+describe("an app link opened from inside the app", () => {
+  const openFromApp = async (href: unknown) =>
+    JSON.stringify(
+      await openAppLinkTarget({
+        client,
+        target: { ledgerFullName: "bob/other", href },
+        sourceUrl: "https://beancount.io/ledger/bob/other",
+        isCurrentSession: () => true,
+        navigation: "push",
+      }),
+    );
+
+  beforeEach(() => {
+    ledger = "alice/books";
+    replaced.length = 0;
+    pushed.length = 0;
+  });
+
+  it("selects the ledger and pushes the commit", async () => {
+    const href = { pathname: "/commit-detail", params: { sha: "abc" } };
+    expect(await openFromApp(href)).toBe(JSON.stringify({ ok: true }));
+    expect(ledger).toBe("bob/other");
+    expect(JSON.stringify(pushed)).toBe(JSON.stringify([href]));
+    expect(replaced).toEqual([]);
+  });
+
+  it("only selects the ledger for its home", async () => {
+    await openFromApp("/");
+    expect(ledger).toBe("bob/other");
+    expect(pushed).toEqual([]);
+    expect(replaced).toEqual([]);
   });
 });
