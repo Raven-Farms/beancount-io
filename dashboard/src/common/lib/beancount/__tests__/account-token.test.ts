@@ -8,6 +8,12 @@ describe("isCompleteAccountToken", () => {
     "Assets:Emergency-Fund",
     "Assets:401K",
     "Assets:Épargne",
+    // w4/279: combining marks (Devanagari, decomposed É) and a titlecase
+    // initial, all accepted by the ledger.
+    "Assets:Qa-20261020:\u0939\u093F\u0902\u0926\u0940",
+    "Assets:Qa-20261020:E\u0301pargne",
+    "Assets:Qa-20261020:\u01C5ep",
+    "Assets:现金",
   ])("accepts %s", (account) => {
     expect(isCompleteAccountToken(account)).toBe(true);
   });
@@ -18,6 +24,8 @@ describe("isCompleteAccountToken", () => {
     "Assets:Emergency Fund",
     "Assets:Emergency USD",
     "Assets:checking",
+    "Assets:\u0301Epargne",
+    "Assets:Bank_1",
     "Checking",
     "",
   ])("rejects %s", (account) => {

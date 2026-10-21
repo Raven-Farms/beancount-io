@@ -112,3 +112,33 @@ describe.each(surfaces)("Open Account in $name (w3/557)", (surface) => {
     expect(surface.submit()).toBeDisabled();
   });
 });
+
+describe.each(surfaces)(
+  "Unicode account names in $name (w4/279)",
+  (surface) => {
+    it.each([
+      ["Devanagari marks", "Assets:Qa-20261020:\u0939\u093F\u0902\u0926\u0940"],
+      ["a decomposed accent", "Assets:Qa-20261020:E\u0301pargne"],
+      ["a titlecase initial", "Assets:Qa-20261020:\u01C5ep"],
+    ])("accepts %s exactly as typed", async (_, account) => {
+      surface.render();
+      fireEvent.change(surface.field(), { target: { value: account } });
+
+      await waitFor(() => expect(surface.submit()).toBeEnabled());
+      expect(surface.field()).toHaveValue(account);
+      expect(surface.field()).not.toHaveAttribute("aria-invalid", "true");
+    });
+
+    it("still refuses a component led by a combining mark", async () => {
+      surface.render();
+      fireEvent.change(surface.field(), {
+        target: { value: "Assets:\u0301Epargne" },
+      });
+
+      await waitFor(() =>
+        expect(surface.field()).toHaveAttribute("aria-invalid", "true"),
+      );
+      expect(surface.submit()).toBeDisabled();
+    });
+  },
+);
