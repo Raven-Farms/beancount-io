@@ -285,3 +285,25 @@ export function buildLogoUrl(domain: string, baseUrl: string): string | null {
   if (!domain || !baseUrl) return null;
   return `${baseUrl}?domain=${encodeURIComponent(domain)}`;
 }
+
+const sameServer = (left: string, right: string) =>
+  left.trim().replace(/\/+$/, "").toLowerCase() ===
+  right.trim().replace(/\/+$/, "").toLowerCase();
+
+/**
+ * The logo proxy to use for the selected server: the configured one only on
+ * the build's own server. On a server the user chose themselves the logo
+ * service would still learn every brand-matched payee in their private
+ * ledger, and their IP (w21/155), so rows fall back to glyphs there.
+ *
+ * @param selectedServer - The server the app talks to now.
+ * @param defaultServer - The build's default server.
+ * @param proxyUrl - The configured logo proxy endpoint.
+ */
+export function logoProxyForServer(
+  selectedServer: string,
+  defaultServer: string,
+  proxyUrl: string,
+): string {
+  return sameServer(selectedServer, defaultServer) ? proxyUrl : "";
+}

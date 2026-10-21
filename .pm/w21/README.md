@@ -14,7 +14,6 @@
 
 - [064](./blocked/064.md) — A token refresh whose response is lost signs the user out on the next refresh (rotated token replayed → grant revoked) — **blocked:** needs an owner decision (ADR) on a refresh-token reuse grace window
 - [065](./blocked/065.md) — One early-year entry (e.g. 0050) makes the balance sheet 23,718 monthly points (3 MB) and the app stalls — **blocked:** needs an approach decision (per-pill fetch vs server downsample) and a simulator profile of the stall
-- [155](./155.md) — On a non-default server, the app still sends merchant brands to the hosted logo service
 - [156](./156.md) — Deleting an account leaves its API keys in place and still accepted for identity checks
 - [157](./157.md) — A failed account deletion has already cancelled the subscription and unlinked banks
 - [158](./158.md) — Delete Account phrase must match exactly; a trailing space greys out Delete with no reason

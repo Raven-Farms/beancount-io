@@ -1,10 +1,17 @@
 import React, { useState } from "react";
+import { useReactiveVar } from "@apollo/client";
 import { Image, StyleSheet, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme, withAlpha } from "@/common/theme";
 import { getAccountRoot, type RootNames } from "@/common/account-root";
 import { useLedgerRootNames } from "@/common/hooks/use-ledger-root-names";
-import { resolveBrandDomain, buildLogoUrl } from "@/common/brand-matcher";
+import {
+  resolveBrandDomain,
+  buildLogoUrl,
+  logoProxyForServer,
+} from "@/common/brand-matcher";
+import { serverUrlOverrideVar } from "@/common/vars/server-url";
+import { defaultRuntimeServerUrl } from "@/common/server-url";
 import {
   PostingLite,
   TRANSFER,
@@ -106,7 +113,14 @@ export const AccountTypeIcon: React.FC<AccountTypeIconProps> = ({
   const roots = useLedgerRootNames();
   const accounts = postings.map((p) => p.account);
   const domain = resolveBrandDomain(payee, accounts, roots);
-  const logoUrl = domain ? buildLogoUrl(domain, config.logoProxyUrl) : null;
+  const serverUrl =
+    useReactiveVar(serverUrlOverrideVar) ?? defaultRuntimeServerUrl();
+  const logoProxyUrl = logoProxyForServer(
+    serverUrl,
+    defaultRuntimeServerUrl(),
+    config.logoProxyUrl,
+  );
+  const logoUrl = domain ? buildLogoUrl(domain, logoProxyUrl) : null;
 
   if (logoUrl && failedDomain !== domain) {
     return (
