@@ -6,7 +6,6 @@
 
 ## Inbox
 
-- [014](./014.md) — listing a nonexistent directory returns `[]` on every surface, indistinguishable from empty
 - [015](./015.md) — BQL position cells drop the lot date and label (`{197.06 USD}` vs `{197.06 USD, 2015-09-15}`)
 - [016](./016.md) — hosted BQL rejects `neg(inventory)`, `filter_currency(position, …)`; `meta('lineno')` empty
 - [017](./017.md) — concurrent file writes: the loser gets `SERVICE_UNAVAILABLE` instead of the promised retry/`CONFLICT`

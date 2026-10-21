@@ -15,6 +15,7 @@ import { AUTHORIZATION_ACTIONS } from "@/server/api/authorization/authorization-
 import { assertSafeRepoPath } from "@/features/ledger/utils/safe-repo-path";
 import { assertExplicitFileContentSize } from "@/features/ledger/utils/explicit-file-size";
 import { BadUserInputError, ConflictError } from "@/shared/errors";
+import { listDirectory } from "@/features/ledger/utils/directory-listing";
 
 type CommitUser = {
   login: string | null;
@@ -178,11 +179,13 @@ export class LedgerRepoService
       identity?.userId,
     );
 
-    const entries = await unwrapFavaResponse(
-      favaApiClient.ledgers.getLedgerDirContent(ledgerOwner, ledgerName, {
-        dir_path: dirPath,
-      }),
-      "list ledger files",
+    const entries = await listDirectory(dirPath, () =>
+      unwrapFavaResponse(
+        favaApiClient.ledgers.getLedgerDirContent(ledgerOwner, ledgerName, {
+          dir_path: dirPath,
+        }),
+        "list ledger files",
+      ),
     );
 
     return [...entries]

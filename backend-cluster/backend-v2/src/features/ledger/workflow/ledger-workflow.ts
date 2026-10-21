@@ -62,6 +62,7 @@ import {
   LedgerTemplate,
 } from "./ledger-workflow.types";
 import { createLedger as createLedgerOperation } from "@/features/ledger/operations/create-ledger";
+import { listDirectory } from "@/features/ledger/utils/directory-listing";
 import {
   BadUserInputError,
   ConflictError,
@@ -1450,13 +1451,15 @@ export class LedgerWorkflow implements ILedgerWorkflow {
     );
     const { ledgerOwner, ledgerName } = parseLedgerId(ledgerId);
 
-    const data = await unwrapFavaResponse(
-      favaApiClient.ledgers.getLedgerDirContent(
-        ledgerOwner,
-        ledgerName,
-        filterNullish({ dir_path: args.dirPath }),
+    const data = await listDirectory(args.dirPath, () =>
+      unwrapFavaResponse(
+        favaApiClient.ledgers.getLedgerDirContent(
+          ledgerOwner,
+          ledgerName,
+          filterNullish({ dir_path: args.dirPath }),
+        ),
+        "get ledger directory content",
       ),
-      "get ledger directory content",
     );
 
     return data.map(mapToLedgerFileContent);

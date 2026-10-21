@@ -229,7 +229,10 @@ describe("LedgerRepoService", () => {
 
     it("passes dirPath through to the fava call", async () => {
       mockGetLedgerDirContent.mockResolvedValue({
-        data: { success: true, data: [] },
+        data: {
+          success: true,
+          data: [{ path: "subdir/a.bean", name: "a.bean", type: "file" }],
+        },
       });
       await service.listDirContent({
         ledgerId: LEDGER_ID,
