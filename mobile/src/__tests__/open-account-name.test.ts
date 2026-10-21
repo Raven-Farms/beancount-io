@@ -511,3 +511,47 @@ describe("Open Account currencies", () => {
     ).toBe(true);
   });
 });
+
+// w21/192: accept/reject results checked against @rustledger/wasm 0.24 over
+// every code point. Persian and full-width digits passed here and were then
+// refused by the engine, while a ZWNJ inside a Persian word was blocked.
+describe("validateAccountName against the engine's grammar", () => {
+  const accepted = [
+    "Assets:Bank:خانه‌ها",
+    "Assets:Ab‍c",
+    "Assets:Épargne",
+    "Assets:ǅep",
+    "Assets:US:401k",
+    "Assets:日本",
+    "Assets:العربية",
+    "Assets:हिंदी",
+  ];
+  const refused: Array<
+    [string, "componentMustStartUppercase" | "invalidCharacters"]
+  > = [
+    ["Assets:۱۴۰۲", "componentMustStartUppercase"],
+    ["Assets:１２３", "componentMustStartUppercase"],
+    ["Assets:٣Bank", "componentMustStartUppercase"],
+    ["Assets:०", "componentMustStartUppercase"],
+    ["Assets:Ⅷ", "componentMustStartUppercase"],
+    ["Assets:²nd", "componentMustStartUppercase"],
+    ["Assets:①Bank", "componentMustStartUppercase"],
+    ["Assets:ʰBank", "componentMustStartUppercase"],
+    ["Assets:ـBank", "componentMustStartUppercase"],
+    ["Assets:bank", "componentMustStartUppercase"],
+    ["Assets:A_b", "invalidCharacters"],
+    ["Assets:A b", "invalidCharacters"],
+  ];
+
+  for (const name of accepted) {
+    it(`opens ${name}`, () => {
+      expect(validateAccountName(name)).toEqual({ ok: true });
+    });
+  }
+
+  for (const [name, reason] of refused) {
+    it(`refuses ${name}`, () => {
+      expect(validateAccountName(name)).toEqual({ ok: false, reason });
+    });
+  }
+});

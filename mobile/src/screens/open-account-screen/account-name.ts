@@ -98,23 +98,18 @@ export function peelTypedRoot(
 }
 
 /**
- * Whether a subcomponent's initial character is one Beancount accepts.
- *
- * Allowed: a Unicode uppercase or titlecase letter ("Épargne", "ǅep"), a
- * digit ("401k"), and a letter from a caseless script ("日本", "العربية",
- * "हिंदी"). Titlecase `ǅ` is neither `\p{Lu}` nor caseless — its uppercase is
- * `Ǆ` — and the ledger accepts it (w21/041). The caseless case is why this
- * is not a single `\p{Lu}` test: Han and Kana are `\p{Lo}`, so an uppercase-only
- * rule rejects names the ledger grammar allows. A letter is treated as caseless
- * when it has no distinct uppercase form, which still rejects a lowercase-led
- * Latin, Greek or Cyrillic name.
+ * Whether a subcomponent's initial character is one the engine accepts, as
+ * probed against `@rustledger/wasm` 0.24 over every code point (w21/192):
+ * an uppercase or titlecase letter ("Épargne", "ǅep"), any other letter that
+ * is not cased, `\p{Lo}` ("日本", "العربية", "हिंदी"), or an ASCII digit
+ * ("401k"). Not accepted, though they once passed here: a digit of another
+ * script (Persian "۱۴۰۲", full-width "１２３", Devanagari "०"), a letter-like
+ * numeral ("Ⅷ", "²nd"), a modifier letter ("ʰBank") and a lowercase letter.
+ * Titlecase `ǅ` is neither `\p{Lu}` nor caseless, and is accepted (w21/041).
  */
 const startsSubcomponent = (component: string): boolean => {
   const initial = [...component][0];
-  if (initial === undefined) return false;
-  if (/\p{N}/u.test(initial)) return true;
-  if (/[\p{Lu}\p{Lt}]/u.test(initial)) return true;
-  return /\p{L}/u.test(initial) && initial.toUpperCase() === initial;
+  return initial !== undefined && /^[\p{Lu}\p{Lt}\p{Lo}0-9]$/u.test(initial);
 };
 
 /** Validate a full account name using Beancount's component naming rules. */
@@ -149,7 +144,10 @@ export function validateAccountName(
     if (!startsSubcomponent(component)) {
       return { ok: false, reason: "componentMustStartUppercase" };
     }
-    if (!/^[\p{L}\p{N}][\p{L}\p{M}\p{N}-]*$/u.test(component)) {
+    // ZWNJ and ZWJ belong to Persian and Indic words ("خانه‌ها"); the engine
+    // accepts them in the body, and refusing them blocked a name it opens
+    // (w21/192).
+    if (!/^[\p{L}\p{N}][\p{L}\p{M}\p{N}\u200c\u200d-]*$/u.test(component)) {
       return { ok: false, reason: "invalidCharacters" };
     }
   }
