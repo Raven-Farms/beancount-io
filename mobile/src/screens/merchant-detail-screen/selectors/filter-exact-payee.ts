@@ -45,3 +45,25 @@ export function parseSpellings(raw: string | string[] | undefined): string[] {
     return [];
   }
 }
+
+/**
+ * The journal filter that selects exactly a merchant's payee spellings: an
+ * anchored payee expression, padded for the trailing space a bank import
+ * leaves (w21/093). Free-text on the payee also matched narrations and longer
+ * payees ("Ace" among "Ace Deli"), and paging stopped after 500 of those, so
+ * the merchant's own rows vanished (w21/181). Case differences still pass the
+ * server's matcher; `filterExactPayee` narrows them on the client.
+ */
+export function exactPayeeFilter(
+  payees: readonly string[],
+): string | undefined {
+  const alternatives = payees
+    .map((payee) => payee.trim())
+    .filter(Boolean)
+    .map((payee) => payee.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"))
+    // The filter's string literal has no escapes, so a quote is spelled \x22.
+    .map((payee) => payee.replace(/"/g, "\\x22"));
+  return alternatives.length === 0
+    ? undefined
+    : `payee:"^\\s*(?:${alternatives.join("|")})\\s*$"`;
+}

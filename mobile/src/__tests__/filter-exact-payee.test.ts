@@ -1,4 +1,7 @@
-import { filterExactPayee } from "../screens/merchant-detail-screen/selectors/filter-exact-payee";
+import {
+  exactPayeeFilter,
+  filterExactPayee,
+} from "../screens/merchant-detail-screen/selectors/filter-exact-payee";
 
 describe("filterExactPayee", () => {
   const entries = [
@@ -45,5 +48,36 @@ describe("filterExactPayee", () => {
     expect(filterExactPayee(entries, "uber").map((e) => e.id)).toEqual([3]);
     expect(filterExactPayee(entries, "   ")).toEqual([]);
     expect(filterExactPayee(entries, "")).toEqual([]);
+  });
+});
+
+// w21/181: free-text filtering paged through longer names ("Ace" among "Ace
+// Deli") and stopped at 500, so the merchant's own rows vanished.
+describe("exactPayeeFilter", () => {
+  it("anchors every spelling, escaped, and pads for trailing spaces", () => {
+    expect(exactPayeeFilter(["QA Ace"])).toBe('payee:"^\\s*(?:QA Ace)\\s*$"');
+    expect(exactPayeeFilter(["Lowe's", "Ethereum 2.0", 'A "B"'])).toBe(
+      'payee:"^\\s*(?:Lowe\'s|Ethereum 2\\.0|A \\x22B\\x22)\\s*$"',
+    );
+  });
+
+  it("is nothing for no payee", () => {
+    expect(exactPayeeFilter([" "])).toBe(undefined);
+  });
+
+  it("is what merchant detail pages with", () => {
+    const screen = require("fs").readFileSync(
+      require("path").join(
+        __dirname,
+        "..",
+        "screens",
+        "merchant-detail-screen",
+        "merchant-detail-screen.tsx",
+      ),
+      "utf8",
+    );
+    expect(screen.includes("exactPayeeFilter(spellings), [spellings]")).toBe(
+      true,
+    );
   });
 });
