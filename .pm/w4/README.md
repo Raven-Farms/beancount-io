@@ -4,6 +4,8 @@
 
 ## Inbox
 
+- [310 — Leave CSV cell commit and cancel keys to active input-method composition](./310.md) — minor; dashboard QA, 2026-10-21; trusted composing Enter commits/closes Payee and Description editors, while composing Escape cancels/closes; ordinary controls pass.
+
 - [309 — Keep excluded CSV rows excluded through validation repair](./309.md) — minor; dashboard QA, 2026-10-21; editing configuration while a row is temporarily invalid drops its saved exclusion, so repairing it selects the row again.
 
 - [308 — Refuse malformed CSV quote boundaries instead of joining their text](./308.md) — minor; dashboard QA, 2026-10-21; closed quoted fields accept trailing text, silently turning malformed payee/amount tokens into2Valid rows at both widths.
