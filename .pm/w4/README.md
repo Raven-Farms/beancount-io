@@ -10,7 +10,6 @@
 - [265 — Keep financial text and private paths out of GA4 automatic events](./blocked/265.md) — major; dashboard QA, 2026-10-20; stream-editor completion dependency. — **blocked:** checklist shipped in `181e7a996`; needs a GA4 Editor to turn off Site search / history page views
 - [273 — Keep active picker options identifiable in forced colors](./blocked/273.md) — minor; dashboard QA, 2026-10-20; CommandItem and shared Combobox. — **blocked:** fix shipped in `7c4e21f4f`; awaiting forced-colors pixel check
 - [289 — Preserve long amount digits in portrait statement print output](./blocked/289.md) — minor; dashboard QA, 2026-10-20. — **blocked:** fix shipped in `68e973700`; awaiting portrait PDF check
-- [296 — Leave Change Name's Enter key to active IME composition](./296.md) — minor; dashboard QA, 2026-10-20.
 - [297 — Withhold a BQL card's old CSV while that query is executing again](./297.md) — minor; dashboard QA, 2026-10-20; residual export scope from 234.
 
 ## Milestones
