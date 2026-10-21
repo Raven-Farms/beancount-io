@@ -18,7 +18,9 @@ export class BaseQueryArgs {
 
 @ArgsType()
 export class ConversionArgs extends BaseQueryArgs {
-  @Field(() => String, { defaultValue: "USD" })
+  // No default: an omitted conversion values in the ledger's operating
+  // currency, as on REST and MCP (w21/202).
+  @Field(() => String, { nullable: true })
   conversion?: string;
 
   @Field(() => String, { defaultValue: "monthly" })

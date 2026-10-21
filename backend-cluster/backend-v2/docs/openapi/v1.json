@@ -9223,12 +9223,11 @@
           {
             "schema": {
               "type": "string",
-              "default": "USD",
-              "description": "Convert amounts to this currency",
+              "description": "Convert amounts to this currency (default: the ledger's operating currency)",
               "example": "USD"
             },
             "required": false,
-            "description": "Convert amounts to this currency",
+            "description": "Convert amounts to this currency (default: the ledger's operating currency)",
             "name": "conversion",
             "in": "query"
           },
@@ -13677,12 +13676,11 @@
           {
             "schema": {
               "type": "string",
-              "default": "USD",
-              "description": "Convert amounts to this currency",
+              "description": "Convert amounts to this currency (default: the ledger's operating currency)",
               "example": "USD"
             },
             "required": false,
-            "description": "Convert amounts to this currency",
+            "description": "Convert amounts to this currency (default: the ledger's operating currency)",
             "name": "conversion",
             "in": "query"
           },
