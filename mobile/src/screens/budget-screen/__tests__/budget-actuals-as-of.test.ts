@@ -15,7 +15,9 @@ describe("useBudgetActuals", () => {
       )
       .replace(/\s+/gu, "");
     expect(
-      source.includes("budgetForInterval(date,group.interval,history,today)"),
+      source.includes(
+        "budgetForInterval(date,group.interval,history,today,windowStart)",
+      ),
     ).toBe(true);
   });
 });

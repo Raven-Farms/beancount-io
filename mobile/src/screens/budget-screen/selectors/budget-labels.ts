@@ -151,6 +151,23 @@ export function timeSpanToFilter(
 }
 
 /**
+ * The first day a budget window's `time` filter covers, or undefined for all
+ * time. The first charted period starts there, often partway through
+ * (w21/102).
+ */
+export function timeWindowStart(
+  time: string | undefined,
+  today: string = getFormatDate(new Date()),
+): string | undefined {
+  if (!time) return undefined;
+  if (time === "year-1") {
+    return `${String(Number(today.slice(0, 4)) - 1).padStart(4, "0")}-01-01`;
+  }
+  const match = /^(\d{4}-\d{2}-\d{2}) - /.exec(time);
+  return match ? match[1] : undefined;
+}
+
+/**
  * Screen-reader summary of the budget-vs-actual chart.
  *
  * `ScrollableAxisChart` wraps the plot in `accessible` — so with no label the

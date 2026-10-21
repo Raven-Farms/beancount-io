@@ -50,6 +50,7 @@ export function selectBudgetPanelRows(
   inputs: BudgetPanelInput[],
   limit: number,
   asOf?: string,
+  windowStart?: string,
 ): BudgetPanelRow[] {
   const rows = inputs.map(({ group, actual, periodEnd }) => {
     // Reuse the card's derivation so the two surfaces can't drift on the
@@ -66,6 +67,7 @@ export function selectBudgetPanelRows(
             group.interval,
             group.budgetHistory,
             asOf,
+            windowStart,
           ) * direction,
       },
     ]);
@@ -125,6 +127,7 @@ export function settleBudgetPanel(
   results: { input: BudgetPanelInput; failed: boolean }[],
   limit: number,
   asOf?: string,
+  windowStart?: string,
 ): { rows: BudgetPanelRow[]; failed: boolean } {
   if (results.some((result) => result.failed)) {
     return { rows: [], failed: true };
@@ -134,6 +137,7 @@ export function settleBudgetPanel(
       results.map((result) => result.input),
       limit,
       asOf,
+      windowStart,
     ),
     failed: false,
   };

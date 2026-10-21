@@ -9,6 +9,7 @@ import {
   type BudgetGroup,
 } from "@/screens/budget-screen/selectors/budget-selectors";
 import type { BudgetSeriesPoint } from "@/screens/budget-screen/selectors/select-budget-card-stats";
+import { timeWindowStart } from "@/screens/budget-screen/selectors/budget-labels";
 
 /**
  * Budget compares raw account activity, so it asks fava for `units` rather than
@@ -71,11 +72,14 @@ export function useBudgetActuals({
     const history = prepareBudgetHistory(group.budgetHistory);
     // Actuals stop at today, so the budget they are measured against does too.
     const today = getFormatDate(new Date());
+    // And start where the window does: its first period is often partial.
+    const windowStart = timeWindowStart(time, today);
     const point = (date: string, actual: number) => ({
       date,
       actual: actual * direction,
       budget:
-        budgetForInterval(date, group.interval, history, today) * direction,
+        budgetForInterval(date, group.interval, history, today, windowStart) *
+        direction,
     });
     const points = items.map((item) =>
       point(item.date, resolveCurrencyBalance(item.balance, currency)),

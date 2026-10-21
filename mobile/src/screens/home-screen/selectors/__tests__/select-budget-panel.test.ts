@@ -291,6 +291,9 @@ describe("the Home panel against the Budget screen", () => {
       ),
       "utf8",
     ) as string;
-    expect(source.includes("getFormatDate(new Date()),")).toBe(true);
+    expect(source.includes("const today = getFormatDate(new Date());")).toBe(
+      true,
+    );
+    expect(source.includes("timeWindowStart(time, today),")).toBe(true);
   });
 });

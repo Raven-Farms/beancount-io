@@ -16,6 +16,7 @@ import {
 import {
   DEFAULT_BUDGET_SPAN,
   timeSpanToFilter,
+  timeWindowStart,
 } from "@/screens/budget-screen/selectors/budget-labels";
 import {
   settleBudgetPanel,
@@ -140,10 +141,14 @@ export function useBudgetPanel({
       if (cancelled) {
         return;
       }
+      const today = getFormatDate(new Date());
       const settled = settleBudgetPanel(
         results,
         BUDGET_PANEL_ROWS,
-        getFormatDate(new Date()),
+        today,
+        // The panel's current period can be the window's clipped first one
+        // (a weekly budget in early January).
+        timeWindowStart(time, today),
       );
       setRows(settled.rows);
       setFailed(settled.failed);

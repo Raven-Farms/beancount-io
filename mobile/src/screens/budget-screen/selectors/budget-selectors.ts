@@ -348,12 +348,14 @@ export function calculateBudgetForInterval(
   chartInterval: string,
   history: BudgetHistoryEntry[],
   asOf?: string,
+  windowStart?: string,
 ): number {
   return budgetForInterval(
     intervalEnd,
     chartInterval,
     prepareBudgetHistory(history),
     asOf,
+    windowStart,
   );
 }
 
@@ -363,8 +365,16 @@ export function budgetForInterval(
   chartInterval: string,
   ordered: PreparedBudgetHistory,
   asOf?: string,
+  windowStart?: string,
 ): number {
-  const start = intervalStartISO(intervalEnd, chartInterval);
+  // The server starts a window's series on its first day, so a 1Y window's
+  // first month (or a YTD's first week) holds only part of a period; budget it
+  // for that part too, as `asOf` does for the end (w21/102).
+  const periodStart = intervalStartISO(intervalEnd, chartInterval);
+  const start =
+    windowStart !== undefined && windowStart > periodStart
+      ? windowStart
+      : periodStart;
   // A budget is compared with actuals, which cannot run past today: a period
   // still in progress is budgeted only up to `asOf`, and one not yet begun has
   // no budget. Otherwise a window without an end (all time) set a full month's
@@ -384,6 +394,7 @@ export function budgetForInterval(
   if (
     only &&
     only.date <= start &&
+    start === periodStart &&
     normalizeInterval(only.interval) === normalizeInterval(chartInterval) &&
     end === addDaysISO(nextIntervalStartISO(start, chartInterval), -1)
   ) {
