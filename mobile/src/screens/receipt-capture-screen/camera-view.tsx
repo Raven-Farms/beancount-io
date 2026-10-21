@@ -60,6 +60,7 @@ const styles = StyleSheet.create({
     lineHeight: 22,
   },
   deniedActions: { flexDirection: "row", gap: 12 },
+  deniedPrimary: { marginBottom: 12 },
   pill: {
     paddingHorizontal: 28,
     paddingVertical: 14,
@@ -137,8 +138,23 @@ export const CameraView = ({
         <View style={styles.denied}>
           <Ionicons name="camera-outline" size={48} color={CHROME.icon} />
           <Text style={styles.deniedText}>{t("receiptCameraPermission")}</Text>
+          {/* A receipt already in the library — a screenshot, an emailed
+              image — needs no camera (w21/017). */}
+          <Pressable
+            testID="receipt-denied-pick-library"
+            accessibilityRole="button"
+            style={({ pressed }) => [
+              styles.pill,
+              styles.deniedPrimary,
+              pressed && styles.pillPressed,
+            ]}
+            onPress={onPickFromLibrary}
+          >
+            <Text style={styles.pillText}>{t("receiptChooseLibrary")}</Text>
+          </Pressable>
           <View style={styles.deniedActions}>
             <Pressable
+              accessibilityRole="button"
               style={({ pressed }) => [
                 styles.pill,
                 pressed && styles.pillPressed,
@@ -152,6 +168,7 @@ export const CameraView = ({
                 styles.pill,
                 pressed && styles.pillPressed,
               ]}
+              accessibilityRole="button"
               onPress={() =>
                 permission.canAskAgain
                   ? requestPermission()
