@@ -140,3 +140,10 @@
 - [245](./245.md) — Explore search finds nothing for "crypto example" or a bare owner name (Gitea substring)
 - [246](./246.md) — At AX2 the Transactions header reads "Transacti…"
 - [247](./247.md) — Regression from 111: drawer line heights double-scaled at AX2 (rows ~2× tall, names split far apart)
+- [248](./248.md) — Hermes has no Intl.PluralRules: on device ru/uk/sk counts use the English rule ("5 ошибки")
+- [249](./249.md) — Persian: at-market/at-cost note and "Not in total" list still flip the minus sign
+- [250](./250.md) — Delete after the entry changed elsewhere: bare failure, stale entry stays, retries all fail
+- [251](./251.md) — Saving a metadata-only edit (same hash) exits the transaction to the journal
+- [252](./252.md) — Edit Transaction in a CRLF file rewrites the entry with LF and adds a blank line
+- [253](./253.md) — Edit on an entry changed elsewhere: "Failed to load transaction" with no Retry, every time
+- [254](./254.md) — VoiceOver calls the transaction ⋯ menu "Details"
