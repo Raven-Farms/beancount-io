@@ -455,6 +455,7 @@ export const uk: Translations = {
   receiptOpenSettings: "Відкрити налаштування",
   receiptCancel: "Скасувати",
   receiptUploading: "Завантажуємо фото…",
+  receiptUploadingProgress: "Завантаження фото… {{percent}}%",
   receiptParsing: "ШІ читає ваш чек…",
   receiptRevealTitle: "Ось що ми прочитали",
   // Deliberately a proposal: nothing is written to the ledger until the user

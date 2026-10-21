@@ -410,6 +410,7 @@ export const zh: Translations = {
   receiptOpenSettings: "打开设置",
   receiptCancel: "取消",
   receiptUploading: "正在上传照片…",
+  receiptUploadingProgress: "正在上传照片… {{percent}}%",
   receiptParsing: "AI 正在识别小票…",
   receiptRevealTitle: "识别结果如下",
   // Deliberately a proposal: nothing is written to the ledger until the user

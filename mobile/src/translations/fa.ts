@@ -444,6 +444,7 @@ export const fa: Translations = {
   receiptOpenSettings: "باز کردن تنظیمات",
   receiptCancel: "لغو",
   receiptUploading: "در حال بارگذاری عکس…",
+  receiptUploadingProgress: "در حال بارگذاری عکس… {{percent}}٪",
   receiptParsing: "هوش مصنوعی رسید شما را می‌خواند…",
   receiptRevealTitle: "این چیزی است که خواندیم",
   // Deliberately a proposal: nothing is written to the ledger until the user

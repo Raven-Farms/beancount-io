@@ -450,6 +450,7 @@ export const bg: Translations = {
   receiptOpenSettings: "Отвори настройките",
   receiptCancel: "Отказ",
   receiptUploading: "Снимката се качва…",
+  receiptUploadingProgress: "Снимката се качва… {{percent}}%",
   receiptParsing: "ИИ разчита бележката ви…",
   receiptRevealTitle: "Ето какво разчетохме",
   // Deliberately a proposal: nothing is written to the ledger until the user

@@ -460,6 +460,7 @@ export const es: Translations = {
   receiptOpenSettings: "Abrir Ajustes",
   receiptCancel: "Cancelar",
   receiptUploading: "Subiendo la foto…",
+  receiptUploadingProgress: "Subiendo la foto… {{percent}}%",
   receiptParsing: "La IA está leyendo tu recibo…",
   receiptRevealTitle: "Esto es lo que hemos leído",
   // Deliberately a proposal: nothing is written to the ledger until the user

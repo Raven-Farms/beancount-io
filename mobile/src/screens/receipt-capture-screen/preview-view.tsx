@@ -81,6 +81,8 @@ export const PreviewView = ({
   onUpload,
   onRetry,
   onCancel,
+  onCancelBusy,
+  uploadPercent,
 }: {
   shot: CapturedShot;
   status: "preview" | "uploading" | "parsing" | "revealed" | "error";
@@ -92,13 +94,19 @@ export const PreviewView = ({
   /** Run the upload again with the same photo; omitted when retrying is futile. */
   onRetry?: () => void;
   onCancel: () => void;
+  /** Abandon the upload or parse in flight and return to the preview. */
+  onCancelBusy: () => void;
+  /** Whole-percent upload progress, `null` while unknown. */
+  uploadPercent?: number | null;
 }) => {
   const insets = useSafeAreaInsets();
   const { t } = useTranslations();
 
   const busyLabel =
     status === "uploading"
-      ? t("receiptUploading")
+      ? uploadPercent == null
+        ? t("receiptUploading")
+        : t("receiptUploadingProgress", { percent: uploadPercent })
       : status === "parsing"
         ? t("receiptParsing")
         : null;
@@ -142,6 +150,17 @@ export const PreviewView = ({
         <View style={styles.scrim}>
           <ActivityIndicator size="large" color={CHROME.icon} />
           <Text style={styles.scrimText}>{busyLabel}</Text>
+          <Pressable
+            testID="receipt-busy-cancel"
+            accessibilityRole="button"
+            style={({ pressed }) => [
+              styles.pill,
+              pressed && styles.pillPressed,
+            ]}
+            onPress={onCancelBusy}
+          >
+            <Text style={styles.pillText}>{t("receiptCancel")}</Text>
+          </Pressable>
         </View>
       ) : null}
 

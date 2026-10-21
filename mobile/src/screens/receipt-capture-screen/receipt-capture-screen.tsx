@@ -229,6 +229,8 @@ const ReceiptCaptureScreenImpl = () => {
             : undefined
         }
         onCancel={() => router.back()}
+        onCancelBusy={workflow.cancel}
+        uploadPercent={phase.kind === "uploading" ? phase.percent : undefined}
       />
     );
   };

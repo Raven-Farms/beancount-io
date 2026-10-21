@@ -456,6 +456,7 @@ export const ru: Translations = {
   receiptOpenSettings: "Открыть настройки",
   receiptCancel: "Отмена",
   receiptUploading: "Загружаем фото…",
+  receiptUploadingProgress: "Загрузка фото… {{percent}}%",
   receiptParsing: "ИИ читает ваш чек…",
   receiptRevealTitle: "Вот что мы прочитали",
   // Deliberately a proposal: nothing is written to the ledger until the user

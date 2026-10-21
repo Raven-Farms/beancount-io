@@ -459,6 +459,7 @@ export const sk: Translations = {
   receiptOpenSettings: "Otvoriť nastavenia",
   receiptCancel: "Zrušiť",
   receiptUploading: "Nahráva sa fotka…",
+  receiptUploadingProgress: "Nahrávam fotografiu… {{percent}} %",
   receiptParsing: "AI číta vašu účtenku…",
   receiptRevealTitle: "Toto sme prečítali",
   // Deliberately a proposal: nothing is written to the ledger until the user

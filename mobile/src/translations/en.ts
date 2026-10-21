@@ -458,6 +458,7 @@ export const en = {
   receiptOpenSettings: "Open Settings",
   receiptCancel: "Cancel",
   receiptUploading: "Uploading photo…",
+  receiptUploadingProgress: "Uploading photo… {{percent}}%",
   receiptParsing: "AI is reading your receipt…",
   receiptRevealTitle: "Here's what we read",
   // Deliberately a proposal: nothing is written to the ledger until the user
