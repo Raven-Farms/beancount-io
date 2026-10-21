@@ -226,7 +226,10 @@ export function DatePicker({
             </Button>
           </PopoverTrigger>
           <PopoverContent
-            className="w-auto overflow-hidden p-0"
+            // Never taller than the space Radix measured beside the field: a
+            // short window showed only part of the month with nothing to
+            // scroll (w4/m40). The header and every week stay reachable.
+            className="w-auto max-h-(--radix-popover-content-available-height) overflow-y-auto overscroll-contain p-0"
             align="end"
             alignOffset={-8}
             sideOffset={10}

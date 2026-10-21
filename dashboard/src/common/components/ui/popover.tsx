@@ -15,15 +15,49 @@ function PopoverTrigger({
   return <PopoverPrimitive.Trigger data-slot="popover-trigger" {...props} />;
 }
 
+/**
+ * A popup is portaled to the body, outside any open Dialog or Sheet, whose
+ * scroll lock cancels wheel and touch scrolling it did not start inside its
+ * own content — so a date or account list inside a modal could not be
+ * scrolled (w4/m40). The lock listens on `document`; stopping these two
+ * events at the popup keeps its own scrolling while the page behind stays
+ * locked. Clicks, keys and focus are untouched.
+ */
+function containPopupScroll(node: HTMLElement) {
+  const stop = (event: Event) => event.stopPropagation();
+  node.addEventListener("wheel", stop, { passive: true });
+  node.addEventListener("touchmove", stop, { passive: true });
+  return () => {
+    node.removeEventListener("wheel", stop);
+    node.removeEventListener("touchmove", stop);
+  };
+}
+
 function PopoverContent({
   className,
   align = "center",
   sideOffset = 4,
+  ref,
   ...props
 }: React.ComponentProps<typeof PopoverPrimitive.Content>) {
+  const contentRef = React.useCallback(
+    (node: HTMLDivElement | null) => {
+      if (typeof ref === "function") ref(node);
+      else if (ref) ref.current = node;
+      if (!node) return;
+      const release = containPopupScroll(node);
+      return () => {
+        release();
+        if (typeof ref === "function") ref(null);
+        else if (ref) ref.current = null;
+      };
+    },
+    [ref],
+  );
   return (
     <PopoverPrimitive.Portal>
       <PopoverPrimitive.Content
+        ref={contentRef}
         data-slot="popover-content"
         align={align}
         sideOffset={sideOffset}
