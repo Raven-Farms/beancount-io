@@ -217,7 +217,7 @@ function FileRow({
   const isDir = entry.type === "dir";
   const editable = !isDir && isEditableTextFile(entry.name);
   const tappable = isDir || editable;
-  const protectedFile = !isDir && !canDeleteLedgerFile(entry.name);
+  const protectedFile = !isDir && !canDeleteLedgerFile(entry.path);
 
   const iconName = isDir
     ? "folder-outline"
@@ -453,7 +453,7 @@ export function LedgerFileBrowserScreen(): JSX.Element {
     async (entry: DirEntry) => {
       if (
         !canWrite ||
-        !canDeleteLedgerFile(entry.name) ||
+        !canDeleteLedgerFile(entry.path) ||
         deleteInFlightRef.current
       )
         return;
@@ -494,7 +494,7 @@ export function LedgerFileBrowserScreen(): JSX.Element {
 
   const handleDelete = useCallback(
     (entry: DirEntry) => {
-      if (!canWrite || !canDeleteLedgerFile(entry.name)) return;
+      if (!canWrite || !canDeleteLedgerFile(entry.path)) return;
       Alert.alert(
         t("ledgerDeleteFileTitle"),
         t("ledgerDeleteFileMessage", { name: entry.name }),

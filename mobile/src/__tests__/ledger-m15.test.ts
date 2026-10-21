@@ -350,3 +350,13 @@ test("getKeyboardOverlap: never returns a negative overlap", () => {
     throw new Error(`expected zero overlap, got ${overlap}`);
   }
 });
+
+// w21/049: a folder's own main.bean was locked because the bare name was
+// compared; only the root file is protected.
+test("canDeleteLedgerFile: protects the root main.bean only", () => {
+  expect(canDeleteLedgerFile("main.bean")).toBe(false);
+  expect(canDeleteLedgerFile("/main.bean")).toBe(false);
+  expect(canDeleteLedgerFile("qa-20261020/main.bean")).toBe(true);
+  expect(canDeleteLedgerFile("/qa-20261020/main.bean")).toBe(true);
+  expect(canDeleteLedgerFile("accounts.bean")).toBe(true);
+});

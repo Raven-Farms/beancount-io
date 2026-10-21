@@ -57,8 +57,14 @@ export function buildLedgerFilePath(
   return cleanDirectory ? `${cleanDirectory}/${filename}` : filename;
 }
 
-export function canDeleteLedgerFile(filename: string): boolean {
-  return filename !== "main.bean";
+/**
+ * Whether Files offers Delete for the file at `path`. Only the ledger's root
+ * `main.bean` is protected, as the server's `deleteLedgerFile` rule is; a
+ * folder's own `main.bean` used to be locked too because the bare name was
+ * compared (w21/049, the dashboard's w3/626).
+ */
+export function canDeleteLedgerFile(path: string): boolean {
+  return path.replace(/^\/+/, "") !== "main.bean";
 }
 
 type Entry = { name: string; type: string; path: string };
