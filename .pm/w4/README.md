@@ -32,6 +32,7 @@
 - [290 — Commit the print generation timestamp before native capture](./290.md) — minor; dashboard QA, 2026-10-20.
 - [291 — Leave file-editor Escape to the active text composition](./291.md) — minor; dashboard QA, 2026-10-20.
 - [292 — Keep composing Escape from dismissing input dialogs](./292.md) — minor; dashboard QA, 2026-10-20.
+- [293 — Keep the DatePicker calendar reachable in short viewports](./293.md) — minor; dashboard QA, 2026-10-20.
 
 ## Milestones
 
