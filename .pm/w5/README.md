@@ -68,6 +68,7 @@
 - [901 — Preserve exact equity offsets for wide preset opening balances](./901.md) — trivial CLI precision follow-up to 310; reproduced 2026-10-20.
 - [902 — Make import price-conflict advice respect `unique_prices`](./902.md) — trivial CLI recovery-advice follow-up to 397; reproduced 2026-10-20.
 - [903 — Explain imported quotes that lose to a generated reciprocal](./903.md) — minor CLI price-feedback follow-up to 741; human/JSON cases reproduced 2026-10-20.
+- [904 — Make MCP dry runs refuse what the plan's directive limit will refuse](./904.md) — minor backend-v2 finding from w5/m5/t004; observed 2026-10-21.
 
 The 27 findings from the MCP QA auth sweep against the hosted endpoint (023–054, less the five under [Dropped](#dropped)) were fixed in `backend-cluster/backend-v2` and closed on 2026-10-02 and 2026-10-03; each note under [`done/`](./done/) records what shipped and in which commit. None has been re-observed against the hosted endpoint yet — the fixes reach it with the next backend deploy.
 

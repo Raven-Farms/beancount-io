@@ -9,10 +9,36 @@
 **Blocked 2026-09-15 after implementation and live verification; narrowed 2026-10-20.** The deploy condition is cleared: on 2026-10-20 the drift check reported no difference between the deployed prompts and the working tree. Claude Code then passed all nine prompt journeys, including the two new `close-month` journeys ([2026-10-20 run](../../../../backend-cluster/backend-v2/evals/mcp-agent/baseline/2026-10-20-prompts.md)). What remains:
 
 1. **Codex measurement — moved to [w4/232](../../../w4/232.md) by the user on 2026-10-20.** Every Codex attempt on 2026-10-20 was incomplete: the Codex CLI's ChatGPT plan had hit its usage limit, which lifts 2026-11-17. m5's closeout still needs that result, because its definition of done names both clients. t002 waits on it too.
-2. **Staged bank data for `categorize-imports` (t004).** Suggestions, previews, confirmed submission, and repeat-import deduplication all need staged transactions, and only a Plaid sync fills staging. The hosted deployment uses Plaid's production environment (its link tokens begin `link-production`), so sandbox credentials cannot link a test bank. `.pm/DO_NOT_DO.md` rules out a duplicate stack for MCP testing. Also, the 2026-10-20 correction to `categorize-imports` (`discardStagedBankTransactions` in place of the retired `operation: "discard"`) is merged but not deployed.
-   **Unblock:** a person who can share a real bank account's transactions links it, in the browser, to a dedicated eval ledger on the QA account. Keep it separate from `mcp-agent-eval`, whose `prompt-categorize-no-bank` journey needs no bank; `mcp-agent-eval-bank` fits the harness's naming rule. Then deploy backend-v2 and add the staged-import journeys. Who: the account owner, and whoever deploys.
+2. **A confirmed bank import, and its repeat (t004).** On 2026-10-21 the account owner pointed this work at their bank-linked QA ledger: a real bank linked through production Plaid, with four transactions staged. A ledger-pinned OAuth grant (`ledger.read ledger.write`, no `ledger.admin`) was approved in the browser, and two Claude Code sessions (five turns) ran the deployed `categorize-imports` prompt. The results are under [Validation evidence](#validation-evidence-2026-10-21).
+   - Suggestion, review, the unconfirmed path, and the dry-run preview are now measured.
+   - The confirmed write could not complete. That ledger is on the free tier and already over its 1,000-directive allowance, so the real import was refused with `RESOURCE_LIMIT_REACHED`, although the dry run had promised one entry. That gap is filed as [w5/904](../../904.md).
+   - Repeat-import deduplication therefore remains unmeasured. Discard was not run, because it permanently removes real staged rows.
+   **Unblock:** a bank-linked ledger that can accept writes. Either the account owner upgrades that ledger's plan or reduces it under its allowance, or a bank is linked to a paid QA account's dedicated `mcp-agent-eval-bank` ledger. Then run the confirmed import, repeat it, and record both. Who: the account owner. The id and wording fixes from 2026-10-21 also need a deploy.
 
 When work can resume, move this directory back to `.pm/w5/m5/`.
+
+## Validation evidence (2026-10-21)
+
+- **t004 on real staged data:** this was the owner's QA ledger with one linked bank (production Plaid) and four staged transactions. The client was Claude Code, using the deployed `categorize-imports` prompt. The credential was an OAuth grant pinned to that ledger, with read and write but not `ledger.admin`. Two sessions ran: one declined, and one confirmed a single row. The ledger and staging were checked over REST after each. Transcripts are kept locally only, because they hold real bank data.
+  - **Discovery:** listing banks was refused for lack of `ledger.admin`. The agent said so and worked from what was staged, as the prompt directs.
+  - **Suggestions:**
+    - It reused the ledger's own prior booking for one payee and cited that entry as the reason.
+    - It left three rows unassigned and invented no account.
+    - For two of those three, the ledger's earlier booking of the same payee went to an unrelated card liability. The agent declined to reuse that prior, and the server's suggestion with it, calling it the wrong card. The prompt's "reuse a confident prior" rule does not anticipate a prior that looks wrong.
+    - The ledger has no `Expenses:Uncategorized`, and the agent did not use one.
+  - **Dedup:** it checked the ledger for matching amounts near each date, found none, and said so.
+  - **Declined:** "No" left the ledger's latest commit and all four staged rows unchanged.
+  - **Confirmed one row:**
+    - It previewed with `dry_run: true` (one entry, no new errors), then waited for an explicit "Yes".
+    - The real call was refused with `RESOURCE_LIMIT_REACHED`, because the free-tier ledger is over its allowance.
+    - The agent verified that nothing was written and nothing staged was marked synced, and it reported the refusal honestly.
+- **Two gaps found and handled:**
+  - **Wrong id:** the agent first passed a staged row's `id` to `importStagedBankTransactions`, which wants its `transactionId`, and got only "Some transactions not found in database".
+    - The listing and both tool schemas now say which field to pass.
+    - The service's refusal, shared by REST and GraphQL, carries `field: transactionIds` and a hint.
+    - `plaid-sync-service.test.ts` pins the hint, and fails without the fix.
+  - **Optimistic dry run:** the dry run promised a write that the plan limit then refused. Filed as [w5/904](../../904.md); it also affects `appendLedgerText`.
+- **Not measured:** a successful confirmed import, the repeat import, discard, and Codex ([w4/232](../../../w4/232.md)).
 
 ## Validation evidence (2026-10-20)
 
