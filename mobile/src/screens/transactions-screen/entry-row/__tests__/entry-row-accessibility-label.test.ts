@@ -7,8 +7,10 @@ describe("entryRowAccessibilityLabel", () => {
     expect(
       entryRowAccessibilityLabel({
         name: "Q2 2026 Expenses",
+        secondary: null,
         amountStr: "$26,560,000,000.00",
         isPending: false,
+        pendingLabel: "Pending",
       }),
     ).toBe("Q2 2026 Expenses, $26,560,000,000.00");
   });
@@ -17,18 +19,36 @@ describe("entryRowAccessibilityLabel", () => {
     expect(
       entryRowAccessibilityLabel({
         name: "Coffee",
+        secondary: null,
         amountStr: "-$7.25",
         isPending: true,
+        pendingLabel: "Offen",
       }),
-    ).toBe("Coffee, -$7.25, Pending");
+    ).toBe("Coffee, -$7.25, Offen");
+  });
+
+  // w21/140: rows told apart only by their narration line sounded the same.
+  it("reads the narration line under the payee", () => {
+    const label = (secondary: string) =>
+      entryRowAccessibilityLabel({
+        name: "Grocer",
+        secondary,
+        amountStr: "-$12.00",
+        isPending: false,
+        pendingLabel: "Pending",
+      });
+    expect(label("Weekly shop")).toBe("Grocer, Weekly shop, -$12.00");
+    expect(label("Weekly shop") === label("Party snacks")).toBe(false);
   });
 
   it("omits a missing amount", () => {
     expect(
       entryRowAccessibilityLabel({
         name: "Open Assets:Cash",
+        secondary: null,
         amountStr: null,
         isPending: false,
+        pendingLabel: "Pending",
       }),
     ).toBe("Open Assets:Cash");
   });
@@ -45,6 +65,11 @@ describe("EntryRow accessibility wiring", () => {
     expect(
       source.includes("accessibilityLabel={entryRowAccessibilityLabel("),
     ).toBe(true);
+  });
+
+  it("passes the narration line and the translated Pending", () => {
+    expect(source.includes("          secondary,\n")).toBe(true);
+    expect(source.includes('pendingLabel: t("pending"),')).toBe(true);
   });
 
   it("hides decorative account-type icons from the row announcement", () => {

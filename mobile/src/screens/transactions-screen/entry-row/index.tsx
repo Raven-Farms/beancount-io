@@ -244,8 +244,10 @@ export const EntryRow: React.FC<EntryRowProps> = ({ entry, onPress }) => {
         accessibilityRole="button"
         accessibilityLabel={entryRowAccessibilityLabel({
           name,
+          secondary,
           amountStr,
           isPending,
+          pendingLabel: t("pending"),
         })}
       >
         {content}
