@@ -230,6 +230,37 @@ describe("visibleAccountSections", () => {
       expect(result.some(({ source }) => source === "recents")).toBe(false);
     });
 
+    // A root chip narrows the pinned block too: Expenses must not lead with
+    // Assets:Cash (w21/021).
+    test("should pin only recents under the selected root", () => {
+      const result = withUsage(
+        "",
+        "Expenses",
+        used("Assets:Cash", "Expenses:Food"),
+      );
+
+      expect(result.map(({ title }) => title)).toEqual(["Recent", "Expenses"]);
+      expect(result[0].data).toEqual(["Expenses:Food"]);
+    });
+
+    test("should drop the block when no recent is under the root", () => {
+      const result = withUsage("", "Expenses", used("Assets:Cash"));
+
+      expect(result.some(({ source }) => source === "recents")).toBe(false);
+      // The lone section loses its header again.
+      expect(result.map(({ title }) => title)).toEqual([""]);
+    });
+
+    test("should keep mixed recents under All", () => {
+      const result = withUsage(
+        "",
+        ALL_ROOTS,
+        used("Assets:Cash", "Expenses:Food"),
+      );
+
+      expect(result[0].data.length).toBe(2);
+    });
+
     test("should leave the pinned accounts in the browse list too", () => {
       const result = withUsage("", ALL_ROOTS, used("Expenses:Food"));
       const expenses = result.filter(({ title }) => title === "Expenses");

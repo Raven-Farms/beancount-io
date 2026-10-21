@@ -88,8 +88,16 @@ export function visibleAccountSections(
 
   if (ranking && recentTitle) {
     // `accounts` is what this picker can offer, so a pinned account is always
-    // one the list could show.
-    const recents = topAccounts(ranking, RECENT_LIMIT, accounts);
+    // one the list could show — and, under a root chip, one under that root:
+    // narrowing to Expenses must not offer Assets:Cash first (w21/021).
+    const offered =
+      activeRoot === ALL_ROOTS
+        ? accounts
+        : accounts.filter(
+            (account) =>
+              account === activeRoot || account.startsWith(`${activeRoot}:`),
+          );
+    const recents = topAccounts(ranking, RECENT_LIMIT, offered);
     if (recents.length > 0) {
       return [
         { title: recentTitle, data: recents, source: "recents" },
