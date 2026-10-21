@@ -147,3 +147,7 @@
 - [197](./197.md) — Delete Transaction can fire twice in flight; the repeat reports failure after success
 - [198](./198.md) — A repeated query param crashes three link-reachable screens ("path.split is not a function")
 - [199](./199.md) — A Files link to an unreadable ledger opens your current ledger's same-named file, editable
+- [200](./200.md) — Directory listing parity: REST/MCP drop sha, size, lastCommitSha that GraphQL returns
+- [201](./201.md) — Missing file: GraphQL returns null, REST/MCP NOT_FOUND; directory path differs too
+- [202](./202.md) — Default conversion: GraphQL USD vs REST/MCP operating currency (trial balance, account report, interval totals)
+- [203](./203.md) — createLedger: title/requestId limits only on REST/MCP; empty requestId disables idempotency on GraphQL
