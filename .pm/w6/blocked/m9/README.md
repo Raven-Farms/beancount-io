@@ -53,7 +53,7 @@
 
 ## Blocked
 
-- **t002:** validated payload and standalone discovery/DCR are ready, but the browser has a non-QA account; no grant/read/preview or submission occurred. **Unblock:** dedicated QA browser session/consent, successful gateway query/preview and callback, then documented upstream review. **Owner:** QA account holder, repository worker and Docker reviewers in that order. Other gallery preparations proceed independently.
+- **t002:** validated payload, working temporary OCI catalog and standalone discovery/DCR are ready. The dedicated synthetic QA session is established and the consent page selected only that ledger with read/write scopes; no grant/read/preview or submission occurred. **Unblock:** the specific temporary access decision, fresh native OAuth and successful gateway query/preview/unchanged-state/callback, then documented upstream review. **Owner:** QA account holder, repository worker and Docker reviewers in that order. Other gallery preparations proceed independently.
 
 - **t003:** format-validated MCP-only packages and both publisher logins are ready; native Cursor QA journey (existing w1/m34/t003), nested-repository submission shape and final official Publisher Terms approval remain. **Unblock:** complete those steps, then send/verify both separate submissions. **Owner:** QA/client account holder, publisher and platform reviewers.
 

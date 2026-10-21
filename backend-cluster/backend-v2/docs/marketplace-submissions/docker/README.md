@@ -19,9 +19,39 @@ The validator checked formatting, the public icon, remote transport and dynamic 
 
 ## Runtime and submission gates
 
-Use the dedicated QA account with synthetic ledgers for the OAuth/tool rehearsal. `DOCKER_CONFIG` alone does not isolate this gateway version's home-directory catalog database; use uniquely named temporary catalog records and remove only those records afterward. Keep credentials in the runtime secret store. On 2026-10-21, the standalone v0.44.1 gateway, using a temporary OCI catalog and `DOCKER_MCP_IN_CONTAINER=1`, completed OAuth discovery and dynamic client registration and reached browser ledger consent. The intended dedicated QA ledger was not visible in that browser session, so no grant was approved and no access token was obtained. Docker Desktop is not the current gate. The remaining gate is the dedicated QA browser session and intended synthetic ledger, followed by consent, one real read, an approved dry-run preview and review evidence. The consent screen alone does not establish a working authorized connection. Cancellation returned to a Chrome-blocked Docker callback page; this was not bypassed or counted as a successful callback. The temporary catalog record/file and DCR credential were removed with the supported CLI; revocation confirmed no OAuth token was present.
+Use the dedicated QA account with synthetic ledgers for the OAuth/tool rehearsal.
+`DOCKER_CONFIG` alone does not isolate this gateway version's home-directory
+catalog database; use uniquely named temporary catalog records and remove only
+those records afterward. Keep credentials in the runtime secret store.
+
+On 2026-10-21, digest-verified standalone v0.44.1, using a temporary OCI catalog
+and `DOCKER_MCP_IN_CONTAINER=1`, completed OAuth discovery and dynamic client
+registration. The first browser attempt had the wrong account and was canceled;
+its Chrome-blocked cancellation redirect was not bypassed or counted as a
+successful callback. Supported cleanup confirmed no OAuth token was present.
+
+A later rehearsal established the dedicated QA browser session and selected
+only its intended synthetic ledger on the real consent page. Authorization
+explicitly requested `ledger.read ledger.write` through
+`oauth authorize beancount-io --scopes 'ledger.read ledger.write'`; omitting
+`--scopes` had requested only identity access, which would not prove ledger
+access. No grant was approved or token obtained. The callback process has since
+exited, so restart that same narrowly scoped native flow after approval. The
+remaining gate is the specific temporary access decision, then authenticated
+discovery, one known read, a supported `dry_run` preview, unchanged-state and
+callback verification, followed by review. Docker Desktop and QA sign-in are
+not the current gates. Consent alone does not establish an authorized journey.
 
 Docker MCP Gateway v0.44.1 is a prerelease, published 2026-09-23. Its CLI has changed since the registry contribution guide: `catalog import` is absent, while current catalog commands support conversion from legacy catalogs. Inspect the chosen version's help and use its supported catalog/profile flow. The gateway README documents `DOCKER_MCP_IN_CONTAINER=1` for feature checks outside Docker Desktop; this alone does not prove that every OAuth service is available. No persistent Docker Desktop configuration is part of this preparation.
+
+For this version, a successful legacy-catalog conversion produced an empty
+server list with the generated fixture. The supported
+`catalog server add <temporary-oci-reference> --server file://<entry-file>`
+path accepted a single-server entry with the gateway's `oauth.providers`
+shape and made the server available for OAuth. Local entry files must resolve
+under `~/.docker/mcp/catalogs`. Inspect the actual catalog contents rather than
+treating command exit status as proof that the server was imported; no remote
+catalog was published by this local operation.
 
 The [remote contribution guide](https://github.com/docker/mcp-registry/blob/main/CONTRIBUTING.md#-adding-a-remote-mcp-server) requires these three files and OAuth testing, followed by a Docker-team-reviewed upstream pull request. No submission is represented by this directory. Use the private credential-sharing channel linked by Docker only when the operator proceeds with review; never attach credentials to a commit, pull request, or public board.
 
