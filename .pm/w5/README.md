@@ -76,6 +76,7 @@
 - [909 — Keep cost lots in the funded-close check](./909.md) — minor CLI closing-guard follow-up to w2/092; offsetting quantities with a residual book balance reproduced 2026-10-21.
 - [910 — Check funded children closed by `close_tree`](./910.md) — minor CLI closing-guard follow-up to w2/092; generated descendant closes reproduced 2026-10-21.
 - [911 — Honor valid remembered custom date formats](./911.md) — minor CLI import-recall follow-up to w1/m24/t007; unchanged-file refusals and unsafe replacement hints reproduced 2026-10-21.
+- [912 — Keep child source accounts in parent-importer identity](./912.md) — major CLI skipped-payment follow-up to 223; separate child-account statements collide despite `--duplicates include`, reproduced 2026-10-21.
 
 The 27 findings from the MCP QA auth sweep against the hosted endpoint (023–054, less the five under [Dropped](#dropped)) were fixed in `backend-cluster/backend-v2` and closed on 2026-10-02 and 2026-10-03; each note under [`done/`](./done/) records what shipped and in which commit. None has been re-observed against the hosted endpoint yet — the fixes reach it with the next backend deploy.
 
