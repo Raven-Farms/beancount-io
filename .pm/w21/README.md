@@ -81,3 +81,5 @@
 - [131](./131.md) — App link with a differently-cased owner opens your own ledger read-only, without "Current"
 - [132](./132.md) — Commit FILES list shows a rename as two "+0 −0" files; created and deleted files look identical
 - [133](./133.md) — Commit per-file counts read 0 under `lib/`-style dirs and miss `---`/`++` content lines
+- [134](./134.md) — Same-day entries are ordered by type, not file order, so account-journal running balances around a pad/note are wrong
+- [135](./135.md) — Pad fires within balance tolerance: wrong balances and no "Unused Pad entry" error
