@@ -38,6 +38,7 @@ import LedgerFileBreadcrumb from "../../shared/components/ledger-file-breadcrumb
 import { useTranslations } from "@/common/hooks/use-translations";
 import { LedgerWritePermission } from "@/common/components/ledger-permission/write";
 import { useIsMac } from "../hooks/use-platform";
+import { imageMimeType } from "@/common/lib/image-mime-type";
 import { restoreFocusOnDialogClose } from "@/common/lib/focus/restore-focus-on-dialog-close";
 
 export interface NonTextFileViewProps {
@@ -257,6 +258,8 @@ export const ImageFileView = ({
     downloadFile(filename, fileContent.content);
   };
 
+  const [failedImage, setFailedImage] = useState<string | null>(null);
+
   const renderImageContent = () => {
     if (!fileContent.content) {
       return (
@@ -271,18 +274,11 @@ export const ImageFileView = ({
       );
     }
 
-    try {
-      const imageData = `data:image/${getFileExtension(filename)};base64,${fileContent.content}`;
-      return (
-        <div className="flex justify-center p-2">
-          <img
-            src={imageData}
-            alt={filename}
-            className="max-w-full max-h-64 sm:max-h-96 object-contain rounded-lg border"
-          />
-        </div>
-      );
-    } catch {
+    // The MIME type, not the bare extension: `image/svg` is not a type, so
+    // an SVG never decoded (w4/258). A failed decode shows the fallback
+    // rather than a broken image; a different file gets a fresh attempt.
+    const imageData = `data:${imageMimeType(filename) ?? "application/octet-stream"};base64,${fileContent.content}`;
+    if (failedImage === imageData) {
       return (
         <div className="flex items-center justify-center py-8">
           <div className="text-center">
@@ -294,6 +290,16 @@ export const ImageFileView = ({
         </div>
       );
     }
+    return (
+      <div className="flex justify-center p-2">
+        <img
+          src={imageData}
+          alt={filename}
+          onError={() => setFailedImage(imageData)}
+          className="max-w-full max-h-64 sm:max-h-96 object-contain rounded-lg border"
+        />
+      </div>
+    );
   };
 
   return (

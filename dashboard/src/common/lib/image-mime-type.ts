@@ -5,6 +5,7 @@ const IMAGE_MIME_TYPES: Record<string, string> = {
   jpeg: "image/jpeg",
   gif: "image/gif",
   webp: "image/webp",
+  bmp: "image/bmp",
 };
 
 /** The image MIME type a ledger file's extension names, if it is an image. */
