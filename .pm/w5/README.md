@@ -45,7 +45,7 @@
 - [878 — Validate preset currencies before unrelated prompts and retry invalid answers](./878.md) — minor CLI PTY onboarding finding; reproduced 2026-10-20.
 - [879 — Refuse portable exports that cannot enumerate required plugin resource directories](./879.md) — minor CLI snapshot-integrity follow-up to 868; reproduced 2026-10-20.
 - [880 — Include cached runtime helpers and namespace-package resources in plugin exports](./880.md) — minor CLI dependency-inventory follow-up to 327; reproduced 2026-10-20.
-- [881 — Anchor stable import IDs to source transactions across view plugins](./881.md) — major CLI source-identity gap; filtered rows and `currency_accounts` native-ID conflicts reproduced 2026-10-20/21.
+- [881 — Anchor stable import IDs to written source facts](./881.md) — major CLI source-identity gap; filtered rows, `currency_accounts` and accepted wide-number native-ID conflicts reproduced 2026-10-20/21.
 - [882 — Pair transfer counterparts one-to-one across ID and date matchers](./882.md) — major CLI duplicate-booking / skipped-deposit follow-up to 821; reproduced 2026-10-20.
 - [883 — Render valid account components containing non-ASCII spaces in treeify](./883.md) — minor CLI grammar follow-up to 137; reproduced 2026-10-20.
 - [884 — Order same-day bulk trades from bookable lots](./884.md) — minor CLI ordering follow-up to 730 and 543; partial holdings, cost-lot selectors, inferred purchases and short covers reproduced 2026-10-20.
