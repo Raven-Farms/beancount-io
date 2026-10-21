@@ -20,6 +20,7 @@ export function getDrawerLedgers(
   ledgers: readonly DrawerLedger[],
   selectedId: string | null,
   selectedLedger?: DrawerLedger,
+  selectedGone = false,
 ): DrawerLedger[] {
   const isSelected = (ledger: DrawerLedger) =>
     ledger.id === selectedId || ledger.fullName === selectedId;
@@ -34,8 +35,15 @@ export function getDrawerLedgers(
 
   // A canonical link identifies the book before its metadata arrives. Don't
   // invent its visibility or use stale metadata from the previous selection.
+  // A ledger the server no longer has gets no row: it was pinned at the top
+  // as current, and tapping it led back to "no longer available" (w21/074).
   const separator = selectedId?.indexOf("/") ?? -1;
-  if (selectedId && separator > 0 && separator < selectedId.length - 1) {
+  if (
+    !selectedGone &&
+    selectedId &&
+    separator > 0 &&
+    separator < selectedId.length - 1
+  ) {
     return [
       {
         id: selectedId,

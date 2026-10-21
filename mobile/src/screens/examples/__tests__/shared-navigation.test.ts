@@ -122,6 +122,8 @@ function load(relative: string): any {
           return load("components/ledger-drawer/account-ledger-drawer.tsx");
         if (id === "./ledger-drawer") return { LedgerDrawer: "LedgerDrawer" };
         if (id === "./drawer-ledgers") return drawerLedgers;
+        if (id === "@/common/graphql-error-codes")
+          return { isLedgerGone: () => false };
         if (id === "@/common/horizontal-swipe-owner")
           return { EdgeSwipeGestureProvider: "EdgeSwipeGestureProvider" };
         if (id === "@/common/ledger-directory/ledger-directory-provider")
