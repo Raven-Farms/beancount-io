@@ -1,6 +1,6 @@
 # w3 · m57 — `beancount-accruals`: supported accrual drafts with explicit period policy
 
-**Worker:** worker3 **Goal:** a new customer skill prepares deterministic, idempotent accrual drafts under an explicit period policy, posted only through the suite's existing propose/confirm/check flow. **Status:** todo (remaining t004, t005, t006, t007)
+**Worker:** worker3 **Goal:** a new customer skill prepares deterministic, idempotent accrual drafts under an explicit period policy, posted only through the suite's existing propose/confirm/check flow. **Status:** todo (remaining t005, t006, t007)
 
 ## Tasks (in order)
 
@@ -9,7 +9,7 @@
 | [t001](done/t001.md) | Define the schedule contract and deterministic calculation reference — **DONE** | 75m | — |
 | [t002](done/t002.md) | Write the accruals skill with stable schedule identity — **DONE** | 90m | t001 |
 | [t003](done/t003.md) | Write evals for partial periods, reversals, invoices, and reruns — **DONE** | 60m | t002 |
-| t004 | Adoption surface | 30m | t003 |
+| [t004](done/t004.md) | Adoption surface — **DONE** | 30m | t003 |
 | t005 | Simplify | 15m | t004 |
 | t006 | Test coverage | 45m | t004 |
 | t007 | Closeout | 10m | t005, t006 |
