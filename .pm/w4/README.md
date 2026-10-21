@@ -5,7 +5,6 @@
 ## Inbox
 
 - [243 — Keep narrow Documents columns readable](./blocked/243.md) — minor; dashboard QA, 2026-10-20. — **blocked:** fix shipped in `19547f970`; awaiting live 390px geometry check
-- [260 — Allow downloading existing zero-byte files](./260.md) — minor; dashboard QA, 2026-10-20.
 - [261 — Keep switch states visible in forced colors](./261.md) — minor; dashboard QA, 2026-10-20.
 - [262 — Keep Journal, Account, Overview and Files row focus visible in forced colors](./262.md) — minor; dashboard QA, 2026-10-20.
 - [263 — Resolve file jumps with tab-separated Git headers](./263.md) — minor; dashboard QA, 2026-10-20.
