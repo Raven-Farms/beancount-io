@@ -40,7 +40,7 @@
 
 - [x] **m33** — [Keep New Entry drafts safe during submission](./done/m33/README.md) (6 tasks) ← dashboard QA, 2026-10-20; major, pending edits and late completion.
 
-- [ ] **m32** — [Preserve valid ledger dates across browser timezones](./blocked/m32/README.md) (6 tasks) ← dashboard QA, 2026-10-20; minor, shared picker and seven form integrations. — **blocked:** fix shipped in `a48655dd6`; awaiting deployed UTC/Apia browser verification
+- [ ] **m32** — [Preserve valid ledger dates across browser timezones](./m32/README.md) (6 tasks) ← dashboard QA, 2026-10-20; minor, shared picker and seven form integrations. — deployed UTC/Apia Transaction payload and CSV controls pass; remaining verification pending
 
 - [x] **m31** — [Bound authentication abuse without losing account recovery](./done/m31/README.md) (11 tasks) ← user-approved rate-limit review and `$pm` / `$loopx w4`, 2026-10-19
 

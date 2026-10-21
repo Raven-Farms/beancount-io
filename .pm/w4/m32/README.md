@@ -1,6 +1,6 @@
 # w4 · m32 — Preserve valid ledger dates across browser timezones
 
-**Worker:** worker1 **Goal:** a valid Gregorian ledger date remains enterable regardless of whether the browser timezone ever observed that civil day **Status:** blocked (t001–t004 done; t005 blocked on deployed-browser verification)
+**Worker:** worker1 **Goal:** a valid Gregorian ledger date remains enterable regardless of whether the browser timezone ever observed that civil day **Status:** todo (t001–t004 done; t005 browser verification in progress)
 
 ## Reproduced problem
 
@@ -63,10 +63,12 @@ Production `date-picker-DHE1-1Cn.js.map` serves `date-picker-utils.ts` SHA-256 `
 - **Why now:** strict local-Date validation leaves a reproducible gap after the earlier calendar fixes; changing the shared value contract requires coordinated caller verification.
 - **Adoption surface:** included because the shared control is exposed by seven entry workflows; review existing guidance without inventing a new public API or migration procedure.
 
-## Blocked
+## Deployment blocker cleared 2026-10-20
 
-**Blocked 2026-10-20** — t005's real-browser journeys (and therefore t006 Closeout) cannot run here.
+The dashboard QA loop verified the deployed date-picker-TUYdAQFd build in fresh UTC and Pacific/Apia contexts at 1440×1000 and 390×844. In every case ISO `2011-12-30` and localized `12/30/2011` display `12/30/2011` without an invalid state; the prepared BulkEntries transaction date remains exactly `2011-12-30`. All mutations were intercepted and aborted before transport: zero production writes. Synthetic unknown posting accounts were used because this disposable ledger's existing accounts open in 2026; optional prepared Open directives also retain the exact day. This proves serialization, not acceptance/persistence of a backdated transaction against the real ledger.
 
-- **Shipped baseline:** `a48655dd6` — DatePicker and all seven forms carry `yyyy-MM-dd` civil days through a UTC-backed date; calendar grid via DayPicker `dateLib`. Automated regressions under `TZ=Pacific/Apia`/UTC/Los Angeles cover the parser, picker typing (ISO and localized), calendar selection of Dec 29/30/31, local Today, all seven form payloads, receipt prefill, invalid/leap/partial input, and react-hook-form draft retention; each Apia case fails against the prior local-Date parse. Dashboard format, lint, tests (6358) and build pass.
-- **Blocker:** the DoD's fresh UTC and Apia Chromium Journal journeys at 1440 and 390 widths need a deployed build of `a48655dd6` and a timezone-emulating browser; this worker's machine has no Chrome for Playwright and no authenticated stack.
-- **Unblock:** after `a48655dd6` (or later) is deployed, a QA run in fresh UTC and `Pacific/Apia` contexts confirms ISO and `12/30/2011` entry in Journal → New Entry → Transaction at desktop and 390px show `12/30/2011` with no invalid state, and the prepared BulkEntries payload carries `2011-12-30` (hold and abort the request; no production write needed). Also recheck the Apia CSV preview/Configure control. **Who:** the user or the dashboard QA loop (deploy is user-run).
+All four contexts also preserve December29/31 and valid leap day2012-02-29; impossible2011-02-29, partial2011-12- and empty required input remain invalid with linked descriptions. Independent fresh narrow Apia CSV preview reports2Valid, and Configure retains12/30/2011 and12/31/2011; no AI or import request occurs. The deployed picker and utilities exactly match current source (SHA-256 `f6ebaac55683ed5e35301e367a88a844cc80edd00ebf2d3d3aa0c2e0b66f3b26` and `7ce800777bca123b28a02580182bdf549a46a69f4941d4bf13f47baefda00a6a`). Full deployed revision remains unverified.
+
+Ignored evidence in `dashboard/tmp/qa-20261020/dashboard-loop/`: `civil-date-deployed-transaction-control.json`, `civil-date-deployed-csv-control.json`, `civil-date-deployed-source-control.json` and inspected narrow `civil-date-deployed-{UTC,Pacific-Apia}-390.png`. All contexts closed; original main session and ledger unchanged. Preliminary pre-hydration timeouts and a broad dialog selector matching transient account popovers were excluded; settled repeats use the named New Entry dialog. These are harness exclusions, not new date findings.
+
+The prior blocker was access to a deployed build plus an authenticated timezone-aware browser; the explicit UTC/Apia Transaction payload and CSV unblock condition now holds. t005 remains todo for the rest of its verification checklist, including the other adapters, receipt prefill, calendar/Today, locale/reset/reopen and ordinary Los Angeles controls. Keep t006 open until the full DoD holds; no milestone closeout is claimed.
