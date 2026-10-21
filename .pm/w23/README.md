@@ -6,6 +6,7 @@
 
 ## Inbox
 
+- [044](./044.md) — `plaintext-journal` has no limit/paging: 276 KB in one read on `open_ledger/example`, unbounded for premium (010 class)
 - [043](./043.md) — structured amount `.5` passes the decimal check but is written raw: opaque "parse errors in main.bean"
 - [042](./042.md) — entry-source write tools hard-code `wrote: []` (documented as files touched); `deleteEntrySources` echoes duplicate hashes
 - [041](./041.md) — `appendLedgerText` moves entries away from their `pushtag`/`poptag` (date insertion): the tag is silently dropped, or a dangling push breaks the file
