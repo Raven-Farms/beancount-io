@@ -1,6 +1,6 @@
 # w4 · m36 — Preserve profile and commit timestamps through hydration
 
-**Worker:** worker1 **Goal:** Commit, profile activity and repository-card timestamps hydrate without replacing focused controls and show exact browser-zone dates. **Status:** todo (t001, t002, t007, t004, t005, t008 done; t003 needs a deployed browser check)
+**Worker:** worker1 **Goal:** Commit, profile activity and repository-card timestamps hydrate without replacing focused controls and show exact browser-zone dates. **Status:** blocked (t001, t002, t004, t005, t007, t008 done; t003 needs the deployed repository-card check)
 
 **Severity:** minor. **Estimate:** 260m across ten tasks, dashboard only.
 
@@ -48,3 +48,12 @@ Repair the three independently proved consumers: CommitMetadata in direct/histor
 The initial implementation shipped in c293ab9c1 and the TanStack useHydrated refactor in 21029d403. The prior source worker recorded passing dashboard format/lint/6375 tests/build and real renderToString → hydrateRoot clock/zone regressions for those two consumers. Those historical checks are not claimed to validate the added card implementation.
 
 **Remaining reproduced failure:** unmodified RepositoryListItem still computes clock-dependent text and a runtime-zone title on initial render. At both widths a real startup delay changes its relative phrase, emits React418 and replaces the focused profile tree while other card labels remain stable. A narrow repeat needs only 11.586 seconds (13 → 14 minutes); an immediate-release control retains all nodes/focus. Separately, Kiritimati retains the server-zone title on all 12 initial public cards while 12 newly mounted cards have correct titles. See the appended production controls in [FINDINGS.md](./FINDINGS.md). This extends the same open hydration finding; the finding-group count is unchanged.
+
+## Blocked again
+
+**Blocked 2026-10-20** — t008's repository-card repair shipped; t003's deployed card journey (and t009, t010 and t006 after it) cannot run here.
+
+- **Shipped baseline:** `e38a2b614`. RepositoryListItem reuses the ProfileActivity convention: TanStack `useHydrated`, a UTC exact date as the server/hydration text and title, then the relative age and browser-zone title in place after hydration, with the `datetime` instant unchanged. `repository-list-item-hydration.test.tsx` runs real `renderToString` → `hydrateRoot`: across a 13→14-minute boundary and in a stable window the cards, time nodes and focused sibling button survive with no recoverable error, and under Pacific/Kiritimati the initial and newly rendered card titles match the browser expression (Jul 28 versus the server's Jul 27). It fails with the change reverted. Test mocks for LedgerCollection, profile tabs and date-locale gained `useHydrated`/`i18n`; dashboard format, lint, test and build pass. The task table's duplicated rows were removed.
+- **Blocker:** t003's added repository-card acceptance needs the deployed build and a held-startup browser at 1440 and 390; this worker has neither.
+- **Unblock:** after `e38a2b614` or later is deployed, QA repeats FINDINGS.md's held-startup card boundary and the UTC/Kiritimati 12-card title comparison at both widths, confirming focus and nodes survive without React418 and initial/expanded titles agree; then close t003, run t009's /simplify, complete t010 (the hydration test above is its starting point) and t006. **Who:** the user (deploy) and the dashboard QA loop.
+

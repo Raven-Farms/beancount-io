@@ -23,7 +23,7 @@
 
 - [x] **m37** — [Resolve README file and image references from their source path](./done/m37/README.md) (7 tasks) ← dashboard QA, 2026-10-20; minor, rendered file/image context and native hrefs. — deployed native links/images verified; owned fixture cleanup complete
 
-- [ ] **m36** — [Preserve profile and commit timestamps through hydration](./m36/README.md) (10 tasks) ← dashboard QA, 2026-10-20; minor, deployed commit/activity controls pass; repository-card hydration and exact titles remain.
+- [ ] **m36** — [Preserve profile and commit timestamps through hydration](./blocked/m36/README.md) (10 tasks) ← dashboard QA, 2026-10-20; minor, deployed commit/activity controls pass; repository-card hydration and exact titles remain. — **blocked:** card fix shipped in `e38a2b614`; awaiting deployed repository-card check
 
 - [ ] **m35** — [Keep form fields usable when suggestions fail](./blocked/m35/README.md) (6 tasks) ← dashboard QA, 2026-10-20; minor, four form suggestion wrappers. — **blocked:** fields now survive; deployed keyboard retry still loses focus, follow-up recorded
 
