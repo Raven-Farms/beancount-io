@@ -60,3 +60,7 @@
 - [110](./110.md) — First New Transaction after relaunch pre-fills accounts from the stale persisted cache, even a deleted account
 - [111](./111.md) — At AX2 the drawer clips "Ledgers", "+ New" and every ledger name to the top half of the text
 - [112](./112.md) — Cash flow Sankey leaves refunds out of Savings, so Savings ≠ Net Profit and the VoiceOver summary contradicts itself
+- [113](./113.md) — Journal account filter matches substrings: `Assets:Cash` also returns `Assets:CashApp` (REST/GraphQL/MCP)
+- [114](./114.md) — Transactions search text carries over to another ledger after a drawer switch
+- [115](./115.md) — Transaction filters survive sign-out and sign-in (missing from clearServerScopedState)
+- [116](./116.md) — A load-more page landing after a filter/ledger change is appended to the new list
