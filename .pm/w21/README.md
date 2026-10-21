@@ -103,3 +103,6 @@
 - [153](./153.md) — Sign-out leaves the browser session, so the next Sign In re-enters the old account with one Approve tap
 - [154](./154.md) — iOS reinstall silently signs the previous account back in from the Keychain
 - [155](./155.md) — On a non-default server, the app still sends merchant brands to the hosted logo service
+- [156](./156.md) — Deleting an account leaves its API keys in place and still accepted for identity checks
+- [157](./157.md) — A failed account deletion has already cancelled the subscription and unlinked banks
+- [158](./158.md) — Delete Account phrase must match exactly; a trailing space greys out Delete with no reason
