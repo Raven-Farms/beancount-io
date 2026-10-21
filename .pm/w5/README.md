@@ -83,6 +83,7 @@
 - [916 — Deduplicate imports across metadata and allowed-currency reordering](./916.md) — minor CLI identity follow-up to 224; reordered fields duplicate annotations, and reordered currency lists block repeated openings, reproduced 2026-10-21.
 - [917 — Skip unchanged document imports with relative attachment paths](./917.md) — minor CLI reload-identity follow-up to 224; root and included-file imports append the same reference on every run, reproduced 2026-10-21.
 - [918 — Give a complete CSV direction repair when `sign=ledger` is active](./918.md) — trivial CLI recovery-message follow-up to 755; the suggested added option conflicts with the existing sign setting, reproduced 2026-10-21.
+- [919 — Keep accented bank references stable on repeat import](./919.md) — major CLI native-ID lookup gap; unchanged NFD references lose exact matching and changed amounts double-book with exit 0, reproduced 2026-10-21.
 
 The 27 findings from the MCP QA auth sweep against the hosted endpoint (023–054, less the five under [Dropped](#dropped)) were fixed in `backend-cluster/backend-v2` and closed on 2026-10-02 and 2026-10-03; each note under [`done/`](./done/) records what shipped and in which commit. None has been re-observed against the hosted endpoint yet — the fixes reach it with the next backend deploy.
 
