@@ -81,6 +81,7 @@
 - [914 — Clarify note/document import lifecycle exceptions](./914.md) — trivial CLI guide follow-up to 351; valid post-close annotations and opening-date controls reproduced 2026-10-21.
 - [915 — Preserve empty labels in booked-cost exports and imports](./915.md) — minor CLI printer follow-up to 805; PRINT merges lots and native Cost imports lose the label, reproduced 2026-10-21.
 - [916 — Deduplicate imports across metadata and allowed-currency reordering](./916.md) — minor CLI identity follow-up to 224; reordered fields duplicate annotations, and reordered currency lists block repeated openings, reproduced 2026-10-21.
+- [917 — Skip unchanged document imports with relative attachment paths](./917.md) — minor CLI reload-identity follow-up to 224; root and included-file imports append the same reference on every run, reproduced 2026-10-21.
 
 The 27 findings from the MCP QA auth sweep against the hosted endpoint (023–054, less the five under [Dropped](#dropped)) were fixed in `backend-cluster/backend-v2` and closed on 2026-10-02 and 2026-10-03; each note under [`done/`](./done/) records what shipped and in which commit. None has been re-observed against the hosted endpoint yet — the fixes reach it with the next backend deploy.
 
