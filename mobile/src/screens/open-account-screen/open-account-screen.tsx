@@ -327,6 +327,9 @@ export function OpenAccountScreenComponent(): JSX.Element {
       date,
     });
 
+    // An open was already running: this press did nothing (w21/193).
+    if (!result) return;
+
     if (result.ok) {
       setSaved(true);
       // Accounts opens its ancestors and scrolls to it (w21/175).

@@ -253,6 +253,11 @@ function AddBudgetScreenImpl(): JSX.Element {
       incomeRoot: ledgerMeta?.options.name_income,
     });
 
+    // A save was already running: this press did nothing (w21/193).
+    if (!result) {
+      return;
+    }
+
     if (result.ok) {
       haptics.success();
       setSaved(true);
