@@ -22,6 +22,8 @@ import { useLedgerReadContext } from "@/common/hooks/use-ledger-read-context";
 import { useTrialBalance } from "@/screens/accounts-screen/hooks/use-trial-balance";
 import { useLedgerPrices } from "@/common/hooks/use-ledger-prices";
 import { useToday } from "@/common/hooks/use-today";
+import { useAccountCloseDates } from "@/common/hooks/use-account-close-dates";
+import { listedAccountsAsOf } from "@/common/account-close-dates";
 import { isShowingStaleDataFromQueries } from "@/common/apollo/stale-data";
 
 // Skeleton rows sized to the loaded table's rhythm: each tile plus its vertical
@@ -103,9 +105,16 @@ const AccountsScreenImpl = (): JSX.Element => {
     error: unitsError,
   } = useTrialBalance(ledgerId, undefined, "units");
 
+  // Closed accounts the ledger emptied stay out of the tree (w21/099).
+  const today = useToday();
+  const closeDates = useAccountCloseDates(ledgerId);
+  const listed = useMemo(
+    () => listedAccountsAsOf(accounts ?? [], today, closeDates),
+    [accounts, today, closeDates],
+  );
   const categories = useMemo(
-    () => selectTrialBalanceCategories(currency, accountData, accounts),
-    [currency, accountData, accounts],
+    () => selectTrialBalanceCategories(currency, accountData, listed),
+    [currency, accountData, listed],
   );
   // Which commodities had a price: a row's value reads "at market" or "at
   // cost", and each root dates its prices the way Home's pages do.
@@ -117,7 +126,6 @@ const AccountsScreenImpl = (): JSX.Element => {
     refetch: pricesRefetch,
     error: pricesError,
   } = useLedgerPrices(ledgerId);
-  const today = useToday();
   const displays = useMemo(
     () =>
       selectTrialBalanceDisplays(

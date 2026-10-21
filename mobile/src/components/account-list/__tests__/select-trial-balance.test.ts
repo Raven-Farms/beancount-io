@@ -599,3 +599,87 @@ describe("selectTrialBalanceCategories with unconverted holdings", () => {
     ).toEqual(["Hoogle:Checking", "Cash"]);
   });
 });
+
+// w21/099: a closed, emptied account stayed in the tree as a live "$0.00" row,
+// because every opened account was kept at zero.
+describe("closed accounts in the Accounts tree", () => {
+  const { listedAccountsAsOf } = require("../../../common/account-close-dates");
+  type Node = { account: string; children: Node[] };
+  const flatten = (nodes: Node[]): string[] =>
+    nodes.flatMap((node) => [node.account, ...flatten(node.children)]);
+
+  const data = createTrialBalance({
+    assets: {
+      account: "Assets",
+      total: { USD: 15 },
+      children: [
+        {
+          account: "Assets:Bank",
+          balanceChildren: { USD: 15 },
+          children: [
+            { account: "Assets:Bank:Checking", balanceChildren: { USD: 10 } },
+            { account: "Assets:Bank:Old", balanceChildren: { USD: 0 } },
+            { account: "Assets:Bank:Leftover", balanceChildren: { USD: 5 } },
+          ],
+        },
+      ],
+    },
+  });
+  const opened = [
+    "Assets:Bank:Checking",
+    "Assets:Bank:Old",
+    "Assets:Bank:Leftover",
+    "Assets:Bank:New",
+  ];
+  const closeDates = new Map([
+    ["Assets:Bank:Old", "2026-08-04"],
+    ["Assets:Bank:Leftover", "2026-08-04"],
+  ]);
+  const tree = flatten(
+    selectTrialBalanceCategories(
+      "USD",
+      data,
+      listedAccountsAsOf(opened, "2026-10-21", closeDates),
+    )[0].children as Node[],
+  );
+
+  it("leaves out a closed account the ledger emptied", () => {
+    expect(tree.includes("Assets:Bank:Old")).toBe(false);
+  });
+
+  it("keeps a closed account with a balance left, and a new empty one", () => {
+    expect(tree.includes("Assets:Bank:Leftover")).toBe(true);
+    expect(tree.includes("Assets:Bank:New")).toBe(true);
+    expect(tree.includes("Assets:Bank:Checking")).toBe(true);
+  });
+
+  it("lists an account closing in the future", () => {
+    expect(
+      listedAccountsAsOf(
+        ["Assets:Bank:Old"],
+        "2026-08-03",
+        new Map([["Assets:Bank:Old", "2026-08-04"]]),
+      ),
+    ).toEqual(["Assets:Bank:Old"]);
+  });
+
+  it("is what the Accounts tab grafts", () => {
+    const source = require("fs").readFileSync(
+      require("path").join(
+        __dirname,
+        "..",
+        "..",
+        "..",
+        "screens",
+        "accounts-screen",
+        "accounts-screen.tsx",
+      ),
+      "utf8",
+    ) as string;
+    expect(
+      source.includes(
+        "selectTrialBalanceCategories(currency, accountData, listed)",
+      ),
+    ).toBe(true);
+  });
+});
