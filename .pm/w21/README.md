@@ -126,3 +126,6 @@
 - [176](./176.md) — iOS camera permission prompt body is English in every language (no InfoPlist.strings)
 - [177](./177.md) — Chart axes and VoiceOver use English K/M/B/T abbreviations in every language
 - [178](./178.md) — Mobile has no untranslated-string guard; a dashboard port would miss its leak shapes
+- [179](./179.md) — Account detail header values mixed holdings at the last-posting price; the Accounts row uses the latest
+- [180](./180.md) — Budget actuals use raw prefix match (`Transport` counts `Transportation`), unlike Reports — owner decision
+- [181](./181.md) — Merchant detail stops after 500 substring matches; rows vanish under its own header
