@@ -30,7 +30,7 @@ Continuous dashboard QA requested for w4, 2026-10-20. See [the live API findings
 
 ## Scope
 
-Backend-v2's shared parseDirectiveDate and its two write consumers. Preserve strict invalid-date errors, operation/credential policy, quota behavior, allowInvalid semantics and source ordering. Do not introduce a new date format, broaden year 0000 policy, change the ledger engine, modify a caller's date or add a date bypass. The earlier report-document timeout remains unclassified. A later independent fixture completed actual dashboard exports and proved a separate dashboard period-construction defect, recorded in [W4/283](../done/283.md); it is outside this backend milestone.
+Backend-v2's shared parseDirectiveDate and its two write consumers. Preserve strict invalid-date errors, operation/credential policy, quota behavior, allowInvalid semantics and source ordering. Do not introduce a new date format, broaden year 0000 policy, change the ledger engine, modify a caller's date or add a date bypass. The earlier report-document timeout remains unclassified. A later independent fixture completed actual dashboard exports and proved a separate dashboard period-construction defect, recorded in [W4/283](../283.md); it is outside this backend milestone.
 
 ## Closeout (2026-10-20)
 
