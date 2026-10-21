@@ -35,4 +35,17 @@ describe("lists searched with the keyboard up", () => {
       ).includes("paddingBottom:150"),
     ).toBe(false);
   });
+
+  // w21/146: the New Transaction form under the number pad.
+  it("lets New Transaction scroll its postings and Remainder above the pad", () => {
+    const source = compact(
+      "screens/multi-postings-transaction/multi-postings-transaction-screen.tsx",
+    );
+    expect(
+      source.includes(
+        'automaticallyAdjustKeyboardInsets={Platform.OS==="ios"}',
+      ),
+    ).toBe(true);
+    expect(source.includes('keyboardDismissMode="interactive"')).toBe(true);
+  });
 });

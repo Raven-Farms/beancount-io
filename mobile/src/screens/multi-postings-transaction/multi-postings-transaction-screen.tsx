@@ -5,6 +5,7 @@ import { isOpenOn } from "@/common/account-close-dates";
 import {
   Alert,
   AccessibilityInfo,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -726,6 +727,12 @@ const MultiPostingsTransactionScreenComponent = () => {
       />
       <ScrollView
         keyboardShouldPersistTaps="handled"
+        // With four or more postings the number pad covered Add posting, the
+        // Remainder line and the save errors, and the form was too short to
+        // scroll (w21/146). The inset makes it scroll; a downward drag puts
+        // the pad, which has no return key, away.
+        automaticallyAdjustKeyboardInsets={Platform.OS === "ios"}
+        keyboardDismissMode="interactive"
         contentContainerStyle={styles.scrollContent}
       >
         <View style={styles.card}>
