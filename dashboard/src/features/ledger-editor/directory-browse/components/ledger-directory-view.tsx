@@ -276,7 +276,7 @@ export default function LedgerDirectoryView({
                 }}
                 className={cn(
                   "flex items-center justify-between px-4 py-3 border-b border-border last:border-b-0",
-                  "hover:bg-accent cursor-pointer transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset",
+                  "hover:bg-accent cursor-pointer transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset forced-colors:focus-visible:[outline-style:solid] forced-colors:focus-visible:outline-2 forced-colors:focus-visible:-outline-offset-2 forced-colors:focus-visible:outline-[CanvasText]",
                   index === 0 && "rounded-t-sm",
                   index === dirContent.length - 1 && "rounded-b-sm",
                 )}

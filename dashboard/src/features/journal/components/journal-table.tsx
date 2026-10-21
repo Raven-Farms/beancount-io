@@ -447,7 +447,7 @@ function JournalTableEntryRows({
               position,
             })}
             className={cn(
-              "rounded-sm text-primary outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring",
+              "rounded-sm text-primary outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring forced-colors:focus-visible:[outline-style:solid] forced-colors:focus-visible:outline-2 forced-colors:focus-visible:outline-offset-2 forced-colors:focus-visible:outline-[CanvasText]",
             )}
             onClick={(event) => {
               event.stopPropagation();
