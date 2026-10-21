@@ -46,3 +46,5 @@
 - [096](./096.md) — Weekly/daily budget chart labels are US month/day in every language
 - [097](./097.md) — Delete Budget alert is ungrammatical in de/nl/ru/uk/sk/bg (adverb used as adjective)
 - [098](./098.md) — Reports/Budget chart VoiceOver summaries ignore plural forms ("over 1 months")
+- [099](./099.md) — Accounts tab lists closed, emptied accounts as live "$0.00" rows
+- [100](./100.md) — Multi-currency account journal shows "$0.00" rows and day totals for other-currency movements
