@@ -9,3 +9,4 @@
 - [006](./006.md) — journal `directiveTypes` is case-sensitive and unvalidated; `["transaction"]` returns an empty success on REST, GraphQL and MCP
 - [007](./007.md) — `updateEntrySource` summary prints the new hash as the old one
 - [008](./008.md) — a failed `createLedger` leaves its `requestId` stuck "in progress" for 24h; the retry answers `CONFLICT` with an entry-edit hint
+- [009](./009.md) — `isStarred` is readable only on GraphQL; REST and MCP `getLedger`/`metadata` omit it
