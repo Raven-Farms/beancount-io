@@ -16,3 +16,4 @@
 - [020](./020.md) — BQL `BALANCES AT value` returns units; `BALANCES FROM <window>` fails "No matching lot" (rustledger 0.24.0)
 - [021](./021.md) — OAuth grants unknown scopes verbatim (`ledger.superuser` lands in the signed token)
 - [022](./blocked/022.md) — report rustledger's multi-currency `cost(sum(position))` collapse upstream — **blocked:** filing in an external tracker needs the user's approval
+- [023](./023.md) — archives over 8 MiB unreachable for OAuth MCP clients: the documented fallback URL refuses the MCP token
