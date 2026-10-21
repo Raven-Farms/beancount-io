@@ -1,6 +1,6 @@
 # w6 · m9 — Reach developer marketplaces and galleries
 
-**Worker:** worker1 **Goal:** Developers discover and connect the hosted MCP server through the supported Docker, Cursor, Cline, and GitHub/VS Code galleries. **Status:** todo (t001 done; t002 blocked on dedicated QA consent; t003 blocked on native QA and final publisher agreement; t004 next)
+**Worker:** worker1 **Goal:** Developers discover and connect the hosted MCP server through the supported Docker, Cursor, Cline, and GitHub/VS Code galleries. **Status:** todo (t001 done; t002 blocked on dedicated QA consent; t003 blocked on native QA and final publisher agreement; t004 blocked on native Cline QA rehearsal; t005 next)
 
 **Implementation estimate:** ~4½h, excluding external review queues and the standing closing tasks.
 
@@ -11,7 +11,7 @@
 | [t001](./done/t001.md) | Confirm developer-gallery eligibility and existing records — **DONE** | 30m | w6/m8/t001 |
 | [t002](./t002.md) | Prepare and submit Docker's remote MCP catalog entry — **BLOCKED** | 60m | t001 |
 | [t003](./t003.md) | Package the remote connection for Cursor's official and community marketplaces — **BLOCKED** | 60m | t001 |
-| [t004](./t004.md) | Prepare Cline's eligible marketplace submission and remote connection evidence | 45m | t001 |
+| [t004](./t004.md) | Prepare Cline's eligible marketplace submission and remote connection evidence — **BLOCKED** | 45m | t001 |
 | [t005](./t005.md) | Prepare GitHub inclusion and verify VS Code's discovery path | 45m | t001 |
 | [t006](./t006.md) | Verify publication and fresh discovery across eligible developer galleries | 30m | t002, t003, t004, t005 |
 | [t007](./t007.md) | Adoption surface | 30m | t006 |
@@ -56,3 +56,5 @@
 - **t002:** validated payload and standalone discovery/DCR are ready, but the browser has a non-QA account; no grant/read/preview or submission occurred. **Unblock:** dedicated QA browser session/consent, successful gateway query/preview and callback, then documented upstream review. **Owner:** QA account holder, repository worker and Docker reviewers in that order. Other gallery preparations proceed independently.
 
 - **t003:** format-validated MCP-only packages and both publisher logins are ready; native Cursor QA journey (existing w1/m34/t003), nested-repository submission shape and final official Publisher Terms approval remain. **Unblock:** complete those steps, then send/verify both separate submissions. **Owner:** QA/client account holder, publisher and platform reviewers.
+
+- **t004:** required icon/setup/issue payload is prepared; Cline is not rehearsed and required template confirmations stay unchecked. **Unblock:** dedicated QA/native Cline session, README-only setup and OAuth/query/preview/catalog-dedup evidence, then review. **Owner:** QA/client account holder, repository worker and Cline reviewers.
