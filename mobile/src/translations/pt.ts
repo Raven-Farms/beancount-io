@@ -47,6 +47,8 @@ export const pt: Translations = {
     "Não foi possível concluir a ação. Verifique sua conexão e o acesso ao livro e tente novamente.",
   ledgerReadOnly:
     "Este livro é somente leitura. Escolha um livro que você possa editar para fazer alterações.",
+  ledgerEditorNotUtf8:
+    "Este arquivo não é texto UTF-8. Editá-lo aqui alteraria alguns caracteres, por isso ele abre somente para leitura. Edite-o em um computador.",
 
   // bottom tab bar
   home: "Início",

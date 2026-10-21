@@ -13,14 +13,14 @@ describe("file editor read-only indicator", () => {
   );
 
   it("shows the translated read-only message when the ledger cannot be written", () => {
-    const start = source.indexOf(
-      '{!canWrite && fileErrors.length === 0 && editorState === "content" ? (',
-    );
+    const start = source.indexOf("{!canWrite &&");
     expect(start === -1).toBe(false);
+    const banner = source.slice(start, source.indexOf(") : null}", start));
+    // A file that is not UTF-8 says so, even beside the error banner
+    // (w21/042); a read-only ledger keeps its own message.
+    expect(banner.includes("(lossy || fileErrors.length === 0)")).toBe(true);
     expect(
-      source
-        .slice(start, source.indexOf(") : null}", start))
-        .includes('t("ledgerReadOnly")'),
+      banner.includes('t(lossy ? "ledgerEditorNotUtf8" : "ledgerReadOnly")'),
     ).toBe(true);
   });
 

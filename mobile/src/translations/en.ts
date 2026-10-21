@@ -42,6 +42,8 @@ export const en = {
     "Couldn’t complete that action. Check your connection and ledger access, then try again.",
   ledgerReadOnly:
     "This ledger is read-only. Choose a ledger you can edit to make changes.",
+  ledgerEditorNotUtf8:
+    "This file isn’t UTF-8 text. Editing it here would change some of its characters, so it opens read-only. Edit it on a computer.",
   // bottom tab bar
   home: "Home",
   ledger: "Ledger",

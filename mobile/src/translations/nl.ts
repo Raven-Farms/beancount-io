@@ -47,6 +47,8 @@ export const nl: Translations = {
     "De actie kon niet worden voltooid. Controleer je verbinding en toegang tot het boek en probeer het opnieuw.",
   ledgerReadOnly:
     "Dit boek is alleen-lezen. Kies een boek dat je kunt bewerken om wijzigingen aan te brengen.",
+  ledgerEditorNotUtf8:
+    "Dit bestand is geen UTF-8-tekst. Als je het hier bewerkt, veranderen sommige tekens, dus het opent alleen-lezen. Bewerk het op een computer.",
 
   // bottom tab bar
   home: "Home",

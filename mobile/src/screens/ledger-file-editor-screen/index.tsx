@@ -48,6 +48,7 @@ import { getKeyboardOverlap } from "@/components/keyboard-accessory-bar/utils";
 import {
   decodeLedgerFileContent,
   encodeLedgerFileContent,
+  isLosslessLedgerFileContent,
 } from "@/common/ledger-file-content";
 import { isBeancountFile } from "@/common/ledger-file-types";
 import {
@@ -339,7 +340,11 @@ function LedgerFileEditorSession({
   const navigation = useNavigation();
   const router = useRouter();
   const guest = useGuest();
-  const { canWrite } = useLedgerAccess();
+  const { canWrite: canWriteLedger } = useLedgerAccess();
+  // A file that does not round-trip as UTF-8 opens read-only: saving it would
+  // replace its non-UTF-8 bytes with U+FFFD (w21/042).
+  const [lossy, setLossy] = useState(false);
+  const canWrite = canWriteLedger && !lossy;
   const { currencies: operatingCurrencies } = useLedgerReadContext(ledgerId);
 
   const beancount = isBeancountFile(path);
@@ -373,6 +378,7 @@ function LedgerFileEditorSession({
     const raw = fileData.getLedgerFile.content ?? "";
     const enc = fileData.getLedgerFile.encoding;
     const fc = decodeLedgerFileContent(raw, enc);
+    setLossy(!isLosslessLedgerFileContent(raw, enc));
     const fs = fileData.getLedgerFile.sha;
     const epoch = documentEpochRef.current + 1;
     documentEpochRef.current = epoch;
@@ -445,6 +451,7 @@ function LedgerFileEditorSession({
     const raw = result.data?.getLedgerFile?.content ?? "";
     const enc = result.data?.getLedgerFile?.encoding;
     const fc = decodeLedgerFileContent(raw, enc);
+    setLossy(!isLosslessLedgerFileContent(raw, enc));
     const fs = result.data?.getLedgerFile?.sha ?? "";
     const epoch = documentEpochRef.current + 1;
     documentEpochRef.current = epoch;
@@ -678,7 +685,9 @@ function LedgerFileEditorSession({
 
       {/* The Save button's absence is otherwise the only sign. Yields to the
           error banner so the two never stack. */}
-      {!canWrite && fileErrors.length === 0 && editorState === "content" ? (
+      {!canWrite &&
+      (lossy || fileErrors.length === 0) &&
+      editorState === "content" ? (
         <View style={styles.readOnlyBanner} testID="ledger-editor-read-only">
           <Ionicons
             name="lock-closed-outline"
@@ -686,7 +695,7 @@ function LedgerFileEditorSession({
             color={readOnlyNoticeColors(theme).foreground}
           />
           <Text key={fontScale} style={styles.readOnlyText}>
-            {t("ledgerReadOnly")}
+            {t(lossy ? "ledgerEditorNotUtf8" : "ledgerReadOnly")}
           </Text>
         </View>
       ) : null}
