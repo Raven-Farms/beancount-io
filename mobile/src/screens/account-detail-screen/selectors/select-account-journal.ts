@@ -148,6 +148,19 @@ export function mergeAccountJournalItems(
 }
 
 /**
+ * Whether a page repeated rows already loaded: an entry added at the head
+ * since the first page shifts every later offset down by one. Dedup hides the
+ * repeat, but the new head entry is only reached by refetching from the top
+ * (w21/072; Transactions does the same, w21/035).
+ */
+export function accountJournalPageOverlapped(page: {
+  incoming: number;
+  added: number;
+}): boolean {
+  return page.added < page.incoming;
+}
+
+/**
  * Whether more pages remain. Stops when every unique entry is loaded, when
  * the server returns an empty page, or when a non-empty page adds nothing
  * after dedup (full overlap at `offset = loaded` — further fetches cannot

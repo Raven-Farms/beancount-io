@@ -46,6 +46,7 @@ import {
   AccountJournalSection,
   accountJournalItemKey,
   hasMoreAccountJournal,
+  accountJournalPageOverlapped,
   mergeAccountJournalItems,
   selectAccountJournalRows,
   groupAccountJournalRowsToSections,
@@ -289,6 +290,7 @@ const AccountDetailScreenImpl = ({
     if (isLoadingMore || !hasMore || journalLoading || !ledgerId) {
       return;
     }
+    let listMoved = false;
     try {
       await fetchMore({
         variables: {
@@ -310,10 +312,12 @@ const AccountDetailScreenImpl = ({
             prev.getLedgerAccountJournal.items,
             incoming,
           );
-          setLastJournalPage({
+          const page = {
             incoming: incoming.length,
             added: merged.length - prev.getLedgerAccountJournal.items.length,
-          });
+          };
+          listMoved = accountJournalPageOverlapped(page);
+          setLastJournalPage(page);
           return {
             ...prev,
             getLedgerAccountJournal: {
@@ -323,6 +327,10 @@ const AccountDetailScreenImpl = ({
           };
         },
       });
+      if (listMoved) {
+        setLastJournalPage(null);
+        void journalRefetch().catch(() => undefined);
+      }
     } catch (err) {
       console.error("Error loading more account entries:", err);
     }
@@ -335,6 +343,7 @@ const AccountDetailScreenImpl = ({
     items.length,
     journalConversion,
     fetchMore,
+    journalRefetch,
   ]);
 
   const [refreshing, setRefreshing] = useState(false);

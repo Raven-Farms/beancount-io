@@ -2,6 +2,7 @@ import {
   AccountJournalItem,
   AccountJournalRow,
   accountJournalItemKey,
+  accountJournalPageOverlapped,
   hasMoreAccountJournal,
   mergeAccountJournalItems,
   selectAccountJournalRows,
@@ -650,5 +651,41 @@ describe("selectAccountJournalRows: what a directive says", () => {
 
   it("words the failed difference in every locale", () => {
     expect(en.balanceOffBy).toBe("Off by {{amount}}");
+  });
+});
+
+// w21/072: a head entry added while paging shifted page 2 down a row; dedup
+// dropped the repeat and the new entry was never fetched.
+describe("paging past an entry added at the head", () => {
+  const hashes = (n: number, from = 0) =>
+    Array.from({ length: n }, (_, i) => item({ entry_hash: `e${from + i}` }));
+
+  it("flags the overlapping page so the screen refetches", () => {
+    const loaded = hashes(50);
+    // "new" now sits at the top, so offset 50 starts at the old 50th row.
+    const page2 = hashes(50, 49);
+    const merged = mergeAccountJournalItems(loaded, page2);
+    const page = {
+      incoming: page2.length,
+      added: merged.length - loaded.length,
+    };
+    expect(accountJournalPageOverlapped(page)).toBe(true);
+    expect(accountJournalPageOverlapped({ incoming: 50, added: 50 })).toBe(
+      false,
+    );
+    expect(accountJournalPageOverlapped({ incoming: 0, added: 0 })).toBe(false);
+  });
+
+  it("is refetched by the screen", () => {
+    const source = require("fs").readFileSync(
+      require("path").join(__dirname, "..", "..", "account-detail-screen.tsx"),
+      "utf8",
+    ) as string;
+    expect(
+      source.includes("listMoved = accountJournalPageOverlapped(page);"),
+    ).toBe(true);
+    expect(
+      source.includes("void journalRefetch().catch(() => undefined);"),
+    ).toBe(true);
   });
 });

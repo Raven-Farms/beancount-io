@@ -14,7 +14,6 @@
 
 - [064](./blocked/064.md) — A token refresh whose response is lost signs the user out on the next refresh (rotated token replayed → grant revoked) — **blocked:** needs an owner decision (ADR) on a refresh-token reuse grace window
 - [065](./blocked/065.md) — One early-year entry (e.g. 0050) makes the balance sheet 23,718 monthly points (3 MB) and the app stalls — **blocked:** needs an approach decision (per-pill fetch vs server downsample) and a simulator profile of the stall
-- [072](./072.md) — Account detail paging dedupes an overlap but never refetches, so a new entry stays missing
 - [073](./073.md) — Renamed roots (`name_assets` …): Open Account can only write `Assets:…`; Reports' Recent transactions always empty
 - [074](./074.md) — After the selected ledger is deleted, the drawer still pins it at the top as the current ledger (054 follow-up)
 - [075](./075.md) — Multi-posting entry: a sub-cent leftover shows a red "+$0.00" that blocks Done; ".5" is refused
