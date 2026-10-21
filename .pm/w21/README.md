@@ -110,3 +110,5 @@
 - [160](./160.md) — Money flow prints per-unit price/cost to 28 digits for `@@` / `{{}}` totals
 - [161](./161.md) — A posting-level `!` flag is dropped everywhere (row, detail, VoiceOver)
 - [162](./162.md) — Transaction and posting metadata never appear on transaction detail
+- [163](./163.md) — Account detail shows "−$0.00"/"+$0.00" on a day that nets to zero (float residue)
+- [164](./164.md) — Account balance chart skips postingless months and spaces points by index, inventing balances
