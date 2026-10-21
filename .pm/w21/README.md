@@ -129,3 +129,6 @@
 - [179](./179.md) — Account detail header values mixed holdings at the last-posting price; the Accounts row uses the latest
 - [180](./180.md) — Budget actuals use raw prefix match (`Transport` counts `Transportation`), unlike Reports — owner decision
 - [181](./181.md) — Merchant detail stops after 500 substring matches; rows vanish under its own header
+- [182](./182.md) — A ledger-service outage at launch permanently drops the selected ledger
+- [183](./183.md) — Lossy/captive network: cold start waits ~60 s on the splash although the cache is ready
+- [184](./184.md) — Offline next day, Home's Spending card fails: its cache key changes daily
