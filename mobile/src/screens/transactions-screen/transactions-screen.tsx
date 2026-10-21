@@ -37,6 +37,7 @@ import {
   groupToSections,
 } from "./utils/transaction-display-utils";
 import { toPlainSearchFilter } from "./utils/plain-search-filter";
+import { mergeJournalPage } from "./utils/merge-journal-page";
 import {
   countActiveFilters,
   selectFiltersForLedger,
@@ -164,6 +165,9 @@ const TransactionList = () => {
   const loadMore = useCallback(async () => {
     if (isLoadingMore || !hasMore || loading || !ledgerId) return;
 
+    // An entry added elsewhere shifted the pages; reload from the top, where
+    // it now sits (w21/035).
+    let listMoved = false;
     try {
       await fetchMore({
         variables: {
@@ -178,19 +182,22 @@ const TransactionList = () => {
         },
         updateQuery: (prev, { fetchMoreResult }) => {
           if (!fetchMoreResult?.getLedgerJournal?.data) return prev;
+          const { data, overlapped } = mergeJournalPage(
+            prev.getLedgerJournal.data || [],
+            fetchMoreResult.getLedgerJournal.data,
+          );
+          listMoved = overlapped;
           return {
             ...prev,
             getLedgerJournal: {
               ...prev.getLedgerJournal,
-              data: [
-                ...(prev.getLedgerJournal.data || []),
-                ...fetchMoreResult.getLedgerJournal.data,
-              ],
+              data,
               total: fetchMoreResult.getLedgerJournal.total,
             },
           };
         },
       });
+      if (listMoved) void refetch().catch(() => undefined);
     } catch (err) {
       console.error("Error loading more transactions:", err);
     }
@@ -201,6 +208,7 @@ const TransactionList = () => {
     ledgerId,
     transactions.length,
     fetchMore,
+    refetch,
     filter,
     filterQuery,
   ]);
@@ -286,7 +294,8 @@ const TransactionList = () => {
         sections={isInitialLoading || error ? [] : sections}
         renderSectionHeader={renderSectionHeader}
         renderItem={renderItem}
-        keyExtractor={(item, index) => `${item.entry_hash}-${index}`}
+        // Unique once pages are merged by hash (w21/035).
+        keyExtractor={(item) => item.entry_hash}
         stickySectionHeadersEnabled={false}
         keyboardDismissMode="on-drag"
         keyboardShouldPersistTaps="handled"

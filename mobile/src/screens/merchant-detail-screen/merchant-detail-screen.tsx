@@ -42,6 +42,7 @@ import { cadenceLabelKey } from "@/screens/merchants-screen/selectors/merchant-s
 import { resolveRecurringVerdict } from "@/screens/merchants-screen/selectors/resolve-recurring";
 import { usePayeeRecurrence } from "@/screens/merchants-screen/use-payee-recurrence";
 import { EntryRow } from "@/screens/transactions-screen/entry-row";
+import { mergeJournalPage } from "@/screens/transactions-screen/utils/merge-journal-page";
 import { DateSectionHeader } from "@/screens/transactions-screen/date-section-header";
 import {
   DirectiveType,
@@ -344,6 +345,9 @@ function MerchantDetailBody({ payee }: { payee: string }) {
     if (isLoadingMore || !hasMore || journalLoading || !ledgerId) {
       return;
     }
+    // An entry added elsewhere shifted the pages; reload from the top, where
+    // it now sits (w21/035).
+    let listMoved = false;
     try {
       await fetchMore({
         variables: {
@@ -359,20 +363,23 @@ function MerchantDetailBody({ payee }: { payee: string }) {
           if (!fetchMoreResult?.getLedgerJournal?.data) {
             return prev;
           }
+          const { data, overlapped } = mergeJournalPage(
+            prev.getLedgerJournal.data || [],
+            fetchMoreResult.getLedgerJournal.data,
+          );
+          listMoved = overlapped;
           return {
             ...prev,
             getLedgerJournal: {
               ...prev.getLedgerJournal,
-              data: [
-                ...(prev.getLedgerJournal.data || []),
-                ...fetchMoreResult.getLedgerJournal.data,
-              ],
+              data,
               total: fetchMoreResult.getLedgerJournal.total,
             },
           };
         },
       });
       pagesFetchedRef.current += 1;
+      if (listMoved) void refetchJournal().catch(() => undefined);
     } catch (err) {
       console.error("Error loading more merchant transactions:", err);
     }
@@ -383,6 +390,7 @@ function MerchantDetailBody({ payee }: { payee: string }) {
     ledgerId,
     rawEntries.length,
     fetchMore,
+    refetchJournal,
     journalFilter,
   ]);
 
@@ -581,7 +589,8 @@ function MerchantDetailBody({ payee }: { payee: string }) {
         contentContainerStyle={styles.listContent}
         sections={listError ? [] : sections}
         keyExtractor={(item, index) =>
-          `${isJournalTransaction(item) ? item.entry_hash : "row"}:${index}`
+          // Transactions are unique by hash once pages merge (w21/035).
+          isJournalTransaction(item) ? item.entry_hash : `row:${index}`
         }
         renderItem={({ item }) => (
           <EntryRow entry={item} onPress={() => handleEntryPress(item)} />
