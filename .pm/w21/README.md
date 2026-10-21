@@ -24,3 +24,4 @@
 - [074](./074.md) — After the selected ledger is deleted, the drawer still pins it at the top as the current ledger (054 follow-up)
 - [075](./075.md) — Multi-posting entry: a sub-cent leftover shows a red "+$0.00" that blocks Done; ".5" is refused
 - [076](./076.md) — Home budget panel ignores the today cutoff and disagrees with the Budget screen; an overspent 0 budget reads "0% used"
+- [077](./077.md) — Commit detail's VoiceOver stats label never pluralises ("+1 additions"; wrong ru/uk/sk/bg forms)
