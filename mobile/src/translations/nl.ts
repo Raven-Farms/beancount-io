@@ -525,6 +525,7 @@ export const nl: Translations = {
   budgetPanelEmpty: "Stel een doel in voor een rekening",
   budgetPanelRowValue:
     "{{actual}} van {{budget}}, {{percent}}% gebruikt, {{status}}",
+  budgetPanelRowValueNoBudget: "{{actual}} van {{budget}}, {{status}}",
   budgetLoadFailed: "Budgetten konden niet worden geladen",
   budgetIntervalDaily: "Dagelijks",
   budgetIntervalWeekly: "Wekelijks",

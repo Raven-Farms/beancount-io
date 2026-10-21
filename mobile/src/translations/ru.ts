@@ -534,6 +534,7 @@ export const ru: Translations = {
   budgetPanelEmpty: "Задайте цель для счёта",
   budgetPanelRowValue:
     "{{actual}} из {{budget}}, использовано {{percent}}%, {{status}}",
+  budgetPanelRowValueNoBudget: "{{actual}} из {{budget}}, {{status}}",
   budgetLoadFailed: "Не удалось загрузить бюджеты",
   budgetIntervalDaily: "Ежедневно",
   budgetIntervalWeekly: "Еженедельно",

@@ -6,6 +6,7 @@ import {
   type GetLedgerIntervalTotalsQueryVariables,
 } from "@/generated-graphql/graphql";
 import { resolveCurrencyBalance } from "@/common/balance-util";
+import { getFormatDate } from "@/common/format-util";
 import { ledgerRevisionVar } from "@/common/apollo/invalidate-ledger";
 import { budgetTotalsVariables } from "@/screens/budget-screen/hooks/use-budget-actuals";
 import {
@@ -125,7 +126,13 @@ export function useBudgetPanel({
       if (cancelled) {
         return;
       }
-      setRows(selectBudgetPanelRows(inputs, BUDGET_PANEL_ROWS));
+      setRows(
+        selectBudgetPanelRows(
+          inputs,
+          BUDGET_PANEL_ROWS,
+          getFormatDate(new Date()),
+        ),
+      );
       setLoading(false);
     });
 

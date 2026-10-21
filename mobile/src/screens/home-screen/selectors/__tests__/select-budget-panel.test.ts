@@ -118,7 +118,10 @@ describe("selectBudgetPanelRows", () => {
       3,
     );
 
-    expect(row.progressPercent).toBe(0);
+    // Nothing to divide by: a full meter, flagged so no percent is read out
+    // (w21/076), and never Infinity or NaN.
+    expect(row.progressPercent).toBe(100);
+    expect(row.noBudget).toBe(true);
   });
 
   it("breaks ties on account so row order does not depend on query timing", () => {
@@ -181,6 +184,7 @@ describe("budgetPanelRowAccessibilityValue", () => {
     budget: 500,
     actual: 400,
     progressPercent: 80,
+    noBudget: false,
     favorable: true,
     ...overrides,
   });
@@ -231,5 +235,62 @@ describe("budgetPanelRowAccessibilityValue", () => {
         "budgetPanelRowValue(",
       ),
     ).toBe(true);
+  });
+});
+
+// w21/076: Home measured a month in progress against the whole month's budget
+// while the Budget screen measured it against the budget up to today, and a 0
+// budget already spent past read "0% used" and sorted last.
+describe("the Home panel against the Budget screen", () => {
+  const today = "2026-10-21";
+  const october = (account: string, amount: string, actual: number) => ({
+    ...input(account, amount, actual),
+    periodEnd: "2026-10-31",
+  });
+
+  it("budgets a month in progress only up to today", () => {
+    const [row] = selectBudgetPanelRows(
+      [october("Expenses:QaBudFood", "300 USD", 250)],
+      3,
+      today,
+    );
+    expect(row.budget.toFixed(2)).toBe("203.23");
+    expect(row.favorable).toBe(false);
+    expect(Math.round(row.progressPercent)).toBe(123);
+  });
+
+  it("ranks an overspent 0 budget first, with a full meter and no percent", () => {
+    const rows = selectBudgetPanelRows(
+      [
+        october("Expenses:Food", "300 USD", 290),
+        october("Expenses:Zero", "0 USD", 80),
+      ],
+      3,
+      today,
+    );
+    expect(rows[0].account).toBe("Expenses:Zero");
+    expect(rows[0].noBudget).toBe(true);
+    expect(rows[0].progressPercent).toBe(100);
+    expect(rows[0].favorable).toBe(false);
+    const spoken = budgetPanelRowAccessibilityValue(
+      rows[0],
+      (key, options) => `${key} ${JSON.stringify(options)}`,
+    );
+    expect(spoken.startsWith("budgetPanelRowValueNoBudget ")).toBe(true);
+    expect(spoken.includes("percent")).toBe(false);
+  });
+
+  it("is given today by the panel hook", () => {
+    const source = require("fs").readFileSync(
+      require("path").join(
+        __dirname,
+        "..",
+        "..",
+        "hooks",
+        "use-budget-panel.ts",
+      ),
+      "utf8",
+    ) as string;
+    expect(source.includes("getFormatDate(new Date()),")).toBe(true);
   });
 });

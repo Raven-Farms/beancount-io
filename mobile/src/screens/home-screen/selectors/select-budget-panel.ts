@@ -28,15 +28,25 @@ export type BudgetPanelRow = {
   budget: number;
   /** Actual for the same period, sign-corrected to match. */
   actual: number;
-  /** Spend as a percentage of budget, clamped at 0; 0 with nothing to divide by. */
+  /**
+   * Spend as a percentage of budget, clamped at 0. A budget of 0 has nothing
+   * to divide by: 100 (a full meter) once anything is spent, else 0.
+   */
   progressPercent: number;
+  /** A budget of 0 or less, so `progressPercent` is no percentage to read out. */
+  noBudget: boolean;
   /** True when this budget is on the good side of its target. */
   favorable: boolean;
 };
 
+/**
+ * @param asOf - Today. A period still in progress is budgeted only up to it,
+ *   as the Budget screen does, so the row and the screen agree (w21/076).
+ */
 export function selectBudgetPanelRows(
   inputs: BudgetPanelInput[],
   limit: number,
+  asOf?: string,
 ): BudgetPanelRow[] {
   const rows = inputs.map(({ group, actual, periodEnd }) => {
     // Reuse the card's derivation so the two surfaces can't drift on the
@@ -52,29 +62,37 @@ export function selectBudgetPanelRows(
             periodEnd,
             group.interval,
             group.budgetHistory,
+            asOf,
           ) * direction,
       },
     ]);
+    const spent = stats.actual ?? 0;
+    const noBudget = stats.budget <= 0;
 
     return {
       account: group.account,
       shortAccount: dropRoot(group.account),
       currency: group.currency,
       budget: stats.budget,
-      actual: stats.actual ?? 0,
-      progressPercent: stats.progressPercent ?? 0,
+      actual: spent,
+      progressPercent: noBudget
+        ? spent > 0
+          ? 100
+          : 0
+        : (stats.progressPercent ?? 0),
+      noBudget,
       favorable: stats.favorable,
     };
   });
 
-  // Highest utilization first; ties break on account so the order is stable
-  // between renders rather than depending on query completion order.
+  // Highest utilization first, and a 0 budget already spent past it before
+  // everything else: it read "0% used" and sorted last (w21/076). Ties break on
+  // account so the order is stable between renders rather than depending on
+  // query completion order.
+  const rank = (row: BudgetPanelRow) =>
+    row.noBudget && row.actual > 0 ? Infinity : row.progressPercent;
   return rows
-    .sort(
-      (a, b) =>
-        b.progressPercent - a.progressPercent ||
-        a.account.localeCompare(b.account),
-    )
+    .sort((a, b) => rank(b) - rank(a) || a.account.localeCompare(b.account))
     .slice(0, limit);
 }
 
@@ -94,12 +112,20 @@ export function budgetPanelRowAccessibilityValue(
   row: BudgetPanelRow,
   t: (key: string, options?: Record<string, string | number>) => string,
 ): string {
+  const status = t(row.favorable ? "budgetBelowTarget" : "budgetAboveTarget");
+  if (row.noBudget) {
+    return t("budgetPanelRowValueNoBudget", {
+      actual: formatMoneyWithCurrency(row.actual, row.currency),
+      budget: formatMoneyWithCurrency(row.budget, row.currency),
+      status,
+    });
+  }
   return t("budgetPanelRowValue", {
     actual: formatMoneyWithCurrency(row.actual, row.currency),
     budget: formatMoneyWithCurrency(row.budget, row.currency),
     // Whole percent: a spoken "73.4166 percent" is noise, and the meter it
     // describes is a bar, not a readout.
     percent: Math.round(row.progressPercent),
-    status: t(row.favorable ? "budgetBelowTarget" : "budgetAboveTarget"),
+    status,
   });
 }

@@ -477,6 +477,7 @@ export const zh: Translations = {
   budgetEmptyStateCta: "添加你的第一个预算",
   budgetPanelEmpty: "为任意账户设置目标金额",
   budgetPanelRowValue: "{{actual}} / {{budget}}，已用 {{percent}}%，{{status}}",
+  budgetPanelRowValueNoBudget: "{{actual}} / {{budget}}，{{status}}",
   budgetLoadFailed: "加载预算失败",
   budgetIntervalDaily: "每日",
   budgetIntervalWeekly: "每周",

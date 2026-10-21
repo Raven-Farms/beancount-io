@@ -537,6 +537,7 @@ export const de: Translations = {
   budgetPanelEmpty: "Für ein Konto ein Ziel festlegen",
   budgetPanelRowValue:
     "{{actual}} von {{budget}}, {{percent}}% genutzt, {{status}}",
+  budgetPanelRowValueNoBudget: "{{actual}} von {{budget}}, {{status}}",
   budgetLoadFailed: "Budgets konnten nicht geladen werden",
   budgetIntervalDaily: "Täglich",
   budgetIntervalWeekly: "Wöchentlich",

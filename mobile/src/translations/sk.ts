@@ -538,6 +538,7 @@ export const sk: Translations = {
   budgetPanelEmpty: "Nastavte cieľ pre účet",
   budgetPanelRowValue:
     "{{actual}} z {{budget}}, využité {{percent}}%, {{status}}",
+  budgetPanelRowValueNoBudget: "{{actual}} z {{budget}}, {{status}}",
   budgetLoadFailed: "Načítanie rozpočtov zlyhalo",
   budgetIntervalDaily: "Denne",
   budgetIntervalWeekly: "Týždenne",

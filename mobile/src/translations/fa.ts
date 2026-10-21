@@ -518,6 +518,7 @@ export const fa: Translations = {
   budgetPanelEmpty: "برای یک حساب هدف تعیین کنید",
   budgetPanelRowValue:
     "{{actual}} از {{budget}}، {{percent}}% مصرف‌شده، {{status}}",
+  budgetPanelRowValueNoBudget: "{{actual}} از {{budget}}، {{status}}",
   budgetLoadFailed: "بارگذاری بودجه‌ها ناموفق بود",
   budgetIntervalDaily: "روزانه",
   budgetIntervalWeekly: "هفتگی",

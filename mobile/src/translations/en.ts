@@ -529,6 +529,7 @@ export const en = {
   budgetPanelEmpty: "Set a spending target for any account",
   budgetPanelRowValue:
     "{{actual}} of {{budget}}, {{percent}}% used, {{status}}",
+  budgetPanelRowValueNoBudget: "{{actual}} of {{budget}}, {{status}}",
   budgetLoadFailed: "Failed to load budgets",
   budgetIntervalDaily: "Daily",
   budgetIntervalWeekly: "Weekly",

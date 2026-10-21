@@ -524,6 +524,7 @@ export const bg: Translations = {
   budgetPanelEmpty: "Задайте цел за сметка",
   budgetPanelRowValue:
     "{{actual}} от {{budget}}, използвани {{percent}}%, {{status}}",
+  budgetPanelRowValueNoBudget: "{{actual}} от {{budget}}, {{status}}",
   budgetLoadFailed: "Неуспешно зареждане на бюджетите",
   budgetIntervalDaily: "Дневно",
   budgetIntervalWeekly: "Седмично",
