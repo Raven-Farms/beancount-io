@@ -336,6 +336,7 @@ export const sk: Translations = {
     "Táto transakcia nie je vo zvolenej knihe dostupná.",
   transactionDetailRemoved:
     "Táto transakcia bola zmenená alebo odstránená. Vráťte sa späť a pozrite si aktuálny zoznam.",
+  transactionErrorOpenFile: "Otvoriť v editore súborov",
   merchantDetailUnavailable:
     "Tento obchodník nie je vo zvolenej knihe dostupný.",
   commitDetailUnavailable: "Táto zmena nie je vo zvolenej knihe dostupná.",

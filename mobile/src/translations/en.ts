@@ -320,6 +320,7 @@ export const en = {
     "This transaction isn't available in the selected ledger.",
   transactionDetailRemoved:
     "This transaction was changed or removed. Go back to see the current list.",
+  transactionErrorOpenFile: "Open in the file editor",
   merchantDetailUnavailable:
     "This merchant isn't available in the selected ledger.",
   commitDetailUnavailable:

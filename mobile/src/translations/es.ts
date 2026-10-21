@@ -334,6 +334,7 @@ export const es: Translations = {
     "Esta transacción no está disponible en el libro seleccionado.",
   transactionDetailRemoved:
     "Esta transacción se cambió o se eliminó. Vuelve atrás para ver la lista actual.",
+  transactionErrorOpenFile: "Abrir en el editor de archivos",
   merchantDetailUnavailable:
     "Este comercio no está disponible en el libro seleccionado.",
   commitDetailUnavailable:

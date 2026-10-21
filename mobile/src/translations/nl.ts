@@ -326,6 +326,7 @@ export const nl: Translations = {
     "Deze transactie is niet beschikbaar in het geselecteerde grootboek.",
   transactionDetailRemoved:
     "Deze transactie is gewijzigd of verwijderd. Ga terug om de actuele lijst te zien.",
+  transactionErrorOpenFile: "Openen in de bestandseditor",
   merchantDetailUnavailable:
     "Deze handelaar is niet beschikbaar in het geselecteerde grootboek.",
   commitDetailUnavailable:

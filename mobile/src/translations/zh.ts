@@ -295,6 +295,7 @@ export const zh: Translations = {
   accountDetailUnavailable: "所选账本中没有这个账户。",
   transactionDetailUnavailable: "所选账本中没有这笔交易。",
   transactionDetailRemoved: "此交易已被更改或删除。返回即可查看最新列表。",
+  transactionErrorOpenFile: "在文件编辑器中打开",
   merchantDetailUnavailable: "所选账本中没有这个商家。",
   commitDetailUnavailable: "所选账本中没有这项更改。",
   journalLoadError: "加载日记账失败：",

@@ -322,6 +322,7 @@ export const fa: Translations = {
   transactionDetailUnavailable: "این تراکنش در دفتر کل انتخاب‌شده موجود نیست.",
   transactionDetailRemoved:
     "این تراکنش تغییر کرده یا حذف شده است. برای دیدن فهرست فعلی برگردید.",
+  transactionErrorOpenFile: "باز کردن در ویرایشگر فایل",
   merchantDetailUnavailable: "این فروشنده در دفتر کل انتخاب‌شده موجود نیست.",
   commitDetailUnavailable: "این تغییر در دفتر کل انتخاب‌شده موجود نیست.",
   journalLoadError: "بارگذاری روزنامه ناموفق بود: ",

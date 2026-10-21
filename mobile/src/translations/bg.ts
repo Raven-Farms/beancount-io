@@ -328,6 +328,7 @@ export const bg: Translations = {
     "Тази транзакция не е налична в избраната книга.",
   transactionDetailRemoved:
     "Тази транзакция е променена или премахната. Върнете се, за да видите актуалния списък.",
+  transactionErrorOpenFile: "Отвори в редактора на файлове",
   merchantDetailUnavailable: "Този търговец не е наличен в избраната книга.",
   commitDetailUnavailable: "Тази промяна не е налична в избраната книга.",
   journalLoadError: "Неуспешно зареждане на журнала: ",

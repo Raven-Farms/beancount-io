@@ -59,6 +59,8 @@ import {
 } from "./selectors/select-transaction-detail";
 import { shouldShowTransactionWriteActions } from "./selectors/select-transaction-write-actions";
 import { isEntryGone } from "./selectors/select-entry-gone";
+import { selectEntryErrors } from "./selectors/select-entry-errors";
+import { useLedgerErrors } from "@/common/hooks/use-ledger-errors";
 import { deleteTransaction } from "./delete-transaction";
 import { ledgerWriteFailureMessage } from "@/common/ledger-refusal";
 import { i18n } from "@/translations";
@@ -70,7 +72,7 @@ import {
 } from "@/common/app-links/ledger-url-actions";
 import { getServerUrl } from "@/common/vars/server-url";
 import { HERO_AMOUNT_FIT } from "@/components/amount-text/hero-amount-fit";
-import { letterSpacing } from "@/common/rtl";
+import { LEADING_TEXT_ALIGN, letterSpacing } from "@/common/rtl";
 
 const getStyles = (theme: ColorTheme) =>
   StyleSheet.create({
@@ -161,6 +163,32 @@ const getStyles = (theme: ColorTheme) =>
       color: theme.black80,
       marginTop: 8,
       marginBottom: 8,
+    },
+    errorBanner: {
+      borderWidth: 1,
+      borderColor: theme.error,
+      borderRadius: 12,
+      padding: 12,
+      gap: 8,
+      marginBottom: 8,
+    },
+    errorRow: {
+      flexDirection: "row",
+      alignItems: "flex-start",
+      gap: 8,
+    },
+    errorText: {
+      flex: 1,
+      fontSize: fontSizes.sm,
+      lineHeight: 20,
+      color: theme.error,
+      textAlign: LEADING_TEXT_ALIGN,
+    },
+    errorAction: {
+      fontSize: fontSizes.sm,
+      fontWeight: fontWeights.medium,
+      color: theme.primary,
+      textAlign: LEADING_TEXT_ALIGN,
     },
     card: {
       borderWidth: 1,
@@ -354,6 +382,39 @@ const TransactionDetailImpl = ({
       ? contextEntry
       : null;
   }, [stashedEntry, data]);
+
+  // Errors the ledger reports inside this entry's own lines (w21/030).
+  const { errors: ledgerErrors } = useLedgerErrors(ledgerId);
+  const contextSource = data?.getLedgerEntryContext;
+  const sourceMeta = (
+    contextSource?.entry as { meta?: { filename?: string; lineno?: number } }
+  )?.meta;
+  const entryErrors = selectEntryErrors(
+    ledgerErrors,
+    contextSource && sourceMeta?.filename && sourceMeta.lineno != null
+      ? {
+          filename: sourceMeta.filename,
+          lineno: sourceMeta.lineno,
+          slice: contextSource.slice,
+        }
+      : null,
+  );
+  const openErrorInEditor = useCallback(
+    (error: { filename?: string | null; lineno?: number | null }) => {
+      router.push({
+        pathname: guest
+          ? "/examples/ledger-file-editor"
+          : "/(app)/ledger-file-editor",
+        params: {
+          path: error.filename ?? "",
+          ...(error.lineno != null
+            ? { initialLine: String(error.lineno) }
+            : {}),
+        },
+      });
+    },
+    [router, guest],
+  );
 
   // Changed or removed elsewhere since the list loaded: refresh the lists
   // behind this screen so the stale row is gone when the user goes back.
@@ -555,6 +616,28 @@ const TransactionDetailImpl = ({
             )}
           </View>
         </View>
+
+        {entryErrors.length > 0 ? (
+          <View style={styles.errorBanner} testID="transaction-errors">
+            {entryErrors.map((error, index) => (
+              <View key={`${error.lineno}-${index}`} style={styles.errorRow}>
+                <Ionicons
+                  name="warning-outline"
+                  size={16}
+                  color={theme.error}
+                />
+                <Text style={styles.errorText}>{error.message}</Text>
+              </View>
+            ))}
+            <Text
+              style={styles.errorAction}
+              accessibilityRole="button"
+              onPress={() => openErrorInEditor(entryErrors[0]!)}
+            >
+              {t("transactionErrorOpenFile")}
+            </Text>
+          </View>
+        ) : null}
 
         {postingRows.length > 0 && (
           <>

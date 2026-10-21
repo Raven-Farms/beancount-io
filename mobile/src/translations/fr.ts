@@ -335,6 +335,7 @@ export const fr: Translations = {
     "Cette transaction n'est pas disponible dans le grand livre sélectionné.",
   transactionDetailRemoved:
     "Cette transaction a été modifiée ou supprimée. Revenez en arrière pour voir la liste à jour.",
+  transactionErrorOpenFile: "Ouvrir dans l'éditeur de fichiers",
   merchantDetailUnavailable:
     "Ce marchand n'est pas disponible dans le grand livre sélectionné.",
   commitDetailUnavailable:

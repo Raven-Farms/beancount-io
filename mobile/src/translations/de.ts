@@ -336,6 +336,7 @@ export const de: Translations = {
     "Diese Buchung ist im ausgewählten Hauptbuch nicht verfügbar.",
   transactionDetailRemoved:
     "Diese Buchung wurde geändert oder entfernt. Gehen Sie zurück, um die aktuelle Liste zu sehen.",
+  transactionErrorOpenFile: "Im Dateieditor öffnen",
   merchantDetailUnavailable:
     "Dieser Händler ist im ausgewählten Hauptbuch nicht verfügbar.",
   commitDetailUnavailable:

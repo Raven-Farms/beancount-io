@@ -333,6 +333,7 @@ export const uk: Translations = {
   transactionDetailUnavailable: "Ця транзакція недоступна у вибраній книзі.",
   transactionDetailRemoved:
     "Цю транзакцію змінено або видалено. Поверніться, щоб побачити актуальний список.",
+  transactionErrorOpenFile: "Відкрити в редакторі файлів",
   merchantDetailUnavailable: "Цей продавець недоступний у вибраній книзі.",
   commitDetailUnavailable: "Ця зміна недоступна у вибраній книзі.",
   journalLoadError: "Помилка завантаження журналу: ",

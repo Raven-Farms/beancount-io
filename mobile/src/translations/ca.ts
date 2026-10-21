@@ -335,6 +335,7 @@ export const ca: Translations = {
     "Aquesta transacció no està disponible al llibre seleccionat.",
   transactionDetailRemoved:
     "Aquesta transacció s'ha canviat o eliminat. Torna enrere per veure la llista actual.",
+  transactionErrorOpenFile: "Obre a l'editor de fitxers",
   merchantDetailUnavailable:
     "Aquest comerç no està disponible al llibre seleccionat.",
   commitDetailUnavailable:
