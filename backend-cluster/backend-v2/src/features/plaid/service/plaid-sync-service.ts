@@ -7,6 +7,7 @@ import {
   InternalServerError,
   BadUserInputError,
   DomainError,
+  NotFoundError,
   ServiceUnavailableError,
 } from "@/shared/errors";
 import { lock, LOCK_KEYS } from "@/shared/lock";
@@ -181,6 +182,14 @@ export class PlaidSyncService implements IPlaidSyncService {
     transactions: PlaidTransaction[];
     accounts: ReadonlyMap<string, PlaidAccount>;
   }> {
+    // Authority first, against the route's ledger: a read-only credential is
+    // FORBIDDEN before any lookup, instead of being told the transactions do
+    // not exist (w23/024).
+    const { ledgerRepoId } = await this.authorizeBankAction(
+      identity,
+      action,
+      ledgerId,
+    );
     const transactions = await this.models.plaidTransaction.getByTransactionIds(
       this.db,
       transactionIds,
@@ -212,12 +221,6 @@ export class PlaidSyncService implements IPlaidSyncService {
     const itemIds = [
       ...new Set([...accounts.values()].map((a) => a.plaidItemId)),
     ];
-    const { ledgerRepoId } = await this.authorizeBankAction(
-      identity,
-      action,
-      ledgerId,
-      itemIds,
-    );
     for (const itemId of itemIds) {
       const item = await this.models.plaidItem.getById(this.db, itemId);
       if (
@@ -225,9 +228,13 @@ export class PlaidSyncService implements IPlaidSyncService {
         item.userId !== identity.userId ||
         item.ledgerRepoId !== ledgerRepoId
       ) {
-        throw new BadUserInputError("Unauthorized access to transaction");
+        // Concealed like every other foreign bank resource.
+        throw new NotFoundError("Bank connection");
       }
     }
+    // The item-bound decision as well, so the PDP verifies the chain and the
+    // audit record names the connections acted on.
+    await this.authorizeBankAction(identity, action, ledgerId, itemIds);
 
     return { transactions, accounts };
   }

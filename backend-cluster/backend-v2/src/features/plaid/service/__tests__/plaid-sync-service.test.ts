@@ -980,7 +980,7 @@ describe("PlaidSyncService", () => {
           ledgerName,
           txInputs,
         ),
-      ).rejects.toThrow("Unauthorized access to transaction");
+      ).rejects.toThrow("Bank connection not found");
     });
 
     it("should reject when the item's ledgerRepoId matches but user binding differs", async () => {
@@ -1010,7 +1010,7 @@ describe("PlaidSyncService", () => {
           ledgerName,
           txInputs,
         ),
-      ).rejects.toThrow("Unauthorized access to transaction");
+      ).rejects.toThrow("Bank connection not found");
     });
   });
 
@@ -1115,7 +1115,7 @@ describe("PlaidSyncService", () => {
           ledgerId,
           transactionIds,
         ),
-      ).rejects.toThrow("Unauthorized access to transaction");
+      ).rejects.toThrow("Bank connection not found");
     });
 
     it("should throw ForbiddenError when the caller only has read access", async () => {

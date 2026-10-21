@@ -7,6 +7,7 @@ import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import { PlaidItemService } from "@/features/plaid/service/plaid-item-service";
 import { PlaidQueryResolver } from "@/features/plaid/api/resolvers/plaid-resolver.query";
+import { PlaidMutationResolver } from "@/features/plaid/api/resolvers/plaid-resolver.mutation";
 import {
   AuthorizationService,
   SourceBackedRelationshipEvaluator,
@@ -60,11 +61,15 @@ const stored = (id: keyof typeof ITEMS) => ({
 });
 
 let currentResolver: PlaidQueryResolver;
+let currentMutation: PlaidMutationResolver;
 let schema: Awaited<ReturnType<typeof buildSchema>>;
 beforeAll(async () => {
   schema = await buildSchema({
-    resolvers: [PlaidQueryResolver],
-    container: { get: () => currentResolver },
+    resolvers: [PlaidQueryResolver, PlaidMutationResolver],
+    container: {
+      get: (ctor) =>
+        ctor === PlaidMutationResolver ? currentMutation : currentResolver,
+    },
     globalMiddlewares: [graphqlScopeMiddleware("enforce")],
     validate: true,
   });
@@ -105,7 +110,16 @@ async function fixture(identity: Identity) {
       },
     }),
   };
-  const models = { plaidItem: { getById } };
+  const getAccountById = jest.fn(async (_db: unknown, id: string) =>
+    id === "pacc_main"
+      ? { id, plaidItemId: "pitm_main", accountName: "Checking" }
+      : null,
+  );
+  const updateForItem = jest.fn(async () => true);
+  const models = {
+    plaidItem: { getById },
+    plaidAccount: { getById: getAccountById, updateForItem },
+  };
   const authorization = new AuthorizationService(
     new SourceBackedRelationshipEvaluator(
       {} as never,
@@ -123,6 +137,7 @@ async function fixture(identity: Identity) {
     authorization,
   );
   currentResolver = new PlaidQueryResolver(service);
+  currentMutation = new PlaidMutationResolver(service, {} as never);
   const rest = await startV1TestServer(
     { services: { plaidItem: service } } as unknown as AppLayers,
     config,
@@ -140,6 +155,44 @@ async function fixture(identity: Identity) {
   await Promise.all([client.connect(a), server.connect(b)]);
   return {
     getById,
+    getAccountById,
+    updateForItem,
+    /** Map a bank account on each surface; each result's code, or `ok`. */
+    map: async (accountId: string) => {
+      const response = await fetch(
+        `${rest.url}/api-gateway/v1/ledgers/alice/main/bank-accounts/${accountId}/mapping`,
+        {
+          method: "PUT",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ ledgerAccount: "Assets:Bank" }),
+        },
+      );
+      const restCode =
+        response.status === 200
+          ? "ok"
+          : ((await response.json()) as { error: { code: string } }).error.code;
+      const tool = await client.callTool({
+        name: "mapBankAccount",
+        arguments: {
+          ledger: "alice/main",
+          account_id: accountId,
+          ledger_account: "Assets:Bank",
+        },
+      });
+      const mcpCode = tool.isError
+        ? (tool.structuredContent as { error: { code: string } }).error.code
+        : "ok";
+      const gql = await graphql({
+        schema,
+        source: `mutation { updatePlaidAccountMapping(accountId: ${JSON.stringify(accountId)}, ledgerAccount: "Assets:Bank", ledgerId: "alice/main") }`,
+        contextValue: { identity, getCurrentIdentity: () => identity },
+      });
+      const gqlError = gql.errors?.[0];
+      const gqlCode = gqlError
+        ? formatError(gqlError.toJSON(), gqlError).extensions?.code
+        : "ok";
+      return { rest: restCode, mcp: mcpCode, gql: gqlCode };
+    },
     rest: async (id: string, ledger = "alice/main") => {
       const response = await fetch(
         `${rest.url}/api-gateway/v1/ledgers/${ledger}/banks/${id}`,
@@ -256,6 +309,58 @@ describe("one linked bank on REST, MCP and GraphQL", () => {
         });
       }
       expect(f.getById).not.toHaveBeenCalled();
+    } finally {
+      await f.close();
+    }
+  });
+});
+
+/**
+ * w23/024. The account-level bank tools looked the account up before
+ * authorizing: a credential without bank authority was told "Account not
+ * found" (BAD_USER_INPUT) for a missing id, an argument error for a scope
+ * problem, and the answer differed by whether the id existed.
+ */
+describe("mapping a bank account on REST, MCP and GraphQL", () => {
+  it("maps the ledger's own account", async () => {
+    const f = await fixture(admin);
+    try {
+      expect(await f.map("pacc_main")).toEqual({
+        rest: "ok",
+        mcp: "ok",
+        gql: "ok",
+      });
+      expect(f.updateForItem).toHaveBeenCalledTimes(3);
+    } finally {
+      await f.close();
+    }
+  });
+
+  it("answers a missing account with the concealed NOT_FOUND", async () => {
+    const f = await fixture(admin);
+    try {
+      expect(await f.map("nope")).toEqual({
+        rest: "NOT_FOUND",
+        mcp: "NOT_FOUND",
+        gql: "NOT_FOUND",
+      });
+      expect(f.updateForItem).not.toHaveBeenCalled();
+    } finally {
+      await f.close();
+    }
+  });
+
+  it("refuses a credential without bank authority before any lookup", async () => {
+    const f = await fixture(readWrite);
+    try {
+      for (const accountId of ["pacc_main", "nope"])
+        expect(await f.map(accountId)).toEqual({
+          rest: "FORBIDDEN",
+          mcp: "FORBIDDEN",
+          gql: "FORBIDDEN",
+        });
+      expect(f.getAccountById).not.toHaveBeenCalled();
+      expect(f.updateForItem).not.toHaveBeenCalled();
     } finally {
       await f.close();
     }
