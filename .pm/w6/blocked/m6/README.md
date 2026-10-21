@@ -1,6 +1,6 @@
 # w6 · m6 — Publish the ledger skills to ClawHub for OpenClaw and Hermes Agent
 
-**Worker:** worker1 **Goal:** An OpenClaw or Hermes Agent user installs any `beancount-*` skill by name from ClawHub, and it works on its own without a Git checkout or this repository's link installer. **Status:** todo (t001–t012 done; native routing and six named prerequisites clear; protected0.3.7 publication/current public-host verification and t013 remain)
+**Worker:** worker1 **Goal:** An OpenClaw or Hermes Agent user installs any `beancount-*` skill by name from ClawHub, and it works on its own without a Git checkout or this repository's link installer. **Status:** blocked (t001–t012 and six named prerequisites done;0.3.7 validated/submitted; nine accepted versions await public promotion, then independent current-byte/native-host checks)
 
 **Research date:** 2026-10-16. Sources: ClawHub's quickstart, how-it-works, and skill-format pages at `docs.openclaw.ai/clawhub/`; Hermes Agent's skills page at `hermes-agent.nousresearch.com/docs/user-guide/features/skills`. Re-check the CLI flags against `clawhub --help` and `hermes skills --help` before relying on them.
 
@@ -20,7 +20,7 @@
 | [t010](done/t010.md) | Adoption surface — **DONE** | 30m | t009 |
 | [t011](done/t011.md) | Simplify — **DONE** | 30m | t010 |
 | [t012](done/t012.md) | Test coverage — **DONE** | 45m | t010, t011 |
-| [t013](t013.md) | Closeout after the listings are live | 15m | t008, t012, w3/m55/t002, w3/m55/t003, w3/m56/t002, w3/m56/t003, w3/m57/t003, w3/m57/t004 |
+| [t013](t013.md) | Closeout after the listings are live — **BLOCKED** (nine accepted versions await promotion) | 15m | t008, t012, w3/m55/t002, w3/m55/t003, w3/m56/t002, w3/m56/t003, w3/m57/t003, w3/m57/t004 |
 
 ## Decisions — 2026-10-19
 
@@ -61,15 +61,15 @@
 ## Source + Goal linkage
 
 - **Source:** user request 2026-10-16 to list Beancount.io on OpenClaw and Hermes Agent, after a search found no such work on the board. Research the same day into ClawHub's publishing, skill-format, and moderation docs, and into Hermes Agent's skills-hub docs.
-- **Goal linkage:** **A3 — Community & distribution.** ClawHub is the public registry both hosts search, as PyPI and the Homebrew tap are for `bea` and the official MCP Registry is for the hosted endpoint ([w2/m36](../../w2/done/m36/README.md)). Secondary **A1 — Agent-native accounting**: two agent hosts beyond Claude Code and Codex can run the ledger workflows.
+- **Goal linkage:** **A3 — Community & distribution.** ClawHub is the public registry both hosts search, as PyPI and the Homebrew tap are for `bea` and the official MCP Registry is for the hosted endpoint ([w2/m36](../../../w2/done/m36/README.md)). Secondary **A1 — Agent-native accounting**: two agent hosts beyond Claude Code and Codex can run the ledger workflows.
 - **Expected outcome:** an OpenClaw or Hermes user types one install command and gets a working skill without cloning this repository. Signals: ClawHub install counts per skill, and `bea` installs that follow.
-- **Why now:** the suite is rehearsed and stable on Claude Code and Codex ([w5/m3](../../w5/done/m3/README.md), [w5/m9](../../w5/done/m9/README.md), [w5/m10](../../w5/done/m10/README.md)), and the only install path today is a sparse Git checkout plus a Python link script. Both hosts read ClawHub, so one listing reaches both. The single-folder gap (t002, t003) has to close before any registry publish, or the first installs read missing files. Adoption surface is included because the milestone changes the customer install guide, the skills catalog, and the skill frontmatter that agents read.
+- **Why now:** the suite is rehearsed and stable on Claude Code and Codex ([w5/m3](../../../w5/done/m3/README.md), [w5/m9](../../../w5/done/m9/README.md), [w5/m10](../../../w5/done/m10/README.md)), and the only install path today is a sparse Git checkout plus a Python link script. Both hosts read ClawHub, so one listing reaches both. The single-folder gap (t002, t003) has to close before any registry publish, or the first installs read missing files. Adoption surface is included because the milestone changes the customer install guide, the skills catalog, and the skill frontmatter that agents read.
 
 ## Out of scope
 
-- Hermes Agent's curated MCP catalog (`optional-mcps/` in its repository). Nous approves entries there, and the docs describe no community submission, so this milestone does not open a pull request against it ([DO_NOT_DO](../../DO_NOT_DO.md): no unsolicited PRs to other repos).
+- Hermes Agent's curated MCP catalog (`optional-mcps/` in its repository). Nous approves entries there, and the docs describe no community submission, so this milestone does not open a pull request against it ([DO_NOT_DO](../../../DO_NOT_DO.md): no unsolicited PRs to other repos).
 - skills.sh, LobeHub, and other directories. A `/.well-known` skills index on `beancount.io`: Hermes documents `/.well-known/skills/index.json`, while the draft discovery RFC uses `/.well-known/agent-skills/index.json`. Revisit once the convention settles.
-- An OpenClaw plugin package, and the hosted MCP endpoint on either host ([w6/m7](../done/m7/README.md)).
+- An OpenClaw plugin package, and the hosted MCP endpoint on either host ([w6/m7](../../done/m7/README.md)).
 - Development skills under `.agents/skills/`. Only the customer `beancount-*` suite is published.
 
 ## Unblocked 2026-10-18; refreshed 2026-10-19
@@ -79,7 +79,7 @@ The milestone was parked on 2026-10-16 because dry-run task t005 depended on the
 ## Publication sequencing
 
 - t007 now depends explicitly on t001. The owner records MIT-0 approval and the publisher handle; the operator supplies the protected environment and token.
-- Use the current skill names selected above for the first release; [w2/m39](../../w2/blocked/m39/README.md)'s readability proposal is not a prerequisite for publication.
+- Use the current skill names selected above for the first release; [w2/m39](../../../w2/blocked/m39/README.md)'s readability proposal is not a prerequisite for publication.
 - Rebuild the suite and repeat the dry runs on the release commit. The inventory includes newly shipped skills automatically. t009 waits for t008 so printed install commands have actual host rehearsal evidence.
 - Dry runs do not establish server moderation or clean OpenClaw/Hermes scanner acceptance; t007/t008 retain those checks.
 
@@ -150,7 +150,7 @@ Fresh environment and account read-backs still show no GitHub publishing secret 
 
 The owner supplied an existing token through local ignored configuration. It was passed directly to GitHub's environment secret setter without printing or committing its value; no token was created by the assistant. Read-back verifies the secret metadata. The main-only environment approval was completed for the owner-authorized release, and [run 39372550698](https://github.com/bex-co/beancount-io/actions/runs/39372550698) succeeds, including credential cleanup.
 
-All eleven submissions return 1.0.0, initially `pending-publication`. Real clean-host installs subsequently pass for nine skills in OpenClaw 2026.10.5 and eight in Hermes v0.22.2. Options and property remain pending; Hermes additionally rejects init. The [public rehearsal](../../../docs/skills/clawhub-rehearsal.md) records per-skill outcomes, exact commands, standalone references/licenses, strict verification limits, and the successful published `bea` 0.3.1 control. New install guidance names only exercised commands and states the current incomplete-suite limits. No model credential was imported and no agent first-query turn has run yet.
+All eleven submissions return 1.0.0, initially `pending-publication`. Real clean-host installs subsequently pass for nine skills in OpenClaw 2026.10.5 and eight in Hermes v0.22.2. Options and property remain pending; Hermes additionally rejects init. The [public rehearsal](../../../../docs/skills/clawhub-rehearsal.md) records per-skill outcomes, exact commands, standalone references/licenses, strict verification limits, and the successful published `bea` 0.3.1 control. New install guidance names only exercised commands and states the current incomplete-suite limits. No model credential was imported and no agent first-query turn has run yet.
 
 **Subsequent promotion:** by 05:35 UTC on Oct 20, options is public at 1.0.0 and both host installs pass without force (OpenClaw audit Review, Hermes SAFE). Verified totals are now ten/nine; property alone remains pending. [Complete skills CI](https://github.com/bex-co/beancount-io/actions/runs/39374976210) passes on the shipped documentation baseline `dec916039`. The task and milestone stay blocked on the remaining explicit conditions above.
 
@@ -166,7 +166,7 @@ Main adds `beancount-roll-forward` through active w3/m55 after the eleven-skill 
 
 ## Resume evidence — 2026-10-20
 
-The source inventory is now thirteen, including accruals and the later ask/close variance recipe. Suite 0.3.5 fixes catalog/version drift and the release checks' discovered valuation/recognition/identity gaps. Sixteen focused native Codex cases pass on `gpt-6.1-sol` with published bea 0.3.1; the former model's usage-limit failure is no longer a general Codex blocker. Claude Code now reports a weekly limit, so the changed instructions' Claude reruns and current routing/discovery remain pending. All thirteen final bundles dry-run successfully; Hermes allows twelve and retains init's documented policy conflict. Current owner reports show clean static analysis but absent remaining scanners for the two inspected pending versions, consistent with queued upstream prepublication work. See [t013](t013.md) and the [rehearsal](../../../docs/skills/clawhub-rehearsal.md#thirteen-skill-release-preparation--2026-10-20) for exact evidence, limits and unblock conditions. No duplicate publication or new login was attempted.
+The source inventory is now thirteen, including accruals and the later ask/close variance recipe. Suite 0.3.5 fixes catalog/version drift and the release checks' discovered valuation/recognition/identity gaps. Sixteen focused native Codex cases pass on `gpt-6.1-sol` with published bea 0.3.1; the former model's usage-limit failure is no longer a general Codex blocker. Claude Code now reports a weekly limit, so the changed instructions' Claude reruns and current routing/discovery remain pending. All thirteen final bundles dry-run successfully; Hermes allows twelve and retains init's documented policy conflict. Current owner reports show clean static analysis but absent remaining scanners for the two inspected pending versions, consistent with queued upstream prepublication work. See [t013](t013.md) and the [rehearsal](../../../../docs/skills/clawhub-rehearsal.md#thirteen-skill-release-preparation--2026-10-20) for exact evidence, limits and unblock conditions. No duplicate publication or new login was attempted.
 
 
 ## Synchronization review cleared — 2026-10-21 UTC
@@ -176,14 +176,14 @@ The 04:23 UTC anonymous API/download check verifies all eleven accepted suite 0.
 A minimal native Claude Code 2.1.304 Sonnet request still returns first-party HTTP 429 `usage_limit_reached`, zero input/output tokens and the same weekly-limit message before inference. Thus t013 remains blocked on the current-source Claude and w3/m55–m57 adoption checks, followed by protected publication and current-content host verification. This is not an outstanding login or owner decision. The existing Codex evidence and recorded PDF first-open limitation remain unchanged. See [t013](t013.md) for current results and the exact unblock condition.
 
 
-Close/options 1.0.1 subsequently pass fresh native installs in both supported hosts with all 29 authored files matching per host. This completes individual install verification of the accepted eleven-skill release alongside the prior results; Hermes init retains its recorded exception. See the [registry rehearsal](../../../docs/skills/clawhub-rehearsal.md#eleven-synchronization-updates-public--2026-10-21-utc) for audit labels and retained scanner findings. No current thirteen-skill release or new authenticated agent-query journey is claimed.
+Close/options 1.0.1 subsequently pass fresh native installs in both supported hosts with all 29 authored files matching per host. This completes individual install verification of the accepted eleven-skill release alongside the prior results; Hermes init retains its recorded exception. See the [registry rehearsal](../../../../docs/skills/clawhub-rehearsal.md#eleven-synchronization-updates-public--2026-10-21-utc) for audit labels and retained scanner findings. No current thirteen-skill release or new authenticated agent-query journey is claimed.
 
 
 ## Independent task-level progress — 2026-10-21 UTC
 
-The [current release preflight](../../../docs/skills/clawhub-release-preflight-20261021.md) completes the fresh bundle equivalence, anonymous publication previews, thirteen-skill install/discovery, standalone Codex controls and protected-environment readiness portions of t013. Continue remaining substeps against their actual prerequisites; t013 remains open for the documented Claude/adoption, publication and current-host conditions.
+The [current release preflight](../../../../docs/skills/clawhub-release-preflight-20261021.md) completes the fresh bundle equivalence, anonymous publication previews, thirteen-skill install/discovery, standalone Codex controls and protected-environment readiness portions of t013. Continue remaining substeps against their actual prerequisites; t013 remains open for the documented Claude/adoption, publication and current-host conditions.
 
-The [variance follow-up](../../../docs/skills/variance-release-controls-20261021.md)
+The [variance follow-up](../../../../docs/skills/variance-release-controls-20261021.md)
 adds the missing negative/bridge evals and corrects close's Report provenance
 and executed-arithmetic gap. Four current Codex controls and all local owning
 checks pass; suite 0.3.6 changes only close's body among the thirteen bundles.
@@ -194,3 +194,14 @@ validation and the subsequent release/host gates remain open.
 ## Unblocked — 2026-10-21
 
 Verified source0.3.7 and final native routing are on main at703fe36ca. All six explicit w3 prerequisites are done; no owning whole-w3 milestone is closed by those records. Continue protected publication of nine changed/new bundles, skip four unchanged trees, verify each independently public candidate and supported-host install, then recheck DoD before closing t013. Prior quota/routing conditions above are retained as history.
+
+
+## Blocked on actual 0.3.7 promotion — 2026-10-21 UTC
+
+Source0.3.7 shipped directly at703fe36ca; complete skillsCI39678149471, guidance, secret scan and hosted thirteen-plan validation pass. All six named w3 prerequisites are done in separate main commits (d0b33bbdc,813ad9ae4,bd4d92747,1493b0023,c154bd7c5,2d7c6ae4c).
+
+Protected run39679035375 from main5e1b38a2c succeeds after the owner-authorized environment review. It accepts nine exact-candidate fingerprints as pending-publication: accruals/roll-forward1.0.0, add/import/migrate/reconcile1.0.3, ask/close/trade1.0.2. Four unchanged versions are skipped; publisher-credential cleanup succeeds. No duplicate pending content is submitted.
+
+The anonymous21:41UTC snapshot confirms unchanged importer-author/init/options/property public bytes40/40. Seven changed listings still expose prior public versions; the two first-release listings are not publicly available. None of the nine new/changed targets is eligible for an exact-current install yet. The unchanged four OpenClaw installs40/40 and three supported Hermes installs33/33 are retained; Hermes init remains the separate039 policy exception. Receipts do not establish publication or a native install.
+
+**Unblock:** as soon as any accepted version becomes publicly available, the repository worker verifies that version's owner and authored bytes against the119-file candidate map and performs its supported native installs independently, without force. Do not wait for all nine to promote before working an eligible one. Close t013 only when all current-main bundles and every milestone DoD are verified; preserve the prior authenticated first-query provenance. **Who can clear it:** ClawHub's publication/moderation service, then the repository worker. No model-login, MIT-0, publisher/token, merge, native-routing or named-adoption answer remains. Do not resubmit byte-identical pending content.

@@ -393,3 +393,54 @@ routing cohorts), `w6-m6-followup-20261021/` (first correction, including failur
 (local validation, link installs, bundles and anonymous plans). Relocation
 preserves all original raw evidence hashes; task tooling/caches remain outside
 the active ship worktree without a secret-scan exemption.
+
+
+## Shipped source, prerequisites and protected submission
+
+Source suite0.3.7 ships directly to main at `703fe36ca`. Its [complete skills
+CI](https://github.com/bex-co/beancount-io/actions/runs/39678149471) passes:
+37 checker tests,138 installer/recipe/journey tests,37 published-minimum recipes
+and development QA helpers. Agent guidance and secret scanning pass separately.
+A post-ship rebuild matches all119 tested authored bundle files exactly.
+
+All six named prerequisites are archived in separate commits:
+
+| Prerequisite | Main commit |
+| --- | --- |
+| w3/m55/t002 | `d0b33bbdc` |
+| w3/m55/t003 | `813ad9ae4` |
+| w3/m56/t002 | `bd4d92747` |
+| w3/m56/t003 | `1493b0023` |
+| w3/m57/t003 | `c154bd7c5` |
+| w3/m57/t004 | `2d7c6ae4c` |
+
+Those records preserve the forty case/client obligations, original accepted
+source limits and final native recovery provenance. They do not close whole
+w3 milestones. m6 is restored for execution at `bce0e48c8`.
+
+Protected [publication39679035375](https://github.com/bex-co/beancount-io/actions/runs/39679035375)
+uses main snapshot `5e1b38a2c`, whose skill/tooling bytes equal the tested source.
+All thirteen hosted plans exactly match candidate versions, file counts and
+fingerprints: nine releases and four unchanged. The owner-authorized environment
+review occurs after complete skillsCI passes; main-only/reviewer protections
+remain in place. Publication and credential cleanup both succeed.
+
+| Accepted, pending-publication | Version |
+| --- | --- |
+| accruals, roll-forward | 1.0.0 |
+| add, import, migrate, reconcile | 1.0.3 |
+| ask, close, trade | 1.0.2 |
+
+Init1.0.2 and importer-author/options/property1.0.1 are unchanged and skipped.
+At21:41UTC the anonymous public snapshot verifies those four current versions
+and40/40 authored files. Seven changed listings still expose older public
+versions; the two first-release listings are unavailable. No new target is yet
+eligible for exact-current native installation. This is a promotion wait, not a
+missing login, token, owner decision, routing or named-adoption check.
+
+Each newly public accepted version must be checked and installed independently;
+one waiting listing does not defer another. Match current-main bundle bytes,
+retain host audit labels/findings and use no force. Submission receipts alone
+do not close m6/t013, and byte-identical pending content must not be resubmitted.
+Original authenticated first-query evidence remains dated to its actual older
+host/content versions; no new authenticated journey is claimed here.

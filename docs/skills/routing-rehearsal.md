@@ -442,3 +442,8 @@ With the separately qualified Claude resolved set above, the final source has
 no new paired routing miss. The original Codex PDF loss and all intermediate
 failed candidates remain historical observations. Release source/published bytes
 and native host installations are separate subsequent gates.
+
+The accepted source ships at `703fe36ca`; [complete skillsCI](https://github.com/bex-co/beancount-io/actions/runs/39678149471)
+passes. The separately qualified native results support the six prerequisite
+closures and protected0.3.7 submission, without claiming public promotion or
+current-content host installation before those observations exist.

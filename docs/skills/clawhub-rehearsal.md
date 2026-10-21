@@ -253,3 +253,31 @@ Fresh native search against the same pinned stable archive and anonymous profile
 | Direct anonymous ClawHub search | HTTP 200 | 14 | 11/11 |
 
 The filtered call takes 30.410 seconds and emits no stderr. The [router](https://github.com/NousResearch/hermes-agent/blob/4d04303818b61bf3aa09278af48356315515965b/tools/skills_hub_search.py) and [catalog-first adapter](https://github.com/NousResearch/hermes-agent/blob/4d04303818b61bf3aa09278af48356315515965b/tools/skills_hub_clawhub.py) are unchanged from v0.22.2; the exact catalog/transport cause remains unproven. The newer release does not establish a fix. No identical retry, filtered-result installation, cache patch or unchanged-content publication follows. Default search and explicit publisher-qualified installs remain the supported paths. Source/version/cleanup limits match the init control above; raw search logs and hashes are retained in the same ignored evidence directory.
+
+
+## Suite0.3.7 submitted — 2026-10-21 UTC
+
+Source `703fe36ca` clears final two-client routing and the six named evaluation/
+adoption prerequisites. Codex passes115/115 twice; Claude resolves115/115 from
+114 original valid choices and one documented-default240-second recovery.
+Original timeouts, failed candidates, source distinctions and shared-routing-
+workspace limits remain in the [dated release record](./client-release-controls-20261021.md).
+Complete [skillsCI39678149471](https://github.com/bex-co/beancount-io/actions/runs/39678149471)
+and the local owning checks pass. A post-ship rebuild matches119/119 candidate
+files across13 bundles.
+
+Protected [run39679035375](https://github.com/bex-co/beancount-io/actions/runs/39679035375)
+succeeds from main `5e1b38a2c`. It accepts first accruals/roll-forward1.0.0;
+add/import/migrate/reconcile1.0.3; ask/close/trade1.0.2, all with status
+pending-publication and exact expected fingerprints. Four unchanged versions
+are skipped. Required environment review and publisher-credential cleanup
+succeed; there is no repository PR or repeated pending upload.
+
+The21:41UTC anonymous public check still exposes the older versions for seven
+updates and no public listing for the two additions. Only the four unchanged
+current targets are publicly exact (40/40 authored files); they already have
+fresh OpenClaw4/4 and supported Hermes3/3 install evidence. The new nine have
+no eligible current-content install yet. Verify and install each as it becomes
+public without waiting for the others. This record does not claim promotion,
+new authenticated host queries or m6 closeout. Hermes init/source-filtered
+search remain separately tracked compatibility gaps.
