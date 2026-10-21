@@ -1,6 +1,6 @@
 # w3 · m56 — Variance explanation in `beancount-ask`, reused by `beancount-close`
 
-**Worker:** worker3 **Goal:** period changes are explained from contributing postings under explicit user thresholds — with a supported driver or an honest "unresolved", never an invented cause. **Status:** todo (remaining t003, t004, t005, t006)
+**Worker:** worker3 **Goal:** period changes are explained from contributing postings under explicit user thresholds — with a supported driver or an honest "unresolved", never an invented cause. **Status:** todo (remaining t004, t005, t006)
 
 ## Tasks (in order)
 
@@ -8,7 +8,7 @@
 | --- | --- | --- | --- |
 | [t001](done/t001.md) | Add the variance recipe to `beancount-ask` — **DONE** | 75m | — |
 | [t002](done/t002.md) | Reuse the recipe in `beancount-close` and write the evals — **DONE** | 60m | t001 |
-| t003 | Adoption surface | 30m | t002 |
+| [t003](done/t003.md) | Adoption surface — **DONE** | 30m | t002 |
 | t004 | Simplify | 15m | t003 |
 | t005 | Test coverage | 45m | t003 |
 | t006 | Closeout | 10m | t004, t005 |
