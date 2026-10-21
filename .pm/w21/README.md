@@ -11,3 +11,4 @@
 - [015](./015.md) — Home's lower cards keep their old text measurements when text size changes with the app open
 - [016](./016.md) — Config plugins override the app's permission strings: a vague camera prompt, plus microphone and Face ID permissions the app never uses
 - [017](./017.md) — With camera access denied, Scan Receipt hides "Choose from photos", so a receipt already in the library can't be scanned
+- [018](./018.md) — Home's Spending chart gives VoiceOver axis ticks but never the two amounts it compares
