@@ -97,3 +97,6 @@
 - [147](./147.md) — Latest Updates shows Blog/Release dates one day early west of UTC
 - [148](./148.md) — Budget "Last year" uses the server's calendar, "This year" the device's — they disagree around New Year
 - [149](./149.md) — New Transaction doesn't seed a payee's usual accounts when the name has punctuation (`Dupar's`, `Mr. Marcel`, `Chase:Slate`)
+- [150](./150.md) — iOS swipe-back gets past the unsaved-changes guard (editor, Edit/New Transaction); Cancel leaves the stack broken
+- [151](./151.md) — Returning to the app offline flips the editor and write actions to "read-only" mid-edit
+- [152](./152.md) — Returning to the file editor jumps the cursor back to the original error line
