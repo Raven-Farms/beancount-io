@@ -103,6 +103,13 @@ function screen(refreshFails: boolean) {
               formState: { errors: {}, isSubmitting: false },
             }),
           };
+        if (id === "@/common/create-ledger-draft")
+          return {
+            CREATE_LEDGER_DRAFT_KEY: "create-ledger-draft",
+            clearCreateLedgerDraft: async () => undefined,
+            restoreCreateLedgerDraft: () => null,
+            serializeCreateLedgerDraft: () => "{}",
+          };
         if (id === "@react-native-async-storage/async-storage")
           return {
             getItem: async () => null,

@@ -5,6 +5,7 @@ import { defaultRuntimeServerUrl } from "@/common/server-url";
 import { oauthTokenManager } from "@/common/oauth/oauth-token-manager";
 import { clearPendingAuthorization } from "@/common/oauth/pending-authorization-storage";
 import { clearGuestVisit } from "@/common/guest/guest-state";
+import { clearCreateLedgerDraft } from "@/common/create-ledger-draft";
 import { invalidateAuthorization } from "@/common/oauth/authorization-context";
 import {
   accountUsageVar,
@@ -49,6 +50,9 @@ export async function clearServerScopedState(
     flushLedger(),
     flushAccountUsage(),
     flushMerchantRecurringOverrides(),
+    // The next account on this device must not resume this one's setup
+    // (w21/053).
+    clearCreateLedgerDraft(),
   ]);
 }
 

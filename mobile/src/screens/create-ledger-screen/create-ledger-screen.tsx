@@ -22,6 +22,13 @@ import {
   usePreviewLedgerSetupLazyQuery,
 } from "@/generated-graphql/graphql";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import {
+  CREATE_LEDGER_DRAFT_KEY,
+  clearCreateLedgerDraft,
+  restoreCreateLedgerDraft,
+  serializeCreateLedgerDraft,
+  type CreateLedgerDraft,
+} from "@/common/create-ledger-draft";
 import * as Localization from "expo-localization";
 import {
   defaultHistoryStart,
@@ -64,15 +71,7 @@ type FormValues = {
 
 type StartKind = "starter" | "sample" | "preset";
 
-const DRAFT_KEY = "create-ledger-draft";
-
-interface CreateDraft {
-  step: number;
-  startKind: StartKind;
-  presetId: string | null;
-  requestId: string;
-  values: FormValues;
-}
+type CreateDraft = CreateLedgerDraft<FormValues> & { startKind: StartKind };
 
 function newRequestId(): string {
   return `req-${Date.now()}-${Math.random().toString(36).slice(2)}`;
@@ -249,18 +248,17 @@ export function CreateLedgerScreen(): JSX.Element {
   useEffect(() => {
     if (restoredRef.current) return;
     restoredRef.current = true;
-    void AsyncStorage.getItem(DRAFT_KEY).then((raw) => {
-      if (!raw) return;
-      try {
-        const draft = JSON.parse(raw) as CreateDraft;
-        setStep(draft.step);
-        setStartKind(draft.startKind);
-        setPresetId(draft.presetId);
-        requestIdRef.current = draft.requestId;
-        reset(draft.values);
-      } catch {
-        // A corrupt draft is ignored; the flow starts fresh.
-      }
+    void AsyncStorage.getItem(CREATE_LEDGER_DRAFT_KEY).then((raw) => {
+      // A missing, corrupt or expired draft starts the flow fresh.
+      const draft = restoreCreateLedgerDraft<FormValues>(
+        raw,
+      ) as CreateDraft | null;
+      if (!draft) return;
+      setStep(draft.step);
+      setStartKind(draft.startKind);
+      setPresetId(draft.presetId);
+      requestIdRef.current = draft.requestId;
+      reset(draft.values);
     });
   }, [reset]);
 
@@ -273,7 +271,10 @@ export function CreateLedgerScreen(): JSX.Element {
       requestId: requestIdRef.current,
       values: watched,
     };
-    void AsyncStorage.setItem(DRAFT_KEY, JSON.stringify(draft)).catch(() => {});
+    void AsyncStorage.setItem(
+      CREATE_LEDGER_DRAFT_KEY,
+      serializeCreateLedgerDraft(draft),
+    ).catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [step, startKind, presetId, JSON.stringify(watched)]);
 
@@ -338,7 +339,7 @@ export function CreateLedgerScreen(): JSX.Element {
           requestId: requestIdRef.current,
         },
       });
-      void AsyncStorage.removeItem(DRAFT_KEY).catch(() => {});
+      void clearCreateLedgerDraft();
       const id = result.data?.createLedger?.id;
       if (!id) {
         setError("root", { message: t("createLedgerGenericError") });
