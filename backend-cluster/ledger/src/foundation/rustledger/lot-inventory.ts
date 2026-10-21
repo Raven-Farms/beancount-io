@@ -36,6 +36,8 @@ const Amount = BigNumber.clone({
 /** A held position lot: net units in `currency`, at an optional per-unit cost. */
 interface Lot {
   number: BigNumber;
+  /** Decimal places the lot's units were written with, at their widest. */
+  scale: number;
   currency: string;
   costNumber: BigNumber | null;
   costCurrency: string | null;
@@ -174,13 +176,16 @@ export class LotInventory {
     const costCurrency = perUnit?.currency ?? null;
     const key = lotKey(posting.units.currency, costNumber, costCurrency);
     const incoming = new Amount(posting.units.number);
+    const scale = writtenScale(posting.units.number);
     const existing = this.lots.get(key);
     if (existing) {
       existing.number = existing.number.plus(incoming);
+      existing.scale = Math.max(existing.scale, scale);
       return;
     }
     this.lots.set(key, {
       number: incoming,
+      scale,
       currency: posting.units.currency,
       costNumber,
       costCurrency,
@@ -198,8 +203,10 @@ export class LotInventory {
   merge(other: LotInventory): void {
     other.lots.forEach((lot, key) => {
       const existing = this.lots.get(key);
-      if (existing) existing.number = existing.number.plus(lot.number);
-      else this.lots.set(key, { ...lot });
+      if (existing) {
+        existing.number = existing.number.plus(lot.number);
+        existing.scale = Math.max(existing.scale, lot.scale);
+      } else this.lots.set(key, { ...lot });
     });
   }
 
@@ -209,12 +216,34 @@ export class LotInventory {
     priceMap: PriceMap,
     date: string | undefined,
   ): Map<string, BigNumber> {
-    let out = new Map<string, BigNumber>();
+    const out = new Map<string, BigNumber>();
+    this.reduceScaled(conversion, priceMap, date).forEach(
+      ({ value }, currency) => out.set(currency, value),
+    );
+    return out;
+  }
+
+  /**
+   * {@link reduce}, keeping each amount's decimal places: the units' written
+   * scale where they pass through unconverted (`1250.50 EUR` stays two
+   * places), a valued amount's own places otherwise, the widest across a sum.
+   * Serialised with `toString()`, `0.00000050` went out as `5e-7` and
+   * `1250.50` as `1250.5`, and clients read the display scale from that
+   * string (w21/125).
+   */
+  reduceScaled(
+    conversion: Conversion,
+    priceMap: PriceMap,
+    date: string | undefined,
+  ): Map<string, { value: BigNumber; scale: number }> {
+    let out = new Map<string, { value: BigNumber; scale: number }>();
     // First pass — value each lot (cost-aware) into targets[0] (or the sole
     // target for non-currency conversions).
     this.lots.forEach((lot) => {
       const [currency, value] = valueLot(lot, conversion, priceMap, date);
-      addInto(out, currency, value);
+      const scale =
+        currency === lot.currency ? lot.scale : (value.decimalPlaces() ?? 0);
+      addScaledInto(out, currency, value, scale);
     });
 
     // Multi-currency conversion (`convert_position` chained, fava
@@ -226,11 +255,18 @@ export class LotInventory {
     if (conversion.kind === "currency") {
       for (let i = 1; i < conversion.targets.length; i += 1) {
         const target = conversion.targets[i];
-        const next = new Map<string, BigNumber>();
-        out.forEach((amount, currency) => {
+        const next = new Map<string, { value: BigNumber; scale: number }>();
+        out.forEach(({ value, scale }, currency) => {
           const rate = priceMap.getRate(currency, target, date);
-          if (rate) addInto(next, target, amount.times(rate));
-          else addInto(next, currency, amount);
+          if (rate) {
+            const converted = value.times(rate);
+            addScaledInto(
+              next,
+              target,
+              converted,
+              converted.decimalPlaces() ?? 0,
+            );
+          } else addScaledInto(next, currency, value, scale);
         });
         out = next;
       }
@@ -239,12 +275,27 @@ export class LotInventory {
   }
 }
 
-/** Net `value` into `map[currency]`. */
-function addInto(
-  map: Map<string, BigNumber>,
+/** Net `value` into `map[currency]`, keeping the widest scale. */
+function addScaledInto(
+  map: Map<string, { value: BigNumber; scale: number }>,
   currency: string,
   value: BigNumber,
+  scale: number,
 ): void {
   const existing = map.get(currency);
-  map.set(currency, existing ? existing.plus(value) : value);
+  map.set(
+    currency,
+    existing
+      ? {
+          value: existing.value.plus(value),
+          scale: Math.max(existing.scale, scale),
+        }
+      : { value, scale },
+  );
+}
+
+/** Decimal places a number was written with: `"1250.50"` → 2. */
+function writtenScale(number: string): number {
+  const dot = number.indexOf(".");
+  return dot < 0 ? 0 : number.length - dot - 1;
 }

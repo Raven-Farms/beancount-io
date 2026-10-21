@@ -54,6 +54,12 @@ const MAX_FRACTION_DIGITS = 20;
  * intent, and formatting at a flat two digits then rounded 0.004 ETH to 0.00.
  */
 export const amountScale = (number: string): number => {
+  // Exponent notation ("5e-7", "1.5e-7") moves the point: read as a plain
+  // "0" it showed a dust holding as "0 BTC" (w21/125).
+  const exponent = /^([^eE]*)[eE]([+-]?\d+)$/.exec(number.trim());
+  if (exponent) {
+    return Math.max(0, amountScale(exponent[1]) - Number(exponent[2]));
+  }
   const dot = number.indexOf(".");
   if (dot < 0) return 0;
   return number.length - dot - 1;

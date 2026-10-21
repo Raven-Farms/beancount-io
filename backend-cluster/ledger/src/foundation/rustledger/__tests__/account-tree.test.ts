@@ -66,22 +66,23 @@ describe("accountHierarchy (units)", () => {
     // Assets own postings: none directly on 'Assets' → balance empty.
     expect(assets.balance).toEqual({});
     // Assets:Bank:Checking own = -30 + -100 = -130; Savings = +100 → subtree total = -30.
-    expect(assets.balance_children).toEqual({ USD: "-30" });
+    // At the postings' written scale, as Python's Decimal keeps it (w21/125).
+    expect(assets.balance_children).toEqual({ USD: "-30.00" });
 
     const bank = assets.children.find((c) => c.account === "Assets:Bank");
     expect(bank?.balance).toEqual({}); // no direct postings on Assets:Bank
-    expect(bank?.balance_children).toEqual({ USD: "-30" });
+    expect(bank?.balance_children).toEqual({ USD: "-30.00" });
 
     const checking = bank?.children.find(
       (c) => c.account === "Assets:Bank:Checking",
     );
-    expect(checking?.balance).toEqual({ USD: "-130" });
+    expect(checking?.balance).toEqual({ USD: "-130.00" });
     expect(checking?.has_txns).toBe(true);
 
     const savings = bank?.children.find(
       (c) => c.account === "Assets:Bank:Savings",
     );
-    expect(savings?.balance).toEqual({ USD: "100" });
+    expect(savings?.balance).toEqual({ USD: "100.00" });
   });
 
   it("sorts children by account name", () => {
@@ -208,5 +209,51 @@ describe("ledgerCurrencies / hasCostPostings", () => {
       },
     ];
     expect(hasCostPostings(withCost)).toBe(true);
+  });
+});
+
+// w21/125: balances went out through `toString()`, so 0.00000050 BTC read
+// "5e-7" (a client showed "0 BTC") and 1250.50 EUR read "1250.5".
+describe("accountHierarchy balance strings", () => {
+  const posting = (account: string, number: string, currency: string) => ({
+    type: "transaction" as const,
+    date: "2024-01-15",
+    flag: "*",
+    narration: "t",
+    tags: [],
+    links: [],
+    postings: [
+      { account, units: { number, currency } },
+      { account: "Equity:Seed", units: { number: `-${number}`, currency } },
+    ],
+  });
+  const balanceOf = (directives: DirectiveJson[], account: string) =>
+    accountHierarchy(directives, account, "units", NO_PRICES).balance;
+
+  it("writes dust in plain decimals at its written scale", () => {
+    expect(
+      balanceOf(
+        [posting("Assets:Wallet", "0.00000050", "BTC") as DirectiveJson],
+        "Assets:Wallet",
+      ),
+    ).toEqual({ BTC: "0.00000050" });
+  });
+
+  it("keeps trailing zeros, through a sum too", () => {
+    expect(
+      balanceOf(
+        [posting("Assets:Euro", "1250.50", "EUR") as DirectiveJson],
+        "Assets:Euro",
+      ),
+    ).toEqual({ EUR: "1250.50" });
+    expect(
+      balanceOf(
+        [
+          posting("Assets:Euro", "999.50", "EUR") as DirectiveJson,
+          posting("Assets:Euro", "0.50", "EUR") as DirectiveJson,
+        ],
+        "Assets:Euro",
+      ),
+    ).toEqual({ EUR: "1000.00" });
   });
 });

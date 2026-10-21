@@ -92,6 +92,25 @@ export function selectAccountUnitsSeries(
 }
 
 /**
+ * The decimal places a units chart needs: the widest any point was recorded
+ * with. The latest balance alone could be a round "1000" after 999.50 + 0.50,
+ * which then showed August's 0.5 as "1" (w21/125).
+ */
+export function selectAccountUnitsScale(
+  commodity: string,
+  data?: AccountReportQuery,
+): number {
+  return (data?.getLedgerAccountReport?.linechartData ?? []).reduce(
+    (widest, point) =>
+      Math.max(
+        widest,
+        amountIn(point.balance as Record<string, string>, commodity).scale,
+      ),
+    0,
+  );
+}
+
+/**
  * Convert an account report's monthly `linechartData` into a chart series in
  * the active currency: one (most recent) point per month, ascending by date.
  * Signed — an account balance can be negative (e.g. liabilities/credit cards).

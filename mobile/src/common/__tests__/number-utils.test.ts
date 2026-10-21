@@ -258,3 +258,17 @@ describe("money at its currency's minor unit", () => {
     expect(formatMoneyWithCurrency(10, "CNY")).toBe("¥10.00");
   });
 });
+
+// w21/125: a dust balance arrived as "5e-7" and read "0 BTC".
+describe("amountScale with exponent notation", () => {
+  const { amountScale } = require("../number-utils");
+  it("moves the point by the exponent", () => {
+    expect(amountScale("5e-7")).toBe(7);
+    expect(amountScale("1.5e-7")).toBe(8);
+    expect(amountScale("1.25E+2")).toBe(0);
+    expect(amountScale("0.0000005")).toBe(7);
+    expect(formatUnits(Number("5e-7"), "BTC", amountScale("5e-7"))).toBe(
+      "0.0000005 BTC",
+    );
+  });
+});

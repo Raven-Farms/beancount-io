@@ -39,6 +39,7 @@ import { formatUnits } from "@/common/number-utils";
 import {
   selectAccountBalanceDisplay,
   selectAccountBalanceSeries,
+  selectAccountUnitsScale,
   selectAccountUnitsSeries,
 } from "@/screens/account-detail-screen/selectors/select-account-balance-series";
 import {
@@ -227,13 +228,19 @@ const AccountDetailScreenImpl = ({
         : selectAccountBalanceSeries(currency, reportData),
     [currency, reportData, unitsCurrency, unitsReportData],
   );
+  // Every chart point and change at the widest scale the series holds, not
+  // the latest balance's (w21/125).
+  const chartScale = Math.max(
+    unitsScale ?? 0,
+    unitsCurrency ? selectAccountUnitsScale(unitsCurrency, unitsReportData) : 0,
+  );
   const formatChartValue = useMemo(
     () =>
       unitsCurrency === undefined
         ? undefined
         : (value: number, includePlus?: boolean) =>
-            formatUnits(value, unitsCurrency, unitsScale ?? 0, includePlus),
-    [unitsCurrency, unitsScale],
+            formatUnits(value, unitsCurrency, chartScale, includePlus),
+    [unitsCurrency, chartScale],
   );
   const chartLabel = [
     t("balance"),

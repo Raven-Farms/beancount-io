@@ -154,3 +154,36 @@ describe("selectAccountUnitsSeries", () => {
     expect(selectAccountBalanceSeries("EUR", data)[0].value).toBe(0);
   });
 });
+
+// w21/125: the units chart took the latest balance's scale, so a round
+// "1000" after 999.50 + 0.50 showed August's 0.5 as "1".
+describe("selectAccountUnitsScale", () => {
+  const {
+    selectAccountUnitsScale,
+  } = require("../select-account-balance-series");
+  it("takes the widest scale across the series", () => {
+    const data = {
+      getLedgerAccountReport: {
+        linechartData: [
+          { date: "2026-08-31", balance: { BTC: "0.5" } },
+          { date: "2026-09-30", balance: { BTC: "1" } },
+          { date: "2026-10-31", balance: { BTC: "1.00000050" } },
+        ],
+      },
+    };
+    expect(selectAccountUnitsScale("BTC", data)).toBe(8);
+    expect(selectAccountUnitsScale("BTC", undefined)).toBe(0);
+  });
+
+  it("is what account detail formats its chart with", () => {
+    const source = require("fs").readFileSync(
+      require("path").join(__dirname, "..", "..", "account-detail-screen.tsx"),
+      "utf8",
+    ) as string;
+    expect(
+      source.includes(
+        "formatUnits(value, unitsCurrency, chartScale, includePlus)",
+      ),
+    ).toBe(true);
+  });
+});
