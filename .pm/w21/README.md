@@ -156,3 +156,6 @@
 - [292](./292.md) — Guest mode: one failed refresh blanks the whole example; foreground then remounts it
 - [293](./293.md) — Guest mode: editor says "Choose a ledger you can edit"; budget invite silently opens sign-in
 - [294](./294.md) — Guest drawer lists examples by raw id instead of the chooser's names
+- [295](./295.md) — Ledger list fails to load → guard says "No ledger selected" with Create, no error or Retry
+- [296](./296.md) — Cold-opened transaction detail shows any load failure as "No entry context data", no Retry
+- [297](./297.md) — Commit detail: no not-found state; missing sha shows a blank title over "No diff available"
