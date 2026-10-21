@@ -68,9 +68,10 @@ export function Combobox({
   const [highlightedIndex, setHighlightedIndex] = React.useState(-1);
   const inputRef = React.useRef<HTMLInputElement>(null);
   const containerRef = React.useRef<HTMLDivElement>(null);
-  // Skip the blur that follows an explicit selection so it cannot overwrite
-  // the chosen option with the still-rendered draft query.
-  const skipBlurCommitRef = React.useRef(false);
+  // The value an explicit selection (or Enter) just committed. Focus stays in
+  // the input afterwards (w4/255), so the next blur — Tab onward — must not
+  // commit it a second time; any new typing clears it.
+  const committedRef = React.useRef<string | null>(null);
   // Unique ID per instance to scope querySelector and avoid cross-instance conflicts
   const instanceId = React.useId().replace(/:/g, "");
   const listboxId = `${instanceId}-listbox`;
@@ -90,11 +91,11 @@ export function Combobox({
   }, [options, inputValue]);
 
   const handleSelect = (selectedValue: string) => {
-    skipBlurCommitRef.current = true;
+    committedRef.current = selectedValue;
     setInputValue(selectedValue);
     onValueChange(selectedValue);
     setOpen(false);
-    inputRef.current?.blur();
+    setHighlightedIndex(-1);
   };
 
   const handleClear = (e: React.MouseEvent) => {
@@ -106,6 +107,7 @@ export function Combobox({
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newValue = e.target.value;
+    committedRef.current = null;
     setInputValue(newValue);
 
     // If allowCustom is true and triggerOn is "change", immediately update the value
@@ -124,10 +126,9 @@ export function Combobox({
   };
 
   const handleInputBlur = () => {
-    if (skipBlurCommitRef.current) {
-      skipBlurCommitRef.current = false;
-      return;
-    }
+    const committed = committedRef.current;
+    committedRef.current = null;
+    if (committed !== null && committed === inputValue) return;
     // If triggerOn is "blur" and allowCustom is true, update the value on blur
     if (allowCustom && triggerOn === "blur") {
       onValueChange(inputValue);
@@ -152,10 +153,9 @@ export function Combobox({
         handleSelect(filteredOptions[highlightedIndex].value);
       } else if (allowCustom) {
         // Use custom value
-        skipBlurCommitRef.current = true;
+        committedRef.current = inputValue;
         onValueChange(inputValue);
         setOpen(false);
-        inputRef.current?.blur();
       }
     } else if (e.key === "ArrowDown") {
       e.preventDefault();
