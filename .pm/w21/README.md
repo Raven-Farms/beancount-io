@@ -48,3 +48,6 @@
 - [098](./098.md) — Reports/Budget chart VoiceOver summaries ignore plural forms ("over 1 months")
 - [099](./099.md) — Accounts tab lists closed, emptied accounts as live "$0.00" rows
 - [100](./100.md) — Multi-currency account journal shows "$0.00" rows and day totals for other-currency movements
+- [101](./101.md) — Budget header says "Above target" in red for a period before the budget existed, over an all-grey chart
+- [102](./102.md) — First bar of a 1Y / weekly-YTD budget chart is held to a whole period's budget for a partial period
+- [103](./103.md) — New Transaction pre-fills a closed account as FROM when it was the most recently used asset
