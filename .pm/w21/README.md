@@ -57,3 +57,4 @@
 - [107](./107.md) — Create Ledger: free-text currency/date, raw server errors, and impossible dates (2026-04-31) accepted
 - [108](./108.md) — "Choose from photos" fails for HEIC iPhone photos with "Could not read receipt"
 - [109](./109.md) — Notifications bell never tells VoiceOver its error count
+- [110](./110.md) — First New Transaction after relaunch pre-fills accounts from the stale persisted cache, even a deleted account
