@@ -454,6 +454,9 @@ export const bg: Translations = {
   ledgerCreateFilePlaceholder: "investments.bean",
   ledgerCreateFileSuccess: "{{name}} е създаден",
   ledgerCreateFileFailed: "Файлът не беше създаден",
+  ledgerFileNameExists: "Файл с име {{name}} вече съществува",
+  ledgerFileNameExtension: "Използвайте име с .bean или .beancount",
+  ledgerFileNamePath: "Използвайте име без \\, .. или празни имена на папки",
   ledgerDeleteFile: "Изтрий {{name}}",
   ledgerDeleteFileTitle: "Изтриване на файл на книгата",
   ledgerDeleteFileMessage:

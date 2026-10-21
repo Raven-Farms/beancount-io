@@ -454,6 +454,9 @@ export const nl: Translations = {
   ledgerCreateFilePlaceholder: "investments.bean",
   ledgerCreateFileSuccess: "{{name}} aangemaakt",
   ledgerCreateFileFailed: "Aanmaken van bestand mislukt",
+  ledgerFileNameExists: "Er bestaat al een bestand met de naam {{name}}",
+  ledgerFileNameExtension: "Gebruik een naam op .bean of .beancount",
+  ledgerFileNamePath: "Gebruik een naam zonder \\, .. of lege mapnamen",
   ledgerDeleteFile: "{{name}} verwijderen",
   ledgerDeleteFileTitle: "Grootboekbestand verwijderen",
   ledgerDeleteFileMessage:

@@ -463,6 +463,10 @@ export const sk: Translations = {
   ledgerCreateFilePlaceholder: "investments.bean",
   ledgerCreateFileSuccess: "{{name}} vytvorený",
   ledgerCreateFileFailed: "Súbor sa nepodarilo vytvoriť",
+  ledgerFileNameExists: "Súbor s názvom {{name}} už existuje",
+  ledgerFileNameExtension: "Použite názov s príponou .bean alebo .beancount",
+  ledgerFileNamePath:
+    "Použite názov bez \\, .. alebo prázdnych názvov priečinkov",
   ledgerDeleteFile: "Odstrániť {{name}}",
   ledgerDeleteFileTitle: "Odstrániť súbor knihy",
   ledgerDeleteFileMessage:

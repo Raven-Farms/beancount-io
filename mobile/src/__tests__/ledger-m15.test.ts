@@ -121,9 +121,13 @@ test("normalizeLedgerFileName: preserves .beancount extension", () => {
   }
 });
 
-test("normalizeLedgerFileName: rejects paths and unsupported extensions", () => {
-  if (normalizeLedgerFileName("nested/file.bean") !== null) {
-    throw new Error("paths should not be accepted as filenames");
+test("normalizeLedgerFileName: rejects traversal and unsupported extensions", () => {
+  // Folders are allowed, as the server allows them (w21/014); escaping is not.
+  if (normalizeLedgerFileName("nested/file") !== "nested/file.bean") {
+    throw new Error("a relative path into a folder should be accepted");
+  }
+  if (normalizeLedgerFileName("../file.bean") !== null) {
+    throw new Error("traversal should be rejected");
   }
   if (normalizeLedgerFileName("notes.txt") !== null) {
     throw new Error("unsupported extensions should be rejected");

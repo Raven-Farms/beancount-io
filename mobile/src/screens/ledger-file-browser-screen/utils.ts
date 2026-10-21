@@ -1,21 +1,52 @@
 import { isBeancountFile } from "../../common/ledger-file-types";
 
-export function normalizeLedgerFileName(input: string): string | null {
-  const trimmed = input.trim();
-  if (
-    !trimmed ||
-    trimmed === "." ||
-    trimmed === ".." ||
-    trimmed.includes("/") ||
-    trimmed.includes("\\") ||
-    /[\u0000-\u001f]/.test(trimmed)
-  ) {
-    return null;
-  }
+/** Why a typed name can't be created, or the name it creates. */
+export type LedgerFileNameCheck =
+  | { ok: true; filename: string }
+  | {
+      ok: false;
+      issue: "empty" | "path" | "extension" | "exists";
+      filename?: string;
+    };
 
-  const filename = trimmed.includes(".") ? trimmed : `${trimmed}.bean`;
-  if (/^\.(bean|beancount)$/i.test(filename)) return null;
-  return isBeancountFile(filename) ? filename : null;
+/**
+ * Check a typed new-file name. A relative path into folders (`sub/notes`)
+ * is allowed, as the server and the dashboard allow it (w3/196): each segment
+ * must be non-empty and not `.` or `..`, and backslashes and control
+ * characters are refused. A last segment with no extension gets `.bean`.
+ * Each refusal says which rule it broke so the dialog can name it (w21/014).
+ */
+export function checkLedgerFileName(
+  input: string,
+  existingNames: readonly string[] = [],
+): LedgerFileNameCheck {
+  const trimmed = input.trim();
+  if (!trimmed) return { ok: false, issue: "empty" };
+  const segments = trimmed.split("/");
+  if (
+    trimmed.includes("\\") ||
+    /[\u0000-\u001f]/.test(trimmed) ||
+    segments.some(
+      (segment) => segment === "" || segment === "." || segment === "..",
+    )
+  ) {
+    return { ok: false, issue: "path" };
+  }
+  const last = segments[segments.length - 1]!;
+  const named = last.includes(".") ? last : `${last}.bean`;
+  if (/^\.(bean|beancount)$/i.test(named) || !isBeancountFile(named)) {
+    return { ok: false, issue: "extension" };
+  }
+  const filename = [...segments.slice(0, -1), named].join("/");
+  if (existingNames.includes(filename)) {
+    return { ok: false, issue: "exists", filename };
+  }
+  return { ok: true, filename };
+}
+
+export function normalizeLedgerFileName(input: string): string | null {
+  const check = checkLedgerFileName(input);
+  return check.ok ? check.filename : null;
 }
 
 export function buildLedgerFilePath(

@@ -108,6 +108,11 @@ const getStyles = (theme: ColorTheme) =>
       fontSize: 16,
       fontWeight: "600",
     },
+    inputError: {
+      marginTop: 8,
+      fontSize: 13,
+      color: theme.error,
+    },
     confirmButtonDisabled: {
       color: theme.black40,
       fontSize: 16,
@@ -125,7 +130,12 @@ type TextInputModalProps = {
   confirmButtonText?: string;
   cancelButtonText?: string;
   destructive?: boolean;
-  validateInput?: (text: string) => boolean;
+  /**
+   * Whether the text may be confirmed. A string means no and says why: it is
+   * shown under the field and announced, so a disabled Confirm is never
+   * unexplained (w21/014). `false` disables without a message.
+   */
+  validateInput?: (text: string) => boolean | string;
 };
 
 export const TextInputModal: React.FC<TextInputModalProps> = ({
@@ -177,14 +187,16 @@ export const TextInputModal: React.FC<TextInputModalProps> = ({
     transform: [{ scale: scale.value }],
   }));
 
+  const validation = validateInput ? validateInput(inputText) : true;
+  const isConfirmDisabled = validation !== true;
+  const inputError = typeof validation === "string" ? validation : null;
+
   const handleConfirm = () => {
-    if (validateInput && !validateInput(inputText)) {
+    if (isConfirmDisabled) {
       return;
     }
     onConfirm(inputText);
   };
-
-  const isConfirmDisabled = validateInput && !validateInput(inputText);
 
   if (!visible) return null;
 
@@ -221,6 +233,15 @@ export const TextInputModal: React.FC<TextInputModalProps> = ({
                   autoCapitalize="none"
                   autoCorrect={false}
                 />
+                {inputError ? (
+                  <Text
+                    style={styles.inputError}
+                    accessibilityLiveRegion="polite"
+                    testID="text-input-modal-error"
+                  >
+                    {inputError}
+                  </Text>
+                ) : null}
               </View>
             </ScrollView>
             <View style={styles.buttonContainer}>

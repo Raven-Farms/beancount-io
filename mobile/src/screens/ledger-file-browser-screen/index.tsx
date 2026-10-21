@@ -42,7 +42,7 @@ import { isEditableTextFile } from "@/common/ledger-file-types";
 import {
   buildLedgerFilePath,
   canDeleteLedgerFile,
-  normalizeLedgerFileName,
+  checkLedgerFileName,
   popPathStack,
   pushPathStack,
   sortEntries,
@@ -366,26 +366,36 @@ export function LedgerFileBrowserScreen(): JSX.Element {
     }
   }, [currentPath, refetch, t, toast]);
 
-  const isValidNewFilename = useCallback(
-    (input: string) => {
-      const filename = normalizeLedgerFileName(input);
-      return (
-        filename !== null && !entries.some((entry) => entry.name === filename)
+  // Create is disabled with the reason under the field, never silently.
+  const validateNewFilename = useCallback(
+    (input: string): boolean | string => {
+      const check = checkLedgerFileName(
+        input,
+        entries.map((entry) => entry.name),
       );
+      if (check.ok) return true;
+      switch (check.issue) {
+        case "empty":
+          return false;
+        case "exists":
+          return t("ledgerFileNameExists", { name: check.filename });
+        case "extension":
+          return t("ledgerFileNameExtension");
+        case "path":
+          return t("ledgerFileNamePath");
+      }
     },
-    [entries],
+    [entries, t],
   );
 
   const handleCreate = useCallback(
     async (input: string) => {
-      const filename = normalizeLedgerFileName(input);
-      if (
-        !filename ||
-        entries.some((entry) => entry.name === filename) ||
-        !canWrite ||
-        createInFlightRef.current
-      )
-        return;
+      const check = checkLedgerFileName(
+        input,
+        entries.map((entry) => entry.name),
+      );
+      if (!check.ok || !canWrite || createInFlightRef.current) return;
+      const { filename } = check;
 
       const filePath = buildLedgerFilePath(currentPath, filename);
       createInFlightRef.current = true;
@@ -632,7 +642,7 @@ export function LedgerFileBrowserScreen(): JSX.Element {
         placeholder={t("ledgerCreateFilePlaceholder")}
         confirmButtonText={t("ledgerCreateFile")}
         cancelButtonText={t("cancel")}
-        validateInput={isValidNewFilename}
+        validateInput={validateNewFilename}
         onConfirm={(input) => void handleCreate(input)}
         onCancel={() => setCreateModalVisible(false)}
       />

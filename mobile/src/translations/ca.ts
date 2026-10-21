@@ -463,6 +463,9 @@ export const ca: Translations = {
   ledgerCreateFilePlaceholder: "investments.bean",
   ledgerCreateFileSuccess: "S'ha creat {{name}}",
   ledgerCreateFileFailed: "No s'ha pogut crear el fitxer",
+  ledgerFileNameExists: "Ja existeix un fitxer anomenat {{name}}",
+  ledgerFileNameExtension: "Fes servir un nom .bean o .beancount",
+  ledgerFileNamePath: "Fes servir un nom sense \\, .. ni noms de carpeta buits",
   ledgerDeleteFile: "Elimina {{name}}",
   ledgerDeleteFileTitle: "Elimina el fitxer del llibre",
   ledgerDeleteFileMessage:

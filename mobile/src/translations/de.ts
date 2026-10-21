@@ -465,6 +465,11 @@ export const de: Translations = {
   ledgerCreateFilePlaceholder: "investments.bean",
   ledgerCreateFileSuccess: "{{name}} angelegt",
   ledgerCreateFileFailed: "Datei konnte nicht angelegt werden",
+  ledgerFileNameExists: "Eine Datei namens {{name}} existiert bereits",
+  ledgerFileNameExtension:
+    "Verwenden Sie einen Namen mit .bean oder .beancount",
+  ledgerFileNamePath:
+    "Verwenden Sie einen Namen ohne \\, .. oder leere Ordnernamen",
   ledgerDeleteFile: "{{name}} löschen",
   ledgerDeleteFileTitle: "Hauptbuchdatei löschen",
   ledgerDeleteFileMessage:

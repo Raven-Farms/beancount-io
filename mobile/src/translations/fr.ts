@@ -463,6 +463,9 @@ export const fr: Translations = {
   ledgerCreateFilePlaceholder: "investments.bean",
   ledgerCreateFileSuccess: "{{name}} créé",
   ledgerCreateFileFailed: "Échec de la création du fichier",
+  ledgerFileNameExists: "Un fichier nommé {{name}} existe déjà",
+  ledgerFileNameExtension: "Utilisez un nom en .bean ou .beancount",
+  ledgerFileNamePath: "Utilisez un nom sans \\, .. ni nom de dossier vide",
   ledgerDeleteFile: "Supprimer {{name}}",
   ledgerDeleteFileTitle: "Supprimer le fichier de grand livre",
   ledgerDeleteFileMessage:

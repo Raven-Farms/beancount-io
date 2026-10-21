@@ -458,6 +458,10 @@ export const uk: Translations = {
   ledgerCreateFilePlaceholder: "investments.bean",
   ledgerCreateFileSuccess: "Створено {{name}}",
   ledgerCreateFileFailed: "Не вдалося створити файл",
+  ledgerFileNameExists: "Файл з назвою {{name}} уже існує",
+  ledgerFileNameExtension:
+    "Використайте назву з розширенням .bean або .beancount",
+  ledgerFileNamePath: "Використайте назву без \\, .. чи порожніх назв тек",
   ledgerDeleteFile: "Видалити {{name}}",
   ledgerDeleteFileTitle: "Видалити файл книги",
   ledgerDeleteFileMessage: 'Видалити "{{name}}"? Скасувати це буде неможливо.',

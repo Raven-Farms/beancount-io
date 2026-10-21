@@ -448,6 +448,10 @@ export const fa: Translations = {
   ledgerCreateFilePlaceholder: "investments.bean",
   ledgerCreateFileSuccess: "{{name}} ساخته شد",
   ledgerCreateFileFailed: "ساخت فایل ناموفق بود",
+  ledgerFileNameExists: "فایلی با نام {{name}} از قبل وجود دارد",
+  ledgerFileNameExtension:
+    "از نامی با پسوند ‎.bean یا ‎.beancount استفاده کنید",
+  ledgerFileNamePath: "از نامی بدون \\، .. یا نام پوشهٔ خالی استفاده کنید",
   ledgerDeleteFile: "حذف {{name}}",
   ledgerDeleteFileTitle: "حذف فایل دفتر کل",
   ledgerDeleteFileMessage: "«{{name}}» حذف شود؟ این کار برگشت‌پذیر نیست.",
