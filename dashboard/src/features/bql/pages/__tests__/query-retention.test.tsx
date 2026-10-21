@@ -258,3 +258,44 @@ describe("LedgerQueryPage re-execution", () => {
     );
   });
 });
+
+/**
+ * Running an older history query moves it to the top; its card and the
+ * others must survive the reorder, keeping keyboard focus (w4/253).
+ */
+describe("LedgerQueryPage history reorder", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    searchQuery = undefined;
+    seededHistory = [QUERY_A, QUERY_B];
+  });
+
+  it("keeps each card mounted and the focused control focused", async () => {
+    const { client, pending } = createHoldingClient();
+    render(
+      <ApolloProvider client={client}>
+        <LedgerQueryPage />
+      </ApolloProvider>,
+    );
+    const cardA = screen.getByTestId(`history-${QUERY_A}`);
+    const openB = screen.getByRole("button", { name: `open ${QUERY_B}` });
+    openB.focus();
+    fireEvent.click(openB);
+    await waitFor(() => expect(pending.has(QUERY_B)).toBe(true));
+    await act(async () => pending.get(QUERY_B)?.resolve([["Assets:B1"]]));
+    await waitFor(() =>
+      expect(screen.getByTestId(`result-rows-${QUERY_B}`)).toHaveTextContent(
+        "Assets:B1",
+      ),
+    );
+
+    const cards = screen.getAllByTestId(/^history-/);
+    expect(cards.map((card) => card.dataset.testid)).toEqual([
+      `history-${QUERY_B}`,
+      `history-${QUERY_A}`,
+    ]);
+    expect(screen.getByRole("button", { name: `open ${QUERY_B}` })).toBe(openB);
+    expect(screen.getByTestId(`history-${QUERY_A}`)).toBe(cardA);
+    expect(document.activeElement).toBe(openB);
+  });
+});

@@ -356,7 +356,10 @@ export default function LedgerQueryPage() {
 
               return (
                 <QueryResultCard
-                  key={`${query}-${index}`}
+                  // The query string is unique in history; keying by it keeps a card
+                  // (and its focus and open state) when running it reorders the list
+                  // (w4/253).
+                  key={query}
                   query={query}
                   result={cached?.data || null}
                   error={cached?.error}
