@@ -641,6 +641,8 @@ export const en = {
     "This is exactly what will be created. Go back to change anything.",
   createLedgerAccounts: "Accounts",
   createLedgerAmountInvalid: "Enter an amount like 100 or -30.50.",
+  createLedgerCurrencyInvalid: "Choose a currency code like USD or EUR.",
+  createLedgerHistoryStartInvalid: "Enter a real date like 2026-01-01.",
   createLedgerPresetPersonal: "Personal ledger",
   createLedgerPresetPersonalOutcome:
     "Record a purchase and understand its effect on money remaining.",

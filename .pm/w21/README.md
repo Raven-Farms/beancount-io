@@ -14,7 +14,6 @@
 
 - [064](./blocked/064.md) — A token refresh whose response is lost signs the user out on the next refresh (rotated token replayed → grant revoked) — **blocked:** needs an owner decision (ADR) on a refresh-token reuse grace window
 - [065](./blocked/065.md) — One early-year entry (e.g. 0050) makes the balance sheet 23,718 monthly points (3 MB) and the app stalls — **blocked:** needs an approach decision (per-pill fetch vs server downsample) and a simulator profile of the stall
-- [107](./107.md) — Create Ledger: free-text currency/date, raw server errors, and impossible dates (2026-04-31) accepted
 - [108](./108.md) — "Choose from photos" fails for HEIC iPhone photos with "Could not read receipt"
 - [109](./109.md) — Notifications bell never tells VoiceOver its error count
 - [110](./110.md) — First New Transaction after relaunch pre-fills accounts from the stale persisted cache, even a deleted account

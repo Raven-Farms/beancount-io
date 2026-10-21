@@ -691,6 +691,9 @@ export const nl: Translations = {
     "Dit is precies wat er wordt gemaakt. Ga terug om iets te wijzigen.",
   createLedgerAccounts: "Rekeningen",
   createLedgerAmountInvalid: "Voer een bedrag in zoals 100 of -30.50",
+  createLedgerCurrencyInvalid: "Kies een valutacode zoals USD of EUR.",
+  createLedgerHistoryStartInvalid:
+    "Voer een geldige datum in, zoals 2026-01-01.",
   createLedgerPresetPersonal: "Persoonlijk grootboek",
   createLedgerPresetPersonalOutcome:
     "Leg een aankoop vast en begrijp het effect op je resterende geld.",

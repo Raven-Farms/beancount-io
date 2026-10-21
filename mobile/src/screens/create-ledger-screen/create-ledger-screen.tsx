@@ -32,6 +32,8 @@ import {
 import * as Localization from "expo-localization";
 import {
   defaultHistoryStart,
+  isHistoryStart,
+  isSetupCurrency,
   openingAmountValue,
   openingSelection,
   SETUP_PRESETS,
@@ -205,8 +207,14 @@ export function CreateLedgerScreen(): JSX.Element {
         description: z.string(),
         private: z.boolean(),
         template: z.enum(["STARTER", "SAMPLE"]),
-        currency: z.string(),
-        historyStart: z.string(),
+        // Checked here, in the user's language, rather than refused on Review
+        // in the server's (w21/107).
+        currency: z.string().refine(isSetupCurrency, {
+          message: t("createLedgerCurrencyInvalid"),
+        }),
+        historyStart: z.string().refine(isHistoryStart, {
+          message: t("createLedgerHistoryStartInvalid"),
+        }),
         openingAccount: z.string(),
         openingAmount: z
           .string()
@@ -303,6 +311,19 @@ export function CreateLedgerScreen(): JSX.Element {
   };
   const chooseStart = (kind: typeof startKind) => {
     if (kind !== startKind) resetOpening();
+    // Only a preset shows and sends the currency and start date, so one left
+    // invalid there must not hold a hidden error on another start.
+    if (kind !== "preset") {
+      if (!isSetupCurrency(getValues("currency"))) {
+        setValue(
+          "currency",
+          suggestCurrency(Localization.getLocales()[0]?.regionCode),
+        );
+      }
+      if (!isHistoryStart(getValues("historyStart"))) {
+        setValue("historyStart", defaultHistoryStart());
+      }
+    }
     setStartKind(kind);
   };
   const choosePreset = (id: typeof presetId) => {
@@ -627,6 +648,9 @@ export function CreateLedgerScreen(): JSX.Element {
                   />
                 )}
               />
+              {errors.currency?.message ? (
+                <Text style={styles.error}>{errors.currency.message}</Text>
+              ) : null}
             </View>
             <View style={[styles.row, styles.rowDivider]}>
               <Text style={styles.label}>{t("createLedgerHistoryStart")}</Text>
@@ -647,6 +671,9 @@ export function CreateLedgerScreen(): JSX.Element {
                   />
                 )}
               />
+              {errors.historyStart?.message ? (
+                <Text style={styles.error}>{errors.historyStart.message}</Text>
+              ) : null}
             </View>
             {moneyAccounts.length > 0 ? (
               <>

@@ -703,6 +703,10 @@ export const de: Translations = {
     "Genau das wird erstellt. Gehen Sie zurück, um etwas zu ändern.",
   createLedgerAccounts: "Konten",
   createLedgerAmountInvalid: "Geben Sie einen Betrag wie 100 oder -30.50 ein",
+  createLedgerCurrencyInvalid:
+    "Wählen Sie einen Währungscode wie USD oder EUR.",
+  createLedgerHistoryStartInvalid:
+    "Geben Sie ein gültiges Datum wie 2026-01-01 ein.",
   createLedgerPresetPersonal: "Persönliches Buch",
   createLedgerPresetPersonalOutcome:
     "Erfassen Sie einen Kauf und verstehen Sie seine Wirkung auf Ihr Guthaben.",

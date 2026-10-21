@@ -706,6 +706,9 @@ export const fr: Translations = {
     "Voici exactement ce qui sera créé. Revenez en arrière pour modifier.",
   createLedgerAccounts: "Comptes",
   createLedgerAmountInvalid: "Saisissez un montant comme 100 ou -30.50",
+  createLedgerCurrencyInvalid: "Choisissez un code de devise comme USD ou EUR.",
+  createLedgerHistoryStartInvalid:
+    "Saisissez une date valide comme 2026-01-01.",
   createLedgerPresetPersonal: "Livre personnel",
   createLedgerPresetPersonalOutcome:
     "Enregistrez un achat et comprenez son effet sur l'argent restant.",

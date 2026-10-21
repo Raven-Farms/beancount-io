@@ -705,6 +705,9 @@ export const uk: Translations = {
     "Буде створено саме це. Поверніться, щоб щось змінити.",
   createLedgerAccounts: "Рахунки",
   createLedgerAmountInvalid: "Введіть суму, наприклад 100 або -30.50",
+  createLedgerCurrencyInvalid: "Укажіть код валюти, наприклад USD або EUR.",
+  createLedgerHistoryStartInvalid:
+    "Введіть коректну дату, наприклад 2026-01-01.",
   createLedgerPresetPersonal: "Особиста книга",
   createLedgerPresetPersonalOutcome:
     "Запишіть покупку та зрозумійте її вплив на залишок грошей.",

@@ -680,6 +680,8 @@ export const fa: Translations = {
     "دقیقاً همین ایجاد خواهد شد. برای تغییر به عقب برگردید.",
   createLedgerAccounts: "حساب‌ها",
   createLedgerAmountInvalid: "مبلغی مانند 100 یا -30.50 وارد کنید",
+  createLedgerCurrencyInvalid: "یک کد ارز مانند USD یا EUR انتخاب کنید.",
+  createLedgerHistoryStartInvalid: "یک تاریخ معتبر مانند 2026-01-01 وارد کنید.",
   createLedgerPresetPersonal: "دفتر شخصی",
   createLedgerPresetPersonalOutcome:
     "خریدی ثبت کنید و اثرش بر پول باقی‌مانده را ببینید.",

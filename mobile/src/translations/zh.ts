@@ -630,6 +630,8 @@ export const zh: Translations = {
   createLedgerReviewDescription: "将创建的正是这些内容。返回可修改。",
   createLedgerAccounts: "账户",
   createLedgerAmountInvalid: "输入如 100 或 -30.50 的金额",
+  createLedgerCurrencyInvalid: "请选择货币代码，例如 USD 或 EUR。",
+  createLedgerHistoryStartInvalid: "请输入有效日期，例如 2026-01-01。",
   createLedgerPresetPersonal: "个人账簿",
   createLedgerPresetPersonalOutcome: "记录一笔购买，了解其对剩余资金的影响。",
   createLedgerPresetFreelance: "自由职业账簿",

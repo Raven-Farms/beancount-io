@@ -189,6 +189,21 @@ describe("buildLedgerFiles (w3/m53/t002)", () => {
     expect(main).not.toContain("--30.50");
   });
 
+  // w21/107: Date.parse rolled 2026-04-31 over to 1 May, so it was accepted.
+  it("refuses a history start that is not a calendar day", () => {
+    for (const historyStart of ["2026-02-30", "2026-04-31", "2025-02-29"]) {
+      expect(() =>
+        previewLedgerSetup({ preset: "personal@1", historyStart }, "2026-01-01"),
+      ).toThrow(`Invalid history start "${historyStart}"`);
+    }
+    expect(
+      previewLedgerSetup(
+        { preset: "personal@1", historyStart: "2024-02-29" },
+        "2026-01-01",
+      ).files["main.bean"],
+    ).toContain("2024-02-29 open");
+  });
+
   it("builds a blank ledger with no accounts", () => {
     const main = buildLedgerFiles(
       { preset: "blank@1", title: "Books", operatingCurrency: "JPY" },

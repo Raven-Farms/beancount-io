@@ -56,6 +56,22 @@ export function buildLedgerFiles(
 }
 
 /**
+ * A real `YYYY-MM-DD` day. `Date.parse` rolls `2026-04-31` over to 1 May, so
+ * an impossible date passed and was written into the ledger's `open` lines
+ * (w21/107); round-tripping the parts through UTC catches it.
+ */
+function isCalendarDate(value: string): boolean {
+  if (!DATE_PATTERN.test(value)) return false;
+  const [year, month, day] = value.split("-").map(Number);
+  const date = new Date(Date.UTC(year, month - 1, day));
+  return (
+    date.getUTCFullYear() === year &&
+    date.getUTCMonth() === month - 1 &&
+    date.getUTCDate() === day
+  );
+}
+
+/**
  * The ledger's sign for an opening amount. A customer states what a credit
  * card or loan is owed as a positive number, and ADR021 stores what they owe
  * as the negative posting; written verbatim, a 500 card balance raised net
@@ -88,7 +104,7 @@ export function previewLedgerSetup(
   }
 
   const historyStart = setup.historyStart ?? today;
-  if (!DATE_PATTERN.test(historyStart) || Number.isNaN(Date.parse(historyStart))) {
+  if (!isCalendarDate(historyStart)) {
     fail(`Invalid history start "${historyStart}"`);
   }
 

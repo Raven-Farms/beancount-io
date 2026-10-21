@@ -705,6 +705,8 @@ export const ca: Translations = {
     "Això és exactament el que es crearà. Torneu enrere per canviar res.",
   createLedgerAccounts: "Comptes",
   createLedgerAmountInvalid: "Introduïu un import com 100 o -30.50",
+  createLedgerCurrencyInvalid: "Tria un codi de moneda com USD o EUR.",
+  createLedgerHistoryStartInvalid: "Introdueix una data vàlida com 2026-01-01.",
   createLedgerPresetPersonal: "Llibre personal",
   createLedgerPresetPersonalOutcome:
     "Registreu una compra i enteneu el seu efecte en els diners restants.",

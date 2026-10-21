@@ -191,3 +191,32 @@ export function openingSelection(
   );
   return offered && amount ? { name: openingAccount, amount } : null;
 }
+
+/**
+ * Whether `code` is a currency the server accepts for a new ledger: the same
+ * catalog it validates against, so a typo like `US` is refused on the form
+ * instead of on Review in the server's words (w21/107).
+ */
+export function isSetupCurrency(code: string): boolean {
+  return setupCurrencies.supportedCurrencies.includes(
+    code.trim().toUpperCase(),
+  );
+}
+
+/**
+ * Whether "Books begin" holds a real `YYYY-MM-DD` day, or nothing (today). A
+ * `2026-04-31` rolls over to 1 May in `Date.parse`, so it reached the ledger
+ * (w21/107).
+ */
+export function isHistoryStart(value: string): boolean {
+  const trimmed = value.trim();
+  if (!trimmed) return true;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) return false;
+  const [year, month, day] = trimmed.split("-").map(Number);
+  const date = new Date(Date.UTC(year, month - 1, day));
+  return (
+    date.getUTCFullYear() === year &&
+    date.getUTCMonth() === month - 1 &&
+    date.getUTCDate() === day
+  );
+}

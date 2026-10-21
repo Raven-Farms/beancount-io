@@ -706,6 +706,9 @@ export const ru: Translations = {
     "Будет создано именно это. Вернитесь, чтобы что-то изменить.",
   createLedgerAccounts: "Счета",
   createLedgerAmountInvalid: "Введите сумму, например 100 или -30.50",
+  createLedgerCurrencyInvalid: "Укажите код валюты, например USD или EUR.",
+  createLedgerHistoryStartInvalid:
+    "Введите корректную дату, например 2026-01-01.",
   createLedgerPresetPersonal: "Личная книга",
   createLedgerPresetPersonalOutcome:
     "Запишите покупку и поймите её влияние на остаток денег.",
