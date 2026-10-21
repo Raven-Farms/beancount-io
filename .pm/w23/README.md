@@ -6,6 +6,9 @@
 
 ## Inbox
 
+- [047](./047.md) — `latest-commit?branchName=<unknown>` says "Ledger resource not found" (sibling `commits?branch=` names the branch)
+- [046](./046.md) — social follower/following/starred lists answer an unknown user (or a host outage) with an empty success; the profile read says `NOT_FOUND`
+- [045](./045.md) — activity feed accepts negative/fractional `offset`/`limit`: `limit=-1` returns 97 of 98 items, `offset=-3` the oldest two (REST, GraphQL, MCP)
 - [044](./044.md) — `plaintext-journal` has no limit/paging: 276 KB in one read on `open_ledger/example`, unbounded for premium (010 class)
 - [043](./043.md) — structured amount `.5` passes the decimal check but is written raw: opaque "parse errors in main.bean"
 - [042](./042.md) — entry-source write tools hard-code `wrote: []` (documented as files touched); `deleteEntrySources` echoes duplicate hashes
