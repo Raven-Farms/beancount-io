@@ -160,3 +160,4 @@
 - [230](./230.md) — Persian / Arabic-Indic digits are refused in New Transaction amounts
 - [231](./231.md) — Zero-decimal currencies are written as "1500.00 JPY"
 - [232](./232.md) — Pasted " -12.50" saves negative but shows positive; the sign toggle then breaks it
+- [233](./233.md) — Home's budget panel and Merchants' Overdue still freeze "today" at mount (w21/078 follow-up)
