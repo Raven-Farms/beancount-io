@@ -178,6 +178,12 @@ const AccountDetailScreenImpl = ({
   const valuationPending =
     (pricesLoading && !pricesData) || (accountsLoading && !accountsData);
   const today = useToday();
+  // The account's balance at the ledger's latest prices, as its Accounts row
+  // reads it (w21/179).
+  const currentBalance = useMemo(
+    () => selectTrialBalanceAccount(accountsData, account),
+    [accountsData, account],
+  );
   const display = useMemo(
     () =>
       selectAccountBalanceDisplay(
@@ -186,7 +192,7 @@ const AccountDetailScreenImpl = ({
         unitsReportData,
         prices,
         today,
-        selectTrialBalanceAccount(accountsData, account),
+        currentBalance,
         managed,
       ),
     [
@@ -225,8 +231,19 @@ const AccountDetailScreenImpl = ({
     () =>
       unitsCurrency
         ? selectAccountUnitsSeries(unitsCurrency, unitsReportData)
-        : selectAccountBalanceSeries(currency, reportData),
-    [currency, reportData, unitsCurrency, unitsReportData],
+        : selectAccountBalanceSeries(
+            currency,
+            reportData,
+            currentBalance ? { balance: currentBalance, today } : undefined,
+          ),
+    [
+      currency,
+      reportData,
+      unitsCurrency,
+      unitsReportData,
+      currentBalance,
+      today,
+    ],
   );
   // Every chart point and change at the widest scale the series holds, not
   // the latest balance's (w21/125).

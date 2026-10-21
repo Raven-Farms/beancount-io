@@ -1,4 +1,5 @@
 import { AccountReportQuery } from "@/generated-graphql/graphql";
+import { resolveCurrencyBalance } from "../../../common/balance-util";
 import {
   SeriesPoint,
   latestBalance,
@@ -22,15 +23,12 @@ import {
  * How the account's figures read (see `selectBalanceDisplay`), from the latest
  * point of its market report and of the same report read in units.
  *
- * One commodity reads in its units, so its value is free to be the current one:
  * `current` is the account's balance in the market-valued trial balance, the
  * figure its Accounts row shows at the ledger's latest price. (The report's
  * latest point is valued at the price of its own date — the account's last
- * change — which for a holding left alone for months is an old one.)
- *
- * Any other balance is the chart's headline, the report's latest point, so it
- * carries what that total discloses about its basis (see `selectValuation`),
- * dated like that point.
+ * change — which for a holding left alone for months is an old one.) Any
+ * balance reads at it when known, and the balance series ends on it; a money
+ * total carries what it discloses about its basis (see `selectValuation`).
  */
 export function selectAccountBalanceDisplay(
   currency: string,
@@ -46,29 +44,25 @@ export function selectAccountBalanceDisplay(
   const unitsBalance = latestBalance(
     units?.getLedgerAccountReport?.linechartData,
   );
+  // Today's value when the trial balance has it, as the Accounts row reads,
+  // for every kind of balance. Only a single commodity used it: a mixed
+  // brokerage showing $1,250 there opened on the $1,000 its last posting was
+  // priced at (w21/179). Without it, the report's latest point, dated so.
+  const hasCurrent = current !== undefined && current !== null;
   const display = selectBalanceDisplay(
-    latest?.balance,
+    hasCurrent ? current : latest?.balance,
     unitsBalance,
     currency,
-    valueBasisOf(prices, currency, latest?.date),
+    valueBasisOf(prices, currency, hasCurrent ? undefined : latest?.date),
   );
-  if (display.kind === "units") {
-    return current === undefined || current === null
-      ? display
-      : selectBalanceDisplay(
-          current,
-          unitsBalance,
-          currency,
-          valueBasisOf(prices, currency),
-        );
-  }
+  if (display.kind === "units") return display;
   return {
     ...display,
     valuation: selectValuation({
-      market: latest?.balance,
+      market: hasCurrent ? current : latest?.balance,
       units: unitsBalance,
       currency,
-      date: latest?.date,
+      date: hasCurrent ? today : latest?.date,
       today,
       prices,
       managed,
@@ -121,12 +115,25 @@ export function selectAccountUnitsScale(
 export function selectAccountBalanceSeries(
   currency: string,
   data?: AccountReportQuery,
+  current?: { balance: BalanceMap; today: string },
 ): SeriesPoint[] {
   // The ledger sends a point only where the balance changed (w21/164).
-  return forwardFillMonths(
+  const series = forwardFillMonths(
     pointsToMonthlySeries(
       currency,
       data?.getLedgerAccountReport?.linechartData,
     ),
   );
+  const last = series[series.length - 1];
+  if (!current || !last || last.date > current.today) return series;
+  // The chart's headline is its last point, priced on the account's last
+  // change; end it on today's value, as the Accounts row reads (w21/179).
+  const now = {
+    date: current.today,
+    // Read like every other point of the series.
+    value: resolveCurrencyBalance(current.balance, currency),
+  };
+  return last.date.slice(0, 7) === current.today.slice(0, 7)
+    ? [...series.slice(0, -1), now]
+    : forwardFillMonths([...series, now]);
 }

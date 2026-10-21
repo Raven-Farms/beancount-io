@@ -90,7 +90,9 @@ describe("selectAccountBalanceDisplay", () => {
     });
   });
 
-  it("dates a money total by its own latest point", () => {
+  // w21/179: the header was the report's point, priced on the account's last
+  // posting date, while its Accounts row read today's value.
+  it("values a money total today, as its Accounts row does", () => {
     // Assets:US:Vanguard: two funds and a cent of cash.
     const display = selectAccountBalanceDisplay(
       "USD",
@@ -110,11 +112,11 @@ describe("selectAccountBalanceDisplay", () => {
     );
     expect(display.kind).toBe("money");
     const valuation = display.kind === "money" ? display.valuation : undefined;
-    // The headline is the report's point, so its prices are the ones on or
-    // before 2017-08-14 — not the row's figure, which is not the headline.
-    expect(display.kind === "money" && display.value).toBe(89045.42238);
-    expect(valuation?.priced[0]?.priceDate).toBe("2017-08-11");
-    expect(valuation?.priced[0]?.stale).toBe(false);
+    // The row's figure, valued at the latest prices, and checked against
+    // today: RGAGX's newest price is years old by then.
+    expect(display.kind === "money" && display.value).toBe(88000);
+    expect(valuation?.priced[0]?.priceDate).toBe("2017-09-08");
+    expect(valuation?.priced[0]?.stale).toBe(true);
   });
 
   it("is an empty money figure before either report arrives", () => {
@@ -211,5 +213,50 @@ describe("a month with no postings", () => {
     expect(
       selectAccountUnitsSeries("ITOT", data).map((point) => point.date),
     ).toEqual(["2025-11-20", "2025-12-31", "2026-01-31", "2026-02-02"]);
+  });
+});
+
+// w21/179: a mixed cash-and-holdings account's header was its last point,
+// priced on its last posting date, not today as its Accounts row is.
+describe("a mixed account's balance today", () => {
+  const report = createReport([
+    { date: "2026-09-02", balance: { USD: "1000" } },
+  ]);
+
+  it("ends the series on today's value", () => {
+    expect(
+      selectAccountBalanceSeries("USD", report, {
+        balance: { USD: "1250" },
+        today: "2026-10-21",
+      }),
+    ).toEqual([
+      { date: "2026-09-02", value: 1000 },
+      { date: "2026-10-21", value: 1250 },
+    ]);
+    // Across a dormant month, the month in between closes on the old value.
+    expect(
+      selectAccountBalanceSeries("USD", report, {
+        balance: { USD: "1250" },
+        today: "2026-11-21",
+      }).map((point) => point.date),
+    ).toEqual(["2026-09-02", "2026-10-31", "2026-11-21"]);
+  });
+
+  it("replaces a point already in this month", () => {
+    const thisMonth = createReport([
+      { date: "2026-10-05", balance: { USD: "1000" } },
+    ]);
+    expect(
+      selectAccountBalanceSeries("USD", thisMonth, {
+        balance: { USD: "1250" },
+        today: "2026-10-21",
+      }),
+    ).toEqual([{ date: "2026-10-21", value: 1250 }]);
+  });
+
+  it("is unchanged without a current value", () => {
+    expect(selectAccountBalanceSeries("USD", report)).toEqual([
+      { date: "2026-09-02", value: 1000 },
+    ]);
   });
 });

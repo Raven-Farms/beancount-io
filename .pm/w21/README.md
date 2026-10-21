@@ -14,7 +14,6 @@
 
 - [064](./blocked/064.md) — A token refresh whose response is lost signs the user out on the next refresh (rotated token replayed → grant revoked) — **blocked:** needs an owner decision (ADR) on a refresh-token reuse grace window
 - [065](./blocked/065.md) — One early-year entry (e.g. 0050) makes the balance sheet 23,718 monthly points (3 MB) and the app stalls — **blocked:** needs an approach decision (per-pill fetch vs server downsample) and a simulator profile of the stall
-- [179](./179.md) — Account detail header values mixed holdings at the last-posting price; the Accounts row uses the latest
 - [180](./180.md) — Budget actuals use raw prefix match (`Transport` counts `Transportation`), unlike Reports — owner decision
 - [181](./181.md) — Merchant detail stops after 500 substring matches; rows vanish under its own header
 - [182](./182.md) — A ledger-service outage at launch permanently drops the selected ledger
