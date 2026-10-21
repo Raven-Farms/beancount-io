@@ -236,7 +236,12 @@ export function groupBudgetEntries(
     Array<{ entry: BudgetEntry; fields: BudgetFields }>
   >();
 
-  for (const entry of entries ?? []) {
+  // The journal returns entries newest first, so two directives on one date
+  // arrive later-first. Reversed into ledger order, the stable date sort below
+  // keeps them in that order and the later one — what Update Budget writes on
+  // the same day — becomes the current target, the last history step and the
+  // chart's basis (w21/040; the dashboard's w4/232).
+  for (const entry of [...(entries ?? [])].reverse()) {
     const fields = entry && getBudgetFields(entry);
     if (!fields) {
       continue;

@@ -6,8 +6,11 @@
  * (no toMatchObject / toHaveLength).
  */
 import {
+  budgetForInterval,
   calculateBudgetForInterval,
   groupBudgetEntries,
+  prepareBudgetHistory,
+  selectHistoryRows,
 } from "../budget-selectors";
 import type { BudgetEntry, BudgetHistoryEntry } from "../budget-selectors";
 import { DirectiveType } from "../../../transactions-screen/types";
@@ -193,5 +196,63 @@ describe("calculateBudgetForInterval", () => {
     expect(calculateBudgetForInterval("2025-01-31", "monthly", history)).toBe(
       -310,
     );
+  });
+});
+
+// w21/040: Update Budget on the original target's date writes a second
+// directive on that date. The journal returns them newest first, and the
+// older one used to stay the current target and the chart's basis.
+describe("groupBudgetEntries with two targets on one date", () => {
+  // Newest first, as getLedgerJournal returns them.
+  const journal = [
+    budgetEntry(
+      "2026-08-01",
+      "Expenses:Food:Groceries",
+      "monthly",
+      "500",
+      "USD",
+      "newer",
+    ),
+    budgetEntry(
+      "2026-08-01",
+      "Expenses:Food:Groceries",
+      "monthly",
+      "300",
+      "USD",
+      "older",
+    ),
+  ];
+
+  it("makes the later directive the current target and last history step", () => {
+    const [group] = groupBudgetEntries(journal, "2026-10-20");
+    expect(group.amount).toBe("500 USD");
+    expect(group.entry_hash).toBe("newer");
+    expect(group.budgetHistory.map((entry) => entry.entry_hash)).toEqual([
+      "older",
+      "newer",
+    ]);
+    // History is shown newest first, current row on top.
+    expect(
+      selectHistoryRows(group).map((row) => [row.entry_hash, row.isCurrent]),
+    ).toEqual([
+      ["newer", true],
+      ["older", false],
+    ]);
+  });
+
+  it("prorates the later target, not the older one", () => {
+    const [group] = groupBudgetEntries(journal, "2026-10-20");
+    const prorated = budgetForInterval(
+      "2026-10-31",
+      "monthly",
+      prepareBudgetHistory(group.budgetHistory),
+      "2026-10-20",
+    );
+    expect(Math.round(prorated * 100) / 100).toBe(322.58);
+  });
+
+  it("returns to the older target once the later one is deleted", () => {
+    const [group] = groupBudgetEntries([journal[1]], "2026-10-20");
+    expect(group.amount).toBe("300 USD");
   });
 });
