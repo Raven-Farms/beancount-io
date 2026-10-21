@@ -39,15 +39,22 @@ function monthKeys(referenceDate: Date) {
 }
 
 /**
- * The `time` window the card asks for: the first of last month through today.
- * Both months come back whole however many transactions they hold (w21/011).
+ * The `time` window the card asks for: the first of last month through the end
+ * of this one. Both months come back whole however many transactions they
+ * hold (w21/011). The window is the same all month: ending it on today made
+ * a new cache key every day, so the next day offline found yesterday's result
+ * unreadable and the card failed to load (w21/184).
  */
 export function spendingWindow(referenceDate: Date = new Date()): string {
   const { lastMonthKey, thisMonthKey } = monthKeys(referenceDate);
-  const day = String(referenceDate.getDate()).padStart(2, "0");
+  const lastDay = new Date(
+    referenceDate.getFullYear(),
+    referenceDate.getMonth() + 1,
+    0,
+  ).getDate();
   return formatTimeFilter({
     start: `${lastMonthKey}-01`,
-    end: `${thisMonthKey}-${day}`,
+    end: `${thisMonthKey}-${String(lastDay).padStart(2, "0")}`,
   });
 }
 

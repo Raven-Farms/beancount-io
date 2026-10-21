@@ -15,8 +15,7 @@ import {
   type BudgetGroup,
 } from "@/screens/budget-screen/selectors/budget-selectors";
 import {
-  DEFAULT_BUDGET_SPAN,
-  timeSpanToFilter,
+  budgetPanelWindow,
   timeWindowStart,
 } from "@/screens/budget-screen/selectors/budget-labels";
 import {
@@ -96,10 +95,10 @@ export function useBudgetPanel({
     setLoading(true);
     setFailed(false);
 
-    // Deliberately the span the page opens on, not this budget's own current
-    // period: identical variables mean one cached result serves the panel and
-    // the page instead of each fetching its own copy of every budget.
-    const time = timeSpanToFilter(DEFAULT_BUDGET_SPAN);
+    // One window all month, so the next day offline still finds the cached
+    // actuals; it no longer shares the page's year-to-date result, which
+    // ends on today and changes daily (w21/184).
+    const time = budgetPanelWindow(getFormatDate(new Date()));
 
     mapInBatches(groups, BUDGET_PANEL_BATCH, async (group) => {
       const { end } = currentPeriodRange(group.interval);

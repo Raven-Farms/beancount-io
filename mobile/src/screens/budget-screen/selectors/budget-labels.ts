@@ -113,6 +113,22 @@ export const TIME_SPAN_LABEL_KEYS: Record<BudgetTimeSpan, string> = {
 };
 
 /**
+ * The window Home's budget panel prices actuals over: January through the end
+ * of the current month. It holds for the whole month, where year-to-date
+ * ended on today and so changed every day, leaving the next day offline with
+ * no cached actuals to read (w21/184).
+ */
+export function budgetPanelWindow(today: string): string {
+  const year = Number(today.slice(0, 4));
+  const month = Number(today.slice(5, 7));
+  const lastDay = utcDate(year, month, 0).getUTCDate();
+  return formatTimeFilter({
+    start: `${today.slice(0, 4)}-01-01`,
+    end: `${today.slice(0, 7)}-${String(lastDay).padStart(2, "0")}`,
+  });
+}
+
+/**
  * Map a pill to fava's `time` filter syntax. `undefined` means no filter (all
  * time). Every other span is an explicit inclusive range built from the
  * device's date, never a relative variable the server resolves on its own

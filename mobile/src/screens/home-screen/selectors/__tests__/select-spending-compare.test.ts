@@ -14,13 +14,20 @@ import { en } from "../../../../translations/en";
 const REF = new Date(2026, 9, 20); // 2026-10-20, local time
 
 describe("spendingWindow", () => {
-  it("asks for the first of last month through today", () => {
-    expect(spendingWindow(REF)).toBe("2026-09-01 - 2026-10-20");
+  // w21/184: ending on today made a new cache key every day, so the next day
+  // offline found no cached result.
+  it("asks for the first of last month through the end of this one", () => {
+    expect(spendingWindow(REF)).toBe("2026-09-01 - 2026-10-31");
+  });
+
+  it("is the same all month", () => {
+    expect(spendingWindow(new Date(2026, 9, 1))).toBe(spendingWindow(REF));
+    expect(spendingWindow(new Date(2026, 9, 31))).toBe(spendingWindow(REF));
   });
 
   it("reaches back across a year boundary in January", () => {
     expect(spendingWindow(new Date(2027, 0, 5))).toBe(
-      "2026-12-01 - 2027-01-05",
+      "2026-12-01 - 2027-01-31",
     );
   });
 });

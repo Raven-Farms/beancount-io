@@ -2,6 +2,7 @@ import {
   budgetChartSummary,
   intervalLabelKey,
   timeSpanToFilter,
+  budgetPanelWindow,
 } from "../budget-labels";
 import { en } from "../../../../translations/en";
 
@@ -163,6 +164,35 @@ describe("timeSpanToFilter: leap day", () => {
     );
     expect(timeSpanToFilter("last-12m", "2027-03-01")).toBe(
       "2026-03-01 - 2027-03-01",
+    );
+  });
+});
+
+// w21/184: year to date ended on today, a new cache key every day.
+describe("budgetPanelWindow", () => {
+  it("runs from January to the end of the month, the same all month", () => {
+    expect(budgetPanelWindow("2026-10-21")).toBe("2026-01-01 - 2026-10-31");
+    expect(budgetPanelWindow("2026-10-01")).toBe(
+      budgetPanelWindow("2026-10-31"),
+    );
+    expect(budgetPanelWindow("2028-02-10")).toBe("2028-01-01 - 2028-02-29");
+  });
+
+  it("is what Home's budget panel prices over", () => {
+    const hook = require("fs").readFileSync(
+      require("path").join(
+        __dirname,
+        "..",
+        "..",
+        "..",
+        "home-screen",
+        "hooks",
+        "use-budget-panel.ts",
+      ),
+      "utf8",
+    );
+    expect(hook.includes("budgetPanelWindow(getFormatDate(new Date()))")).toBe(
+      true,
     );
   });
 });
