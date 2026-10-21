@@ -510,6 +510,7 @@ export const sk: Translations = {
     "Zadajte jedinečný názov súboru .bean alebo .beancount. Bez prípony sa doplní .bean.",
   ledgerCreateFilePlaceholder: "investments.bean",
   ledgerCreateFileSuccess: "{{name}} vytvorený",
+  ledgerCreateFileSuccessIn: "{{name}} bol vytvorený v {{ledger}}",
   ledgerCreateFileFailed: "Súbor sa nepodarilo vytvoriť",
   ledgerFileNameExists: "Súbor s názvom {{name}} už existuje",
   ledgerFileNameExtension: "Použite názov s príponou .bean alebo .beancount",

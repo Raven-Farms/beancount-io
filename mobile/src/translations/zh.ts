@@ -451,6 +451,7 @@ export const zh: Translations = {
     "请输入唯一的 .bean 或 .beancount 文件名。若省略扩展名，将自动添加 .bean。",
   ledgerCreateFilePlaceholder: "investments.bean",
   ledgerCreateFileSuccess: "已创建 {{name}}",
+  ledgerCreateFileSuccessIn: "已在 {{ledger}} 中创建 {{name}}",
   ledgerCreateFileFailed: "新建文件失败",
   ledgerFileNameExists: "名为 {{name}} 的文件已存在",
   ledgerFileNameExtension: "请使用 .bean 或 .beancount 文件名",

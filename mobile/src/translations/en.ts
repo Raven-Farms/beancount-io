@@ -506,6 +506,7 @@ export const en = {
     "Enter a unique .bean or .beancount filename. If you omit the extension, .bean is added.",
   ledgerCreateFilePlaceholder: "investments.bean",
   ledgerCreateFileSuccess: "Created {{name}}",
+  ledgerCreateFileSuccessIn: "Created {{name}} in {{ledger}}",
   ledgerCreateFileFailed: "Failed to create file",
   ledgerFileNameExists: "A file named {{name}} already exists",
   ledgerFileNameExtension: "Use a .bean or .beancount name",

@@ -491,6 +491,7 @@ export const fa: Translations = {
     "یک نام یکتا برای فایل .bean یا .beancount وارد کنید. اگر پسوند را ننویسید، .bean افزوده می‌شود.",
   ledgerCreateFilePlaceholder: "investments.bean",
   ledgerCreateFileSuccess: "{{name}} ساخته شد",
+  ledgerCreateFileSuccessIn: "{{name}} در {{ledger}} ایجاد شد",
   ledgerCreateFileFailed: "ساخت فایل ناموفق بود",
   ledgerFileNameExists: "فایلی با نام {{name}} از قبل وجود دارد",
   ledgerFileNameExtension:

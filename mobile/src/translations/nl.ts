@@ -498,6 +498,7 @@ export const nl: Translations = {
     "Voer een unieke .bean- of .beancount-bestandsnaam in. Zonder extensie wordt .bean toegevoegd.",
   ledgerCreateFilePlaceholder: "investments.bean",
   ledgerCreateFileSuccess: "{{name}} aangemaakt",
+  ledgerCreateFileSuccessIn: "{{name}} aangemaakt in {{ledger}}",
   ledgerCreateFileFailed: "Aanmaken van bestand mislukt",
   ledgerFileNameExists: "Er bestaat al een bestand met de naam {{name}}",
   ledgerFileNameExtension: "Gebruik een naam op .bean of .beancount",

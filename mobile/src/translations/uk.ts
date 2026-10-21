@@ -505,6 +505,7 @@ export const uk: Translations = {
     "Введіть унікальну назву файлу .bean або .beancount. Без розширення буде додано .bean.",
   ledgerCreateFilePlaceholder: "investments.bean",
   ledgerCreateFileSuccess: "Створено {{name}}",
+  ledgerCreateFileSuccessIn: "Файл {{name}} створено в {{ledger}}",
   ledgerCreateFileFailed: "Не вдалося створити файл",
   ledgerFileNameExists: "Файл з назвою {{name}} уже існує",
   ledgerFileNameExtension:

@@ -53,6 +53,8 @@ import {
   type LedgerPathStack,
 } from "./utils";
 import { LEADING_TEXT_ALIGN, directionalIcon } from "@/common/rtl";
+import { ledgerVar } from "@/common/vars";
+import { useIsHere } from "@/common/hooks/use-is-here";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -330,6 +332,7 @@ export function LedgerFileBrowserScreen(): JSX.Element {
   const [refreshing, setRefreshing] = useState(false);
   const [createModalVisible, setCreateModalVisible] = useState(false);
   const [deletingPath, setDeletingPath] = useState<string | null>(null);
+  const isHere = useIsHere();
   const createInFlightRef = useRef(false);
   const deleteInFlightRef = useRef(false);
 
@@ -423,13 +426,24 @@ export function LedgerFileBrowserScreen(): JSX.Element {
         });
         const createdPath = result.data?.createLedgerFile.path ?? filePath;
         haptics.success();
+        // The editor opens the *selected* ledger's file. Switched, or left,
+        // during the create, the file exists in the ledger it was made in
+        // and opening that path elsewhere could edit another ledger's file
+        // of the same name (w21/196): say where, and open nothing.
+        const stayedHere = ledgerVar() === ledgerId && isHere();
         toast.showToast({
-          message: t("ledgerCreateFileSuccess", { name: filename }),
+          message: stayedHere
+            ? t("ledgerCreateFileSuccess", { name: filename })
+            : t("ledgerCreateFileSuccessIn", {
+                name: filename,
+                ledger: ledgerId,
+              }),
           type: "success",
         });
         // Not awaited: the user is on their way into the editor, and the
         // listing behind them repaints as soon as the refetch lands.
         void invalidateLedgerData(client, "file");
+        if (!stayedHere) return;
         router.push({
           pathname: guest
             ? "/examples/ledger-file-editor"
@@ -449,6 +463,7 @@ export function LedgerFileBrowserScreen(): JSX.Element {
     [
       client,
       guest,
+      isHere,
       canWrite,
       createLedgerFile,
       currentPath,

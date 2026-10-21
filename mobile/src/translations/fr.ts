@@ -509,6 +509,7 @@ export const fr: Translations = {
     "Saisissez un nom de fichier .bean ou .beancount unique. Sans extension, .bean est ajouté.",
   ledgerCreateFilePlaceholder: "investments.bean",
   ledgerCreateFileSuccess: "{{name}} créé",
+  ledgerCreateFileSuccessIn: "{{name}} créé dans {{ledger}}",
   ledgerCreateFileFailed: "Échec de la création du fichier",
   ledgerFileNameExists: "Un fichier nommé {{name}} existe déjà",
   ledgerFileNameExtension: "Utilisez un nom en .bean ou .beancount",

@@ -509,6 +509,7 @@ export const ca: Translations = {
     "Escriu un nom únic de fitxer .bean o .beancount. Si no poses extensió, s'hi afegeix .bean.",
   ledgerCreateFilePlaceholder: "investments.bean",
   ledgerCreateFileSuccess: "S'ha creat {{name}}",
+  ledgerCreateFileSuccessIn: "S'ha creat {{name}} a {{ledger}}",
   ledgerCreateFileFailed: "No s'ha pogut crear el fitxer",
   ledgerFileNameExists: "Ja existeix un fitxer anomenat {{name}}",
   ledgerFileNameExtension: "Fes servir un nom .bean o .beancount",

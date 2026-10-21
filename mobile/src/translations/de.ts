@@ -510,6 +510,7 @@ export const de: Translations = {
     "Geben Sie einen eindeutigen .bean- oder .beancount-Dateinamen ein. Ohne Endung wird .bean ergänzt.",
   ledgerCreateFilePlaceholder: "investments.bean",
   ledgerCreateFileSuccess: "{{name}} angelegt",
+  ledgerCreateFileSuccessIn: "{{name}} in {{ledger}} erstellt",
   ledgerCreateFileFailed: "Datei konnte nicht angelegt werden",
   ledgerFileNameExists: "Eine Datei namens {{name}} existiert bereits",
   ledgerFileNameExtension:
