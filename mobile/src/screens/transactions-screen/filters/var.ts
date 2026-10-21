@@ -20,3 +20,12 @@ import { NO_SCOPED_FILTERS, ScopedTransactionFilters } from "./types";
  */
 export const transactionFiltersVar =
   makeVar<ScopedTransactionFilters>(NO_SCOPED_FILTERS);
+
+/**
+ * Back to no filters, for sign-out: the var lives in memory, keyed by ledger
+ * but not by account, so the next sign-in opened Transactions narrowed by the
+ * last session's filters (w21/115).
+ */
+export function resetTransactionFilters(): void {
+  transactionFiltersVar(NO_SCOPED_FILTERS);
+}

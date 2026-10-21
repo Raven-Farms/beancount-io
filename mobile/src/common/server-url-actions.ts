@@ -7,6 +7,7 @@ import { clearPendingAuthorization } from "@/common/oauth/pending-authorization-
 import { clearGuestVisit } from "@/common/guest/guest-state";
 import { clearPendingAppLink } from "@/common/app-links/pending-app-link";
 import { clearCreateLedgerDraft } from "@/common/create-ledger-draft";
+import { resetTransactionFilters } from "@/screens/transactions-screen/filters/var";
 import { invalidateAuthorization } from "@/common/oauth/authorization-context";
 import {
   accountUsageVar,
@@ -43,6 +44,7 @@ export async function clearServerScopedState(
   ledgerVar(null);
   accountUsageVar({});
   merchantRecurringOverridesVar({});
+  resetTransactionFilters();
   await teardownSessionCaches({
     clearSession: () => sessionVar(null),
     flushSession,

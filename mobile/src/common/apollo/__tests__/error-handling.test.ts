@@ -33,6 +33,8 @@ describe("the auth-error sign-out", () => {
       "ledgerVar(null);",
       "accountUsageVar({});",
       "merchantRecurringOverridesVar({});",
+      // w21/115: Transactions' filters, which outlived the session.
+      "resetTransactionFilters();",
       "clearCreateLedgerDraft(),",
       "await clearPendingAuthorization();",
     ]) {
