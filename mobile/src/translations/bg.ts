@@ -620,8 +620,11 @@ export const bg: Translations = {
   ledgerGuardMessage: "Създайте книга или открийте такава, за да продължите.",
   removePosting: "Премахни запис",
   toggleAmountSign: "Превключи знака на сумата",
-  incomeExpenseChartSummary:
-    "Приходи и разходи за {{count}} месеца. Приходи {{income}}, разходи {{expense}}, нето {{net}}.",
+  incomeExpenseChartSummary: {
+    one: "Приходи и разходи за {{count}} месец. Приходи {{income}}, разходи {{expense}}, нето {{net}}.",
+    other:
+      "Приходи и разходи за {{count}} месеца. Приходи {{income}}, разходи {{expense}}, нето {{net}}.",
+  },
   cashFlowChartSummary:
     "Паричен поток от приходи към разходи. Приходи {{income}}, разходи {{expenses}}.",
   cashFlowChartSummaryWithSavings:
@@ -640,8 +643,11 @@ export const bg: Translations = {
   expandAccount: "Разгъни {{account}}",
   collapseAccount: "Сгъни {{account}}",
   breakdownRowShare: "{{amount}}, {{percent}}% от общото",
-  budgetChartSummary:
-    "Бюджет спрямо действителни за {{span}}. Действителни {{actual}} от бюджет {{budget}} за {{count}} периода, {{over}} над целта.",
+  budgetChartSummary: {
+    one: "Бюджет спрямо действителни за {{span}}. Действителни {{actual}} от бюджет {{budget}} за {{count}} период, {{over}} над целта.",
+    other:
+      "Бюджет спрямо действителни за {{span}}. Действителни {{actual}} от бюджет {{budget}} за {{count}} периода, {{over}} над целта.",
+  },
   feedSourceLedger: "Счетоводна книга",
   feedSourceBlog: "Блог",
   feedSourceRelease: "Издание",

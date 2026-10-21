@@ -634,8 +634,13 @@ export const ru: Translations = {
   ledgerGuardMessage: "Создайте книгу или найдите её, чтобы продолжить.",
   removePosting: "Удалить проводку",
   toggleAmountSign: "Сменить знак суммы",
-  incomeExpenseChartSummary:
-    "Доходы и расходы за {{count}} мес. Доходы {{income}}, расходы {{expense}}, чистыми {{net}}.",
+  incomeExpenseChartSummary: {
+    one: "Доходы и расходы за {{count}} мес. Доходы {{income}}, расходы {{expense}}, чистыми {{net}}.",
+    few: "Доходы и расходы за {{count}} мес. Доходы {{income}}, расходы {{expense}}, чистыми {{net}}.",
+    many: "Доходы и расходы за {{count}} мес. Доходы {{income}}, расходы {{expense}}, чистыми {{net}}.",
+    other:
+      "Доходы и расходы за {{count}} мес. Доходы {{income}}, расходы {{expense}}, чистыми {{net}}.",
+  },
   cashFlowChartSummary:
     "Денежный поток от доходов к расходам. Доходы {{income}}, расходы {{expenses}}.",
   cashFlowChartSummaryWithSavings:
@@ -654,8 +659,13 @@ export const ru: Translations = {
   expandAccount: "Развернуть {{account}}",
   collapseAccount: "Свернуть {{account}}",
   breakdownRowShare: "{{amount}}, {{percent}}% от итога",
-  budgetChartSummary:
-    "Бюджет и факт за {{span}}. Факт {{actual}} из {{budget}} за {{count}} периодов, {{over}} сверх цели.",
+  budgetChartSummary: {
+    one: "Бюджет и факт за {{span}}. Факт {{actual}} из {{budget}} за {{count}} период, {{over}} сверх цели.",
+    few: "Бюджет и факт за {{span}}. Факт {{actual}} из {{budget}} за {{count}} периода, {{over}} сверх цели.",
+    many: "Бюджет и факт за {{span}}. Факт {{actual}} из {{budget}} за {{count}} периодов, {{over}} сверх цели.",
+    other:
+      "Бюджет и факт за {{span}}. Факт {{actual}} из {{budget}} за {{count}} периода, {{over}} сверх цели.",
+  },
   feedSourceLedger: "Книга",
   feedSourceBlog: "Блог",
   feedSourceRelease: "Релиз",

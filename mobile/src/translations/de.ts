@@ -635,8 +635,11 @@ export const de: Translations = {
     "Erstellen oder entdecken Sie ein Hauptbuch, um fortzufahren.",
   removePosting: "Buchung entfernen",
   toggleAmountSign: "Vorzeichen des Betrags umschalten",
-  incomeExpenseChartSummary:
-    "Einnahmen und Ausgaben über {{count}} Monate. Einnahmen {{income}}, Ausgaben {{expense}}, Netto {{net}}.",
+  incomeExpenseChartSummary: {
+    one: "Einnahmen und Ausgaben über {{count}} Monat. Einnahmen {{income}}, Ausgaben {{expense}}, Netto {{net}}.",
+    other:
+      "Einnahmen und Ausgaben über {{count}} Monate. Einnahmen {{income}}, Ausgaben {{expense}}, Netto {{net}}.",
+  },
   cashFlowChartSummary:
     "Cashflow von Einnahmen zu Ausgaben. Einnahmen {{income}}, Ausgaben {{expenses}}.",
   cashFlowChartSummaryWithSavings:
@@ -655,8 +658,11 @@ export const de: Translations = {
   expandAccount: "{{account}} ausklappen",
   collapseAccount: "{{account}} einklappen",
   breakdownRowShare: "{{amount}}, {{percent}} % des Gesamtbetrags",
-  budgetChartSummary:
-    "Budget gegen Ist für {{span}}. Ist {{actual}} von geplanten {{budget}} über {{count}} Perioden, {{over}} über dem Ziel.",
+  budgetChartSummary: {
+    one: "Budget gegen Ist für {{span}}. Ist {{actual}} von geplanten {{budget}} über {{count}} Periode, {{over}} über dem Ziel.",
+    other:
+      "Budget gegen Ist für {{span}}. Ist {{actual}} von geplanten {{budget}} über {{count}} Perioden, {{over}} über dem Ziel.",
+  },
   feedSourceLedger: "Hauptbuch",
   feedSourceBlog: "Blog",
   feedSourceRelease: "Veröffentlichung",

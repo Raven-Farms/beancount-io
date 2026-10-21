@@ -636,8 +636,12 @@ export const fr: Translations = {
   ledgerGuardMessage: "Créez un grand livre ou découvrez-en un pour continuer.",
   removePosting: "Supprimer l'écriture",
   toggleAmountSign: "Inverser le signe du montant",
-  incomeExpenseChartSummary:
-    "Revenus et dépenses sur {{count}} mois. Revenus {{income}}, dépenses {{expense}}, net {{net}}.",
+  incomeExpenseChartSummary: {
+    one: "Revenus et dépenses sur {{count}} mois. Revenus {{income}}, dépenses {{expense}}, net {{net}}.",
+    many: "Revenus et dépenses sur {{count}} mois. Revenus {{income}}, dépenses {{expense}}, net {{net}}.",
+    other:
+      "Revenus et dépenses sur {{count}} mois. Revenus {{income}}, dépenses {{expense}}, net {{net}}.",
+  },
   cashFlowChartSummary:
     "Flux de trésorerie des revenus vers les dépenses. Revenus {{income}}, dépenses {{expenses}}.",
   cashFlowChartSummaryWithSavings:
@@ -656,8 +660,12 @@ export const fr: Translations = {
   expandAccount: "Développer {{account}}",
   collapseAccount: "Replier {{account}}",
   breakdownRowShare: "{{amount}}, {{percent}} % du total",
-  budgetChartSummary:
-    "Budget et réel pour {{span}}. Réel {{actual}} sur {{budget}} budgété sur {{count}} périodes, {{over}} au-dessus de l'objectif.",
+  budgetChartSummary: {
+    one: "Budget et réel pour {{span}}. Réel {{actual}} sur {{budget}} budgété sur {{count}} période, {{over}} au-dessus de l'objectif.",
+    many: "Budget et réel pour {{span}}. Réel {{actual}} sur {{budget}} budgété sur {{count}} périodes, {{over}} au-dessus de l'objectif.",
+    other:
+      "Budget et réel pour {{span}}. Réel {{actual}} sur {{budget}} budgété sur {{count}} périodes, {{over}} au-dessus de l'objectif.",
+  },
   feedSourceLedger: "Livre",
   feedSourceBlog: "Blog",
   feedSourceRelease: "Version",

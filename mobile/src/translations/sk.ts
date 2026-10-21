@@ -640,8 +640,13 @@ export const sk: Translations = {
     "Vytvorte knihu alebo objavte jednu, aby ste mohli pokračovať.",
   removePosting: "Odstrániť zápis",
   toggleAmountSign: "Prepnúť znamienko sumy",
-  incomeExpenseChartSummary:
-    "Príjmy a výdavky za {{count}} mesiacov. Príjmy {{income}}, výdavky {{expense}}, čisté {{net}}.",
+  incomeExpenseChartSummary: {
+    one: "Príjmy a výdavky za {{count}} mesiac. Príjmy {{income}}, výdavky {{expense}}, čisté {{net}}.",
+    few: "Príjmy a výdavky za {{count}} mesiace. Príjmy {{income}}, výdavky {{expense}}, čisté {{net}}.",
+    many: "Príjmy a výdavky za {{count}} mesiaca. Príjmy {{income}}, výdavky {{expense}}, čisté {{net}}.",
+    other:
+      "Príjmy a výdavky za {{count}} mesiacov. Príjmy {{income}}, výdavky {{expense}}, čisté {{net}}.",
+  },
   cashFlowChartSummary:
     "Peňažný tok z príjmov do výdavkov. Príjmy {{income}}, výdavky {{expenses}}.",
   cashFlowChartSummaryWithSavings:
@@ -660,8 +665,13 @@ export const sk: Translations = {
   expandAccount: "Rozbaliť {{account}}",
   collapseAccount: "Zbaliť {{account}}",
   breakdownRowShare: "{{amount}}, {{percent}} % z celku",
-  budgetChartSummary:
-    "Rozpočet verzus skutočnosť za {{span}}. Skutočnosť {{actual}} z rozpočtu {{budget}} za {{count}} období, {{over}} nad cieľom.",
+  budgetChartSummary: {
+    one: "Rozpočet verzus skutočnosť za {{span}}. Skutočnosť {{actual}} z rozpočtu {{budget}} za {{count}} obdobie, {{over}} nad cieľom.",
+    few: "Rozpočet verzus skutočnosť za {{span}}. Skutočnosť {{actual}} z rozpočtu {{budget}} za {{count}} obdobia, {{over}} nad cieľom.",
+    many: "Rozpočet verzus skutočnosť za {{span}}. Skutočnosť {{actual}} z rozpočtu {{budget}} za {{count}} obdobia, {{over}} nad cieľom.",
+    other:
+      "Rozpočet verzus skutočnosť za {{span}}. Skutočnosť {{actual}} z rozpočtu {{budget}} za {{count}} období, {{over}} nad cieľom.",
+  },
   feedSourceLedger: "Kniha",
   feedSourceBlog: "Blog",
   feedSourceRelease: "Vydanie",

@@ -366,8 +366,11 @@ export const en = {
   cashFlow: "Cash flow",
   moneyFlow: "Money flow",
   cashFlowEmpty: "No cash flow in this range",
-  incomeExpenseChartSummary:
-    "Income and expenses over {{count}} months. Income {{income}}, expenses {{expense}}, net {{net}}.",
+  incomeExpenseChartSummary: {
+    one: "Income and expenses over {{count}} month. Income {{income}}, expenses {{expense}}, net {{net}}.",
+    other:
+      "Income and expenses over {{count}} months. Income {{income}}, expenses {{expense}}, net {{net}}.",
+  },
   cashFlowChartSummary:
     "Cash flow from income to expenses. Income {{income}}, expenses {{expenses}}.",
   cashFlowChartSummaryWithSavings:
@@ -673,8 +676,11 @@ export const en = {
   expandAccount: "Expand {{account}}",
   collapseAccount: "Collapse {{account}}",
   breakdownRowShare: "{{amount}}, {{percent}}% of total",
-  budgetChartSummary:
-    "Budget versus actual for {{span}}. Actual {{actual}} of {{budget}} budgeted across {{count}} periods, {{over}} over target.",
+  budgetChartSummary: {
+    one: "Budget versus actual for {{span}}. Actual {{actual}} of {{budget}} budgeted across {{count}} period, {{over}} over target.",
+    other:
+      "Budget versus actual for {{span}}. Actual {{actual}} of {{budget}} budgeted across {{count}} periods, {{over}} over target.",
+  },
   profile: "Profile",
   signedInAs: "Signed in as {{name}}, {{email}}",
   openSettings: "Opens Settings",

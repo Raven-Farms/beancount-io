@@ -634,8 +634,12 @@ export const pt: Translations = {
   ledgerGuardMessage: "Crie um livro ou descubra um para continuar.",
   removePosting: "Remover lançamento",
   toggleAmountSign: "Alternar sinal do valor",
-  incomeExpenseChartSummary:
-    "Receitas e despesas em {{count}} meses. Receitas {{income}}, despesas {{expense}}, líquido {{net}}.",
+  incomeExpenseChartSummary: {
+    one: "Receitas e despesas em {{count}} mês. Receitas {{income}}, despesas {{expense}}, líquido {{net}}.",
+    many: "Receitas e despesas em {{count}} meses. Receitas {{income}}, despesas {{expense}}, líquido {{net}}.",
+    other:
+      "Receitas e despesas em {{count}} meses. Receitas {{income}}, despesas {{expense}}, líquido {{net}}.",
+  },
   cashFlowChartSummary:
     "Fluxo de caixa de receitas para despesas. Receitas {{income}}, despesas {{expenses}}.",
   cashFlowChartSummaryWithSavings:
@@ -654,8 +658,12 @@ export const pt: Translations = {
   expandAccount: "Expandir {{account}}",
   collapseAccount: "Recolher {{account}}",
   breakdownRowShare: "{{amount}}, {{percent}}% do total",
-  budgetChartSummary:
-    "Orçado versus realizado em {{span}}. Realizado {{actual}} de {{budget}} orçado em {{count}} períodos, {{over}} acima da meta.",
+  budgetChartSummary: {
+    one: "Orçado versus realizado em {{span}}. Realizado {{actual}} de {{budget}} orçado em {{count}} período, {{over}} acima da meta.",
+    many: "Orçado versus realizado em {{span}}. Realizado {{actual}} de {{budget}} orçado em {{count}} períodos, {{over}} acima da meta.",
+    other:
+      "Orçado versus realizado em {{span}}. Realizado {{actual}} de {{budget}} orçado em {{count}} períodos, {{over}} acima da meta.",
+  },
   feedSourceLedger: "Livro",
   feedSourceBlog: "Blog",
   feedSourceRelease: "Versão",

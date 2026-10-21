@@ -623,8 +623,11 @@ export const nl: Translations = {
   ledgerGuardMessage: "Maak een grootboek of ontdek er een om door te gaan.",
   removePosting: "Boeking verwijderen",
   toggleAmountSign: "Teken van bedrag wisselen",
-  incomeExpenseChartSummary:
-    "Inkomsten en uitgaven over {{count}} maanden. Inkomsten {{income}}, uitgaven {{expense}}, netto {{net}}.",
+  incomeExpenseChartSummary: {
+    one: "Inkomsten en uitgaven over {{count}} maand. Inkomsten {{income}}, uitgaven {{expense}}, netto {{net}}.",
+    other:
+      "Inkomsten en uitgaven over {{count}} maanden. Inkomsten {{income}}, uitgaven {{expense}}, netto {{net}}.",
+  },
   cashFlowChartSummary:
     "Kasstroom van inkomsten naar uitgaven. Inkomsten {{income}}, uitgaven {{expenses}}.",
   cashFlowChartSummaryWithSavings:
@@ -643,8 +646,11 @@ export const nl: Translations = {
   expandAccount: "{{account}} uitklappen",
   collapseAccount: "{{account}} inklappen",
   breakdownRowShare: "{{amount}}, {{percent}}% van het totaal",
-  budgetChartSummary:
-    "Budget versus werkelijk voor {{span}}. Werkelijk {{actual}} van {{budget}} begroot over {{count}} periodes, {{over}} boven het doel.",
+  budgetChartSummary: {
+    one: "Budget versus werkelijk voor {{span}}. Werkelijk {{actual}} van {{budget}} begroot over {{count}} periode, {{over}} boven het doel.",
+    other:
+      "Budget versus werkelijk voor {{span}}. Werkelijk {{actual}} van {{budget}} begroot over {{count}} periodes, {{over}} boven het doel.",
+  },
   feedSourceLedger: "Grootboek",
   feedSourceBlog: "Blog",
   feedSourceRelease: "Uitgave",

@@ -18,6 +18,7 @@ import {
 } from "./locale-parity";
 import { en } from "../en";
 import { ru } from "../ru";
+import { sk } from "../sk";
 import { zh } from "../zh";
 
 describe("pluralCategory", () => {
@@ -123,5 +124,45 @@ describe("commit detail stats", () => {
     expect(say("commitDetailAdditions", "ru", 1)).toBe("+1 строка");
     expect(say("commitDetailAdditions", "ru", 2)).toBe("+2 строки");
     expect(say("commitDetailDeletions", "ru", 5)).toBe("-5 строк");
+  });
+});
+
+// w21/098: the chart summaries VoiceOver reads said "over 1 months" and
+// "за 2 периодов".
+describe("chart summaries", () => {
+  const i18n = new I18n({ en, ru, sk });
+  registerPluralizers(i18n, ["en", "ru", "sk"]);
+  const months = (locale: string, count: number) =>
+    i18n.t("incomeExpenseChartSummary", {
+      locale,
+      count,
+      income: "I",
+      expense: "E",
+      net: "N",
+    });
+  const periods = (locale: string, count: number) =>
+    i18n.t("budgetChartSummary", {
+      locale,
+      count,
+      span: "S",
+      actual: "A",
+      budget: "B",
+      over: 0,
+    });
+
+  it("count months and periods in English", () => {
+    expect(months("en", 1).includes("over 1 month.")).toBe(true);
+    expect(months("en", 2).includes("over 2 months.")).toBe(true);
+    expect(periods("en", 1).includes("across 1 period,")).toBe(true);
+    expect(periods("en", 5).includes("across 5 periods,")).toBe(true);
+  });
+
+  it("use Russian's and Slovak's forms", () => {
+    expect(periods("ru", 1).includes("за 1 период,")).toBe(true);
+    expect(periods("ru", 2).includes("за 2 периода,")).toBe(true);
+    expect(periods("ru", 5).includes("за 5 периодов,")).toBe(true);
+    expect(months("sk", 1).includes("za 1 mesiac.")).toBe(true);
+    expect(months("sk", 2).includes("za 2 mesiace.")).toBe(true);
+    expect(months("sk", 5).includes("za 5 mesiacov.")).toBe(true);
   });
 });

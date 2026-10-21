@@ -635,8 +635,12 @@ export const ca: Translations = {
   ledgerGuardMessage: "Creeu un llibre o descubriu-ne un per continuar.",
   removePosting: "Elimina l'assentament",
   toggleAmountSign: "Canvia el signe de l'import",
-  incomeExpenseChartSummary:
-    "Ingressos i despeses durant {{count}} mesos. Ingressos {{income}}, despeses {{expense}}, net {{net}}.",
+  incomeExpenseChartSummary: {
+    one: "Ingressos i despeses durant {{count}} mes. Ingressos {{income}}, despeses {{expense}}, net {{net}}.",
+    many: "Ingressos i despeses durant {{count}} mesos. Ingressos {{income}}, despeses {{expense}}, net {{net}}.",
+    other:
+      "Ingressos i despeses durant {{count}} mesos. Ingressos {{income}}, despeses {{expense}}, net {{net}}.",
+  },
   cashFlowChartSummary:
     "Flux de caixa d'ingressos a despeses. Ingressos {{income}}, despeses {{expenses}}.",
   cashFlowChartSummaryWithSavings:
@@ -655,8 +659,12 @@ export const ca: Translations = {
   expandAccount: "Desplega {{account}}",
   collapseAccount: "Plega {{account}}",
   breakdownRowShare: "{{amount}}, {{percent}}% del total",
-  budgetChartSummary:
-    "Pressupost i real de {{span}}. Real {{actual}} d'un pressupost de {{budget}} en {{count}} períodes, {{over}} per sobre de l'objectiu.",
+  budgetChartSummary: {
+    one: "Pressupost i real de {{span}}. Real {{actual}} d'un pressupost de {{budget}} en {{count}} període, {{over}} per sobre de l'objectiu.",
+    many: "Pressupost i real de {{span}}. Real {{actual}} d'un pressupost de {{budget}} en {{count}} períodes, {{over}} per sobre de l'objectiu.",
+    other:
+      "Pressupost i real de {{span}}. Real {{actual}} d'un pressupost de {{budget}} en {{count}} períodes, {{over}} per sobre de l'objectiu.",
+  },
   feedSourceLedger: "Llibre",
   feedSourceBlog: "Blog",
   feedSourceRelease: "Versió",

@@ -43,11 +43,17 @@ describe("timeSpanToFilter", () => {
 
 // Interpolates the real English copy, so a renamed key or a dropped token fails
 // here rather than shipping "undefined" into the chart's only spoken text.
-const t = (key: string, params?: Record<string, unknown>) =>
-  String((en as unknown as Record<string, string>)[key]).replace(
-    /{{(\w+)}}/g,
-    (_match, name: string) => String(params?.[name]),
+// English plural objects pick `one` or `other` by count (w21/098).
+const t = (key: string, params?: Record<string, unknown>) => {
+  const value = (en as unknown as Record<string, unknown>)[key];
+  const text =
+    typeof value === "object" && value !== null
+      ? (value as Record<string, string>)[params?.count === 1 ? "one" : "other"]
+      : String(value);
+  return text.replace(/{{(\w+)}}/g, (_match, name: string) =>
+    String(params?.[name]),
   );
+};
 
 describe("budgetChartSummary", () => {
   it("summarizes the span, the totals, and how many periods missed target", () => {
@@ -80,7 +86,7 @@ describe("budgetChartSummary", () => {
         t,
       ),
     ).toBe(
-      "Budget versus actual for JAN. Actual $400 of $500 budgeted across 1 periods, 0 over target.",
+      "Budget versus actual for JAN. Actual $400 of $500 budgeted across 1 period, 0 over target.",
     );
   });
 
@@ -97,7 +103,7 @@ describe("budgetChartSummary", () => {
         t,
       ),
     ).toBe(
-      "Budget versus actual for JAN. Actual 400 MUSD of 500 MUSD budgeted across 1 periods, 0 over target.",
+      "Budget versus actual for JAN. Actual 400 MUSD of 500 MUSD budgeted across 1 period, 0 over target.",
     );
   });
 

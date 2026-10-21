@@ -567,8 +567,10 @@ export const zh: Translations = {
   ledgerGuardMessage: "请创建账本或发现一个账本以继续。",
   removePosting: "删除分录",
   toggleAmountSign: "切换金额正负",
-  incomeExpenseChartSummary:
-    "过去 {{count}} 个月的收入与支出。收入 {{income}}，支出 {{expense}}，净额 {{net}}。",
+  incomeExpenseChartSummary: {
+    other:
+      "过去 {{count}} 个月的收入与支出。收入 {{income}}，支出 {{expense}}，净额 {{net}}。",
+  },
   cashFlowChartSummary:
     "从收入到支出的现金流。收入 {{income}}，支出 {{expenses}}。",
   cashFlowChartSummaryWithSavings:
@@ -586,8 +588,10 @@ export const zh: Translations = {
   expandAccount: "展开 {{account}}",
   collapseAccount: "收起 {{account}}",
   breakdownRowShare: "{{amount}}，占总额 {{percent}}%",
-  budgetChartSummary:
-    "{{span}} 的预算与实际对比。{{count}} 个周期内实际 {{actual}}，预算 {{budget}}，其中 {{over}} 个周期超出目标。",
+  budgetChartSummary: {
+    other:
+      "{{span}} 的预算与实际对比。{{count}} 个周期内实际 {{actual}}，预算 {{budget}}，其中 {{over}} 个周期超出目标。",
+  },
   feedSourceLedger: "账本",
   feedSourceBlog: "博客",
   feedSourceRelease: "发布",

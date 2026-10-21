@@ -612,8 +612,11 @@ export const fa: Translations = {
   ledgerGuardMessage: "برای ادامه یک دفترکل بسازید یا کشف کنید.",
   removePosting: "حذف ثبت",
   toggleAmountSign: "تغییر علامت مبلغ",
-  incomeExpenseChartSummary:
-    "درآمد و هزینه در {{count}} ماه. درآمد {{income}}، هزینه {{expense}}، خالص {{net}}.",
+  incomeExpenseChartSummary: {
+    one: "درآمد و هزینه در {{count}} ماه. درآمد {{income}}، هزینه {{expense}}، خالص {{net}}.",
+    other:
+      "درآمد و هزینه در {{count}} ماه. درآمد {{income}}، هزینه {{expense}}، خالص {{net}}.",
+  },
   cashFlowChartSummary:
     "جریان نقدی از درآمد به هزینه. درآمد {{income}}، هزینه {{expenses}}.",
   cashFlowChartSummaryWithSavings:
@@ -632,8 +635,11 @@ export const fa: Translations = {
   expandAccount: "باز کردن {{account}}",
   collapseAccount: "بستن {{account}}",
   breakdownRowShare: "{{amount}}، {{percent}}٪ از کل",
-  budgetChartSummary:
-    "بودجه در برابر واقعی برای {{span}}. واقعی {{actual}} از بودجه {{budget}} در {{count}} دوره، {{over}} دوره بیش از هدف.",
+  budgetChartSummary: {
+    one: "بودجه در برابر واقعی برای {{span}}. واقعی {{actual}} از بودجه {{budget}} در {{count}} دوره، {{over}} دوره بیش از هدف.",
+    other:
+      "بودجه در برابر واقعی برای {{span}}. واقعی {{actual}} از بودجه {{budget}} در {{count}} دوره، {{over}} دوره بیش از هدف.",
+  },
   feedSourceLedger: "دفتر",
   feedSourceBlog: "وبلاگ",
   feedSourceRelease: "انتشار",

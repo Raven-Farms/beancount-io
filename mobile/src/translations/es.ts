@@ -632,8 +632,12 @@ export const es: Translations = {
   ledgerGuardMessage: "Crea un libro o descubre uno para continuar.",
   removePosting: "Eliminar asiento",
   toggleAmountSign: "Cambiar el signo del importe",
-  incomeExpenseChartSummary:
-    "Ingresos y gastos durante {{count}} meses. Ingresos {{income}}, gastos {{expense}}, neto {{net}}.",
+  incomeExpenseChartSummary: {
+    one: "Ingresos y gastos durante {{count}} mes. Ingresos {{income}}, gastos {{expense}}, neto {{net}}.",
+    many: "Ingresos y gastos durante {{count}} meses. Ingresos {{income}}, gastos {{expense}}, neto {{net}}.",
+    other:
+      "Ingresos y gastos durante {{count}} meses. Ingresos {{income}}, gastos {{expense}}, neto {{net}}.",
+  },
   cashFlowChartSummary:
     "Flujo de caja de ingresos a gastos. Ingresos {{income}}, gastos {{expenses}}.",
   cashFlowChartSummaryWithSavings:
@@ -652,8 +656,12 @@ export const es: Translations = {
   expandAccount: "Expandir {{account}}",
   collapseAccount: "Contraer {{account}}",
   breakdownRowShare: "{{amount}}, {{percent}}% del total",
-  budgetChartSummary:
-    "Presupuesto frente a real de {{span}}. Real {{actual}} de {{budget}} presupuestado en {{count}} periodos, {{over}} por encima del objetivo.",
+  budgetChartSummary: {
+    one: "Presupuesto frente a real de {{span}}. Real {{actual}} de {{budget}} presupuestado en {{count}} periodo, {{over}} por encima del objetivo.",
+    many: "Presupuesto frente a real de {{span}}. Real {{actual}} de {{budget}} presupuestado en {{count}} periodos, {{over}} por encima del objetivo.",
+    other:
+      "Presupuesto frente a real de {{span}}. Real {{actual}} de {{budget}} presupuestado en {{count}} periodos, {{over}} por encima del objetivo.",
+  },
   feedSourceLedger: "Libro",
   feedSourceBlog: "Blog",
   feedSourceRelease: "Versión",

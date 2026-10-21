@@ -633,8 +633,13 @@ export const uk: Translations = {
   ledgerGuardMessage: "Створіть книгу або знайдіть її, щоб продовжити.",
   removePosting: "Видалити проведення",
   toggleAmountSign: "Змінити знак суми",
-  incomeExpenseChartSummary:
-    "Доходи й витрати за {{count}} міс. Доходи {{income}}, витрати {{expense}}, чистими {{net}}.",
+  incomeExpenseChartSummary: {
+    one: "Доходи й витрати за {{count}} міс. Доходи {{income}}, витрати {{expense}}, чистими {{net}}.",
+    few: "Доходи й витрати за {{count}} міс. Доходи {{income}}, витрати {{expense}}, чистими {{net}}.",
+    many: "Доходи й витрати за {{count}} міс. Доходи {{income}}, витрати {{expense}}, чистими {{net}}.",
+    other:
+      "Доходи й витрати за {{count}} міс. Доходи {{income}}, витрати {{expense}}, чистими {{net}}.",
+  },
   cashFlowChartSummary:
     "Грошовий потік від доходів до витрат. Доходи {{income}}, витрати {{expenses}}.",
   cashFlowChartSummaryWithSavings:
@@ -653,8 +658,13 @@ export const uk: Translations = {
   expandAccount: "Розгорнути {{account}}",
   collapseAccount: "Згорнути {{account}}",
   breakdownRowShare: "{{amount}}, {{percent}}% від підсумку",
-  budgetChartSummary:
-    "Бюджет і факт за {{span}}. Факт {{actual}} із {{budget}} за {{count}} періодів, {{over}} понад ціль.",
+  budgetChartSummary: {
+    one: "Бюджет і факт за {{span}}. Факт {{actual}} із {{budget}} за {{count}} період, {{over}} понад ціль.",
+    few: "Бюджет і факт за {{span}}. Факт {{actual}} із {{budget}} за {{count}} періоди, {{over}} понад ціль.",
+    many: "Бюджет і факт за {{span}}. Факт {{actual}} із {{budget}} за {{count}} періодів, {{over}} понад ціль.",
+    other:
+      "Бюджет і факт за {{span}}. Факт {{actual}} із {{budget}} за {{count}} періоду, {{over}} понад ціль.",
+  },
   feedSourceLedger: "Книга",
   feedSourceBlog: "Блог",
   feedSourceRelease: "Реліз",
