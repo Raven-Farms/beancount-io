@@ -21,6 +21,7 @@
 - [292 — Keep composing Escape from dismissing input dialogs](./292.md) — minor; dashboard QA, 2026-10-20.
 - [295 — Protect newer Budget drafts from an earlier pending submission](./295.md) — minor; dashboard QA, 2026-10-20; coordinate with m41.
 - [296 — Leave Change Name's Enter key to active IME composition](./296.md) — minor; dashboard QA, 2026-10-20.
+- [297 — Withhold a BQL card's old CSV while that query is executing again](./297.md) — minor; dashboard QA, 2026-10-20; residual export scope from 234.
 
 ## Milestones
 
