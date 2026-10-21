@@ -1,3 +1,4 @@
+import { isolateLtr } from "@/common/bidi";
 import {
   StyleSheet,
   Text,
@@ -151,20 +152,24 @@ export function AccountEntryRow({
   const costText =
     units && units.cost !== null
       ? t("atCost", {
-          amount: formatSignedMoneyWithCurrency(units.cost, currency, true),
+          amount: isolateLtr(
+            formatSignedMoneyWithCurrency(units.cost, currency, true),
+          ),
         })
       : null;
-  const balanceLine = `${t("balance")}: ${balanceText}`;
+  // Amounts are isolated so a Persian label cannot reorder their signs and
+  // symbols (w21/095).
+  const balanceLine = `${t("balance")}: ${isolateLtr(balanceText)}`;
   const detail = row.detail;
   const detailText =
     detail === undefined
       ? null
       : detail.kind === "balance"
-        ? `${t("balance")} ${detail.amount}`
+        ? `${t("balance")} ${isolateLtr(detail.amount)}`
         : detail.text;
   const offByText =
     detail?.kind === "balance" && detail.offBy
-      ? t("balanceOffBy", { amount: detail.offBy })
+      ? t("balanceOffBy", { amount: isolateLtr(detail.offBy) })
       : null;
 
   const leading = (

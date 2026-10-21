@@ -33,6 +33,7 @@ import {
 import { formatLedgerDateShort } from "./date-format";
 import { formatSignedMoneyWithCurrency } from "./number-utils";
 import { utcTime } from "./calendar-date";
+import { isolateLtr } from "./bidi";
 
 /**
  * One commodity pair's price history, as `getLedgerCommodities` returns it.
@@ -397,9 +398,10 @@ export function costBasisLine(
   if (cost === null || unrealized === null || Math.abs(unrealized) < 0.005) {
     return null;
   }
+  // Isolated so a Persian sentence keeps each amount's sign in place (w21/095).
   return t("costBasisLine", {
-    cost: formatSignedMoneyWithCurrency(cost, currency),
-    gain: formatSignedMoneyWithCurrency(unrealized, currency, true),
+    cost: isolateLtr(formatSignedMoneyWithCurrency(cost, currency)),
+    gain: isolateLtr(formatSignedMoneyWithCurrency(unrealized, currency, true)),
   });
 }
 

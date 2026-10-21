@@ -375,7 +375,7 @@ describe("isPriceStale", () => {
 describe("costBasisLine", () => {
   it("shows the cost and the signed unrealized difference", () => {
     expect(costBasisLine(selectValuation(EXAMPLE), "USD", t)).toBe(
-      'costBasisLine({"cost":"$106,826.05","gain":"+$10,823.44"})',
+      'costBasisLine({"cost":"\u2066$106,826.05\u2069","gain":"\u2066+$10,823.44\u2069"})',
     );
   });
 
@@ -386,7 +386,7 @@ describe("costBasisLine", () => {
       cost: { USD: "1000" },
     });
     expect(costBasisLine(valuation, "USD", t)).toBe(
-      'costBasisLine({"cost":"$1,000.00","gain":"-$100.00"})',
+      'costBasisLine({"cost":"\u2066$1,000.00\u2069","gain":"\u2066-$100.00\u2069"})',
     );
   });
 

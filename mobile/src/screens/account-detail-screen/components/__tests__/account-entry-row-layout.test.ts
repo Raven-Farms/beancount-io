@@ -72,6 +72,7 @@ function load(): (props: Record<string, unknown>) => Node {
         type === "Transaction" ? null : "directiveBalance",
     },
     "@/common/rtl": { LEADING_TEXT_ALIGN: "left" },
+    "@/common/bidi": { isolateLtr: (text: string) => text },
     "@/common/theme/dynamic-type": dynamicType,
   };
   vm.runInNewContext(source, {
