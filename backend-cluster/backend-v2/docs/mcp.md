@@ -483,6 +483,12 @@ For direct archive delivery, read
 The original Content-Disposition value is retained in
 `_meta["beancount/contentDisposition"]`. Decode `blob` to save the archive.
 
+`{archive}` is a branch, tag, or commit followed by `.zip` or `.tar.gz`. Any
+other name is refused with `BAD_USER_INPUT` before the repository is contacted.
+A reference that names no branch, tag, or commit — including a well-formed but
+unknown full commit SHA — answers `NOT_FOUND` promptly. `SERVICE_UNAVAILABLE`
+means the repository host itself failed, and only that is worth a retry.
+
 The blob is capped at 8 MiB of archive bytes. A resource read is one JSON-RPC
 message, so the archive is held whole in memory, and base64 adds a third. A
 larger archive is refused with `OPERATION_NOT_ALLOWED` (JSON-RPC `-32003`) as

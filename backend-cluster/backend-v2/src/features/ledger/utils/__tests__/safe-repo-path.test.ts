@@ -1,6 +1,9 @@
 import { BadUserInputError } from "@/shared/errors";
 import { assertSafeRepoPath } from "@/features/ledger/utils/safe-repo-path";
-import { assertSafeArchiveName } from "@/features/ledger/utils/safe-archive-name";
+import {
+  archiveRef,
+  assertSafeArchiveName,
+} from "@/features/ledger/utils/safe-archive-name";
 
 describe("repository path validation", () => {
   it.each(["main.bean", "accounts/2026.bean", "Q1 #draft.bean"])(
@@ -23,8 +26,29 @@ describe("repository path validation", () => {
 });
 
 describe("archive name validation", () => {
-  it.each(["zip", "tar.gz", "gitea-main.zip"])("accepts %p", (archive) => {
-    expect(() => assertSafeArchiveName(archive)).not.toThrow();
+  it.each(["main.zip", "v1.0.tar.gz", "gitea-main.zip"])(
+    "accepts %p",
+    (archive) => {
+      expect(() => assertSafeArchiveName(archive)).not.toThrow();
+    },
+  );
+
+  // Gitea refuses these upstream; they were reported as an outage (w23/003).
+  it.each(["main", "main.rar", "main.tar", "zip", "tar.gz", "main.bundle"])(
+    "refuses %p, which names no supported format",
+    (archive) => {
+      expect(() => assertSafeArchiveName(archive)).toThrow(
+        /\.zip or \.tar\.gz/,
+      );
+    },
+  );
+
+  it.each([
+    ["main.zip", "main"],
+    ["v1.0.tar.gz", "v1.0"],
+    ["release.zip.tar.gz", "release.zip"],
+  ])("reads the reference of %p as %p", (archive, ref) => {
+    expect(archiveRef(archive)).toBe(ref);
   });
 
   it.each(["", ".", "..", "../private", "a/b", "a%2fb", "a?ref=main"])(
