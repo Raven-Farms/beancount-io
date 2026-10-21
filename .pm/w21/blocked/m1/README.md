@@ -80,3 +80,5 @@
   4. The fixture bytes are restored (sha256-checked, clean `getLedgerErrors`).
 
   Then run `/pm done w21/m1/t007`. **Who:** the user (deploy) and the mobile/MCP QA loops.
+
+**Partial native check 2026-10-20 (QA loop)** — the API is **not yet deployed**. Production introspection still shows `DeleteSourceSliceInput {entryHash, sha256sum}` and `UpdateSourceSliceInput {entryHash, sha256sum, newContent}`, with no `allowInvalid`, so unblock items 1–2 and the server half of 3 remain open. Verified the client-only part of item 3 on iPhone 17e (iOS 27.0), dev build serving `main` at `d4a3d0906`: a file-editor save that adds `2026-01-02 balance Assets:Cash  1.00 USD` to `mcp-agent-eval` commits, then shows "Saved, with a new ledger error — … Balance failed for Assets:Cash: expected 1.00 USD, got 200.00 USD" with **Close** and **View errors**, plus the "1 error" banner. Restored byte-for-byte, with a clean ledger check.
