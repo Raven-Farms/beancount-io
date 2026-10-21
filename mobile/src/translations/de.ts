@@ -368,6 +368,8 @@ export const de: Translations = {
     "Dieser Händler ist im ausgewählten Hauptbuch nicht verfügbar.",
   commitDetailUnavailable:
     "Diese Änderung ist im ausgewählten Hauptbuch nicht verfügbar.",
+  fileEditorUnavailable:
+    "Diese Datei ist im ausgewählten Hauptbuch nicht verfügbar.",
   journalLoadError: "Fehler beim Laden des Journals",
   // entry context (transactions screen)
   journalError: "Fehler",

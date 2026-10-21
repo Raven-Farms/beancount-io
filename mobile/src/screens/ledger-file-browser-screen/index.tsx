@@ -448,7 +448,7 @@ export function LedgerFileBrowserScreen(): JSX.Element {
           pathname: guest
             ? "/examples/ledger-file-editor"
             : "/(app)/ledger-file-editor",
-          params: { path: createdPath },
+          params: { path: createdPath, ledger: ledgerId },
         });
       } catch (createError: unknown) {
         haptics.error();
@@ -559,7 +559,7 @@ export function LedgerFileBrowserScreen(): JSX.Element {
         pathname: guest
           ? "/examples/ledger-file-editor"
           : "/(app)/ledger-file-editor",
-        params: { path: entry.path },
+        params: { path: entry.path, ledger: ledgerId },
       });
     }
   };

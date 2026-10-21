@@ -366,6 +366,8 @@ export const ca: Translations = {
     "Aquest comerç no està disponible al llibre seleccionat.",
   commitDetailUnavailable:
     "Aquest canvi no està disponible al llibre seleccionat.",
+  fileEditorUnavailable:
+    "Aquest fitxer no està disponible al llibre seleccionat.",
   journalLoadError: "Error en carregar el diari",
   // entry context (transactions screen)
   journalError: "Error",

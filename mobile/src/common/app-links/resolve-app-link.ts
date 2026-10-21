@@ -141,7 +141,10 @@ export function resolveAppLink(
         ledgerFullName,
         href: {
           pathname: "/ledger-file-editor",
-          params: { path },
+          // `ledger` binds the file to the link's ledger: without it the
+          // editor opened the *selected* ledger's same-named file, editable,
+          // for a link to a ledger the user cannot read (w21/199).
+          params: { path, ledger: ledgerFullName },
         },
       };
     }

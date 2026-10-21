@@ -349,6 +349,7 @@ export const en = {
     "This merchant isn't available in the selected ledger.",
   commitDetailUnavailable:
     "This change isn't available in the selected ledger.",
+  fileEditorUnavailable: "This file isn't available in the selected ledger.",
   journalLoadError: "Failed to load journal",
   // entry context (transactions screen)
   journalError: "Error",

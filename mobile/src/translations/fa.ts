@@ -350,6 +350,7 @@ export const fa: Translations = {
   transactionErrorOpenFile: "باز کردن در ویرایشگر فایل",
   merchantDetailUnavailable: "این فروشنده در دفتر کل انتخاب‌شده موجود نیست.",
   commitDetailUnavailable: "این تغییر در دفتر کل انتخاب‌شده موجود نیست.",
+  fileEditorUnavailable: "این فایل در دفتر انتخاب‌شده در دسترس نیست.",
   journalLoadError: "بارگذاری روزنامه ناموفق بود",
   // entry context (transactions screen)
   journalError: "خطا", // TODO: needs native speaker review

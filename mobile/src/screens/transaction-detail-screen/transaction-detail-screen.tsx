@@ -454,6 +454,7 @@ const TransactionDetailImpl = ({
           : "/(app)/ledger-file-editor",
         params: {
           path: error.filename ?? "",
+          ledger: ledgerId,
           ...(error.lineno != null
             ? { initialLine: String(error.lineno) }
             : {}),

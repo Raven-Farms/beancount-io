@@ -147,7 +147,13 @@ function SkeletonRows(): JSX.Element {
   );
 }
 
-function ErrorRow({ err }: { err: LedgerError }): JSX.Element {
+function ErrorRow({
+  err,
+  ledgerId,
+}: {
+  err: LedgerError;
+  ledgerId: string;
+}): JSX.Element {
   const theme = useTheme().colorTheme;
   const styles = useThemeStyle(getStyles);
   const canFix = !!err.filename;
@@ -158,6 +164,7 @@ function ErrorRow({ err }: { err: LedgerError }): JSX.Element {
       pathname: "/(app)/ledger-file-editor",
       params: {
         path: err.filename!,
+        ledger: ledgerId,
         ...(err.lineno != null ? { initialLine: String(err.lineno) } : {}),
       },
     });
@@ -293,7 +300,7 @@ function NotificationsScreenImpl(): JSX.Element {
               ) : (
                 errors.map((err, i) => (
                   <View key={i}>
-                    <ErrorRow err={err} />
+                    <ErrorRow err={err} ledgerId={ledgerId} />
                     <View style={styles.divider} />
                   </View>
                 ))

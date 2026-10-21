@@ -362,6 +362,7 @@ export const ru: Translations = {
   transactionErrorOpenFile: "Открыть в редакторе файлов",
   merchantDetailUnavailable: "Этот продавец недоступен в выбранной книге.",
   commitDetailUnavailable: "Это изменение недоступно в выбранной книге.",
+  fileEditorUnavailable: "Этот файл недоступен в выбранной книге.",
   journalLoadError: "Ошибка загрузки журнала",
   // entry context (transactions screen)
   journalError: "Ошибка",

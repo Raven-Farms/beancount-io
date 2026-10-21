@@ -77,6 +77,8 @@ import { filterFileErrors, readOnlyNoticeColors } from "./utils";
 import { selectLedgerFileEditorState } from "./select-editor-state";
 import { LEADING_TEXT_ALIGN, directionalIcon } from "@/common/rtl";
 import { useRouteParams } from "@/common/hooks/use-route-params";
+import { bindRouteLedger } from "@/common/route-ledger";
+import { RouteLedgerUnavailable } from "@/components/route-ledger-unavailable";
 
 // ─── Styles ──────────────────────────────────────────────────────────────────
 
@@ -310,10 +312,13 @@ function ErrorBanner({
 export function LedgerFileEditorScreen(): JSX.Element {
   const ledgerId = useLedgerGuard();
   const guest = useGuest();
-  const { path, initialLine } = useRouteParams<{
+  const { path, initialLine, ledger } = useRouteParams<{
     path?: string;
     initialLine?: string;
+    ledger?: string;
   }>();
+  const { t } = useTranslations();
+  const binding = bindRouteLedger(ledger, ledgerId);
 
   // Opened by URL without a file there is nothing to edit; the Files tab lists
   // what can be opened.
@@ -321,6 +326,18 @@ export function LedgerFileEditorScreen(): JSX.Element {
     return (
       <Redirect
         href={guest ? "/examples/(tabs)/ledger" : "/(app)/(tabs)/ledger"}
+      />
+    );
+  }
+
+  // A link to another ledger's file, before the switch lands or for a ledger
+  // that cannot be read: the file in the selected ledger is a different file
+  // (w21/199). Send no request.
+  if (binding.status === "mismatch") {
+    return (
+      <RouteLedgerUnavailable
+        title={path}
+        message={t("fileEditorUnavailable")}
       />
     );
   }

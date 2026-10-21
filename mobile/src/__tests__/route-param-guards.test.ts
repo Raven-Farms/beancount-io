@@ -69,3 +69,45 @@ describe("route param guards", () => {
     );
   });
 });
+
+// w21/199: a Files link to a ledger the user cannot read opened the *selected*
+// ledger's same-named file, editable. The editor binds its route to a ledger.
+describe("the file editor's ledger binding", () => {
+  const compact = (file: string) => read(file).replace(/\s+/g, "");
+
+  it("shows the unavailable state for another ledger's file, sending no request", () => {
+    const editor = compact("src/screens/ledger-file-editor-screen/index.tsx");
+    expect(editor.includes("bindRouteLedger(ledger,ledgerId)")).toBe(true);
+    expect(
+      guardsBefore(
+        editor,
+        'if(binding.status==="mismatch"){',
+        "<LedgerFileEditorSessionkey=",
+      ),
+    ).toBe(true);
+    expect(editor.includes('message={t("fileEditorUnavailable")}')).toBe(true);
+  });
+
+  it("is passed the ledger by every in-app way into the editor", () => {
+    for (const [file, snippet] of [
+      [
+        "src/screens/ledger-file-browser-screen/index.tsx",
+        "params:{path:createdPath,ledger:ledgerId}",
+      ],
+      [
+        "src/screens/ledger-file-browser-screen/index.tsx",
+        "params:{path:entry.path,ledger:ledgerId}",
+      ],
+      [
+        "src/screens/transaction-detail-screen/transaction-detail-screen.tsx",
+        'path:error.filename??"",ledger:ledgerId,',
+      ],
+      [
+        "src/screens/notifications-screen/notifications-screen.tsx",
+        "path:err.filename!,ledger:ledgerId,",
+      ],
+    ]) {
+      expect(compact(file).includes(snippet)).toBe(true);
+    }
+  });
+});

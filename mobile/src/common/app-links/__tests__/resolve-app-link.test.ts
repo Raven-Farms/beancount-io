@@ -56,7 +56,8 @@ describe("resolveAppLink", () => {
       ledgerFullName: LEDGER,
       href: {
         pathname: "/ledger-file-editor",
-        params: { path: "main.beancount" },
+        // Bound to the link's ledger (w21/199).
+        params: { path: "main.beancount", ledger: LEDGER },
       },
     });
     expect(
@@ -208,7 +209,7 @@ describe("buildLedgerUrl round trip", () => {
       if (input.kind === "file") {
         expect(resolved!.href).toEqual({
           pathname: "/ledger-file-editor",
-          params: { path: input.path },
+          params: { path: input.path, ledger: LEDGER },
         });
         return;
       }
