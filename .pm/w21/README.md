@@ -14,7 +14,6 @@
 
 - [064](./blocked/064.md) — A token refresh whose response is lost signs the user out on the next refresh (rotated token replayed → grant revoked) — **blocked:** needs an owner decision (ADR) on a refresh-token reuse grace window
 - [065](./blocked/065.md) — One early-year entry (e.g. 0050) makes the balance sheet 23,718 monthly points (3 MB) and the app stalls — **blocked:** needs an approach decision (per-pill fetch vs server downsample) and a simulator profile of the stall
-- [124](./124.md) — Holdings bought in a non-operating currency get the wrong "priced / at cost (no price)" label
 - [125](./125.md) — Holdings below 0.000001 units read "0 BTC" (exponential balance strings)
 - [126](./126.md) — Fresh install ignores device language (English; Persian gets English in RTL that Settings can't undo)
 - [127](./127.md) — Pending "P" badge is white on amber (~1.9:1 dark, 2.7:1 light)

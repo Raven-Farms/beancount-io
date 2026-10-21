@@ -492,3 +492,51 @@ describe("balanceNotes", () => {
     ).toEqual([]);
   });
 });
+
+// w21/124: a lot bought in EUR is valued at an EUR price, else at cost; the
+// caption judged it by a USD price instead.
+describe("a holding bought in a non-operating currency", () => {
+  const veur = {
+    market: { EUR: "550" },
+    cost: { EUR: "500" },
+    units: { VEUR: "10" },
+    currency: "USD",
+    date: "2026-10-21",
+    today: "2026-10-21",
+  };
+
+  it("is priced by a price in its cost currency", () => {
+    const valuation = selectValuation({
+      ...veur,
+      prices: [pair("VEUR", "EUR", ["2026-08-28"])],
+    });
+    expect(valuation.atCostNoPrice).toEqual([]);
+    expect(valuation.priced.map((holding) => holding.priceDate)).toEqual([
+      "2026-08-28",
+    ]);
+  });
+
+  it("is at cost with only an operating-currency price", () => {
+    const valuation = selectValuation({
+      ...veur,
+      market: { EUR: "500" },
+      prices: [pair("VEUR", "USD", ["2026-08-28"])],
+    });
+    expect(valuation.priced).toEqual([]);
+    expect(valuation.atCostNoPrice.map((holding) => holding.currency)).toEqual([
+      "VEUR",
+    ]);
+  });
+
+  it("keeps the operating-currency rule for a lot bought in it", () => {
+    const valuation = selectValuation({
+      ...veur,
+      market: { USD: "600" },
+      cost: { USD: "500" },
+      prices: [pair("VEUR", "USD", ["2026-08-28"])],
+    });
+    expect(valuation.priced.map((holding) => holding.currency)).toEqual([
+      "VEUR",
+    ]);
+  });
+});

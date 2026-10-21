@@ -287,9 +287,27 @@ export function selectValuation({
 
   const priced: PricedHolding[] = [];
   const atCostNoPrice: Holding[] = [];
+  // The ledger values a lot at a price in its cost currency, else at cost;
+  // it never hops through another currency. The cost map's currencies are
+  // those cost currencies, so a lot bought in EUR is priced by an EUR price,
+  // not the operating currency's: the caption said "at cost (no price)" over
+  // a market value, and "priced" over a cost (w21/124).
+  const costCurrencies =
+    cost == null ? [] : holdingsOf(cost).map((holding) => holding.currency);
   if (prices !== undefined) {
     for (const holding of converted) {
-      const dates = priceDates(prices, holding.currency, currency, date);
+      const candidates = costCurrencies.filter(
+        (candidate) => candidate !== holding.currency,
+      );
+      let priceCurrency = currency;
+      let dates: string[] = [];
+      for (const candidate of candidates.length > 0 ? candidates : [currency]) {
+        const found = priceDates(prices, holding.currency, candidate, date);
+        if ((found.at(-1) ?? "") > (dates.at(-1) ?? "")) {
+          dates = found;
+          priceCurrency = candidate;
+        }
+      }
       const priceDate = dates.at(-1);
       if (priceDate === undefined) {
         atCostNoPrice.push(holding);
@@ -301,7 +319,7 @@ export function selectValuation({
             entry.commodity ?? "",
             entry.quote ?? "",
             holding.currency,
-            currency,
+            priceCurrency,
           ),
         ) ?? null;
       priced.push({
