@@ -8,6 +8,7 @@ import { buildSchema } from "type-graphql";
 import { graphql } from "graphql";
 import { LedgerQueryResolver } from "@/features/ledger/api/resolvers/ledger-resolver.query";
 import { LedgerWorkflow } from "@/features/ledger/workflow/ledger-workflow";
+import { formatError } from "@/server/graphql/format-error";
 import { graphqlScopeMiddleware } from "@/server/graphql/scope-middleware";
 import { assembleMcpRegistry } from "@/server/api/composition-root";
 import {
@@ -202,6 +203,56 @@ describe("catalog adapters", () => {
         f.client.readResource({ uri: "beancount://catalog/ledgers/owned" }),
       ).rejects.toThrow();
       expect(f.ledgers.listUserLedgers).not.toHaveBeenCalled();
+    } finally {
+      await f.close();
+    }
+  });
+});
+
+// w23/019: search ignored a bad `order`, `limit=0` and negative ids, unlike
+// the catalog's other lists.
+describe("search arguments", () => {
+  it.each([
+    ["order=sideways", 'order: "sideways"', "order"],
+    ["limit=0", "limit: 0", "limit"],
+    ["limit=1000", "limit: 1000", "limit"],
+    ["page=0", "page: 0", "page"],
+    ["starredBy=-5", "starredBy: -5", "starredBy"],
+  ])(
+    "refuses %s on every surface before searching",
+    async (param, gqlArg, field) => {
+      const f = await fixture();
+      try {
+        const rest = await f.rest(`search?q=example&${param}`);
+        expect(rest.status).toBe(400);
+        await expect(
+          f.client.readResource({
+            uri: `beancount://catalog/ledgers/search?q=example&${param}`,
+          }),
+        ).rejects.toMatchObject({ data: { code: "BAD_USER_INPUT" } });
+        const gql = await f.gql(`searchLedgers(q: "example", ${gqlArg})`);
+        const error = gql.errors?.[0];
+        expect(error).toBeDefined();
+        expect(formatError(error!.toJSON(), error!).extensions).toMatchObject({
+          code: "BAD_USER_INPUT",
+          field,
+        });
+        expect(f.ledgers.searchLedgers).not.toHaveBeenCalled();
+      } finally {
+        await f.close();
+      }
+    },
+  );
+
+  it("still passes valid order and bounds through", async () => {
+    const f = await fixture();
+    try {
+      for (const order of ["asc", "desc"]) {
+        expect(
+          (await f.rest(`search?q=example&order=${order}&limit=100`)).status,
+        ).toBe(200);
+      }
+      expect(f.ledgers.searchLedgers).toHaveBeenCalledTimes(2);
     } finally {
       await f.close();
     }

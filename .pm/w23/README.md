@@ -6,7 +6,6 @@
 
 ## Inbox
 
-- [019](./019.md) — ledger search silently accepts `order=sideways`, `limit=0`, negative ids
 - [020](./020.md) — BQL `BALANCES AT value` returns units; `BALANCES FROM <window>` fails "No matching lot" (rustledger 0.24.0)
 - [021](./021.md) — OAuth grants unknown scopes verbatim (`ledger.superuser` lands in the signed token)
 - [022](./blocked/022.md) — report rustledger BQL gaps upstream (`cost(sum(position))`, `neg`/`filter_currency`, `meta('lineno')`) — **blocked:** filing in an external tracker needs the user's approval

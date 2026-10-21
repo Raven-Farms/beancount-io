@@ -350,6 +350,47 @@ interface CreateRequestRecord {
   ledger?: LedgerData;
 }
 
+/**
+ * Search's own arguments, held to the catalog's other lists (w23/019).
+ *
+ * The repository host refuses a bad `sort` or `mode` itself, but ignores a
+ * bad `order`, a `limit` of 0 (returning every match) and a negative id
+ * filter, so a typo like `order=dsc` came back as the default with no signal.
+ * Checked here so GraphQL, whose `Number` arguments arrive unchecked, refuses
+ * the same values the REST and MCP schema do.
+ */
+function assertSearchArgs(args: SearchLedgersParams): void {
+  const page = args.page ?? undefined;
+  if (page !== undefined && (!Number.isSafeInteger(page) || page < 1)) {
+    throw new BadUserInputError("page must be a positive integer", "page");
+  }
+  const limit = args.limit ?? undefined;
+  if (
+    limit !== undefined &&
+    (!Number.isSafeInteger(limit) || limit < 1 || limit > 100)
+  ) {
+    throw new BadUserInputError(
+      "limit must be an integer from 1 to 100",
+      "limit",
+    );
+  }
+  for (const field of [
+    "uid",
+    "priorityOwnerId",
+    "teamId",
+    "starredBy",
+  ] as const) {
+    const id = args[field] ?? undefined;
+    if (id !== undefined && (!Number.isSafeInteger(id) || id < 1)) {
+      throw new BadUserInputError(`${field} must be a positive integer`, field);
+    }
+  }
+  const order = args.order ?? undefined;
+  if (order !== undefined && order !== "asc" && order !== "desc") {
+    throw new BadUserInputError('order must be "asc" or "desc"', "order");
+  }
+}
+
 export class LedgerWorkflow implements ILedgerWorkflow {
   constructor(
     private readonly favaClientFactory: IFavaClientFactory,
@@ -1309,6 +1350,7 @@ export class LedgerWorkflow implements ILedgerWorkflow {
     identity: Identity;
     args: SearchLedgersParams;
   }): Promise<LedgerData[]> {
+    assertSearchArgs(args);
     await this.authorization.authorizeOrThrow({
       principal: identity,
       action: AUTHORIZATION_ACTIONS.LEDGER_CATALOG_READ,
