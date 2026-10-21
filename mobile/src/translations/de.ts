@@ -695,6 +695,7 @@ export const de: Translations = {
   createLedgerHistoryStart: "Bücher beginnen am",
   createLedgerOpeningAccount: "Eröffnungskonto",
   createLedgerOpeningAmount: "Eröffnungssaldo (optional)",
+  createLedgerAmountOwed: "Geschuldeter Betrag (optional)",
   createLedgerOpeningNone: "Später entscheiden",
   createLedgerReview: "Überprüfen",
   createLedgerReviewDescription:

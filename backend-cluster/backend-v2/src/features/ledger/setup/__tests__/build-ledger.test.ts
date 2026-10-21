@@ -153,6 +153,42 @@ describe("buildLedgerFiles (w3/m53/t002)", () => {
     );
   });
 
+  // w21/104: a credit card's 500 owed was written as +500, raising net worth.
+  it("stores a liability's amount owed as the negative posting", () => {
+    const main = previewLedgerSetup(
+      {
+        preset: "personal@1",
+        operatingCurrency: "USD",
+        historyStart: "2026-02-01",
+        accounts: [
+          { name: "Liabilities:CreditCard", openingState: "known", amount: "500" },
+          { name: "Assets:Cash", openingState: "known", amount: "100" },
+        ],
+      },
+      "2026-01-01",
+    ).files["main.bean"];
+    expect(main).toContain("  Liabilities:CreditCard -500 USD");
+    expect(main).toContain("  Equity:OpeningBalances 500 USD");
+    expect(main).toContain("2026-02-01 balance Liabilities:CreditCard -500 USD");
+    // Assets are unchanged.
+    expect(main).toContain("2026-02-01 balance Assets:Cash 100 USD");
+  });
+
+  it("keeps an explicit negative on a liability as written", () => {
+    const main = previewLedgerSetup(
+      {
+        preset: "personal@1",
+        historyStart: "2026-02-01",
+        accounts: [
+          { name: "Liabilities:CreditCard", openingState: "known", amount: "-30.50" },
+        ],
+      },
+      "2026-01-01",
+    ).files["main.bean"];
+    expect(main).toContain("2026-02-01 balance Liabilities:CreditCard -30.50 USD");
+    expect(main).not.toContain("--30.50");
+  });
+
   it("builds a blank ledger with no accounts", () => {
     const main = buildLedgerFiles(
       { preset: "blank@1", title: "Books", operatingCurrency: "JPY" },

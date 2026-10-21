@@ -56,6 +56,21 @@ export function buildLedgerFiles(
 }
 
 /**
+ * The ledger's sign for an opening amount. A customer states what a credit
+ * card or loan is owed as a positive number, and ADR021 stores what they owe
+ * as the negative posting; written verbatim, a 500 card balance raised net
+ * worth by 500 (w21/104). An explicit negative is already the ledger's sign
+ * and stays as written; every other account keeps its amount.
+ */
+function ledgerOpeningAmount(account: string, amount: string): string {
+  const owed =
+    account.startsWith("Liabilities:") &&
+    !amount.startsWith("-") &&
+    /[1-9]/.test(amount);
+  return owed ? `-${amount}` : amount;
+}
+
+/**
  * Pure builder: turns a setup specification (ADR021) into the files it
  * would create plus their summary, without creating anything. Throws
  * `ValidationError` for any invalid explicit value.
@@ -173,7 +188,7 @@ export function previewLedgerSetup(
       lines.push(`  ${openingStatusKey}: "zero"`);
     }
     if (account.openingState === "known" && account.amount) {
-      const amount = account.amount;
+      const amount = ledgerOpeningAmount(account.name, account.amount);
       const counter = account.name === OPENING_EQUITY ? null : OPENING_EQUITY;
       if (counter && !opened.has(counter)) {
         lines.push(`${openDate} open ${counter} ${currency}`);

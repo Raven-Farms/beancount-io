@@ -698,6 +698,7 @@ export const ru: Translations = {
   createLedgerHistoryStart: "Книги начинаются с",
   createLedgerOpeningAccount: "Счёт открытия",
   createLedgerOpeningAmount: "Начальный остаток (необязательно)",
+  createLedgerAmountOwed: "Сумма долга (необязательно)",
   createLedgerOpeningNone: "Решить позже",
   createLedgerReview: "Проверка",
   createLedgerReviewDescription:

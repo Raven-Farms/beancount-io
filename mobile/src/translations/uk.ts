@@ -697,6 +697,7 @@ export const uk: Translations = {
   createLedgerHistoryStart: "Книги починаються з",
   createLedgerOpeningAccount: "Рахунок відкриття",
   createLedgerOpeningAmount: "Початковий залишок (необов’язково)",
+  createLedgerAmountOwed: "Сума боргу (необов’язково)",
   createLedgerOpeningNone: "Вирішити пізніше",
   createLedgerReview: "Перевірка",
   createLedgerReviewDescription:

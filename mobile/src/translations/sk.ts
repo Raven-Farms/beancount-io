@@ -704,6 +704,7 @@ export const sk: Translations = {
   createLedgerHistoryStart: "Knihy začínajú dňa",
   createLedgerOpeningAccount: "Otvárací účet",
   createLedgerOpeningAmount: "Počiatočný zostatok (voliteľné)",
+  createLedgerAmountOwed: "Dlžná suma (voliteľné)",
   createLedgerOpeningNone: "Rozhodnúť neskôr",
   createLedgerReview: "Kontrola",
   createLedgerReviewDescription:

@@ -326,6 +326,11 @@ export function CreateLedgerScreen(): JSX.Element {
 
   const nameValue = watch("name");
   const openingAccountValue = watch("openingAccount");
+  // A card or loan balance is asked as what is owed; the server stores it as
+  // the negative posting ADR021 calls for (w21/104).
+  const openingAmountLabelKey = openingAccountValue.startsWith("Liabilities:")
+    ? "createLedgerAmountOwed"
+    : "createLedgerOpeningAmount";
   const slugPreview = ledgerSlugPreview(nameValue ?? "");
   const busy = loading || isSubmitting;
 
@@ -638,9 +643,7 @@ export function CreateLedgerScreen(): JSX.Element {
                   </Pressable>
                 ))}
                 <View style={[styles.row, styles.rowDivider]}>
-                  <Text style={styles.label}>
-                    {t("createLedgerOpeningAmount")}
-                  </Text>
+                  <Text style={styles.label}>{t(openingAmountLabelKey)}</Text>
                   <Controller
                     control={control}
                     name="openingAmount"
@@ -649,11 +652,17 @@ export function CreateLedgerScreen(): JSX.Element {
                         value={value}
                         onChangeText={onChange}
                         onBlur={onBlur}
-                        keyboardType="decimal-pad"
+                        // A keypad with a minus: the decimal pad had none,
+                        // so no balance could be entered as negative.
+                        keyboardType={
+                          Platform.OS === "ios"
+                            ? "numbers-and-punctuation"
+                            : "numeric"
+                        }
                         placeholder="0"
                         placeholderTextColor={theme.black40}
                         style={styles.input}
-                        accessibilityLabel={t("createLedgerOpeningAmount")}
+                        accessibilityLabel={t(openingAmountLabelKey)}
                       />
                     )}
                   />

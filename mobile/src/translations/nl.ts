@@ -683,6 +683,7 @@ export const nl: Translations = {
   createLedgerHistoryStart: "Boeken beginnen op",
   createLedgerOpeningAccount: "Openingsrekening",
   createLedgerOpeningAmount: "Openingssaldo (optioneel)",
+  createLedgerAmountOwed: "Verschuldigd bedrag (optioneel)",
   createLedgerOpeningNone: "Later beslissen",
   createLedgerReview: "Controleren",
   createLedgerReviewDescription:
