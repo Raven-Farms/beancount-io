@@ -86,6 +86,8 @@ function fixture(
     session?: { userId: string } | null;
     oauth?: boolean;
     authorizeThrows?: Error;
+    /** The key's account was deleted (w21/156). */
+    ownerDeleted?: boolean;
   } = {},
 ): Fixture {
   const {
@@ -121,6 +123,11 @@ function fixture(
           key && key.keyDigest === digest ? key : null,
         ),
         touchLastUsedAt,
+      },
+      user: {
+        getById: jest.fn(async (_db: unknown, id: string) =>
+          options.ownerDeleted ? null : { id },
+        ),
       },
     } as unknown as DatabaseLayer["models"],
   } satisfies DatabaseLayer;
@@ -324,6 +331,14 @@ describe("you may introspect your own credentials, and only your own", () => {
   // is live and learn the moment it was revoked.
   it("reports another user's live key as inactive", async () => {
     const { service } = fixture({ key: { ...liveKey, userId: "usr_2" } });
+
+    await expect(
+      service.introspect(CALLER, { token: KEY_PLAINTEXT }),
+    ).resolves.toEqual({ active: false });
+  });
+
+  it("reports a key from a deleted account as inactive", async () => {
+    const { service } = fixture({ ownerDeleted: true });
 
     await expect(
       service.introspect(CALLER, { token: KEY_PLAINTEXT }),

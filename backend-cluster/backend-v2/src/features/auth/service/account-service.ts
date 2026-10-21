@@ -92,6 +92,7 @@ export class AccountService implements IAccountService {
       | "oauthGrant"
       | "emailToken"
       | "plaidItem"
+      | "apiKey"
     >,
     private readonly db: DbExecutor,
     private readonly stripe: IStripeService,
@@ -393,6 +394,9 @@ export class AccountService implements IAccountService {
       // Sessions and OAuth grants alike: the provider would otherwise keep
       // minting access tokens from a deleted account's refresh token (w0/054).
       await this.models.oauthGrant.revokeAllForUser(tx, userId);
+      // API keys too: `api_keys` has no foreign key to cascade from, and a
+      // surviving key still resolved to the deleted identity (w21/156).
+      await this.models.apiKey.deleteByUserId(tx, userId);
       await this.models.user.deleteByUserId(tx, userId);
       const favaAdminApiClient = this.favaClientFactory.getAdminClient();
       if (user?.ledger_username) {

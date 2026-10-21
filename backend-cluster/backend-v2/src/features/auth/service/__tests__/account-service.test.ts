@@ -111,6 +111,9 @@ describe("AccountService", () => {
       oauthGrant: {
         revokeAllForUser: jest.fn().mockResolvedValue(undefined),
       },
+      apiKey: {
+        deleteByUserId: jest.fn().mockResolvedValue(undefined),
+      },
       emailToken: {
         deleteByUserId: jest.fn(),
       },
@@ -531,6 +534,19 @@ describe("AccountService", () => {
         userId,
       );
       expect(mockModels.user.deleteByUserId).toHaveBeenCalledWith(tx, userId);
+    });
+
+    // w21/156: `api_keys` has no foreign key, so nothing cascaded.
+    it("deletes the user's API keys in the deletion transaction", async () => {
+      const userId = "user-123";
+      mockModels.user.getById = jest
+        .fn()
+        .mockResolvedValue({ email: "test@example.com", ledger_username: "t" });
+
+      await accountService.deleteAccount(identity(userId));
+
+      const [tx] = mockModels.jwt.deleteByUserId.mock.calls[0];
+      expect(mockModels.apiKey.deleteByUserId).toHaveBeenCalledWith(tx, userId);
     });
 
     it("should throw error if user not found", async () => {
