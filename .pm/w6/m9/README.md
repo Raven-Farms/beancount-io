@@ -1,6 +1,6 @@
 # w6 · m9 — Reach developer marketplaces and galleries
 
-**Worker:** worker1 **Goal:** Developers discover and connect the hosted MCP server through the supported Docker, Cursor, Cline, and GitHub/VS Code galleries. **Status:** todo
+**Worker:** worker1 **Goal:** Developers discover and connect the hosted MCP server through the supported Docker, Cursor, Cline, and GitHub/VS Code galleries. **Status:** todo (t001 done; t002 next)
 
 **Implementation estimate:** ~4½h, excluding external review queues and the standing closing tasks.
 
@@ -8,7 +8,7 @@
 
 | id | title | est | depends_on |
 | --- | --- | --- | --- |
-| [t001](./t001.md) | Confirm developer-gallery eligibility and existing records | 30m | w6/m8/t001 |
+| [t001](./done/t001.md) | Confirm developer-gallery eligibility and existing records — **DONE** | 30m | w6/m8/t001 |
 | [t002](./t002.md) | Prepare and submit Docker's remote MCP catalog entry | 60m | t001 |
 | [t003](./t003.md) | Package the remote connection for Cursor's official and community marketplaces | 60m | t001 |
 | [t004](./t004.md) | Prepare Cline's eligible marketplace submission and remote connection evidence | 45m | t001 |
