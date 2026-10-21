@@ -18,7 +18,7 @@
 
 - [ ] **m41** — [Preserve acknowledged actions through refresh failures](./m41/README.md) (6 tasks) ← dashboard QA, 2026-10-20; minor, promoted 294 with independent Budget submission scope.
 
-- [ ] **m40** — [Keep picker popups sized and scrollable inside modals](./m40/README.md) (6 tasks) ← dashboard QA, 2026-10-20; minor, promoted 293 with independently reproduced Combobox wheel scope.
+- [ ] **m40** — [Keep picker popups sized and scrollable inside modals](./blocked/m40/README.md) (6 tasks) ← dashboard QA, 2026-10-20; minor, promoted 293 with independently reproduced Combobox wheel scope. — **blocked:** fix shipped in `eeb14c2b2`; awaiting real-viewport scroll checks
 
 - [ ] **m39** — [Recover Journal and dashboard from malformed saved lists](./blocked/m39/README.md) (6 tasks) ← dashboard QA, 2026-10-20; minor, preference decoding and cross-tab recovery. — **blocked:** fix shipped in `48d13ad09`; awaiting fresh browser recovery checks
 
