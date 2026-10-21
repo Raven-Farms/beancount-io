@@ -6,6 +6,7 @@
 
 ## Inbox
 
+- [036](./036.md) — `updateEntrySource` accepts `option`/`include`/several directives as one entry's replacement (018 class on the source-slice path)
 - [035](./035.md) — `appendLedgerText` `path` to a file outside the include closure (even `notes.txt`) succeeds with "No new bean-check errors"; the entry is never loaded
 - [034](./034.md) — backend-v2 `diffBeanCheckErrors` keys on file:line, so an existing error moved by an insertion is "new" and `appendLedgerText` refuses valid text
 - [033](./033.md) — `addLedgerEntries` renders tags, links, flags, accounts, currencies and meta keys raw: one entry with a newline in a tag smuggles extra directives
