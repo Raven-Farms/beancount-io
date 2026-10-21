@@ -51,6 +51,7 @@ import {
   lineEndingOf,
   withLineEnding,
   type LineEnding,
+  isUnreadableLargeFile,
 } from "@/common/ledger-file-content";
 import { isBeancountFile } from "@/common/ledger-file-types";
 import {
@@ -354,7 +355,10 @@ function LedgerFileEditorSession({
   // A file that does not round-trip as UTF-8 opens read-only: saving it would
   // replace its non-UTF-8 bytes with U+FFFD (w21/042).
   const [lossy, setLossy] = useState(false);
-  const canWrite = canWriteLedger && !lossy;
+  // A file the server sent no text for: read-only, never an empty document to
+  // type over (w21/185).
+  const [tooLarge, setTooLarge] = useState(false);
+  const canWrite = canWriteLedger && !lossy && !tooLarge;
   const { currencies: operatingCurrencies } = useLedgerReadContext(ledgerId);
 
   const beancount = isBeancountFile(path);
@@ -390,6 +394,12 @@ function LedgerFileEditorSession({
     const enc = fileData.getLedgerFile.encoding;
     const fc = decodeLedgerFileContent(raw, enc);
     setLossy(!isLosslessLedgerFileContent(raw, enc));
+    setTooLarge(
+      isUnreadableLargeFile(
+        fileData.getLedgerFile.content,
+        fileData.getLedgerFile.size,
+      ),
+    );
     lineEndingRef.current = lineEndingOf(fc);
     const fs = fileData.getLedgerFile.sha;
     const epoch = documentEpochRef.current + 1;
@@ -468,6 +478,12 @@ function LedgerFileEditorSession({
     const enc = result.data?.getLedgerFile?.encoding;
     const fc = decodeLedgerFileContent(raw, enc);
     setLossy(!isLosslessLedgerFileContent(raw, enc));
+    setTooLarge(
+      isUnreadableLargeFile(
+        result.data?.getLedgerFile?.content,
+        result.data?.getLedgerFile?.size,
+      ),
+    );
     lineEndingRef.current = lineEndingOf(fc);
     const fs = result.data?.getLedgerFile?.sha ?? "";
     const epoch = documentEpochRef.current + 1;
@@ -725,7 +741,7 @@ function LedgerFileEditorSession({
       {/* The Save button's absence is otherwise the only sign. Yields to the
           error banner so the two never stack. */}
       {!canWrite &&
-      (lossy || fileErrors.length === 0) &&
+      (lossy || tooLarge || fileErrors.length === 0) &&
       editorState === "content" ? (
         <View style={styles.readOnlyBanner} testID="ledger-editor-read-only">
           <Ionicons
@@ -734,7 +750,13 @@ function LedgerFileEditorSession({
             color={readOnlyNoticeColors(theme).foreground}
           />
           <Text key={fontScale} style={styles.readOnlyText}>
-            {t(lossy ? "ledgerEditorNotUtf8" : "ledgerReadOnly")}
+            {t(
+              tooLarge
+                ? "ledgerEditorTooLarge"
+                : lossy
+                  ? "ledgerEditorNotUtf8"
+                  : "ledgerReadOnly",
+            )}
           </Text>
         </View>
       ) : null}

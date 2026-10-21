@@ -4,6 +4,7 @@ import {
   isLosslessLedgerFileContent,
   lineEndingOf,
   withLineEnding,
+  isUnreadableLargeFile,
 } from "../ledger-file-content";
 
 // w21/042: a Latin-1 "Café" decoded to "Caf�" and one unrelated save
@@ -65,9 +66,12 @@ describe("the file editor", () => {
       source.split("setLossy(!isLosslessLedgerFileContent(raw, enc));").length -
         1,
     ).toBe(2);
-    expect(source.includes("const canWrite = canWriteLedger && !lossy;")).toBe(
-      true,
-    );
+    // And one the server sent no text for (w21/185).
+    expect(
+      source.includes(
+        "const canWrite = canWriteLedger && !lossy && !tooLarge;",
+      ),
+    ).toBe(true);
   });
 });
 
@@ -128,5 +132,40 @@ describe("line endings survive an edit", () => {
     expect(
       source.includes("withLineEnding(content, lineEndingRef.current)"),
     ).toBe(true);
+  });
+});
+
+// w21/185: Gitea sends `content: null` for a blob over its inline limit, which
+// opened as an empty, writable document.
+describe("isUnreadableLargeFile", () => {
+  it("flags a non-empty file that came back without its text", () => {
+    expect(isUnreadableLargeFile(null, 11_000_000)).toBe(true);
+    expect(isUnreadableLargeFile("", 11_000_000)).toBe(true);
+    expect(isUnreadableLargeFile(undefined, 12)).toBe(true);
+  });
+
+  it("leaves an empty file, and a file with its text, alone", () => {
+    expect(isUnreadableLargeFile(null, 0)).toBe(false);
+    expect(isUnreadableLargeFile("", 0)).toBe(false);
+    expect(isUnreadableLargeFile(null, null)).toBe(false);
+    expect(isUnreadableLargeFile("2026-01-01 open Assets:Cash", 27)).toBe(
+      false,
+    );
+  });
+
+  it("is what the editor opens read-only on, at load and on reload", () => {
+    const editor = require("fs").readFileSync(
+      require("path").join(
+        __dirname,
+        "..",
+        "..",
+        "screens",
+        "ledger-file-editor-screen",
+        "index.tsx",
+      ),
+      "utf8",
+    );
+    expect(editor.split("isUnreadableLargeFile(").length - 1).toBe(2);
+    expect(editor.includes("canWriteLedger && !lossy && !tooLarge")).toBe(true);
   });
 });

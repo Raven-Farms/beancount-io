@@ -52,6 +52,8 @@ export const fr: Translations = {
     "Il a été supprimé, renommé ou n’est plus partagé. Choisissez un autre livre pour continuer.",
   ledgerEditorNotUtf8:
     "Ce fichier n’est pas du texte UTF-8. Le modifier ici changerait certains de ses caractères ; il s’ouvre donc en lecture seule. Modifiez-le sur un ordinateur.",
+  ledgerEditorTooLarge:
+    "Ce fichier est trop volumineux pour s’ouvrir sur votre téléphone ; il est donc en lecture seule. Modifiez-le sur un ordinateur.",
 
   // bottom tab bar
   home: "Accueil",

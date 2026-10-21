@@ -18,10 +18,15 @@ describe("file editor read-only indicator", () => {
     const banner = source.slice(start, source.indexOf(") : null}", start));
     // A file that is not UTF-8 says so, even beside the error banner
     // (w21/042); a read-only ledger keeps its own message.
-    expect(banner.includes("(lossy || fileErrors.length === 0)")).toBe(true);
+    // A file too large to open does the same (w21/185).
     expect(
-      banner.includes('t(lossy ? "ledgerEditorNotUtf8" : "ledgerReadOnly")'),
+      banner.includes("(lossy || tooLarge || fileErrors.length === 0)"),
     ).toBe(true);
+    expect(
+      banner.replace(/\s+/g, " ").includes('tooLarge ? "ledgerEditorTooLarge"'),
+    ).toBe(true);
+    expect(banner.includes('"ledgerEditorNotUtf8"')).toBe(true);
+    expect(banner.includes('"ledgerReadOnly"')).toBe(true);
   });
 
   it("still hides Save on a read-only ledger", () => {

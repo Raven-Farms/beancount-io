@@ -52,6 +52,8 @@ export const sk: Translations = {
     "Bola odstránená, premenovaná alebo už nie je zdieľaná. Pokračujte výberom inej knihy.",
   ledgerEditorNotUtf8:
     "Tento súbor nie je text v UTF-8. Úprava tu by zmenila niektoré znaky, preto sa otvára iba na čítanie. Upravte ho na počítači.",
+  ledgerEditorTooLarge:
+    "Tento súbor je príliš veľký na otvorenie v telefóne, preto je len na čítanie. Upravte ho na počítači.",
 
   // bottom tab bar
   home: "Domov",

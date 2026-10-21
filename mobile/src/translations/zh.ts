@@ -44,6 +44,8 @@ export const zh: Translations = {
   ledgerGoneMessage: "它已被删除、重命名或取消共享。请选择其他账本继续。",
   ledgerEditorNotUtf8:
     "此文件不是 UTF-8 文本。在此编辑会改变其中部分字符，因此以只读方式打开。请在电脑上编辑。",
+  ledgerEditorTooLarge:
+    "此文件太大，无法在手机上打开，因此为只读。请在电脑上编辑。",
 
   // bottom tab bar
   home: "首页",

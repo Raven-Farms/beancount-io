@@ -26,6 +26,19 @@ export function isLosslessLedgerFileContent(
   return Buffer.from(bytes.toString("utf8"), "utf8").equals(bytes);
 }
 
+/**
+ * Whether a file read came back without its text although the file is not
+ * empty: Gitea sends `content: null` for a blob over its inline limit (10 MiB).
+ * Read as an empty document with a valid sha, the editor let a user type over
+ * a whole large file (w21/185).
+ */
+export function isUnreadableLargeFile(
+  content: string | null | undefined,
+  size: number | null | undefined,
+): boolean {
+  return !content && (size ?? 0) > 0;
+}
+
 export type LineEnding = "\r\n" | "\n";
 
 /**

@@ -47,6 +47,8 @@ export const en = {
     "It was deleted, renamed or unshared. Choose another ledger to continue.",
   ledgerEditorNotUtf8:
     "This file isn’t UTF-8 text. Editing it here would change some of its characters, so it opens read-only. Edit it on a computer.",
+  ledgerEditorTooLarge:
+    "This file is too large to open on your phone, so it is read-only. Edit it on a computer.",
   // bottom tab bar
   home: "Home",
   ledger: "Ledger",

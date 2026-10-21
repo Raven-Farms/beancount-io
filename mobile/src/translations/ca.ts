@@ -52,6 +52,8 @@ export const ca: Translations = {
     "S’ha eliminat, reanomenat o deixat de compartir. Tria un altre llibre per continuar.",
   ledgerEditorNotUtf8:
     "Aquest fitxer no és text UTF-8. Editar-lo aquí en canviaria alguns caràcters, així que s’obre només en lectura. Edita’l en un ordinador.",
+  ledgerEditorTooLarge:
+    "Aquest fitxer és massa gran per obrir-lo al telèfon, així que és només de lectura. Edita'l en un ordinador.",
 
   // bottom tab bar
   home: "Inici",

@@ -52,6 +52,8 @@ export const nl: Translations = {
     "Het is verwijderd, hernoemd of niet meer gedeeld. Kies een ander boek om verder te gaan.",
   ledgerEditorNotUtf8:
     "Dit bestand is geen UTF-8-tekst. Als je het hier bewerkt, veranderen sommige tekens, dus het opent alleen-lezen. Bewerk het op een computer.",
+  ledgerEditorTooLarge:
+    "Dit bestand is te groot om op je telefoon te openen en is daarom alleen-lezen. Bewerk het op een computer.",
 
   // bottom tab bar
   home: "Home",
