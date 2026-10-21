@@ -4,6 +4,10 @@
 
 ## Inbox
 
+- [303 — Preserve sanitized code anchors and authored direction through rendering](./303.md) — minor; dashboard QA, 2026-10-21; code wrappers drop allowed IDs and explicit LTR direction, breaking fragment targets and reversing Persian code lines.
+
+- [302 — Keep Activity cards unique when newer events shift the next page](./302.md) — minor; dashboard QA, 2026-10-21; live offset pages overlap after new events and raw concatenation repeats cards at desktop/narrow widths.
+
 - [301 — Resolve document attachments from the file that declares them](./301.md) — minor; dashboard QA, 2026-10-21; the ledger report returns included-source attachment paths without their source directory, producing a real missing-file result.
 
 - [300 — Let active sidebar groups collapse through their disclosure button](./300.md) — minor; dashboard QA, 2026-10-21; active-route expansion overrides Enter, Space and pointer toggles in desktop/narrow navigation.
