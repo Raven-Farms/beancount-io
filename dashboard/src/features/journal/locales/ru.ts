@@ -476,10 +476,6 @@ const ruJournal: Record<string, TranslationEntry> = {
     message: "Ожидается",
     description: "Pending transaction status",
   },
-  "journal.blankStatus": {
-    message: "(пусто)",
-    description: "Blank transaction status option",
-  },
   "journal.addPosting": {
     message: "Добавить проводку",
     description: "Accessible name for adding a transaction posting row",

@@ -68,7 +68,7 @@ interface TransactionFormProps {
 
 type TransactionFormData = {
   date: string;
-  flag: string;
+  flag: "*" | "!";
   payee?: string;
   narration?: string;
   postings: {
@@ -116,7 +116,9 @@ export function TransactionForm({
     () =>
       z.object({
         date: z.iso.date(),
-        flag: z.string().trim(),
+        // Beancount has no blank transaction status: only Cleared and
+        // Pending survive a save (w4/270).
+        flag: z.enum(["*", "!"]),
         payee: z.string().trim().optional(),
         narration: z.string().trim().optional(),
         postings: z.array(postingSchema).min(2),
@@ -397,12 +399,10 @@ export function TransactionForm({
                           <span aria-hidden="true">
                             {field.value === "*" && "*"}
                             {field.value === "!" && "!"}
-                            {field.value === " " && " "}
                           </span>
                           <span className="sr-only">
                             {field.value === "*" && t("journal.clearedStatus")}
                             {field.value === "!" && t("journal.pendingStatus")}
-                            {field.value === " " && t("journal.blankStatus")}
                           </span>
                         </SelectValue>
                       </SelectTrigger>
@@ -413,9 +413,6 @@ export function TransactionForm({
                       </SelectItem>
                       <SelectItem value="!">
                         ! {t("journal.pendingStatus")}
-                      </SelectItem>
-                      <SelectItem value=" ">
-                        {t("journal.blankStatus")}
                       </SelectItem>
                     </SelectContent>
                   </Select>

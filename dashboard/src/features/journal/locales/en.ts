@@ -445,10 +445,6 @@ const enJournal: Record<string, TranslationEntry> = {
     message: "Pending",
     description: "Pending transaction status",
   },
-  "journal.blankStatus": {
-    message: "(blank)",
-    description: "Blank transaction status option",
-  },
   "journal.addPosting": {
     message: "Add posting",
     description: "Accessible name for adding a transaction posting row",

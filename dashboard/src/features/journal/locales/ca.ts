@@ -461,10 +461,6 @@ const caJournal: Record<string, TranslationEntry> = {
     message: "Pendent",
     description: "Pending transaction status",
   },
-  "journal.blankStatus": {
-    message: "(en blanc)",
-    description: "Blank transaction status option",
-  },
   "journal.addPosting": {
     message: "Afegeix apunt",
     description: "Accessible name for adding a transaction posting row",
