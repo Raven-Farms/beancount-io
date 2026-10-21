@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { Controller, useForm } from "react-hook-form";
@@ -433,4 +433,34 @@ describe("DatePicker draft after an earlier valid edit (w4/239)", () => {
     expect(input).toHaveValue("12/01/2026");
     expect(input).not.toHaveAttribute("aria-invalid");
   });
+});
+
+/** An IME's ArrowDown stays with its composition (w4/288). */
+describe("DatePicker during IME composition", () => {
+  it.each(["2016-09-20", "2016-09"])(
+    "keeps the calendar closed and focus in the field for a composing ArrowDown over %s",
+    async (preedit) => {
+      const onValue = vi.fn();
+      render(<ControlledDatePicker onValue={onValue} />);
+      const input = screen.getByRole("textbox");
+      input.focus();
+      fireEvent.compositionStart(input);
+      fireEvent.change(input, { target: { value: preedit } });
+
+      for (const keyCode of [40, 229]) {
+        fireEvent.keyDown(input, {
+          key: "ArrowDown",
+          keyCode,
+          isComposing: true,
+        });
+      }
+      expect(screen.queryByRole("grid")).toBeNull();
+      expect(input).toHaveFocus();
+      expect(input).toHaveValue(preedit);
+
+      fireEvent.compositionEnd(input);
+      fireEvent.keyDown(input, { key: "ArrowDown", keyCode: 40 });
+      expect(await screen.findByRole("grid")).toBeInTheDocument();
+    },
+  );
 });

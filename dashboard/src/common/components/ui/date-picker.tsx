@@ -14,6 +14,7 @@ import {
 } from "@/common/components/ui/popover";
 import { useTranslations } from "@/common/hooks/use-translations";
 import { useDateLocale } from "@/common/hooks/use-date-locale";
+import { isCompositionKey } from "@/common/lib/keyboard/is-composition-key";
 import {
   ISO_PATTERN,
   calendarToIsoDate,
@@ -194,7 +195,9 @@ export function DatePicker({
             }
           }}
           onKeyDown={(e) => {
-            if (e.key === "ArrowDown") {
+            // An IME's ArrowDown picks a candidate; opening the calendar would
+            // move focus and end the composition (w4/288).
+            if (e.key === "ArrowDown" && !isCompositionKey(e.nativeEvent)) {
               e.preventDefault();
               setOpen(true);
             }
