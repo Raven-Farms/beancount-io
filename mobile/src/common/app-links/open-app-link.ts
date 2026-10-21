@@ -6,6 +6,7 @@ import {
   type GetLedgerQuery,
 } from "@/generated-graphql/graphql";
 import { ledgerVar } from "@/common/vars";
+import { confirmDiscardUnsavedEdits } from "@/common/unsaved-edits-guard";
 import type { AppLinkTarget } from "./resolve-app-link";
 export { isOAuthCallbackUrl } from "./oauth-callback-url";
 
@@ -51,6 +52,20 @@ export async function openAppLinkTarget(args: {
     return { ok: false, reason: "unreadable" };
   }
 
+  if (!isCurrentSession()) {
+    return { ok: false, reason: "aborted" };
+  }
+
+  // Switching ledgers remounts the file editor clean before any navigation
+  // could ask about its draft, so ask first; Cancel keeps the editor, its
+  // draft and the ledger (w21/090). A same-ledger link reaches the editor's
+  // own beforeRemove guard.
+  if (
+    ledgerVar() !== target.ledgerFullName &&
+    !(await confirmDiscardUnsavedEdits())
+  ) {
+    return { ok: false, reason: "aborted" };
+  }
   if (!isCurrentSession()) {
     return { ok: false, reason: "aborted" };
   }
