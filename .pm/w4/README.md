@@ -4,6 +4,8 @@
 
 ## Inbox
 
+- [305 — Keep late Upload completion from redirecting after the user leaves](./305.md) — minor; dashboard QA, 2026-10-21; pending Upload permits Journal departure, then its successful completion takes both widths back to Files.
+
 - [304 — Keep late Create File success from redirecting after the user leaves](./304.md) — minor; dashboard QA, 2026-10-21; explicit pending-save departure reaches Journal, then the old successful completion takes both widths back to Files.
 
 - [303 — Preserve sanitized code anchors and authored direction through rendering](./303.md) — minor; dashboard QA, 2026-10-21; code wrappers drop allowed IDs and explicit LTR direction, breaking fragment targets and reversing Persian code lines.
