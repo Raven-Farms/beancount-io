@@ -4,6 +4,8 @@
 
 ## Inbox
 
+- [319 — Name the import configuration's amount filter](./319.md) — minor; dashboard QA, 2026-10-21; native AX exposes an empty control name at both widths; value/filtering/keyboard and adjacent named controls pass.
+
 - [318 — Keep composing Escape inside searchable popovers](./318.md) — minor; dashboard QA, 2026-10-21; trusted composing Escape dismisses the ledger switcher and clears its search at both widths; ordinary Escape, composing Enter and read-retry controls pass.
 
 - [317 — Default Books begin to the browser's local calendar day](./317.md) — major; dashboard QA clock controls, 2026-10-21; Pacific evening defaults tomorrow and real preview opens all12 accounts tomorrow; UTC and explicit-date controls pass; no ledger created.
