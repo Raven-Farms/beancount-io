@@ -58,3 +58,4 @@
 - [108](./108.md) — "Choose from photos" fails for HEIC iPhone photos with "Could not read receipt"
 - [109](./109.md) — Notifications bell never tells VoiceOver its error count
 - [110](./110.md) — First New Transaction after relaunch pre-fills accounts from the stale persisted cache, even a deleted account
+- [111](./111.md) — At AX2 the drawer clips "Ledgers", "+ New" and every ledger name to the top half of the text
