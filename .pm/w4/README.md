@@ -4,6 +4,8 @@
 
 ## Inbox
 
+- [308 — Refuse malformed CSV quote boundaries instead of joining their text](./308.md) — minor; dashboard QA, 2026-10-21; closed quoted fields accept trailing text, silently turning malformed payee/amount tokens into2Valid rows at both widths.
+
 - [307 — Show copy failure during stale-entry draft recovery](./307.md) — minor; dashboard QA, 2026-10-21; Copy my edit leaves a rejected clipboard promise unhandled and gives no failure feedback; exact-payload retry succeeds at both widths.
 
 - [306 — Restore usable keyboard focus when a confirmed file deletion fails](./306.md) — minor; dashboard QA, 2026-10-21; settled desktop/narrow confirmations close before acknowledgement and leave BODY focus on failure, with the next Tab at Skip.
