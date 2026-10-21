@@ -447,6 +447,10 @@ function LedgerFileEditorSession({
   );
 
   const handleReload = useCallback(async () => {
+    // The error strip follows the cache after mount; a reload that swaps in
+    // the remote text must refresh it too, or it keeps a fixed error at a line
+    // that no longer exists (w21/048).
+    void invalidateLedgerData(client, "errors");
     const result = await refetch();
     const raw = result.data?.getLedgerFile?.content ?? "";
     const enc = result.data?.getLedgerFile?.encoding;
@@ -459,7 +463,7 @@ function LedgerFileEditorSession({
     shaRef.current = fs;
     setDocumentSpec({ value: fc, epoch });
     setHasUnsavedChanges(false);
-  }, [refetch]);
+  }, [client, refetch]);
 
   const handleEdit = useCallback(
     async (epoch: number, revision: number, isDirty: boolean) => {
@@ -728,6 +732,7 @@ function LedgerFileEditorSession({
             <View style={styles.unavailableActions}>
               <TouchableOpacity
                 onPress={() => {
+                  void invalidateLedgerData(client, "errors");
                   void refetch();
                 }}
               >
