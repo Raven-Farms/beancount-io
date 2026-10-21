@@ -94,3 +94,5 @@
 - [144](./144.md) — File editor can't dismiss the keyboard for writable non-.bean files
 - [145](./145.md) — Payee suggestions, Account Picker and Browse Ledgers can't bring last rows above the keyboard
 - [146](./146.md) — New Transaction: with 4+ postings the number pad covers Add posting, Remainder and save errors
+- [147](./147.md) — Latest Updates shows Blog/Release dates one day early west of UTC
+- [148](./148.md) — Budget "Last year" uses the server's calendar, "This year" the device's — they disagree around New Year
