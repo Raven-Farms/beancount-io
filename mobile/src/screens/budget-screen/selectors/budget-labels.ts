@@ -3,6 +3,7 @@
  * mapping, kept out of the components so the fava `time` filter values are
  * unit-testable.
  */
+import { utcDate } from "../../../common/calendar-date";
 import { getFormatDate } from "../../../common/format-util";
 import { formatShortMoneyWithCurrency } from "../../../common/number-utils";
 import { formatTimeFilter } from "../../transactions-screen/filters/select-filter-query";
@@ -109,10 +110,15 @@ export function timeSpanToFilter(
       return "year-1";
     case "last-12m": {
       // Same calendar date one year back through today, matching the
-      // dashboard's `subYears(now, 1) → now` window.
-      const year = Number(today.slice(0, 4));
+      // dashboard's `subYears(now, 1) → now` window. A leap day clamps to
+      // 28 Feb: "2023-02-29" is no date, and the server refused the whole
+      // range every 29 February (w21/063).
+      const year = Number(today.slice(0, 4)) - 1;
+      const month = Number(today.slice(5, 7));
+      const lastDay = utcDate(year, month, 0).getUTCDate();
+      const day = Math.min(Number(today.slice(8, 10)), lastDay);
       return formatTimeFilter({
-        start: `${year - 1}${today.slice(4)}`,
+        start: `${String(year).padStart(4, "0")}-${today.slice(5, 7)}-${String(day).padStart(2, "0")}`,
         end: today,
       });
     }

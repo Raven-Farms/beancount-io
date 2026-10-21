@@ -131,3 +131,25 @@ describe("budgetChartSummary", () => {
     ).toBe(undefined);
   });
 });
+
+// w21/063: on 29 February the 1Y start was "2023-02-29", which the server
+// refuses, so the view failed all day.
+describe("timeSpanToFilter: leap day", () => {
+  it("clamps a leap day's start to 28 February", () => {
+    expect(timeSpanToFilter("last-12m", "2024-02-29")).toBe(
+      "2023-02-28 - 2024-02-29",
+    );
+  });
+
+  it("keeps every other date as it is", () => {
+    expect(timeSpanToFilter("last-12m", "2026-10-21")).toBe(
+      "2025-10-21 - 2026-10-21",
+    );
+    expect(timeSpanToFilter("last-12m", "2025-02-28")).toBe(
+      "2024-02-28 - 2025-02-28",
+    );
+    expect(timeSpanToFilter("last-12m", "2027-03-01")).toBe(
+      "2026-03-01 - 2027-03-01",
+    );
+  });
+});
