@@ -4,6 +4,8 @@
 
 ## Inbox
 
+- [300 — Let active sidebar groups collapse through their disclosure button](./300.md) — minor; dashboard QA, 2026-10-21; active-route expansion overrides Enter, Space and pointer toggles in desktop/narrow navigation.
+
 - [299 — Return focus after restoring a public reader's hidden dashboard](./299.md) — minor; dashboard QA, 2026-10-21; the empty-state opener disappears and public readers have no header fallback, so closing Customize leaves BODY focus.
 
 - [298 — Make calendar arrow keys follow the rendered RTL day grid](./298.md) — minor; dashboard QA, 2026-10-21; shared Calendar omits DayPicker direction, so Persian horizontal keys move against the visible grid.
