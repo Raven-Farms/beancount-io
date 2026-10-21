@@ -4,6 +4,7 @@ import { type IFavaClientFactory } from "@/foundation/clients/fava-client-factor
 import {
   BadUserInputError,
   ConflictError,
+  NotFoundError,
   ServiceUnavailableError,
 } from "@/shared/errors";
 import { unwrapFavaResponse } from "@/foundation/fava";
@@ -119,7 +120,17 @@ export type PlaidUnlinkResult =
 
 export interface IPlaidItemService {
   getItems(identity: Identity, ledgerId: string): Promise<PlaidItemResult[]>;
-  getItem(identity: Identity, id: string): Promise<PlaidItemResult>;
+  /**
+   * One bank connection. With `ledgerId` (REST and MCP name it in the path)
+   * the item must belong to that ledger; without it (GraphQL) its own ledger
+   * is resolved. Either way a missing or foreign item is the concealed
+   * "Bank connection not found".
+   */
+  getItem(
+    identity: Identity,
+    id: string,
+    ledgerId?: string,
+  ): Promise<PlaidItemResult>;
   getAccounts(
     identity: Identity,
     itemId: string,
@@ -272,27 +283,35 @@ export class PlaidItemService implements IPlaidItemService {
     return items.map(toItemResult);
   }
 
-  async getItem(identity: Identity, id: string): Promise<PlaidItemResult> {
-    const locatedItem = await this.models.plaidItem.getById(this.db, id);
-    if (!locatedItem) {
-      throw new BadUserInputError("Plaid Item not found");
+  async getItem(
+    identity: Identity,
+    id: string,
+    ledgerId?: string,
+  ): Promise<PlaidItemResult> {
+    // Authorization runs before any lookup when the path names the ledger, so
+    // a credential without bank authority is refused the same way whether or
+    // not the id exists (w23/004).
+    let targetLedgerId = ledgerId;
+    if (targetLedgerId === undefined) {
+      const located = await this.models.plaidItem.getById(this.db, id);
+      if (!located) throw new NotFoundError("Bank connection");
+      targetLedgerId = await this.resolveLedgerId(located.ledgerRepoId);
     }
-    const ledgerId = await this.resolveLedgerId(locatedItem.ledgerRepoId);
-    await this.authorizeBankAction(
+    // The PDP checks the item belongs to the caller and to this ledger, and
+    // conceals a mismatch as "Bank connection not found".
+    const { ledgerRepoId } = await this.authorizeBankAction(
       identity,
       AUTHORIZATION_ACTIONS.BANK_CONNECTION_READ,
-      ledgerId,
+      targetLedgerId,
       id,
     );
     const item = await this.models.plaidItem.getById(this.db, id);
-    if (!item) {
-      throw new BadUserInputError("Plaid Item not found");
-    }
     if (
+      !item ||
       item.userId !== identity.userId ||
-      item.ledgerRepoId !== locatedItem.ledgerRepoId
+      item.ledgerRepoId !== ledgerRepoId
     ) {
-      throw new BadUserInputError("Unauthorized access to Plaid Item");
+      throw new NotFoundError("Bank connection");
     }
     return toItemResult(item);
   }
@@ -553,14 +572,11 @@ export class PlaidItemService implements IPlaidItemService {
       accountId,
     });
 
-    const { suggestions } = await categorizeTransactions(
-      this.llmClient,
-      {
-        transactions: txsForCategorization,
-        existingAccounts,
-        autoAccounts: false,
-      },
-    );
+    const { suggestions } = await categorizeTransactions(this.llmClient, {
+      transactions: txsForCategorization,
+      existingAccounts,
+      autoAccounts: false,
+    });
 
     itemServiceLogger.info("AI categorization completed", {
       userId,
@@ -624,21 +640,18 @@ export class PlaidItemService implements IPlaidItemService {
       itemId,
     });
 
-    const { suggestions } = await suggestAccountMappingWithLLM(
-      this.llmClient,
-      {
-        institutionName: item.institutionName,
-        accounts: unmappedAccounts.map((a) => ({
-          accountId: a.id,
-          accountName: a.accountName,
-          accountType: a.accountType,
-          accountSubtype: a.accountSubtype,
-          mask: a.mask,
-        })),
-        existingAccounts,
-        autoAccounts,
-      },
-    );
+    const { suggestions } = await suggestAccountMappingWithLLM(this.llmClient, {
+      institutionName: item.institutionName,
+      accounts: unmappedAccounts.map((a) => ({
+        accountId: a.id,
+        accountName: a.accountName,
+        accountType: a.accountType,
+        accountSubtype: a.accountSubtype,
+        mask: a.mask,
+      })),
+      existingAccounts,
+      autoAccounts,
+    });
 
     itemServiceLogger.info("AI account mapping suggestion completed", {
       userId,

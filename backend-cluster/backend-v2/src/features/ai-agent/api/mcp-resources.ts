@@ -306,15 +306,14 @@ const bankResources: readonly McpResourceDescriptor[] = [
     description: "Status and institution details for a single bank connection.",
     mimeType: "application/json",
     uriTemplate: `${RESOURCE_SCHEME}://{owner}/{name}/banks/{itemId}`,
-    read: async (ctx, vars) => {
-      resolveLedgerId(ctx, vars);
-      return JSON.stringify(
+    read: async (ctx, vars) =>
+      JSON.stringify(
         await ctx.services.plaidItem.getItem(
           ctx.identity,
           String(vars.itemId ?? ""),
+          resolveLedgerId(ctx, vars),
         ),
-      );
-    },
+      ),
   },
   {
     name: "bankAccountsForItem",

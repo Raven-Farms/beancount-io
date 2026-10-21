@@ -93,7 +93,11 @@ export const BANK_ROUTES = [
     params: itemPath,
     responses: { 200: json("The bank connection") },
     handler: async ({ layers }, { identity, params }) =>
-      layers.services.plaidItem.getItem(callerOf(identity), params.itemId),
+      layers.services.plaidItem.getItem(
+        callerOf(identity),
+        params.itemId,
+        ledgerIdOf(params),
+      ),
   }),
   v1Route({
     method: "get",
