@@ -14,7 +14,6 @@
 
 - [064](./blocked/064.md) — A token refresh whose response is lost signs the user out on the next refresh (rotated token replayed → grant revoked) — **blocked:** needs an owner decision (ADR) on a refresh-token reuse grace window
 - [065](./blocked/065.md) — One early-year entry (e.g. 0050) makes the balance sheet 23,718 monthly points (3 MB) and the app stalls — **blocked:** needs an approach decision (per-pill fetch vs server downsample) and a simulator profile of the stall
-- [138](./138.md) — Pull-to-refresh on Home doesn't refresh the bell's error badge
 - [139](./139.md) — VoiceOver reads a Merchants row as only the payee (drops count, Recurring, cadence, Overdue)
 - [140](./140.md) — VoiceOver on transaction rows omits narration and says "Pending" in English
 - [141](./141.md) — Controls read with icon-font glyphs ("…U+F23B"), missing button roles; guardrail can't catch them

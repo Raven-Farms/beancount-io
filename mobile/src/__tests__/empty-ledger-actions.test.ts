@@ -260,6 +260,8 @@ function load(relative: string): any {
         return { useBalanceSheetBasis: () => homeRead("basis") };
       if (id.endsWith("/use-ledger-prices"))
         return { useLedgerPrices: () => homeRead("prices") };
+      if (id.endsWith("/use-ledger-errors"))
+        return { useLedgerErrors: () => homeRead("errors") };
       const otherCards: Record<string, string> = {
         "account-charts-card": "AccountChartsCard",
         "spending-card": "SpendingCard",
@@ -355,7 +357,9 @@ for (const [name, screen] of [
         render(screen);
         expect(journalRefetches).toBe(1);
         expect(homeRefetches.sort()).toEqual(
-          name === "Home" ? ["balances", "basis", "metadata", "prices"] : [],
+          name === "Home"
+            ? ["balances", "basis", "errors", "metadata", "prices"]
+            : [],
         );
         expect(AddTransactionCallback.hasFn()).toBe(false);
         await runAddTransactionCallback();

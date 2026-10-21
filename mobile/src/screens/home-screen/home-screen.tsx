@@ -44,6 +44,7 @@ import {
   StaleDataBanner,
 } from "@/components";
 import { LedgerGuard, useLedgerGuard } from "@/components/ledger-guard";
+import { useLedgerErrors } from "@/common/hooks/use-ledger-errors";
 import { isShowingStaleDataFromQueries } from "@/common/apollo/stale-data";
 
 const getStyles = (theme: ColorTheme) =>
@@ -61,6 +62,7 @@ const HomeScreenImpl = (): JSX.Element => {
   const styles = useThemeStyle(getStyles);
   const router = useRouter();
   const ledgerId = useLedgerGuard();
+  const { refetch: ledgerErrorsRefetch } = useLedgerErrors(ledgerId);
   const { canWrite } = useLedgerAccess();
   const {
     currencies,
@@ -183,6 +185,9 @@ const HomeScreenImpl = (): JSX.Element => {
         balanceSheetRefetch(),
         basisRefetch(),
         pricesRefetch(),
+        // The bell counts these: a ledger broken or fixed elsewhere showed
+        // the old badge after a pull (w21/138).
+        ledgerErrorsRefetch(),
       ]);
     } catch {
       // Query errors render in the cards or the guest access boundary.
