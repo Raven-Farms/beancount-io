@@ -4,7 +4,7 @@
 
 ## Milestones
 
-- [ ] **m1** — [Entry edits and deletes refuse changes that would break the ledger](./blocked/m1/README.md) (7 tasks) ← from mobile QA 2026-10-20 — **blocked:** fix shipped through `250c4d2f0`; awaiting the deployed API and native-app check
+- [ ] **m1** — [Entry edits and deletes refuse changes that would break the ledger](./blocked/m1/README.md) (7 tasks) ← from mobile QA 2026-10-20 — **blocked:** deployed; GraphQL, REST and native verified 2026-10-20 — only the MCP check (needs QA_MCP_TOKEN) remains
 
 ## Inbox
 

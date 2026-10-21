@@ -82,3 +82,16 @@
   Then run `/pm done w21/m1/t007`. **Who:** the user (deploy) and the mobile/MCP QA loops.
 
 **Partial native check 2026-10-20 (QA loop)** — the API is **not yet deployed**. Production introspection still shows `DeleteSourceSliceInput {entryHash, sha256sum}` and `UpdateSourceSliceInput {entryHash, sha256sum, newContent}`, with no `allowInvalid`, so unblock items 1–2 and the server half of 3 remain open. Verified the client-only part of item 3 on iPhone 17e (iOS 27.0), dev build serving `main` at `d4a3d0906`: a file-editor save that adds `2026-01-02 balance Assets:Cash  1.00 USD` to `mcp-agent-eval` commits, then shows "Saved, with a new ledger error — … Balance failed for Assets:Cash: expected 1.00 USD, got 200.00 USD" with **Close** and **View errors**, plus the "1 error" banner. Restored byte-for-byte, with a clean ledger check.
+
+**Deployed-surface check 2026-10-20 19:30 (QA loop)** — production now exposes `allowInvalid` on `DeleteSourceSliceInput` / `UpdateSourceSliceInput`. On the synthetic disposable ledger `mcp-agent-eval`, with the FARMERS MARKET entry `371532b3…` and `2026-08-29 balance Assets:Cash 49.75 USD`:
+
+| surface | delete | re-date to 2026-08-30 | `allowInvalid: true` |
+| --- | --- | --- | --- |
+| GraphQL | refused, `VALIDATION_FAILED`, `newLedgerErrors` = "Balance failed for Assets:Cash: expected 49.75 USD, got 73.25 USD (main.bean:84)", sha unchanged | refused the same way (main.bean:87), sha unchanged | both commit |
+| REST v1 (`POST …/entry-source/delete`, `PUT …/entry-source`) | HTTP 400 `VALIDATION_FAILED`, message names the balance failure, sha unchanged | HTTP 400, same, sha unchanged | both HTTP 200 and commit |
+| Native app, iPhone 17e / iOS 27.0, `main` at `d2b8efbb4` | "Failed to delete transaction — This would add an error to your ledger: Balance failed … (main.bean:84)"; the detail screen stays | inline under the editor hint plus a toast, "This would add an error to your ledger: … (main.bean:87)"; the editor stays | — |
+| MCP (`/api-gateway/mcp`) | **not verified**: the endpoint answers 401 to the QA session, and no `QA_MCP_TOKEN` is available to this loop | — | — |
+
+The file-editor warning (item 3) was verified earlier in this section. Every write was restored byte-for-byte (sha256 checked, clean `getLedgerErrors`).
+
+**Unblock (narrowed):** only the MCP arm remains. Run `node .agents/skills/qa-shared/scripts/qa-mcp.mjs --credentials-file <file with QA_MCP_TOKEN>` against `mcp-agent-eval`: the delete and edit source tools refuse both repros, and the same calls with `allowInvalid: true` commit. Then restore and run `/pm done w21/m1/t007`. **Who:** whoever holds the QA MCP token (the user), or the MCP QA loop.
