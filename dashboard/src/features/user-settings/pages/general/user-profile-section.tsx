@@ -36,6 +36,7 @@ import { toast } from "sonner";
 import { useTranslations } from "@/common/hooks/use-translations";
 import { useErrorMessage } from "@/common/lib/errors/error-message";
 import { usernameRuleError } from "@/common/lib/auth/username-rule";
+import { isCompositionKey } from "@/common/lib/keyboard/is-composition-key";
 
 /** The server refused the name as outside the username rule (w0/036). */
 function isUsernameRuleRefusal(error: unknown): boolean {
@@ -189,7 +190,11 @@ export function UserProfileSection({ userData }: UserProfileSectionProps) {
                       onChange={(e) => setNewFirstName(e.target.value)}
                       placeholder={t("auth.enterFirstName")}
                       onKeyDown={(e) => {
-                        if (e.key === "Enter") {
+                        // An IME's Enter commits its text, not the form (w4/296).
+                        if (
+                          e.key === "Enter" &&
+                          !isCompositionKey(e.nativeEvent)
+                        ) {
                           handleUpdateName();
                         }
                       }}
@@ -205,7 +210,10 @@ export function UserProfileSection({ userData }: UserProfileSectionProps) {
                       onChange={(e) => setNewLastName(e.target.value)}
                       placeholder={t("auth.enterLastName")}
                       onKeyDown={(e) => {
-                        if (e.key === "Enter") {
+                        if (
+                          e.key === "Enter" &&
+                          !isCompositionKey(e.nativeEvent)
+                        ) {
                           handleUpdateName();
                         }
                       }}
@@ -280,7 +288,7 @@ export function UserProfileSection({ userData }: UserProfileSectionProps) {
                       : "username-rule"
                   }
                   onKeyDown={(e) => {
-                    if (e.key === "Enter") {
+                    if (e.key === "Enter" && !isCompositionKey(e.nativeEvent)) {
                       handleUpdateUsername();
                     }
                   }}
