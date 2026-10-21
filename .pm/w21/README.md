@@ -158,3 +158,8 @@
 - [278](./278.md) — A commodity with cost and cost-less lots hides its market value on Accounts; root loses "At market value"
 - [279](./279.md) — Single-commodity Accounts root reads in units and drops the stale-price warning Home shows
 - [280](./280.md) — An open $0 account vanishes when its only sub-account is closed and emptied
+- [281](./281.md) — Receipt capture can prefill and save an account the ledger never opened
+- [282](./282.md) — Android: library HEIC re-encoded to JPEG but uploaded as image/heic, always "Could not read receipt"
+- [283](./283.md) — Android: granting camera in Settings leaves "Camera access is needed" until reopen
+- [284](./284.md) — Receipt preview/upload/error/reveal states are silent to VoiceOver
+- [285](./285.md) — A non-ISO receipt date goes straight into New Transaction's date
