@@ -8,7 +8,6 @@
 - [261 — Keep switch states visible in forced colors](./blocked/261.md) — minor; dashboard QA, 2026-10-20. — **blocked:** fix shipped in `17b703796`; awaiting forced-colors pixel check
 - [262 — Keep Journal, Account, Overview and Files row focus visible in forced colors](./blocked/262.md) — minor; dashboard QA, 2026-10-20. — **blocked:** fix shipped in `def18543d`; awaiting forced-colors pixel check
 - [265 — Keep financial text and private paths out of GA4 automatic events](./blocked/265.md) — major; dashboard QA, 2026-10-20; stream-editor completion dependency. — **blocked:** checklist shipped in `181e7a996`; needs a GA4 Editor to turn off Site search / history page views
-- [272 — Validate saved BQL history before rendering](./272.md) — minor; dashboard QA, 2026-10-20; controlled corrupted-cache recovery.
 - [273 — Keep active picker options identifiable in forced colors](./273.md) — minor; dashboard QA, 2026-10-20; CommandItem and shared Combobox.
 - [274 — Preserve account-search focus through retry](./274.md) — minor; dashboard QA, 2026-10-20.
 - [275 — Distinguish failed ledger-switcher reads from empty results](./275.md) — minor; dashboard QA, 2026-10-20.
