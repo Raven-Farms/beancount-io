@@ -199,6 +199,7 @@ export const nl: Translations = {
   accountPickerAllTab: "Alle",
   accountPickerNoResults: "Geen overeenkomende rekeningen",
   accountPickerCreate: '"%{name}" aanmaken',
+  accountPickerClosedOn: "{{name}} is gesloten op {{date}}",
   next: "Volgende",
   cancel: "Annuleren",
   confirm: "Bevestigen",
@@ -326,6 +327,8 @@ export const nl: Translations = {
   openAccountEmptyComponent: "Naamdelen mogen niet leeg zijn.",
   openAccountNamePreview: "Wordt aangemaakt als {{account}}",
   openAccountAlreadyOpen: "{{account}} is al geopend in dit grootboek.",
+  openAccountClosed:
+    "{{account}} is gesloten op {{date}} en kan niet opnieuw worden geopend.",
   openAccountUppercaseComponent:
     "Elk naamdeel moet met een hoofdletter of cijfer beginnen.",
   openAccountInvalidCharacters:

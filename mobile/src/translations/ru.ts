@@ -202,6 +202,7 @@ export const ru: Translations = {
   accountPickerAllTab: "Все",
   accountPickerNoResults: "Нет подходящих счетов",
   accountPickerCreate: "Создать «%{name}»",
+  accountPickerClosedOn: "{{name}} закрыт {{date}}",
   next: "Далее",
   cancel: "Отмена",
   confirm: "Подтвердить",
@@ -336,6 +337,7 @@ export const ru: Translations = {
   openAccountEmptyComponent: "Части названия счёта не могут быть пустыми.",
   openAccountNamePreview: "Будет создан как {{account}}",
   openAccountAlreadyOpen: "Счёт {{account}} уже открыт в этой книге.",
+  openAccountClosed: "{{account}} закрыт {{date}}, открыть его снова нельзя.",
   openAccountUppercaseComponent:
     "Каждая часть названия счёта должна начинаться с заглавной буквы или цифры.",
   openAccountInvalidCharacters:

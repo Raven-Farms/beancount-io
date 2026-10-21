@@ -192,6 +192,7 @@ export const en = {
   accountPickerAllTab: "All",
   accountPickerNoResults: "No matching accounts",
   accountPickerCreate: 'Create "%{name}"',
+  accountPickerClosedOn: "{{name}} was closed on {{date}}",
   next: "Next",
   cancel: "Cancel",
   confirm: "Confirm",
@@ -318,6 +319,8 @@ export const en = {
   openAccountEmptyComponent: "Account components cannot be empty.",
   openAccountNamePreview: "Will be created as {{account}}",
   openAccountAlreadyOpen: "{{account}} is already open in this ledger.",
+  openAccountClosed:
+    "{{account}} was closed on {{date}} and can't be reopened.",
   openAccountUppercaseComponent:
     "Each account component must start with an uppercase letter or a number.",
   openAccountInvalidCharacters:

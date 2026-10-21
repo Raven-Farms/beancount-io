@@ -1,3 +1,5 @@
+import { useAccountCloseDates } from "@/common/hooks/use-account-close-dates";
+import { formatLedgerDate } from "@/common/date-format";
 import { useEffect, useState } from "react";
 import {
   Pressable,
@@ -201,7 +203,7 @@ const getStyles = (theme: ColorTheme) =>
 type PickerKind = "root" | "currency" | null;
 
 export function OpenAccountScreenComponent(): JSX.Element {
-  const { t } = useTranslations();
+  const { t, locale } = useTranslations();
   const router = useRouter();
   const theme = useTheme().colorTheme;
   const styles = useThemeStyle(getStyles);
@@ -281,6 +283,8 @@ export function OpenAccountScreenComponent(): JSX.Element {
     busy: loading,
   });
   const { alreadyOpen } = submitState;
+  const closeDates = useAccountCloseDates(ledgerId);
+  const closedAt = alreadyOpen ? closeDates.get(account) : undefined;
   const canSubmit = submitState.canSubmit && !saved;
   const rootKey = rootPrefix.toLowerCase() as AccountRoot;
   const rootIcon = getRootIcon(rootKey);
@@ -445,7 +449,14 @@ export function OpenAccountScreenComponent(): JSX.Element {
                 accessibilityRole="alert"
                 accessibilityLiveRegion="polite"
               >
-                {t("openAccountAlreadyOpen", { account })}
+                {/* A closed account can't be reopened; "already open"
+                    contradicted the picker that hid it (w21/122). */}
+                {closedAt
+                  ? t("openAccountClosed", {
+                      account,
+                      date: formatLedgerDate(closedAt, locale),
+                    })
+                  : t("openAccountAlreadyOpen", { account })}
               </Text>
             ) : null}
             {namePreview ? (

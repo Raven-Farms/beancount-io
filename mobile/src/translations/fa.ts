@@ -196,6 +196,7 @@ export const fa: Translations = {
   accountPickerAllTab: "همه",
   accountPickerNoResults: "حسابی مطابقت ندارد",
   accountPickerCreate: "ایجاد «%{name}»",
+  accountPickerClosedOn: "{{name}} در {{date}} بسته شد",
   next: "بعدی",
   cancel: "لغو",
   confirm: "تأیید",
@@ -323,6 +324,7 @@ export const fa: Translations = {
   openAccountEmptyComponent: "بخش‌های نام حساب نمی‌توانند خالی باشند.",
   openAccountNamePreview: "با نام {{account}} ایجاد می‌شود",
   openAccountAlreadyOpen: "{{account}} از قبل در این دفتر باز شده است.",
+  openAccountClosed: "{{account}} در {{date}} بسته شد و دوباره باز نمی‌شود.",
   openAccountUppercaseComponent:
     "هر بخش نام حساب باید با حرف بزرگ یا رقم آغاز شود.",
   openAccountInvalidCharacters:

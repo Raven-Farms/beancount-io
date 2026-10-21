@@ -203,6 +203,7 @@ export const pt: Translations = {
   accountPickerAllTab: "Todas",
   accountPickerNoResults: "Nenhuma conta correspondente",
   accountPickerCreate: 'Criar "%{name}"',
+  accountPickerClosedOn: "{{name}} foi encerrada em {{date}}",
   next: "Próximo",
   cancel: "Cancelar",
   confirm: "Confirmar",
@@ -335,6 +336,8 @@ export const pt: Translations = {
     "As partes do nome da conta não podem ficar vazias.",
   openAccountNamePreview: "Será criada como {{account}}",
   openAccountAlreadyOpen: "{{account}} já está aberta neste livro.",
+  openAccountClosed:
+    "{{account}} foi encerrada em {{date}} e não pode ser reaberta.",
   openAccountUppercaseComponent:
     "Cada parte do nome da conta precisa começar com letra maiúscula ou número.",
   openAccountInvalidCharacters:

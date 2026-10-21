@@ -204,6 +204,7 @@ export const de: Translations = {
   accountPickerAllTab: "Alle",
   accountPickerNoResults: "Keine passenden Konten",
   accountPickerCreate: "„%{name}“ erstellen",
+  accountPickerClosedOn: "{{name}} wurde am {{date}} geschlossen",
   next: "Weiter",
   cancel: "Abbrechen",
   confirm: "Bestätigen",
@@ -336,6 +337,8 @@ export const de: Translations = {
   openAccountNamePreview: "Wird als {{account}} erstellt",
   openAccountAlreadyOpen:
     "{{account}} ist in diesem Hauptbuch bereits eröffnet.",
+  openAccountClosed:
+    "{{account}} wurde am {{date}} geschlossen und kann nicht wieder eröffnet werden.",
   openAccountUppercaseComponent:
     "Jeder Namensbestandteil muss mit einem Großbuchstaben oder einer Ziffer beginnen.",
   openAccountInvalidCharacters:

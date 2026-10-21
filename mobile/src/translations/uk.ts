@@ -201,6 +201,7 @@ export const uk: Translations = {
   accountPickerAllTab: "Усі",
   accountPickerNoResults: "Немає відповідних рахунків",
   accountPickerCreate: "Створити «%{name}»",
+  accountPickerClosedOn: "{{name}} закрито {{date}}",
   next: "Далі",
   cancel: "Скасувати",
   confirm: "Підтвердити",
@@ -334,6 +335,8 @@ export const uk: Translations = {
   openAccountEmptyComponent: "Частини назви рахунку не можуть бути порожніми.",
   openAccountNamePreview: "Буде створено як {{account}}",
   openAccountAlreadyOpen: "Рахунок {{account}} уже відкрито в цій книзі.",
+  openAccountClosed:
+    "{{account}} закрито {{date}}, відкрити його знову не можна.",
   openAccountUppercaseComponent:
     "Кожна частина назви рахунку має починатися з великої літери або цифри.",
   openAccountInvalidCharacters:

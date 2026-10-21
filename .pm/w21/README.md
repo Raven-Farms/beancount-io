@@ -14,7 +14,6 @@
 
 - [064](./blocked/064.md) — A token refresh whose response is lost signs the user out on the next refresh (rotated token replayed → grant revoked) — **blocked:** needs an owner decision (ADR) on a refresh-token reuse grace window
 - [065](./blocked/065.md) — One early-year entry (e.g. 0050) makes the balance sheet 23,718 monthly points (3 MB) and the app stalls — **blocked:** needs an approach decision (per-pill fetch vs server downsample) and a simulator profile of the stall
-- [122](./122.md) — Account picker offers "Create" for a closed account; Open Account then says "already open"
 - [123](./123.md) — Profile Save silently does nothing for a first/last name over 100 characters
 - [124](./124.md) — Holdings bought in a non-operating currency get the wrong "priced / at cost (no price)" label
 - [125](./125.md) — Holdings below 0.000001 units read "0 BTC" (exponential balance strings)

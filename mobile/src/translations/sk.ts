@@ -202,6 +202,7 @@ export const sk: Translations = {
   accountPickerAllTab: "Všetky",
   accountPickerNoResults: "Žiadne zodpovedajúce účty",
   accountPickerCreate: "Vytvoriť „%{name}“",
+  accountPickerClosedOn: "{{name}} bol zatvorený {{date}}",
   next: "Ďalej",
   cancel: "Zrušiť",
   confirm: "Potvrdiť",
@@ -336,6 +337,8 @@ export const sk: Translations = {
   openAccountEmptyComponent: "Časti názvu účtu nemôžu byť prázdne.",
   openAccountNamePreview: "Vytvorí sa ako {{account}}",
   openAccountAlreadyOpen: "Účet {{account}} je v tejto knihe už otvorený.",
+  openAccountClosed:
+    "{{account}} bol zatvorený {{date}} a nedá sa znova otvoriť.",
   openAccountUppercaseComponent:
     "Každá časť názvu účtu musí začínať veľkým písmenom alebo číslicou.",
   openAccountInvalidCharacters:

@@ -204,6 +204,7 @@ export const ca: Translations = {
   accountPickerAllTab: "Tots",
   accountPickerNoResults: "Cap compte coincident",
   accountPickerCreate: 'Crea "%{name}"',
+  accountPickerClosedOn: "{{name}} es va tancar el {{date}}",
   next: "Següent",
   cancel: "Cancel·lar",
   confirm: "Confirmar",
@@ -335,6 +336,8 @@ export const ca: Translations = {
   openAccountEmptyComponent: "Els components del nom no poden ser buits.",
   openAccountNamePreview: "Es crearà com a {{account}}",
   openAccountAlreadyOpen: "{{account}} ja està obert en aquest llibre.",
+  openAccountClosed:
+    "{{account}} es va tancar el {{date}} i no es pot tornar a obrir.",
   openAccountUppercaseComponent:
     "Cada component del nom ha de començar amb majúscula o xifra.",
   openAccountInvalidCharacters:

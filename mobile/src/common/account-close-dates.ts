@@ -60,3 +60,27 @@ export function listedAccountsAsOf(
     return closedAt === undefined || closedAt > today;
   });
 }
+
+/**
+ * The closed account a search names exactly (ignoring case), with its close
+ * date, when it is closed by `onDate`. A posting picker hides closed accounts,
+ * so their exact name read as new and offered Create, which Open Account then
+ * refused as "already open" (w21/122).
+ */
+export function closedAccountNamed(
+  query: string,
+  onDate: string,
+  closeDates: CloseDates,
+): { account: string; closedAt: string } | null {
+  const wanted = query.trim().toLowerCase();
+  if (!wanted) return null;
+  for (const [account, closedAt] of closeDates) {
+    if (
+      account.toLowerCase() === wanted &&
+      !isOpenOn(account, onDate, closeDates)
+    ) {
+      return { account, closedAt };
+    }
+  }
+  return null;
+}

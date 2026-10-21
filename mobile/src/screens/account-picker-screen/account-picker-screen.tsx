@@ -20,7 +20,8 @@ import {
 import { useLedgerAccess } from "@/common/hooks/use-ledger-access";
 import { useLedgerReadContext } from "@/common/hooks/use-ledger-read-context";
 import { useAccountCloseDates } from "@/common/hooks/use-account-close-dates";
-import { openOn } from "@/common/account-close-dates";
+import { closedAccountNamed, openOn } from "@/common/account-close-dates";
+import { formatLedgerDate } from "@/common/date-format";
 import { getFormatDate } from "@/common/format-util";
 import { groupAccountsByRoot } from "@/common/ledger-meta-utils";
 import { splitAccountLeaf } from "@/common/account-util";
@@ -260,7 +261,7 @@ function AccountPickerScreenComponent(): JSX.Element {
     selectedItem?: string;
     entryDate?: string;
   }>();
-  const { t } = useTranslations();
+  const { t, locale } = useTranslations();
   const theme = useTheme().colorTheme;
   const styles = useThemeStyle(getStyles);
   const { fontScale } = useWindowDimensions();
@@ -479,11 +480,6 @@ function AccountPickerScreenComponent(): JSX.Element {
   // active (a no-match search yields zero sections — see `picker-sections`),
   // and only for a collaborator who may actually create the account.
   const trimmedQuery = query.trim();
-  const showCreateRow = showCreateAccountRow(query, visibleSections.length, {
-    canWrite,
-    loading: accessLoading,
-    error: accessError,
-  });
 
   const onCreate = useCallback(() => {
     if (!canWrite) {
@@ -502,6 +498,24 @@ function AccountPickerScreenComponent(): JSX.Element {
       },
     });
   }, [canWrite, trimmedQuery, type, entryDate, router, confirmSelection]);
+
+  // A closed account named exactly is not new: say when it closed rather than
+  // offer to create it, which Open Account would refuse (w21/122).
+  const closedMatch =
+    type === "filter"
+      ? null
+      : closedAccountNamed(
+          trimmedQuery,
+          entryDate ?? getFormatDate(new Date()),
+          closeDates,
+        );
+  const showCreateRow =
+    !closedMatch &&
+    showCreateAccountRow(query, visibleSections.length, {
+      canWrite,
+      loading: accessLoading,
+      error: accessError,
+    });
 
   if (loading && accounts.length === 0) {
     return (
@@ -591,6 +605,18 @@ function AccountPickerScreenComponent(): JSX.Element {
             <Text key={fontScale} style={styles.emptyText}>
               {t("accountPickerNoResults")}
             </Text>
+            {closedMatch ? (
+              <Text
+                key={`closed-${fontScale}`}
+                testID="account-picker-closed-row"
+                style={styles.emptyText}
+              >
+                {t("accountPickerClosedOn", {
+                  name: closedMatch.account,
+                  date: formatLedgerDate(closedMatch.closedAt, locale),
+                })}
+              </Text>
+            ) : null}
             {showCreateRow && (
               <TouchableOpacity
                 testID="account-picker-create-row"
