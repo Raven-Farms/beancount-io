@@ -151,3 +151,8 @@
 - [264](./264.md) — Home's lower-card skeletons are short; content jumps 160–260 pt on load
 - [265](./265.md) — All Home "See all" buttons share one VoiceOver name
 - [266](./266.md) — Reports' Recent transactions says "No transactions yet" while the statement loads or after it fails
+- [267](./267.md) — A cancelled subscription stays "Overdue" atop Merchants' Recurring for ~3 years
+- [268](./268.md) — Refunds count as recurring payments: Next moves, amount turns "~", short histories lost
+- [269](./269.md) — Bimonthly and semi-annual bills never detected; manual mark says "Irregular"
+- [270](./270.md) — Merchant logos show the processor ("PAYPAL *NETFLIX" → PayPal); "#" bypasses common-word guard
+- [271](./271.md) — One weekend-shifted payment disables the day-of-month anchor; Next drifts a day
