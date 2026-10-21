@@ -18,7 +18,6 @@ import {
   Redirect,
   Stack,
   useLocalSearchParams,
-  useNavigation,
   useFocusEffect,
   useRouter,
 } from "expo-router";
@@ -40,6 +39,7 @@ import { haptics } from "@/common/haptics";
 import { useThemeStyle } from "@/common/hooks";
 import { useLedgerReadContext } from "@/common/hooks/use-ledger-read-context";
 import { useTranslations } from "@/common/hooks/use-translations";
+import { useUnsavedChangesGuard } from "@/common/hooks/use-unsaved-changes-guard";
 import { useLedgerErrors } from "@/common/hooks/use-ledger-errors";
 import { useLedgerGuard } from "@/components/ledger-guard";
 import { LoadingTile } from "@/components/loading-tile";
@@ -354,7 +354,6 @@ function LedgerFileEditorSession({
   // remounting this session or its editor (see DateSectionHeader).
   const { fontScale } = useWindowDimensions();
   const insets = useSafeAreaInsets();
-  const navigation = useNavigation();
   const router = useRouter();
   const guest = useGuest();
   const { canWrite: canWriteLedger } = useLedgerAccess();
@@ -593,25 +592,7 @@ function LedgerFileEditorSession({
 
   // ── Unsaved changes guard ────────────────────────────────────────────────
 
-  useEffect(() => {
-    const unsubscribe = navigation.addListener("beforeRemove", (e) => {
-      if (!hasUnsavedChanges) return;
-      e.preventDefault();
-      Alert.alert(
-        t("ledgerEditorUnsavedTitle"),
-        t("ledgerEditorUnsavedMessage"),
-        [
-          { text: t("cancel"), style: "cancel" },
-          {
-            text: t("ledgerEditorDiscardChanges"),
-            style: "destructive",
-            onPress: () => navigation.dispatch(e.data.action),
-          },
-        ],
-      );
-    });
-    return unsubscribe;
-  }, [navigation, hasUnsavedChanges, t]);
+  useUnsavedChangesGuard(hasUnsavedChanges);
 
   // An app link to another ledger switches ledgers before it navigates, which
   // would remount this session clean; it asks here first (w21/090).

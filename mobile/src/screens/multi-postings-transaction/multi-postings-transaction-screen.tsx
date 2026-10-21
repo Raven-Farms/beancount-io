@@ -3,7 +3,6 @@ import { createSingleFlight, type SingleFlight } from "@/common/single-flight";
 import { useAccountCloseDatesState } from "@/common/hooks/use-account-close-dates";
 import { isOpenOn } from "@/common/account-close-dates";
 import {
-  Alert,
   AccessibilityInfo,
   Platform,
   Pressable,
@@ -15,12 +14,7 @@ import {
   View,
   useWindowDimensions,
 } from "react-native";
-import {
-  Stack,
-  useLocalSearchParams,
-  useNavigation,
-  useRouter,
-} from "expo-router";
+import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Swipeable } from "react-native-gesture-handler";
 import { Ionicons } from "@expo/vector-icons";
@@ -38,6 +32,7 @@ import {
 import { AmountText } from "@/components/amount-text";
 import { useThemeStyle, useToast } from "@/common/hooks";
 import { useTranslations } from "@/common/hooks/use-translations";
+import { useUnsavedChangesGuard } from "@/common/hooks/use-unsaved-changes-guard";
 import { getFormatDate, parseFormatDate } from "@/common/format-util";
 import { formatMoneyWithCurrency } from "@/common/number-utils";
 import { ColorTheme } from "@/types/theme-props";
@@ -506,7 +501,6 @@ const MultiPostingsTransactionScreenComponent = () => {
   useEffect(() => {
     setSaveError(null);
   }, [date, payee, narration, postings]);
-  const navigation = useNavigation();
   const [isDatePickerVisible, setDatePickerVisible] = useState(false);
 
   // A picked payee brings its usual accounts while the postings are still as
@@ -602,25 +596,7 @@ const MultiPostingsTransactionScreenComponent = () => {
 
   // Back on a dirty draft asks first, like the file and transaction editors.
   // A successful Done leaves the screen itself and is not a discard.
-  useEffect(() => {
-    const unsubscribe = navigation.addListener("beforeRemove", (e) => {
-      if (savedOutRef.current || !hasUnsavedChanges) return;
-      e.preventDefault();
-      Alert.alert(
-        t("ledgerEditorUnsavedTitle"),
-        t("ledgerEditorUnsavedMessage"),
-        [
-          { text: t("cancel"), style: "cancel" },
-          {
-            text: t("ledgerEditorDiscardChanges"),
-            style: "destructive",
-            onPress: () => navigation.dispatch(e.data.action),
-          },
-        ],
-      );
-    });
-    return unsubscribe;
-  }, [navigation, hasUnsavedChanges, t]);
+  useUnsavedChangesGuard(hasUnsavedChanges, savedOutRef);
 
   const handleSave = async () => {
     // The write already committed, or is running; stay silent instead of

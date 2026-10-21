@@ -4,12 +4,7 @@ import {
   SafeAreaView,
   useSafeAreaInsets,
 } from "react-native-safe-area-context";
-import {
-  Stack,
-  useLocalSearchParams,
-  useNavigation,
-  useRouter,
-} from "expo-router";
+import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { useApolloClient } from "@apollo/client";
 import {
   fontSizes,
@@ -20,6 +15,7 @@ import {
 import { useThemeStyle } from "@/common/hooks";
 import { useLedgerWrite } from "@/common/hooks/use-ledger-write";
 import { useTranslations } from "@/common/hooks/use-translations";
+import { useUnsavedChangesGuard } from "@/common/hooks/use-unsaved-changes-guard";
 import { useLedgerAccess } from "@/common/hooks/use-ledger-access";
 import { useLedgerMeta } from "@/common/hooks/use-ledger-meta";
 import { useSession } from "@/common/hooks/use-session";
@@ -111,7 +107,6 @@ const getStyles = (theme: ColorTheme) =>
 
 export const EditTransactionScreen = (): JSX.Element => {
   const router = useRouter();
-  const navigation = useNavigation();
   const { t } = useTranslations();
   const styles = useThemeStyle(getStyles);
   const theme = useTheme().colorTheme;
@@ -381,26 +376,8 @@ export const EditTransactionScreen = (): JSX.Element => {
 
   // ── Unsaved changes guard ───────────────────────────────────────────────────
 
-  useEffect(() => {
-    const unsubscribe = navigation.addListener("beforeRemove", (e) => {
-      // A successful save navigates back itself; that is not a draft discard.
-      if (savedOutRef.current || !hasUnsavedChanges) return;
-      e.preventDefault();
-      Alert.alert(
-        t("ledgerEditorUnsavedTitle"),
-        t("ledgerEditorUnsavedMessage"),
-        [
-          { text: t("cancel"), style: "cancel" },
-          {
-            text: t("ledgerEditorDiscardChanges"),
-            style: "destructive",
-            onPress: () => navigation.dispatch(e.data.action),
-          },
-        ],
-      );
-    });
-    return unsubscribe;
-  }, [navigation, hasUnsavedChanges, t]);
+  // A successful save navigates back itself; that is not a draft discard.
+  useUnsavedChangesGuard(hasUnsavedChanges, savedOutRef);
 
   // ── Keyboard + accessory bar ────────────────────────────────────────────────
 
