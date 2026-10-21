@@ -16,6 +16,10 @@ const zhEvents: Record<string, TranslationEntry> = {
     message: "事件：{filtered} / {total}",
     description: "Count of filtered events out of total",
   },
+  "page.events.emptyType": {
+    message: "（无类型）",
+    description: "Label for an event whose type is empty, in the type filter",
+  },
   "page.events.noEventsFound": {
     message: "未找到事件",
     description: "Empty state title when no events exist",

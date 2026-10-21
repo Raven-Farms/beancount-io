@@ -16,6 +16,10 @@ const ukEvents: Record<string, TranslationEntry> = {
     message: "Події: {filtered} / {total}",
     description: "Count of filtered events out of total",
   },
+  "page.events.emptyType": {
+    message: "(без типу)",
+    description: "Label for an event whose type is empty, in the type filter",
+  },
   "page.events.noEventsFound": {
     message: "Подій не знайдено",
     description: "Empty state title when no events exist",
