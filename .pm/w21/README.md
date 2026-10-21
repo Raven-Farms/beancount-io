@@ -27,3 +27,5 @@
 - [077](./077.md) — Commit detail's VoiceOver stats label never pluralises ("+1 additions"; wrong ru/uk/sk/bg forms)
 - [078](./078.md) — Transactions' 1M/3M/YTD filters freeze "today" when applied; after midnight new entries stay hidden
 - [079](./079.md) — Entry writes leave the Files tab's file sha stale, so deleting that file fails until a refresh
+- [080](./080.md) — A failed first load on Reports, Accounts and Home's budget panel reads as \$0.00 or "No accounts" (siblings of w4/067)
+- [081](./081.md) — A failed pull to refresh wipes the loaded Transactions list and account journal
