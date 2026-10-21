@@ -154,3 +154,7 @@
 - [204](./204.md) — Receipt "Upload failed. Please try again." has no retry; Retake discards the photo
 - [205](./205.md) — Receipt upload can't be cancelled on iOS; 60 s whole-transfer limit fails slow uploads of full-res photos
 - [206](./206.md) — Refund/return receipts are always prefilled as a purchase
+- [207](./207.md) — USD+commodity account journal shows dollars to 9–10 decimals ("+$7,422.647539491")
+- [208](./208.md) — Equal direct/inverse price quotes: holding labelled "at cost (no price)" though valued at market
+- [209](./209.md) — Home hides stale prices once the ledger is quiet this month; Accounts flags them
+- [210](./210.md) — Holdings sheet labels a user-typed price "Live price" and applies the feed's staleness rule
