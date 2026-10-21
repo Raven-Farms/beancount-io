@@ -54,6 +54,8 @@ export const sk: Translations = {
     "Tento súbor nie je text v UTF-8. Úprava tu by zmenila niektoré znaky, preto sa otvára iba na čítanie. Upravte ho na počítači.",
   ledgerEditorTooLarge:
     "Tento súbor je príliš veľký na otvorenie v telefóne, preto je len na čítanie. Upravte ho na počítači.",
+  ledgerEditorTooLargeToEdit:
+    "Tento súbor má viac ako 1 MiB, viac, než sa dá uložiť z telefónu, preto je len na čítanie. Upravte ho na webe alebo cez CLI.",
 
   // bottom tab bar
   home: "Domov",

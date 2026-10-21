@@ -46,6 +46,8 @@ export const zh: Translations = {
     "此文件不是 UTF-8 文本。在此编辑会改变其中部分字符，因此以只读方式打开。请在电脑上编辑。",
   ledgerEditorTooLarge:
     "此文件太大，无法在手机上打开，因此为只读。请在电脑上编辑。",
+  ledgerEditorTooLargeToEdit:
+    "此文件超过 1 MiB，超出手机可保存的上限，因此为只读。请在网页端或使用 CLI 编辑。",
 
   // bottom tab bar
   home: "首页",

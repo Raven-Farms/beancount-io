@@ -54,6 +54,8 @@ export const ca: Translations = {
     "Aquest fitxer no és text UTF-8. Editar-lo aquí en canviaria alguns caràcters, així que s’obre només en lectura. Edita’l en un ordinador.",
   ledgerEditorTooLarge:
     "Aquest fitxer és massa gran per obrir-lo al telèfon, així que és només de lectura. Edita'l en un ordinador.",
+  ledgerEditorTooLargeToEdit:
+    "Aquest fitxer supera 1 MiB, més del que es pot desar des del telèfon, així que és només de lectura. Edita'l al web o amb la CLI.",
 
   // bottom tab bar
   home: "Inici",

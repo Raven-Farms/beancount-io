@@ -39,6 +39,18 @@ export function isUnreadableLargeFile(
   return !content && (size ?? 0) > 0;
 }
 
+/**
+ * The largest explicit file write the server accepts: 1 MiB. A long-lived
+ * `main.bean` grows past it by appends, and fixing a typo then failed on save
+ * after the edit, with the server's English message (w21/186).
+ */
+const MAX_EDITABLE_BYTES = 1_048_576;
+
+/** Whether a file of `size` bytes is over what can be saved back. */
+export function isOverEditLimit(size: number | null | undefined): boolean {
+  return (size ?? 0) > MAX_EDITABLE_BYTES;
+}
+
 export type LineEnding = "\r\n" | "\n";
 
 /**

@@ -55,6 +55,8 @@ export const de: Translations = {
     "Diese Datei ist kein UTF-8-Text. Eine Bearbeitung hier würde einige Zeichen verändern, daher wird sie schreibgeschützt geöffnet. Bearbeiten Sie sie am Computer.",
   ledgerEditorTooLarge:
     "Diese Datei ist zu groß, um sie auf dem Telefon zu öffnen, daher ist sie schreibgeschützt. Bearbeiten Sie sie auf einem Computer.",
+  ledgerEditorTooLargeToEdit:
+    "Diese Datei ist größer als 1 MiB und lässt sich vom Telefon aus nicht speichern, daher ist sie schreibgeschützt. Bearbeiten Sie sie im Web oder mit der CLI.",
 
   // bottom tab bar
   home: "Startseite",

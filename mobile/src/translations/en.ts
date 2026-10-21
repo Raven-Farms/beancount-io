@@ -49,6 +49,8 @@ export const en = {
     "This file isn’t UTF-8 text. Editing it here would change some of its characters, so it opens read-only. Edit it on a computer.",
   ledgerEditorTooLarge:
     "This file is too large to open on your phone, so it is read-only. Edit it on a computer.",
+  ledgerEditorTooLargeToEdit:
+    "This file is over 1 MiB, more than can be saved from your phone, so it is read-only. Edit it on the web or with the CLI.",
   // bottom tab bar
   home: "Home",
   ledger: "Ledger",

@@ -20,7 +20,9 @@ describe("file editor read-only indicator", () => {
     // (w21/042); a read-only ledger keeps its own message.
     // A file too large to open does the same (w21/185).
     expect(
-      banner.includes("(lossy || tooLarge || fileErrors.length === 0)"),
+      banner.includes(
+        "(lossy || tooLarge || overLimit || fileErrors.length === 0)",
+      ),
     ).toBe(true);
     expect(
       banner.replace(/\s+/g, " ").includes('tooLarge ? "ledgerEditorTooLarge"'),

@@ -54,6 +54,8 @@ export const fr: Translations = {
     "Ce fichier n’est pas du texte UTF-8. Le modifier ici changerait certains de ses caractères ; il s’ouvre donc en lecture seule. Modifiez-le sur un ordinateur.",
   ledgerEditorTooLarge:
     "Ce fichier est trop volumineux pour s’ouvrir sur votre téléphone ; il est donc en lecture seule. Modifiez-le sur un ordinateur.",
+  ledgerEditorTooLargeToEdit:
+    "Ce fichier dépasse 1 Mio, plus que ce qu’on peut enregistrer depuis le téléphone ; il est donc en lecture seule. Modifiez-le sur le web ou avec la CLI.",
 
   // bottom tab bar
   home: "Accueil",

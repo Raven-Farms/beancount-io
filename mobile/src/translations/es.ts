@@ -54,6 +54,8 @@ export const es: Translations = {
     "Este archivo no es texto UTF-8. Editarlo aquí cambiaría algunos de sus caracteres, así que se abre en solo lectura. Edítalo en un ordenador.",
   ledgerEditorTooLarge:
     "Este archivo es demasiado grande para abrirlo en el teléfono, así que es de solo lectura. Edítalo en un ordenador.",
+  ledgerEditorTooLargeToEdit:
+    "Este archivo supera 1 MiB, más de lo que se puede guardar desde el teléfono, así que es de solo lectura. Edítalo en la web o con la CLI.",
 
   // bottom tab bar
   home: "Inicio",

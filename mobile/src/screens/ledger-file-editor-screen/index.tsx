@@ -51,6 +51,7 @@ import {
   lineEndingOf,
   withLineEnding,
   type LineEnding,
+  isOverEditLimit,
   isUnreadableLargeFile,
 } from "@/common/ledger-file-content";
 import { isBeancountFile } from "@/common/ledger-file-types";
@@ -358,7 +359,9 @@ function LedgerFileEditorSession({
   // A file the server sent no text for: read-only, never an empty document to
   // type over (w21/185).
   const [tooLarge, setTooLarge] = useState(false);
-  const canWrite = canWriteLedger && !lossy && !tooLarge;
+  // One the server would refuse to save back, though it opens (w21/186).
+  const [overLimit, setOverLimit] = useState(false);
+  const canWrite = canWriteLedger && !lossy && !tooLarge && !overLimit;
   const { currencies: operatingCurrencies } = useLedgerReadContext(ledgerId);
 
   const beancount = isBeancountFile(path);
@@ -400,6 +403,7 @@ function LedgerFileEditorSession({
         fileData.getLedgerFile.size,
       ),
     );
+    setOverLimit(isOverEditLimit(fileData.getLedgerFile.size));
     lineEndingRef.current = lineEndingOf(fc);
     const fs = fileData.getLedgerFile.sha;
     const epoch = documentEpochRef.current + 1;
@@ -484,6 +488,7 @@ function LedgerFileEditorSession({
         result.data?.getLedgerFile?.size,
       ),
     );
+    setOverLimit(isOverEditLimit(result.data?.getLedgerFile?.size));
     lineEndingRef.current = lineEndingOf(fc);
     const fs = result.data?.getLedgerFile?.sha ?? "";
     const epoch = documentEpochRef.current + 1;
@@ -741,7 +746,7 @@ function LedgerFileEditorSession({
       {/* The Save button's absence is otherwise the only sign. Yields to the
           error banner so the two never stack. */}
       {!canWrite &&
-      (lossy || tooLarge || fileErrors.length === 0) &&
+      (lossy || tooLarge || overLimit || fileErrors.length === 0) &&
       editorState === "content" ? (
         <View style={styles.readOnlyBanner} testID="ledger-editor-read-only">
           <Ionicons
@@ -753,9 +758,11 @@ function LedgerFileEditorSession({
             {t(
               tooLarge
                 ? "ledgerEditorTooLarge"
-                : lossy
-                  ? "ledgerEditorNotUtf8"
-                  : "ledgerReadOnly",
+                : overLimit
+                  ? "ledgerEditorTooLargeToEdit"
+                  : lossy
+                    ? "ledgerEditorNotUtf8"
+                    : "ledgerReadOnly",
             )}
           </Text>
         </View>

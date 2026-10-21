@@ -4,6 +4,7 @@ import {
   isLosslessLedgerFileContent,
   lineEndingOf,
   withLineEnding,
+  isOverEditLimit,
   isUnreadableLargeFile,
 } from "../ledger-file-content";
 
@@ -69,7 +70,7 @@ describe("the file editor", () => {
     // And one the server sent no text for (w21/185).
     expect(
       source.includes(
-        "const canWrite = canWriteLedger && !lossy && !tooLarge;",
+        "const canWrite = canWriteLedger && !lossy && !tooLarge && !overLimit;",
       ),
     ).toBe(true);
   });
@@ -167,5 +168,32 @@ describe("isUnreadableLargeFile", () => {
     );
     expect(editor.split("isUnreadableLargeFile(").length - 1).toBe(2);
     expect(editor.includes("canWriteLedger && !lossy && !tooLarge")).toBe(true);
+  });
+});
+
+// w21/186: a file between 1 and 10 MiB opened writable, and every save was
+// refused after the edit.
+describe("isOverEditLimit", () => {
+  it("is over 1 MiB, exactly", () => {
+    expect(isOverEditLimit(1_048_576)).toBe(false);
+    expect(isOverEditLimit(1_048_577)).toBe(true);
+    expect(isOverEditLimit(1_300_000)).toBe(true);
+    expect(isOverEditLimit(null)).toBe(false);
+  });
+
+  it("opens the editor read-only with its own notice, on load and reload", () => {
+    const editor = require("fs").readFileSync(
+      require("path").join(
+        __dirname,
+        "..",
+        "..",
+        "screens",
+        "ledger-file-editor-screen",
+        "index.tsx",
+      ),
+      "utf8",
+    );
+    expect(editor.split("setOverLimit(isOverEditLimit(").length - 1).toBe(2);
+    expect(editor.includes('"ledgerEditorTooLargeToEdit"')).toBe(true);
   });
 });

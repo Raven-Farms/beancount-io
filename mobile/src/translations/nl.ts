@@ -54,6 +54,8 @@ export const nl: Translations = {
     "Dit bestand is geen UTF-8-tekst. Als je het hier bewerkt, veranderen sommige tekens, dus het opent alleen-lezen. Bewerk het op een computer.",
   ledgerEditorTooLarge:
     "Dit bestand is te groot om op je telefoon te openen en is daarom alleen-lezen. Bewerk het op een computer.",
+  ledgerEditorTooLargeToEdit:
+    "Dit bestand is groter dan 1 MiB, meer dan je vanaf je telefoon kunt opslaan, en is daarom alleen-lezen. Bewerk het op het web of met de CLI.",
 
   // bottom tab bar
   home: "Home",
