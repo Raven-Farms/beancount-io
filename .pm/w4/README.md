@@ -4,6 +4,8 @@
 
 ## Inbox
 
+- [311 — Detect a CSV delimiter after leading blank records](./311.md) — minor; dashboard QA, 2026-10-21; an empty sampling record defaults to comma, sending otherwise supported semicolon/tab files to the AI offer; ordinary and comma controls pass.
+
 - [310 — Leave CSV cell commit and cancel keys to active input-method composition](./310.md) — minor; dashboard QA, 2026-10-21; trusted composing Enter commits/closes Payee and Description editors, while composing Escape cancels/closes; ordinary controls pass.
 
 - [309 — Keep excluded CSV rows excluded through validation repair](./309.md) — minor; dashboard QA, 2026-10-21; editing configuration while a row is temporarily invalid drops its saved exclusion, so repairing it selects the row again.
