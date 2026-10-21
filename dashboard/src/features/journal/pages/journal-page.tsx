@@ -29,6 +29,7 @@ import {
   type SetStateAction,
 } from "react";
 import { useLocalStorageState } from "@/common/hooks/use-local-storage-state";
+import { decodeStringList } from "@/common/lib/storage/decode-string-list";
 import { useLedgerSearchParams } from "@/common/hooks/use-ledger-search-params";
 import { NewDirectiveDialog } from "@/features/journal/components/new-directive-dialog";
 import { EntryContextDialog } from "@/features/journal/components/entry-context-dialog";
@@ -57,6 +58,19 @@ import { normalizeListSearchOffset } from "@/common/lib/list-search-params";
 const DEFAULT_DIRECTIVE_TYPES: DirectiveType[] = [DirectiveType.TRANSACTION];
 const DEFAULT_STRING_FILTER: string[] = [];
 
+// Saved filters are decoded before they reach the filters or the query's
+// enum variables; a wrong-shaped value falls back to the default (w4/m39).
+const DIRECTIVE_TYPES = new Set<string>(Object.values(DirectiveType));
+const directiveTypesStorage = {
+  deserializer: (raw: string) =>
+    decodeStringList(raw, (value): value is DirectiveType =>
+      DIRECTIVE_TYPES.has(value),
+    ),
+};
+const subtypesStorage = {
+  deserializer: (raw: string) => decodeStringList(raw),
+};
+
 const JournalContent = () => {
   const { t } = useTranslations();
   const { ledgerOwner, ledgerName } = useParams({
@@ -80,21 +94,25 @@ const JournalContent = () => {
     useLocalStorageState<DirectiveType[]>(
       `journal.${ledgerId}.directiveTypes`,
       DEFAULT_DIRECTIVE_TYPES,
+      directiveTypesStorage,
     );
   const [selectedTransactionSubtypes, setSelectedTransactionSubtypes] =
     useLocalStorageState<string[]>(
       `journal.${ledgerId}.transactionSubtypes`,
       DEFAULT_STRING_FILTER,
+      subtypesStorage,
     );
   const [selectedDocumentSubtypes, setSelectedDocumentSubtypes] =
     useLocalStorageState<string[]>(
       `journal.${ledgerId}.documentSubtypes`,
       DEFAULT_STRING_FILTER,
+      subtypesStorage,
     );
   const [selectedCustomSubtypes, setSelectedCustomSubtypes] =
     useLocalStorageState<string[]>(
       `journal.${ledgerId}.customSubtypes`,
       DEFAULT_STRING_FILTER,
+      subtypesStorage,
     );
   const [showMetadata, setShowMetadata] = useLocalStorageState(
     `journal.${ledgerId}.showMetadata`,

@@ -1,6 +1,6 @@
 # w4 · m39 — Recover Journal and dashboard from malformed saved lists
 
-**Worker:** worker1 **Goal:** Invalid optional browser preferences cannot trap the Journal or signed-in dashboard behind an error screen. **Status:** todo
+**Worker:** worker1 **Goal:** Invalid optional browser preferences cannot trap the Journal or signed-in dashboard behind an error screen. **Status:** in progress (t001 done)
 
 **Severity:** minor. **Estimate:** 135m across six tasks, dashboard only.
 
@@ -8,7 +8,7 @@
 
 | id | title | est | depends_on |
 | --- | --- | --- | --- |
-| [t001](./t001.md) | Validate persisted Journal filter arrays | 45m | — |
+| [t001](./done/t001.md) | Validate persisted Journal filter arrays — **DONE** | 45m | — |
 | [t002](./t002.md) | Validate changelog read identities on mount and sync | 35m | t001 |
 | [t003](./t003.md) | Verify preference recovery across adoption surfaces | 10m | t002 |
 | [t004](./t004.md) | Simplify the bounded preference decoding | 10m | t003 |
