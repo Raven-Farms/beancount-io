@@ -70,6 +70,7 @@
 - [903 — Explain quotes that lose to generated prices](./903.md) — minor CLI price-feedback follow-up to 741; import and included-file add cases reproduced 2026-10-20.
 - [904 — Make MCP dry runs refuse what the plan's directive limit will refuse](./904.md) — minor backend-v2 finding from w5/m5/t004; observed 2026-10-21.
 - [905 — Scope missing-price route explanations to selected accounts](./905.md) — trivial CLI report-message follow-up to 557 and 748; reproduced 2026-10-20.
+- [906 — Infer grouped three-decimal CSV amounts consistently](./906.md) — minor CLI import follow-up to w1/130 and w5/753; space and apostrophe groupings reproduced 2026-10-20.
 
 The 27 findings from the MCP QA auth sweep against the hosted endpoint (023–054, less the five under [Dropped](#dropped)) were fixed in `backend-cluster/backend-v2` and closed on 2026-10-02 and 2026-10-03; each note under [`done/`](./done/) records what shipped and in which commit. None has been re-observed against the hosted endpoint yet — the fixes reach it with the next backend deploy.
 
