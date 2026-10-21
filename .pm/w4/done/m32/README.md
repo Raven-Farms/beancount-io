@@ -1,6 +1,6 @@
 # w4 · m32 — Preserve valid ledger dates across browser timezones
 
-**Worker:** worker1 **Goal:** a valid Gregorian ledger date remains enterable regardless of whether the browser timezone ever observed that civil day **Status:** todo (t001–t004 done; t005 browser verification in progress)
+**Worker:** worker1 **Goal:** a valid Gregorian ledger date remains enterable regardless of whether the browser timezone ever observed that civil day **Status:** done
 
 ## Reproduced problem
 
@@ -36,18 +36,18 @@ The seven searched integrations are Journal Transaction, Balance, Note and Accou
 | t002 | Carry exact date-only values through all seven forms — **DONE** | 55m | t001 |
 | t003 | Adoption surface — check date-entry promises and guides — **DONE** | 15m | t002 |
 | t004 | Simplify the changed date flow — **DONE** | 15m | t003 |
-| t005 | Verify real timezone and form regressions | 55m | t003 |
-| t006 | Close out and archive the milestone | 15m | t004, t005 |
+| t005 | Verify real timezone and form regressions — **DONE** | 55m | t003 |
+| t006 | Close out and archive the milestone — **DONE** | 15m | t004, t005 |
 
 Estimated 220 minutes across coordinated shared-control and caller changes, so this exceeds the sub-hour inbox-note limit.
 
 ## Definition of done
 
-- [ ] Fresh UTC and Apia browsers accept ISO and localized `2011-12-30` in the actual Journal form at desktop and narrow widths, with display and prepared payload preserving that exact Gregorian day.
-- [ ] All seven picker integrations preserve date-only identity; receipt-prefilled canonical dates do not round-trip through an unrepresentable local midnight.
-- [ ] Invalid calendar dates and incomplete input remain invalid, with linked error semantics; valid-then-invalid, clearing, reset, locale changes and reopening retain their intended contracts, including w4/239.
-- [ ] Calendar selection, month/year navigation, keyboard access and local Today remain coherent. Ordinary UTC/Los Angeles date entry and existing CSV calendar controls keep working.
-- [ ] No API/schema/dependency or OS timezone change is required; the actual browser/form regressions and dashboard format/lint/test/build pass.
+- [x] Fresh UTC and Apia browsers accept ISO and localized `2011-12-30` in the actual Journal form at desktop and narrow widths, with display and prepared payload preserving that exact Gregorian day.
+- [x] All seven picker integrations preserve date-only identity; receipt-prefilled canonical dates do not round-trip through an unrepresentable local midnight.
+- [x] Invalid calendar dates and incomplete input remain invalid, with linked error semantics; valid-then-invalid, clearing, reset, locale changes and reopening retain their intended contracts, including w4/239.
+- [x] Calendar selection, month/year navigation, keyboard access and local Today remain coherent. Ordinary UTC/Los Angeles date entry and existing CSV calendar controls keep working.
+- [x] No API/schema/dependency or OS timezone change is required; the actual browser/form regressions and dashboard format/lint/test/build pass.
 
 ## Dedupe and evidence
 
@@ -67,8 +67,12 @@ Production `date-picker-DHE1-1Cn.js.map` serves `date-picker-utils.ts` SHA-256 `
 
 The dashboard QA loop verified the deployed date-picker-TUYdAQFd build in fresh UTC and Pacific/Apia contexts at 1440×1000 and 390×844. In every case ISO `2011-12-30` and localized `12/30/2011` display `12/30/2011` without an invalid state; the prepared BulkEntries transaction date remains exactly `2011-12-30`. All mutations were intercepted and aborted before transport: zero production writes. Synthetic unknown posting accounts were used because this disposable ledger's existing accounts open in 2026; optional prepared Open directives also retain the exact day. This proves serialization, not acceptance/persistence of a backdated transaction against the real ledger.
 
-All four contexts also preserve December29/31 and valid leap day2012-02-29; impossible2011-02-29, partial2011-12- and empty required input remain invalid with linked descriptions. Independent fresh narrow Apia CSV preview reports2Valid, and Configure retains12/30/2011 and12/31/2011; no AI or import request occurs. The deployed picker and utilities exactly match current source (SHA-256 `f6ebaac55683ed5e35301e367a88a844cc80edd00ebf2d3d3aa0c2e0b66f3b26` and `7ce800777bca123b28a02580182bdf549a46a69f4941d4bf13f47baefda00a6a`). Full deployed revision remains unverified.
+All four contexts also preserve December 29/31 and valid leap day 2012-02-29; impossible2011-02-29, partial2011-12- and empty required input remain invalid with linked descriptions. Independent fresh narrow Apia CSV preview reports 2 Valid, and Configure retains 12/30/2011 and 12/31/2011; no AI or import request occurs. The deployed picker and utilities exactly match source at capture (1cdf076a0) (SHA-256 `f6ebaac55683ed5e35301e367a88a844cc80edd00ebf2d3d3aa0c2e0b66f3b26` and `7ce800777bca123b28a02580182bdf549a46a69f4941d4bf13f47baefda00a6a`). Full deployed revision remains unverified.
 
 Ignored evidence in `dashboard/tmp/qa-20261020/dashboard-loop/`: `civil-date-deployed-transaction-control.json`, `civil-date-deployed-csv-control.json`, `civil-date-deployed-source-control.json` and inspected narrow `civil-date-deployed-{UTC,Pacific-Apia}-390.png`. All contexts closed; original main session and ledger unchanged. Preliminary pre-hydration timeouts and a broad dialog selector matching transient account popovers were excluded; settled repeats use the named New Entry dialog. These are harness exclusions, not new date findings.
 
-The prior blocker was access to a deployed build plus an authenticated timezone-aware browser; the explicit UTC/Apia Transaction payload and CSV unblock condition now holds. t005 remains todo for the rest of its verification checklist, including the other adapters, receipt prefill, calendar/Today, locale/reset/reopen and ordinary Los Angeles controls. Keep t006 open until the full DoD holds; no milestone closeout is claimed.
+## Verified and closed 2026-10-20
+
+The remaining checks also pass: fresh narrow Apia Balance, Note, Journal Account, Accounts Open Account and Budget all prepare 2011-12-30; deployed Receipt Review preserves the same prefilled date in display, preview and captured submission using explicitly modeled client-only upload/parse responses. No real upload, AI request/quota or ledger write occurred. Native calendar pointer/Tab/arrow/Enter selects December 30; next month crosses into January 2012 and month/year dropdowns return to December 2011. Today matches each local Apia/Los Angeles day, and a settled idle close/reopen resets it. Fresh French day-first and ISO entry agree; impossible French dates remain invalid.
+
+The 72 targeted parser/picker/seven-adapter regressions pass, including dynamic locale changes and external resets. Full dashboard formatting, lint,624 test files (6,585 passed,1 existing skip) and production build pass at 1cdf076a0. Dependencies were synchronized with yarn install --immutable after the first lint found an already-pinned package absent locally; manifests and lockfile remain unchanged. Additional exact controls and gate logs are listed in done/t005.md; original Transaction/CSV/source artifacts remain above. All remaining tasks and the milestone are archived only now that the date DoD holds. QA made no product changes. Receipt parsing itself was modeled, and real persisted writes, physical devices, other engines and actual speech remain unverified.

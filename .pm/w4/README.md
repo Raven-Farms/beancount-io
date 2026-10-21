@@ -29,13 +29,13 @@
 
 - [ ] **m36** — [Preserve commit and profile activity timestamps through hydration](./blocked/m36/README.md) (7 tasks) ← dashboard QA, 2026-10-20; minor, commit/profile focus and exact browser-zone attributes. — **blocked:** fix shipped; awaiting deployed SSR browser check
 
-- [ ] **m35** — [Keep form fields usable when suggestions fail](./blocked/m35/README.md) (6 tasks) ← dashboard QA, 2026-10-20; minor, four form suggestion wrappers. — **blocked:** fix shipped; awaiting deployed live failure/retry check
+- [ ] **m35** — [Keep form fields usable when suggestions fail](./blocked/m35/README.md) (6 tasks) ← dashboard QA, 2026-10-20; minor, four form suggestion wrappers. — **blocked:** fields now survive; deployed keyboard retry still loses focus, follow-up recorded
 
 - [ ] **m34** — [Resolve multiline entry sources without splitting quoted strings](./blocked/m34/README.md) (6 tasks) ← dashboard QA, 2026-10-20; minor, ledger source resolution. — **blocked:** fix shipped in `a0fa2e619`; awaiting deployed dashboard reopen check
 
 - [x] **m33** — [Keep New Entry drafts safe during submission](./done/m33/README.md) (6 tasks) ← dashboard QA, 2026-10-20; major, pending edits and late completion.
 
-- [ ] **m32** — [Preserve valid ledger dates across browser timezones](./m32/README.md) (6 tasks) ← dashboard QA, 2026-10-20; minor, shared picker and seven form integrations. — deployed UTC/Apia Transaction payload and CSV controls pass; remaining verification pending
+- [x] **m32** — [Preserve valid ledger dates across browser timezones](./done/m32/README.md) (6 tasks) ← dashboard QA, 2026-10-20; minor, shared picker and seven form integrations. — deployed date/payload journeys and dashboard gates verified 2026-10-20
 
 - [x] **m31** — [Bound authentication abuse without losing account recovery](./done/m31/README.md) (11 tasks) ← user-approved rate-limit review and `$pm` / `$loopx w4`, 2026-10-19
 
