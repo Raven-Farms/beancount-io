@@ -102,6 +102,31 @@ describe("initialMobileOAuthConsentState", () => {
     ).toEqual({ step: "approve", email: "ada@example.test" });
     expect(
       initialMobileOAuthConsentState({ userProfile, screenHint: "signup" }),
-    ).toEqual({ step: "choose_account", email: "ada@example.test" });
+    ).toEqual({
+      step: "choose_account",
+      email: "ada@example.test",
+      alternative: "register",
+    });
+  });
+
+  // w21/153: the app's first Sign In after a sign-out, with the browser still
+  // signed in to the previous account.
+  it("asks which account after the app signed out, offering a fresh sign-in", () => {
+    expect(
+      initialMobileOAuthConsentState({
+        userProfile: { email: "ada@example.test" },
+        screenHint: "select_account",
+      }),
+    ).toEqual({
+      step: "choose_account",
+      email: "ada@example.test",
+      alternative: "login",
+    });
+    expect(
+      initialMobileOAuthConsentState({
+        userProfile: null,
+        screenHint: "select_account",
+      }),
+    ).toEqual({ step: "login" });
   });
 });

@@ -94,6 +94,10 @@ export const OAUTH_CONFIG = {
   },
   interaction: {
     signupScreenHint: "signup",
+    // The app's first Sign In after a sign-out: the browser is still signed
+    // in, and the page asks which account instead of a one-tap Approve
+    // (w21/153).
+    selectAccountScreenHint: "select_account",
   },
 } as const;
 

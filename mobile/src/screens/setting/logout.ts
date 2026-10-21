@@ -5,6 +5,7 @@ import { revokeOAuthSession } from "@/common/oauth/token-manager";
 import { oauthTokenManager } from "@/common/oauth/oauth-token-manager";
 import { clearServerScopedState } from "@/common/server-url-actions";
 import { performLogout } from "./logout-action";
+import { markAccountChoiceNeeded } from "@/common/oauth/account-choice";
 
 /**
  * Sign-out choke point: clear the session, wipe the persisted Apollo cache,
@@ -22,5 +23,6 @@ export async function actionLogout(session: Session) {
       });
     },
     clearLocalState: clearServerScopedState,
+    markSignedOut: markAccountChoiceNeeded,
   });
 }

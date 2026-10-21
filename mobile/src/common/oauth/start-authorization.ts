@@ -1,6 +1,7 @@
 import * as WebBrowser from "expo-web-browser";
 import { getServerUrl } from "../vars/server-url";
 import { completeOAuthAuthorization } from "./authorization-completion";
+import { isAccountChoiceNeeded } from "./account-choice";
 import { createAuthorizationLauncher } from "./authorization-launcher";
 import type { PendingOAuthAuthorization } from "./authorization-result";
 import { discoverOAuthServer } from "./discovery";
@@ -29,6 +30,7 @@ const launch = createAuthorizationLauncher({
       preferEphemeralSession: false,
     }),
   complete: completeOAuthAuthorization,
+  chooseAccount: isAccountChoiceNeeded,
 });
 
 /**

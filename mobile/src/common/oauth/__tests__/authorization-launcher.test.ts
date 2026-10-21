@@ -140,6 +140,20 @@ describe("native authorization launcher", () => {
     expect(new URL(opened[0]).searchParams.get("prompt")).toBe("consent");
   });
 
+  // w21/153: the first Sign In after a sign-out asks which account to use.
+  it("asks for an account choice while the sign-out mark is set", async () => {
+    const marked = harness({ chooseAccount: async () => true });
+    await marked.launch(`${issuer}/`, "sign_in");
+    expect(new URL(marked.opened[0]).searchParams.get("screen_hint")).toBe(
+      "select_account",
+    );
+    const unmarked = harness({ chooseAccount: async () => false });
+    await unmarked.launch(`${issuer}/`, "sign_in");
+    expect(new URL(unmarked.opened[0]).searchParams.has("screen_hint")).toBe(
+      false,
+    );
+  });
+
   it("never carries a query the discovered endpoint smuggled in", () => {
     const pending: PendingOAuthAuthorization = {
       ...discovery,

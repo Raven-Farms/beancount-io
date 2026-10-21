@@ -53,8 +53,11 @@ function supportedScope(scope: unknown): string {
 
 const oidcLogger = logger.child({ module: "oidc-provider" });
 
-/** The one `screen_hint` value this server forwards to the interaction page. */
-const SIGNUP_SCREEN_HINT = OAUTH_CONFIG.interaction.signupScreenHint;
+/** The `screen_hint` values this server forwards to the interaction page. */
+const FORWARDED_SCREEN_HINTS: ReadonlySet<unknown> = new Set([
+  OAUTH_CONFIG.interaction.signupScreenHint,
+  OAUTH_CONFIG.interaction.selectAccountScreenHint,
+]);
 const AUTHORIZATION_ROUTE = "/api-gateway/oauth/auth";
 
 interface IdentityClaims {
@@ -186,12 +189,13 @@ export function setOidcRoutes(
     responseTypes: ["code"],
 
     // `screen_hint=signup` lets the native app say "the user tapped Sign Up" so
-    // the interaction page can open on registration instead of the login form.
-    // oidc-provider discards any authorization parameter it does not know, so
+    // the interaction page can open on registration instead of the login form;
+    // `screen_hint=select_account` asks it for an explicit account choice
+    // after the app signed out (w21/153). oidc-provider discards any authorization parameter it does not know, so
     // the name has to be whitelisted here. Values are not validated: it is a
     // display hint, and an app one release ahead of a self-hosted server must
     // still get a login form, not an error. `interactions.url` forwards only
-    // the value it understands.
+    // the values it understands.
     extraParams: ["screen_hint"],
 
     features: {
@@ -283,8 +287,9 @@ export function setOidcRoutes(
           // Only the native client's interaction page knows what to do with
           // the hint; MCP and identity clients never see it, and a value this
           // server does not recognise is simply not forwarded.
-          if (interaction.params.screen_hint === SIGNUP_SCREEN_HINT) {
-            consentUrl.searchParams.set("screen_hint", SIGNUP_SCREEN_HINT);
+          const hint = interaction.params.screen_hint;
+          if (typeof hint === "string" && FORWARDED_SCREEN_HINTS.has(hint)) {
+            consentUrl.searchParams.set("screen_hint", hint);
           }
         }
         return consentUrl.toString();

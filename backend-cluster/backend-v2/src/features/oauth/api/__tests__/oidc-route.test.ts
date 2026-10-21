@@ -907,6 +907,14 @@ describe("oidc-route: unified MCP + identity provider", () => {
     expect(signUp.searchParams.get("screen_hint")).toBe("signup");
     expect(signUp.searchParams.get("scope")).toBe("openid ledger.read");
 
+    // w21/153: after a sign-out the app asks for an explicit account choice.
+    const afterSignOut = await interactionUrlFor(
+      mobileAuthUrl({ screen_hint: "select_account" }),
+    );
+    expect(afterSignOut.searchParams.get("screen_hint")).toBe(
+      "select_account",
+    );
+
     // A hint this server does not know is a newer app talking to an older
     // server: the user still gets the login form, never an error.
     const unknown = await interactionUrlFor(

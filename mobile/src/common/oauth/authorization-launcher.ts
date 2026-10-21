@@ -25,6 +25,8 @@ export type AuthorizationLauncherDependencies = {
     redirectUri: string,
   ) => Promise<AuthorizationBrowserResult>;
   complete: (callbackUrl: string) => Promise<OAuthSession>;
+  /** Whether the user signed out since the last sign-in (w21/153). */
+  chooseAccount?: () => Promise<boolean>;
   now?: () => number;
 };
 
@@ -85,8 +87,9 @@ export function createAuthorizationLauncher(
       // to prove the returning redirect belongs to a request this app made.
       await deps.savePending(pending);
 
+      const chooseAccount = (await deps.chooseAccount?.()) ?? false;
       const result = await deps.openAuthSession(
-        buildAuthorizationUrl(pending, codeChallenge),
+        buildAuthorizationUrl(pending, codeChallenge, { chooseAccount }),
         pending.redirectUri,
       );
 

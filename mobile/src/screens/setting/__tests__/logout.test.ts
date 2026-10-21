@@ -31,6 +31,9 @@ function dependencies(events: string[]): LogoutDependencies {
     clearLocalState: async () => {
       events.push("clear-local");
     },
+    markSignedOut: async () => {
+      events.push("mark-signed-out");
+    },
   };
 }
 
@@ -38,7 +41,14 @@ describe("performLogout", () => {
   it("revokes OAuth refresh access before clearing local account data", async () => {
     const events: string[] = [];
     await performLogout(oauthSession, dependencies(events));
-    expect(events).toEqual(["cancel-refreshes", "revoke-oauth", "clear-local"]);
+    // w21/153: the next sign-in asks which account, marked after the wipe so
+    // the wipe cannot erase it.
+    expect(events).toEqual([
+      "cancel-refreshes",
+      "revoke-oauth",
+      "clear-local",
+      "mark-signed-out",
+    ]);
   });
 
   it("preserves the legacy server logout path", async () => {
@@ -65,6 +75,7 @@ describe("performLogout", () => {
       "cancel-refreshes",
       "revoke-failed",
       "clear-local",
+      "mark-signed-out",
     ]);
   });
 });
