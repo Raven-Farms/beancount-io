@@ -645,7 +645,14 @@ Journal resources are `journal`, `plaintext-journal`, `account-journal`, and
 Journal subtype filters (`directiveTypes`, `transactionSubtypes`,
 `documentSubtypes`, `customSubtypes`) are JSON-encoded string arrays in URL
 parameters, for example `directiveTypes=%5B%22Transaction%22%5D`. Empty arrays
-are preserved. Plaintext journal returns `{ "content": "..." }`.
+are preserved. Values match case-insensitively, so `"transaction"` (the
+spelling `addLedgerEntries` takes) selects the same entries as `"Transaction"`.
+`directiveTypes` takes `Transaction`, `Balance`, `Commodity`, `Close`, `Custom`,
+`Document`, `Event`, `Note`, `Open`, `Pad`, and `Price`; `transactionSubtypes`
+takes `cleared`, `pending`, and `other`; `documentSubtypes` takes `discovered`
+and `linked`; `customSubtypes` takes `budget`. Any other value is refused with
+`BAD_USER_INPUT` on every surface, rather than matching nothing.
+Plaintext journal returns `{ "content": "..." }`.
 
 Account journal requires `account`, accepts `filter`, `time`, `limit`, `offset`,
 `with_children`, and `conversion`, and defaults to 20 entries, offset 0,

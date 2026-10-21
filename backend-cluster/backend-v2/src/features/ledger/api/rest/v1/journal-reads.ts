@@ -1,11 +1,6 @@
 import { z } from "@/shared/zod-openapi-setup";
 import { booleanQuery } from "@/server/rest/v1-schemas";
-import type {
-  DirectiveType,
-  TransactionSubtype,
-  DocumentSubtype,
-  CustomSubtype,
-} from "@/foundation/fava";
+import { JOURNAL_KINDS } from "@/features/ledger/utils/journal-kinds";
 import type {
   JournalQueryParams,
   AccountJournalQueryParams,
@@ -37,7 +32,8 @@ const filters = z.object({
  */
 const directiveTypesQuery = (schema: z.ZodTypeAny) =>
   schema.describe(
-    'JSON-encoded directive kinds to include, e.g. ["Transaction"]. ' +
+    'JSON-encoded directive kinds to include, e.g. ["Transaction"]: any of ' +
+      `${JOURNAL_KINDS.directiveTypes.join(", ")}, in any case. ` +
       "Omitted, every kind is returned — including the epoch-dated `open`/`close` " +
       "directives that fall inside any time window.",
   );
@@ -71,21 +67,11 @@ export const jsonStringArrayQuery = jsonQuery(
 const journalQuerySchema = filters.extend({
   limit: z.coerce.number().int().min(1).max(1000).optional(),
   offset: z.coerce.number().int().min(0).optional(),
-  // GraphQL accepts strings here; the ledger service owns subtype validation.
-  directiveTypes: directiveTypesQuery(
-    jsonStringArrayQuery
-      .transform((values) => values as DirectiveType[])
-      .optional(),
-  ),
-  transactionSubtypes: jsonStringArrayQuery
-    .transform((values) => values as TransactionSubtype[])
-    .optional(),
-  documentSubtypes: jsonStringArrayQuery
-    .transform((values) => values as DocumentSubtype[])
-    .optional(),
-  customSubtypes: jsonStringArrayQuery
-    .transform((values) => values as CustomSubtype[])
-    .optional(),
+  // The journal service normalizes and validates these for every surface.
+  directiveTypes: directiveTypesQuery(jsonStringArrayQuery.optional()),
+  transactionSubtypes: jsonStringArrayQuery.optional(),
+  documentSubtypes: jsonStringArrayQuery.optional(),
+  customSubtypes: jsonStringArrayQuery.optional(),
 });
 const accountJournalQuery = filters.extend({
   account: z.string(),
@@ -96,20 +82,10 @@ const accountJournalQuery = filters.extend({
   with_children: booleanQuery,
   conversion: z.string().optional(),
   // Same optional display selectors as the main journal read.
-  directiveTypes: directiveTypesQuery(
-    jsonStringArrayQuery
-      .transform((values) => values as DirectiveType[])
-      .optional(),
-  ),
-  transactionSubtypes: jsonStringArrayQuery
-    .transform((values) => values as TransactionSubtype[])
-    .optional(),
-  documentSubtypes: jsonStringArrayQuery
-    .transform((values) => values as DocumentSubtype[])
-    .optional(),
-  customSubtypes: jsonStringArrayQuery
-    .transform((values) => values as CustomSubtype[])
-    .optional(),
+  directiveTypes: directiveTypesQuery(jsonStringArrayQuery.optional()),
+  transactionSubtypes: jsonStringArrayQuery.optional(),
+  documentSubtypes: jsonStringArrayQuery.optional(),
+  customSubtypes: jsonStringArrayQuery.optional(),
 });
 
 type ReadParams = {

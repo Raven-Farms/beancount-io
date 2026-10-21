@@ -537,3 +537,158 @@ describe("listLedgerEntries tool", () => {
     },
   );
 });
+
+/**
+ * w23/006. The ledger service filters kinds by exact match, so the lowercase
+ * spelling `addLedgerEntries` takes — `"transaction"` — and any typo came back
+ * as an empty success. Every surface now matches case-insensitively and
+ * refuses an unknown kind before authorization or ledger work.
+ */
+describe("journal directive kinds", () => {
+  const loose = {
+    directiveTypes: ["transaction", "OPEN"],
+    transactionSubtypes: ["Cleared"],
+    documentSubtypes: ["LINKED"],
+    customSubtypes: ["Budget"],
+  };
+  const canonical = {
+    directive_types: ["Transaction", "Open"],
+    transaction_subtypes: ["cleared"],
+    document_subtypes: ["linked"],
+    custom_subtypes: ["budget"],
+  };
+
+  it("forwards any spelling of a kind as the ledger's own, on every surface", async () => {
+    const f = await fixture();
+    try {
+      const path = `journal?${encode(loose)}`;
+      expect((await f.rest(path)).status).toBe(200);
+      await f.mcp(path);
+      const tool = await f.tool({ directiveTypes: loose.directiveTypes });
+      expect(tool.isError).toBeFalsy();
+      const gql = await f.gql(
+        `getLedgerJournal(ledgerId: "alice/main", query: { ${gqlInput(loose)} }) { total }`,
+      );
+      expect(gql.errors).toBeUndefined();
+      const forwarded = f.journal.getJournal.mock.calls.map(
+        ([, , params]) => params,
+      );
+      expect(forwarded).toHaveLength(4);
+      for (const params of [forwarded[0], forwarded[1], forwarded[3]])
+        expect(params).toMatchObject(canonical);
+      expect(forwarded[2]).toMatchObject({
+        directive_types: canonical.directive_types,
+      });
+
+      const accountPath = `account-journal?${encode({ account: "Assets:Bank", ...loose })}`;
+      expect((await f.rest(accountPath)).status).toBe(200);
+      await f.mcp(accountPath);
+      const accountGql = await f.gql(
+        `getLedgerAccountJournal(ledgerId: "alice/main", query: { account: "Assets:Bank", ${gqlInput(loose)} }) { total }`,
+      );
+      expect(accountGql.errors).toBeUndefined();
+      for (const [, , params] of f.journal.getAccountJournal.mock.calls)
+        expect(params).toMatchObject(canonical);
+      expect(f.journal.getAccountJournal).toHaveBeenCalledTimes(3);
+    } finally {
+      await f.close();
+    }
+  });
+
+  it.each([
+    { directiveTypes: ["Txn"], field: "directiveTypes" },
+    { directiveTypes: ["Transaction", "Nope"], field: "directiveTypes" },
+    { transactionSubtypes: ["settled"], field: "transactionSubtypes" },
+    { documentSubtypes: ["attached"], field: "documentSubtypes" },
+    { customSubtypes: ["forecast"], field: "customSubtypes" },
+  ])(
+    "refuses an unknown $field value as BAD_USER_INPUT before reading",
+    async ({ field, ...params }) => {
+      const f = await fixture();
+      try {
+        for (const read of ["journal", "account-journal"]) {
+          const path = `${read}?${encode({ account: "Assets:Bank", ...params })}`;
+          const rest = await f.rest(path);
+          expect(rest.status).toBe(400);
+          expect((await rest.json()).error).toMatchObject({
+            code: "BAD_USER_INPUT",
+          });
+          await expect(f.mcp(path)).rejects.toMatchObject({
+            data: { code: "BAD_USER_INPUT" },
+          });
+        }
+        const gql = await f.gql(
+          `getLedgerJournal(ledgerId: "alice/main", query: { ${gqlInput(params)} }) { total }`,
+        );
+        const error = gql.errors?.[0];
+        expect(error).toBeDefined();
+        expect(formatError(error!.toJSON(), error!).extensions).toMatchObject({
+          code: "BAD_USER_INPUT",
+          field,
+        });
+        if ("directiveTypes" in params) {
+          const tool = await f.tool(params);
+          expect(tool.isError).toBe(true);
+          expect(JSON.stringify(tool.content)).toContain("BAD_USER_INPUT");
+        }
+        expect(f.journal.getJournal).not.toHaveBeenCalled();
+        expect(f.journal.getAccountJournal).not.toHaveBeenCalled();
+        expect(f.authorize).not.toHaveBeenCalled();
+      } finally {
+        await f.close();
+      }
+    },
+  );
+
+  it("keeps an empty list as an empty filter", async () => {
+    const f = await fixture();
+    try {
+      expect(
+        (await f.rest(`journal?${encode({ directiveTypes: [] })}`)).status,
+      ).toBe(200);
+      expect(f.journal.getJournal.mock.calls[0]![2]).toMatchObject({
+        directive_types: [],
+      });
+    } finally {
+      await f.close();
+    }
+  });
+
+  it("publishes the kinds as an enum in listLedgerEntries' input schema", async () => {
+    const f = await fixture();
+    try {
+      const server = assembleMcpRegistry(
+        {
+          identity: pinnedReadToken,
+          services: {},
+        } as unknown as McpRequestContext,
+        config,
+      );
+      const client = new Client({ name: "journal-kinds", version: "1" });
+      const [a, b] = InMemoryTransport.createLinkedPair();
+      await Promise.all([client.connect(a), server.connect(b)]);
+      const { tools } = await client.listTools();
+      const schema = tools.find(({ name }) => name === "listLedgerEntries")
+        ?.inputSchema as unknown as {
+        properties: { directiveTypes: { items: { enum?: string[] } } };
+      };
+      expect(schema.properties.directiveTypes.items.enum).toEqual([
+        "Transaction",
+        "Balance",
+        "Commodity",
+        "Close",
+        "Custom",
+        "Document",
+        "Event",
+        "Note",
+        "Open",
+        "Pad",
+        "Price",
+      ]);
+      await client.close();
+      await server.close();
+    } finally {
+      await f.close();
+    }
+  });
+});

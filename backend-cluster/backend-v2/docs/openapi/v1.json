@@ -8236,10 +8236,10 @@
           {
             "schema": {
               "type": "string",
-              "description": "JSON-encoded directive kinds to include, e.g. [\"Transaction\"]. Omitted, every kind is returned — including the epoch-dated `open`/`close` directives that fall inside any time window."
+              "description": "JSON-encoded directive kinds to include, e.g. [\"Transaction\"]: any of Transaction, Balance, Commodity, Close, Custom, Document, Event, Note, Open, Pad, Price, in any case. Omitted, every kind is returned — including the epoch-dated `open`/`close` directives that fall inside any time window."
             },
             "required": false,
-            "description": "JSON-encoded directive kinds to include, e.g. [\"Transaction\"]. Omitted, every kind is returned — including the epoch-dated `open`/`close` directives that fall inside any time window.",
+            "description": "JSON-encoded directive kinds to include, e.g. [\"Transaction\"]: any of Transaction, Balance, Commodity, Close, Custom, Document, Event, Note, Open, Pad, Price, in any case. Omitted, every kind is returned — including the epoch-dated `open`/`close` directives that fall inside any time window.",
             "name": "directiveTypes",
             "in": "query"
           },
@@ -8666,10 +8666,10 @@
           {
             "schema": {
               "type": "string",
-              "description": "JSON-encoded directive kinds to include, e.g. [\"Transaction\"]. Omitted, every kind is returned — including the epoch-dated `open`/`close` directives that fall inside any time window."
+              "description": "JSON-encoded directive kinds to include, e.g. [\"Transaction\"]: any of Transaction, Balance, Commodity, Close, Custom, Document, Event, Note, Open, Pad, Price, in any case. Omitted, every kind is returned — including the epoch-dated `open`/`close` directives that fall inside any time window."
             },
             "required": false,
-            "description": "JSON-encoded directive kinds to include, e.g. [\"Transaction\"]. Omitted, every kind is returned — including the epoch-dated `open`/`close` directives that fall inside any time window.",
+            "description": "JSON-encoded directive kinds to include, e.g. [\"Transaction\"]: any of Transaction, Balance, Commodity, Close, Custom, Document, Event, Note, Open, Pad, Price, in any case. Omitted, every kind is returned — including the epoch-dated `open`/`close` directives that fall inside any time window.",
             "name": "directiveTypes",
             "in": "query"
           },

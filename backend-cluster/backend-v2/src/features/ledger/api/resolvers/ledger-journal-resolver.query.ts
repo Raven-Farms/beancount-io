@@ -10,12 +10,6 @@ import {
 import { AllowAnonymous } from "@/server/graphql/authenticated";
 import { IContext } from "@/server/graphql/context";
 import { GraphQLJSONObject } from "graphql-scalars";
-import {
-  CustomSubtype,
-  DirectiveType,
-  DocumentSubtype,
-  TransactionSubtype,
-} from "@/foundation/fava";
 import type { ILedgerJournalService } from "@/features/ledger/service/ledger-journal-service";
 
 @ObjectType()
@@ -73,16 +67,16 @@ class JournalQueryInput {
   offset?: number;
 
   @Field(() => [String], { nullable: true })
-  directiveTypes?: DirectiveType[];
+  directiveTypes?: string[];
 
   @Field(() => [String], { nullable: true })
-  transactionSubtypes?: TransactionSubtype[];
+  transactionSubtypes?: string[];
 
   @Field(() => [String], { nullable: true })
-  documentSubtypes?: DocumentSubtype[];
+  documentSubtypes?: string[];
 
   @Field(() => [String], { nullable: true })
-  customSubtypes?: CustomSubtype[];
+  customSubtypes?: string[];
 }
 
 @ObjectType()
@@ -161,16 +155,16 @@ class AccountJournalQueryInput {
   conversion?: string;
 
   @Field(() => [String], { nullable: true })
-  directiveTypes?: DirectiveType[];
+  directiveTypes?: string[];
 
   @Field(() => [String], { nullable: true })
-  transactionSubtypes?: TransactionSubtype[];
+  transactionSubtypes?: string[];
 
   @Field(() => [String], { nullable: true })
-  documentSubtypes?: DocumentSubtype[];
+  documentSubtypes?: string[];
 
   @Field(() => [String], { nullable: true })
-  customSubtypes?: CustomSubtype[];
+  customSubtypes?: string[];
 }
 
 @Resolver()

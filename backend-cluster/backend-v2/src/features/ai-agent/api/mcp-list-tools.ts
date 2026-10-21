@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { bankAccountQuery } from "@/features/ledger/api/rest/v1/banks-handler";
-import type { DirectiveType } from "@/foundation/fava";
+import { JOURNAL_KINDS } from "@/features/ledger/utils/journal-kinds";
 import { logger } from "@/shared/logger";
 import type { ToolContext } from "../tools/types";
 import { toolOutputSchema } from "../tools/types";
@@ -96,10 +96,14 @@ export const listLedgerEntriesInput = z.object({
     .optional()
     .describe("Filter expression: payee, narration, tag, or link."),
   time: z.string().optional().describe("Time expression, e.g. 2026-08."),
+  // The published schema lists the kinds; matching ignores case, so the
+  // service, not the schema, refuses an unknown one (w23/006).
   directiveTypes: z
-    .array(z.string())
+    .array(z.string().meta({ enum: [...JOURNAL_KINDS.directiveTypes] }))
     .optional()
-    .describe('Directive types to include, e.g. ["Transaction"].'),
+    .describe(
+      'Directive types to include, e.g. ["Transaction"]; case does not matter.',
+    ),
   limit: z
     .number()
     .int()
@@ -138,10 +142,7 @@ export async function executeListLedgerEntries(
       services.ledgerJournal.getJournal({
         ledgerId,
         identity,
-        query: {
-          ...input,
-          directiveTypes: input.directiveTypes as DirectiveType[] | undefined,
-        },
+        query: input,
       }),
   });
 }

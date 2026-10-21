@@ -1,11 +1,5 @@
 import { parseLedgerId } from "@/shared/str";
-import {
-  unwrapFavaResponse,
-  type DirectiveType,
-  type TransactionSubtype,
-  type DocumentSubtype,
-  type CustomSubtype,
-} from "@/foundation/fava";
+import { unwrapFavaResponse } from "@/foundation/fava";
 import type { Identity } from "@/server/api/identity";
 import {
   authorizeLedger,
@@ -17,6 +11,7 @@ import {
 } from "@/server/api/authorization/authorization-contract";
 import { BadUserInputError } from "@/shared/errors";
 import { directiveLimitExemptParams } from "@/features/ledger/operations/directive-limit-bypass";
+import { normalizeJournalKinds } from "@/features/ledger/utils/journal-kinds";
 
 /**
  * The page a journal read asks for: limit 1–1000 (default 20), offset 0 or
@@ -102,10 +97,11 @@ export type JournalQueryParams = {
   account?: string;
   filter?: string;
   time?: string;
-  directiveTypes?: DirectiveType[];
-  transactionSubtypes?: TransactionSubtype[];
-  documentSubtypes?: DocumentSubtype[];
-  customSubtypes?: CustomSubtype[];
+  /** Matched case-insensitively against `DirectiveType` (w23/006). */
+  directiveTypes?: readonly string[] | null;
+  transactionSubtypes?: readonly string[] | null;
+  documentSubtypes?: readonly string[] | null;
+  customSubtypes?: readonly string[] | null;
   limit?: number;
   offset?: number;
 };
@@ -116,10 +112,11 @@ export type AccountJournalQueryParams = {
   filterAccount?: string;
   filter?: string;
   time?: string;
-  directiveTypes?: DirectiveType[];
-  transactionSubtypes?: TransactionSubtype[];
-  documentSubtypes?: DocumentSubtype[];
-  customSubtypes?: CustomSubtype[];
+  /** Matched case-insensitively against `DirectiveType` (w23/006). */
+  directiveTypes?: readonly string[] | null;
+  transactionSubtypes?: readonly string[] | null;
+  documentSubtypes?: readonly string[] | null;
+  customSubtypes?: readonly string[] | null;
   limit?: number;
   offset?: number;
   with_children?: boolean;
@@ -207,6 +204,7 @@ export class LedgerJournalService
   }): Promise<JournalResult> {
     const { ledgerId, identity, query } = params;
     const page = journalPage(query);
+    const kinds = normalizeJournalKinds(query);
     const { favaApiClient, ledgerOwner, ledgerName } = await this.getClient(
       ledgerId,
       identity,
@@ -218,11 +216,8 @@ export class LedgerJournalService
         account: query?.account || undefined,
         filter: query?.filter || undefined,
         time: query?.time || undefined,
-        directive_types: query?.directiveTypes || undefined,
         ...page,
-        transaction_subtypes: query?.transactionSubtypes || undefined,
-        document_subtypes: query?.documentSubtypes || undefined,
-        custom_subtypes: query?.customSubtypes || undefined,
+        ...kinds,
       }),
       "get ledger journal entries",
     );
@@ -292,6 +287,7 @@ export class LedgerJournalService
   }): Promise<AccountJournalResult> {
     const { ledgerId, identity, query } = params;
     const page = journalPage(query);
+    const kinds = normalizeJournalKinds(query);
     const { favaApiClient, ledgerOwner, ledgerName } = await this.getClient(
       ledgerId,
       identity,
@@ -308,10 +304,7 @@ export class LedgerJournalService
         with_children:
           query.with_children !== undefined ? query.with_children : true,
         conversion: query.conversion || "at_cost",
-        directive_types: query.directiveTypes || undefined,
-        transaction_subtypes: query.transactionSubtypes || undefined,
-        document_subtypes: query.documentSubtypes || undefined,
-        custom_subtypes: query.customSubtypes || undefined,
+        ...kinds,
       }),
       "get account journal entries",
     );
