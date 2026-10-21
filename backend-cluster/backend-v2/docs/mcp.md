@@ -156,9 +156,11 @@ a header there.
 Beancount.io publishes the hosted endpoint to the official MCP Registry
 (`registry.modelcontextprotocol.io`) as **`io.beancount/beancount`** (see
 [Publishing the registry listing](#publishing-the-registry-listing)). Clients,
-subregistries, and aggregators that read the registry — Smithery and PulseMCP
-are among those the registry's own documentation names — install it from there
-on their own schedule. The entry names `https://beancount.io/api-gateway/mcp` and nothing else:
+subregistries, and aggregators may import that record on their own schedules.
+The [marketplace inventory and submission packet](./mcp-marketplaces.md) tracks
+actual directory records and external review gates separately; registry
+publication does not establish gallery inclusion.
+The entry names `https://beancount.io/api-gateway/mcp` and nothing else:
 no header and no package, so a client that installs it meets the same `401` and
 discovery chain as one configured by hand, and signs in with the OAuth flow
 above. Claude Code and Codex do not browse the registry; configure them with the

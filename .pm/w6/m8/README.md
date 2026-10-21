@@ -1,6 +1,6 @@
 # w6 · m8 — Claim and publish the hosted connector on Smithery and Glama
 
-**Worker:** worker1 **Goal:** Users find one accurate, owned, authenticated listing per platform for the existing hosted MCP endpoint. **Status:** todo (t003 blocked on existing w2/088; t001 and t002 can proceed)
+**Worker:** worker1 **Goal:** Users find one accurate, owned, authenticated listing per platform for the existing hosted MCP endpoint. **Status:** todo (t001 done; t002 next; t003 blocked on existing w2/088)
 
 **Implementation estimate:** ~3h, excluding external review queues and the standing closing tasks.
 
@@ -8,7 +8,7 @@
 
 | id | title | est | depends_on |
 | --- | --- | --- | --- |
-| [t001](./t001.md) | Audit imported listings and prepare shared submission materials | 30m | — |
+| [t001](./done/t001.md) | Audit imported listings and prepare shared submission materials — **DONE** | 30m | — |
 | [t002](./t002.md) | Publish or claim Smithery's existing hosted-server listing | 45m | t001 |
 | [t003](./t003.md) | Align the existing Glama connector after w2/088's ownership and health repair — **BLOCKED** | 45m | t001, w2/088 |
 | [t004](./t004.md) | Verify both public listings through fresh authenticated connections | 60m | t002, t003 |
