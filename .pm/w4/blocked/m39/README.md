@@ -29,7 +29,7 @@ Continuous dashboard QA requested for w4, 2026-10-20. [Live findings](./FINDINGS
 
 ## Scope
 
-Journal's four persisted filter-array keys and the changelog readIds list, using the existing useLocalStorageState deserializer boundary. Reuse a small decoder where appropriate, without replacing the storage system or inferring arbitrary generic types at runtime. Completed [W4/272](../done/272.md) owns the BQL history consumer independently; preserve its decoder and coordinate any shared validation without duplicating its implementation task or importing that feature's history policy. Overview's separate layout normalizer already checks its saved structure and is outside this repair. No API/backend, authentication, ledger write or persistent server preference change is required.
+Journal's four persisted filter-array keys and the changelog readIds list, using the existing useLocalStorageState deserializer boundary. Reuse a small decoder where appropriate, without replacing the storage system or inferring arbitrary generic types at runtime. Completed [W4/272](../../done/272.md) owns the BQL history consumer independently; preserve its decoder and coordinate any shared validation without duplicating its implementation task or importing that feature's history policy. Overview's separate layout normalizer already checks its saved structure and is outside this repair. No API/backend, authentication, ledger write or persistent server preference change is required.
 
 ## Blocked
 
