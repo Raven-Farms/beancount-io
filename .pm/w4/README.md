@@ -21,6 +21,7 @@
 - [290 — Commit the print generation timestamp before native capture](./290.md) — minor; dashboard QA, 2026-10-20.
 - [291 — Leave file-editor Escape to the active text composition](./291.md) — minor; dashboard QA, 2026-10-20.
 - [292 — Keep composing Escape from dismissing input dialogs](./292.md) — minor; dashboard QA, 2026-10-20.
+- [295 — Protect newer Budget drafts from an earlier pending submission](./295.md) — minor; dashboard QA, 2026-10-20; coordinate with m41.
 
 ## Milestones
 
