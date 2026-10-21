@@ -80,6 +80,7 @@ export const bg: Translations = {
   merchantsSortByCount: "Сортиране по брой транзакции",
   merchantsSortAlphabetical: "Сортиране по азбучен ред",
   merchantsRecurringSection: "Повтарящи се",
+  merchantsAllSection: "Всички търговци",
   merchantsRecurringBadge: "Повтарящ се",
   merchantsCadenceWeekly: "Седмично",
   merchantsCadenceBiweekly: "На 2 седмици",

@@ -84,6 +84,7 @@ export const uk: Translations = {
   merchantsSortByCount: "Сортувати за кількістю транзакцій",
   merchantsSortAlphabetical: "Сортувати за алфавітом",
   merchantsRecurringSection: "Регулярні",
+  merchantsAllSection: "Усі отримувачі",
   merchantsRecurringBadge: "Регулярний",
   merchantsCadenceWeekly: "Щотижня",
   merchantsCadenceBiweekly: "Раз на 2 тижні",

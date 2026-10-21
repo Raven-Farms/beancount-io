@@ -83,6 +83,7 @@ export const pt: Translations = {
   merchantsSortByCount: "Ordenar por número de transações",
   merchantsSortAlphabetical: "Ordenar alfabeticamente",
   merchantsRecurringSection: "Recorrente",
+  merchantsAllSection: "Todos os comerciantes",
   merchantsRecurringBadge: "Recorrente",
   merchantsCadenceWeekly: "Semanal",
   merchantsCadenceBiweekly: "A cada 2 semanas",

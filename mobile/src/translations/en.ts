@@ -73,6 +73,7 @@ export const en = {
   merchantsSortByCount: "Sort by transaction count",
   merchantsSortAlphabetical: "Sort alphabetically",
   merchantsRecurringSection: "Recurring",
+  merchantsAllSection: "All merchants",
   merchantsRecurringBadge: "Recurring",
   merchantsCadenceWeekly: "Weekly",
   merchantsCadenceBiweekly: "Every 2 weeks",

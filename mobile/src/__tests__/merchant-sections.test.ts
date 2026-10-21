@@ -62,7 +62,8 @@ describe("buildMerchantSections", () => {
       "Netflix",
     ]);
     expect(sections[0]!.titleKey).toBe("merchantsRecurringSection");
-    expect(sections[1]!.titleKey).toBe(null);
+    // Titled once a Recurring section precedes it (w21/020).
+    expect(sections[1]!.titleKey).toBe("merchantsAllSection");
     expect(sections[1]!.data.map((row) => row.merchant.payee)).toEqual([
       "Uber",
       "Netflix",
@@ -84,6 +85,8 @@ describe("buildMerchantSections", () => {
     );
     expect(sections.map((s) => s.key)).toEqual(["all"]);
     expect(sections[0]!.data[0]!.resolved.isRecurring).toBe(false);
+    // The only section: no heading needed (w21/020).
+    expect(sections[0]!.titleKey).toBe(null);
   });
 
   it("lets a recurring override pin an undetected payee", () => {

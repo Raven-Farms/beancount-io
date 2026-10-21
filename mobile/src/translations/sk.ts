@@ -84,6 +84,7 @@ export const sk: Translations = {
   merchantsSortByCount: "Zoradiť podľa počtu transakcií",
   merchantsSortAlphabetical: "Zoradiť abecedne",
   merchantsRecurringSection: "Opakujúce sa",
+  merchantsAllSection: "Všetci obchodníci",
   merchantsRecurringBadge: "Opakujúci sa",
   merchantsCadenceWeekly: "Týždenne",
   merchantsCadenceBiweekly: "Každé 2 týždne",

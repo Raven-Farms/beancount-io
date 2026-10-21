@@ -85,6 +85,7 @@ export const ru: Translations = {
   merchantsSortByCount: "Сортировать по числу транзакций",
   merchantsSortAlphabetical: "Сортировать по алфавиту",
   merchantsRecurringSection: "Регулярные",
+  merchantsAllSection: "Все получатели",
   merchantsRecurringBadge: "Регулярный",
   merchantsCadenceWeekly: "Еженедельно",
   merchantsCadenceBiweekly: "Раз в 2 недели",

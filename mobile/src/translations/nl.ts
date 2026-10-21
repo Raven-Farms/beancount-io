@@ -80,6 +80,7 @@ export const nl: Translations = {
   merchantsSortByCount: "Sorteren op aantal transacties",
   merchantsSortAlphabetical: "Alfabetisch sorteren",
   merchantsRecurringSection: "Terugkerend",
+  merchantsAllSection: "Alle winkels",
   merchantsRecurringBadge: "Terugkerend",
   merchantsCadenceWeekly: "Wekelijks",
   merchantsCadenceBiweekly: "Om de 2 weken",

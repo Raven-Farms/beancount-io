@@ -31,7 +31,7 @@ export interface MerchantListItem {
 export interface MerchantSection {
   key: MerchantSectionKey;
   /** Translation key for the section header; null = no header chrome. */
-  titleKey: "merchantsRecurringSection" | null;
+  titleKey: "merchantsRecurringSection" | "merchantsAllSection" | null;
   data: MerchantListItem[];
 }
 
@@ -95,7 +95,9 @@ export function buildMerchantSections(
   if (general.length > 0) {
     sections.push({
       key: "all",
-      titleKey: null,
+      // Untitled on its own; under a Recurring section it needs a heading, or
+      // every merchant reads as recurring (w21/020).
+      titleKey: recurring.length > 0 ? "merchantsAllSection" : null,
       data: general,
     });
   }

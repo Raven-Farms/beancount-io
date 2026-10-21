@@ -83,6 +83,7 @@ export const ca: Translations = {
   merchantsSortByCount: "Ordena per nombre de transaccions",
   merchantsSortAlphabetical: "Ordena alfabèticament",
   merchantsRecurringSection: "Recurrent",
+  merchantsAllSection: "Tots els comerciants",
   merchantsRecurringBadge: "Recurrent",
   merchantsCadenceWeekly: "Setmanal",
   merchantsCadenceBiweekly: "Cada 2 setmanes",

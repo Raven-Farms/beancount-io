@@ -69,6 +69,7 @@ export const zh: Translations = {
   merchantsSortByCount: "按交易次数排序",
   merchantsSortAlphabetical: "按名称排序",
   merchantsRecurringSection: "定期",
+  merchantsAllSection: "所有商户",
   merchantsRecurringBadge: "定期",
   merchantsCadenceWeekly: "每周",
   merchantsCadenceBiweekly: "每两周",

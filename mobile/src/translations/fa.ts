@@ -80,6 +80,7 @@ export const fa: Translations = {
   merchantsSortByCount: "مرتب‌سازی بر اساس تعداد تراکنش",
   merchantsSortAlphabetical: "مرتب‌سازی الفبایی",
   merchantsRecurringSection: "دوره‌ای",
+  merchantsAllSection: "همهٔ پذیرندگان",
   merchantsRecurringBadge: "دوره‌ای",
   merchantsCadenceWeekly: "هفتگی",
   merchantsCadenceBiweekly: "هر ۲ هفته",
