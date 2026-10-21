@@ -1,6 +1,6 @@
 # w4 · m41 — Preserve acknowledged actions through refresh failures
 
-**Worker:** worker1 **Goal:** Star and Budget report a confirmed action truthfully even when a subsequent metadata/list read fails. **Status:** todo
+**Worker:** worker1 **Goal:** Star and Budget report a confirmed action truthfully even when a subsequent metadata/list read fails. **Status:** in progress (t001 done)
 
 **Severity:** minor. **Estimate:** 140m across six tasks, dashboard only.
 
@@ -8,7 +8,7 @@
 
 | id | title | est | depends_on |
 | --- | --- | --- | --- |
-| [t001](./t001.md) | Preserve confirmed Star and Unstar results | 40m | — |
+| [t001](./done/t001.md) | Preserve confirmed Star and Unstar results — **DONE** | 40m | — |
 | [t002](./t002.md) | Finish an acknowledged Budget submission once | 40m | t001 |
 | [t003](./t003.md) | Verify action feedback and recovery across adoption surfaces | 10m | t002 |
 | [t004](./t004.md) | Simplify acknowledgement and refresh handling | 10m | t003 |

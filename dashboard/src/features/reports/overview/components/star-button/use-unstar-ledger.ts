@@ -1,8 +1,9 @@
 import { useMutation } from "@apollo/client/react";
 import { toast } from "sonner";
-import { UnstarLedgerDocument, GetLedgerDocument } from "@/graphql/definitions";
+import { UnstarLedgerDocument } from "@/graphql/definitions";
 import { useErrorMessage } from "@/common/lib/errors/error-message";
 import { useTranslations } from "@/common/hooks/use-translations";
+import { writeStarredState } from "./write-starred-state";
 
 export function useUnstarLedger(ledgerId: string) {
   const formatError = useErrorMessage();
@@ -21,8 +22,8 @@ export function useUnstarLedger(ledgerId: string) {
     onError: (error) => {
       toast.error(formatError(error));
     },
-    refetchQueries: [{ query: GetLedgerDocument, variables: { ledgerId } }],
-    awaitRefetchQueries: true,
+    update: (cache, { data }) =>
+      writeStarredState(cache, ledgerId, data?.unstarLedger),
   });
 
   return {
