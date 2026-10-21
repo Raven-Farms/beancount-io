@@ -28,7 +28,7 @@ import { apolloClient } from "@/common/apollo/client";
 import { restoreApolloCache } from "@/common/apollo/cache-persist";
 import { clearServerScopedState } from "@/common/server-url-actions";
 import { GetLedgerDocument } from "@/generated-graphql/graphql";
-import { isApolloError } from "@apollo/client";
+import { shouldClearLedgerSelection } from "@/common/graphql-error-codes";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -126,22 +126,19 @@ const SplashProviderComponent = ({
               fetchPolicy: "network-only",
             });
           } catch (e) {
-            // Offline / transport failure: keep the persisted selection so a
-            // cold start can still render cached Home/Accounts/Reports data.
-            // Clear only when the server rejects the ledger.
+            // Keep the persisted selection through offline, a ledger service
+            // outage or a rate limit, so a cold start can still render cached
+            // Home/Accounts/Reports data. Clear only when the server says the
+            // ledger is gone or no longer accessible (w21/182).
             const err = e instanceof Error ? e : new Error(String(e));
-            const networkOnly =
-              isApolloError(err) &&
-              err.networkError != null &&
-              (err.graphQLErrors?.length ?? 0) === 0;
-            if (networkOnly) {
-              console.warn("Offline at launch; keeping ledger selection:", err);
-            } else {
+            if (shouldClearLedgerSelection(err)) {
               console.warn(
-                "Failed to validate ledger, clearing ledgerVar:",
+                "Ledger gone or inaccessible, clearing ledgerVar:",
                 err,
               );
               ledgerVar(null);
+            } else {
+              console.warn("Could not confirm the ledger; keeping it:", err);
             }
           }
         }

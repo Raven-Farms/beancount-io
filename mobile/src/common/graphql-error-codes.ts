@@ -29,3 +29,15 @@ export function graphQLErrorCodes(err: unknown): string[] {
 export function isLedgerGone(err: unknown): boolean {
   return graphQLErrorCodes(err).includes("NOT_FOUND");
 }
+
+/**
+ * Whether the launch check of the persisted ledger selection should drop it:
+ * only when the server says the ledger is gone or no longer yours. Any other
+ * failure (SERVICE_UNAVAILABLE, RATE_LIMITED, INTERNAL_SERVER_ERROR, a
+ * timeout) says nothing about the selection, and clearing it on one lost it
+ * for good when the ledger service was briefly down (w21/182).
+ */
+export function shouldClearLedgerSelection(err: unknown): boolean {
+  const codes = graphQLErrorCodes(err);
+  return codes.includes("NOT_FOUND") || codes.includes("FORBIDDEN");
+}
