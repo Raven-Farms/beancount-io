@@ -134,3 +134,6 @@
 - [184](./184.md) — Offline next day, Home's Spending card fails: its cache key changes daily
 - [185](./185.md) — A text file over 10 MiB opens empty and editable; saving replaces the whole file (data loss)
 - [186](./186.md) — Files between 1 and 10 MiB open editable but every save is refused after editing
+- [187](./187.md) — Syntax errors lose file and line ("parse errors in main.bean"); no way to find the bad line in the app
+- [188](./188.md) — Engine warnings listed and counted as errors although bean-check passes
+- [189](./189.md) — Missing `include` shows raw "virtual filesystem" text with no tap target
