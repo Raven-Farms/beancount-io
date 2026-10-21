@@ -1,6 +1,6 @@
 # w21 · m1 — Entry edits and deletes refuse changes that would break the ledger
 
-**Worker:** worker1 **Goal:** editing or deleting an existing entry can't silently add a bean-check error. Since w0/m2, adding an entry is refused unless the caller passes `allowInvalid`. The edit and delete source-slice writes still commit whatever they are given, and the native app then reports plain success. **Status:** blocked (t001–t006 done; t007 Closeout awaits the deployed check)
+**Worker:** worker1 **Goal:** editing or deleting an existing entry can't silently add a bean-check error. Since w0/m2, adding an entry is refused unless the caller passes `allowInvalid`. The edit and delete source-slice writes still commit whatever they are given, and the native app then reports plain success. **Status:** done
 
 ## Tasks (in order)
 
@@ -12,7 +12,7 @@
 | t004 | Adoption surface — **DONE** | 20m | t002, t003 |
 | t005 | Simplify — **DONE** | 15m | t004 |
 | t006 | Test coverage — **DONE** | 30m | t004, t005 |
-| t007 | Closeout — **blocked** | 10m | t006 |
+| t007 | Closeout — **DONE** | 10m | t006 |
 
 ## Definition of done
 
@@ -54,7 +54,10 @@
 
 - Refusing raw `updateLedgerFile` saves. The file editor is the escape hatch for hand-repair and may need to pass through invalid states; it gets a warning, not a refusal.
 
-## Blocked
+## Blocked (cleared 2026-10-20)
+
+**Cleared 2026-10-20** — The deploy went out. The full definition of done was verified live on `https://beancount.io` against the synthetic ledger `mcp-agent-eval`. Delete and re-date of the 2026-08-28 FARMERS MARKET entry are refused on GraphQL, REST and MCP with `VALIDATION_FAILED` naming "Balance failed for Assets:Cash: expected 49.75 USD, got 73.25 USD (main.bean:84 / :87)", with the file unchanged. The same requests with `allowInvalid: true` commit on all three. The native app checks are recorded below. MCP was reached with an OAuth authorization-code + PKCE token restricted to the ledger, approved on the consent page with the QA session, because the QA account cannot mint API keys. Every write was restored byte-for-byte (sha256 77c3a591…), with 0 errors at the end. The record of the block follows.
+
 
 **Blocked 2026-10-20** — t007 Closeout cannot run here, because the definition of done is observed on the deployed service and the native app.
 
