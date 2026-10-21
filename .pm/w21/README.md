@@ -29,3 +29,4 @@
 - [053](./053.md) — Create Ledger keeps its draft forever in AsyncStorage, opening balance included, and resumes stale dates
 - [054](./054.md) — The drawer keeps listing a ledger that no longer exists across cold starts; choosing it shows only "Failed to load"
 - [055](./055.md) — Reports keeps a "−$0.00 · 0%" row for a category that nets to zero; the Sankey can draw phantom nodes (float sums vs exact zero)
+- [056](./056.md) — An account opened from the Accounts tab doesn't appear there after Done (`getLedger` not evicted by the write)
