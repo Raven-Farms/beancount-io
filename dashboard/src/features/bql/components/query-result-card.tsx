@@ -383,7 +383,10 @@ export function QueryResultCard({
         </div>
       </details>
       <div className="absolute right-3 top-2 flex items-center gap-1">
-        {result?.table && (
+        {/* Same gate as the result body: while this query runs again its
+            previous table is hidden, so it must not download unlabelled as
+            the current result (w4/297). */}
+        {result?.table && !loading && (
           <QueryResultExport result={result.table} queryString={query} />
         )}
         <Button
