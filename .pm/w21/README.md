@@ -34,3 +34,4 @@
 - [084](./084.md) — Returning to the app resets a guest's example ledger: navigation and filters are thrown away
 - [085](./085.md) — Open Account offers only operating currencies; its default sticks at "No currency" after a failed first load
 - [086](./086.md) — Cancelling the RTL restart prompt leaves layout and language mismatched, and the prompt can't be brought back
+- [087](./087.md) — A failing balance assertion looks like a passing one: the ledger service always sends `diff_amount: null`
