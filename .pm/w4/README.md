@@ -4,6 +4,8 @@
 
 ## Inbox
 
+- [321 — Give the Template choice a first-step explanation](./321.md) — minor; dashboard QA, 2026-10-21; initial choice reuses Review's Go back instruction before configuration/Back exists; eight-preset selection works.
+
 - [320 — Preserve the creation draft after a failed request](./320.md) — minor; dashboard QA, 2026-10-21; caught creation failure clears the saved draft, so closing/reopening loses details and requestId at both widths; normal close/resume passes, every attempt preblocked.
 
 - [319 — Name the import configuration's amount filter](./319.md) — minor; dashboard QA, 2026-10-21; native AX exposes an empty control name at both widths; value/filtering/keyboard and adjacent named controls pass.

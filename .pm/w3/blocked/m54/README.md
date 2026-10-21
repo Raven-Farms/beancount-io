@@ -1,6 +1,6 @@
 # w3 · m54 — Ledger creation: staged creation flow on dashboard and mobile
 
-**Worker:** worker3 **Goal:** the m53 setup specification becomes a staged, resumable creation flow on web and native, where accepting every default still reaches a valid private ledger unasked. **Status:** todo (t001–t002, t004–t006 done; t003 blocked — see Blocked)
+**Worker:** worker3 **Goal:** the m53 setup specification becomes a staged, resumable creation flow on web and native, where accepting every default still reaches a valid private ledger unasked. **Status:** blocked (t001–t002, t004–t006 done; t003 and the dashboard QA closeout gates remain — see Blocked)
 
 ## Tasks (in order)
 
@@ -35,9 +35,9 @@
 
 ## Blocked (2026-10-20)
 
-Closeout (t007) cannot run: the milestone's definition of done is not fully met. t003's remaining criterion — a demo ledger identifiable as fictional in ledger lists — waits on an API-visible demo flag on the ledger directory surfaces, and the Starter-copy correction lives in inbox note 648.
+Closeout (t007) cannot run: the milestone's definition of done is not fully met. t003's remaining criterion — a demo ledger identifiable as fictional in ledger lists — waits on an API-visible demo flag on the ledger directory surfaces. The Starter-copy correction is complete in [648](../../done/648.md), shipped2f11faa72; it is no longer an unblock condition. The dashboard QA follow-ups below also remain required for closeout.
 
-**Unblock:** the ledger directory surfaces (REST/GraphQL/MCP in parity) expose a demo flag sourced from the ledger's `bcio_demo` identity or recorded at creation, and w3/648 has shipped. Who can clear it: whoever next extends the ledger directory read in backend-v2 (for the flag) and any worker (for 648).
+**Unblock:** the ledger directory surfaces (REST/GraphQL/MCP in parity) expose a demo flag sourced from the ledger's `bcio_demo` identity or recorded at creation, then the list criterion and recorded dashboard QA gates pass. Who can clear it: whoever next extends the ledger directory read in backend-v2 (for the flag), the W4 repair owners and the dashboard QA loop (for the linked client checks).
 
 ## Dashboard QA follow-ups — 2026-10-21
 
@@ -50,3 +50,5 @@ Closeout must also verify [W4/314](../../../w4/314.md) and [W4/315](../../../w4/
 [W4/320](../../../w4/320.md) adds fresh desktop/narrow failure-resumption evidence: an ordinary close/reopen keeps setup/requestId, but a caught creation failure deletes the saved draft; closing that review and returning loses the fields and mints a new requestId. Every attempt is aborted before transport. Its W4 repair must pass the failed-request close/return contract before this milestone closes; it is independent of314's premature Next submission.
 
 The same320 record also contains an independent desktop ownership control: cancelling an unchanged existing-ledger edit preserves a parked creation draft, while a preblocked failed UpdateLedger deletes it and forces a new creation identity. This shared-form cleanup path attempts no CreateLedger and must preserve the creation draft as well.
+
+[W4/321](../../../w4/321.md) records the remaining Template-choice hint: step1 reuses the final Review's Go back instruction instead of explaining the ready-made chart/preset choice. Both widths reproduce while preset selection works. This is separate from648's completed Starter copy and the native W21/051 hint fix.
