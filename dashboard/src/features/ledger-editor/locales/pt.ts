@@ -9,6 +9,17 @@ const ptLedgerEditor: Record<string, { message: string; description: string }> =
       message: "Criar Arquivo",
       description: "Button label to create file",
     },
+    "ledgerEditor.branchNotFound": {
+      message:
+        "O branch “{branch}” não está disponível aqui. Os arquivos são exibidos a partir de {main}.",
+      description:
+        "404 for a Files URL naming a branch other than the supported one (contains {branch} and {main})",
+    },
+    "ledgerEditor.browseMainFiles": {
+      message: "Ver arquivos em {main}",
+      description:
+        "Link to the Files root on the supported branch (contains {main})",
+    },
     "ledgerEditor.files": {
       message: "Arquivos",
       description: "Ledger files management",

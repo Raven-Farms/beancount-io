@@ -9,6 +9,17 @@ const deLedgerEditor: Record<string, { message: string; description: string }> =
       message: "Datei erstellen",
       description: "Button label to create file",
     },
+    "ledgerEditor.branchNotFound": {
+      message:
+        "Der Branch „{branch}“ ist hier nicht verfügbar. Dateien werden aus {main} angezeigt.",
+      description:
+        "404 for a Files URL naming a branch other than the supported one (contains {branch} and {main})",
+    },
+    "ledgerEditor.browseMainFiles": {
+      message: "Dateien in {main} durchsuchen",
+      description:
+        "Link to the Files root on the supported branch (contains {main})",
+    },
     "ledgerEditor.files": {
       message: "Dateien",
       description: "Ledger files management",

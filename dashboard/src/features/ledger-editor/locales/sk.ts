@@ -9,6 +9,17 @@ const skLedgerEditor: Record<string, { message: string; description: string }> =
       message: "Vytvoriť súbor",
       description: "Button label to create file",
     },
+    "ledgerEditor.branchNotFound": {
+      message:
+        "Vetva „{branch}“ tu nie je dostupná. Súbory sa zobrazujú z {main}.",
+      description:
+        "404 for a Files URL naming a branch other than the supported one (contains {branch} and {main})",
+    },
+    "ledgerEditor.browseMainFiles": {
+      message: "Prehliadať súbory v {main}",
+      description:
+        "Link to the Files root on the supported branch (contains {main})",
+    },
     "ledgerEditor.files": {
       message: "Súbory",
       description: "Ledger files management",

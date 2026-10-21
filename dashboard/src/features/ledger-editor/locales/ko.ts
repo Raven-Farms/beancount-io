@@ -9,6 +9,17 @@ const koLedgerEditor: Record<string, { message: string; description: string }> =
       message: "파일 생성",
       description: "Button label to create file",
     },
+    "ledgerEditor.branchNotFound": {
+      message:
+        "브랜치 “{branch}”은(는) 여기에서 사용할 수 없습니다. 파일은 {main}에서 표시됩니다.",
+      description:
+        "404 for a Files URL naming a branch other than the supported one (contains {branch} and {main})",
+    },
+    "ledgerEditor.browseMainFiles": {
+      message: "{main}의 파일 보기",
+      description:
+        "Link to the Files root on the supported branch (contains {main})",
+    },
     "ledgerEditor.files": {
       message: "파일",
       description: "Ledger files management",

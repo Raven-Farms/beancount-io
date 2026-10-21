@@ -9,6 +9,17 @@ const ruLedgerEditor: Record<string, { message: string; description: string }> =
       message: "Создать файл",
       description: "Button label to create file",
     },
+    "ledgerEditor.branchNotFound": {
+      message:
+        "Ветка «{branch}» здесь недоступна. Файлы показываются из {main}.",
+      description:
+        "404 for a Files URL naming a branch other than the supported one (contains {branch} and {main})",
+    },
+    "ledgerEditor.browseMainFiles": {
+      message: "Открыть файлы в {main}",
+      description:
+        "Link to the Files root on the supported branch (contains {main})",
+    },
     "ledgerEditor.files": {
       message: "Файлы",
       description: "Ledger files management",

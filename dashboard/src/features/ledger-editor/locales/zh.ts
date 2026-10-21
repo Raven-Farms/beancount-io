@@ -9,6 +9,16 @@ const zhLedgerEditor: Record<string, { message: string; description: string }> =
       message: "创建文件",
       description: "Button label to create file",
     },
+    "ledgerEditor.branchNotFound": {
+      message: "此处无法使用分支“{branch}”。文件显示自 {main}。",
+      description:
+        "404 for a Files URL naming a branch other than the supported one (contains {branch} and {main})",
+    },
+    "ledgerEditor.browseMainFiles": {
+      message: "浏览 {main} 中的文件",
+      description:
+        "Link to the Files root on the supported branch (contains {main})",
+    },
     "ledgerEditor.files": {
       message: "文件",
       description: "Ledger files management",

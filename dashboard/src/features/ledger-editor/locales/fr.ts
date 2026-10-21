@@ -9,6 +9,17 @@ const frLedgerEditor: Record<string, { message: string; description: string }> =
       message: "Créer un fichier",
       description: "Button label to create file",
     },
+    "ledgerEditor.branchNotFound": {
+      message:
+        "La branche « {branch} » n'est pas disponible ici. Les fichiers sont affichés depuis {main}.",
+      description:
+        "404 for a Files URL naming a branch other than the supported one (contains {branch} and {main})",
+    },
+    "ledgerEditor.browseMainFiles": {
+      message: "Parcourir les fichiers de {main}",
+      description:
+        "Link to the Files root on the supported branch (contains {main})",
+    },
     "ledgerEditor.files": {
       message: "Fichiers",
       description: "Ledger files management",

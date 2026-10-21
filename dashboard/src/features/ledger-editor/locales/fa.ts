@@ -9,6 +9,17 @@ const faLedgerEditor: Record<string, { message: string; description: string }> =
       message: "ایجاد فایل",
       description: "Button label to create file",
     },
+    "ledgerEditor.branchNotFound": {
+      message:
+        "شاخهٔ «{branch}» اینجا در دسترس نیست. فایل‌ها از {main} نمایش داده می‌شوند.",
+      description:
+        "404 for a Files URL naming a branch other than the supported one (contains {branch} and {main})",
+    },
+    "ledgerEditor.browseMainFiles": {
+      message: "مرور فایل‌ها در {main}",
+      description:
+        "Link to the Files root on the supported branch (contains {main})",
+    },
     "ledgerEditor.files": {
       message: "فایل‌ها",
       description: "Ledger files management",

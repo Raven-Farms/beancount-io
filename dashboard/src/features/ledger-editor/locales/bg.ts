@@ -9,6 +9,17 @@ const bgLedgerEditor: Record<string, { message: string; description: string }> =
       message: "Създаване на файл",
       description: "Button label to create file",
     },
+    "ledgerEditor.branchNotFound": {
+      message:
+        "Клонът „{branch}“ не е наличен тук. Файловете се показват от {main}.",
+      description:
+        "404 for a Files URL naming a branch other than the supported one (contains {branch} and {main})",
+    },
+    "ledgerEditor.browseMainFiles": {
+      message: "Разгледайте файловете в {main}",
+      description:
+        "Link to the Files root on the supported branch (contains {main})",
+    },
     "ledgerEditor.files": {
       message: "Файлове",
       description: "Ledger files management",

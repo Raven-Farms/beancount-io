@@ -9,6 +9,17 @@ const jaLedgerEditor: Record<string, { message: string; description: string }> =
       message: "ファイルを作成",
       description: "Button label to create file",
     },
+    "ledgerEditor.branchNotFound": {
+      message:
+        "ブランチ「{branch}」はここでは利用できません。ファイルは {main} から表示されます。",
+      description:
+        "404 for a Files URL naming a branch other than the supported one (contains {branch} and {main})",
+    },
+    "ledgerEditor.browseMainFiles": {
+      message: "{main} のファイルを表示",
+      description:
+        "Link to the Files root on the supported branch (contains {main})",
+    },
     "ledgerEditor.files": {
       message: "ファイル",
       description: "Ledger files management",

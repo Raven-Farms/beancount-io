@@ -9,6 +9,17 @@ const esLedgerEditor: Record<string, { message: string; description: string }> =
       message: "Crear Archivo",
       description: "Button label to create file",
     },
+    "ledgerEditor.branchNotFound": {
+      message:
+        "La rama «{branch}» no está disponible aquí. Los archivos se muestran desde {main}.",
+      description:
+        "404 for a Files URL naming a branch other than the supported one (contains {branch} and {main})",
+    },
+    "ledgerEditor.browseMainFiles": {
+      message: "Explorar archivos en {main}",
+      description:
+        "Link to the Files root on the supported branch (contains {main})",
+    },
     "ledgerEditor.files": {
       message: "Archivos",
       description: "Ledger files management",
