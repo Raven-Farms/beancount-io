@@ -8,7 +8,6 @@
 
 ## Inbox
 
-- [026](./026.md) — Transaction Filters raises a duplicate-key error when a reversed custom range shows its message
 - [027](./027.md) — At AX2, Budget card titles shrink to "Ex…ing" and "Ex…ries", so budgets can't be told apart
 - [028](./028.md) — Saving over an entry changed elsewhere shows "Ledger resource not found" instead of w4/045's Reload choice
 - [029](./029.md) — At AX2, New Transaction's posting accounts shrink to "Asse…cking" and "Ex…ries"
