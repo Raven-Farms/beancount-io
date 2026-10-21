@@ -5,7 +5,7 @@ import { useApolloClient, useReactiveVar } from "@apollo/client";
 import { sessionVar } from "@/common/vars";
 import { getServerUrl } from "@/common/vars/server-url";
 import { isOAuthCallbackUrl, openAppLinkTarget } from "./open-app-link";
-import { setPendingAppLink, takePendingAppLink } from "./pending-app-link";
+import { routeIncomingAppLink, takePendingAppLink } from "./pending-app-link";
 import { resolveAppLink, type AppLinkTarget } from "./resolve-app-link";
 import { canonicalizeIncomingAppLinkUrl } from "./rewrite-system-path";
 
@@ -59,12 +59,9 @@ export function useAppLinkHandler(): void {
       const target = resolveAppLink(candidate, { serverUrl: getServerUrl() });
       if (!target) return;
 
-      if (!sessionRef.current) {
-        setPendingAppLink(target, candidate);
-        return;
+      if (routeIncomingAppLink(target, candidate, !!sessionRef.current)) {
+        await open(target, candidate);
       }
-
-      await open(target, candidate);
     };
 
     void handleUrl(ExpoLinking.getLinkingURL());

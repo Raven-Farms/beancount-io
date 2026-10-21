@@ -5,6 +5,7 @@ import { defaultRuntimeServerUrl } from "@/common/server-url";
 import { oauthTokenManager } from "@/common/oauth/oauth-token-manager";
 import { clearPendingAuthorization } from "@/common/oauth/pending-authorization-storage";
 import { clearGuestVisit } from "@/common/guest/guest-state";
+import { clearPendingAppLink } from "@/common/app-links/pending-app-link";
 import { clearCreateLedgerDraft } from "@/common/create-ledger-draft";
 import { invalidateAuthorization } from "@/common/oauth/authorization-context";
 import {
@@ -31,6 +32,8 @@ export async function clearServerScopedState(
 ): Promise<void> {
   clearGuestVisit();
   invalidateAuthorization();
+  // A link stashed for this account must not open for the next one (w21/083).
+  clearPendingAppLink();
   if (options.refreshAlreadyTerminal) {
     oauthTokenManager.invalidatePendingRefreshes();
   } else {

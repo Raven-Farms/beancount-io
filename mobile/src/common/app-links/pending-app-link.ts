@@ -52,3 +52,24 @@ export function takePendingAppLink(): PendingAppLink | null {
 export function clearPendingAppLink(): void {
   store().pending = null;
 }
+
+/**
+ * Where an incoming link goes. Signed out, it waits in the slot for sign-in.
+ * Signed in, it opens now, and the slot is cleared: `rewriteSystemPath`
+ * stashes every link it resolves, and a stash left behind replayed on the
+ * next sign-in, possibly as another account (w21/083).
+ *
+ * @returns Whether the caller should open the link now.
+ */
+export function routeIncomingAppLink(
+  target: AppLinkTarget,
+  sourceUrl: string,
+  signedIn: boolean,
+): boolean {
+  if (!signedIn) {
+    setPendingAppLink(target, sourceUrl);
+    return false;
+  }
+  clearPendingAppLink();
+  return true;
+}
