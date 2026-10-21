@@ -734,3 +734,67 @@ index 111..222 100644
     ).toEqual(["added", "removed", "modified"]);
   });
 });
+
+// w21/133: the file name came from the first `b/` in the header, so a path
+// under `lib/` or `web/` never matched, and header-looking content lines
+// went uncounted.
+describe("per-file counts the old parser missed", () => {
+  it("keys a file under a directory ending in b by its real path", () => {
+    const stats = parseFileStatsFromDiff(
+      [
+        "diff --git a/lib/x.bean b/lib/x.bean",
+        "--- a/lib/x.bean",
+        "+++ b/lib/x.bean",
+        "@@ -1 +1 @@",
+        "-old",
+        "+new",
+      ].join("\n"),
+    );
+    expect([...stats.keys()]).toEqual(["lib/x.bean"]);
+    expect(stats.get("lib/x.bean")).toMatchObject({
+      additions: 1,
+      deletions: 1,
+    });
+  });
+
+  it("counts a deleted --- line and an added ++ line", () => {
+    const stats = parseFileStatsFromDiff(
+      [
+        "diff --git a/README.md b/README.md",
+        "--- a/README.md",
+        "+++ b/README.md",
+        "@@ -1,2 +1,2 @@",
+        " Title",
+        "----",
+        "+++note",
+      ].join("\n"),
+    );
+    expect(stats.get("README.md")).toMatchObject({
+      additions: 1,
+      deletions: 1,
+    });
+  });
+
+  it("names both sides of a rename whose paths contain b/", () => {
+    const stats = parseFileStatsFromDiff(
+      [
+        "diff --git a/web/b/old.bean b/lib/b/new.bean",
+        "similarity index 90%",
+        "rename from web/b/old.bean",
+        "rename to lib/b/new.bean",
+        "--- a/web/b/old.bean",
+        "+++ b/lib/b/new.bean",
+        "@@ -1 +1 @@",
+        "-a",
+        "+b",
+      ].join("\n"),
+    );
+    expect([...stats.keys()]).toEqual(["lib/b/new.bean"]);
+    expect(stats.get("lib/b/new.bean")).toEqual({
+      additions: 1,
+      deletions: 1,
+      status: "renamed",
+      previousFilename: "web/b/old.bean",
+    });
+  });
+});
