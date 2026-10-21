@@ -356,7 +356,7 @@ export class LedgerWorkflow implements ILedgerWorkflow {
      * requestId-less creation works in consumers that do not wire Redis. */
     private readonly createIdempotencyStore?: Pick<
       CacheHelper,
-      "getStrict" | "setStrict"
+      "getStrict" | "setStrict" | "delStrict"
     >,
   ) {}
 
@@ -553,6 +553,9 @@ export class LedgerWorkflow implements ILedgerWorkflow {
           throw new ConflictError(
             "Ledger creation",
             "A creation with this requestId is still in progress",
+            {
+              hint: "Wait a few seconds and repeat the same call with the same requestId: once the first attempt finishes it returns that ledger, or that attempt's refusal. Send a new requestId only to start a separate creation.",
+            },
           );
         }
         await idempotency.store.setStrict(
@@ -562,22 +565,38 @@ export class LedgerWorkflow implements ILedgerWorkflow {
         );
       }
 
-      const { favaApiClient } =
-        await this.favaClientFactory.getApiContext(userId);
+      let ledger: LedgerData;
+      try {
+        const { favaApiClient } =
+          await this.favaClientFactory.getApiContext(userId);
 
-      // Tier enforcement + Fava ledger creation lives in the cross-service
-      // operation (still shared with the auth signup flow); the workflow owns
-      // the lock + client provisioning around it.
-      const ledger = await createLedgerOperation({
-        favaApiClient,
-        models: this.models,
-        postgresDb: this.db,
-        stripe: this.stripe,
-        config: this.config,
-        ledgerCreate,
-        userId,
-        platform,
-      });
+        // Tier enforcement + Fava ledger creation lives in the cross-service
+        // operation (still shared with the auth signup flow); the workflow owns
+        // the lock + client provisioning around it.
+        ledger = await createLedgerOperation({
+          favaApiClient,
+          models: this.models,
+          postgresDb: this.db,
+          stripe: this.stripe,
+          config: this.config,
+          ledgerCreate,
+          userId,
+          platform,
+        });
+      } catch (error) {
+        // A refused or failed attempt is finished, not in progress: release
+        // the requestId so the documented retry runs again and returns its
+        // real outcome instead of CONFLICT for 24 hours (w23/008). Still
+        // inside the per-user lock, so no concurrent attempt can slip in.
+        // The attempt's own error is what the caller needs; a failed release
+        // is logged by the strict store and must not replace it.
+        if (idempotency) {
+          await idempotency.store
+            .delStrict(idempotency.key)
+            .catch(() => undefined);
+        }
+        throw error;
+      }
 
       if (idempotency) {
         await idempotency.store.setStrict(

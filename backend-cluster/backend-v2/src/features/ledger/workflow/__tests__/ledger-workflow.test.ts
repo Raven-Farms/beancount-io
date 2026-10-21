@@ -441,11 +441,12 @@ describe("LedgerWorkflow", () => {
         const records = new Map<string, string>();
         const store = {
           getStrict: jest.fn(async (key: string) => records.get(key)),
-          setStrict: jest.fn(
-            async (key: string, value: string) => {
-              records.set(key, value);
-            },
-          ),
+          setStrict: jest.fn(async (key: string, value: string) => {
+            records.set(key, value);
+          }),
+          delStrict: jest.fn(async (key: string) => {
+            records.delete(key);
+          }),
         };
         const config = { gitea: { hostName: "gitea", httpPort: 3000 } };
         const withStore = new LedgerWorkflow(
@@ -467,9 +468,7 @@ describe("LedgerWorkflow", () => {
         mockFavaApiClient.ledgers.listUserLedgers.mockResolvedValue({
           data: { success: true, data: [] },
         });
-        mockFavaApiClient.ledgers.createLedger.mockResolvedValue(
-          createdLedger,
-        );
+        mockFavaApiClient.ledgers.createLedger.mockResolvedValue(createdLedger);
       });
 
       it("creates files from a setup specification", async () => {
@@ -533,9 +532,7 @@ describe("LedgerWorkflow", () => {
           input,
         });
         expect(second).toEqual(first);
-        expect(
-          mockFavaApiClient.ledgers.createLedger,
-        ).toHaveBeenCalledTimes(1);
+        expect(mockFavaApiClient.ledgers.createLedger).toHaveBeenCalledTimes(1);
       });
 
       it("refuses the same requestId with a different request", async () => {
@@ -550,9 +547,7 @@ describe("LedgerWorkflow", () => {
             input: { name: "other-ledger", requestId: "req-2" },
           }),
         ).rejects.toThrow("requestId");
-        expect(
-          mockFavaApiClient.ledgers.createLedger,
-        ).toHaveBeenCalledTimes(1);
+        expect(mockFavaApiClient.ledgers.createLedger).toHaveBeenCalledTimes(1);
       });
 
       it("reports in-progress for a repeated requestId whose first attempt has not finished", async () => {
@@ -574,6 +569,80 @@ describe("LedgerWorkflow", () => {
           withStore.createLedger({ identity: IDENTITY, input }),
         ).rejects.toThrow("still in progress");
         expect(mockFavaApiClient.ledgers.createLedger).not.toHaveBeenCalled();
+      });
+
+      // w23/008: a refused or failed attempt used to leave its record
+      // "in-progress" for 24 hours, so the retry answered CONFLICT forever.
+      it("lets the same requestId retry after the plan limit refused it", async () => {
+        const { withStore, records } = workflowWithStore();
+        const input = { name: "setup-ledger", requestId: "req-limit" };
+        // At the free plan's limit for the first attempt only.
+        mockFavaApiClient.ledgers.listUserLedgers.mockResolvedValueOnce({
+          data: {
+            success: true,
+            data: Array.from({ length: 50 }, (_, i) => ({ id: i })),
+          },
+        });
+        await expect(
+          withStore.createLedger({ identity: IDENTITY, input }),
+        ).rejects.toMatchObject({ category: "RESOURCE_LIMIT_REACHED" });
+        expect(mockFavaApiClient.ledgers.createLedger).not.toHaveBeenCalled();
+        expect(records.size).toBe(0);
+
+        const ledger = await withStore.createLedger({
+          identity: IDENTITY,
+          input,
+        });
+        expect(ledger).toBeDefined();
+        expect(mockFavaApiClient.ledgers.createLedger).toHaveBeenCalledTimes(1);
+        // The success is recorded, so a further repeat replays it.
+        await expect(
+          withStore.createLedger({ identity: IDENTITY, input }),
+        ).resolves.toEqual(ledger);
+        expect(mockFavaApiClient.ledgers.createLedger).toHaveBeenCalledTimes(1);
+      });
+
+      it("lets the same requestId retry after an upstream failure", async () => {
+        const { withStore, records } = workflowWithStore();
+        const input = { name: "setup-ledger", requestId: "req-outage" };
+        mockFavaApiClient.ledgers.createLedger.mockRejectedValueOnce(
+          new Error("upstream unavailable"),
+        );
+        await expect(
+          withStore.createLedger({ identity: IDENTITY, input }),
+        ).rejects.toThrow();
+        expect(records.size).toBe(0);
+        await expect(
+          withStore.createLedger({ identity: IDENTITY, input }),
+        ).resolves.toBeDefined();
+        expect(mockFavaApiClient.ledgers.createLedger).toHaveBeenCalledTimes(2);
+      });
+
+      it("tells an in-progress repeat how to retry, not how to edit an entry", async () => {
+        const { withStore, records } = workflowWithStore();
+        records.set(
+          `ledger:create_request:user:${USER_ID}:id:req-busy`,
+          JSON.stringify({
+            requestHash: JSON.stringify({
+              name: "setup-ledger",
+              description: null,
+              private: null,
+              template: null,
+              setup: null,
+            }),
+            status: "in-progress",
+          }),
+        );
+        const error = await withStore
+          .createLedger({
+            identity: IDENTITY,
+            input: { name: "setup-ledger", requestId: "req-busy" },
+          })
+          .catch((caught: unknown) => caught);
+        expect(error).toMatchObject({
+          category: "CONFLICT",
+          metadata: { hint: expect.stringContaining("same requestId") },
+        });
       });
 
       it("previews a setup without creating anything", async () => {

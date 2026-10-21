@@ -565,7 +565,9 @@ authority and apply changes immediately. Creation can be previewed first with
   Repeating a creation with the same `requestId` and the same inputs returns
   the ledger the first call created instead of creating a second one; reusing
   it with different inputs is a validation error, and a repeat while the first
-  call is still running is a conflict. A `requestId` is remembered for 24 hours.
+  call is still running is a conflict. A call that fails — a plan limit, a
+  refused name, an outage — releases its `requestId`, so repeating it runs the
+  creation again. A successful `requestId` is remembered for 24 hours.
 - `private` controls who can read the ledger. On create, an omitted or null
   value keeps it private; `false` publishes it, readable by anyone.
 - `updateLedger` accepts `ledger` and optional `name`, `description`, and `private`;

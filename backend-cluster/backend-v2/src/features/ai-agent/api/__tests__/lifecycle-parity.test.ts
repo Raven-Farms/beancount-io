@@ -270,6 +270,17 @@ async function fixture(caller = identity, appId?: string, rateLimited = false) {
       deleteByLedgerRepoId: deleteBankRows,
     },
   };
+  // The strict store creation idempotency records live in (ADR021).
+  const idempotencyRecords = new Map<string, unknown>();
+  const idempotencyStore = {
+    getStrict: async (key: string) => idempotencyRecords.get(key),
+    setStrict: async (key: string, value: unknown) => {
+      idempotencyRecords.set(key, value);
+    },
+    delStrict: async (key: string) => {
+      idempotencyRecords.delete(key);
+    },
+  };
   const workflow = new LedgerWorkflow(
     { getApiContext, getPublicApiClient } as never,
     {} as never,
@@ -280,6 +291,7 @@ async function fixture(caller = identity, appId?: string, rateLimited = false) {
     db as never,
     config,
     authorization,
+    idempotencyStore as never,
   );
   const services = {
     ledgerRepo: new LedgerRepoService(
@@ -325,6 +337,7 @@ async function fixture(caller = identity, appId?: string, rateLimited = false) {
   await Promise.all([client.connect(a), server.connect(b)]);
   return {
     records,
+    idempotencyRecords,
     events,
     bankRows: () => bankRows,
     create,
@@ -981,6 +994,34 @@ describe("ledger lifecycle through actual adapters and workflow", () => {
         ).toBe(true);
         expect(f.create).not.toHaveBeenCalled();
         expect(f.records.size).toBe(1);
+      } finally {
+        await f.close();
+      }
+    },
+  );
+  it.each(surfaces)(
+    "lets a refused creation retry with the same requestId via %s",
+    async (surface) => {
+      // w23/008: the refusal used to leave the requestId "in progress" for
+      // 24 hours, so the documented retry answered CONFLICT.
+      const f = await fixture();
+      const paid = await f.subscriptions();
+      f.subscriptions.mockResolvedValue([]);
+      const input = { name: "retried", requestId: "req-retry" };
+      try {
+        const refused = await f.call(surface, "create", input);
+        expect(refused.failed).toBe(true);
+        expect(refused.error?.code).toBe("RESOURCE_LIMIT_REACHED");
+        expect(f.idempotencyRecords.size).toBe(0);
+
+        f.subscriptions.mockResolvedValue(paid);
+        const created = await f.call(surface, "create", input);
+        expect(created.failed).toBe(false);
+        expect(created.data).toMatchObject({ fullName: "alice/retried" });
+        const replayed = await f.call(surface, "create", input);
+        expect(replayed.failed).toBe(false);
+        expect(replayed.data).toMatchObject({ fullName: "alice/retried" });
+        expect(f.create).toHaveBeenCalledTimes(1);
       } finally {
         await f.close();
       }
