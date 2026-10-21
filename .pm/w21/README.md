@@ -14,3 +14,4 @@
 - [041](./041.md) — Mobile Open Account rejects valid Hindi, decomposed-accent and titlecase names (mobile counterpart of w4/279)
 - [042](./042.md) — Mobile file editor silently corrupts non-UTF-8 files on save: "Café" becomes "Caf\uFFFD" (mobile counterpart of w4/276)
 - [043](./043.md) — Mobile shows dates in years 0001–0099 as 1901–1999 (mobile counterpart of w4/277, w4/283 and w4/m38)
+- [044](./044.md) — New Transaction's Done stays live while the save is in flight, so a second tap posts the entry twice
