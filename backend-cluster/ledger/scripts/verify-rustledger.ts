@@ -1697,6 +1697,61 @@ async function main(): Promise<void> {
     "a position cell keeps its lot date and label (w23/015)",
   );
 
+  // w23/016: documented beanquery forms this engine refuses, and the spellings
+  // the refusals name instead. When a bump accepts the upstream form, the
+  // first check of a pair fails and its ENGINE_GAPS entry can go.
+  const gapFiles: FileMap = {
+    "main.bean": [
+      "2024-01-01 open Assets:Cash",
+      "2024-01-01 open Income:Salary",
+      '2024-01-02 * "pay"',
+      "  Assets:Cash  100 USD",
+      "  Income:Salary",
+      "",
+    ].join("\n"),
+  };
+  const gap = (query: string) =>
+    queryLedgerFilesResult(gapFiles, "main.bean", query);
+  const negInventory = await gap(
+    "SELECT account, neg(sum(position)) WHERE account ~ '^Income' GROUP BY account",
+  );
+  assert(
+    negInventory.errors[0]?.message.includes("NEG expects a number or amount") ===
+      true,
+    "engine still refuses neg(inventory) (w23/016)",
+  );
+  const negUnits = await gap(
+    "SELECT account, sum(neg(units(position))) WHERE account ~ '^Income' GROUP BY account",
+  );
+  assert(
+    negUnits.errors.length === 0 && negUnits.rows.length === 1,
+    "sum(neg(units(position))) runs, as the neg refusal says",
+  );
+  const negNumber = await gap(
+    "SELECT currency, neg(sum(number)) WHERE account ~ '^Income' GROUP BY currency",
+  );
+  assert(
+    negNumber.errors.length === 0 &&
+      JSON.stringify(negNumber.rows) === JSON.stringify([["USD", "100"]]),
+    "neg(sum(number)) grouped by currency runs, as the neg refusal says",
+  );
+  const filterPosition = await gap(
+    "SELECT account, sum(filter_currency(position, 'USD')) GROUP BY account",
+  );
+  assert(
+    filterPosition.errors[0]?.message.includes(
+      "FILTER_CURRENCY expects (inventory, string)",
+    ) === true,
+    "engine still refuses filter_currency(position, ...) (w23/016)",
+  );
+  const filterInventory = await gap(
+    "SELECT account, filter_currency(sum(position), 'USD') GROUP BY account",
+  );
+  assert(
+    filterInventory.errors.length === 0 && filterInventory.rows.length > 0,
+    "filter_currency(sum(position), 'USD') runs, as the refusal says",
+  );
+
   console.log("\nAll rustledger engine checks passed.");
 }
 
