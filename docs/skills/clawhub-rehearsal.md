@@ -240,3 +240,16 @@ The official stable [v0.22.4](https://github.com/NousResearch/hermes-agent/relea
 A fresh native `hermes skills install clawhub/@puncsky/beancount-init --yes` against the unmodified official archive and isolated profile exits 1: DANGEROUS/community, `skills-guard-v10`, 18 findings (2 critical, 2 medium, 14 low). Public init is 1.0.2; its changelog names the suite 0.3.3 synchronization. No force is used and nothing is installed. This remains w6/039's host-policy blocker, independently of other skills' supported installations and first queries.
 
 The archive lacks `.git`, so the CLI prints `vunknown`. Provenance comes from the exact tag, archive SHA-256 `147a567a05402c2832ca12d7e0a33f48fc0e7f627018687cbae1f333dafff0c2`, verified lockfile and Python 3.14.3 runtime; no native version string is fabricated. The fresh public-bundle scan digest is `sha256:d2b170d1b013be7cacdbde1160d82be73f9d5745593e0b45cca92178d3069f15`, without a claim that it equals a later local candidate. Raw logs and rejection attestation remain in ignored `skills/tmp/w6-evening-hermes-20261021/`; restored runtime/source, task profiles and caches are removed. No model login, upstream contact or scanner bypass occurs.
+
+## Hermes v0.22.4 search control — 2026-10-21 UTC
+
+Fresh native search against the same pinned stable archive and anonymous profile at 19:24 UTC retains w6/040's source-filter gap:
+
+| Control | Exit | Results | Published suite skills |
+| --- | --- | --- | --- |
+| `hermes skills search beancount` | 0 | 14 | 11/11 |
+| `hermes skills search beancount --source all --json --limit 30` | 0 | 14 | 11/11 |
+| `hermes skills search beancount --source clawhub --json --limit 30` | 0 | 0 | 0/11 |
+| Direct anonymous ClawHub search | HTTP 200 | 14 | 11/11 |
+
+The filtered call takes 30.410 seconds and emits no stderr. The [router](https://github.com/NousResearch/hermes-agent/blob/4d04303818b61bf3aa09278af48356315515965b/tools/skills_hub_search.py) and [catalog-first adapter](https://github.com/NousResearch/hermes-agent/blob/4d04303818b61bf3aa09278af48356315515965b/tools/skills_hub_clawhub.py) are unchanged from v0.22.2; the exact catalog/transport cause remains unproven. The newer release does not establish a fix. No identical retry, filtered-result installation, cache patch or unchanged-content publication follows. Default search and explicit publisher-qualified installs remain the supported paths. Source/version/cleanup limits match the init control above; raw search logs and hashes are retained in the same ignored evidence directory.
