@@ -160,3 +160,5 @@
 - [287](./287.md) — VoiceOver skips Settings row descriptions ("Deleting account…") and reads Version as dimmed
 - [288](./288.md) — Username + name save can say "Failed to save" after the username already changed
 - [289](./289.md) — "Photo from Gravatar" shown under the initials placeholder when there's no Gravatar
+- [290](./290.md) — BTC/ETH budgets rounded to cents with a $0.005 tolerance: a 33% overspend reads "On target"
+- [291](./291.md) — Cost-currency-priced holding still "at cost (no price)" on Accounts root/detail (124 follow-up)
