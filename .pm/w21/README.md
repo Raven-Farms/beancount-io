@@ -29,3 +29,6 @@
 - [079](./079.md) — Entry writes leave the Files tab's file sha stale, so deleting that file fails until a refresh
 - [080](./080.md) — A failed first load on Reports, Accounts and Home's budget panel reads as \$0.00 or "No accounts" (siblings of w4/067)
 - [081](./081.md) — A failed pull to refresh wipes the loaded Transactions list and account journal
+- [082](./082.md) — The Narration input never shows suggestions (the multiline layout dropped the list)
+- [083](./083.md) — A ledger link opened while signed in stays stashed and replays on the next sign-in
+- [084](./084.md) — Returning to the app resets a guest's example ledger: navigation and filters are thrown away
