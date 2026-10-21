@@ -1,4 +1,6 @@
-import { memo, useCallback, useMemo, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useReactiveVar } from "@apollo/client";
+import { revealAccountVar } from "@/common/vars/reveal-account";
 import { useScrollToTop } from "expo-router";
 import {
   FlatList,
@@ -33,7 +35,12 @@ import {
   CATEGORY_SIGN,
   type AccountCategory,
 } from "@/components/account-list/select-account-list";
-import { flattenRows, rowDisclosure, type TableRow } from "./flatten-rows";
+import {
+  flattenRows,
+  revealAccountOverrides,
+  rowDisclosure,
+  type TableRow,
+} from "./flatten-rows";
 import { LEADING_TEXT_ALIGN, directionalIcon } from "@/common/rtl";
 
 /**
@@ -478,6 +485,24 @@ export function AccountTable({
     [categories, overrides],
   );
 
+  // A just-opened account: open its ancestors, then scroll to it once the
+  // refreshed tree holds its row (w21/175).
+  const reveal = useReactiveVar(revealAccountVar);
+  useEffect(() => {
+    if (!reveal) return;
+    const opened = revealAccountOverrides(categories, reveal);
+    if (!opened) return;
+    const pending = Object.keys(opened).filter((key) => !overrides[key]);
+    if (pending.length > 0) {
+      setOverrides((prev) => ({ ...prev, ...opened }));
+      return;
+    }
+    const index = rows.findIndex((row) => row.account === reveal && !row.own);
+    if (index < 0) return;
+    revealAccountVar(null);
+    listRef.current?.scrollToIndex({ index, viewPosition: 0.5 });
+  }, [reveal, categories, overrides, rows]);
+
   const onToggle = useCallback((row: TableRow) => {
     setOverrides((prev) => ({ ...prev, [row.key]: !row.expanded }));
   }, []);
@@ -515,6 +540,16 @@ export function AccountTable({
       data={rows}
       renderItem={renderItem}
       keyExtractor={(row) => row.key}
+      // A row not yet measured: land near it, then try again once laid out.
+      onScrollToIndexFailed={({ index, averageItemLength }) => {
+        listRef.current?.scrollToOffset({
+          offset: index * averageItemLength,
+        });
+        setTimeout(
+          () => listRef.current?.scrollToIndex({ index, viewPosition: 0.5 }),
+          100,
+        );
+      }}
       ListHeaderComponent={
         <View style={styles.columnHeader}>
           <Text style={styles.columnLabel}>{t("account")}</Text>

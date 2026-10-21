@@ -55,6 +55,7 @@ import { useOpenAccount } from "./use-open-account";
 import { getFormatDate } from "@/common/format-util";
 import { initialOpenDate } from "./open-date";
 import { LEADING_TEXT_ALIGN, directionalIcon } from "@/common/rtl";
+import { revealAccountVar } from "@/common/vars/reveal-account";
 
 const VALIDATION_KEYS: Record<AccountNameValidationReason, string> = {
   invalidRoot: "openAccountInvalidRoot",
@@ -328,6 +329,8 @@ export function OpenAccountScreenComponent(): JSX.Element {
 
     if (result.ok) {
       setSaved(true);
+      // Accounts opens its ancestors and scrolls to it (w21/175).
+      revealAccountVar(account);
       // Pop only this screen, then hand the account to whatever registered via
       // `pushOpenAccount` — the picker's callback delivers the pick and pops
       // its own frame, so no screen ever pops a frame it doesn't own. A plain

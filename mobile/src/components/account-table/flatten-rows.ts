@@ -67,6 +67,31 @@ function shareOfSiblings(value: number, siblings: AccountNode[]): number {
 }
 
 /**
+ * The expand overrides that show `account`: its category and every ancestor
+ * row open. Rows are keyed by account (a folded chain by its deepest one), so
+ * opening each path prefix opens whichever of them are rows. Null when no
+ * category holds it (w21/175).
+ */
+export function revealAccountOverrides(
+  categories: readonly AccountCategory[],
+  account: string,
+): Record<string, true> | null {
+  const category = categories.find(
+    (candidate) =>
+      candidate.account !== "" &&
+      (account === candidate.account ||
+        account.startsWith(`${candidate.account}:`)),
+  );
+  if (!category) return null;
+  const overrides: Record<string, true> = { [category.key]: true };
+  const parts = account.split(":");
+  for (let length = 2; length < parts.length; length++) {
+    overrides[parts.slice(0, length).join(":")] = true;
+  }
+  return overrides;
+}
+
+/**
  * Flatten the category trees into the visible rows a `FlatList` renders, honoring
  * per-row expand/collapse. `overrides` holds the rows the user has toggled; rows
  * it doesn't mention fall back to the defaults above.
