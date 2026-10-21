@@ -151,3 +151,6 @@
 - [201](./201.md) — Missing file: GraphQL returns null, REST/MCP NOT_FOUND; directory path differs too
 - [202](./202.md) — Default conversion: GraphQL USD vs REST/MCP operating currency (trial balance, account report, interval totals)
 - [203](./203.md) — createLedger: title/requestId limits only on REST/MCP; empty requestId disables idempotency on GraphQL
+- [204](./204.md) — Receipt "Upload failed. Please try again." has no retry; Retake discards the photo
+- [205](./205.md) — Receipt upload can't be cancelled on iOS; 60 s whole-transfer limit fails slow uploads of full-res photos
+- [206](./206.md) — Refund/return receipts are always prefilled as a purchase
