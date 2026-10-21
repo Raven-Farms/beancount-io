@@ -121,3 +121,5 @@
 - [171](./171.md) — After a price rise, Recurring "typical amount" keeps the old price with no "~"
 - [172](./172.md) — Brand matcher treats accented letters as word boundaries ("Café Amazonía" → Amazon logo)
 - [173](./173.md) — Transfer-only payees never detected; marking Recurring says "Not enough history"
+- [174](./174.md) — A parent's own postings never appear in the Accounts tree; children don't add up to it
+- [175](./175.md) — An account opened under a collapsed parent is invisible after Done
