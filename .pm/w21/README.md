@@ -163,3 +163,6 @@
 - [302](./302.md) — A negative Expenses budget is stored as an income target: always red, 0% used
 - [303](./303.md) — Update Budget can save an income target with the wrong sign while ledger options load
 - [304](./304.md) — Budgets on Liabilities/Assets get favourability backwards (owner decision)
+- [305](./305.md) — VoiceOver can't tell Transactions filters are on; account ✕ announced as a second "Reset"
+- [306](./306.md) — All three status chips selected counts as an active filter though it filters nothing
+- [307](./307.md) — A Custom filter ending 9999-12-31 passes validation but breaks the journal load
