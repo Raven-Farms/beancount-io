@@ -162,3 +162,7 @@
 - [283](./283.md) — Android: granting camera in Settings leaves "Camera access is needed" until reopen
 - [284](./284.md) — Receipt preview/upload/error/reveal states are silent to VoiceOver
 - [285](./285.md) — A non-ISO receipt date goes straight into New Transaction's date
+- [286](./286.md) — Help Center always opens the English page regardless of app language
+- [287](./287.md) — VoiceOver skips Settings row descriptions ("Deleting account…") and reads Version as dimmed
+- [288](./288.md) — Username + name save can say "Failed to save" after the username already changed
+- [289](./289.md) — "Photo from Gravatar" shown under the initials placeholder when there's no Gravatar
