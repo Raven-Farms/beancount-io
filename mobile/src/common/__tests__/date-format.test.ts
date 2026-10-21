@@ -53,6 +53,35 @@ describe("formatFeedDate", () => {
     expect(formatFeedDate("2026-08-17T12:00:00Z", "en")).toBe("Aug 17, 2026");
   });
 
+  // w21/147: a date-only post arrives as midnight UTC and read a day early
+  // west of UTC.
+  it("keeps a date-only post on its day in every zone", () => {
+    const previous = process.env.TZ;
+    try {
+      for (const zone of [
+        "America/Los_Angeles",
+        "Pacific/Honolulu",
+        "UTC",
+        "Asia/Tokyo",
+      ]) {
+        process.env.TZ = zone;
+        expect(
+          formatFeedDate("2026-10-21T00:00:00.000Z", "en", {
+            calendarDay: true,
+          }),
+        ).toBe("Oct 21, 2026");
+      }
+      // An instant still reads in the device's zone.
+      process.env.TZ = "America/Los_Angeles";
+      expect(formatFeedDate("2026-10-21T00:00:00.000Z", "en")).toBe(
+        "Oct 20, 2026",
+      );
+    } finally {
+      if (previous === undefined) delete process.env.TZ;
+      else process.env.TZ = previous;
+    }
+  });
+
   it("returns empty for anything unparseable", () => {
     // A feed row with no date reads fine; one saying "Invalid Date" does not.
     expect(formatFeedDate("nonsense", "en")).toBe("");

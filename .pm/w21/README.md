@@ -14,7 +14,6 @@
 
 - [064](./blocked/064.md) — A token refresh whose response is lost signs the user out on the next refresh (rotated token replayed → grant revoked) — **blocked:** needs an owner decision (ADR) on a refresh-token reuse grace window
 - [065](./blocked/065.md) — One early-year entry (e.g. 0050) makes the balance sheet 23,718 monthly points (3 MB) and the app stalls — **blocked:** needs an approach decision (per-pill fetch vs server downsample) and a simulator profile of the stall
-- [147](./147.md) — Latest Updates shows Blog/Release dates one day early west of UTC
 - [148](./148.md) — Budget "Last year" uses the server's calendar, "This year" the device's — they disagree around New Year
 - [149](./149.md) — New Transaction doesn't seed a payee's usual accounts when the name has punctuation (`Dupar's`, `Mr. Marcel`, `Chase:Slate`)
 - [150](./150.md) — iOS swipe-back gets past the unsaved-changes guard (editor, Edit/New Transaction); Cancel leaves the stack broken

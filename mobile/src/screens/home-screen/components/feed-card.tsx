@@ -19,6 +19,7 @@ import { FeedSource } from "@/generated-graphql/types";
 import { formatFeedDate } from "@/common/date-format";
 import {
   feedQueryVariables,
+  feedDateIsCalendarDay,
   feedRowAction,
   feedSourceLabelKey,
 } from "./feed-logic";
@@ -87,7 +88,9 @@ function FeedRow({ title, link, publishedAt, source, isFirst }: FeedRowProps) {
   };
 
   const sourceLabel = t(feedSourceLabelKey(source));
-  const date = formatFeedDate(publishedAt, locale);
+  const date = formatFeedDate(publishedAt, locale, {
+    calendarDay: feedDateIsCalendarDay(source),
+  });
   const metaText = date ? `${sourceLabel} · ${date}` : sourceLabel;
 
   return (

@@ -113,11 +113,18 @@ export function formatLedgerMonthDay(isoDate: string, locale: string): string {
 /**
  * A timestamp in short form — "Aug 17, 2026" — for feed items, which carry a
  * real instant rather than a ledger day and so are shown in the device's zone.
+ * `calendarDay` is for a date-only post sent as midnight UTC: read in the
+ * device's zone it fell on the day before anywhere west of UTC (w21/147), so
+ * its UTC day is shown.
  *
  * Returns an empty string when unparseable: a feed row without a date reads
  * fine, and one saying "Invalid Date" does not.
  */
-export function formatFeedDate(publishedAt: unknown, locale: string): string {
+export function formatFeedDate(
+  publishedAt: unknown,
+  locale: string,
+  options: { calendarDay?: boolean } = {},
+): string {
   try {
     // Guarded before `new Date`, which reads `null` as the epoch and would
     // date every feed item with a missing timestamp to 1 Jan 1970.
@@ -132,6 +139,7 @@ export function formatFeedDate(publishedAt: unknown, locale: string): string {
       month: "short",
       day: "numeric",
       year: "numeric",
+      ...(options.calendarDay ? { timeZone: "UTC" } : {}),
     });
   } catch {
     return "";

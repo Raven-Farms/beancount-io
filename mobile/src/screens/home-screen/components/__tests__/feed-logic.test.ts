@@ -2,6 +2,7 @@ import { FeedSource } from "../../../../generated-graphql/types";
 import fs from "fs";
 import path from "path";
 import {
+  feedDateIsCalendarDay,
   feedQueryVariables,
   feedRowAction,
   feedSourceLabelKey,
@@ -88,5 +89,23 @@ describe("the feed row", () => {
     expect(card.includes("feedRowAction(link, getServerUrl())")).toBe(true);
     expect(card.includes('navigation: "push"')).toBe(true);
     expect(card.includes("disabled={!action}")).toBe(true);
+  });
+});
+
+describe("feedDateIsCalendarDay", () => {
+  it("reads blog and release dates as days, ledger activity as instants", () => {
+    expect(feedDateIsCalendarDay(FeedSource.Blog)).toBe(true);
+    expect(feedDateIsCalendarDay(FeedSource.Changelog)).toBe(true);
+    expect(feedDateIsCalendarDay(FeedSource.LedgerRss)).toBe(false);
+  });
+
+  it("is what the row formats its date with", () => {
+    const card = fs.readFileSync(
+      path.join(__dirname, "..", "feed-card.tsx"),
+      "utf8",
+    );
+    expect(card.includes("calendarDay: feedDateIsCalendarDay(source),")).toBe(
+      true,
+    );
   });
 });

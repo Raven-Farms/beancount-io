@@ -55,3 +55,12 @@ export function feedRowAction(
   const target = resolveAppLink(sourceUrl, { serverUrl });
   return target ? { kind: "ledger", target, sourceUrl } : null;
 }
+
+/**
+ * Whether a row's date is a calendar day rather than an instant. Blog and
+ * release posts are date-only and arrive as midnight UTC; ledger activity
+ * is a real commit time, read in the device's zone (w21/147).
+ */
+export function feedDateIsCalendarDay(source: FeedSource): boolean {
+  return source !== FeedSource.LedgerRss;
+}
