@@ -296,7 +296,7 @@ export const ca: Translations = {
     "Quan afegeixis transaccions, apareixeran aquí.",
   transactionsNoSearchResults:
     "Cap transacció coincideix amb la cerca o els filtres.",
-  transactionsLoadError: "No s'han pogut carregar les transaccions: ",
+  transactionsLoadError: "No s'han pogut carregar les transaccions",
   // transactions filter modal
   filters: "Filtres",
   filterStatus: "Estat",
@@ -349,7 +349,7 @@ export const ca: Translations = {
     "Aquest comerç no està disponible al llibre seleccionat.",
   commitDetailUnavailable:
     "Aquest canvi no està disponible al llibre seleccionat.",
-  journalLoadError: "Error en carregar el diari: ",
+  journalLoadError: "Error en carregar el diari",
   // entry context (transactions screen)
   journalError: "Error",
   journalNoData: "No hi ha dades de context d'entrada disponibles",

@@ -95,3 +95,20 @@ describe("Reports and Accounts", () => {
     ).toBe(true);
   });
 });
+
+// w21/081: account detail blanked its loaded journal on a failed refresh.
+describe("account detail after a failed refresh", () => {
+  it("keeps the journal rows and shows the stale banner", () => {
+    const source = read(
+      "screens",
+      "account-detail-screen",
+      "account-detail-screen.tsx",
+    );
+    expect(source.includes("sections={isInitialLoading ? [] : sections}")).toBe(
+      true,
+    );
+    expect(source.includes("{ data: journalData, error: journalError },")).toBe(
+      true,
+    );
+  });
+});

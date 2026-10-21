@@ -485,3 +485,25 @@ describe("Home holdings sheet", () => {
     expect(sheetAccess()).toBe(false);
   });
 });
+
+// w21/081: a failed pull to refresh replaced the loaded list with the raw
+// Apollo message.
+describe("Transactions after a failed refresh", () => {
+  it("keeps the rows under the stale banner", () => {
+    journal.data!.getLedgerJournal = { data: [transaction], total: 1 };
+    journal.error = new Error("Network request failed");
+    const tree = render(TransactionsScreen);
+    expect(find(tree, "EntryRow").length).toBe(1);
+    expect(find(tree, "StaleDataBanner").length).toBe(1);
+    expect(text(tree).includes("transactionsLoadError")).toBe(false);
+    expect(text(tree).includes("Network request failed")).toBe(false);
+  });
+
+  it("still shows the failure with nothing loaded, without the raw error", () => {
+    journal = { loading: false, error: new Error("Network request failed") };
+    const tree = render(TransactionsScreen);
+    expect(find(tree, "EntryRow").length).toBe(0);
+    expect(text(tree).includes("transactionsLoadError")).toBe(true);
+    expect(text(tree).includes("Network request failed")).toBe(false);
+  });
+});

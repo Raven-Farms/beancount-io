@@ -289,7 +289,7 @@ export const bg: Translations = {
     "Щом добавите транзакции, те ще се появят тук.",
   transactionsNoSearchResults:
     "Няма транзакции, отговарящи на търсенето или филтрите.",
-  transactionsLoadError: "Транзакциите не бяха заредени: ",
+  transactionsLoadError: "Транзакциите не бяха заредени",
   // transactions filter modal
   filters: "Филтри",
   filterStatus: "Състояние",
@@ -340,7 +340,7 @@ export const bg: Translations = {
   transactionErrorOpenFile: "Отвори в редактора на файлове",
   merchantDetailUnavailable: "Този търговец не е наличен в избраната книга.",
   commitDetailUnavailable: "Тази промяна не е налична в избраната книга.",
-  journalLoadError: "Неуспешно зареждане на журнала: ",
+  journalLoadError: "Неуспешно зареждане на журнала",
   // entry context (transactions screen)
   journalError: "Грешка",
   journalNoData: "Няма налични данни за контекст на запис",

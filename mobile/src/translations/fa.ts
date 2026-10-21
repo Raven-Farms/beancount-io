@@ -286,7 +286,7 @@ export const fa: Translations = {
     "به‌محض افزودن تراکنش‌ها، اینجا نمایش داده می‌شوند.",
   transactionsNoSearchResults:
     "هیچ تراکنشی با جست‌وجو یا فیلترهای شما مطابقت ندارد.",
-  transactionsLoadError: "بارگذاری تراکنش‌ها ناموفق بود: ",
+  transactionsLoadError: "بارگذاری تراکنش‌ها ناموفق بود",
   // transactions filter modal
   filters: "فیلترها",
   filterStatus: "وضعیت",
@@ -334,7 +334,7 @@ export const fa: Translations = {
   transactionErrorOpenFile: "باز کردن در ویرایشگر فایل",
   merchantDetailUnavailable: "این فروشنده در دفتر کل انتخاب‌شده موجود نیست.",
   commitDetailUnavailable: "این تغییر در دفتر کل انتخاب‌شده موجود نیست.",
-  journalLoadError: "بارگذاری روزنامه ناموفق بود: ",
+  journalLoadError: "بارگذاری روزنامه ناموفق بود",
   // entry context (transactions screen)
   journalError: "خطا", // TODO: needs native speaker review
   journalNoData: "داده‌های زمینه ورودی در دسترس نیست", // TODO: needs native speaker review

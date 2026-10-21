@@ -260,7 +260,7 @@ export const zh: Translations = {
   transactionsWelcomeInstruction3: "导入现有会计数据",
   transactionsWelcomeInstructionFinal: "添加交易后，它们会显示在这里。",
   transactionsNoSearchResults: "没有符合搜索或筛选条件的交易。",
-  transactionsLoadError: "加载交易记录失败：",
+  transactionsLoadError: "加载交易记录失败",
   // transactions filter modal
   filters: "筛选",
   filterStatus: "状态",
@@ -305,7 +305,7 @@ export const zh: Translations = {
   transactionErrorOpenFile: "在文件编辑器中打开",
   merchantDetailUnavailable: "所选账本中没有这个商家。",
   commitDetailUnavailable: "所选账本中没有这项更改。",
-  journalLoadError: "加载日记账失败：",
+  journalLoadError: "加载日记账失败",
   // entry context (transactions screen)
   journalError: "错误",
   journalNoData: "没有可用的条目上下文数据",

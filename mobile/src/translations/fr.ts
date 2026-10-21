@@ -295,7 +295,7 @@ export const fr: Translations = {
     "Dès que vous ajoutez des transactions, elles apparaissent ici.",
   transactionsNoSearchResults:
     "Aucune transaction ne correspond à votre recherche ou à vos filtres.",
-  transactionsLoadError: "Échec du chargement des transactions : ",
+  transactionsLoadError: "Échec du chargement des transactions",
   // transactions filter modal
   filters: "Filtres",
   filterStatus: "Statut",
@@ -349,7 +349,7 @@ export const fr: Translations = {
     "Ce marchand n'est pas disponible dans le grand livre sélectionné.",
   commitDetailUnavailable:
     "Cette modification n'est pas disponible dans le grand livre sélectionné.",
-  journalLoadError: "Échec du chargement du journal : ",
+  journalLoadError: "Échec du chargement du journal",
   // entry context (transactions screen)
   journalError: "Erreur",
   journalNoData: "Aucune donnée de contexte d'entrée disponible",

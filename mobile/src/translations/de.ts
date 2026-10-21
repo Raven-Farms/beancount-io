@@ -294,7 +294,7 @@ export const de: Translations = {
     "Sobald Sie Transaktionen hinzufügen, erscheinen sie hier.",
   transactionsNoSearchResults:
     "Keine Transaktionen entsprechen Ihrer Suche oder Ihren Filtern.",
-  transactionsLoadError: "Transaktionen konnten nicht geladen werden: ",
+  transactionsLoadError: "Transaktionen konnten nicht geladen werden",
   // transactions filter modal
   filters: "Filter",
   filterStatus: "Status",
@@ -350,7 +350,7 @@ export const de: Translations = {
     "Dieser Händler ist im ausgewählten Hauptbuch nicht verfügbar.",
   commitDetailUnavailable:
     "Diese Änderung ist im ausgewählten Hauptbuch nicht verfügbar.",
-  journalLoadError: "Fehler beim Laden des Journals: ",
+  journalLoadError: "Fehler beim Laden des Journals",
   // entry context (transactions screen)
   journalError: "Fehler",
   journalNoData: "Keine Eintragskontextdaten verfügbar",

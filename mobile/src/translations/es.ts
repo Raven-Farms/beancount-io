@@ -294,7 +294,7 @@ export const es: Translations = {
     "En cuanto añadas transacciones, aparecerán aquí.",
   transactionsNoSearchResults:
     "Ninguna transacción coincide con tu búsqueda o tus filtros.",
-  transactionsLoadError: "Error al cargar las transacciones: ",
+  transactionsLoadError: "Error al cargar las transacciones",
   // transactions filter modal
   filters: "Filtros",
   filterStatus: "Estado",
@@ -348,7 +348,7 @@ export const es: Translations = {
     "Este comercio no está disponible en el libro seleccionado.",
   commitDetailUnavailable:
     "Este cambio no está disponible en el libro seleccionado.",
-  journalLoadError: "Error al cargar el diario: ",
+  journalLoadError: "Error al cargar el diario",
   // entry context (transactions screen)
   journalError: "Error",
   journalNoData: "No hay datos de contexto de entrada disponibles",

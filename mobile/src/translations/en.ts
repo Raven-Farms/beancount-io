@@ -281,7 +281,7 @@ export const en = {
   transactionsWelcomeInstructionFinal:
     "Once you add some transactions, they'll appear here.",
   transactionsNoSearchResults: "No transactions match your search or filters.",
-  transactionsLoadError: "Failed to load transactions: ",
+  transactionsLoadError: "Failed to load transactions",
   // transactions filter modal
   filters: "Filters",
   filterStatus: "Status",
@@ -333,7 +333,7 @@ export const en = {
     "This merchant isn't available in the selected ledger.",
   commitDetailUnavailable:
     "This change isn't available in the selected ledger.",
-  journalLoadError: "Failed to load journal: ",
+  journalLoadError: "Failed to load journal",
   // entry context (transactions screen)
   journalError: "Error",
   journalNoData: "No entry context data available",

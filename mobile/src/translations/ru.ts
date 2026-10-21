@@ -299,7 +299,7 @@ export const ru: Translations = {
     "Как только вы добавите транзакции, они появятся здесь.",
   transactionsNoSearchResults:
     "Нет транзакций, подходящих под поиск или фильтры.",
-  transactionsLoadError: "Не удалось загрузить транзакции: ",
+  transactionsLoadError: "Не удалось загрузить транзакции",
   // transactions filter modal
   filters: "Фильтры",
   filterStatus: "Статус",
@@ -347,7 +347,7 @@ export const ru: Translations = {
   transactionErrorOpenFile: "Открыть в редакторе файлов",
   merchantDetailUnavailable: "Этот продавец недоступен в выбранной книге.",
   commitDetailUnavailable: "Это изменение недоступно в выбранной книге.",
-  journalLoadError: "Ошибка загрузки журнала: ",
+  journalLoadError: "Ошибка загрузки журнала",
   // entry context (transactions screen)
   journalError: "Ошибка",
   journalNoData: "Данные контекста записи недоступны",

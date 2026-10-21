@@ -298,7 +298,7 @@ export const sk: Translations = {
     "Len čo pridáte transakcie, objavia sa tu.",
   transactionsNoSearchResults:
     "Vášmu hľadaniu ani filtrom nezodpovedá žiadna transakcia.",
-  transactionsLoadError: "Načítanie transakcií zlyhalo: ",
+  transactionsLoadError: "Načítanie transakcií zlyhalo",
   // transactions filter modal
   filters: "Filtre",
   filterStatus: "Stav",
@@ -349,7 +349,7 @@ export const sk: Translations = {
   merchantDetailUnavailable:
     "Tento obchodník nie je vo zvolenej knihe dostupný.",
   commitDetailUnavailable: "Táto zmena nie je vo zvolenej knihe dostupná.",
-  journalLoadError: "Načítanie denníka zlyhalo: ",
+  journalLoadError: "Načítanie denníka zlyhalo",
   // entry context (transactions screen)
   journalError: "Chyba",
   journalNoData: "Údaje kontextu záznamu nie sú k dispozícii",

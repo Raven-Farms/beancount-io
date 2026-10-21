@@ -288,7 +288,7 @@ export const nl: Translations = {
     "Zodra je transacties toevoegt, verschijnen ze hier.",
   transactionsNoSearchResults:
     "Geen transacties komen overeen met je zoekopdracht of filters.",
-  transactionsLoadError: "Laden van transacties mislukt: ",
+  transactionsLoadError: "Laden van transacties mislukt",
   // transactions filter modal
   filters: "Filters",
   filterStatus: "Status",
@@ -340,7 +340,7 @@ export const nl: Translations = {
     "Deze handelaar is niet beschikbaar in het geselecteerde grootboek.",
   commitDetailUnavailable:
     "Deze wijziging is niet beschikbaar in het geselecteerde grootboek.",
-  journalLoadError: "Laden van journaal mislukt: ",
+  journalLoadError: "Laden van journaal mislukt",
   // entry context (transactions screen)
   journalError: "Fout",
   journalNoData: "Geen contextgegevens van vermelding beschikbaar",

@@ -297,7 +297,7 @@ export const uk: Translations = {
     "Щойно ви додасте транзакції, вони з'являться тут.",
   transactionsNoSearchResults:
     "Немає транзакцій, що відповідають пошуку або фільтрам.",
-  transactionsLoadError: "Не вдалося завантажити транзакції: ",
+  transactionsLoadError: "Не вдалося завантажити транзакції",
   // transactions filter modal
   filters: "Фільтри",
   filterStatus: "Статус",
@@ -345,7 +345,7 @@ export const uk: Translations = {
   transactionErrorOpenFile: "Відкрити в редакторі файлів",
   merchantDetailUnavailable: "Цей продавець недоступний у вибраній книзі.",
   commitDetailUnavailable: "Ця зміна недоступна у вибраній книзі.",
-  journalLoadError: "Помилка завантаження журналу: ",
+  journalLoadError: "Помилка завантаження журналу",
   // entry context (transactions screen)
   journalError: "Помилка",
   journalNoData: "Дані контексту запису недоступні",

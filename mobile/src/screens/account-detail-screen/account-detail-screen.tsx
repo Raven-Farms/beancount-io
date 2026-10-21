@@ -15,7 +15,8 @@ import { fontSizes, fontWeights, useTheme } from "@/common/theme";
 import { useThemeStyle } from "@/common/hooks";
 import { useTranslations } from "@/common/hooks/use-translations";
 import { getPrimaryCurrency } from "@/common/currency-util";
-import { BalanceChartCard } from "@/components";
+import { BalanceChartCard, StaleDataBanner } from "@/components";
+import { isShowingStaleDataFromQueries } from "@/common/apollo/stale-data";
 import { LedgerGuard, useLedgerGuard } from "@/components/ledger-guard";
 import { ThemedRefreshControl } from "@/components/dashboard-scroll-view";
 import { useLedgerReadContext } from "@/common/hooks/use-ledger-read-context";
@@ -443,8 +444,15 @@ const AccountDetailScreenImpl = ({
   return (
     <SafeAreaView edges={["bottom"]} style={styles.container}>
       <Stack.Screen options={{ title: accountLeafName(account) }} />
+      {isShowingStaleDataFromQueries([
+        { data: journalData, error: journalError },
+      ]) ? (
+        <StaleDataBanner />
+      ) : null}
       <SectionList
-        sections={isInitialLoading || journalError ? [] : sections}
+        // A failed refresh keeps the rows already loaded, under the stale
+        // banner; only a failed first load has nothing to list (w21/081).
+        sections={isInitialLoading ? [] : sections}
         renderItem={renderItem}
         renderSectionHeader={renderSectionHeader}
         keyExtractor={(item) => item.key}

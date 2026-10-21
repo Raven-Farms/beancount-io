@@ -20,7 +20,8 @@ import { NetworkStatus, useReactiveVar } from "@apollo/client";
 import { useGetLedgerJournalQuery } from "@/generated-graphql/graphql";
 import { LedgerGuard, useLedgerGuard } from "@/components/ledger-guard";
 import { ThemedRefreshControl } from "@/components/dashboard-scroll-view";
-import { LedgerDrawerHeader } from "@/components";
+import { LedgerDrawerHeader, StaleDataBanner } from "@/components";
+import { isShowingStaleDataFromQueries } from "@/common/apollo/stale-data";
 import { AddTransactionCallback } from "@/common/globalFnFactory";
 import { TransactionsHeader } from "./transactions-header";
 import { EntryRow } from "./entry-row";
@@ -263,7 +264,11 @@ const TransactionList = () => {
   );
 
   const isInitialLoading = loading && !transactions.length;
-  const isBlank = !loading && !error && sections.length === 0;
+  // A failed refresh keeps the rows already loaded, under the stale banner;
+  // only a failure with nothing to list replaces them (w21/081).
+  const loadFailed = Boolean(error) && transactions.length === 0;
+  const showStale = isShowingStaleDataFromQueries([{ data, error }]);
+  const isBlank = !loading && !loadFailed && sections.length === 0;
   const isNarrowed = !!search || activeFilterCount > 0;
   // A ledger with no transactions gets the welcome copy even when it holds
   // other directives — this tab only ever shows transactions.
@@ -282,6 +287,7 @@ const TransactionList = () => {
           }
         }
       />
+      {showStale ? <StaleDataBanner /> : null}
       <SectionList
         ref={listRef}
         ListHeaderComponent={
@@ -296,7 +302,7 @@ const TransactionList = () => {
         contentContainerStyle={styles.listContent}
         contentInsetAdjustmentBehavior="automatic"
         alwaysBounceVertical
-        sections={isInitialLoading || error ? [] : sections}
+        sections={isInitialLoading ? [] : sections}
         renderSectionHeader={renderSectionHeader}
         renderItem={renderItem}
         // Unique once pages are merged by hash (w21/035).
@@ -319,12 +325,11 @@ const TransactionList = () => {
         ListEmptyComponent={
           isInitialLoading ? (
             TransactionsListSkeleton
-          ) : error ? (
+          ) : loadFailed ? (
             () => (
               <View style={styles.errorContainer}>
                 <Text style={styles.errorText}>
                   {t("transactionsLoadError")}
-                  {error?.message}
                 </Text>
               </View>
             )
