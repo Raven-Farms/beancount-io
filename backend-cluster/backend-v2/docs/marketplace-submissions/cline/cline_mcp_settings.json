@@ -1,0 +1,10 @@
+{
+  "mcpServers": {
+    "beancount": {
+      "type": "streamableHttp",
+      "url": "https://beancount.io/api-gateway/mcp",
+      "disabled": false,
+      "autoApprove": []
+    }
+  }
+}
