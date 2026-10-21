@@ -539,6 +539,11 @@ export const nl: Translations = {
   budgetIntervalMonthly: "Maandelijks",
   budgetIntervalQuarterly: "Per kwartaal",
   budgetIntervalYearly: "Jaarlijks",
+  budgetIntervalAdjDaily: "dagelijkse",
+  budgetIntervalAdjWeekly: "wekelijkse",
+  budgetIntervalAdjMonthly: "maandelijkse",
+  budgetIntervalAdjQuarterly: "driemaandelijkse",
+  budgetIntervalAdjYearly: "jaarlijkse",
   // add / update budget
   budgetAdd: "Budget toevoegen",
   budgetUpdate: "Budget bijwerken",

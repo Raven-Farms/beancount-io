@@ -532,6 +532,11 @@ export const fa: Translations = {
   budgetIntervalMonthly: "ماهانه",
   budgetIntervalQuarterly: "فصلی",
   budgetIntervalYearly: "سالانه",
+  budgetIntervalAdjDaily: "روزانه",
+  budgetIntervalAdjWeekly: "هفتگی",
+  budgetIntervalAdjMonthly: "ماهانه",
+  budgetIntervalAdjQuarterly: "فصلی",
+  budgetIntervalAdjYearly: "سالانه",
   // add / update budget
   budgetAdd: "افزودن بودجه",
   budgetUpdate: "به‌روزرسانی بودجه",

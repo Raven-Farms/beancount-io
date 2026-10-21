@@ -489,6 +489,11 @@ export const zh: Translations = {
   budgetIntervalMonthly: "每月",
   budgetIntervalQuarterly: "每季",
   budgetIntervalYearly: "每年",
+  budgetIntervalAdjDaily: "每日",
+  budgetIntervalAdjWeekly: "每周",
+  budgetIntervalAdjMonthly: "每月",
+  budgetIntervalAdjQuarterly: "每季度",
+  budgetIntervalAdjYearly: "每年",
   // add / update budget
   budgetAdd: "添加预算",
   budgetUpdate: "更新预算",

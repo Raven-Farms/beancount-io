@@ -550,6 +550,11 @@ export const uk: Translations = {
   budgetIntervalMonthly: "Щомісяця",
   budgetIntervalQuarterly: "Щоквартально",
   budgetIntervalYearly: "Щорічно",
+  budgetIntervalAdjDaily: "щоденний",
+  budgetIntervalAdjWeekly: "щотижневий",
+  budgetIntervalAdjMonthly: "щомісячний",
+  budgetIntervalAdjQuarterly: "щоквартальний",
+  budgetIntervalAdjYearly: "щорічний",
   // add / update budget
   budgetAdd: "Додати бюджет",
   budgetUpdate: "Оновити бюджет",

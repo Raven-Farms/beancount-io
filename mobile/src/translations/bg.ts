@@ -538,6 +538,11 @@ export const bg: Translations = {
   budgetIntervalMonthly: "Месечно",
   budgetIntervalQuarterly: "Тримесечно",
   budgetIntervalYearly: "Годишно",
+  budgetIntervalAdjDaily: "дневният",
+  budgetIntervalAdjWeekly: "седмичният",
+  budgetIntervalAdjMonthly: "месечният",
+  budgetIntervalAdjQuarterly: "тримесечният",
+  budgetIntervalAdjYearly: "годишният",
   // add / update budget
   budgetAdd: "Добавяне на бюджет",
   budgetUpdate: "Актуализиране на бюджета",

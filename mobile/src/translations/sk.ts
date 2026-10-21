@@ -556,6 +556,11 @@ export const sk: Translations = {
   budgetIntervalMonthly: "Mesačne",
   budgetIntervalQuarterly: "Štvrťročne",
   budgetIntervalYearly: "Ročne",
+  budgetIntervalAdjDaily: "denný",
+  budgetIntervalAdjWeekly: "týždenný",
+  budgetIntervalAdjMonthly: "mesačný",
+  budgetIntervalAdjQuarterly: "štvrťročný",
+  budgetIntervalAdjYearly: "ročný",
   // add / update budget
   budgetAdd: "Pridať rozpočet",
   budgetUpdate: "Aktualizovať rozpočet",

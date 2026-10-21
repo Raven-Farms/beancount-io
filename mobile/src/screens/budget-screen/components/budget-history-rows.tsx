@@ -16,7 +16,10 @@ import { AmountText } from "@/components";
 import { useLedgerAccess } from "@/common/hooks/use-ledger-access";
 import { useDeleteBudgetEntry } from "@/screens/budget-screen/hooks/use-delete-budget-entry";
 import { selectBudgetEntryActions } from "@/screens/budget-screen/selectors/select-budget-write-actions";
-import { intervalLabelKey } from "@/screens/budget-screen/selectors/budget-labels";
+import {
+  intervalAdjectiveKey,
+  intervalLabelKey,
+} from "@/screens/budget-screen/selectors/budget-labels";
 import {
   selectHistoryRows,
   type BudgetGroup,
@@ -118,7 +121,7 @@ export function BudgetHistoryRows({
     Alert.alert(
       t("budgetDeleteTitle"),
       t("budgetDeleteMessage", {
-        interval: t(intervalLabelKey(interval)).toLowerCase(),
+        interval: t(intervalAdjectiveKey(interval)),
         amount,
         account: group.account,
         date,

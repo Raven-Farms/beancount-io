@@ -552,6 +552,11 @@ export const ru: Translations = {
   budgetIntervalMonthly: "Ежемесячно",
   budgetIntervalQuarterly: "Ежеквартально",
   budgetIntervalYearly: "Ежегодно",
+  budgetIntervalAdjDaily: "ежедневный",
+  budgetIntervalAdjWeekly: "еженедельный",
+  budgetIntervalAdjMonthly: "ежемесячный",
+  budgetIntervalAdjQuarterly: "ежеквартальный",
+  budgetIntervalAdjYearly: "ежегодный",
   // add / update budget
   budgetAdd: "Добавить бюджет",
   budgetUpdate: "Обновить бюджет",

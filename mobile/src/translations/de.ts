@@ -551,6 +551,11 @@ export const de: Translations = {
   budgetIntervalMonthly: "Monatlich",
   budgetIntervalQuarterly: "Vierteljährlich",
   budgetIntervalYearly: "Jährlich",
+  budgetIntervalAdjDaily: "tägliche",
+  budgetIntervalAdjWeekly: "wöchentliche",
+  budgetIntervalAdjMonthly: "monatliche",
+  budgetIntervalAdjQuarterly: "vierteljährliche",
+  budgetIntervalAdjYearly: "jährliche",
   // add / update budget
   budgetAdd: "Budget hinzufügen",
   budgetUpdate: "Budget aktualisieren",

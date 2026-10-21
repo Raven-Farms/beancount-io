@@ -45,6 +45,27 @@ export function periodAxisLabel(
   return t(date.slice(5, 7));
 }
 
+/**
+ * Translation key for a cadence used as an adjective in a sentence ("the
+ * monthly budget"). The picker's label is an adverb in several languages, so
+ * lowercased into the delete alert it read "Das monatlich Budget" and
+ * "ежемесячно бюджет" (w21/097).
+ */
+const INTERVAL_ADJECTIVE_KEYS: Record<string, string> = {
+  daily: "budgetIntervalAdjDaily",
+  weekly: "budgetIntervalAdjWeekly",
+  monthly: "budgetIntervalAdjMonthly",
+  quarterly: "budgetIntervalAdjQuarterly",
+  yearly: "budgetIntervalAdjYearly",
+};
+
+export function intervalAdjectiveKey(interval: string): string {
+  return (
+    INTERVAL_ADJECTIVE_KEYS[interval.toLowerCase()] ??
+    "budgetIntervalAdjMonthly"
+  );
+}
+
 /** Cadences offered by the add form, in chronological order. */
 export const BUDGET_INTERVALS = [
   "DAILY",

@@ -543,6 +543,12 @@ export const en = {
   budgetIntervalMonthly: "Monthly",
   budgetIntervalQuarterly: "Quarterly",
   budgetIntervalYearly: "Yearly",
+  // The cadence as an adjective agreeing with "budget" in budgetDeleteMessage.
+  budgetIntervalAdjDaily: "daily",
+  budgetIntervalAdjWeekly: "weekly",
+  budgetIntervalAdjMonthly: "monthly",
+  budgetIntervalAdjQuarterly: "quarterly",
+  budgetIntervalAdjYearly: "yearly",
   // add / update budget
   budgetAdd: "Add Budget",
   budgetUpdate: "Update Budget",
