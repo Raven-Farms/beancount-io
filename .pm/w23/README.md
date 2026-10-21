@@ -9,3 +9,4 @@
 - [022](./blocked/022.md) — report rustledger BQL gaps upstream (`cost(sum(position))`, `neg`/`filter_currency`, `meta('lineno')`, `AT value`, `BALANCES FROM`) — **blocked:** filing in an external tracker needs the user's approval
 - [024](./024.md) — bank-account tools look the account up before authorizing (`ledger.read` gets "Account not found" from admin tools)
 - [025](./025.md) — adding/removing the ledger owner as a collaborator reports success but does nothing
+- [026](./blocked/026.md) — streaming archive route for MCP OAuth clients over 8 MiB (option 1 from 023) — **blocked:** an ADR 0007 trust-boundary decision for the owner
