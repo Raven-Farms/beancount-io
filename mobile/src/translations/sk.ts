@@ -424,6 +424,8 @@ export const sk: Translations = {
   deleteFailed: "Transakciu sa nepodarilo odstrániť",
   editSuccess: "Transakcia uložená",
   editFailed: "Transakciu sa nepodarilo uložiť",
+  editTransactionEmpty:
+    "Prázdny záznam nemožno uložiť. Ak chcete transakciu odstrániť, použite Odstrániť v jej detaile.",
   editTransactionLoadFailed: "Transakciu sa nepodarilo načítať",
   editTransactionSource:
     "Nižšie upravte zdrojový text beancount. Neplatný beancount alebo zastaraný kontrolný súčet bude odmietnutý s chybou.",

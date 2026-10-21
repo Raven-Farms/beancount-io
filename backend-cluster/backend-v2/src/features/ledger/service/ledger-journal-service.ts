@@ -394,6 +394,14 @@ export class LedgerJournalService
       identity,
       AUTHORIZATION_ACTIONS.LEDGER_ENTRIES_WRITE,
     );
+    // An empty edit would replace the entry with a blank line: a delete that
+    // skipped the delete confirmation and reported "saved" (w21/120). REST,
+    // GraphQL and MCP all edit through here.
+    if (!newContent.trim()) {
+      throw new BadUserInputError(
+        "newContent is empty; delete the entry instead of saving it blank",
+      );
+    }
 
     const data = await unwrapFavaResponse(
       favaApiClient.journal.updateSourceSlice(

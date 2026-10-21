@@ -424,6 +424,8 @@ export const en = {
   deleteFailed: "Failed to delete transaction",
   editSuccess: "Transaction saved",
   editFailed: "Failed to save transaction",
+  editTransactionEmpty:
+    "An empty entry can't be saved. To remove the transaction, use Delete on its detail screen.",
   editTransactionLoadFailed: "Failed to load transaction",
   editTransactionSource:
     "Edit raw beancount source below. A stale checksum or invalid beancount will be rejected with an error.",

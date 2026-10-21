@@ -420,6 +420,8 @@ export const uk: Translations = {
   deleteFailed: "Не вдалося видалити транзакцію",
   editSuccess: "Транзакцію збережено",
   editFailed: "Не вдалося зберегти транзакцію",
+  editTransactionEmpty:
+    "Порожній запис не можна зберегти. Щоб видалити транзакцію, скористайтеся «Видалити» на екрані її деталей.",
   editTransactionLoadFailed: "Не вдалося завантажити транзакцію",
   editTransactionSource:
     "Змініть вихідний текст beancount нижче. Застаріла контрольна сума або хибний beancount будуть відхилені з помилкою.",

@@ -425,6 +425,8 @@ export const fr: Translations = {
   deleteFailed: "Échec de la suppression de la transaction",
   editSuccess: "Transaction enregistrée",
   editFailed: "Échec de l'enregistrement de la transaction",
+  editTransactionEmpty:
+    "Une écriture vide ne peut pas être enregistrée. Pour supprimer la transaction, utilisez Supprimer dans son détail.",
   editTransactionLoadFailed: "Échec du chargement de la transaction",
   editTransactionSource:
     "Modifiez le source beancount ci-dessous. Une somme de contrôle obsolète ou un beancount invalide sera refusé avec une erreur.",

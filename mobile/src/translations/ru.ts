@@ -422,6 +422,8 @@ export const ru: Translations = {
   deleteFailed: "Не удалось удалить транзакцию",
   editSuccess: "Транзакция сохранена",
   editFailed: "Не удалось сохранить транзакцию",
+  editTransactionEmpty:
+    "Пустую запись нельзя сохранить. Чтобы удалить транзакцию, используйте «Удалить» на экране её деталей.",
   editTransactionLoadFailed: "Не удалось загрузить транзакцию",
   editTransactionSource:
     "Измените исходный текст beancount ниже. Устаревшая контрольная сумма или неверный beancount будут отклонены с ошибкой.",

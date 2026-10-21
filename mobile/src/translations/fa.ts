@@ -409,6 +409,8 @@ export const fa: Translations = {
   deleteFailed: "حذف تراکنش ناموفق بود",
   editSuccess: "تراکنش ذخیره شد",
   editFailed: "ذخیرهٔ تراکنش ناموفق بود",
+  editTransactionEmpty:
+    "ورودی خالی ذخیره نمی‌شود. برای حذف تراکنش، از گزینه حذف در صفحه جزئیات آن استفاده کنید.",
   editTransactionLoadFailed: "بارگیری تراکنش ناموفق بود",
   editTransactionSource:
     "متن اصلی beancount را در زیر ویرایش کنید. جمع کنترلی منسوخ یا beancount نامعتبر با خطا رد می‌شود.",

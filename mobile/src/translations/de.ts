@@ -426,6 +426,8 @@ export const de: Translations = {
   deleteFailed: "Transaktion konnte nicht gelöscht werden",
   editSuccess: "Transaktion gespeichert",
   editFailed: "Transaktion konnte nicht gespeichert werden",
+  editTransactionEmpty:
+    "Ein leerer Eintrag kann nicht gespeichert werden. Um die Transaktion zu entfernen, verwenden Sie „Löschen“ in ihrer Detailansicht.",
   editTransactionLoadFailed: "Transaktion konnte nicht geladen werden",
   editTransactionSource:
     "Bearbeiten Sie unten den beancount-Quelltext. Eine veraltete Prüfsumme oder ungültiges beancount wird mit einem Fehler abgelehnt.",

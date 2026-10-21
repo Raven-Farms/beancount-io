@@ -424,6 +424,8 @@ export const es: Translations = {
   deleteFailed: "Error al eliminar la transacción",
   editSuccess: "Transacción guardada",
   editFailed: "Error al guardar la transacción",
+  editTransactionEmpty:
+    "No se puede guardar una entrada vacía. Para quitar la transacción, usa Eliminar en su detalle.",
   editTransactionLoadFailed: "No se pudo cargar la transacción",
   editTransactionSource:
     "Edita el código beancount original abajo. Una suma de comprobación caducada o un beancount no válido se rechazará con un error.",

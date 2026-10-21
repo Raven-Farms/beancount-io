@@ -425,6 +425,8 @@ export const pt: Translations = {
   deleteFailed: "Falha ao excluir a transação",
   editSuccess: "Transação salva",
   editFailed: "Falha ao salvar a transação",
+  editTransactionEmpty:
+    "Não é possível salvar um lançamento vazio. Para remover a transação, use Excluir no detalhe dela.",
   editTransactionLoadFailed: "Falha ao carregar a transação",
   editTransactionSource:
     "Edite o código beancount abaixo. Uma soma de verificação desatualizada ou beancount inválido será recusado com erro.",

@@ -416,6 +416,8 @@ export const nl: Translations = {
   deleteFailed: "Verwijderen van transactie mislukt",
   editSuccess: "Transactie opgeslagen",
   editFailed: "Opslaan van transactie mislukt",
+  editTransactionEmpty:
+    "Een lege boeking kan niet worden opgeslagen. Gebruik Verwijderen in de details om de transactie te verwijderen.",
   editTransactionLoadFailed: "Transactie laden mislukt",
   editTransactionSource:
     "Bewerk hieronder de beancount-brontekst. Een verouderde controlesom of ongeldige beancount wordt met een foutmelding geweigerd.",

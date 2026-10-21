@@ -250,6 +250,13 @@ export const EditTransactionScreen = (): JSX.Element => {
       )
         return false;
 
+      // An empty edit would replace the entry with a blank line: a delete
+      // without Delete's confirmation, reported as saved (w21/120).
+      if (!content.trim()) {
+        setSaveError(t("editTransactionEmpty"));
+        return false;
+      }
+
       const sha = shaRef.current;
       if (!sha) {
         setSaveError(t("editFailed"));

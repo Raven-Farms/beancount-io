@@ -504,6 +504,23 @@ describe("LedgerJournalService", () => {
       );
     });
 
+    // w21/120: an emptied edit replaced the entry with a blank line, deleting
+    // it without the delete confirmation and reporting it saved.
+    it("refuses an empty or whitespace-only edit before the ledger sees it", async () => {
+      for (const newContent of ["", "  ", "\n\t\n"]) {
+        await expect(
+          service.updateSourceSlice({
+            ledgerId: LEDGER_ID,
+            identity: IDENTITY,
+            entryHash: "h",
+            sha256sum: "s",
+            newContent,
+          }),
+        ).rejects.toMatchObject({ category: "BAD_USER_INPUT" });
+      }
+      expect(mockUpdateSourceSlice).not.toHaveBeenCalled();
+    });
+
     it("throws InternalServerError on failure", async () => {
       mockUpdateSourceSlice.mockResolvedValue({ data: { success: false } });
 

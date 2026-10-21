@@ -377,6 +377,8 @@ export const zh: Translations = {
   deleteFailed: "删除交易失败",
   editSuccess: "交易已保存",
   editFailed: "保存交易失败",
+  editTransactionEmpty:
+    "无法保存空条目。如需删除该交易，请在其详情页使用“删除”。",
   editTransactionLoadFailed: "加载交易失败",
   editTransactionSource:
     "在下方编辑 beancount 原文。校验值过期或语法有误的内容将被拒绝并提示错误。",

@@ -425,6 +425,8 @@ export const ca: Translations = {
   deleteFailed: "No s'ha pogut eliminar la transacció",
   editSuccess: "Transacció desada",
   editFailed: "No s'ha pogut desar la transacció",
+  editTransactionEmpty:
+    "No es pot desar una entrada buida. Per treure la transacció, fes servir Elimina al seu detall.",
   editTransactionLoadFailed: "No s'ha pogut carregar la transacció",
   editTransactionSource:
     "Edita a sota el codi beancount original. Una suma de verificació obsoleta o un beancount no vàlid es rebutjarà amb un error.",
