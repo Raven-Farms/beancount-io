@@ -7,6 +7,7 @@ import {
   Pressable,
   TextInput,
   useWindowDimensions,
+  Platform,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
@@ -263,6 +264,9 @@ export function LedgerSelectionScreen() {
         data={items}
         keyExtractor={(item) => item.id}
         keyboardShouldPersistTaps="handled"
+        // The last ledgers scroll above the keyboard (w21/145).
+        automaticallyAdjustKeyboardInsets={Platform.OS === "ios"}
+        keyboardDismissMode="on-drag"
         refreshControl={
           <ThemedRefreshControl
             refreshing={state.refreshing}

@@ -198,6 +198,10 @@ export const TextInputScreen: React.FC<TextInputScreenProps> = ({
         style={styles.suggestionsScroll}
         contentContainerStyle={styles.suggestionsContent}
         keyboardShouldPersistTaps="handled"
+        // The last matches scroll above the keyboard instead of staying
+        // under it (w21/145).
+        automaticallyAdjustKeyboardInsets={Platform.OS === "ios"}
+        keyboardDismissMode="on-drag"
         showsVerticalScrollIndicator={false}
       >
         <Text style={styles.sectionTitle}>

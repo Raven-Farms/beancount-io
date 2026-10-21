@@ -7,6 +7,7 @@ import {
   SectionList,
   TouchableOpacity,
   useWindowDimensions,
+  Platform,
 } from "react-native";
 import {
   fontSizes,
@@ -146,7 +147,9 @@ const getStyles = (theme: ColorTheme) =>
       fontWeight: fontWeights.medium,
     },
     listContent: {
-      paddingBottom: 150,
+      // The keyboard inset below keeps the last rows reachable; a fixed
+      // 150 pt fell short of a 291–336 pt keyboard (w21/145).
+      paddingBottom: gutter,
     },
     emptyText: {
       paddingHorizontal: gutter,
@@ -573,6 +576,8 @@ function AccountPickerScreenComponent(): JSX.Element {
         sections={visibleSections}
         keyExtractor={(account) => account}
         keyboardShouldPersistTaps="handled"
+        automaticallyAdjustKeyboardInsets={Platform.OS === "ios"}
+        keyboardDismissMode="on-drag"
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.listContent}
         stickySectionHeadersEnabled={false}
