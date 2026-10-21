@@ -100,3 +100,6 @@
 - [150](./150.md) — iOS swipe-back gets past the unsaved-changes guard (editor, Edit/New Transaction); Cancel leaves the stack broken
 - [151](./151.md) — Returning to the app offline flips the editor and write actions to "read-only" mid-edit
 - [152](./152.md) — Returning to the file editor jumps the cursor back to the original error line
+- [153](./153.md) — Sign-out leaves the browser session, so the next Sign In re-enters the old account with one Approve tap
+- [154](./154.md) — iOS reinstall silently signs the previous account back in from the Keychain
+- [155](./155.md) — On a non-default server, the app still sends merchant brands to the hosted logo service
