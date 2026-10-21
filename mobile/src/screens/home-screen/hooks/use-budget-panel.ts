@@ -7,6 +7,7 @@ import {
 } from "@/generated-graphql/graphql";
 import { resolveCurrencyBalance } from "@/common/balance-util";
 import { getFormatDate } from "@/common/format-util";
+import { mapInBatches } from "@/common/map-in-batches";
 import { ledgerRevisionVar } from "@/common/apollo/invalidate-ledger";
 import { budgetTotalsVariables } from "@/screens/budget-screen/hooks/use-budget-actuals";
 import {
@@ -27,17 +28,17 @@ import {
 const BUDGET_PANEL_ROWS = 3;
 
 /**
- * Ceiling on how many budgets the panel will price before ranking. Ranking by
- * utilization needs an actual per budget, so the cost is one query per group;
- * this bounds it for ledgers with a very large budget set, at the cost of
- * ranking only the first N accounts alphabetically. Typical ledgers hold far
- * fewer than this, and the queries are cache hits once /budget has loaded.
+ * How many budgets the panel prices at once. Ranking by utilization needs an
+ * actual per budget, one query per group; every budget is priced, in batches
+ * of this size. Pricing only the first twelve alphabetically left a 250%
+ * budget later in the alphabet off the panel (w21/165). The queries are cache
+ * hits once /budget has loaded.
  *
  * TODO: this is a client-side stand-in for a missing server capability —
  * budgets returned with their current-period actuals in one request. With that,
- * the panel ranks the whole set in a single round-trip and the cap goes away.
+ * the panel ranks the whole set in a single round-trip.
  */
-const BUDGET_PANEL_QUERY_CAP = 12;
+const BUDGET_PANEL_BATCH = 12;
 
 /**
  * Fetches current-period actuals for the ledger's budgets and ranks them.
@@ -94,50 +95,47 @@ export function useBudgetPanel({
 
     setLoading(true);
     setFailed(false);
-    const priced = groups.slice(0, BUDGET_PANEL_QUERY_CAP);
 
     // Deliberately the span the page opens on, not this budget's own current
     // period: identical variables mean one cached result serves the panel and
     // the page instead of each fetching its own copy of every budget.
     const time = timeSpanToFilter(DEFAULT_BUDGET_SPAN);
 
-    Promise.all(
-      priced.map(async (group) => {
-        const { end } = currentPeriodRange(group.interval);
-        const totals = (fetchPolicy: "network-only" | "cache-only") =>
-          client
-            .query<
-              GetLedgerIntervalTotalsQuery,
-              GetLedgerIntervalTotalsQueryVariables
-            >({
-              query: GetLedgerIntervalTotalsDocument,
-              variables: budgetTotalsVariables({ ledgerId, group, time }),
-              fetchPolicy,
-            })
-            .then(({ data }) => data?.getLedgerIntervalTotals ?? []);
-        // Current totals first: the persisted cache holds the last session's
-        // spending (w21/006). Offline, that cache is still better than nothing.
-        const items = await totals("network-only")
-          .catch(() => totals("cache-only"))
-          // Nothing fetched and nothing cached: the row would read "$0.00 of
-          // $500.00", a claim about spending a failed read cannot back
-          // (w21/080).
-          .catch(() => null);
+    mapInBatches(groups, BUDGET_PANEL_BATCH, async (group) => {
+      const { end } = currentPeriodRange(group.interval);
+      const totals = (fetchPolicy: "network-only" | "cache-only") =>
+        client
+          .query<
+            GetLedgerIntervalTotalsQuery,
+            GetLedgerIntervalTotalsQueryVariables
+          >({
+            query: GetLedgerIntervalTotalsDocument,
+            variables: budgetTotalsVariables({ ledgerId, group, time }),
+            fetchPolicy,
+          })
+          .then(({ data }) => data?.getLedgerIntervalTotals ?? []);
+      // Current totals first: the persisted cache holds the last session's
+      // spending (w21/006). Offline, that cache is still better than nothing.
+      const items = await totals("network-only")
+        .catch(() => totals("cache-only"))
+        // Nothing fetched and nothing cached: the row would read "$0.00 of
+        // $500.00", a claim about spending a failed read cannot back
+        // (w21/080).
+        .catch(() => null);
 
-        // The last interval in the window is the one in progress.
-        const last = items && items.length > 0 ? items[items.length - 1] : null;
-        return {
-          input: {
-            group,
-            periodEnd: end,
-            actual: last
-              ? resolveCurrencyBalance(last.balance, group.currency)
-              : null,
-          },
-          failed: items === null,
-        };
-      }),
-    ).then((results) => {
+      // The last interval in the window is the one in progress.
+      const last = items && items.length > 0 ? items[items.length - 1] : null;
+      return {
+        input: {
+          group,
+          periodEnd: end,
+          actual: last
+            ? resolveCurrencyBalance(last.balance, group.currency)
+            : null,
+        },
+        failed: items === null,
+      };
+    }).then((results) => {
       if (cancelled) {
         return;
       }
