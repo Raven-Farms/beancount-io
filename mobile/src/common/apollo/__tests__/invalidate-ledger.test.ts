@@ -147,6 +147,9 @@ describe("invalidate-ledger", () => {
         // (w21/056).
         "getLedger",
         "getLedgerAccountDirectives",
+        // Every entry write commits to a file, and the browser hands that
+        // file's sha back to deleteLedgerFile as the lock (w21/079).
+        "getLedgerDirContent",
       ];
 
       expect(
@@ -159,8 +162,6 @@ describe("invalidate-ledger", () => {
     it("covers what only a whole-file write changes", () => {
       const { LEDGER_SCOPE_FIELDS } = require("../invalidate-ledger");
 
-      // getLedgerDirContent carries the sha the browser hands back to
-      // deleteLedgerFile as an optimistic lock — stale here means a conflict.
       const required = [
         "getLedgerDirContent",
         "getLedgerNarrations",

@@ -62,6 +62,10 @@ const ENTRIES_FIELDS = [
   "getLedgerAccountDirectives",
   // Every write is a git commit, so the notifications history moves too.
   "listCommits",
+  // Size, sha and lastCommitSha in the file browser: an entry write commits to
+  // its file, and a stale sha handed back to `deleteLedgerFile` as the
+  // optimistic lock refused the delete until a refresh (w21/079).
+  "getLedgerDirContent",
   // Fixed app-authored BQL aggregations (Merchants directory and later
   // merchant/recurring views). Evict on every entry write so rollups stay exact.
   "queryShell",
@@ -69,9 +73,6 @@ const ENTRIES_FIELDS = [
 
 const FILE_FIELDS = [
   ...ENTRIES_FIELDS,
-  // Size, sha and lastCommitSha in the file browser. Stale shas here get handed
-  // straight back to `deleteLedgerFile` as an optimistic lock.
-  "getLedgerDirContent",
   "getLedgerNarrations",
   "getLedgerPayees",
   "getLedgerPayeeAccounts",
