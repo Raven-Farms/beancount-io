@@ -9,7 +9,6 @@
 - [262 — Keep Journal, Account, Overview and Files row focus visible in forced colors](./blocked/262.md) — minor; dashboard QA, 2026-10-20. — **blocked:** fix shipped in `def18543d`; awaiting forced-colors pixel check
 - [265 — Keep financial text and private paths out of GA4 automatic events](./blocked/265.md) — major; dashboard QA, 2026-10-20; stream-editor completion dependency. — **blocked:** checklist shipped in `181e7a996`; needs a GA4 Editor to turn off Site search / history page views
 - [273 — Keep active picker options identifiable in forced colors](./blocked/273.md) — minor; dashboard QA, 2026-10-20; CommandItem and shared Combobox. — **blocked:** fix shipped in `7c4e21f4f`; awaiting forced-colors pixel check
-- [287 — Leave Gallery result navigation inactive during IME composition](./287.md) — minor; dashboard QA, 2026-10-20.
 - [288 — Keep DatePicker's calendar shortcut out of IME composition](./288.md) — minor; dashboard QA, 2026-10-20.
 - [289 — Preserve long amount digits in portrait statement print output](./289.md) — minor; dashboard QA, 2026-10-20.
 - [290 — Commit the print generation timestamp before native capture](./290.md) — minor; dashboard QA, 2026-10-20.
