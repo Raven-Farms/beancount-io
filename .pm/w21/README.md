@@ -33,3 +33,4 @@
 - [083](./083.md) — A ledger link opened while signed in stays stashed and replays on the next sign-in
 - [084](./084.md) — Returning to the app resets a guest's example ledger: navigation and filters are thrown away
 - [085](./085.md) — Open Account offers only operating currencies; its default sticks at "No currency" after a failed first load
+- [086](./086.md) — Cancelling the RTL restart prompt leaves layout and language mismatched, and the prompt can't be brought back
