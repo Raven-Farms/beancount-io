@@ -4,6 +4,8 @@
 
 ## Inbox
 
+- [313 — Let an unlimited ledger allowance advance the creation wizard](./313.md) — minor; dashboard QA simulation, 2026-10-21; documented-1 allowance produces0/-1 reached-limit warning and disabled Next; finite controls pass, no real Enterprise account/write claimed.
+
 - [312 — Show unavailable AI usage when Billing's read fails](./312.md) — minor; dashboard QA, 2026-10-21; failed usage reads render invented0/0 counts and a full red gauge at both widths; loading and reload controls pass.
 
 - [311 — Detect a CSV delimiter after leading blank records](./311.md) — minor; dashboard QA, 2026-10-21; an empty sampling record defaults to comma, sending otherwise supported semicolon/tab files to the AI offer; ordinary and comma controls pass.
