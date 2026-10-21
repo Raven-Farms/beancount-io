@@ -28,17 +28,40 @@ describe("computeTrialBalanceReconciliation", () => {
     expect(computeTrialBalanceReconciliation([])).toEqual({});
   });
 
-  it("sums displayed root balances per unit and reconciles a balanced ledger", () => {
-    const difference = computeTrialBalanceReconciliation([
-      rootNode("Equity", { USD: "50" }, true),
-      rootNode("Liabilities", { USD: "30" }, true),
-      rootNode("Income", { USD: "20" }, true),
-      rootNode("Assets", { USD: "60" }),
-      rootNode("Expenses", { USD: "40" }),
-    ]);
+  // The API's credit roots are negative; `inverted` only flips their display.
+  it.each([true, false])(
+    "reconciles a balanced ledger whatever the credit-sign display (inverted=%s, w4/267)",
+    (inverted) => {
+      const difference = computeTrialBalanceReconciliation([
+        rootNode("Equity", { USD: "-50" }, inverted),
+        rootNode("Liabilities", { USD: "-30" }, inverted),
+        rootNode("Income", { USD: "-20" }, inverted),
+        rootNode("Assets", { USD: "60" }),
+        rootNode("Expenses", { USD: "40" }),
+      ]);
 
-    expect(difference).toEqual({ USD: "0" });
+      expect(difference).toEqual({ USD: "0" });
+      expect(hasTrialBalanceReconciliationDifference(difference)).toBe(false);
+    },
+  );
+
+  it("keeps the QA ledger's exact balance at zero with credits displayed positive", () => {
+    const difference = computeTrialBalanceReconciliation([
+      rootNode("Equity", { USD: "-13200" }, true),
+      rootNode("Liabilities", { USD: "-143.25" }, true),
+      rootNode("Income", { USD: "-8000" }, true),
+      rootNode("Assets", { USD: "17251.76" }),
+      rootNode("Expenses", { USD: "4091.49" }),
+    ]);
     expect(hasTrialBalanceReconciliationDifference(difference)).toBe(false);
+  });
+
+  it("keeps genuine per-unit differences separate", () => {
+    const difference = computeTrialBalanceReconciliation([
+      rootNode("Assets", { USD: "-33809", ACME: "150" }, false),
+      rootNode("Income", { USD: "0" }, true),
+    ]);
+    expect(difference).toEqual({ USD: "-33809", ACME: "150" });
   });
 
   it("shows the exact per-unit difference when roots do not reconcile", () => {
