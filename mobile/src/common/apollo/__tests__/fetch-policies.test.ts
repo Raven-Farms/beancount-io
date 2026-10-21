@@ -89,6 +89,38 @@ describe("w21/006 cold-start revalidation", () => {
     }
   });
 
+  // w21/047: a constant (`LEDGER_PRICES_FETCH_POLICY = "cache-first"`) hid
+  // the price hook from the literal check above. Every source is held to it.
+  it("pins cache-first nowhere but the reads that follow an invalidation", () => {
+    const fs = require("fs") as typeof import("fs");
+    const path = require("path") as typeof import("path");
+    const root = path.join(__dirname, "..", "..", "..");
+    const allowed = new Set([
+      // The read right after `invalidateLedgerData(…, "errors")` evicted it.
+      "screens/ledger-file-editor-screen/index.tsx",
+      // The client default's own follow-up policy.
+      "common/apollo/default-options.ts",
+    ]);
+    const offenders: string[] = [];
+    const walk = (dir: string) => {
+      for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+        if (["__tests__", "generated-graphql"].includes(entry.name)) continue;
+        const full = path.join(dir, entry.name);
+        if (entry.isDirectory()) walk(full);
+        else if (/\.tsx?$/.test(entry.name)) {
+          const relative = path.relative(root, full).split(path.sep).join("/");
+          if (
+            !allowed.has(relative) &&
+            fs.readFileSync(full, "utf8").includes('"cache-first"')
+          )
+            offenders.push(relative);
+        }
+      }
+    };
+    walk(root);
+    expect(offenders).toEqual([]);
+  });
+
   it("reads Home's budget totals from the network before the cache", () => {
     const src = read("../../../screens/home-screen/hooks/use-budget-panel.ts");
     expect(src.includes('totals("network-only")')).toBe(true);

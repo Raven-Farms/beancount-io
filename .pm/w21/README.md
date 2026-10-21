@@ -12,7 +12,6 @@
 
 ## Inbox
 
-- [047](./047.md) — Home's price-age warning reads a stale persisted price list after relaunch (`useLedgerPrices` still cache-first; residual of 006)
 - [048](./048.md) — File editor's "File Changed → Reload" refreshes the text but keeps the old error list
 - [049](./049.md) — Files locks every file named `main.bean`, not just the root one
 - [050](./050.md) — Account detail shows Note, Balance and Document rows without their text, asserted amount or file
