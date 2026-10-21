@@ -9,10 +9,22 @@ export interface QueryHistoryItem {
   timestamp: number;
 }
 
+/**
+ * Saved history is browser data: a stored `null` or object would crash the
+ * page or hide a result (w4/272). Keep only an array's query strings.
+ */
+function readHistory(raw: string): string[] {
+  const value: unknown = JSON.parse(raw);
+  return Array.isArray(value)
+    ? value.filter((item): item is string => typeof item === "string")
+    : [];
+}
+
 export function useQueryHistory() {
   const [history, setHistory, removeHistory] = useLocalStorageState<string[]>(
     STORAGE_KEY,
     [],
+    { deserializer: readHistory },
   );
 
   const addQuery = useCallback(
