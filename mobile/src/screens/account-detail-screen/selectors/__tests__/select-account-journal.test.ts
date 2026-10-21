@@ -8,6 +8,7 @@ import {
   selectAccountJournalRows,
   groupAccountJournalRowsToSections,
   directiveTypeLabelKey,
+  formatOtherChanges,
 } from "../select-account-journal";
 import { en } from "../../../../translations/en";
 
@@ -213,8 +214,13 @@ describe("selectAccountJournalRows", () => {
         { MRMB: -40 },
       ),
     ]);
+    // The running total stays in MRMB; the USD movement is shown beside it
+    // rather than read as a zero (w21/100).
     expect(usdChange.change).toBe(0);
     expect(usdChange.balance).toBe(-40);
+    expect(usdChange.otherChanges).toEqual([
+      { currency: "USD", number: -7, scale: 0 },
+    ]);
   });
 
   it("takes the wider recorded scale from a zero-change row's balance", () => {
@@ -687,5 +693,52 @@ describe("paging past an entry added at the head", () => {
     expect(
       source.includes("void journalRefetch().catch(() => undefined);"),
     ).toBe(true);
+  });
+});
+
+// w21/100: a 500 EUR deposit to a USD-read account showed "$0.00" on its row
+// and day, as if nothing moved.
+describe("a movement only in another currency", () => {
+  const rows = selectAccountJournalRows("USD", [
+    item(
+      { entry_hash: "eur", date: "2026-08-06", payee: "QA WISE EUR" },
+      { EUR: "500.00" },
+      { USD: "1000.00", EUR: "500.00" },
+    ),
+    item(
+      { entry_hash: "usd", date: "2026-08-05", payee: "QA WISE USD" },
+      { USD: "1000.00" },
+      { USD: "1000.00" },
+    ),
+  ]);
+
+  it("shows the row's own amount, not a zero", () => {
+    expect(rows[0].change).toBe(0);
+    expect(formatOtherChanges(rows[0].otherChanges!)).toBe("+500.00 EUR");
+    // The running balance stays in the account's currency.
+    expect(rows[0].balance).toBe(1000);
+    // USD rows are unchanged.
+    expect(rows[1].otherChanges).toBe(undefined);
+  });
+
+  it("shows the day's own amount, not $0.00", () => {
+    const sections = groupAccountJournalRowsToSections(rows, "USD");
+    expect(sections[0].totalChange).toBe("+500.00 EUR");
+    expect(sections[1].totalChange).toBe("+$1,000.00");
+  });
+
+  it("is rendered with a not-in-total note", () => {
+    const source = require("fs").readFileSync(
+      require("path").join(
+        __dirname,
+        "..",
+        "..",
+        "components",
+        "account-entry-row.tsx",
+      ),
+      "utf8",
+    ) as string;
+    expect(source.includes("? formatOtherChanges(otherChanges)")).toBe(true);
+    expect(source.includes('t("valuationNotInTotalTag")')).toBe(true);
   });
 });

@@ -23,6 +23,7 @@ import {
 import {
   AccountJournalRow,
   directiveTypeLabelKey,
+  formatOtherChanges,
 } from "@/screens/account-detail-screen/selectors/select-account-journal";
 import { LEADING_TEXT_ALIGN } from "@/common/rtl";
 import { prefersStackedLayout } from "@/common/theme/dynamic-type";
@@ -135,9 +136,17 @@ export function AccountEntryRow({
   const isPending = row.flag === "!";
   // A commodity account's rows read in its units, with what each change cost.
   const { units } = row;
-  const changeText = units
-    ? formatUnits(row.change, units.currency, units.scale, true)
-    : formatAccountJournalChange(row.change, currency, row.moneyScale ?? 2);
+  // Moved only other currencies: show them, not a zero, and say they are
+  // outside the running total (w21/100).
+  const otherChanges = row.otherChanges ?? [];
+  const changeText =
+    otherChanges.length > 0
+      ? formatOtherChanges(otherChanges)
+      : units
+        ? formatUnits(row.change, units.currency, units.scale, true)
+        : formatAccountJournalChange(row.change, currency, row.moneyScale ?? 2);
+  const notInTotalText =
+    otherChanges.length > 0 ? t("valuationNotInTotalTag") : null;
   const balanceText = units
     ? formatUnits(row.balance, units.currency, units.scale)
     : formatAccountJournalBalance(row.balance, currency, row.moneyScale ?? 2);
@@ -223,6 +232,9 @@ export function AccountEntryRow({
         >
           {changeText}
         </AmountText>
+        {notInTotalText !== null ? (
+          <Text style={styles.balance}>{notInTotalText}</Text>
+        ) : null}
         {costText !== null ? (
           <AmountText style={styles.balance}>{costText}</AmountText>
         ) : null}
@@ -245,6 +257,7 @@ export function AccountEntryRow({
           detailText,
           offByText,
           changeText,
+          notInTotalText,
           costText,
           balanceLine,
           isPending ? t("pending") : null,

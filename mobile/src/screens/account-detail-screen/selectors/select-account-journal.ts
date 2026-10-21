@@ -1,6 +1,10 @@
 import { AccountJournalQuery } from "@/generated-graphql/graphql";
 import { PostingLite } from "@/common/tx-category";
-import { amountIn } from "../../../common/balance-display";
+import {
+  amountIn,
+  notInTotalOf,
+  type Holding,
+} from "../../../common/balance-display";
 import { formatUnits } from "../../../common/number-utils";
 import { formatAccountJournalChange } from "../utils/format-account-journal-balance";
 import { formatLedgerDate } from "../../../common/date-format";
@@ -46,6 +50,12 @@ export type AccountJournalRow = {
    * the operating currency, when its postings carry one.
    */
   units?: { currency: string; scale: number; cost: number | null };
+  /**
+   * What the entry moved in other currencies when it moved nothing in the one
+   * shown: a 500 EUR deposit to a USD-read account read "$0.00" (w21/100).
+   * Shown in place of the zero, not in the running total.
+   */
+  otherChanges?: Holding[];
 };
 
 /** The account a journal shows in units, and the commodity it holds. */
@@ -233,6 +243,36 @@ function entryTitle(entry: AccountJournalItem["entry"]): string {
   );
 }
 
+/**
+ * Amounts in their own currencies, signed and code-suffixed at their recorded
+ * scale: "+500.00 EUR", "-2 ITOT".
+ */
+export function formatOtherChanges(holdings: readonly Holding[]): string {
+  return holdings
+    .map((holding) =>
+      formatUnits(holding.number, holding.currency, holding.scale, true),
+    )
+    .join(", ");
+}
+
+/** Each currency's sum over the rows' other-currency changes. */
+function sumOtherChanges(rows: readonly AccountJournalRow[]): Holding[] {
+  const sums = new Map<string, Holding>();
+  for (const row of rows) {
+    for (const holding of row.otherChanges ?? []) {
+      const sum = sums.get(holding.currency);
+      sums.set(holding.currency, {
+        currency: holding.currency,
+        number: (sum?.number ?? 0) + holding.number,
+        scale: Math.max(sum?.scale ?? 0, holding.scale),
+      });
+    }
+  }
+  return [...sums.values()].filter(
+    (sum) => Math.abs(sum.number) >= 0.5 * 10 ** -sum.scale,
+  );
+}
+
 /** One date-grouped section of account-journal rows for display. */
 export type AccountJournalSection = {
   isoDate: string;
@@ -259,19 +299,24 @@ export function groupAccountJournalRowsToSections(
   return Array.from(groups.entries()).map(([isoDate, data]) => {
     const net = data.reduce((sum, r) => sum + r.change, 0);
     const units = data[0].units;
+    // A day that moved only other currencies says so, not "$0.00" (w21/100).
+    const others = net === 0 ? sumOtherChanges(data) : [];
     // Sign is an explicit prefix; the amount carries the symbol (or code suffix).
-    const totalChange = units
-      ? formatUnits(
-          net,
-          units.currency,
-          Math.max(...data.map((r) => r.units?.scale ?? 0)),
-          net > 0,
-        )
-      : formatAccountJournalChange(
-          net,
-          currency,
-          Math.max(...data.map((r) => r.moneyScale ?? 2)),
-        );
+    const totalChange =
+      others.length > 0
+        ? formatOtherChanges(others)
+        : units
+          ? formatUnits(
+              net,
+              units.currency,
+              Math.max(...data.map((r) => r.units?.scale ?? 0)),
+              net > 0,
+            )
+          : formatAccountJournalChange(
+              net,
+              currency,
+              Math.max(...data.map((r) => r.moneyScale ?? 2)),
+            );
     return {
       isoDate,
       displayDate: formatLedgerDate(isoDate, locale),
@@ -334,20 +379,24 @@ export function selectAccountJournalRows(
       directiveType: asString(item.entry.directive_type) || undefined,
       detail: entryDetail(item.entry),
     };
+    const shown = units?.currency ?? currency;
+    const change = amountIn(item.change, shown);
+    const others = change.number === 0 ? notInTotalOf(item.change, shown) : [];
+    const otherChanges = others.length > 0 ? { otherChanges: others } : {};
     if (!units) {
-      const change = amountIn(item.change, currency);
       const balance = amountIn(item.balance, currency);
       return {
         ...row,
+        ...otherChanges,
         change: change.number,
         balance: balance.number,
         moneyScale: Math.max(change.scale, balance.scale),
       };
     }
-    const change = amountIn(item.change, units.currency);
     const balance = amountIn(item.balance, units.currency);
     return {
       ...row,
+      ...otherChanges,
       change: change.number,
       balance: balance.number,
       units: {
