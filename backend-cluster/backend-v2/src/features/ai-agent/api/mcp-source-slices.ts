@@ -83,8 +83,10 @@ export const SOURCE_SLICE_EXECUTORS = {
           ledgerId,
           ...args,
         }),
+      // The service returns the new hash in `entryHash` too, so the old one
+      // comes from the request (w23/007).
       (written) =>
-        `Updated entry ${written.entryHash} (new hash ${written.newEntryHash})`,
+        `Updated entry ${args.entryHash} (new hash ${written.newEntryHash})`,
       (written) => [written.newEntryHash],
     );
   },

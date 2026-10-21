@@ -135,9 +135,12 @@ async function fixture(caller = identity) {
         });
       }
       slices.set(body.entry_hash, body.new_content);
+      // The ledger service's wire contract: `entry_hash` is the entry's NEW
+      // hash, repeated as `new_entry_hash`. A fake that echoed the request
+      // here hid a summary that printed the new hash as the old one (w23/007).
       return envelope({
         message: "Updated",
-        entry_hash: body.entry_hash,
+        entry_hash: "entry1-updated",
         new_sha256sum: hash(body.new_content),
         new_entry_hash: "entry1-updated",
       });
@@ -299,7 +302,7 @@ describe.each(["rest", "gql", "mcp"])("source edits via %s", (surface) => {
             expect(f.slices.get("entry1")).toBe("; replacement café\n");
             const updated = {
               message: "Updated",
-              entryHash: "entry1",
+              entryHash: "entry1-updated",
               newSha256sum: hash("; replacement café\n"),
               newEntryHash: "entry1-updated",
             };
