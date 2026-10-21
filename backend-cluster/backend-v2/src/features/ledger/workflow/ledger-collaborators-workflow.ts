@@ -9,6 +9,7 @@ import { parseLedgerId } from "@/shared/str";
 import {
   BadUserInputError,
   InternalServerError,
+  OperationNotAllowedError,
   ResourceLimitReachedError,
 } from "@/shared/errors";
 import type { DbExecutor } from "@/drizzle/drizzle";
@@ -48,6 +49,27 @@ function assertCollaboratorName(collaborator: string): void {
     throw new BadUserInputError(
       "collaborator must be a non-empty username",
       "collaborator",
+    );
+  }
+}
+
+/**
+ * The owner is not a collaborator (w23/025). The repository host no-ops a
+ * grant or removal naming the owner and still reports success, so "give the
+ * owner read access" or "remove me" read as done while nothing changed — and
+ * nothing could: an owner's access is not a collaborator grant. Logins are
+ * case-insensitive, as the limit check compares them.
+ */
+function assertNotOwner(
+  operation: string,
+  collaborator: string,
+  ledgerOwner: string,
+): void {
+  if (collaborator.toLowerCase() === ledgerOwner.toLowerCase()) {
+    throw new OperationNotAllowedError(
+      operation,
+      `${collaborator} owns this ledger; an owner's access can't be granted or removed as a collaborator`,
+      "Name another user: the owner already has full access, which comes with owning the ledger.",
     );
   }
 }
@@ -157,6 +179,7 @@ export class LedgerCollaboratorsWorkflow implements ILedgerCollaboratorsWorkflow
     });
     const userId = identity.userId;
     const { ledgerOwner, ledgerName } = parseLedgerId(ledgerId);
+    assertNotOwner("setLedgerCollaborator", collaborator, ledgerOwner);
     const [favaApiClient, ownerTier] = await Promise.all([
       this.favaClientFactory.getPublicApiClient(ledgerId, userId),
       this.ownerTier(ledgerOwner, userId),
@@ -229,11 +252,12 @@ export class LedgerCollaboratorsWorkflow implements ILedgerCollaboratorsWorkflow
       resource: ledgerResource(ledgerId),
     });
     const userId = identity.userId;
+    const { ledgerOwner, ledgerName } = parseLedgerId(ledgerId);
+    assertNotOwner("removeLedgerCollaborator", collaborator, ledgerOwner);
     const favaApiClient = await this.favaClientFactory.getPublicApiClient(
       ledgerId,
       userId,
     );
-    const { ledgerOwner, ledgerName } = parseLedgerId(ledgerId);
 
     let response;
     try {

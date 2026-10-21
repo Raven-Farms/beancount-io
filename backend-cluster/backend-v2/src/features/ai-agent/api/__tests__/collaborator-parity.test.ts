@@ -688,6 +688,59 @@ describe("collaborators through actual adapters, workflow, PDP, and relationship
     }
   });
 
+  // w23/025: the host no-ops a grant or removal naming the owner and still
+  // reports success.
+  it.each([
+    ["update", "alice"],
+    ["delete", "alice"],
+    ["update", "ALICE"],
+    ["delete", "ALICE"],
+  ] as const)(
+    "refuses the ledger owner as a %s target (%s) on every surface, without mutation",
+    async (operation, owner) => {
+      const f = await fixture();
+      try {
+        const rest = await f.request(
+          `collaborators/${owner}`,
+          operation === "update" ? "PUT" : "DELETE",
+          operation === "update" ? { permission: "read" } : undefined,
+        );
+        expect(rest.status).toBe(403);
+        expect(
+          ((await rest.json()) as { error: { code: string } }).error.code,
+        ).toBe("OPERATION_NOT_ALLOWED");
+        const mcp = await f.client.callTool(
+          perOperation({
+            operation,
+            ledger: "alice/main",
+            collaborator: owner,
+            ...(operation === "update" && { permission: "read" }),
+          }),
+        );
+        expect(mcp.isError).toBe(true);
+        expect(mcp.structuredContent).toMatchObject({
+          error: {
+            code: "OPERATION_NOT_ALLOWED",
+            message: expect.stringContaining("owns this ledger"),
+          },
+        });
+        const field =
+          operation === "update"
+            ? `addOrUpdateLedgerCollaborator(ledgerId: "alice/main", collaborator: "${owner}", permission: "read")`
+            : `deleteLedgerCollaborator(ledgerId: "alice/main", collaborator: "${owner}")`;
+        const gql = await f.gql(`mutation { ${field} { success } }`);
+        expect(gql.errors?.[0].originalError).toMatchObject({
+          category: "OPERATION_NOT_ALLOWED",
+        });
+        expect(f.update).not.toHaveBeenCalled();
+        expect(f.remove).not.toHaveBeenCalled();
+        expect(f.members.size).toBe(2);
+      } finally {
+        await f.close();
+      }
+    },
+  );
+
   it("answers deleting an unknown user as bad input, without upstream internals, on every surface", async () => {
     const f = await fixture();
     try {
