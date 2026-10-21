@@ -13,6 +13,8 @@
 
 ## Milestones
 
+- [ ] **m42** — [Keep keyboard focus owned during and after modal submissions](./m42/README.md) (5 tasks) ← dashboard QA, 2026-10-20; minor, pending reverse-Tab escapes New Entry and failed submits lose the retry position.
+
 - [ ] **m41** — [Preserve acknowledged actions through refresh failures](./blocked/m41/README.md) (6 tasks) ← dashboard QA, 2026-10-20; minor, promoted 294 with independent Budget submission scope. — **blocked:** fixes shipped in `9a268c473` and `292a4321b`; awaiting controlled browser checks
 
 - [ ] **m40** — [Keep picker popups sized and scrollable inside modals](./blocked/m40/README.md) (6 tasks) ← dashboard QA, 2026-10-20; minor, promoted 293 with independently reproduced Combobox wheel scope. — **blocked:** fix shipped in `eeb14c2b2`; awaiting real-viewport scroll checks
