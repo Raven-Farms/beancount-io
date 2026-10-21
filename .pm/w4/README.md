@@ -37,6 +37,7 @@
 - [286 — Keep IME composition keys from applying Combobox values](./286.md) — minor; dashboard QA, 2026-10-20.
 - [287 — Leave Gallery result navigation inactive during IME composition](./287.md) — minor; dashboard QA, 2026-10-20.
 - [288 — Keep DatePicker's calendar shortcut out of IME composition](./288.md) — minor; dashboard QA, 2026-10-20.
+- [289 — Preserve long amount digits in portrait statement print output](./289.md) — minor; dashboard QA, 2026-10-20.
 
 ## Milestones
 
