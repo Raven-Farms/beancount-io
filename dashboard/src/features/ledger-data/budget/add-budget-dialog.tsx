@@ -5,7 +5,7 @@ import { z } from "zod";
 import { useTranslations } from "@/common/hooks/use-translations";
 import { useErrorMessage } from "@/common/lib/errors/error-message";
 import { restoreFocusOnDialogClose } from "@/common/lib/focus/restore-focus-on-dialog-close";
-import { useMutation } from "@apollo/client/react";
+import { useApolloClient, useMutation } from "@apollo/client/react";
 import {
   BulkEntriesDocument,
   BudgetInterval,
@@ -44,7 +44,6 @@ import {
   CurrencyCombobox,
 } from "@/common/components/ledger-comboboxes";
 import { DatePicker } from "@/common/components/ui/date-picker";
-import { budgetJournalVariables } from "./use-budget-entries";
 import { todayIsoDate } from "@/common/components/ui/date-picker-utils";
 
 const createBudgetSchema = (t: (key: string) => string) =>
@@ -101,15 +100,8 @@ export function AddBudgetDialog({
     }),
     [t],
   );
-  const [addEntryBudget] = useMutation(BulkEntriesDocument, {
-    refetchQueries: [
-      {
-        query: GetLedgerJournalDocument,
-        variables: budgetJournalVariables(ledgerId),
-      },
-    ],
-    awaitRefetchQueries: true,
-  });
+  const client = useApolloClient();
+  const [addEntryBudget] = useMutation(BulkEntriesDocument);
   const [error, setError] = useState<string | null>(null);
 
   const form = useForm<FormData>({
@@ -162,6 +154,14 @@ export function AddBudgetDialog({
         resetForm();
         onSuccess?.();
         onOpenChange(false);
+        // The budget is saved; reading the list again is a separate step.
+        // Awaited inside the mutation, a failed read reported the saved
+        // budget as failed and offered the same write again (w4/m41). A
+        // failed refresh now shows on the Budget page's own query, with its
+        // Retry.
+        void client
+          .refetchQueries({ include: [GetLedgerJournalDocument] })
+          .catch(() => undefined);
       } else {
         setError(
           result.data?.bulkEntries.message ??

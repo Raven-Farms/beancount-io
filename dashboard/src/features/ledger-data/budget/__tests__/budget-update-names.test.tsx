@@ -25,6 +25,7 @@ vi.unmock("react-i18next");
 
 const { mutate } = vi.hoisted(() => ({ mutate: vi.fn() }));
 vi.mock("@apollo/client/react", () => ({
+  useApolloClient: () => ({ refetchQueries: async () => [] }),
   useMutation: () => [mutate, { loading: false }],
   useQuery: (document: unknown) => {
     if (document === GetLedgerIntervalTotalsDocument) {

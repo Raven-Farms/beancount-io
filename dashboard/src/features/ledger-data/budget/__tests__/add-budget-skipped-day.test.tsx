@@ -5,6 +5,7 @@ import { AddBudgetDialog } from "../add-budget-dialog";
 const { mutate } = vi.hoisted(() => ({ mutate: vi.fn() }));
 
 vi.mock("@apollo/client/react", () => ({
+  useApolloClient: () => ({ refetchQueries: async () => [] }),
   useMutation: () => [mutate, { loading: false }],
   useQuery: () => ({ data: undefined, loading: false, error: undefined }),
 }));
