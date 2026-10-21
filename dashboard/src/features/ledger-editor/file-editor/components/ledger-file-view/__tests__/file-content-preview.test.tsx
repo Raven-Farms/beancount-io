@@ -84,6 +84,8 @@ vi.mock("@/common/components/monaco-editor", async () => {
           deltaDecorations: () => [],
           trigger() {},
           getContribution: () => undefined,
+          onDidCompositionStart: () => ({ dispose() {} }),
+          onDidCompositionEnd: () => ({ dispose() {} }),
         };
         latest.current.beforeMount?.(monaco as never);
         latest.current.onMount?.(editor as never, monaco as never);

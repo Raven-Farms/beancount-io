@@ -6,6 +6,7 @@ import { useIsDarkTheme } from "@/common/hooks/use-theme";
 import { getFileLanguage } from "../../../shared/lib/utils";
 import { registerBeancountLanguage } from "@/common/lib/editor/monaco-beancount-language-vscode";
 import { registerEditorShortcuts } from "@/common/lib/editor/monaco-beancount-actions";
+import { isCompositionKey } from "@/common/lib/keyboard/is-composition-key";
 import {
   beancountErrorsToMarkers,
   shouldCancelEditOnEscape,
@@ -45,6 +46,9 @@ export const TextEditor = ({
   const monacoRef = useRef<typeof import("monaco-editor") | null>(null);
   const [editorMounted, setEditorMounted] = useState(false);
   const isProgrammaticScrollRef = useRef(false);
+  // Monaco's composition lifecycle, which also covers its native EditContext
+  // host, whose Escape arrives with isComposing=false (w4/291).
+  const composingRef = useRef(false);
 
   const language = getFileLanguage(filename);
   const theme =
@@ -103,6 +107,8 @@ export const TextEditor = ({
       }
 
       if (e.key === "Escape" && onCancel) {
+        // An input method's Escape cancels its composition, not the edit.
+        if (composingRef.current || isCompositionKey(e)) return;
         if (!shouldCancelEditOnEscape(editorRef.current, e.target)) {
           return;
         }
@@ -123,6 +129,13 @@ export const TextEditor = ({
   ) => {
     editorRef.current = editor;
     monacoRef.current = monaco;
+    composingRef.current = false;
+    editor.onDidCompositionStart(() => {
+      composingRef.current = true;
+    });
+    editor.onDidCompositionEnd(() => {
+      composingRef.current = false;
+    });
 
     if (onScrollChange) {
       editor.onDidScrollChange(() => {
