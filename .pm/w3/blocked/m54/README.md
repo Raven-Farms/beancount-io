@@ -24,7 +24,7 @@
 
 ## Source + Goal linkage
 
-- **Source:** `/pm-brainstorm w3` 2026-10-20 candidate 2, from [PRFAQ001](../../../docs/prfaqs/PRFAQ001-ledger-creation.md) and [ADR021](../../../docs/adrs/ADR021-backend-v2-ledger-creation-experience.md), which record the current one-shot form, the "Save" button, and the stale Starter copy as known defects.
+- **Source:** `/pm-brainstorm w3` 2026-10-20 candidate 2, from [PRFAQ001](../../../../docs/prfaqs/PRFAQ001-ledger-creation.md) and [ADR021](../../../../docs/adrs/ADR021-backend-v2-ledger-creation-experience.md), which record the current one-shot form, the "Save" button, and the stale Starter copy as known defects.
 - **Goal linkage:** A2 — Frictionless onboarding.
 - **Expected outcome:** first-time users finish creation and record a first transaction instead of stalling on a four-field form that front-loads every decision. Signals: signup-to-first-transaction completion, creation-flow abandonment by stage.
 - **Why now:** sequenced directly after m53, whose specification, preview, and idempotent create this flow consumes; building UI first would hard-code a contract that does not exist yet. Adoption surface is included (t004) because both clients' creation journeys change.
@@ -38,3 +38,7 @@
 Closeout (t007) cannot run: the milestone's definition of done is not fully met. t003's remaining criterion — a demo ledger identifiable as fictional in ledger lists — waits on an API-visible demo flag on the ledger directory surfaces, and the Starter-copy correction lives in inbox note 648.
 
 **Unblock:** the ledger directory surfaces (REST/GraphQL/MCP in parity) expose a demo flag sourced from the ledger's `bcio_demo` identity or recorded at creation, and w3/648 has shipped. Who can clear it: whoever next extends the ledger directory read in backend-v2 (for the flag) and any worker (for 648).
+
+## Dashboard QA follow-ups — 2026-10-21
+
+Closeout must also verify [W4/314](../../../w4/314.md) and [W4/315](../../../w4/315.md), independently reproduced against the deployed/current LedgerForm. Details Next attempts CreateLedger before the separate final confirmation at desktop/narrow widths; the read-only guard stops every request before transport. Review also names the retained Personal preset for real Starter/Sample choices while the captured payload chooses the correct kind. No ledger is created. The concrete repairs are owned by those W4 records; do not duplicate implementation tasks here. These follow-ups keep the review-before-create and truthful-review acceptance open in addition to the existing directory/demo and copy blockers.

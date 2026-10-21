@@ -4,6 +4,9 @@
 
 ## Inbox
 
+- [314 — Advancing to ledger Review must not submit the creation form](./314.md) — major; dashboard QA, 2026-10-21; pointer/keyboard details Next changes the same button to submit and attempts CreateLedger before final confirmation; every attempt blocked before transport.
+- [315 — Review the selected ledger starting point rather than the retained preset](./315.md) — minor; dashboard QA, 2026-10-21; Starter and Sample both review as Personal ledger despite correct template/setup payloads; no ledger created.
+
 - [313 — Let an unlimited ledger allowance advance the creation wizard](./313.md) — minor; dashboard QA simulation, 2026-10-21; documented-1 allowance produces0/-1 reached-limit warning and disabled Next; finite controls pass, no real Enterprise account/write claimed.
 
 - [312 — Show unavailable AI usage when Billing's read fails](./312.md) — minor; dashboard QA, 2026-10-21; failed usage reads render invented0/0 counts and a full red gauge at both widths; loading and reload controls pass.
