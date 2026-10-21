@@ -159,3 +159,6 @@
 - [289](./289.md) — "Photo from Gravatar" shown under the initials placeholder when there's no Gravatar
 - [290](./290.md) — BTC/ETH budgets rounded to cents with a $0.005 tolerance: a 33% overspend reads "On target"
 - [291](./291.md) — Cost-currency-priced holding still "at cost (no price)" on Accounts root/detail (124 follow-up)
+- [292](./292.md) — Guest mode: one failed refresh blanks the whole example; foreground then remounts it
+- [293](./293.md) — Guest mode: editor says "Choose a ledger you can edit"; budget invite silently opens sign-in
+- [294](./294.md) — Guest drawer lists examples by raw id instead of the chooser's names
