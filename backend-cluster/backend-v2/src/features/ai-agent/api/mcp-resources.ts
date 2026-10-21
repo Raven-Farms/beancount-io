@@ -770,13 +770,13 @@ export const MCP_RESOURCES: readonly McpResourceDescriptor[] = [
     name: "ledgerMetadata",
     title: "Ledger Metadata",
     description:
-      "Read ledger metadata, visibility, repository URLs, and caller permissions.",
+      "Read ledger metadata, visibility, repository URLs, caller permissions, and whether the caller has starred it (isStarred).",
     mimeType: "application/json",
     uriTemplate: `${RESOURCE_SCHEME}://{owner}/{name}/metadata`,
     listSegment: "metadata",
     read: async (context, variables) =>
       JSON.stringify(
-        await context.ledgerWorkflow.getLedger({
+        await context.ledgerWorkflow.getLedgerMetadata({
           identity: context.identity,
           ledgerId: resolveLedgerId(context, variables),
         }),

@@ -65,6 +65,8 @@ import { createLedger as createLedgerOperation } from "@/features/ledger/operati
 import {
   BadUserInputError,
   ConflictError,
+  DomainError,
+  ErrorCategory,
   InternalServerError,
   NotFoundError,
   ValidationError,
@@ -233,6 +235,15 @@ export interface ILedgerWorkflow {
     args: SearchLedgersParams;
   }): Promise<LedgerData[]>;
   getLedger(params: {
+    ledgerId: string;
+    identity?: Identity;
+  }): Promise<LedgerData>;
+  /**
+   * `getLedger` plus the caller's `isStarred`, for the surfaces that return
+   * one serialized object (REST and the MCP `metadata` resource). GraphQL
+   * resolves the same field on demand.
+   */
+  getLedgerMetadata(params: {
     ledgerId: string;
     identity?: Identity;
   }): Promise<LedgerData>;
@@ -1608,6 +1619,36 @@ export class LedgerWorkflow implements ILedgerWorkflow {
       receiptStorage: data.receipt_storage ?? null,
       documentFile: data.document_file ?? null,
     };
+  }
+
+  async getLedgerMetadata({
+    ledgerId,
+    identity,
+  }: {
+    ledgerId: string;
+    identity?: Identity;
+  }): Promise<LedgerData> {
+    const ledger = await this.getLedger({ ledgerId, identity });
+    // GraphQL's isStarred is a field only an authenticated caller sees; REST
+    // and MCP serialize this object, so they carried no star state at all
+    // and could set a star but never read it back (w23/009).
+    if (!identity) return ledger;
+    try {
+      const isStarred = await this.isLedgerStarred({ ledgerId, identity });
+      return isStarred === undefined ? ledger : { ...ledger, isStarred };
+    } catch (error) {
+      // The star check has its own credential rule. A credential the
+      // metadata read admits but that rule refuses still gets the metadata,
+      // without a star state it may not see.
+      if (
+        error instanceof DomainError &&
+        (error.category === ErrorCategory.FORBIDDEN ||
+          error.category === ErrorCategory.NOT_FOUND)
+      ) {
+        return ledger;
+      }
+      throw error;
+    }
   }
 
   async isLedgerStarred({

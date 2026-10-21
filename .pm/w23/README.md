@@ -6,7 +6,6 @@
 
 ## Inbox
 
-- [009](./009.md) — `isStarred` is readable only on GraphQL; REST and MCP `getLedger`/`metadata` omit it
 - [010](./010.md) — `runBqlQuery` has no row cap; one `JOURNAL` returns 5.2 MB of text
 - [011](./011.md) — one non-UTF-8 `.bean` anywhere in the repo, even unincluded, breaks every read with an unnamed `BAD_USER_INPUT`
 - [012](./012.md) — BQL `cost(sum(position))` over mixed currencies returns one mislabelled amount (rustledger 0.24.0)

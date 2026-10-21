@@ -55,7 +55,7 @@ const services = {
 const workflows = {
   ledger: {
     listLedgers: jest.fn(async () => [{ id: "alice/main" }]),
-    getLedger: jest.fn(async () => ({ id: "alice/main" })),
+    getLedgerMetadata: jest.fn(async () => ({ id: "alice/main" })),
   },
 };
 
@@ -186,12 +186,12 @@ describe("v1 authentication and scope", () => {
 
   it("lets the protected workflow's PDP enforce the ledger pin", async () => {
     server.setIdentity(pinnedReadToken);
-    workflows.ledger.getLedger.mockRejectedValueOnce(
+    workflows.ledger.getLedgerMetadata.mockRejectedValueOnce(
       new ForbiddenError("credential is pinned to alice/main"),
     );
     const { status } = await call("GET", "/api-gateway/v1/ledgers/alice/other");
     expect(status).toBe(403);
-    expect(workflows.ledger.getLedger).toHaveBeenCalledWith({
+    expect(workflows.ledger.getLedgerMetadata).toHaveBeenCalledWith({
       ledgerId: "alice/other",
       identity: pinnedReadToken,
     });
@@ -206,7 +206,7 @@ describe("v1 authentication and scope", () => {
       identity: pinnedReadToken,
       args: { page: undefined, limit: undefined },
     });
-    expect(workflows.ledger.getLedger).not.toHaveBeenCalled();
+    expect(workflows.ledger.getLedgerMetadata).not.toHaveBeenCalled();
   });
 });
 
@@ -261,7 +261,7 @@ describe("v1 reads", () => {
   it("addresses one ledger by owner and name, never by an encoded id", async () => {
     const { status } = await call("GET", LEDGER);
     expect(status).toBe(200);
-    expect(workflows.ledger.getLedger).toHaveBeenCalledWith({
+    expect(workflows.ledger.getLedgerMetadata).toHaveBeenCalledWith({
       ledgerId: "alice/main",
       identity: sessionIdentity,
     });

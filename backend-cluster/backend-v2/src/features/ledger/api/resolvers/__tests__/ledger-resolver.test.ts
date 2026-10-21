@@ -48,6 +48,7 @@ describe("Ledger resolvers (delegation)", () => {
       getLedgerFavaOptions: jest.fn(),
       getLedgerBcioOptions: jest.fn(),
       isLedgerStarred: jest.fn(),
+      getLedgerMetadata: jest.fn(),
     };
     mutationResolver = new LedgerMutationResolver(workflow);
     queryResolver = new LedgerQueryResolver(workflow);

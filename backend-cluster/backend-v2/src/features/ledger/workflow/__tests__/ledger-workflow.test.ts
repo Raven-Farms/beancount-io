@@ -3,7 +3,9 @@ import { LedgerWorkflow } from "../ledger-workflow";
 import {
   InternalServerError,
   BadUserInputError,
+  ForbiddenError,
   OperationNotAllowedError,
+  ServiceUnavailableError,
 } from "@/shared/errors";
 import { Ledger } from "@/features/ledger/api/resolvers/ledger-resolver.types";
 import { LedgerTemplate } from "../ledger-workflow.types";
@@ -2167,6 +2169,66 @@ describe("LedgerWorkflow", () => {
 
       expect(result.success).toBe(false);
       expect(result.isStarred).toBe(true);
+    });
+  });
+
+  // w23/009: REST and MCP read the caller's star state through this.
+  describe("getLedgerMetadata", () => {
+    const ledgerId = "testuser/test-ledger";
+    const starring = jest.fn();
+    beforeEach(() => {
+      starring.mockReset().mockResolvedValue({ status: 204 });
+      giteaClientFactory.getUserApiClient.mockResolvedValue({
+        user: { userCurrentCheckStarring: starring },
+      });
+      mockFavaApiClient.ledgers.getLedger.mockResolvedValue({
+        data: {
+          success: true,
+          data: {
+            id: 1,
+            name: "test-ledger",
+            full_name: ledgerId,
+            private: false,
+            empty: false,
+          },
+        },
+      });
+    });
+
+    it("adds the caller's star state to the ledger", async () => {
+      const result = await workflow.getLedgerMetadata({
+        ledgerId,
+        identity: IDENTITY,
+      });
+      expect(result).toMatchObject({ id: ledgerId, isStarred: true });
+    });
+
+    it("leaves star state out for an anonymous reader without checking it", async () => {
+      const result = await workflow.getLedgerMetadata({ ledgerId });
+      expect(result.id).toBe(ledgerId);
+      expect(result).not.toHaveProperty("isStarred");
+      expect(starring).not.toHaveBeenCalled();
+    });
+
+    it("still returns the metadata when the star check alone is refused", async () => {
+      authorization.authorizeOrThrow
+        .mockResolvedValueOnce({ allowed: true })
+        .mockRejectedValueOnce(new ForbiddenError("no social read"));
+      const result = await workflow.getLedgerMetadata({
+        ledgerId,
+        identity: IDENTITY,
+      });
+      expect(result.id).toBe(ledgerId);
+      expect(result).not.toHaveProperty("isStarred");
+    });
+
+    it("does not hide an authorization outage", async () => {
+      authorization.authorizeOrThrow
+        .mockResolvedValueOnce({ allowed: true })
+        .mockRejectedValueOnce(new ServiceUnavailableError("Authorization"));
+      await expect(
+        workflow.getLedgerMetadata({ ledgerId, identity: IDENTITY }),
+      ).rejects.toThrow(ServiceUnavailableError);
     });
   });
 

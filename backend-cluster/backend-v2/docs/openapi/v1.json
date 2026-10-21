@@ -2171,7 +2171,7 @@
       "get": {
         "operationId": "getLedger",
         "summary": "Get one ledger",
-        "description": "Metadata for a single ledger: description, visibility, clone URLs, timestamps, and the caller's permissions when available.",
+        "description": "Metadata for a single ledger: description, visibility, clone URLs, timestamps, and the caller's permissions and `isStarred` when available.",
         "tags": [
           "Ledger v1"
         ],
