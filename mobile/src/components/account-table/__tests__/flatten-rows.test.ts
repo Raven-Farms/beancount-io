@@ -228,3 +228,29 @@ describe("rowDisclosure", () => {
     }
   });
 });
+
+// w21/174: a parent's own-postings row shares its account, not its row key.
+describe("a parent's own-postings row", () => {
+  it("has a key of its own and is marked for its label", () => {
+    const rows = flattenRows(
+      [
+        {
+          key: "assets",
+          account: "Assets",
+          value: 300,
+          children: [
+            node("Assets:Bank", 300, [
+              node("Assets:Bank:Checking", 100),
+              { ...node("Assets:Bank", 200), name: "Bank", own: true },
+            ]),
+          ],
+        },
+      ],
+      { "Assets:Bank": true },
+    );
+    const own = rows.find((row) => row.own)!;
+    expect(own.account).toBe("Assets:Bank");
+    expect(own.key === "Assets:Bank").toBe(false);
+    expect(new Set(rows.map((row) => row.key)).size).toBe(rows.length);
+  });
+});

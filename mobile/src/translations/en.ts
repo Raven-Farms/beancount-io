@@ -367,6 +367,7 @@ export const en = {
   other: "Other",
   budget: "Budget",
   metadata: "Metadata",
+  accountOwnPostings: "{{name}} (own)",
   postings: "Postings",
   details: "Details",
   tags: "Tags",

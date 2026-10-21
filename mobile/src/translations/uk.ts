@@ -379,6 +379,7 @@ export const uk: Translations = {
   other: "Інші",
   budget: "Бюджет",
   metadata: "Метадані",
+  accountOwnPostings: "{{name}} (власні)",
   postings: "Проведення",
   details: "Подробиці",
   tags: "Теги",

@@ -350,3 +350,71 @@ describe("accountCategory and NET_WORTH_SIGN", () => {
     );
   });
 });
+
+// w21/174: a parent's own postings had no row, so its children did not add
+// up to it.
+describe("a parent's own postings", () => {
+  const bank = {
+    account: "Assets",
+    balanceChildren: {},
+    children: [
+      {
+        account: "Assets:Bank",
+        balance: { USD: 200 },
+        balanceChildren: { USD: 17202.01 },
+        children: [
+          {
+            account: "Assets:Bank:Savings",
+            balance: { USD: 10500 },
+            balanceChildren: { USD: 10500 },
+            children: [],
+            hasTxns: true,
+          },
+          {
+            account: "Assets:Bank:Checking",
+            balance: { USD: 6502.01 },
+            balanceChildren: { USD: 6502.01 },
+            children: [],
+            hasTxns: true,
+          },
+        ],
+        hasTxns: true,
+      },
+    ],
+    hasTxns: true,
+  };
+
+  it("get a row of their own beside the sub-accounts", () => {
+    const [row] = selectAccountTreeFromRoot("USD", bank);
+    expect(row.account).toBe("Assets:Bank");
+    expect(
+      row.children.map((child) => [
+        child.name,
+        child.value,
+        child.own ?? false,
+      ]),
+    ).toEqual([
+      ["Savings", 10500, false],
+      ["Checking", 6502.01, false],
+      ["Bank", 200, true],
+    ]);
+    const sum = row.children.reduce((total, child) => total + child.value, 0);
+    expect(Math.abs(sum - row.value) < 0.005).toBe(true);
+  });
+
+  it("add no row when the parent holds nothing itself", () => {
+    const children = bank.children[0].children;
+    const [row] = selectAccountTreeFromRoot("USD", {
+      ...bank,
+      children: [
+        {
+          ...bank.children[0],
+          balance: {},
+          balanceChildren: { USD: 17002.01 },
+          children,
+        },
+      ],
+    });
+    expect(row.children.some((child) => child.own)).toBe(false);
+  });
+});

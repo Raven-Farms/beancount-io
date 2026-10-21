@@ -384,6 +384,7 @@ export const fr: Translations = {
   other: "Autres",
   budget: "Budget",
   metadata: "Métadonnées",
+  accountOwnPostings: "{{name}} (propres)",
   postings: "Écritures",
   details: "Détails",
   tags: "Étiquettes",

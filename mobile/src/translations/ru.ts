@@ -380,6 +380,7 @@ export const ru: Translations = {
   other: "Прочее",
   budget: "Бюджет",
   metadata: "Метаданные",
+  accountOwnPostings: "{{name}} (собственные)",
   postings: "Проводки",
   details: "Подробности",
   tags: "Теги",

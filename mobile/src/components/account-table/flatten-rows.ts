@@ -16,6 +16,8 @@ export type TableRow = {
   account: string;
   /** Row label: an i18n key on category rows, a ready display name below them. */
   label: string;
+  /** A parent's own postings, labelled "{name} (own)" (w21/174). */
+  own?: true;
   /** Category this row belongs to — picks the label's translation at depth 0. */
   category: CategoryKey;
   /** Signed rolled-up balance in the active currency. */
@@ -93,9 +95,11 @@ export function flattenRows(
       const expanded =
         hasChildren && isExpanded(node.account, depth < DEFAULT_EXPANDED_DEPTH);
       rows.push({
-        key: node.account,
+        // The own row shares its parent's account, not its key.
+        key: node.own ? `${node.account}\0own` : node.account,
         account: node.account,
         label: node.name,
+        ...(node.own ? { own: true as const } : {}),
         category,
         value: node.value,
         depth,

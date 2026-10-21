@@ -384,6 +384,7 @@ export const pt: Translations = {
   other: "Outras",
   budget: "Orçamento",
   metadata: "Metadados",
+  accountOwnPostings: "{{name}} (próprias)",
   postings: "Lançamentos",
   details: "Detalhes",
   tags: "Tags",

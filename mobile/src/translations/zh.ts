@@ -337,6 +337,7 @@ export const zh: Translations = {
   other: "其他",
   budget: "预算",
   metadata: "元数据",
+  accountOwnPostings: "{{name}}（自身）",
   postings: "分录",
   details: "详情",
   tags: "标签",

@@ -383,6 +383,7 @@ export const es: Translations = {
   other: "Otras",
   budget: "Presupuesto",
   metadata: "Metadatos",
+  accountOwnPostings: "{{name}} (propias)",
   postings: "Apuntes",
   details: "Detalles",
   tags: "Etiquetas",

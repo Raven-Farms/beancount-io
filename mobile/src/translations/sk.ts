@@ -383,6 +383,7 @@ export const sk: Translations = {
   other: "Ostatné",
   budget: "Rozpočet",
   metadata: "Metaúdaje",
+  accountOwnPostings: "{{name}} (vlastné)",
   postings: "Zápisy",
   details: "Podrobnosti",
   tags: "Značky",

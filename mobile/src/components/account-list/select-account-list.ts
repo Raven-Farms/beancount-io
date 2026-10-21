@@ -11,6 +11,12 @@ export type AccountNode = {
   value: number;
   /** Immediate sub-accounts (one level deeper), same shape. */
   children: AccountNode[];
+  /**
+   * The postings made to the parent itself, as a child row of its own. They
+   * had none, so a parent's children did not add up to it (w21/174). Its
+   * `account` is the parent's.
+   */
+  own?: true;
 };
 
 /** Beancount's five root account categories; each key is also its i18n key. */
@@ -99,6 +105,8 @@ export function accountCategory(
 type RawChild = {
   account: string;
   balance_children: Record<string, number | string>;
+  /** The account's own postings, without its descendants. */
+  balance?: Record<string, number | string> | null;
   children?: RawChild[] | null;
 };
 
@@ -124,16 +132,30 @@ function toNode(
   displayName: (account: string) => string,
   rules: TreeRules,
 ): AccountNode {
+  const children = (raw.children ?? [])
+    .map((child) => toNode(child, currency, sign, leafName, rules))
+    .filter((node) => node.value !== 0 || rules.keep(node));
+  // A parent's own postings, beside its sub-accounts, so the rows beneath it
+  // add up to it (w21/174). A leaf's own balance is its value already.
+  const ownValue = raw.balance
+    ? sign * resolveCurrencyBalance(raw.balance, currency)
+    : 0;
+  if (children.length > 0 && !sameAmount(ownValue, 0)) {
+    children.push({
+      account: raw.account,
+      name: leafName(raw.account),
+      value: ownValue,
+      children: [],
+      own: true,
+    });
+  }
   return {
     account: raw.account,
     name: displayName(raw.account),
     value: sign * resolveCurrencyBalance(raw.balance_children, currency),
-    children: (raw.children ?? [])
-      .map((child) => toNode(child, currency, sign, leafName, rules))
-      .filter((node) => node.value !== 0 || rules.keep(node))
-      // By magnitude: a large negative belongs next to its large siblings, not
-      // sunk to the bottom of the list.
-      .sort((a, b) => Math.abs(b.value) - Math.abs(a.value)),
+    // By magnitude: a large negative belongs next to its large siblings, not
+    // sunk to the bottom of the list.
+    children: children.sort((a, b) => Math.abs(b.value) - Math.abs(a.value)),
   };
 }
 
@@ -173,6 +195,7 @@ function compressChain(node: AccountNode, rules: TreeRules): AccountNode {
     name: segments.join(":"),
     value: current.value,
     children: current.children.map((child) => compressChain(child, rules)),
+    ...(current.own ? { own: true as const } : {}),
   };
 }
 
@@ -182,7 +205,9 @@ function compressChain(node: AccountNode, rules: TreeRules): AccountNode {
  * holding postings of its own fails this and keeps its row.
  */
 function isPassThrough(node: AccountNode, rules: TreeRules): boolean {
-  if (node.children.length === 0) {
+  // Its own-postings row (w21/174) makes the children sum up, but the node
+  // still holds money of its own and keeps its row.
+  if (node.children.length === 0 || node.children.some((child) => child.own)) {
     return false;
   }
   const childSum = node.children.reduce((sum, child) => sum + child.value, 0);
@@ -308,6 +333,7 @@ export type AccountCategory = {
 type SerializableChild = {
   account: string;
   balanceChildren: Record<string, number | string>;
+  balance?: Record<string, number | string> | null;
   children?: SerializableChild[] | null;
 };
 
@@ -323,6 +349,7 @@ function fromSerializable(node: SerializableChild): RawChild {
   return {
     account: node.account,
     balance_children: node.balanceChildren,
+    balance: node.balance,
     children: (node.children ?? []).map(fromSerializable),
   };
 }

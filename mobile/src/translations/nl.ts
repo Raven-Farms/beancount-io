@@ -375,6 +375,7 @@ export const nl: Translations = {
   other: "Overige",
   budget: "Budget",
   metadata: "Metadata",
+  accountOwnPostings: "{{name}} (eigen)",
   postings: "Boekingen",
   details: "Details",
   tags: "Tags",

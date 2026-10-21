@@ -374,6 +374,7 @@ export const bg: Translations = {
   other: "Други",
   budget: "Бюджет",
   metadata: "Метаданни",
+  accountOwnPostings: "{{name}} (собствени)",
   postings: "Редове",
   details: "Подробности",
   tags: "Етикети",

@@ -488,7 +488,13 @@ export function AccountTable({
         row={item}
         // Category rows label themselves from the i18n key they carry; account
         // rows already hold a display name built from the ledger.
-        label={item.depth === 0 ? t(item.label) : item.label}
+        label={
+          item.depth === 0
+            ? t(item.label)
+            : item.own
+              ? t("accountOwnPostings", { name: item.label })
+              : item.label
+        }
         currency={currency}
         display={displays?.get(item.key)}
         stacked={stacked}

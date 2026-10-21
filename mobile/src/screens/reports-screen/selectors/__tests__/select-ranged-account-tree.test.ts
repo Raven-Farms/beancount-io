@@ -287,3 +287,39 @@ describe("selectRangedAccountTree: other currencies", () => {
     expect(notInTotalNote(result.notInTotal, t)).toBe(null);
   });
 });
+
+// w21/174: a parent's own postings had no row on Reports' breakdown cards, so
+// Food read 240 over children adding to 190.
+describe("a parent's own postings on a breakdown", () => {
+  it("get a row of their own at every level, so each adds up", () => {
+    const { tree } = selectRangedAccountTree(
+      "USD",
+      [
+        point("2026-10-31", {
+          "Expenses:Food": { USD: 50 },
+          "Expenses:Food:Groceries": { USD: 100 },
+          "Expenses:Food:Groceries:Costco": { USD: 60 },
+          "Expenses:Food:Dining": { USD: 30 },
+          "Expenses:Rent": { USD: 1000 },
+        }),
+      ],
+      "ALL",
+      "expenses",
+      "2026-10",
+    );
+    const food = tree.find((node) => node.account === "Expenses:Food")!;
+    expect(food.value).toBe(240);
+    const shape = (nodes: typeof tree) =>
+      nodes.map((node) => [node.name, node.value, node.own ?? false]);
+    expect(shape(food.children)).toEqual([
+      ["Groceries", 160, false],
+      ["Food", 50, true],
+      ["Dining", 30, false],
+    ]);
+    const groceries = food.children[0];
+    expect(shape(groceries.children)).toEqual([
+      ["Groceries", 100, true],
+      ["Costco", 60, false],
+    ]);
+  });
+});

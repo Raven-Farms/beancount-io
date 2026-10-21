@@ -368,6 +368,7 @@ export const fa: Translations = {
   other: "سایر",
   budget: "بودجه",
   metadata: "فراداده",
+  accountOwnPostings: "{{name}} (خود حساب)",
   postings: "ثبت‌ها",
   details: "جزئیات",
   tags: "برچسب‌ها",

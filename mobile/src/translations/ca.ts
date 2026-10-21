@@ -384,6 +384,7 @@ export const ca: Translations = {
   other: "Altres",
   budget: "Pressupost",
   metadata: "Metadades",
+  accountOwnPostings: "{{name}} (pròpies)",
   postings: "Apunts",
   details: "Detalls",
   tags: "Etiquetes",

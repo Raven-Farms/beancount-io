@@ -219,6 +219,10 @@ export function CategoryBreakdown({
 
   const renderChild = (node: AccountNode, depth: number): JSX.Element => {
     const hasChildren = node.children.length > 0;
+    // A parent's own postings, beside its sub-accounts (w21/174).
+    const name = node.own
+      ? t("accountOwnPostings", { name: node.name })
+      : node.name;
     const isExpanded = overrides[node.account] ?? false;
     const paddingStart = gutter + depth * INDENT_STEP;
 
@@ -243,7 +247,7 @@ export function CategoryBreakdown({
       <>
         {chevron}
         <View style={styles.stackedColumn}>
-          <Text style={styles.stackedChildName}>{node.name}</Text>
+          <Text style={styles.stackedChildName}>{name}</Text>
           <AmountText style={styles.stackedChildValue}>{amountText}</AmountText>
         </View>
       </>
@@ -251,7 +255,7 @@ export function CategoryBreakdown({
       <>
         {chevron}
         <Text style={styles.childName} numberOfLines={1}>
-          {node.name}
+          {name}
         </Text>
         <AmountText style={styles.childValue}>{amountText}</AmountText>
       </>
@@ -261,11 +265,11 @@ export function CategoryBreakdown({
       <Fragment key={node.account}>
         {hasChildren ? (
           <TouchableOpacity
-            testID={`category-row-${node.account}`}
+            testID={`category-row-${node.account}${node.own ? "-own" : ""}`}
             style={[styles.childRow, { paddingStart }]}
             onPress={() => toggle(node.account, isExpanded)}
             accessibilityRole="button"
-            accessibilityLabel={node.name}
+            accessibilityLabel={name}
             accessibilityValue={{
               text: breakdownRowAccessibilityValue(amountText, null, t),
             }}
@@ -275,7 +279,7 @@ export function CategoryBreakdown({
           </TouchableOpacity>
         ) : (
           <View
-            testID={`category-row-${node.account}`}
+            testID={`category-row-${node.account}${node.own ? "-own" : ""}`}
             style={[styles.childRow, { paddingStart }]}
           >
             {rowContent}

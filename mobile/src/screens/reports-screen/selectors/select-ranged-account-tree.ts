@@ -48,6 +48,7 @@ const EMPTY: RangedAccountTree = { tree: [], total: 0, notInTotal: [] };
 /** Node in the SerializableTreeNode shape `selectAccountTreeFromRoot` reads. */
 type TreeNode = {
   account: string;
+  balance?: Record<string, number>;
   balanceChildren: Record<string, number>;
   children: TreeNode[];
 };
@@ -107,6 +108,9 @@ function toTreeNode(
 ): TreeNode {
   return {
     account: trie.account,
+    // Its own sum, kept so its postings get a row beside its sub-accounts
+    // and the breakdown adds up (w21/174).
+    balance: { [currency]: sums.get(trie.account) ?? 0 },
     balanceChildren: { [currency]: rollup(trie, sums) },
     children: Array.from(trie.children.values()).map((child) =>
       toTreeNode(child, currency, sums),
