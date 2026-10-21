@@ -15,6 +15,7 @@ import {
 } from "@/generated-graphql/graphql";
 import {
   selectSpendingCompare,
+  spendingChartSummary,
   spendingWindow,
 } from "@/screens/home-screen/selectors/select-spending-compare";
 import { CardLoadFailure } from "@/components/card-load-failure";
@@ -127,6 +128,11 @@ export function SpendingCard({
             currency={currency}
             labels={SPENDING_LABELS}
             numbers={[lastMonth, thisMonth]}
+            accessibilityLabel={spendingChartSummary(
+              { lastMonth, thisMonth },
+              currency,
+              t,
+            )}
           />
         </FadeInView>
       )}

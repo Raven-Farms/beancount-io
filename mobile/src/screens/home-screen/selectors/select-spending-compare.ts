@@ -1,4 +1,5 @@
 import { resolveCurrencyBalance } from "../../../common/balance-util";
+import { formatMoneyWithCurrency } from "../../../common/number-utils";
 import { formatTimeFilter } from "../../transactions-screen/filters/select-filter-query";
 
 export type SpendingCompare = {
@@ -65,4 +66,19 @@ export function selectSpendingCompare(
     else if (key === lastMonthKey) lastMonth += spent;
   }
   return { thisMonth, lastMonth, thisMonthKey, lastMonthKey };
+}
+
+/**
+ * The Spending chart as one spoken sentence — both months and their amounts —
+ * since its bars and axis ticks are not readable on their own (w21/018).
+ */
+export function spendingChartSummary(
+  { lastMonth, thisMonth }: Pick<SpendingCompare, "lastMonth" | "thisMonth">,
+  currency: string,
+  t: (key: "spendingChartSummary", params: Record<string, string>) => string,
+): string {
+  return t("spendingChartSummary", {
+    lastMonth: formatMoneyWithCurrency(lastMonth, currency),
+    thisMonth: formatMoneyWithCurrency(thisMonth, currency),
+  });
 }

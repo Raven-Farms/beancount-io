@@ -376,6 +376,8 @@ export const bg: Translations = {
   recentTransactionsEmpty: "Още няма транзакции",
   spending: "Разходи",
   spendingSubtitle: "Този месец спрямо миналия",
+  spendingChartSummary:
+    "Разходи: миналия месец {{lastMonth}}, този месец {{thisMonth}}.",
   thisMonth: "Този месец",
   lastMonth: "Миналия месец",
   range1M: "1М",

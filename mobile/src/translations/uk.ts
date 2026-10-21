@@ -381,6 +381,8 @@ export const uk: Translations = {
   recentTransactionsEmpty: "Транзакцій поки немає",
   spending: "Витрати",
   spendingSubtitle: "Цей місяць проти минулого",
+  spendingChartSummary:
+    "Витрати: минулого місяця {{lastMonth}}, цього місяця {{thisMonth}}.",
   thisMonth: "Цей місяць",
   lastMonth: "Минулий місяць",
   range1M: "1М",

@@ -386,6 +386,8 @@ export const de: Translations = {
   recentTransactionsEmpty: "Noch keine Transaktionen",
   spending: "Ausgaben",
   spendingSubtitle: "Dieser Monat vs. Vormonat",
+  spendingChartSummary:
+    "Ausgaben: letzter Monat {{lastMonth}}, dieser Monat {{thisMonth}}.",
   thisMonth: "Dieser Monat",
   lastMonth: "Vormonat",
   range1M: "1M",

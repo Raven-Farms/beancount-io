@@ -383,6 +383,8 @@ export const en = {
   recentTransactionsEmpty: "No transactions yet",
   spending: "Spending",
   spendingSubtitle: "This month vs. last month",
+  spendingChartSummary:
+    "Spending: last month {{lastMonth}}, this month {{thisMonth}}.",
   thisMonth: "This month",
   lastMonth: "Last month",
   range1M: "1M",

@@ -385,6 +385,8 @@ export const ca: Translations = {
   recentTransactionsEmpty: "Encara no hi ha transaccions",
   spending: "Despeses",
   spendingSubtitle: "Aquest mes en comparació amb l'anterior",
+  spendingChartSummary:
+    "Despeses: el mes passat {{lastMonth}}, aquest mes {{thisMonth}}.",
   thisMonth: "Aquest mes",
   lastMonth: "Mes passat",
   range1M: "1M",

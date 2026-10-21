@@ -2,8 +2,10 @@ import fs from "fs";
 import path from "path";
 import {
   selectSpendingCompare,
+  spendingChartSummary,
   spendingWindow,
 } from "../select-spending-compare";
+import { en } from "../../../../translations/en";
 
 // The card used to sum the newest 200 journal rows, so a month with more
 // transactions than that hid last month's spending and capped this month's
@@ -90,5 +92,33 @@ describe("Spending card", () => {
     expect(source.includes('interval: "month",')).toBe(true);
     expect(source.includes("time: spendingWindow(),")).toBe(true);
     expect(source.includes("useGetLedgerJournalQuery")).toBe(false);
+  });
+});
+
+// The chart's bars and ticks are not readable on their own; VoiceOver hears
+// one summary naming both months and amounts (w21/018).
+describe("spendingChartSummary", () => {
+  const t = (key: "spendingChartSummary", params: Record<string, string>) =>
+    en[key].replace(/\{\{(\w+)\}\}/g, (_, name: string) => params[name]);
+
+  it("names both months and their amounts", () => {
+    expect(
+      spendingChartSummary({ lastMonth: 100, thisMonth: 205 }, "USD", t),
+    ).toBe("Spending: last month $100.00, this month $205.00.");
+  });
+
+  it("is the label of the one accessible chart element", () => {
+    const read = (...parts: string[]) =>
+      fs.readFileSync(path.join(__dirname, ...parts), "utf8");
+    expect(
+      read("..", "..", "..", "..", "common", "d3", "bar-chart-d3.tsx").includes(
+        "<View accessible accessibilityLabel={accessibilityLabel}>",
+      ),
+    ).toBe(true);
+    expect(
+      read("..", "..", "components", "spending-card.tsx").includes(
+        "accessibilityLabel={spendingChartSummary(",
+      ),
+    ).toBe(true);
   });
 });
