@@ -76,6 +76,25 @@ describe("selectOutcomeFailure", () => {
     ).toEqual({ kind: "conflict" });
   });
 
+  // An entry changed elsewhere no longer resolves by its content hash, so the
+  // save is answered NOT_FOUND, not as a checksum conflict (w21/028).
+  it("offers Reload when the entry changed elsewhere", () => {
+    const changed = Object.assign(new Error("Ledger resource not found"), {
+      graphQLErrors: [
+        {
+          message: "Ledger resource not found",
+          extensions: { code: "NOT_FOUND" },
+        },
+      ],
+    });
+    expect(
+      selectOutcomeFailure(
+        { ok: false, message: "Couldn't save", error: changed },
+        i18n,
+      ),
+    ).toEqual({ kind: "conflict" });
+  });
+
   it("falls back to the toast copy when the error says nothing", () => {
     expect(
       selectOutcomeFailure({ ok: false, message: "Couldn't save" }, i18n),
@@ -98,5 +117,23 @@ describe("Edit Transaction save-failure wiring", () => {
     expect(source.includes("selectOutcomeFailure(outcome, i18n)")).toBe(true);
     expect(source.includes('setSaveError(t("editConflict"))')).toBe(true);
     expect(source.includes("onPress: () => void handleReload()")).toBe(true);
+  });
+});
+
+describe("Edit Transaction reload of an entry that is gone", () => {
+  const source = fs.readFileSync(
+    path.join(__dirname, "..", "edit-transaction-screen.tsx"),
+    "utf8",
+  );
+
+  it("shows the changed-or-removed state and refreshes the lists", () => {
+    expect(source.includes("if (!isEntryGone(error)) return;")).toBe(true);
+    expect(source.includes("setEntryGone(true);")).toBe(true);
+    expect(source.includes('message={t("transactionDetailRemoved")}')).toBe(
+      true,
+    );
+    expect(
+      source.includes('void invalidateLedgerData(client, "entries");'),
+    ).toBe(true);
   });
 });

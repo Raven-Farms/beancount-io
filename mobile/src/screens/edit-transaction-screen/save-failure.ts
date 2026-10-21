@@ -1,4 +1,5 @@
 import { isConflictError } from "../../common/ledger-conflict";
+import { isEntryGone } from "../transaction-detail-screen/selectors/select-entry-gone";
 import { ledgerWriteFailureMessage } from "../../common/ledger-refusal";
 import type { LedgerWriteOutcome } from "../../common/ledger-write";
 
@@ -29,6 +30,10 @@ export function selectOutcomeFailure(
   outcome: Extract<LedgerWriteOutcome, { ok: false }>,
   i18n: Parameters<typeof ledgerWriteFailureMessage>[1],
 ): SaveFailure {
+  // An entry is addressed by a hash of its content, so one changed elsewhere
+  // is answered NOT_FOUND before any checksum is compared — the same stale
+  // edit a checksum conflict reports, and it gets the same Reload (w21/028).
+  if (isEntryGone(outcome.error)) return { kind: "conflict" };
   return selectSaveFailure(
     ledgerWriteFailureMessage(outcome.error, i18n) ?? outcome.message,
   );

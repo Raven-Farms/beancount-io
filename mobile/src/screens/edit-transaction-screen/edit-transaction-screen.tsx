@@ -50,6 +50,8 @@ import {
 } from "@/components/code-editor/revision-tracker";
 import { applySavedIdentity, resolveSaveExit } from "./save-exit";
 import { selectOutcomeFailure } from "./save-failure";
+import { isEntryGone } from "@/screens/transaction-detail-screen/selectors/select-entry-gone";
+import { RouteLedgerUnavailable } from "@/components/route-ledger-unavailable";
 import { i18n } from "@/translations";
 
 const SKELETON_WIDTHS = [220, 160, 280, 120, 200, 260, 140];
@@ -179,13 +181,27 @@ export const EditTransactionScreen = (): JSX.Element => {
   // After a stale-checksum rejection the draft can never be saved as it is:
   // re-read the entry (under its current identity) and reseed the editor, the
   // same reset the effect above performs on first load.
+  // Reload finds the entry gone when it was changed or removed elsewhere: its
+  // hash no longer resolves. Say so instead of leaving a draft that fails on
+  // every save, and refresh the lists behind (w21/028, as w21/013).
+  const [entryGone, setEntryGone] = useState(false);
   const handleReload = useCallback(async () => {
-    const result = await refetchContext({
-      entryHash: entryHashRef.current,
-      ledgerId: ledgerId ?? "",
-    });
-    const context = result.data?.getLedgerEntryContext;
-    if (!context) return;
+    let context;
+    try {
+      const result = await refetchContext({
+        entryHash: entryHashRef.current,
+        ledgerId: ledgerId ?? "",
+      });
+      context = result.data?.getLedgerEntryContext;
+    } catch (error: unknown) {
+      if (!isEntryGone(error)) return;
+    }
+    if (!context) {
+      setHasUnsavedChanges(false);
+      setEntryGone(true);
+      void invalidateLedgerData(client, "entries");
+      return;
+    }
     const epoch = documentEpochRef.current + 1;
     documentEpochRef.current = epoch;
     resetRevisionTracker(revisionTrackerRef.current);
@@ -193,7 +209,7 @@ export const EditTransactionScreen = (): JSX.Element => {
     setDocumentSpec({ value: context.slice, epoch });
     setHasUnsavedChanges(false);
     setSaveError(null);
-  }, [ledgerId, refetchContext]);
+  }, [ledgerId, refetchContext, client]);
 
   // ── Save ────────────────────────────────────────────────────────────────────
 
@@ -413,6 +429,15 @@ export const EditTransactionScreen = (): JSX.Element => {
     !initialized &&
     (Boolean(contextError) ||
       (!contextLoading && !data?.getLedgerEntryContext));
+
+  if (entryGone) {
+    return (
+      <RouteLedgerUnavailable
+        title={t("editTransaction")}
+        message={t("transactionDetailRemoved")}
+      />
+    );
+  }
 
   return (
     <SafeAreaView edges={["bottom"]} style={styles.container}>
