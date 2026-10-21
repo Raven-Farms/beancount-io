@@ -49,6 +49,9 @@ import {
   decodeLedgerFileContent,
   encodeLedgerFileContent,
   isLosslessLedgerFileContent,
+  lineEndingOf,
+  withLineEnding,
+  type LineEnding,
 } from "@/common/ledger-file-content";
 import { isBeancountFile } from "@/common/ledger-file-types";
 import {
@@ -370,6 +373,7 @@ function LedgerFileEditorSession({
   });
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const shaRef = useRef("");
+  const lineEndingRef = useRef<LineEnding>("\n");
   const documentEpochRef = useRef(0);
   const revisionTrackerRef = useRef(createRevisionTracker());
 
@@ -379,6 +383,7 @@ function LedgerFileEditorSession({
     const enc = fileData.getLedgerFile.encoding;
     const fc = decodeLedgerFileContent(raw, enc);
     setLossy(!isLosslessLedgerFileContent(raw, enc));
+    lineEndingRef.current = lineEndingOf(fc);
     const fs = fileData.getLedgerFile.sha;
     const epoch = documentEpochRef.current + 1;
     documentEpochRef.current = epoch;
@@ -456,6 +461,7 @@ function LedgerFileEditorSession({
     const enc = result.data?.getLedgerFile?.encoding;
     const fc = decodeLedgerFileContent(raw, enc);
     setLossy(!isLosslessLedgerFileContent(raw, enc));
+    lineEndingRef.current = lineEndingOf(fc);
     const fs = result.data?.getLedgerFile?.sha ?? "";
     const epoch = documentEpochRef.current + 1;
     documentEpochRef.current = epoch;
@@ -503,7 +509,9 @@ function LedgerFileEditorSession({
           variables: {
             ledgerId,
             path,
-            content: encodeLedgerFileContent(content),
+            content: encodeLedgerFileContent(
+              withLineEnding(content, lineEndingRef.current),
+            ),
             sha,
             message: `edit ${path}`,
           },

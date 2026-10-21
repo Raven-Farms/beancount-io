@@ -2,6 +2,8 @@ import {
   decodeLedgerFileContent,
   encodeLedgerFileContent,
   isLosslessLedgerFileContent,
+  lineEndingOf,
+  withLineEnding,
 } from "../ledger-file-content";
 
 // w21/042: a Latin-1 "Café" decoded to "Caf�" and one unrelated save
@@ -66,5 +68,65 @@ describe("the file editor", () => {
     expect(source.includes("const canWrite = canWriteLedger && !lossy;")).toBe(
       true,
     );
+  });
+});
+
+// w21/062: the editor joins lines with "\n", so saving a CRLF file rewrote
+// every line ending and a one-line edit became a whole-file diff.
+describe("line endings survive an edit", () => {
+  const b64 = (text: string) => Buffer.from(text, "utf8").toString("base64");
+  // What the CodeMirror document hands back: its lines joined with "\n".
+  const editor = (text: string) => text.split(/\r\n|\r|\n/).join("\n");
+  const roundTrip = (original: string, edit: (text: string) => string) => {
+    const decoded = decodeLedgerFileContent(b64(original), "base64");
+    const saved = encodeLedgerFileContent(
+      withLineEnding(edit(editor(decoded)), lineEndingOf(decoded)),
+    );
+    return Buffer.from(saved, "base64").toString("utf8");
+  };
+  const addLine = (text: string) => `${text}; qa added`;
+
+  it("keeps a CRLF file's endings, so only the added line changes", () => {
+    expect(roundTrip("; line1\r\n; line2\r\n; line3\r\n", addLine)).toBe(
+      "; line1\r\n; line2\r\n; line3\r\n; qa added",
+    );
+  });
+
+  it("leaves an LF file as it was", () => {
+    expect(roundTrip("; line1\n; line2\n", addLine)).toBe(
+      "; line1\n; line2\n; qa added",
+    );
+  });
+
+  it("keeps a BOM and CRLF together", () => {
+    expect(roundTrip("﻿; a\r\n; b\r\n", (text) => text)).toBe(
+      "﻿; a\r\n; b\r\n",
+    );
+  });
+
+  it("keeps a mixed file's majority ending", () => {
+    expect(lineEndingOf("a\r\nb\r\nc\n")).toBe("\r\n");
+    expect(lineEndingOf("a\nb\nc\r\n")).toBe("\n");
+    expect(lineEndingOf("no newline")).toBe("\n");
+  });
+
+  it("is what the editor saves with, from load and from Reload", () => {
+    const source = require("fs").readFileSync(
+      require("path").join(
+        __dirname,
+        "..",
+        "..",
+        "screens",
+        "ledger-file-editor-screen",
+        "index.tsx",
+      ),
+      "utf8",
+    ) as string;
+    expect(
+      source.split("lineEndingRef.current = lineEndingOf(fc);").length - 1,
+    ).toBe(2);
+    expect(
+      source.includes("withLineEnding(content, lineEndingRef.current)"),
+    ).toBe(true);
   });
 });
