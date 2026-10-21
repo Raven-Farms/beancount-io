@@ -9,24 +9,24 @@ const CHECKOUT_CONFIRMATION_WINDOW_MS = 24 * 60 * 60 * 1000;
 /** Ids recorded during this page load, for when storage is unavailable. */
 const recordedThisLoad = new Set<string>();
 
-export interface PaidTransaction {
-  /** The Stripe invoice that was paid; GA4 deduplicates purchases on it. */
+export interface Purchase {
+  /** The plan's Stripe invoice; GA4 deduplicates purchases on it. */
   invoiceId: string | null | undefined;
-  /** Collected, in the currency's minor unit, discounts applied. */
+  /** What the invoice charges, in the currency's minor unit; may be 0. */
   amount: number | null | undefined;
   currency: string | null | undefined;
   priceId: string;
 }
 
 /**
- * Send GA4's `purchase` for a paid invoice, once per browser. The browser is
- * the only purchase source, so the caller celebrates exactly the purchases
- * this counts: it returns true only the first time. A missing invoice, a
- * zero amount or an invoice already recorded sends nothing.
+ * Send GA4's `purchase` for a plan's invoice, once per browser, whatever it
+ * charged. Returns true only the first time, so a caller that runs on page
+ * load can celebrate exactly once. Without an invoice there is nothing to
+ * deduplicate on, so nothing is sent.
  */
-export function recordPaidTransaction(transaction: PaidTransaction): boolean {
-  const { invoiceId, amount, currency, priceId } = transaction;
-  if (!invoiceId || !currency || !amount || amount <= 0) return false;
+export function recordPurchase(purchase: Purchase): boolean {
+  const { invoiceId, amount, currency, priceId } = purchase;
+  if (!invoiceId || !currency || amount == null) return false;
   if (!claim(invoiceId)) return false;
   const value = majorUnits(amount, currency);
   const plan = planForPrice(priceId);

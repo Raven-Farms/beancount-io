@@ -8,10 +8,10 @@ vi.mock("@/common/analytics", () => ({ track: mockTrack }));
 
 const load = async () => {
   vi.resetModules();
-  return import("../paid-transaction");
+  return import("../purchase");
 };
 
-const paid = {
+const purchase = {
   invoiceId: "in_first",
   amount: 14388,
   currency: "usd",
@@ -38,11 +38,11 @@ beforeEach(() => {
   vi.stubGlobal("localStorage", memoryStorage());
 });
 
-describe("recordPaidTransaction", () => {
+describe("recordPurchase", () => {
   it("sends one GA4 purchase in major units with the plan as its item", async () => {
-    const { recordPaidTransaction } = await load();
+    const { recordPurchase } = await load();
 
-    expect(recordPaidTransaction(paid)).toBe(true);
+    expect(recordPurchase(purchase)).toBe(true);
 
     expect(mockTrack).toHaveBeenCalledTimes(1);
     expect(mockTrack).toHaveBeenCalledWith("purchase", {
@@ -62,14 +62,14 @@ describe("recordPaidTransaction", () => {
   });
 
   it("counts an invoice once on this browser, across reloads", async () => {
-    expect((await load()).recordPaidTransaction(paid)).toBe(true);
+    expect((await load()).recordPurchase(purchase)).toBe(true);
     // A fresh module is a reload: only storage remembers.
-    expect((await load()).recordPaidTransaction(paid)).toBe(false);
+    expect((await load()).recordPurchase(purchase)).toBe(false);
     expect(mockTrack).toHaveBeenCalledTimes(1);
   });
 
   it("still counts once per page load when storage is unavailable", async () => {
-    const { recordPaidTransaction } = await load();
+    const { recordPurchase } = await load();
     vi.stubGlobal("localStorage", {
       ...memoryStorage(),
       getItem: () => {
@@ -77,29 +77,41 @@ describe("recordPaidTransaction", () => {
       },
     });
 
-    expect(recordPaidTransaction(paid)).toBe(true);
-    expect(recordPaidTransaction(paid)).toBe(false);
+    expect(recordPurchase(purchase)).toBe(true);
+    expect(recordPurchase(purchase)).toBe(false);
     expect(mockTrack).toHaveBeenCalledTimes(1);
+  });
+
+  it("counts a fully discounted plan like any other, at value 0", async () => {
+    const { recordPurchase } = await load();
+
+    expect(
+      recordPurchase({ ...purchase, invoiceId: "in_free", amount: 0 }),
+    ).toBe(true);
+
+    expect(mockTrack).toHaveBeenCalledWith(
+      "purchase",
+      expect.objectContaining({ transaction_id: "in_free", value: 0 }),
+    );
   });
 
   it.each([
     ["no invoice", { invoiceId: null }],
     ["an empty invoice id", { invoiceId: "" }],
-    ["nothing paid", { amount: 0 }],
     ["an unknown amount", { amount: null }],
     ["no currency", { currency: null }],
   ])("sends nothing for %s", async (_label, change) => {
-    const { recordPaidTransaction } = await load();
+    const { recordPurchase } = await load();
 
-    expect(recordPaidTransaction({ ...paid, ...change })).toBe(false);
+    expect(recordPurchase({ ...purchase, ...change })).toBe(false);
     expect(mockTrack).not.toHaveBeenCalled();
   });
 
   it("reports no billing cycle for a price this app does not know", async () => {
-    const { recordPaidTransaction } = await load();
+    const { recordPurchase } = await load();
 
-    recordPaidTransaction({
-      ...paid,
+    recordPurchase({
+      ...purchase,
       invoiceId: "in_unknown",
       priceId: "price_unknown",
     });
@@ -114,10 +126,10 @@ describe("recordPaidTransaction", () => {
   });
 
   it("converts a zero-decimal currency without dividing by 100", async () => {
-    const { recordPaidTransaction } = await load();
+    const { recordPurchase } = await load();
 
-    recordPaidTransaction({
-      ...paid,
+    recordPurchase({
+      ...purchase,
       invoiceId: "in_yen",
       amount: 1500,
       currency: "jpy",

@@ -378,7 +378,17 @@ describe("emailRenewalReminder", () => {
     expect(mailOf(sendMail).text).toContain("$71.94 is charged");
   });
 
-  it("reminds nobody on a monthly plan, a plan set to end, or a renewal that charges nothing", async () => {
+  it("reminds a fully discounted renewal like any other, at its amount", async () => {
+    const { remind, sendMail } = setup();
+
+    await expect(
+      remind(subscription(), invoice({ amount_due: 0 })),
+    ).resolves.toBe("sent");
+
+    expect(mailOf(sendMail).text).toContain("$0.00 is charged");
+  });
+
+  it("reminds nobody on a monthly plan or a plan set to end", async () => {
     const { remind, sendMail } = setup();
 
     await expect(remind(subscription(PREMIUM_MONTHLY))).resolves.toBe(
@@ -386,9 +396,6 @@ describe("emailRenewalReminder", () => {
     );
     await expect(
       remind(subscription(PREMIUM_YEARLY, { cancel_at_period_end: true })),
-    ).resolves.toBe("not-applicable");
-    await expect(
-      remind(subscription(), invoice({ amount_due: 0 })),
     ).resolves.toBe("not-applicable");
     await expect(remind(subscription("price_other"))).resolves.toBe(
       "not-applicable",

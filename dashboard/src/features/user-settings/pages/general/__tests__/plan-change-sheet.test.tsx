@@ -538,6 +538,44 @@ describe("PlanChangeSheet", () => {
       expect(mockCelebrate).not.toHaveBeenCalled();
     });
 
+    it("counts a change that took effect at no charge at value 0, and celebrates it", async () => {
+      mockChangePlan.mockResolvedValue({
+        data: {
+          changePlan: {
+            status: "ACTIVE",
+            invoiceId: "in_credit",
+            amountCharged: 0,
+            currency: "usd",
+          },
+        },
+      });
+      const { onClose } = renderSheet();
+
+      await confirm();
+
+      await waitFor(() => expect(onClose).toHaveBeenCalled());
+      expect(purchases()).toEqual([
+        [
+          "purchase",
+          expect.objectContaining({ transaction_id: "in_credit", value: 0 }),
+        ],
+      ]);
+      expect(mockCelebrate).toHaveBeenCalledTimes(1);
+    });
+
+    it("celebrates a change that took effect without an invoice, counting no purchase", async () => {
+      mockChangePlan.mockResolvedValue({
+        data: { changePlan: { status: "ACTIVE" } },
+      });
+      const { onClose } = renderSheet();
+
+      await confirm();
+
+      await waitFor(() => expect(onClose).toHaveBeenCalled());
+      expect(purchases()).toEqual([]);
+      expect(mockCelebrate).toHaveBeenCalledTimes(1);
+    });
+
     it("says nothing changed when the bank refuses, and offers another card", async () => {
       mockChangePlan.mockResolvedValue(requiresAction());
       mockApproveBankPayment.mockResolvedValue("declined");
@@ -706,7 +744,7 @@ describe("PlanChangeSheet", () => {
       // useChangePlan refetches the plan itself; a second refetch is waste.
       expect(onChanged).not.toHaveBeenCalled();
       expect(onClose).toHaveBeenCalled();
-      // Nothing was charged: not a purchase, nothing to celebrate.
+      // Scheduled, not yet in effect: not a purchase, nothing to celebrate.
       expect(
         mockTrack.mock.calls.filter(([event]) => event === "purchase"),
       ).toEqual([]);

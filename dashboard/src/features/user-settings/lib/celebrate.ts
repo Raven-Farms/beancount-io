@@ -1,5 +1,5 @@
 /**
- * A short confetti burst for a payment that went through. Skipped when the
+ * A short confetti burst for a plan that took effect. Skipped when the
  * reader prefers reduced motion; the library loads only here, so it never
  * reaches the entry chunk.
  */

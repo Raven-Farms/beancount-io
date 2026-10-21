@@ -702,14 +702,32 @@ describe("Checkout return", () => {
     expect(mockCelebrate).toHaveBeenCalledTimes(1);
   });
 
-  it.each([
-    ["a fully discounted Checkout", 0, "subscription_create"],
-    ["a renewal invoice", 1499, "subscription_cycle"],
-  ])("counts and celebrates nothing for %s", (_label, amountPaid, reason) => {
+  it("counts and celebrates a fully discounted Checkout like any other", () => {
     returnedWith({
-      id: `in_${reason}_${amountPaid}`,
-      amountPaid,
-      billingReason: reason,
+      id: "in_checkout_free",
+      amountPaid: 0,
+      billingReason: "subscription_create",
+    });
+
+    render(<SubscriptionSection checkoutReturned />);
+
+    expect(purchases()).toEqual([
+      [
+        "purchase",
+        expect.objectContaining({
+          transaction_id: "in_checkout_free",
+          value: 0,
+        }),
+      ],
+    ]);
+    expect(mockCelebrate).toHaveBeenCalledTimes(1);
+  });
+
+  it("counts and celebrates nothing when the latest invoice is a renewal", () => {
+    returnedWith({
+      id: "in_renewal",
+      amountPaid: 1499,
+      billingReason: "subscription_cycle",
     });
 
     render(<SubscriptionSection checkoutReturned />);

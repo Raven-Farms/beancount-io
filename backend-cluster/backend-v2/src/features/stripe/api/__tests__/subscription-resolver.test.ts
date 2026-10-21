@@ -350,7 +350,7 @@ describe("SubscriptionResolver", () => {
       expect(result.subscriptions[0]?.nextPaymentAttempt).toBeNull();
     });
 
-    it("reports what the latest invoice collected, so a $0 Checkout is not counted as a sale", async () => {
+    it("reports what the latest invoice collected, discounts applied", async () => {
       mockStripeService.listSubscriptions.mockResolvedValue([
         liveSubscription("active", {
           latest_invoice: {

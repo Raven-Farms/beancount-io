@@ -9,7 +9,7 @@ export type ConfirmationState = "confirming" | "done" | "pending";
 /**
  * Poll subscription status after Checkout until the webhook has recorded the
  * subscription, or until the timeout. Nothing here treats a slow webhook as an
- * error: the customer has paid.
+ * error: Checkout has completed.
  */
 export function useCheckoutConfirmation(
   enabled: boolean,

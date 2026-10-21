@@ -229,11 +229,11 @@ export interface AnalyticsEvents {
    */
   checkout_started: { target_tier: PlanTier; surface: BillingSurface };
   /**
-   * GA4's recommended purchase: an invoice the customer paid us for a plan,
-   * from Checkout's confirmation or an immediate upgrade in the change sheet.
-   * The one event that carries money (what the customer paid us, never a
-   * ledger amount). Sent once per invoice from this browser; a $0 invoice is
-   * not a purchase.
+   * GA4's recommended purchase: a plan that took effect, from Checkout's
+   * confirmation or an immediate change in the change sheet, with what its
+   * invoice charged (0 included). The one event that carries money (what the
+   * customer pays us, never a ledger amount). Sent once per invoice from this
+   * browser.
    */
   purchase: {
     /** The Stripe invoice id; GA4 deduplicates purchases on it. */

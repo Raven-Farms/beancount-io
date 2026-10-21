@@ -53,7 +53,7 @@ export interface PlanChangeResultView {
   effectiveAt: Date | null;
   /**
    * With ACTIVE or REQUIRES_ACTION: the invoice the change charges and its
-   * amount (minor units), so a client counts the purchase once. Paid with
+   * amount (minor units), so a client counts the purchase once. Settled with
    * ACTIVE; what the bank is asked to approve with REQUIRES_ACTION.
    */
   invoiceId: string | null;

@@ -155,9 +155,9 @@ export async function emailPlanEnded(
 
 /**
  * Remind a yearly subscriber of the coming renewal and its charge, from
- * Stripe's upcoming-invoice notice. A monthly plan, a plan set to end by
- * then, a renewal that charges nothing, and one bringing a scheduled plan
- * change (which has its own reminder) get none.
+ * Stripe's upcoming-invoice notice, whatever the amount. A monthly plan, a
+ * plan set to end by then, and one bringing a scheduled plan change (which
+ * has its own reminder) get none.
  */
 export async function emailRenewalReminder(
   deps: BillingEmailDeps,
@@ -173,8 +173,7 @@ export async function emailRenewalReminder(
   const { cancel_at } = subscription;
   if (
     subscription.cancel_at_period_end ||
-    (cancel_at != null && cancel_at * 1000 <= renewsAt.getTime()) ||
-    invoice.amount_due <= 0
+    (cancel_at != null && cancel_at * 1000 <= renewsAt.getTime())
   ) {
     return "not-applicable";
   }

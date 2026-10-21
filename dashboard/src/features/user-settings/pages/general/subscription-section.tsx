@@ -48,8 +48,8 @@ import {
 import { celebrate } from "@/features/user-settings/lib/celebrate";
 import {
   isFreshCheckoutInvoice,
-  recordPaidTransaction,
-} from "@/features/user-settings/lib/paid-transaction";
+  recordPurchase,
+} from "@/features/user-settings/lib/purchase";
 import { CheckoutReturnTo } from "@/graphql/definitions";
 import { UsageOverview } from "./subscription-usage-overview";
 import { PlanPicker } from "./subscription-plan-picker";
@@ -241,7 +241,8 @@ export function SubscriptionSection({
       void refetchUserLimits();
     },
   );
-  // Checkout's first invoice, counted and celebrated once it is confirmed.
+  // Checkout's first invoice, counted and celebrated once it is confirmed,
+  // whatever it charged.
   const latestInvoice = currentSubscription?.latestInvoice;
   const checkoutInvoice =
     checkoutReturned &&
@@ -254,7 +255,7 @@ export function SubscriptionSection({
   useEffect(() => {
     if (!checkoutInvoice || !checkoutPriceId) return;
     if (
-      recordPaidTransaction({
+      recordPurchase({
         invoiceId: checkoutInvoice.id,
         amount: checkoutInvoice.amountPaid,
         currency: checkoutInvoice.currency,

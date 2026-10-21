@@ -10,7 +10,7 @@ import { toast } from "sonner";
 import { Button } from "@/common/components/ui/button";
 import { track, type BillingSurface } from "@/common/analytics";
 import { celebrate } from "@/features/user-settings/lib/celebrate";
-import { recordPaidTransaction } from "@/features/user-settings/lib/paid-transaction";
+import { recordPurchase } from "@/features/user-settings/lib/purchase";
 import { planValue } from "@/common/lib/subscription/plan-change";
 import {
   Dialog,
@@ -242,15 +242,15 @@ export function PlanChangeSheet({
   const [splitChoice, setSplitChoice] = useState<SplitChoice>("later");
   const targetLabel = target ? planLabel(t, target.tier, target.cycle) : "";
 
-  /** A paid change landed: count and celebrate the charge, then close. */
+  /** A change took effect: count its invoice, celebrate, then close. */
   const landed = (charge: ChangeCharge, priceId: string) => {
-    const paid = recordPaidTransaction({
+    recordPurchase({
       invoiceId: charge.invoiceId,
       amount: charge.amountCharged,
       currency: charge.currency,
       priceId,
     });
-    if (paid) void celebrate();
+    void celebrate();
     toast.success(
       t("userSettings.subscriptionUpgraded"),
       returnTo
@@ -320,7 +320,8 @@ export function PlanChangeSheet({
           : "unavailable";
         if (approval === "approved") {
           if (params) track("payment_action_completed", params);
-          // Paid either way: a failed refetch only delays what Billing shows.
+          // The plan has taken effect either way: a failed refetch only delays
+          // what Billing shows.
           await refetchPlan().catch(() => {});
           landed(result, chosen.targetPriceId);
         } else if (approval === "declined") {

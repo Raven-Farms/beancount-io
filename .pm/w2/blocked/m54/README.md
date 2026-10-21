@@ -24,8 +24,8 @@
 
 - A paid Stripe Checkout, started from the marketing pricing page or from Billing, returns to `https://beancount.io/settings/billing?checkout=success&session_id=<id>`. The confirmation waits for the webhook, then shows the plan, renewal date and what was unlocked, with "Back to work" when the purchase began at an in-product prompt and "Start using <plan>" otherwise.
 - A Checkout cancelled from Billing returns to Billing with a "nothing was charged" notice. A cancel from the marketing pricing page still returns there with the plan and cycle preselected, and that page's `createSubscriptionSession` call is unchanged.
-- Exactly one GA4 `purchase` is sent from the browser per paid invoice — a Checkout subscription's first invoice on the confirmation, or the invoice of an immediate in-sheet upgrade that charged — with a non-empty `transaction_id`, `value`, `currency` and `items`. A refresh, a back navigation, a second tab, a pending confirmation or a $0 transaction sends none.
-- Confetti plays once per paid transaction after the payment is confirmed, never while confirming, on a timeout, on a $0 transaction, or when the reader prefers reduced motion, and the confetti code is not in the entry chunk.
+- Exactly one GA4 `purchase` is sent from the browser per plan invoice — a Checkout subscription's first invoice on the confirmation, or the invoice of an immediate in-sheet change — with a non-empty `transaction_id`, `value` (what the invoice charged, 0 included), `currency` and `items`. A refresh, a back navigation, a second tab or a pending confirmation sends none. Nothing depends on whether a discount applied.
+- Confetti plays once whenever a plan takes effect — a confirmed Checkout or an immediate in-sheet change — whatever it charged; never while confirming, on a timeout, or when the reader prefers reduced motion; and the confetti code is not in the entry chunk.
 - The backend sends no Measurement Protocol `purchase` and has no `GA_MEASUREMENT_PROTOCOL_SECRET` setting.
 - Verified in production after a deploy (t011).
 
@@ -35,6 +35,10 @@
 - **Goal linkage:** **A2 — Frictionless onboarding.** The moment after paying is when a new subscriber starts using what they bought. Today Checkout drops them on a marketing page that neither confirms the payment nor leads back into the product, and the confirmation built for them is unreachable.
 - **Expected outcome:** every buyer lands in the product knowing the payment worked and with one obvious next step; the purchase funnel (`checkout_started` → `purchase`) is measurable without operator setup. Adoption surface is included because the change is reader-facing (dashboard copy, event taxonomy, backend environment variables).
 - **Why now:** the confirmation (w1/m39/t008) and the way-back memory (w1/m39/t009) shipped; only the return URL and a purchase signal stood between them and every paying customer.
+
+## Revised — 2026-10-21
+
+User decision: nothing depends on whether a discount applied or an amount is $0. GA4 `purchase` and the confetti follow a plan taking effect, not money moving — a fully discounted Checkout or a change settled by credit counts at `value` 0 and celebrates like any other; a change that takes effect without an invoice celebrates but has no `transaction_id` to count. The yearly renewal reminder goes out for a $0 renewal too, stating its amount. QA purchases flow through the same GA stream as real ones, unfiltered, so the production test exercises the real path.
 
 ## Blocked
 
