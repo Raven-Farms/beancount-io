@@ -109,12 +109,14 @@ const getStyles = (theme: ColorTheme) =>
       color: theme.black80,
       fontSize: fontSizes.sm,
       lineHeight: 20,
+      textAlign: LEADING_TEXT_ALIGN,
     },
     error: {
       paddingHorizontal: space.xs,
       color: theme.error,
       fontSize: fontSizes.sm,
       lineHeight: 20,
+      textAlign: LEADING_TEXT_ALIGN,
     },
   });
 

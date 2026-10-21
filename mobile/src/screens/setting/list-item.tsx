@@ -149,6 +149,7 @@ export const SectionHeader = ({ title }: { title: string }) => {
         fontSize: 18,
         fontWeight: "600",
         color: theme.black90,
+        textAlign: LEADING_TEXT_ALIGN,
       },
     }),
   );

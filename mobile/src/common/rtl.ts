@@ -139,16 +139,19 @@ export function letterSpacing(spacing: number): number {
  * directions. Branching on `isRTL` here double-flips it and lands the text on
  * the wrong side.
  *
- * What is *not* direction-aware is the default, `natural`, which resolves from
- * the string's own first strong character. That is fine for UI copy, which is
- * in the app's language — and wrong for anything holding ledger data, because
- * account names, payees and amounts are Latin. Left to `natural`, an account
- * name inside a Persian row aligns itself left while the row around it mirrors
- * right, and the account tree's indentation stops reading as indentation at
- * all: every depth starts at the same edge.
+ * What is *not* direction-aware is the default, `natural`, which in principle
+ * resolves from the string's own first strong character. For ledger data that
+ * is plainly wrong — account names, payees and amounts are Latin, so an
+ * account name inside a Persian row aligns itself left while the row around it
+ * mirrors right, and the account tree's indentation stops reading as
+ * indentation at all. And on current iOS builds even Persian UI copy left at
+ * `natural` lands on the physical left: Settings section titles and card
+ * subtitles sat against the left edge beside correctly mirrored rows (w0/049,
+ * w21/019).
  *
- * So: UI copy needs nothing; a `Text` that holds ledger data and is wider than
- * its content needs this. A `TextInput` needs `leadingInputTextAlign()`
+ * So: any `Text` wider than its content — a full-width title, subtitle, help
+ * line or row label, ledger data or UI copy — needs this, unless it is meant
+ * to centre or trail. A short `Text` sized to its content needs nothing. A `TextInput` needs `leadingInputTextAlign()`
  * instead — see there.
  */
 export const LEADING_TEXT_ALIGN = "left" as const;

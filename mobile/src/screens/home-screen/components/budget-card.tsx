@@ -54,6 +54,7 @@ const getStyles = (theme: ColorTheme) =>
     emptyText: {
       fontSize: fontSizes.md,
       color: theme.black80,
+      textAlign: LEADING_TEXT_ALIGN,
     },
   });
 

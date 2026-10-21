@@ -309,6 +309,7 @@ const getStyles = (theme: ColorTheme) =>
       lineHeight: 24,
       fontWeight: fontWeights.regular,
       color: theme.text01,
+      textAlign: LEADING_TEXT_ALIGN,
     },
     // The avatar takes the icon's place in a menu row. It is drawn a little
     // larger than the 20pt icons so initials stay legible, but lays out at

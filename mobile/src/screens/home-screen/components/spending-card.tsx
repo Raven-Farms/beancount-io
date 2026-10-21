@@ -3,6 +3,7 @@ import { useRouter } from "expo-router";
 import { StyleSheet, Text, useWindowDimensions } from "react-native";
 import { ColorTheme } from "@/types/theme-props";
 import { fontSizes } from "@/common/theme";
+import { LEADING_TEXT_ALIGN } from "@/common/rtl";
 import { useThemeStyle } from "@/common/hooks/use-theme-style";
 import { useTranslations } from "@/common/hooks/use-translations";
 import { LoadingTile } from "@/components/loading-tile";
@@ -32,6 +33,7 @@ const getStyles = (theme: ColorTheme) =>
       marginBottom: 12,
       fontSize: fontSizes.sm,
       color: theme.black80,
+      textAlign: LEADING_TEXT_ALIGN,
     },
   });
 
