@@ -38,7 +38,10 @@ import { cn } from "@/common/lib/utils/utils";
 import { decodeLedgerId, parseLedgerFullName } from "@/common/lib/utils/encode";
 import { groupLedgersByOwner } from "@/common/lib/utils/ledger-utils";
 import { useTranslations } from "@/common/hooks/use-translations";
-import { useErrorMessage } from "@/common/lib/errors/error-message";
+import {
+  getErrorMessageKey,
+  useErrorMessage,
+} from "@/common/lib/errors/error-message";
 import { Authenticated } from "../authenticated";
 import { useReactNativeContext } from "@/common/providers/react-native-bridge-provider";
 import { useSidebar } from "@/common/components/ui/sidebar";
@@ -119,10 +122,14 @@ function LedgerAuthenticatedSwitcher({
     currentLedgerFullName ||
     decodeLedgerId(currentLedgerId).ledgerOwner + "/" + currentLedgerName;
 
-  const { data, loading } = useQuery(ListLedgersDocument, {
+  const { data, loading, error, refetch } = useQuery(ListLedgersDocument, {
     skip: !open,
     fetchPolicy: "cache-and-network",
   });
+  // A failed read with nothing cached is not "no ledgers" (w4/275); cached
+  // ledgers stay listed if only a refresh fails.
+  const readFailed = Boolean(error) && !data && !loading;
+  const searchRef = React.useRef<HTMLInputElement>(null);
   const [createLedgerMutation, { loading: createLoading }] = useMutation(
     CreateLedgerDocument,
     {
@@ -259,13 +266,42 @@ function LedgerAuthenticatedSwitcher({
                 label={t("page.dashboard.searchLedgers")}
                 className="max-h-[min(340px,var(--radix-popover-content-available-height))] [&_[cmdk-input-wrapper]]:shrink-0"
               >
-                <CommandInput placeholder={t("page.dashboard.searchLedgers")} />
+                <CommandInput
+                  ref={searchRef}
+                  placeholder={t("page.dashboard.searchLedgers")}
+                />
                 <CommandList className="min-h-0 flex-1">
-                  <CommandEmpty>
-                    {loading
-                      ? t("page.dashboard.loadingLedgers")
-                      : t("page.dashboard.noLedgersFound")}
-                  </CommandEmpty>
+                  {readFailed ? (
+                    <div className="flex flex-col items-center gap-2 px-3 py-6 text-center">
+                      <p role="alert" className="text-sm text-muted-foreground">
+                        {t(getErrorMessageKey(error))}
+                      </p>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        onClick={() => {
+                          // The loading view replaces this button; keep the
+                          // keyboard in the picker (as Go to Account does).
+                          searchRef.current?.focus();
+                          void refetch().catch(() => undefined);
+                        }}
+                        onKeyDown={(event) => {
+                          // cmdk cancels every Enter reaching its root; let
+                          // the button's own activation run, once.
+                          if (event.key === "Enter") event.stopPropagation();
+                        }}
+                      >
+                        {t("common.tryAgain")}
+                      </Button>
+                    </div>
+                  ) : (
+                    <CommandEmpty>
+                      {loading
+                        ? t("page.dashboard.loadingLedgers")
+                        : t("page.dashboard.noLedgersFound")}
+                    </CommandEmpty>
+                  )}
 
                   {sortedGroups.map(([owner, ownedLedgers], groupIndex) => (
                     <React.Fragment key={owner}>
