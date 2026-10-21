@@ -17,6 +17,7 @@ import {
 } from "@/generated-graphql/graphql";
 import { DiscoveryStore, type DiscoveryItem } from "./discovery-store";
 import { queryCatalogPage } from "./catalog-query";
+import { collectPages } from "./collect-pages";
 
 const PAGE_SIZE = 30;
 export function useDiscovery() {
@@ -60,33 +61,23 @@ export function useDiscovery() {
             username = data.userProfile?.username ?? undefined;
             if (!username) throw new Error("Missing account username");
           }
-          const items: DiscoveryItem[] = [];
-          for (let current = 1; ; current++) {
-            if (signal.aborted) throw new Error("Discovery request cancelled");
-            if (tab === "starred") {
-              const { data } = await client.query<StarredDiscoveryLedgersQuery>(
-                {
-                  query: StarredDiscoveryLedgersDocument,
-                  variables: { username, page: current, limit: PAGE_SIZE },
-                  fetchPolicy: "no-cache",
-                  context,
-                },
-              );
-              const result = data.getUserStarredRepos;
-              items.push(
-                ...result.repositories.map((repo) => ({
+          const items = await collectPages<DiscoveryItem>(
+            async (current) => {
+              if (tab === "starred") {
+                const { data } =
+                  await client.query<StarredDiscoveryLedgersQuery>({
+                    query: StarredDiscoveryLedgersDocument,
+                    variables: { username, page: current, limit: PAGE_SIZE },
+                    fetchPolicy: "no-cache",
+                    context,
+                  });
+                return data.getUserStarredRepos.repositories.map((repo) => ({
                   ...repo,
                   id: repo.fullName,
                   private: repo.isPrivate,
                   isStarred: true,
-                })),
-              );
-              if (
-                result.repositories.length < PAGE_SIZE ||
-                items.length >= result.total
-              )
-                break;
-            } else {
+                }));
+              }
               const data = await queryCatalogPage<
                 MyDiscoveryLedgersQuery,
                 { page: number; limit: number }
@@ -99,10 +90,12 @@ export function useDiscovery() {
                 },
                 "listLedgers",
               );
-              items.push(...data.listLedgers);
-              if (data.listLedgers.length < PAGE_SIZE) break;
-            }
-          }
+              return data.listLedgers;
+            },
+            PAGE_SIZE,
+            (item) => item.id,
+            signal,
+          );
           return { items, hasMore: false };
         },
         star: async (ledgerId, starred) => {

@@ -14,7 +14,6 @@
 
 - [064](./blocked/064.md) — A token refresh whose response is lost signs the user out on the next refresh (rotated token replayed → grant revoked) — **blocked:** needs an owner decision (ADR) on a refresh-token reuse grace window
 - [065](./blocked/065.md) — One early-year entry (e.g. 0050) makes the balance sheet 23,718 monthly points (3 MB) and the app stalls — **blocked:** needs an approach decision (per-pill fetch vs server downsample) and a simulator profile of the stall
-- [129](./129.md) — Browse ledgers → Starred stops after 30; local search can't find the rest
 - [130](./130.md) — A starred private ledger never appears in Starred (admin client hides private stars; all surfaces)
 - [131](./131.md) — App link with a differently-cased owner opens your own ledger read-only, without "Current"
 - [132](./132.md) — Commit FILES list shows a rename as two "+0 −0" files; created and deleted files look identical
