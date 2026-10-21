@@ -26,3 +26,4 @@
 - [076](./076.md) — Home budget panel ignores the today cutoff and disagrees with the Budget screen; an overspent 0 budget reads "0% used"
 - [077](./077.md) — Commit detail's VoiceOver stats label never pluralises ("+1 additions"; wrong ru/uk/sk/bg forms)
 - [078](./078.md) — Transactions' 1M/3M/YTD filters freeze "today" when applied; after midnight new entries stay hidden
+- [079](./079.md) — Entry writes leave the Files tab's file sha stale, so deleting that file fails until a refresh
