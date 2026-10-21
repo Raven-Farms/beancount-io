@@ -7,8 +7,8 @@
   "plan": "Free Queue",
   "feeUSD": 0,
   "receiptHeading": "Success",
-  "receiptText": "Submitted! You're in the free queue \u2014 current wait is ~4\u20136 weeks. We'll email you when it's live.",
-  "review": "About 4\u20136 weeks; email on publication",
+  "receiptText": "Submitted! You're in the free queue — current wait is ~4–6 weeks. We'll email you when it's live.",
+  "review": "About 4–6 weeks; email on publication",
   "state": "Submitted; pending review; no public listing URL or receipt ID exposed",
   "dedupSearch": "https://mcpmarket.com/search?q=beancount",
   "dedupResult": "Other authors/projects found; no canonical bex-co hosted connector match in inspected live results",
@@ -18,5 +18,12 @@
   "requiredAuthentication": "OAuth",
   "requiredRegistryIdentity": "io.beancount/beancount",
   "contact": "Publisher public-profile contact supplied privately; omitted here",
-  "authenticatedConnection": "Not run through this directory; verify actual listing recipe after publication"
+  "authenticatedConnection": "Not run through this directory; verify actual listing recipe after publication",
+  "publicRecheck": {
+    "observedAtUTC": "2026-10-21T19:41:23Z",
+    "url": "https://mcpmarket.com/search?q=beancount",
+    "result": "21 first-page entries show no canonical hosted connector match; Load More is present",
+    "action": "No resubmission; retain original free repository queue receipt",
+    "limit": "Incomplete pagination is not exhaustive absence, moderator status or authenticated connection evidence"
+  }
 }
