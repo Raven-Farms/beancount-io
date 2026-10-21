@@ -17,3 +17,4 @@
 - [022](./blocked/022.md) — report rustledger's multi-currency `cost(sum(position))` collapse upstream — **blocked:** filing in an external tracker needs the user's approval
 - [023](./023.md) — archives over 8 MiB unreachable for OAuth MCP clients: the documented fallback URL refuses the MCP token
 - [024](./024.md) — bank-account tools look the account up before authorizing (`ledger.read` gets "Account not found" from admin tools)
+- [025](./025.md) — adding/removing the ledger owner as a collaborator reports success but does nothing
