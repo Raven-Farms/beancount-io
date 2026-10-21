@@ -9,3 +9,4 @@
 ## Inbox
 
 - [038](./038.md) — Reports silently drops spending in other currencies; Home and Accounts say "not in total", Reports says nothing
+- [039](./039.md) — Reports labels a net-negative category "0%" of its section
