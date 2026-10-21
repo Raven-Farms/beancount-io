@@ -214,6 +214,7 @@ export const ru: Translations = {
   cancel: "Отмена",
   confirm: "Подтвердить",
   saving: "Сохранение...",
+  deleting: "Удаление...",
   saveSuccess: "Транзакция сохранена!",
   saveFailed: "Ошибка сохранения",
   amountEmptyError: "Пожалуйста, введите сумму",

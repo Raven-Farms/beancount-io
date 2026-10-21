@@ -211,6 +211,7 @@ export const bg: Translations = {
   cancel: "Отказ",
   confirm: "Потвърждение",
   saving: "Запазване...",
+  deleting: "Изтриване...",
   saveSuccess: "Транзакцията е запазена!",
   saveFailed: "Неуспешно запазване",
   amountEmptyError: "Моля въведете сумата",

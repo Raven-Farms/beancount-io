@@ -213,6 +213,7 @@ export const uk: Translations = {
   cancel: "Скасувати",
   confirm: "Підтвердити",
   saving: "Збереження...",
+  deleting: "Видалення...",
   saveSuccess: "Транзакцію збережено!",
   saveFailed: "Помилка збереження",
   amountEmptyError: "Будь ласка, введіть суму",

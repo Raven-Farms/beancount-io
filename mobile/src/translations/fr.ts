@@ -214,6 +214,7 @@ export const fr: Translations = {
   cancel: "Annuler",
   confirm: "Confirmer",
   saving: "Enregistrement...",
+  deleting: "Suppression...",
   saveSuccess: "Transaction enregistrée !",
   saveFailed: "Échec de l'enregistrement",
   amountEmptyError: "Veuillez saisir le montant",

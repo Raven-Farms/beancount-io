@@ -1,6 +1,6 @@
 import { useGuest } from "@/common/guest/guest-context";
 import { useLedgerAccess } from "@/common/hooks/use-ledger-access";
-import { useCallback, useEffect, useMemo } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Alert,
   Pressable,
@@ -88,6 +88,7 @@ import {
 import { getServerUrl } from "@/common/vars/server-url";
 import { HERO_AMOUNT_FIT } from "@/components/amount-text/hero-amount-fit";
 import { LEADING_TEXT_ALIGN, letterSpacing } from "@/common/rtl";
+import { createSingleFlight } from "@/common/single-flight";
 
 const getStyles = (theme: ColorTheme) =>
   StyleSheet.create({
@@ -366,8 +367,11 @@ const TransactionDetailImpl = ({
     }, [entryHash, shouldLoadContext, ledgerChangedSinceCheck, refetchContext]),
   );
 
-  const [deleteMutation, { loading: deleting }] =
-    useDeleteLedgerEntrySourceSliceMutation();
+  const [deleteMutation] = useDeleteLedgerEntrySourceSliceMutation();
+  // One delete at a time: with no feedback a user repeated ⋯ → Delete, and
+  // the second got "not found" after the first had succeeded (w21/197).
+  const [deleting, setDeleting] = useState(false);
+  const deleteFlight = useRef(createSingleFlight(setDeleting)).current;
 
   const sha256sum = data?.getLedgerEntryContext?.sha256sum;
 
@@ -377,32 +381,34 @@ const TransactionDetailImpl = ({
   }, [canWrite, sha256sum, entryHash, ledgerId, originAccount, router]);
 
   const handleDelete = useCallback(() => {
-    if (!canWrite || !sha256sum) return;
+    if (!canWrite || !sha256sum || deleteFlight.busy()) return;
     Alert.alert(t("deleteTransactionTitle"), t("deleteTransactionMessage"), [
       { text: t("cancel"), style: "cancel" },
       {
         text: t("deleteTransaction"),
         style: "destructive",
-        onPress: async () => {
-          await deleteTransaction({
-            confirmWrite,
-            perform: () =>
-              deleteMutation({
-                variables: {
-                  input: { entryHash, sha256sum },
-                  ledgerId,
-                },
-              }),
-            // The server's reason is more useful than "delete failed".
-            describeFailure: (e) => ledgerWriteFailureMessage(e, i18n),
-            showRefusal: (title, message) => Alert.alert(title, message),
-            messages: {
-              success: t("deleteSuccess"),
-              failure: t("deleteFailed"),
-            },
-            afterSuccess: () => invalidateLedgerData(client, "entries"),
-          });
-        },
+        onPress: () =>
+          void deleteFlight.run(() =>
+            deleteTransaction({
+              confirmWrite,
+              perform: () =>
+                deleteMutation({
+                  variables: {
+                    input: { entryHash, sha256sum },
+                    ledgerId,
+                  },
+                }),
+              // The server's reason is more useful than "delete failed".
+              describeFailure: (e) => ledgerWriteFailureMessage(e, i18n),
+              showRefusal: (title, message) => Alert.alert(title, message),
+              messages: {
+                loading: t("deleting"),
+                success: t("deleteSuccess"),
+                failure: t("deleteFailed"),
+              },
+              afterSuccess: () => invalidateLedgerData(client, "entries"),
+            }),
+          ),
       },
     ]);
   }, [
@@ -414,6 +420,7 @@ const TransactionDetailImpl = ({
     client,
     t,
     confirmWrite,
+    deleteFlight,
   ]);
 
   const entry: JournalTransaction | null = useMemo(() => {

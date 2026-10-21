@@ -211,6 +211,7 @@ export const nl: Translations = {
   cancel: "Annuleren",
   confirm: "Bevestigen",
   saving: "Opslaan...",
+  deleting: "Verwijderen...",
   saveSuccess: "Transactie opgeslagen!",
   saveFailed: "Opslaan mislukt",
   amountEmptyError: "Voer het bedrag in",

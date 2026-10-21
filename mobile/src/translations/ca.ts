@@ -216,6 +216,7 @@ export const ca: Translations = {
   cancel: "Cancel·lar",
   confirm: "Confirmar",
   saving: "Guardant...",
+  deleting: "Suprimint...",
   saveSuccess: "Transacció guardada!",
   saveFailed: "Error al guardar",
   amountEmptyError: "Si us plau, introdueix l'import",

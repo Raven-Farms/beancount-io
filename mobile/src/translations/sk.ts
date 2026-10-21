@@ -214,6 +214,7 @@ export const sk: Translations = {
   cancel: "Zrušiť",
   confirm: "Potvrdiť",
   saving: "Ukladanie...",
+  deleting: "Odstraňuje sa...",
   saveSuccess: "Transakcia uložená!",
   saveFailed: "Ukladanie zlyhalo",
   amountEmptyError: "Prosím zadajte sumu",

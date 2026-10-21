@@ -190,6 +190,7 @@ export const zh: Translations = {
   cancel: "取消",
   confirm: "确定",
   saving: "保存...",
+  deleting: "正在删除...",
   saveSuccess: "保存成功!",
   saveFailed: "保存失败",
   amountEmptyError: "请输入金额",

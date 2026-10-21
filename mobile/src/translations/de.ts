@@ -217,6 +217,7 @@ export const de: Translations = {
   cancel: "Abbrechen",
   confirm: "Bestätigen",
   saving: "Speichern...",
+  deleting: "Löschen...",
   saveSuccess: "Transaktion gespeichert!",
   saveFailed: "Speichern fehlgeschlagen",
   amountEmptyError: "Bitte geben Sie den Betrag ein",

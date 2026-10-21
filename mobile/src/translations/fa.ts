@@ -209,6 +209,7 @@ export const fa: Translations = {
   cancel: "لغو",
   confirm: "تأیید",
   saving: "در حال ذخیره...",
+  deleting: "در حال حذف...",
   saveSuccess: "تراکنش ذخیره شد!",
   saveFailed: "ذخیره ناموفق",
   amountEmptyError: "لطفاً مبلغ را وارد کنید",

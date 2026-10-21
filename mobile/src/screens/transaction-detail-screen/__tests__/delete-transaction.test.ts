@@ -68,6 +68,7 @@ function harness(perform: () => Promise<unknown>) {
     describeFailure: (error) => ledgerWriteFailureMessage(error, i18n),
     showRefusal: (title, message) => record.dialogs.push({ title, message }),
     messages: {
+      loading: "Deleting...",
       success: "Transaction deleted",
       failure: "Failed to delete transaction",
     },
@@ -117,6 +118,29 @@ describe("deleteTransaction", () => {
   });
 });
 
+// w21/197: with no feedback a user repeated Delete, and the second reported
+// "couldn't delete" after the first had succeeded.
+describe("delete feedback and repeats", () => {
+  it("shows Deleting… while the delete runs", async () => {
+    const { run, record } = harness(async () => ({ data: {} }));
+    await run;
+    expect(record.toasts[0]).toBe("Deleting...");
+  });
+
+  it("runs once however often the menu item is chosen", async () => {
+    const screen = require("fs").readFileSync(
+      require("path").join(__dirname, "..", "transaction-detail-screen.tsx"),
+      "utf8",
+    ) as string;
+    const compact = screen.replace(/\s+/g, "");
+    expect(compact.includes("||deleteFlight.busy())return;")).toBe(true);
+    expect(
+      compact.includes("voiddeleteFlight.run(()=>deleteTransaction({"),
+    ).toBe(true);
+    expect(compact.includes("disabled={deleting}")).toBe(true);
+  });
+});
+
 // w21/119: the session ended under the delete; Welcome says why, and an alert
 // on top read as a raw "OAuth grant is no longer valid".
 describe("deleteTransaction when the session ends", () => {
@@ -133,7 +157,10 @@ describe("deleteTransaction when the session ends", () => {
     });
     expect(await run).toBe(false);
     expect(record.dialogs).toEqual([]);
-    expect(record.toasts.length).toBe(0);
+    // Only the "Deleting..." progress toast, dismissed when the delete ends.
+    expect(record.toasts.filter((toast) => toast !== "Deleting...")).toEqual(
+      [],
+    );
   });
 
   it("shows no dialog for a refresh the server refused for good", async () => {

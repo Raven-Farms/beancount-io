@@ -214,6 +214,7 @@ export const es: Translations = {
   cancel: "Cancelar",
   confirm: "Confirmar",
   saving: "Guardando...",
+  deleting: "Eliminando...",
   saveSuccess: "¡Transacción guardada!",
   saveFailed: "Error al guardar",
   amountEmptyError: "Introduce el monto",

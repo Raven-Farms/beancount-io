@@ -204,6 +204,7 @@ export const en = {
   cancel: "Cancel",
   confirm: "Confirm",
   saving: "Saving...",
+  deleting: "Deleting...",
   saveSuccess: "Transaction saved!",
   saveFailed: "Failed to save",
   amountEmptyError: "Please input the amount",

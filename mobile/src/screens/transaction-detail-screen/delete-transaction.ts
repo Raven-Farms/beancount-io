@@ -12,7 +12,8 @@ export type DeleteTransactionDeps = {
   describeFailure: (error: unknown) => string | null;
   /** A dialog the user dismisses; a toast is gone before a refusal is read. */
   showRefusal: (title: string, message: string) => void;
-  messages: { success: string; failure: string };
+  /** `loading` is shown while the delete runs (w21/197). */
+  messages: { loading?: string; success: string; failure: string };
   afterSuccess: () => void | Promise<void>;
 };
 
@@ -27,6 +28,7 @@ export async function deleteTransaction(
 ): Promise<boolean> {
   const outcome = await deps.confirmWrite({
     perform: deps.perform,
+    loadingMessage: deps.messages.loading,
     successMessage: deps.messages.success,
     failureMessage: deps.messages.failure,
     failureMessageFor: (error) =>
