@@ -297,8 +297,15 @@ export function groupAccountJournalRowsToSections(
     groups.get(isoDate)!.push(row);
   }
   return Array.from(groups.entries()).map(([isoDate, data]) => {
-    const net = data.reduce((sum, r) => sum + r.change, 0);
     const units = data[0].units;
+    const scale = units
+      ? Math.max(...data.map((r) => r.units?.scale ?? 0))
+      : Math.max(...data.map((r) => r.moneyScale ?? 2));
+    // Rounded to what the header shows before its sign is read: summed as
+    // floats, 4.10 + 8.20 − 12.30 left −1.8e-15, a day of "-$0.00" over rows
+    // that net to nothing (w21/163). `+ 0` turns a rounded -0 into 0.
+    const net =
+      Number(data.reduce((sum, r) => sum + r.change, 0).toFixed(scale)) + 0;
     // A day that moved only other currencies says so, not "$0.00" (w21/100).
     const others = net === 0 ? sumOtherChanges(data) : [];
     // Sign is an explicit prefix; the amount carries the symbol (or code suffix).
@@ -306,17 +313,8 @@ export function groupAccountJournalRowsToSections(
       others.length > 0
         ? formatOtherChanges(others)
         : units
-          ? formatUnits(
-              net,
-              units.currency,
-              Math.max(...data.map((r) => r.units?.scale ?? 0)),
-              net > 0,
-            )
-          : formatAccountJournalChange(
-              net,
-              currency,
-              Math.max(...data.map((r) => r.moneyScale ?? 2)),
-            );
+          ? formatUnits(net, units.currency, scale, net > 0)
+          : formatAccountJournalChange(net, currency, scale);
     return {
       isoDate,
       displayDate: formatLedgerDate(isoDate, locale),

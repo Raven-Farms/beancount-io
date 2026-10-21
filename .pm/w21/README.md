@@ -14,7 +14,6 @@
 
 - [064](./blocked/064.md) — A token refresh whose response is lost signs the user out on the next refresh (rotated token replayed → grant revoked) — **blocked:** needs an owner decision (ADR) on a refresh-token reuse grace window
 - [065](./blocked/065.md) — One early-year entry (e.g. 0050) makes the balance sheet 23,718 monthly points (3 MB) and the app stalls — **blocked:** needs an approach decision (per-pill fetch vs server downsample) and a simulator profile of the stall
-- [163](./163.md) — Account detail shows "−$0.00"/"+$0.00" on a day that nets to zero (float residue)
 - [164](./164.md) — Account balance chart skips postingless months and spaces points by index, inventing balances
 - [165](./165.md) — Home's budget panel ranks only the first 12 budgets alphabetically; an overspent 13th never appears
 - [166](./166.md) — One future-dated transaction moves every Reports range onto next month (1M on Oct 21 shows only November)

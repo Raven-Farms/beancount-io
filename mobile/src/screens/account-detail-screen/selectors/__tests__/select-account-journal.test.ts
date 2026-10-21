@@ -742,3 +742,35 @@ describe("a movement only in another currency", () => {
     expect(source.includes('t("valuationNotInTotalTag")')).toBe(true);
   });
 });
+
+// w21/163: float residue signed a day that nets to zero.
+describe("a day that nets to zero", () => {
+  it("reads an unsigned zero, not -$0.00 or +$0.00", () => {
+    const expenses = groupAccountJournalRowsToSections(
+      [
+        row("2026-08-30", "QA GROCER", -12.3, 0),
+        row("2026-08-30", "QA GROCER", 8.2, 12.3),
+        row("2026-08-30", "QA GROCER", 4.1, 4.1),
+      ],
+      "USD",
+    );
+    expect(expenses[0].totalChange).toBe("$0.00");
+    const cash = groupAccountJournalRowsToSections(
+      [
+        row("2026-08-30", "QA GROCER", 12.3, 0),
+        row("2026-08-30", "QA GROCER", -8.2, 0),
+        row("2026-08-30", "QA GROCER", -4.1, 0),
+      ],
+      "USD",
+    );
+    expect(cash[0].totalChange).toBe("$0.00");
+  });
+
+  it("still signs a real day total", () => {
+    const [day] = groupAccountJournalRowsToSections(
+      [row("2026-08-30", "A", 4.1, 0), row("2026-08-30", "B", 8.2, 0)],
+      "USD",
+    );
+    expect(day.totalChange).toBe("+$12.30");
+  });
+});
