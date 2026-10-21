@@ -14,7 +14,7 @@ import type {
   UpdateLedgerFileMutation,
   UpdateLedgerFileMutationVariables,
 } from "@/graphql/definitions";
-import { base64Encode } from "@/common/lib/utils/encode";
+import { base64Encode, hasUtf8Bom } from "@/common/lib/utils/encode";
 import { track } from "@/common/analytics";
 import { useApolloCacheClear } from "@/common/hooks/use-apollo-cache";
 import { toast } from "sonner";
@@ -139,7 +139,13 @@ export default function LedgerFileView({
         variables: {
           ledgerId: ledgerId,
           path: filePath,
-          content: base64Encode(content),
+          // Keep the file's UTF-8 byte-order mark: the editor buffer never
+          // sees it, and an ordinary edit is not an encoding change (w4/268).
+          content: base64Encode(
+            hasUtf8Bom(fileContent.content) && !content.startsWith("\uFEFF")
+              ? `\uFEFF${content}`
+              : content,
+          ),
           sha: fileContent.sha,
           message: t("ledgerEditor.updateFileCommit", { path: filePath }),
         },

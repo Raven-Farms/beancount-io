@@ -79,6 +79,21 @@ export function base64Decode(base64: string): string {
 }
 
 /**
+ * Whether base64 file content starts with the UTF-8 byte-order mark
+ * (EF BB BF). `base64Decode` drops it, as TextDecoder does, so a saver that
+ * must keep the file's marker has to ask the original bytes (w4/268).
+ */
+export function hasUtf8Bom(base64: string | null | undefined): boolean {
+  if (!base64) return false;
+  const head = atob(base64.slice(0, 4));
+  return (
+    head.charCodeAt(0) === 0xef &&
+    head.charCodeAt(1) === 0xbb &&
+    head.charCodeAt(2) === 0xbf
+  );
+}
+
+/**
  * Parses a ledger fullName into owner and repo components
  * @param fullName - The full name in format "owner/repo-name"
  * @returns Object with owner and repo, or null values if parsing fails
