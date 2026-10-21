@@ -67,7 +67,15 @@ const UploadFilesPage = () => {
 
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [commitMessage, setCommitMessage] = useState("");
-  const [isUploading, setIsUploading] = useState(false);
+  const [isUploading, setIsUploadingState] = useState(false);
+  // Synchronous twin of isUploading: a drop can land before React renders
+  // the busy state. While a batch is in flight no new file is staged — the
+  // success path leaves with exactly that batch (w4/259).
+  const uploadingRef = useRef(false);
+  const setIsUploading = (busy: boolean) => {
+    uploadingRef.current = busy;
+    setIsUploadingState(busy);
+  };
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const uploadSizeLimitId = useId();
@@ -217,7 +225,7 @@ const UploadFilesPage = () => {
     const chosen = event.target.files ? Array.from(event.target.files) : [];
     // Allow selecting the same path again after remove/cancel.
     event.target.value = "";
-    if (chosen.length > 0) {
+    if (chosen.length > 0 && !uploadingRef.current) {
       setSelectedFiles((prev) => stageFiles(prev, chosen));
     }
   };
@@ -227,6 +235,10 @@ const UploadFilesPage = () => {
    */
   const handleDragOver = (e: DragEvent<HTMLDivElement>) => {
     e.preventDefault();
+    if (uploadingRef.current) {
+      if (e.dataTransfer) e.dataTransfer.dropEffect = "none";
+      return;
+    }
     setIsDragging(true);
   };
 
@@ -244,6 +256,7 @@ const UploadFilesPage = () => {
   const handleDrop = (e: DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     setIsDragging(false);
+    if (uploadingRef.current) return;
 
     const files = e.dataTransfer.files;
     if (files && files.length > 0) {

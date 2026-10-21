@@ -11,6 +11,7 @@ import {
   render,
   screen,
   waitFor,
+  act,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import {
@@ -61,7 +62,9 @@ async function setup({
   canWrite = true,
   failFirstUpload = false,
   failRefresh = false,
+  holdUploads = false,
 } = {}) {
+  const held: Array<() => void> = [];
   access.canWrite = canWrite;
   const requests: Array<{ name: string; variables: Record<string, unknown> }> =
     [];
@@ -78,6 +81,30 @@ async function setup({
           });
           if (operation.operationName === "CreateLedgerFile") {
             mutations.push(operation.variables);
+            if (holdUploads) {
+              const variables = operation.variables;
+              held.push(() => {
+                observer.next({
+                  data: {
+                    createLedgerFile: {
+                      __typename: "LedgerFileContent",
+                      name: String(variables.path).split("/").at(-1),
+                      path: variables.path,
+                      content: variables.content,
+                      type: "file",
+                      encoding: "base64",
+                      size: 0,
+                      sha: "synthetic-sha",
+                      lastCommitSha: null,
+                      lastAuthorDate: null,
+                      lastCommitterDate: null,
+                    },
+                  },
+                });
+                observer.complete();
+              });
+              return;
+            }
             if (failFirstUpload && mutations.length === 1) {
               observer.error(new Error("Synthetic upload failure"));
               return;
@@ -178,6 +205,7 @@ async function setup({
     drop,
     dir,
     refreshPermission: () => view.rerender(contents(1)),
+    held,
   };
 }
 
@@ -458,5 +486,26 @@ describe("upload size enforcement with native files and readers", () => {
       "refetch-b.txt",
     ]);
     expect(screen.queryByText(/wasn't uploaded/)).toBeNull();
+  });
+
+  it("does not stage a file dropped while a batch is uploading (w4/259)", async () => {
+    const { picker, upload, drop, mutations, held } = await setup({
+      holdUploads: true,
+    });
+    const user = userEvent.setup();
+    await user.upload(picker(), [
+      new File(["a\n"], "pending-a.txt", { type: "text/plain" }),
+    ]);
+    await user.click(upload());
+    await waitFor(() => expect(held).toHaveLength(1));
+
+    drop([new File(["b\n"], "late-b.txt", { type: "text/plain" })]);
+    expect(screen.queryByText("late-b.txt")).toBeNull();
+
+    await act(async () => held[0]!());
+    await screen.findByRole("heading", { name: "Files destination" });
+    expect(mutations.map((m) => String(m.path).split("/").at(-1))).toEqual([
+      "pending-a.txt",
+    ]);
   });
 });
