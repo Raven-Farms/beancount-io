@@ -16,3 +16,4 @@
 - [043](./043.md) — Mobile shows dates in years 0001–0099 as 1901–1999 (mobile counterpart of w4/277, w4/283 and w4/m38)
 - [044](./044.md) — New Transaction's Done stays live while the save is in flight, so a second tap posts the entry twice
 - [045](./045.md) — New Transaction's account picker offers closed accounts, and the save is then refused
+- [046](./046.md) — Merchants merges payee case variants in the list, but the drill-down shows only one variant
