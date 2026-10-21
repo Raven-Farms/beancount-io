@@ -652,6 +652,8 @@ export const nl: Translations = {
   createLedgerBack: "Terug",
   createLedgerStep: "Stap {{step}} van {{total}}",
   createLedgerStartPreset: "Voorinstelling",
+  createLedgerStartPresetHint:
+    "Kies een kant-en-klaar rekeningschema voor wat je bijhoudt: een huishouden, een bedrijf, beleggingen.",
   createLedgerCurrency: "Operationele valuta",
   createLedgerHistoryStart: "Boeken beginnen op",
   createLedgerOpeningAccount: "Openingsrekening",

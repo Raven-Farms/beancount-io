@@ -649,6 +649,8 @@ export const bg: Translations = {
   createLedgerBack: "Назад",
   createLedgerStep: "Стъпка {{step}} от {{total}}",
   createLedgerStartPreset: "Предварителна настройка",
+  createLedgerStartPresetHint:
+    "Изберете готов сметкоплан според това, което следите: домакинство, бизнес, инвестиции.",
   createLedgerCurrency: "Оперативна валута",
   createLedgerHistoryStart: "Книгите започват на",
   createLedgerOpeningAccount: "Начална сметка",

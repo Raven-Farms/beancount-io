@@ -1,4 +1,6 @@
 import type { LedgerSetupPreset } from "@/generated-graphql/types";
+import { getFormatDate } from "../../common/format-util";
+import { parseExactAmount } from "../multi-postings-transaction/postings-utils";
 
 /**
  * The mobile copy of the setup catalog (ADR021): preset identities and
@@ -189,4 +191,24 @@ export function suggestCurrency(regionCode: string | null | undefined): string {
   if (!region || !/^[A-Z]{2}$/.test(region)) return "USD";
   if (EUROZONE.has(region)) return "EUR";
   return REGION_CURRENCY[region] ?? "USD";
+}
+
+/**
+ * The day "Books begin" starts on: the device's own date. It used the UTC
+ * date, so from 17:00 PDT the ledger began tomorrow, every preset account
+ * opened tomorrow, and the first entry dated today — the app's default — was
+ * refused as posting to an account not yet open (w21/051).
+ */
+export function defaultHistoryStart(now: Date = new Date()): string {
+  return getFormatDate(now);
+}
+
+/**
+ * The opening balance as the setup sends it, or null when it is not an
+ * amount; "" for an empty field. A decimal comma is accepted, as in New
+ * Transaction: the decimal pad offers only "," in most of the app's locales,
+ * so `1234,56` used to read as an invalid amount (w21/051).
+ */
+export function openingAmountValue(input: string): string | null {
+  return input.trim() ? parseExactAmount(input) : "";
 }

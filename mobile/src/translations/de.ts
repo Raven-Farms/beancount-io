@@ -664,6 +664,8 @@ export const de: Translations = {
   createLedgerBack: "Zurück",
   createLedgerStep: "Schritt {{step}} von {{total}}",
   createLedgerStartPreset: "Vorlage",
+  createLedgerStartPresetHint:
+    "Wählen Sie einen fertigen Kontenplan für das, was Sie erfassen: Haushalt, Unternehmen, Investitionen.",
   createLedgerCurrency: "Betriebswährung",
   createLedgerHistoryStart: "Bücher beginnen am",
   createLedgerOpeningAccount: "Eröffnungskonto",

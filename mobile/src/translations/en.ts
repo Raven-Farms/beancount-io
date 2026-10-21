@@ -604,6 +604,8 @@ export const en = {
   createLedgerBack: "Back",
   createLedgerStep: "Step {{step}} of {{total}}",
   createLedgerStartPreset: "Preset",
+  createLedgerStartPresetHint:
+    "Pick a ready-made chart of accounts for what you track: a household, a business, investments.",
   createLedgerCurrency: "Operating currency",
   createLedgerHistoryStart: "Books begin",
   createLedgerOpeningAccount: "Opening account",

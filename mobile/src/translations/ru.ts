@@ -659,6 +659,8 @@ export const ru: Translations = {
   createLedgerBack: "Назад",
   createLedgerStep: "Шаг {{step}} из {{total}}",
   createLedgerStartPreset: "Шаблон",
+  createLedgerStartPresetHint:
+    "Выберите готовый план счетов для того, что вы учитываете: домохозяйство, бизнес, инвестиции.",
   createLedgerCurrency: "Операционная валюта",
   createLedgerHistoryStart: "Книги начинаются с",
   createLedgerOpeningAccount: "Счёт открытия",

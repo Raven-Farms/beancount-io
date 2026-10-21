@@ -597,6 +597,8 @@ export const zh: Translations = {
   createLedgerBack: "返回",
   createLedgerStep: "第 {{step}} 步，共 {{total}} 步",
   createLedgerStartPreset: "预设",
+  createLedgerStartPresetHint:
+    "为你要记录的内容选择现成的账户表：家庭、企业或投资。",
   createLedgerCurrency: "运营货币",
   createLedgerHistoryStart: "账簿开始日期",
   createLedgerOpeningAccount: "开户账户",

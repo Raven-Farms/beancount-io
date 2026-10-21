@@ -117,6 +117,8 @@ function screen(refreshFails: boolean) {
               { id: "PERSONAL", titleKey: "t", outcomeKey: "o", accounts: [] },
             ],
             suggestCurrency: () => "USD",
+            defaultHistoryStart: () => "2026-10-20",
+            openingAmountValue: (value: string) => value.trim(),
           };
         if (id === "@/generated-graphql/graphql")
           return {

@@ -641,6 +641,8 @@ export const fa: Translations = {
   createLedgerBack: "بازگشت",
   createLedgerStep: "گام {{step}} از {{total}}",
   createLedgerStartPreset: "پیش‌تنظیم",
+  createLedgerStartPresetHint:
+    "یک ساختار حساب آماده برای آنچه پیگیری می‌کنید انتخاب کنید: خانوار، کسب‌وکار، سرمایه‌گذاری.",
   createLedgerCurrency: "ارز عملیاتی",
   createLedgerHistoryStart: "دفاتر از تاریخ",
   createLedgerOpeningAccount: "حساب افتتاحیه",

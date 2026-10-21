@@ -665,6 +665,8 @@ export const sk: Translations = {
   createLedgerBack: "Späť",
   createLedgerStep: "Krok {{step}} z {{total}}",
   createLedgerStartPreset: "Predvoľba",
+  createLedgerStartPresetHint:
+    "Vyberte hotový účtový rozvrh pre to, čo sledujete: domácnosť, podnikanie, investície.",
   createLedgerCurrency: "Prevádzková mena",
   createLedgerHistoryStart: "Knihy začínajú dňa",
   createLedgerOpeningAccount: "Otvárací účet",

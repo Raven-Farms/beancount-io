@@ -12,7 +12,6 @@
 
 ## Inbox
 
-- [051](./051.md) — New ledger's "Books begin" defaults to the UTC date, so evening ledgers in the Americas start tomorrow
 - [053](./053.md) — Create Ledger keeps its draft forever in AsyncStorage, opening balance included, and resumes stale dates
 - [054](./054.md) — The drawer keeps listing a ledger that no longer exists across cold starts; choosing it shows only "Failed to load"
 - [055](./055.md) — Reports keeps a "−$0.00 · 0%" row for a category that nets to zero; the Sankey can draw phantom nodes (float sums vs exact zero)

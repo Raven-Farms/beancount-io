@@ -662,6 +662,8 @@ export const ca: Translations = {
   createLedgerBack: "Enrere",
   createLedgerStep: "Pas {{step}} de {{total}}",
   createLedgerStartPreset: "Configuració predefinida",
+  createLedgerStartPresetHint:
+    "Tria un pla de comptes ja preparat per al que segueixes: una llar, un negoci, inversions.",
   createLedgerCurrency: "Moneda d'operació",
   createLedgerHistoryStart: "Els llibres comencen el",
   createLedgerOpeningAccount: "Compte d'obertura",

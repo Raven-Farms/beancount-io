@@ -659,6 +659,8 @@ export const es: Translations = {
   createLedgerBack: "Atrás",
   createLedgerStep: "Paso {{step}} de {{total}}",
   createLedgerStartPreset: "Preajuste",
+  createLedgerStartPresetHint:
+    "Elige un plan de cuentas ya preparado para lo que registras: un hogar, un negocio, inversiones.",
   createLedgerCurrency: "Moneda de operación",
   createLedgerHistoryStart: "Los libros comienzan el",
   createLedgerOpeningAccount: "Cuenta de apertura",

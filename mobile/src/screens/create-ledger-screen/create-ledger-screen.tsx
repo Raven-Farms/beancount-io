@@ -23,7 +23,12 @@ import {
 } from "@/generated-graphql/graphql";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Localization from "expo-localization";
-import { SETUP_PRESETS, suggestCurrency } from "./setup-presets";
+import {
+  defaultHistoryStart,
+  openingAmountValue,
+  SETUP_PRESETS,
+  suggestCurrency,
+} from "./setup-presets";
 import { useThemeStyle } from "@/common/hooks/use-theme-style";
 import { useTranslations } from "@/common/hooks/use-translations";
 import {
@@ -145,6 +150,12 @@ const getStyles = (theme: ColorTheme) =>
       paddingVertical: space.sm,
       gap: space.xs,
     },
+    optionRow: {
+      minHeight: 48,
+      paddingHorizontal: space.md,
+      paddingVertical: space.sm,
+      justifyContent: "center",
+    },
     templateSelected: {
       backgroundColor: theme.black10,
     },
@@ -195,7 +206,7 @@ export function CreateLedgerScreen(): JSX.Element {
         openingAccount: z.string(),
         openingAmount: z
           .string()
-          .refine((val) => !val || /^-?\d+(\.\d+)?$/.test(val), {
+          .refine((val) => openingAmountValue(val) !== null, {
             message: t("createLedgerAmountInvalid"),
           }),
       }),
@@ -225,7 +236,7 @@ export function CreateLedgerScreen(): JSX.Element {
       private: true,
       template: "STARTER",
       currency: suggestCurrency(Localization.getLocales()[0]?.regionCode),
-      historyStart: new Date().toISOString().slice(0, 10),
+      historyStart: defaultHistoryStart(),
       openingAccount: "",
       openingAmount: "",
     },
@@ -280,7 +291,7 @@ export function CreateLedgerScreen(): JSX.Element {
 
   const buildSetup = (values: FormValues) => {
     if (!preset) return undefined;
-    const amount = values.openingAmount.trim();
+    const amount = openingAmountValue(values.openingAmount) ?? "";
     return {
       preset: preset.id,
       title: values.name,
@@ -415,7 +426,7 @@ export function CreateLedgerScreen(): JSX.Element {
                   [
                     "preset",
                     "createLedgerStartPreset",
-                    "createLedgerReviewDescription",
+                    "createLedgerStartPresetHint",
                   ],
                 ] as const
               ).map(([kind, titleKey, hintKey]) => (
@@ -588,34 +599,36 @@ export function CreateLedgerScreen(): JSX.Element {
             </View>
             {moneyAccounts.length > 0 ? (
               <>
-                <Text style={styles.label}>
-                  {t("createLedgerOpeningAccount")}
-                </Text>
-                <Text style={styles.hint}>{t("createLedgerOpeningNone")}</Text>
-                {moneyAccounts.map((account) => (
+                {/* Inside the card's padding, and "Decide later" an option
+                    to choose like the accounts, not a heading (w21/051). */}
+                <View style={[styles.row, styles.rowDivider]}>
+                  <Text style={styles.label}>
+                    {t("createLedgerOpeningAccount")}
+                  </Text>
+                </View>
+                {[
+                  { value: "", label: t("createLedgerOpeningNone") },
+                  ...moneyAccounts.map((account) => ({
+                    value: account.name,
+                    label: account.name,
+                  })),
+                ].map((option) => (
                   <Pressable
-                    key={account.name}
-                    onPress={() =>
-                      setValue(
-                        "openingAccount",
-                        openingAccountValue === account.name
-                          ? ""
-                          : account.name,
-                      )
-                    }
+                    key={option.value || "none"}
+                    onPress={() => setValue("openingAccount", option.value)}
                     style={[
-                      styles.templateRow,
-                      openingAccountValue === account.name
+                      styles.optionRow,
+                      openingAccountValue === option.value
                         ? styles.templateSelected
                         : null,
                     ]}
                     accessibilityRole="button"
                     accessibilityState={{
-                      selected: openingAccountValue === account.name,
+                      selected: openingAccountValue === option.value,
                     }}
-                    accessibilityLabel={account.name}
+                    accessibilityLabel={option.label}
                   >
-                    <Text style={styles.templateTitle}>{account.name}</Text>
+                    <Text style={styles.templateTitle}>{option.label}</Text>
                   </Pressable>
                 ))}
                 <View style={[styles.row, styles.rowDivider]}>

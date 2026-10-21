@@ -658,6 +658,8 @@ export const uk: Translations = {
   createLedgerBack: "Назад",
   createLedgerStep: "Крок {{step}} з {{total}}",
   createLedgerStartPreset: "Шаблон",
+  createLedgerStartPresetHint:
+    "Виберіть готовий план рахунків для того, що ви відстежуєте: домогосподарство, бізнес, інвестиції.",
   createLedgerCurrency: "Операційна валюта",
   createLedgerHistoryStart: "Книги починаються з",
   createLedgerOpeningAccount: "Рахунок відкриття",
