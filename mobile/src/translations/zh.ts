@@ -282,6 +282,7 @@ export const zh: Translations = {
   transactions: "交易记录",
   search: "搜索",
   unknown: "未知",
+  datePlaceholder: "年-月-日",
   openAccount: "开户",
   accountType: "账户类型",
   currency: "币种",

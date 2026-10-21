@@ -309,6 +309,7 @@ export const fa: Translations = {
   transactions: "تراکنش‌ها",
   search: "جست‌وجو",
   unknown: "نامشخص",
+  datePlaceholder: "سال-ماه-روز",
   openAccount: "افتتاح حساب",
   accountType: "نوع حساب",
   currency: "واحد پول",

@@ -19,6 +19,7 @@ import Animated, {
 import { durations, useTheme } from "@/common/theme";
 import { easeStandard } from "@/common/theme/motion-easing";
 import { ColorTheme } from "@/types/theme-props";
+import { useTranslations } from "@/common/hooks/use-translations";
 
 const getStyles = (theme: ColorTheme) =>
   StyleSheet.create({
@@ -145,12 +146,16 @@ export const TextInputModal: React.FC<TextInputModalProps> = ({
   placeholder,
   onConfirm,
   onCancel,
-  confirmButtonText = "Confirm",
-  cancelButtonText = "Cancel",
+  confirmButtonText,
+  cancelButtonText,
   destructive = false,
   validateInput,
 }) => {
   const theme = useTheme().colorTheme;
+  // Translated defaults, never English ones (w21/178).
+  const { t } = useTranslations();
+  confirmButtonText ??= t("confirm");
+  cancelButtonText ??= t("cancel");
   const styles = getStyles(theme);
   const [inputText, setInputText] = useState("");
   const opacity = useSharedValue(0);

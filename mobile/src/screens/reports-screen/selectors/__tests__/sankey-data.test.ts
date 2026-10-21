@@ -37,6 +37,8 @@ const labels = {
   otherLabel: "Other",
   cashFlowLabel: "Cash flow",
   savingsLabel: "Savings",
+  refundsLabel: "Refunds",
+  clawbacksLabel: "Clawbacks",
 };
 
 describe("categorizeAccount", () => {
@@ -376,9 +378,7 @@ describe("cashFlowChartSummary", () => {
     transformToSankeyData({
       income: [node("Income:Salary", incomeValue)],
       expenses: [node("Expenses:Rent", expenseValue)],
-      otherLabel: "Other",
-      cashFlowLabel: "Cash flow",
-      savingsLabel: "Savings",
+      ...labels,
     });
 
   it("formats the totals with the currency and names savings when drawn", () => {

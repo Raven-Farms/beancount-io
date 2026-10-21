@@ -320,6 +320,7 @@ export const ca: Translations = {
   transactions: "Transaccions",
   search: "Buscar",
   unknown: "Desconegut",
+  datePlaceholder: "AAAA-MM-DD",
   openAccount: "Obrir compte",
   accountType: "Tipus de compte",
   currency: "Moneda",

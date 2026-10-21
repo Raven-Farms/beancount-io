@@ -13,6 +13,8 @@ const labels = {
   otherLabel: "Other",
   cashFlowLabel: "Cash flow",
   savingsLabel: "Savings",
+  refundsLabel: "Refunds",
+  clawbacksLabel: "Clawbacks",
 };
 const month = (
   date: string,

@@ -319,6 +319,7 @@ export const uk: Translations = {
   transactions: "Транзакції",
   search: "Пошук",
   unknown: "Невідомо",
+  datePlaceholder: "РРРР-ММ-ДД",
   openAccount: "Відкрити рахунок",
   accountType: "Тип рахунку",
   currency: "Валюта",

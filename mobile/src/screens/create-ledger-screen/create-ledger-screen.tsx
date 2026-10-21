@@ -669,7 +669,7 @@ export function CreateLedgerScreen(): JSX.Element {
                     onBlur={onBlur}
                     autoCapitalize="none"
                     autoCorrect={false}
-                    placeholder="YYYY-MM-DD"
+                    placeholder={t("datePlaceholder")}
                     placeholderTextColor={theme.controlPlaceholder}
                     style={styles.input}
                     accessibilityLabel={t("createLedgerHistoryStart")}

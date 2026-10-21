@@ -311,6 +311,7 @@ export const nl: Translations = {
   transactions: "Transacties",
   search: "Zoeken",
   unknown: "Onbekend",
+  datePlaceholder: "JJJJ-MM-DD",
   openAccount: "Account openen",
   accountType: "Accounttype",
   currency: "Valuta",

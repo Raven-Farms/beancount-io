@@ -139,6 +139,9 @@ function loadPicker() {
       useTheme: () => ({ colorTheme: {} }),
     },
     "@/common/theme/motion-easing": { easeStandard: null },
+    "@/common/hooks/use-translations": {
+      useTranslations: () => ({ t: (key: string) => key }),
+    },
     "./wheel-position": wheelPosition,
   };
   vm.runInNewContext(source, {

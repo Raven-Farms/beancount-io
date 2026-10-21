@@ -312,6 +312,7 @@ export const bg: Translations = {
   transactions: "Транзакции", // TODO: needs native speaker review
   search: "Търсене",
   unknown: "Неизвестно",
+  datePlaceholder: "ГГГГ-ММ-ДД",
   openAccount: "Отвори сметка",
   accountType: "Вид сметка",
   currency: "Валута",

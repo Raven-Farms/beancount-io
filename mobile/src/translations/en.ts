@@ -303,6 +303,7 @@ export const en = {
   transactions: "Transactions",
   search: "Search",
   unknown: "Unknown",
+  datePlaceholder: "YYYY-MM-DD",
   openAccount: "Open Account",
   accountType: "Account type",
   currency: "Currency",

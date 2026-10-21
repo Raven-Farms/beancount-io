@@ -321,6 +321,7 @@ export const sk: Translations = {
   transactions: "Transakcie", // TODO: needs native speaker review
   search: "Hľadať",
   unknown: "Neznámy",
+  datePlaceholder: "RRRR-MM-DD",
   openAccount: "Otvoriť účet",
   accountType: "Typ účtu",
   currency: "Mena",

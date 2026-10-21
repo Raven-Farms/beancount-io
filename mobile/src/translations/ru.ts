@@ -321,6 +321,7 @@ export const ru: Translations = {
   transactions: "Транзакции",
   search: "Поиск",
   unknown: "Неизвестно",
+  datePlaceholder: "ГГГГ-ММ-ДД",
   openAccount: "Открыть счёт",
   accountType: "Тип счёта",
   currency: "Валюта",

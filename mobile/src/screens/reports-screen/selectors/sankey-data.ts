@@ -214,8 +214,8 @@ type TransformOptions = {
   cashFlowLabel: string;
   savingsLabel: string;
   /** The inflow of refunded spending, and the outflow of clawed-back income. */
-  refundsLabel?: string;
-  clawbacksLabel?: string;
+  refundsLabel: string;
+  clawbacksLabel: string;
   /**
    * Labels an income or expense group whose name the other side also uses
    * (`Income:Crypto` and `Expenses:Crypto` both read "Crypto"), so the two
@@ -306,8 +306,8 @@ export function transformToSankeyData(options: TransformOptions): SankeyData {
     otherLabel,
     cashFlowLabel,
     savingsLabel,
-    refundsLabel = "Refunds",
-    clawbacksLabel = "Clawbacks",
+    refundsLabel,
+    clawbacksLabel,
     incomeNodeLabel = (name: string) => name,
     expensesNodeLabel = (name: string) => name,
     depth = SANKEY_DEPTH,

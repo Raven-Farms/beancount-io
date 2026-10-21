@@ -42,6 +42,7 @@ import {
   pickerOptionAccessibility,
   wheelOffsetForIndex,
 } from "./wheel-position";
+import { useTranslations } from "@/common/hooks/use-translations";
 
 const VISIBLE_ITEMS = 5;
 const WHEEL_ITEM_FONT_SIZE = 18;
@@ -180,10 +181,14 @@ export const Picker: React.FC<PickerProps> = ({
   onCancel,
   selectedValue,
   title,
-  confirmButtonText = "Done",
-  cancelButtonText = "Cancel",
+  confirmButtonText,
+  cancelButtonText,
 }) => {
   const theme = useTheme().colorTheme;
+  // Translated defaults, never English ones (w21/178).
+  const { t } = useTranslations();
+  confirmButtonText ??= t("done");
+  cancelButtonText ??= t("cancel");
   const styles = getStyles(theme);
 
   const translateY = useSharedValue(screenHeight);

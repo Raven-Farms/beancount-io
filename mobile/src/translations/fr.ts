@@ -319,6 +319,7 @@ export const fr: Translations = {
   transactions: "Transactions",
   search: "Rechercher",
   unknown: "Inconnu",
+  datePlaceholder: "AAAA-MM-JJ",
   openAccount: "Ouvrir un compte",
   accountType: "Type de compte",
   currency: "Devise",

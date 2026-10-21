@@ -211,7 +211,7 @@ export const MainContent = () => {
             />
           }
           title={t("currentVersion")}
-          content={Constants.expoConfig?.version || "Unknown"}
+          content={Constants.expoConfig?.version || t("unknown")}
         />
       </List2>
 

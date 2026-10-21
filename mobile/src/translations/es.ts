@@ -318,6 +318,7 @@ export const es: Translations = {
   transactions: "Transacciones",
   search: "Buscar",
   unknown: "Desconocido",
+  datePlaceholder: "AAAA-MM-DD",
   openAccount: "Abrir cuenta",
   accountType: "Tipo de cuenta",
   currency: "Moneda",
