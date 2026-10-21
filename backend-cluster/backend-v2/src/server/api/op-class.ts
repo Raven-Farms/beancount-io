@@ -199,7 +199,7 @@ export const SOCIAL_PUBLIC_EXCLUSIONS = {
   "Query.getUserFollowing":
     "Following lists are public social-graph discovery in the current product contract.",
   "Query.getUserStarredRepos":
-    "Starred repository lists are public discovery and return only the established public response shape.",
+    "Starred repository lists are public discovery and return only the established public response shape; the caller's own list, read with their credentials, also holds their private stars.",
 } as const;
 
 /**

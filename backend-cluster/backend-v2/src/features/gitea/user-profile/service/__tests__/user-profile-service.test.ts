@@ -947,6 +947,64 @@ describe("UserProfileService", () => {
       );
     });
 
+    // w21/130: the admin list is public-only, so a viewer's own private
+    // ledger never showed under Starred.
+    describe("the viewer's own list", () => {
+      const ownClient = (login: string) => ({
+        user: {
+          userGetCurrent: jest.fn().mockResolvedValue({ data: { login } }),
+          userCurrentListStarred: jest.fn().mockResolvedValue({
+            data: [
+              createMockGiteaRepository({
+                name: "books",
+                full_name: "testuser/books",
+                private: true,
+              }),
+            ],
+          }),
+        },
+      });
+
+      it("reads it through the viewer's own client, private stars included", async () => {
+        const client = ownClient("TestUser");
+        mockGetUserApiClient.mockResolvedValue(client);
+
+        const result = await service.getUserStarredRepos(
+          "testuser",
+          2,
+          30,
+          "viewer-1",
+        );
+
+        expect(mockGetUserApiClient).toHaveBeenCalledWith("viewer-1");
+        expect(client.user.userCurrentListStarred).toHaveBeenCalledWith(
+          { page: 2, limit: 30 },
+          { format: "json" },
+        );
+        expect(mockGiteaClient.users.userListStarred).not.toHaveBeenCalled();
+        expect(result.repositories.map((r) => r.fullName)).toEqual([
+          "testuser/books",
+        ]);
+      });
+
+      it("keeps the admin public list for someone else's profile", async () => {
+        const client = ownClient("someone-else");
+        mockGetUserApiClient.mockResolvedValue(client);
+        mockGiteaClient.users.userListStarred.mockResolvedValue({
+          data: [],
+        } as any);
+
+        await service.getUserStarredRepos("testuser", 1, 20, "viewer-1");
+
+        expect(client.user.userCurrentListStarred).not.toHaveBeenCalled();
+        expect(mockGiteaClient.users.userListStarred).toHaveBeenCalledWith(
+          "testuser",
+          { page: 1, limit: 20 },
+          { format: "json" },
+        );
+      });
+    });
+
     it("should transform repositories correctly", async () => {
       const mockRepo = createMockGiteaRepository({
         name: "awesome-project",

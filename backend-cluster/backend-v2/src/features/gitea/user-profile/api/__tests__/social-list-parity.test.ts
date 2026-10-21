@@ -40,7 +40,18 @@ const repos = ["books", "sample", "demo"].map((name) => ({
 let resolver: UserProfileResolver;
 let schemaPromise: ReturnType<typeof buildSchema>;
 
-async function fixture(outage = false, upstreamUsers = users) {
+// The reader's own starred list, private ledger included (w21/130).
+const ownStars = [
+  ...repos,
+  {
+    ...repos[0],
+    name: "private-books",
+    full_name: "alice/private-books",
+    private: true,
+  },
+];
+
+async function fixture(outage = false, upstreamUsers = users, asOwner = false) {
   const fetchPage = jest.fn(
     async (
       kind: string,
@@ -72,6 +83,25 @@ async function fixture(outage = false, upstreamUsers = users) {
           ) => fetchPage("repos", target, opts),
         },
       }),
+      // Only the parity case for one's own list signs the reader in as the
+      // profile's user; everywhere else they are someone else.
+      getUserApiClient: async (userId: string) => ({
+        user: {
+          userGetCurrent: async () => ({
+            data: {
+              login:
+                asOwner && userId === identity.userId ? username : "someone",
+            },
+          }),
+          userCurrentListStarred: async (opts: {
+            page: number;
+            limit: number;
+          }) => {
+            const start = (opts.page - 1) * opts.limit;
+            return { data: ownStars.slice(start, start + opts.limit) };
+          },
+        },
+      }),
     } as never,
     {} as never,
     {} as never,
@@ -89,6 +119,7 @@ async function fixture(outage = false, upstreamUsers = users) {
     { services: { userProfile: service } } as unknown as AppLayers,
     config,
   );
+  if (asOwner) rest.setIdentity(identity);
   const mcp = assembleMcpRegistry(
     { identity, socialService: service } as unknown as McpRequestContext,
     config,
@@ -119,7 +150,7 @@ async function fixture(outage = false, upstreamUsers = users) {
       const g = await graphql({
         schema,
         source: `{${read.method}(${args}){${selection} total}}`,
-        contextValue: {},
+        contextValue: asOwner ? { userId: identity.userId } : {},
       });
       expect(g.errors).toBeUndefined();
       expect(g.data?.[read.method]).toEqual(
@@ -149,6 +180,21 @@ async function fixture(outage = false, upstreamUsers = users) {
 }
 
 describe("public social lists across real REST, GraphQL, and MCP adapters", () => {
+  it("lists the reader's own private stars on every surface", async () => {
+    const f = await fixture(false, users, true);
+    try {
+      const own = await f.compare(
+        SOCIAL_READS.find((r) => r.path === "starred-repositories")!,
+      );
+      expect(own.repositories.map((r: { name: string }) => r.name)).toEqual(
+        ownStars.map((r) => r.name),
+      );
+      expect(f.fetchPage).not.toHaveBeenCalled();
+    } finally {
+      await f.close();
+    }
+  });
+
   it.each(SOCIAL_READS.filter((read) => read.path !== "starred-repositories"))(
     "$name omits non-public upstream avatars while retaining public URLs and pagination",
     async (read) => {

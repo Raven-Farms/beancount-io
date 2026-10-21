@@ -123,11 +123,14 @@ export class UserProfileResolver {
   })
   async getUserStarredRepos(
     @Args() args: GetUserListArgs,
+    @Ctx() ctx: IContext,
   ): Promise<RepositoryListResponse> {
+    // The caller's own list includes their private stars (w21/130).
     return this.userProfileService.getUserStarredRepos(
       args.username,
       args.page,
       args.limit,
+      ctx.userId,
     );
   }
 }

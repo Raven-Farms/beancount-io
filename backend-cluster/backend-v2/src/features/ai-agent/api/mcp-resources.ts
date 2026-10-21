@@ -463,7 +463,12 @@ export const MCP_RESOURCES: readonly McpResourceDescriptor[] = [
       read: async (context, variables) => {
         const { username, page, limit } = socialListQuery.parse(variables);
         return JSON.stringify(
-          await context.socialService[read.method](username, page, limit),
+          await context.socialService[read.method](
+            username,
+            page,
+            limit,
+            context.identity.userId,
+          ),
         );
       },
     }),

@@ -188,16 +188,21 @@ describe("UserProfileResolver (delegation)", () => {
         total: 0,
       });
 
-      await resolver.getUserStarredRepos({
-        username: "testuser",
-        page: 1,
-        limit: 20,
-      });
+      await resolver.getUserStarredRepos(
+        {
+          username: "testuser",
+          page: 1,
+          limit: 20,
+        },
+        { userId: "viewer-1" } as never,
+      );
 
+      // The caller, so their own list includes their private stars (w21/130).
       expect(mockService.getUserStarredRepos).toHaveBeenCalledWith(
         "testuser",
         1,
         20,
+        "viewer-1",
       );
     });
   });
