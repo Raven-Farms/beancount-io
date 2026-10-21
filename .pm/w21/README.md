@@ -83,3 +83,6 @@
 - [133](./133.md) — Commit per-file counts read 0 under `lib/`-style dirs and miss `---`/`++` content lines
 - [134](./134.md) — Same-day entries are ordered by type, not file order, so account-journal running balances around a pad/note are wrong
 - [135](./135.md) — Pad fires within balance tolerance: wrong balances and no "Unused Pad entry" error
+- [136](./136.md) — Home's Latest Updates always requests the English feed
+- [137](./137.md) — Ledger rows in Home's Latest Updates do nothing when tapped
+- [138](./138.md) — Pull-to-refresh on Home doesn't refresh the bell's error badge
