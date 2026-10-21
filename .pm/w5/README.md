@@ -63,6 +63,7 @@
 - [896 — Match multi-fill sales to their booked cost lots without importing them twice](./896.md) — major CLI brokerage deduplication gap after 467 and 603; reproduced 2026-10-20.
 - [897 — Preserve explicitly selected acquisition dates in import identity](./897.md) — major CLI skipped-sale follow-up to 349; reproduced 2026-10-20.
 - [898 — Preserve wide arithmetic totals in `@@` annotations](./898.md) — minor CLI precision follow-up to 059, 802 and 263; reproduced 2026-10-20.
+- [899 — Include label-only lot selectors in generated import IDs](./899.md) — major CLI skipped-sale follow-up to 349 and 467; reproduced 2026-10-20.
 
 The 27 findings from the MCP QA auth sweep against the hosted endpoint (023–054, less the five under [Dropped](#dropped)) were fixed in `backend-cluster/backend-v2` and closed on 2026-10-02 and 2026-10-03; each note under [`done/`](./done/) records what shipped and in which commit. None has been re-observed against the hosted endpoint yet — the fixes reach it with the next backend deploy.
 
