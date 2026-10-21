@@ -55,7 +55,10 @@ import {
 } from "@/screens/transactions-screen/utils/transaction-display-utils";
 import { openTransactionDetail } from "@/screens/transaction-detail-screen/open-transaction-detail";
 import { toPlainSearchFilter } from "@/screens/transactions-screen/utils/plain-search-filter";
-import { filterExactPayee } from "./selectors/filter-exact-payee";
+import {
+  filterExactPayee,
+  parseSpellings,
+} from "./selectors/filter-exact-payee";
 import {
   buildMerchantCurrencyTotalsBql,
   buildMerchantMetaBql,
@@ -235,7 +238,14 @@ const getStyles = (theme: ColorTheme) =>
     },
   });
 
-function MerchantDetailBody({ payee }: { payee: string }) {
+function MerchantDetailBody({
+  payee,
+  spellings,
+}: {
+  payee: string;
+  /** Every spelling the Merchants row merged, the displayed one first. */
+  spellings: readonly string[];
+}) {
   const ledgerId = useLedgerGuard();
   const router = useRouter();
   const styles = useThemeStyle(getStyles);
@@ -246,10 +256,10 @@ function MerchantDetailBody({ payee }: { payee: string }) {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const pagesFetchedRef = useRef(1);
 
-  const metaBql = useMemo(() => buildMerchantMetaBql(payee), [payee]);
+  const metaBql = useMemo(() => buildMerchantMetaBql(spellings), [spellings]);
   const totalsBql = useMemo(
-    () => buildMerchantCurrencyTotalsBql(payee),
-    [payee],
+    () => buildMerchantCurrencyTotalsBql(spellings),
+    [spellings],
   );
 
   const {
@@ -315,8 +325,8 @@ function MerchantDetailBody({ payee }: { payee: string }) {
   );
 
   const transactions = useMemo(
-    () => filterExactPayee(rawEntries.filter(isJournalTransaction), payee),
-    [rawEntries, payee],
+    () => filterExactPayee(rawEntries.filter(isJournalTransaction), spellings),
+    [rawEntries, spellings],
   );
 
   const rawTotal = journalData?.getLedgerJournal.total;
@@ -628,13 +638,19 @@ function MerchantDetailBody({ payee }: { payee: string }) {
 
 function MerchantDetailRoute({
   payee,
+  otherSpellings,
   ledger,
 }: {
   payee: string;
+  otherSpellings: readonly string[];
   ledger?: string | string[];
 }) {
   const { t } = useTranslations();
   const binding = bindRouteLedger(ledger, useLedgerGuard());
+  const spellings = useMemo(
+    () => [payee, ...otherSpellings],
+    [payee, otherSpellings],
+  );
 
   if (binding.status === "mismatch") {
     // A revived merchant from another ledger: its stats and journal would be
@@ -647,7 +663,7 @@ function MerchantDetailRoute({
       />
     );
   }
-  return <MerchantDetailBody payee={payee} />;
+  return <MerchantDetailBody payee={payee} spellings={spellings} />;
 }
 
 export function MerchantDetailScreen() {
@@ -655,10 +671,15 @@ export function MerchantDetailScreen() {
   // `common/route-ledger` for why the ambient selection is not enough.
   const params = useLocalSearchParams<{
     payee?: string | string[];
+    otherSpellings?: string | string[];
     ledger?: string | string[];
   }>();
   const raw = params.payee;
   const payee = Array.isArray(raw) ? raw[0] : raw;
+  const otherSpellings = useMemo(
+    () => parseSpellings(params.otherSpellings),
+    [params.otherSpellings],
+  );
   const theme = useTheme().colorTheme;
 
   if (!payee) {
@@ -678,7 +699,11 @@ export function MerchantDetailScreen() {
           contentStyle: { backgroundColor: theme.white },
         }}
       />
-      <MerchantDetailRoute payee={payee} ledger={params.ledger} />
+      <MerchantDetailRoute
+        payee={payee}
+        otherSpellings={otherSpellings}
+        ledger={params.ledger}
+      />
     </LedgerGuard>
   );
 }

@@ -24,6 +24,12 @@ export interface MerchantAggregate {
   transactionCount: number;
   firstDate: string;
   lastDate: string;
+  /**
+   * The other spellings this row merged ("Qa Cafe" beside "QA CAFE"), sorted;
+   * absent when it has one. The detail screen matches every spelling, so it
+   * covers what the row counted (w21/046).
+   */
+  otherSpellings?: string[];
 }
 
 export type MerchantSort = "count" | "alphabetical";
@@ -79,8 +85,9 @@ function resolveColumns(types: ReadonlyArray<QueryColumnLike>): {
  *   into one directory row: counts sum, firstDate is the earlier, lastDate the
  *   later, and the display name is the variant with the most transactions
  *   (ties: the more recently used, then the lexicographically smaller). This is
- *   Monarch-style merge at the display layer only — tapping through opens the
- *   shown variant, and a real rename stays a ledger-source rewrite (see
+ *   Monarch-style merge at the display layer only — tapping through opens
+ *   every merged spelling (`otherSpellings`), and a real rename stays a
+ *   ledger-source rewrite (see
  *   `.pm` note `w1/032`). Exact-duplicate rows merge the same way.
  * - Default order matches the BQL: count desc, alphabetical tiebreak.
  */
@@ -98,7 +105,11 @@ export function aggregatePayees(
   /** Keyed by lowercased payee; tracks the best display variant seen so far. */
   const byPayee = new Map<
     string,
-    MerchantAggregate & { variantCount: number; variantLastDate: string }
+    MerchantAggregate & {
+      variantCount: number;
+      variantLastDate: string;
+      spellings: Set<string>;
+    }
   >();
 
   for (const row of table.rows) {
@@ -122,9 +133,11 @@ export function aggregatePayees(
         lastDate,
         variantCount: transactionCount,
         variantLastDate: lastDate,
+        spellings: new Set([payee]),
       });
       continue;
     }
+    existing.spellings.add(payee);
     existing.transactionCount += transactionCount;
     if (firstDate && (!existing.firstDate || firstDate < existing.firstDate)) {
       existing.firstDate = firstDate;
@@ -146,12 +159,18 @@ export function aggregatePayees(
 
   return sortMerchants(
     [...byPayee.values()].map(
-      ({ payee, transactionCount, firstDate, lastDate }) => ({
-        payee,
-        transactionCount,
-        firstDate,
-        lastDate,
-      }),
+      ({ payee, transactionCount, firstDate, lastDate, spellings }) => {
+        const otherSpellings = [...spellings]
+          .filter((spelling) => spelling !== payee)
+          .sort();
+        return {
+          payee,
+          transactionCount,
+          firstDate,
+          lastDate,
+          ...(otherSpellings.length > 0 && { otherSpellings }),
+        };
+      },
     ),
     "count",
   );

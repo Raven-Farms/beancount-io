@@ -234,7 +234,15 @@ function MerchantsDirectory() {
         pathname: "/merchant-detail",
         // `ledger` binds the entry to this ledger, so a later ledger switch
         // cannot revive the merchant under a different one.
-        params: { payee: item.merchant.payee, ledger: ledgerId },
+        params: {
+          payee: item.merchant.payee,
+          ledger: ledgerId,
+          // The spellings this row merged, so the detail counts what the row
+          // did (w21/046).
+          otherSpellings: item.merchant.otherSpellings
+            ? JSON.stringify(item.merchant.otherSpellings)
+            : undefined,
+        },
       });
     },
     [router, ledgerId],

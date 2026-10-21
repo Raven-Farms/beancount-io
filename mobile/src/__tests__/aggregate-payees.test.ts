@@ -159,6 +159,8 @@ describe("aggregatePayees", () => {
         transactionCount: 11,
         firstDate: "2022-11-01",
         lastDate: "2025-07-01",
+        // The detail screen opens both spellings (w21/046).
+        otherSpellings: ["Burger king"],
       },
     ]);
   });
