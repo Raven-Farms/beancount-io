@@ -4,6 +4,8 @@
 
 ## Inbox
 
+- [309 — Keep excluded CSV rows excluded through validation repair](./309.md) — minor; dashboard QA, 2026-10-21; editing configuration while a row is temporarily invalid drops its saved exclusion, so repairing it selects the row again.
+
 - [308 — Refuse malformed CSV quote boundaries instead of joining their text](./308.md) — minor; dashboard QA, 2026-10-21; closed quoted fields accept trailing text, silently turning malformed payee/amount tokens into2Valid rows at both widths.
 
 - [307 — Show copy failure during stale-entry draft recovery](./307.md) — minor; dashboard QA, 2026-10-21; Copy my edit leaves a rejected clipboard promise unhandled and gives no failure feedback; exact-payload retry succeeds at both widths.
