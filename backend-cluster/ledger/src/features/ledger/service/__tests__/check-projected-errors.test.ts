@@ -101,6 +101,7 @@ describe("checkProjectedErrors", () => {
         message: "Transaction does not balance: residual 1.50 USD",
         code: "E3001",
         hint: "add the missing posting",
+        severity: "error",
         source: { filename: "main.bean", lineno: 5 },
       },
     ]);

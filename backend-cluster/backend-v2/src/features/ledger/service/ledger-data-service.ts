@@ -49,7 +49,15 @@ export interface ILedgerDataService {
 
   getPayeeAccounts(params: BaseParams & { payee: string }): Promise<string[]>;
 
-  getErrors(params: BaseParams): Promise<BeancountErrorPublic[]>;
+  /**
+   * What `bean-check` fails on. The engine's warnings (a one-posting entry,
+   * closing an account with a balance) are left out unless asked for: every
+   * client counted them as errors on a ledger `bean-check` accepts, and the
+   * bell, Notifications and the agent's checks all read this (w21/188).
+   */
+  getErrors(
+    params: BaseParams & { includeWarnings?: boolean },
+  ): Promise<BeancountErrorPublic[]>;
 
   /**
    * Status of every managed price include the ledger names (ADR 015 §8):
@@ -227,16 +235,21 @@ export class LedgerDataService
     );
   }
 
-  async getErrors(params: BaseParams): Promise<BeancountErrorPublic[]> {
-    const { ledgerId, identity } = params;
+  async getErrors(
+    params: BaseParams & { includeWarnings?: boolean },
+  ): Promise<BeancountErrorPublic[]> {
+    const { ledgerId, identity, includeWarnings = false } = params;
     const { favaApiClient, ledgerOwner, ledgerName } = await this.getClient(
       ledgerId,
       identity,
     );
-    return unwrapFavaResponse(
+    const errors = await unwrapFavaResponse(
       favaApiClient.reports.getLedgerErrors(ledgerOwner, ledgerName),
       "get ledger errors",
     );
+    return includeWarnings
+      ? errors
+      : errors.filter((error) => error.severity !== "warning");
   }
 
   async getManagedPrices(

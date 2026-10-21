@@ -118,6 +118,12 @@ class BeancountError {
 
   @Field(() => String)
   message: string;
+
+  @Field(() => String, {
+    description:
+      "`error` for what bean-check fails on; the engine's `warning`s are not returned by getLedgerErrors.",
+  })
+  severity: string;
 }
 
 @ObjectType({
@@ -453,7 +459,8 @@ export class LedgerDataQueryResolver {
 
   @AllowAnonymous()
   @Query(() => [BeancountError], {
-    description: "Get all errors from the ledger",
+    description:
+      "Get the ledger's errors: what bean-check fails on. The engine's warnings (a one-posting entry, closing an account with a balance) are not listed.",
   })
   async getLedgerErrors(
     @Arg("ledgerId", () => String) ledgerId: string,
@@ -467,6 +474,7 @@ export class LedgerDataQueryResolver {
       filename: error.source?.filename || undefined,
       lineno: error.source?.lineno || undefined,
       message: error.message,
+      severity: error.severity === "warning" ? "warning" : "error",
     }));
   }
 

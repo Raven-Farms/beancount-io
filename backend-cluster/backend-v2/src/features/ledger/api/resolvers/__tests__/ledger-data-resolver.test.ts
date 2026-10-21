@@ -301,6 +301,23 @@ describe("LedgerDataQueryResolver", () => {
       expect(result[0].message).toBe("Syntax error");
       expect(result[0].filename).toBe("main.beancount");
       expect(result[0].lineno).toBe(42);
+      // No severity from the service means an error.
+      expect(result[0].severity).toBe("error");
+    });
+
+    // w21/188: a warning must not pass for an error.
+    it("carries a warning's severity through", async () => {
+      mockDataService.getErrors.mockResolvedValue([
+        { message: "Transaction has only one posting", severity: "warning" },
+        { message: "Does not balance", severity: "error" },
+      ]);
+
+      const result = await resolver.getLedgerErrors(ledgerId, mockContext);
+
+      expect(result.map((error) => error.severity)).toEqual([
+        "warning",
+        "error",
+      ]);
     });
   });
 

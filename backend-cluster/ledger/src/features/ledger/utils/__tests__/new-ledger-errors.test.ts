@@ -106,3 +106,34 @@ describe("refuseNewLedgerErrors", () => {
     ).rejects.toThrow(/^adding these entries would introduce 1 new/);
   });
 });
+
+// w21/188: the engine's warnings are not what bean-check refuses a write for.
+describe("warnings and the write gate", () => {
+  const warning = {
+    message: "Transaction has only one posting",
+    source: { filename: "main.bean", lineno: 90 },
+    severity: "warning" as const,
+  };
+
+  it("does not count a new warning as a new error", () => {
+    expect(newLedgerErrors([], [warning])).toEqual([]);
+  });
+
+  it("does not refuse a write that only adds a warning", async () => {
+    const before = jest.fn(async () => []);
+    await expect(
+      refuseNewLedgerErrors([warning], before, "add" as never),
+    ).resolves.toBeUndefined();
+    expect(before).not.toHaveBeenCalled();
+  });
+
+  it("still refuses a real new error beside a warning", async () => {
+    await expect(
+      refuseNewLedgerErrors(
+        [warning, { message: "does not balance", severity: "error" as const }],
+        async () => [],
+        "add" as never,
+      ),
+    ).rejects.toThrow();
+  });
+});

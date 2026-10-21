@@ -12846,7 +12846,7 @@
     "/api-gateway/v1/ledgers/{owner}/{name}/errors": {
       "get": {
         "summary": "List the ledger's parse and validation errors",
-        "description": "What `bean-check` reports for this ledger. An empty list means the ledger is currently valid.",
+        "description": "What `bean-check` reports for this ledger. An empty list means the ledger is currently valid. The engine's warnings (a one-posting entry, closing an account with a balance) are not listed: `bean-check` does not fail on them.",
         "tags": [
           "Ledger v1"
         ],

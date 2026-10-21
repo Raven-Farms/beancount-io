@@ -34,21 +34,28 @@ export interface WriteValidation {
   readonly newErrors: BeanCheckError[];
 }
 
-/** Reduce ledger-service errors to the actionable shape. */
+/**
+ * Reduce ledger-service errors to the actionable shape: what bean-check fails
+ * on. The engine's warnings (a one-posting entry, closing an account with a
+ * balance) are not errors and do not count as one (w21/188).
+ */
 export function toBeanCheckErrors(
   errors: readonly {
     message: string;
     source?: { filename: string; lineno: number } | null;
     code?: string | null;
+    severity?: string | null;
   }[],
 ): BeanCheckError[] {
-  return (errors ?? []).map((error) => ({
-    message: error.message,
-    ...(error.source
-      ? { source: `${error.source.filename}:${error.source.lineno}` }
-      : {}),
-    ...(error.code ? { code: error.code } : {}),
-  }));
+  return (errors ?? [])
+    .filter((error) => error.severity !== "warning")
+    .map((error) => ({
+      message: error.message,
+      ...(error.source
+        ? { source: `${error.source.filename}:${error.source.lineno}` }
+        : {}),
+      ...(error.code ? { code: error.code } : {}),
+    }));
 }
 
 /** Errors in `after` that were not already in `before`, by message+source. */

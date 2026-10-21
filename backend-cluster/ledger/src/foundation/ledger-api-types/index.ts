@@ -375,6 +375,12 @@ export interface BeancountErrorPublic {
   code?: string | null;
   /** The engine's own remediation hint for this error, when it has one. */
   hint?: string | null;
+  /**
+   * `error` for what `bean-check` fails on; `warning` for what the engine only
+   * remarks on (a one-posting entry, closing an account with a balance). Count
+   * only errors, as `bean-check` would (w21/188). Absent means error.
+   */
+  severity?: "error" | "warning" | null;
 }
 
 /**

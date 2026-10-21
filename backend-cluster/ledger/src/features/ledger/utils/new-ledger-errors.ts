@@ -19,6 +19,8 @@ export function newLedgerErrors(
     left.set(key(error), (left.get(key(error)) ?? 0) + 1);
   }
   return after.filter((error) => {
+    // A warning is not an error `bean-check` would refuse (w21/188).
+    if (error.severity === "warning") return false;
     const count = left.get(key(error)) ?? 0;
     if (count > 0) left.set(key(error), count - 1);
     return count === 0;
@@ -36,7 +38,7 @@ export async function refuseNewLedgerErrors(
   before: () => Promise<readonly BeancountErrorPublic[]>,
   action: LedgerWriteAction,
 ): Promise<void> {
-  if (after.length === 0) return;
+  if (after.every((error) => error.severity === "warning")) return;
   const introduced = newLedgerErrors(await before(), after);
   if (introduced.length > 0) {
     throw new NewLedgerErrorsError(introduced, action);
