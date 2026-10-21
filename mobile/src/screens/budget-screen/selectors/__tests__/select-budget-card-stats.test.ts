@@ -1,4 +1,7 @@
-import { selectBudgetCardStats } from "../select-budget-card-stats";
+import {
+  selectBudgetCardStats,
+  selectPointFavorability,
+} from "../select-budget-card-stats";
 import type { BudgetGroup } from "../budget-selectors";
 
 function group(
@@ -91,5 +94,65 @@ describe("selectBudgetCardStats", () => {
     );
 
     expect(stats.progressPercent).toBe(null);
+  });
+});
+
+// Months before the first budget directive have nothing to be over; their zero
+// budget made any spending read red (w21/033).
+describe("selectPointFavorability before the budget existed", () => {
+  const history = [{ date: "2026-08-01" }, { date: "2026-09-01" }];
+
+  it("leaves a pre-budget period unjudged and judges the rest", () => {
+    expect(
+      selectPointFavorability(
+        [
+          { date: "2026-07-31", actual: 120.4, budget: 0 },
+          { date: "2026-08-31", actual: 180.85, budget: 300 },
+          { date: "2026-09-30", actual: 400, budget: 350 },
+        ],
+        1,
+        history,
+      ),
+    ).toEqual([null, true, false]);
+  });
+
+  it("still judges an explicit zero budget", () => {
+    expect(
+      selectPointFavorability(
+        [{ date: "2026-08-31", actual: 5, budget: 0 }],
+        1,
+        [{ date: "2026-08-01" }],
+      ),
+    ).toEqual([false]);
+  });
+
+  it("judges a period the first directive starts partway through", () => {
+    // Dated by its period start, but carrying a prorated budget.
+    expect(
+      selectPointFavorability(
+        [{ date: "2026-08-01", actual: 50, budget: 150 }],
+        1,
+        [{ date: "2026-08-15" }],
+      ),
+    ).toEqual([true]);
+  });
+
+  it("draws an unjudged bar neutral", () => {
+    const fs = require("fs");
+    const path = require("path");
+    const chart = fs.readFileSync(
+      path.join(
+        __dirname,
+        "..",
+        "..",
+        "..",
+        "..",
+        "common",
+        "d3",
+        "budget-bar-chart-d3.tsx",
+      ),
+      "utf8",
+    );
+    expect(chart.includes("favorables[i] === null")).toBe(true);
   });
 });

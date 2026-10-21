@@ -193,7 +193,11 @@ export function BudgetGroupCard({
   });
 
   const stats = selectBudgetCardStats(group, series);
-  const favorables = selectPointFavorability(series, direction);
+  const favorables = selectPointFavorability(
+    series,
+    direction,
+    group.budgetHistory,
+  );
 
   // One object so the chart and its spoken summary can never describe different
   // series.

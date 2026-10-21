@@ -37,16 +37,31 @@ export type BudgetCardStats = {
  * Whether each charted period landed on the good side of its own budget. Same
  * rule as the card's status badge — money tolerance and income inversion
  * included — so a bar can't contradict the badge sitting above it.
+ *
+ * `null` for a period that ended before the first budget directive: there was
+ * no target to miss, yet its zero budget made any spending read as over, so a
+ * new budget always looked behind on first view (w21/033). An explicit zero
+ * budget is a target and is still judged.
  */
 export function selectPointFavorability(
   series: BudgetSeriesPoint[],
   direction: 1 | -1,
-): boolean[] {
+  budgetHistory: readonly { date: string }[] = [],
+): (boolean | null)[] {
+  const firstBudget = budgetHistory.reduce<string | null>(
+    (first, entry) =>
+      first === null || entry.date < first ? entry.date : first,
+    null,
+  );
   return series.map((point) =>
-    isFavorableVariance(
-      varianceStatus(point.actual - Math.abs(point.budget)),
-      direction,
-    ),
+    // A zero budget too: a period the first directive starts partway through
+    // carries a prorated target and is judged against it.
+    point.budget === 0 && firstBudget !== null && point.date < firstBudget
+      ? null
+      : isFavorableVariance(
+          varianceStatus(point.actual - Math.abs(point.budget)),
+          direction,
+        ),
   );
 }
 

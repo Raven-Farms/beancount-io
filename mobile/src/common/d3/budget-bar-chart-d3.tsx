@@ -31,7 +31,8 @@ type BudgetBarChartProps = {
    * `labels`. Decided by the caller — expense and income budgets invert the
    * rule, and the selectors already own that decision.
    */
-  favorables: boolean[];
+  /** `null` for a period with no budget yet: drawn neutral, not judged. */
+  favorables: (boolean | null)[];
   currency: string;
   /**
    * Screen-reader summary of the series — `ScrollableAxisChart` wraps the plot in
@@ -139,7 +140,13 @@ function BudgetBarChart({
             width={barWidth}
             height={barHeight}
             baselineY={zeroY}
-            fill={favorables[i] === false ? theme.error : theme.primary}
+            fill={
+              favorables[i] === null
+                ? theme.black40
+                : favorables[i] === false
+                  ? theme.error
+                  : theme.primary
+            }
             rx={2}
             progress={entrance}
             index={i}

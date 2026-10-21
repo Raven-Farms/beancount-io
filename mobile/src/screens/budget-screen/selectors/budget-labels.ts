@@ -139,7 +139,7 @@ export function budgetChartSummary(
     labels: string[];
     actuals: number[];
     budgets: number[];
-    favorables: boolean[];
+    favorables: (boolean | null)[];
     currency: string;
   },
   t: (key: string, params?: Record<string, unknown>) => string,
