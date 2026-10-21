@@ -23,3 +23,4 @@
 - [050](./050.md) — Account detail shows Note, Balance and Document rows without their text, asserted amount or file
 - [051](./051.md) — New ledger's "Books begin" defaults to the UTC date, so evening ledgers in the Americas start tomorrow
 - [052](./052.md) — At the largest text size the drawer's header breaks single words mid-word
+- [053](./053.md) — Create Ledger keeps its draft forever in AsyncStorage, opening balance included, and resumes stale dates
