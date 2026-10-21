@@ -1,5 +1,9 @@
 # Current ClawHub release preflight — 2026-10-21 UTC
 
+Later follow-up: [variance controls and the close Report correction](./variance-release-controls-20261021.md)
+advance the suite to 0.3.6 and change only close's skill body relative to this
+preflight. The dated equivalence results below describe the earlier candidate.
+
 Rechecked the unfinished m6/t013 task and all six named w3/m55–m57 dependencies on main `e3ddae94d3cf63476b242ceb6bcf3618058e1ba3`. Preparation continued inside the blocked milestone. No Claude quota probe, protected dispatch or publication was made.
 
 Rebuilding produces **13 standalone bundles and 119 authored files**. Every file matches the previously tested final thirteen-skill candidate from `1537bc6bd2ab1be1bd299ee411ef801139f61f61`; the customer skill files and plugin manifests have not changed since that source. Later changes affect the routing harness/set and evidence documentation. The sorted `skill/path<TAB>sha256` manifest has SHA-256 **`348d6cf4fe6be906551c9cb128fb532b7540685187e1e8a86de6c7c1629397ac`**. Exact comparisons against the accepted eleven-skill release `ac95106709fbcbdc9214048c75af258e2a9b71f2` and fresh anonymous ClawHub **0.23.3** dry runs agree:

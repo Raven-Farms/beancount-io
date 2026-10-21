@@ -233,6 +233,36 @@
         "Any speculation is labelled hypothesis or the change is left unresolved",
         "The queries are shown and the ledger is not modified"
       ]
+    },
+    {
+      "id": 17,
+      "name": "variance-negative-comparator",
+      "prompt": "Why did Expenses:Supplies change from May 2026 to June 2026? My threshold policy is over 50 USD absolute or 10% relative, either tripping, with the comparator-period denominator. Ledger is ./ledger.beancount. Read only.",
+      "files": [
+        "evals/files/eval17_ledger.beancount"
+      ],
+      "expected_output": "Comparator -100 USD, current 200 USD, absolute delta +300 USD; relative percentage not applicable because the comparator is negative. Explain the refund-versus-purchase postings with dates; leave ledger unchanged.",
+      "expectations": [
+        "Both period totals and the +300 USD delta come from actual local reads/calculation, with commands shown.",
+        "Percentage is not applicable; do not report -300%, 300%, or another growth rate on the negative base.",
+        "Absolute threshold crosses; evidence distinguishes the dated refund and current purchase without inventing business causality.",
+        "Ledger bytes stay unchanged."
+      ]
+    },
+    {
+      "id": 18,
+      "name": "variance-price-volume-without-double-interaction",
+      "prompt": "Why did Expenses:Supplies change from May 2026 to June 2026? The invoice entries carry quantity and unit-price metadata. Use this decomposition convention: price effect = (current unit price - prior unit price) times current quantity; volume effect = (current quantity - prior quantity) times prior unit price. My threshold policy is over 50 USD absolute or 10% relative, either tripping, with the prior-period denominator. Ledger is ./ledger.beancount. Read only.",
+      "files": [
+        "evals/files/eval18_ledger.beancount"
+      ],
+      "expected_output": "Prior 200 USD (10 x20), current 300 USD (12 x25), delta100 USD/50%; price effect60 plus volume effect40 =100 exactly. The interaction is already included in the price term; do not add another10, fabricate mix, or infer business causes. Show executed supporting queries and reproducible arithmetic; leave ledger unchanged.",
+      "expectations": [
+        "Executed local reads recover quantities10/12, prices20/25 and booked totals200/300 from the two invoice entries.",
+        "Bridge uses the explicitly requested convention: price60 plus volume40 equals actual100.",
+        "No third10 interaction term is added and no unsupported product-mix or causal explanation is invented.",
+        "Threshold/delta/percentage are correct and supported by shown queries/calculation; ledger bytes stay unchanged."
+      ]
     }
   ]
 }

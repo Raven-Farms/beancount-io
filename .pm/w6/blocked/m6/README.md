@@ -182,3 +182,10 @@ Close/options 1.0.1 subsequently pass fresh native installs in both supported ho
 ## Independent task-level progress — 2026-10-21 UTC
 
 The [current release preflight](../../../../docs/skills/clawhub-release-preflight-20261021.md) completes the fresh bundle equivalence, anonymous publication previews, thirteen-skill install/discovery, standalone Codex controls and protected-environment readiness portions of t013. Continue remaining substeps against their actual prerequisites; t013 remains open for the documented Claude/adoption, publication and current-host conditions.
+
+The [variance follow-up](../../../../docs/skills/variance-release-controls-20261021.md)
+adds the missing negative/bridge evals and corrects close's Report provenance
+and executed-arithmetic gap. Four current Codex controls and all local owning
+checks pass; suite 0.3.6 changes only close's body among the thirteen bundles.
+Claude's one fresh 07:23 UTC probe still returns 429/zero tokens. Current Claude
+validation and the subsequent release/host gates remain open.

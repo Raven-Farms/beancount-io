@@ -1496,6 +1496,59 @@ class TestBeaRecipes(unittest.TestCase):
             [("2026-05-28", "BEST BUY", "500.00")],
         )
 
+    def test_variance_negative_comparator_keeps_refund_signs_and_period_bounds(self):
+        fixture = SUITE / "beancount-ask" / "evals" / "files" / "eval17_ledger.beancount"
+        self.ledger.write_text(
+            fixture.read_text(encoding="utf-8")
+            + '\n2026-04-30 * "Outside comparator"\n  Expenses:Supplies 999 USD\n  Assets:Checking -999 USD\n'
+            + '\n2026-07-01 * "Outside current"\n  Expenses:Supplies 888 USD\n  Assets:Checking -888 USD\n'
+        )
+        before = self.ledger.read_bytes()
+        account = {"<account-re>": "^Expenses:Supplies$"}
+        for start, end, date, amount, narration in (
+            ("2026-05-01", "2026-06-01", "2026-05-15", "-100.00", "Refund on returned supplies"),
+            ("2026-06-01", "2026-07-01", "2026-06-15", "200.00", "New supplies purchase"),
+        ):
+            with self.subTest(start=start):
+                bounds = {"<start>": start, "<end>": end}
+                rows = self.query_recipe("variance-total", **account, **bounds)
+                self.assertEqual(rows[0][0][0]["units"], {"number": amount, "currency": "USD"})
+                drivers = self.query_recipe("variance-drivers", **account, **bounds)
+                self.assertEqual(
+                    [(row[0], row[2], row[3]["number"]) for row in drivers],
+                    [(date, narration, amount)],
+                )
+        self.assertEqual(self.ledger.read_bytes(), before)
+
+    def test_variance_bridge_fixture_exposes_invoice_inputs_and_matching_totals(self):
+        fixture = SUITE / "beancount-ask" / "evals" / "files" / "eval18_ledger.beancount"
+        self.ledger.write_text(fixture.read_text(encoding="utf-8"))
+        before = self.ledger.read_bytes()
+        query = (
+            "SELECT date, entry_meta('quantity'), entry_meta('unit-price'), number "
+            "WHERE account = 'Expenses:Supplies' ORDER BY date"
+        )
+        result = subprocess.run(
+            [*self.bea, "--file", str(self.ledger), "--json", "--no-input", "query", query],
+            cwd=self.root, env=self.env, capture_output=True, text=True, timeout=90,
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        rows = json.loads(result.stdout)["data"]["rows"]
+        self.assertEqual(
+            [(row[0], *(Decimal(str(value)) for value in row[1:])) for row in rows],
+            [("2026-05-15", Decimal("10"), Decimal("20.00"), Decimal("200.00")),
+             ("2026-06-15", Decimal("12"), Decimal("25.00"), Decimal("300.00"))],
+        )
+        for start, end, amount in (
+            ("2026-05-01", "2026-06-01", "200.00"),
+            ("2026-06-01", "2026-07-01", "300.00"),
+        ):
+            totals = self.query_recipe(
+                "variance-total", **{"<account-re>": "^Expenses:Supplies$", "<start>": start, "<end>": end}
+            )
+            self.assertEqual(totals[0][0][0]["units"], {"number": amount, "currency": "USD"})
+        self.assertEqual(self.ledger.read_bytes(), before)
+
     def test_rollforward_ties_out_per_account_and_currency(self):
         fixture = SUITE / "beancount-roll-forward" / "evals" / "files" / "eval1_ledger.beancount"
         self.ledger.write_text(fixture.read_text(encoding="utf-8"))

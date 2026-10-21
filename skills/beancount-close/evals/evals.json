@@ -194,6 +194,38 @@
         "The driver cites the 2026-05-28 BEST BUY posting",
         "No driver is claimed for a change under the stated thresholds"
       ]
+    },
+    {
+      "id": 13,
+      "name": "close-variance-negative-comparator",
+      "prompt": "Prepare only the read-only variance commentary for the June 2026 close. Why did Expenses:Supplies change from May 2026 to June 2026? My threshold policy is over 50 USD absolute or 10% relative, either tripping, with the comparator-period denominator. Ledger is ./ledger.beancount. Read only. No statements or write approval are supplied: keep reconciliation unverified and do not edit, stage or commit anything.",
+      "files": [
+        "evals/files/eval13_ledger.beancount"
+      ],
+      "expected_output": "Comparator -100 USD, current 200 USD, absolute delta +300 USD; relative percentage not applicable because the comparator is negative. Explain the refund-versus-purchase postings with dates; leave ledger unchanged. Commentary must agree with the corresponding beancount-ask case; do not claim the close is complete.",
+      "expectations": [
+        "Both period totals and the +300 USD delta come from actual local reads/calculation, with commands shown.",
+        "Percentage is not applicable; do not report -300%, 300%, or another growth rate on the negative base.",
+        "Absolute threshold crosses; evidence distinguishes the dated refund and current purchase without inventing business causality.",
+        "Ledger bytes stay unchanged.",
+        "Commentary agrees with the ask answer on this same fixture and period; reconciliation stays unverified and no completed close, staging or commit is claimed."
+      ]
+    },
+    {
+      "id": 14,
+      "name": "close-variance-price-volume-without-double-interaction",
+      "prompt": "Prepare only the read-only variance commentary for the June 2026 close. Why did Expenses:Supplies change from May 2026 to June 2026? The invoice entries carry quantity and unit-price metadata. Use this decomposition convention: price effect = (current unit price - prior unit price) times current quantity; volume effect = (current quantity - prior quantity) times prior unit price. My threshold policy is over 50 USD absolute or 10% relative, either tripping, with the prior-period denominator. Ledger is ./ledger.beancount. Read only. No statements or write approval are supplied: keep reconciliation unverified and do not edit, stage or commit anything.",
+      "files": [
+        "evals/files/eval14_ledger.beancount"
+      ],
+      "expected_output": "Prior 200 USD (10 x20), current 300 USD (12 x25), delta100 USD/50%; price effect60 plus volume effect40 =100 exactly. The interaction is already included in the price term; do not add another10, fabricate mix, or infer business causes. Show executed supporting queries and reproducible arithmetic; leave ledger unchanged. Commentary must agree with the corresponding beancount-ask case; do not claim the close is complete.",
+      "expectations": [
+        "Executed local reads recover quantities10/12, prices20/25 and booked totals200/300 from the two invoice entries.",
+        "Bridge uses the explicitly requested convention: price60 plus volume40 equals actual100.",
+        "No third10 interaction term is added and no unsupported product-mix or causal explanation is invented.",
+        "Threshold/delta/percentage are correct and supported by shown queries/calculation; ledger bytes stay unchanged.",
+        "Commentary agrees with the ask answer on this same fixture and period; reconciliation stays unverified and no completed close, staging or commit is claimed."
+      ]
     }
   ]
 }
