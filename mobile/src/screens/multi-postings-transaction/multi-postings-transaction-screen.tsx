@@ -38,10 +38,7 @@ import { AmountText } from "@/components/amount-text";
 import { useThemeStyle, useToast } from "@/common/hooks";
 import { useTranslations } from "@/common/hooks/use-translations";
 import { getFormatDate, parseFormatDate } from "@/common/format-util";
-import {
-  formatMoneyWithCurrency,
-  formatSignedMoneyWithCurrency,
-} from "@/common/number-utils";
+import { formatMoneyWithCurrency } from "@/common/number-utils";
 import { ColorTheme } from "@/types/theme-props";
 import { LedgerGuard, useLedgerGuard } from "@/components/ledger-guard";
 import { LoadingTile } from "@/components/loading-tile";
@@ -63,7 +60,7 @@ import {
   buildEntryInput,
   createInitialPostings,
   createPrefilledPostings,
-  formatExactAmount,
+  formatRemainderAmount,
   hasNonZeroAmount,
   hasUnparsedAmount,
   isRemainderBalanced,
@@ -669,13 +666,6 @@ const MultiPostingsTransactionScreenComponent = () => {
     });
   };
 
-  const formatRemainder = (exact: string) =>
-    formatSignedMoneyWithCurrency(
-      Number(formatExactAmount(exact)),
-      currency,
-      true,
-    );
-
   return (
     <SafeAreaView edges={["bottom"]} style={styles.container}>
       <Stack.Screen
@@ -825,7 +815,7 @@ const MultiPostingsTransactionScreenComponent = () => {
               ? "—"
               : isBalanced
                 ? `✓  ${formatMoneyWithCurrency(0, currency)}`
-                : formatRemainder(rem)}
+                : formatRemainderAmount(rem, currency)}
           </AmountText>
         </View>
         {amountUnreadable ? (

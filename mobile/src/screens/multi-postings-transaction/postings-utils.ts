@@ -1,3 +1,8 @@
+import {
+  amountScale,
+  formatSignedMoneyWithCurrency,
+} from "../../common/number-utils";
+
 let _postingIdCounter = 0;
 const nextId = () => `posting-${++_postingIdCounter}`;
 
@@ -28,8 +33,9 @@ type Scaled = { coeff: bigint; scale: number };
  * `.` decimal separator, or a single `,` as a decimal separator (`1,25` →
  * `1.25`). Thousands grouping is accepted only where it can't be a decimal
  * comma: with a `.` after the groups (`1,234.56`) or two groups or more
- * (`1,234,567`) (w21/031). `1,250` stays the decimal comma 1.250. Rejects
- * partial forms (`1.`, `-`) and any other junk — never silently takes a
+ * (`1,234,567`) (w21/031). `1,250` stays the decimal comma 1.250. A leading
+ * `.` reads as `0.` (`.5` → `0.5`). Rejects partial forms (`1.`, `-`, `.`)
+ * and any other junk — never silently takes a
  * numeric prefix the way parseFloat does.
  */
 export function parseExactAmount(input: string): string | null {
@@ -48,6 +54,8 @@ export function parseExactAmount(input: string): string | null {
     return null;
   }
 
+  // The decimal pad lets "." come first: ".5" is 0.5 (w21/075).
+  normalized = normalized.replace(/^(-?)\./, "$10.");
   if (!/^-?\d+(\.\d+)?$/.test(normalized)) return null;
 
   const neg = normalized.startsWith("-");
@@ -369,4 +377,19 @@ export function hasNonZeroAmount(posting: Posting): boolean {
 
 export function isRemainderBalanced(rem: string): boolean {
   return isZeroExact(rem);
+}
+
+/**
+ * The Remainder row's label, at the remainder's own scale: 10.004 against -10
+ * leaves "+$0.004". Rounded to cents it read "+$0.00" in red while Done
+ * refused the entry as unbalanced (w21/075).
+ */
+export function formatRemainderAmount(rem: string, currency: string): string {
+  const exact = formatExactAmount(rem);
+  return formatSignedMoneyWithCurrency(
+    Number(exact),
+    currency,
+    true,
+    amountScale(exact),
+  );
 }

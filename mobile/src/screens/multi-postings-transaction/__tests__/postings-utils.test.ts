@@ -3,6 +3,7 @@ import {
   buildEntryInput,
   createPrefilledPostings,
   formatExactAmount,
+  formatRemainderAmount,
   hasUnparsedAmount,
   isRemainderBalanced,
   lastPostingAutoToggle,
@@ -553,5 +554,27 @@ describe("postingAmountAccessibility", () => {
         t,
       }).value,
     ).toBe("-7.25 USD");
+  });
+});
+
+// w21/075: the decimal pad lets "." come first, and ".5" was refused; a
+// sub-cent remainder read "+$0.00" while Done refused it as unbalanced.
+describe("leading decimal points and sub-cent remainders", () => {
+  it("reads a leading dot as zero point", () => {
+    expect(parseExactAmount(".5")).toBe("0.5");
+    expect(parseExactAmount(".99")).toBe("0.99");
+    expect(parseExactAmount("-.5")).toBe("-0.5");
+    expect(parseExactAmount(".")).toBe(null);
+    expect(parseExactAmount("-.")).toBe(null);
+  });
+
+  it("shows the remainder it refuses", () => {
+    const rem = remainder([
+      posting("Expenses:Food", "10.004", "10.004"),
+      posting("Assets:Cash", "-10", "-10"),
+    ]);
+    expect(isRemainderBalanced(rem)).toBe(false);
+    expect(formatRemainderAmount(rem, "USD")).toBe("+$0.004");
+    expect(formatRemainderAmount("-12.5", "USD")).toBe("-$12.50");
   });
 });

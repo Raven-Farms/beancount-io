@@ -159,17 +159,19 @@ export const formatMoneyWithCurrency = (
  * (e.g. "-$1,234.50"); otherwise the currency code is appended after the amount
  * (e.g. "551,620.00 MUSD") so a custom or unrecognized commodity is never shown
  * as a bare, unlabeled number. Prefer this over `formatSignedMoney` wherever the
- * currency code is available.
+ * currency code is available. `minScale` keeps at least that many decimals, for
+ * an exact figure finer than the currency's minor unit.
  */
 export const formatSignedMoneyWithCurrency = (
   value: number,
   currency: string,
   includePlus = false,
+  minScale = 0,
 ): string => {
   const { sign, amount } = signedAmount(
     value,
     includePlus,
-    currencyMinorUnits(currency),
+    Math.max(currencyMinorUnits(currency), minScale),
   );
   return annotateCurrency(sign, amount, currency);
 };
