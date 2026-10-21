@@ -6,6 +6,7 @@ import { useUserLimits } from "@/common/hooks/use-user-limits";
 import { UpgradePromptLink } from "@/common/components/upgrade-prompt-link";
 import { getNextTier } from "@/common/lib/subscription/tier-config";
 import { isPremiumRequired } from "../../../utils/is-premium-required";
+import { CsvEncodingError } from "../../../utils/decode-csv-bytes";
 import type { FileFormat } from "../../../types";
 
 interface ParseErrorDisplayProps {
@@ -179,6 +180,27 @@ function ServerError({ onReset }: { onReset: () => void }) {
 }
 
 /**
+ * A CSV whose bytes are not UTF-8: say how to re-save it rather than import
+ * changed text (w4/278).
+ */
+function EncodingError({ onReset }: { onReset: () => void }) {
+  const { t } = useTranslations();
+
+  return (
+    <ErrorLayout onReset={onReset}>
+      <div role="alert" className="space-y-2">
+        <h3 className="text-lg font-semibold text-foreground">
+          {t("importer.error.notUtf8")}
+        </h3>
+        <p className="text-sm text-muted-foreground">
+          {t("importer.error.notUtf8Description")}
+        </p>
+      </div>
+    </ErrorLayout>
+  );
+}
+
+/**
  * Parent component that routes to appropriate error display
  * based on error type
  */
@@ -189,6 +211,10 @@ export function ParseErrorDisplay({
 }: ParseErrorDisplayProps) {
   // Detect if error is premium-related using GraphQL extensions.code
   const isPremiumRequiredError = isPremiumRequired(error);
+
+  if (error instanceof CsvEncodingError) {
+    return <EncodingError onReset={onReset} />;
+  }
 
   if (isPremiumRequiredError) {
     return <PremiumRequiredError onReset={onReset} fileFormat={fileFormat} />;

@@ -177,6 +177,15 @@ const deImporter: Record<string, TranslationEntry> = {
     message: "Datei konnte nicht analysiert werden",
     description: "Title for parse failure error",
   },
+  "importer.error.notUtf8": {
+    message: "Datei ist kein UTF-8-Text",
+    description: "Title when an uploaded CSV is not UTF-8 text",
+  },
+  "importer.error.notUtf8Description": {
+    message:
+      "Diese CSV enthält Zeichen, die kein gültiges UTF-8 sind; ein Import würde Empfänger- und Beschreibungstexte verändern. Speichern Sie sie in Ihrer Bank- oder Tabellen-App erneut als CSV UTF-8 und laden Sie diese Datei hoch.",
+    description: "How to re-save a CSV that is not UTF-8 text",
+  },
   "importer.error.serverError": {
     message:
       "Bei der Verarbeitung Ihrer Datei ist ein Serverfehler aufgetreten. Bitte versuchen Sie es in einigen Sekunden erneut.",

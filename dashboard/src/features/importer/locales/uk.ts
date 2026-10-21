@@ -174,6 +174,15 @@ const ukImporter: Record<string, TranslationEntry> = {
     message: "Не вдалося проаналізувати файл",
     description: "Title for parse failure error",
   },
+  "importer.error.notUtf8": {
+    message: "Файл не є текстом UTF-8",
+    description: "Title when an uploaded CSV is not UTF-8 text",
+  },
+  "importer.error.notUtf8Description": {
+    message:
+      "Цей CSV містить символи, які не є коректним UTF-8, тож імпорт змінив би текст отримувачів і описів. Збережіть файл знову як CSV UTF-8 у банку чи табличному редакторі та завантажте його.",
+    description: "How to re-save a CSV that is not UTF-8 text",
+  },
   "importer.error.serverError": {
     message:
       "Сталася помилка сервера під час обробки вашого файлу. Будь ласка, спробуйте знову через кілька секунд.",

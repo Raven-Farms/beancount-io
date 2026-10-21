@@ -169,6 +169,15 @@ const zhImporter: Record<string, TranslationEntry> = {
     message: "文件解析失败",
     description: "Title for parse failure error",
   },
+  "importer.error.notUtf8": {
+    message: "文件不是 UTF-8 文本",
+    description: "Title when an uploaded CSV is not UTF-8 text",
+  },
+  "importer.error.notUtf8Description": {
+    message:
+      "此 CSV 包含无效的 UTF-8 字符，导入会改变收款方和描述文本。请在银行或电子表格应用中重新另存为 CSV UTF-8，然后上传该文件。",
+    description: "How to re-save a CSV that is not UTF-8 text",
+  },
   "importer.error.serverError": {
     message: "处理你的文件时发生服务器错误。请稍后几秒钟重试。",
     description: "Description of server error",

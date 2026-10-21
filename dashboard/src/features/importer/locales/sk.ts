@@ -174,6 +174,15 @@ const skImporter: Record<string, TranslationEntry> = {
     message: "Nepodarilo sa analyzovať súbor",
     description: "Title for parse failure error",
   },
+  "importer.error.notUtf8": {
+    message: "Súbor nie je text v UTF-8",
+    description: "Title when an uploaded CSV is not UTF-8 text",
+  },
+  "importer.error.notUtf8Description": {
+    message:
+      "Tento CSV obsahuje znaky, ktoré nie sú platné UTF-8, takže import by zmenil text príjemcov a popisov. Uložte ho znova ako CSV UTF-8 z banky alebo tabuľkového programu a nahrajte tento súbor.",
+    description: "How to re-save a CSV that is not UTF-8 text",
+  },
   "importer.error.serverError": {
     message:
       "Pri spracovaní vášho súboru došlo k chybe servera. Prosím, skúste to znova o niekoľko sekúnd.",

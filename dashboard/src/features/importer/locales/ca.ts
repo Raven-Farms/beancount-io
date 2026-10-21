@@ -177,6 +177,15 @@ const caImporter: Record<string, TranslationEntry> = {
     message: "No s'ha pogut analitzar el fitxer",
     description: "Title for parse failure error",
   },
+  "importer.error.notUtf8": {
+    message: "El fitxer no és text UTF-8",
+    description: "Title when an uploaded CSV is not UTF-8 text",
+  },
+  "importer.error.notUtf8Description": {
+    message:
+      "Aquest CSV conté caràcters que no són UTF-8 vàlid, de manera que importar-lo canviaria el text dels beneficiaris i les descripcions. Torneu-lo a desar com a CSV UTF-8 des del banc o del full de càlcul i pengeu aquest fitxer.",
+    description: "How to re-save a CSV that is not UTF-8 text",
+  },
   "importer.error.serverError": {
     message:
       "S'ha produït un error del servidor en processar el vostre fitxer. Torneu-ho a provar en uns segons.",

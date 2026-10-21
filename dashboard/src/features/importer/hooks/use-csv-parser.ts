@@ -1,6 +1,7 @@
 import { useState, useCallback } from "react";
 import { useTranslations } from "@/common/hooks/use-translations";
 import type { ParsedRow, CSVParseResult } from "../types";
+import { CsvEncodingError, decodeCsvBytes } from "../utils/decode-csv-bytes";
 import {
   isValidRowFormat,
   detectHeaderRow,
@@ -294,11 +295,17 @@ export function useCSVParser() {
 
         reader.onload = (e) => {
           try {
-            const content = e.target?.result as string;
-            const result = parseCSV(content);
+            const bytes = new Uint8Array(e.target?.result as ArrayBuffer);
+            const result = parseCSV(decodeCsvBytes(bytes));
             setIsLoading(false);
             resolve(result);
           } catch (err) {
+            if (err instanceof CsvEncodingError) {
+              setError(t("importer.error.notUtf8Description"));
+              setIsLoading(false);
+              reject(err);
+              return;
+            }
             console.error("Failed to parse CSV:", err);
             const errorMessage = t("importer.error.failedToParse");
             setError(errorMessage);
@@ -314,7 +321,7 @@ export function useCSVParser() {
           reject(new Error(errorMessage));
         };
 
-        reader.readAsText(file);
+        reader.readAsArrayBuffer(file);
       });
     },
     [parseCSV, t],

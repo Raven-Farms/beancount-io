@@ -176,6 +176,15 @@ const bgImporter: Record<string, TranslationEntry> = {
     message: "Неуспешен анализ на файла",
     description: "Title for parse failure error",
   },
+  "importer.error.notUtf8": {
+    message: "Файлът не е текст в UTF-8",
+    description: "Title when an uploaded CSV is not UTF-8 text",
+  },
+  "importer.error.notUtf8Description": {
+    message:
+      "Този CSV съдържа знаци, които не са валиден UTF-8, затова импортирането му би променило текста на получателите и описанията. Запазете го отново като CSV UTF-8 от банката или програмата за таблици и качете този файл.",
+    description: "How to re-save a CSV that is not UTF-8 text",
+  },
   "importer.error.serverError": {
     message:
       "Възникна сървърна грешка при обработката на вашия файл. Моля, опитайте отново след няколко секунди.",

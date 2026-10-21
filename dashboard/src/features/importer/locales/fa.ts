@@ -176,6 +176,15 @@ const faImporter: Record<string, TranslationEntry> = {
     message: "تجزیه فایل ناموفق بود",
     description: "Title for parse failure error",
   },
+  "importer.error.notUtf8": {
+    message: "فایل متن UTF-8 نیست",
+    description: "Title when an uploaded CSV is not UTF-8 text",
+  },
+  "importer.error.notUtf8Description": {
+    message:
+      "این CSV نویسه‌هایی دارد که UTF-8 معتبر نیستند، بنابراین وارد کردن آن متن دریافت‌کننده‌ها و توضیحات را تغییر می‌دهد. آن را دوباره از بانک یا برنامهٔ صفحه‌گسترده با قالب CSV UTF-8 ذخیره کنید و همان فایل را بارگذاری کنید.",
+    description: "How to re-save a CSV that is not UTF-8 text",
+  },
   "importer.error.serverError": {
     message:
       "هنگام پردازش فایل شما خطای سرور رخ داد. لطفاً چند ثانیه دیگر دوباره امتحان کنید.",

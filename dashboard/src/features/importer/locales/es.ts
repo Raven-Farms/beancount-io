@@ -174,6 +174,15 @@ const esImporter: Record<string, TranslationEntry> = {
     message: "Error al analizar el archivo",
     description: "Title for parse failure error",
   },
+  "importer.error.notUtf8": {
+    message: "El archivo no es texto UTF-8",
+    description: "Title when an uploaded CSV is not UTF-8 text",
+  },
+  "importer.error.notUtf8Description": {
+    message:
+      "Este CSV contiene caracteres que no son UTF-8 válido, así que importarlo cambiaría el texto de beneficiarios y descripciones. Vuelve a guardarlo como CSV UTF-8 desde tu banco o tu hoja de cálculo y sube ese archivo.",
+    description: "How to re-save a CSV that is not UTF-8 text",
+  },
   "importer.error.serverError": {
     message:
       "Ocurrió un error del servidor al procesar tu archivo. Por favor, inténtalo de nuevo en unos segundos.",

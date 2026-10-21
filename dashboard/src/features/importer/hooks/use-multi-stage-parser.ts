@@ -9,6 +9,7 @@ import { useState, useCallback, useRef } from "react";
 import { useCSVParser } from "./use-csv-parser";
 import { useLLMParser } from "./use-llm-parser";
 import { detectFileFormat } from "../utils/file-format-detector";
+import { CsvEncodingError } from "../utils/decode-csv-bytes";
 import type { CSVParseResult, ParseStage, FileFormat } from "../types";
 
 export function useMultiStageParser() {
@@ -65,6 +66,13 @@ export function useMultiStageParser() {
           return result;
         }
       } catch (err) {
+        // Bytes in another encoding are not the AI's to guess either: the
+        // user re-saves the file as UTF-8 (w4/278).
+        if (err instanceof CsvEncodingError) {
+          setError(err);
+          setStage("error");
+          throw err;
+        }
         console.warn("Client-side CSV parsing failed", err);
       }
       // Never spend AI tokens on a CSV without asking (w3/643).

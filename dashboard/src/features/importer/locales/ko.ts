@@ -170,6 +170,15 @@ const koImporter: Record<string, TranslationEntry> = {
     message: "파일 파싱에 실패했습니다",
     description: "Title for parse failure error",
   },
+  "importer.error.notUtf8": {
+    message: "파일이 UTF-8 텍스트가 아닙니다",
+    description: "Title when an uploaded CSV is not UTF-8 text",
+  },
+  "importer.error.notUtf8Description": {
+    message:
+      "이 CSV에는 유효한 UTF-8이 아닌 문자가 있어 가져오면 수취인과 설명 텍스트가 바뀝니다. 은행이나 스프레드시트 앱에서 CSV UTF-8로 다시 저장한 뒤 그 파일을 업로드하세요.",
+    description: "How to re-save a CSV that is not UTF-8 text",
+  },
   "importer.error.serverError": {
     message:
       "파일 처리 중 서버 오류가 발생했습니다. 몇 초 후 다시 시도해 주세요.",

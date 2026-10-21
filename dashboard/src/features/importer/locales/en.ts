@@ -178,6 +178,15 @@ const enImporter: Record<string, TranslationEntry> = {
     message: "Failed to Parse File",
     description: "Title for parse failure error",
   },
+  "importer.error.notUtf8": {
+    message: "File isn't UTF-8 text",
+    description: "Title when an uploaded CSV is not UTF-8 text",
+  },
+  "importer.error.notUtf8Description": {
+    message:
+      "This CSV has characters that aren't valid UTF-8, so importing it would change your payee and description text. Save it again as CSV UTF-8 from your bank or spreadsheet app, then upload that file.",
+    description: "How to re-save a CSV that is not UTF-8 text",
+  },
   "importer.error.serverError": {
     message:
       "A server error occurred while processing your file. Please try again in a few seconds.",

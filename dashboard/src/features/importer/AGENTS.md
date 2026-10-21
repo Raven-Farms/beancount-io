@@ -30,7 +30,10 @@ Preview. It clears on a new upload or reset/finish — never via localStorage.
 ## Parser Hooks
 
 - **`use-csv-parser.ts`** — Client CSV parsing; the field delimiter (`,`, `;`,
-  tab) is detected from the first record, so EU bank exports parse for free
+  tab) is detected from the first record, so EU bank exports parse for free.
+  Bytes decode losslessly through `utils/decode-csv-bytes.ts` (UTF-8, or
+  UTF-16 by BOM); any other encoding is a `CsvEncodingError`, shown as re-save
+  guidance and never offered to AI
 - **`use-llm-parser.ts`** — LLM-assisted parsing for non-standard formats
 - **`use-multi-stage-parser.ts`** — Client CSV first; other formats go to the
   LLM. A CSV the client cannot read stops at the `ai-offer` stage until the

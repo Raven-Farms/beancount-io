@@ -171,6 +171,15 @@ const jaImporter: Record<string, TranslationEntry> = {
     message: "ファイルの解析に失敗しました",
     description: "Title for parse failure error",
   },
+  "importer.error.notUtf8": {
+    message: "ファイルが UTF-8 テキストではありません",
+    description: "Title when an uploaded CSV is not UTF-8 text",
+  },
+  "importer.error.notUtf8Description": {
+    message:
+      "この CSV には有効な UTF-8 ではない文字が含まれているため、インポートすると支払先や説明のテキストが変わってしまいます。銀行または表計算アプリで CSV UTF-8 として保存し直し、そのファイルをアップロードしてください。",
+    description: "How to re-save a CSV that is not UTF-8 text",
+  },
   "importer.error.serverError": {
     message:
       "ファイルの処理中にサーバーエラーが発生しました。数秒後にもう一度お試しください。",

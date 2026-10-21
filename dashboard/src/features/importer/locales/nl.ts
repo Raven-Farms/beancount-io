@@ -175,6 +175,15 @@ const nlImporter: Record<string, TranslationEntry> = {
     message: "Kon bestand niet analyseren",
     description: "Title for parse failure error",
   },
+  "importer.error.notUtf8": {
+    message: "Bestand is geen UTF-8-tekst",
+    description: "Title when an uploaded CSV is not UTF-8 text",
+  },
+  "importer.error.notUtf8Description": {
+    message:
+      "Deze CSV bevat tekens die geen geldige UTF-8 zijn, dus importeren zou de tekst van begunstigden en omschrijvingen veranderen. Sla het bestand opnieuw op als CSV UTF-8 vanuit je bank of spreadsheet-app en upload dat bestand.",
+    description: "How to re-save a CSV that is not UTF-8 text",
+  },
   "importer.error.serverError": {
     message:
       "Er is een serverfout opgetreden tijdens het verwerken van uw bestand. Probeer het over een paar seconden opnieuw.",

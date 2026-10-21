@@ -175,6 +175,15 @@ const ruImporter: Record<string, TranslationEntry> = {
     message: "Не удалось проанализировать файл",
     description: "Title for parse failure error",
   },
+  "importer.error.notUtf8": {
+    message: "Файл не в кодировке UTF-8",
+    description: "Title when an uploaded CSV is not UTF-8 text",
+  },
+  "importer.error.notUtf8Description": {
+    message:
+      "В этом CSV есть символы, недопустимые в UTF-8, поэтому импорт изменил бы текст получателей и описаний. Сохраните файл заново как CSV UTF-8 в банке или табличном редакторе и загрузите его.",
+    description: "How to re-save a CSV that is not UTF-8 text",
+  },
   "importer.error.serverError": {
     message:
       "Произошла ошибка сервера при обработке вашего файла. Пожалуйста, повторите попытку через несколько секунд.",
