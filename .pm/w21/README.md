@@ -137,3 +137,6 @@
 - [187](./187.md) — Syntax errors lose file and line ("parse errors in main.bean"); no way to find the bad line in the app
 - [188](./188.md) — Engine warnings listed and counted as errors although bean-check passes
 - [189](./189.md) — Missing `include` shows raw "virtual filesystem" text with no tap target
+- [190](./190.md) — Mobile can't add transactions on ledgers whose currency isn't 3 uppercase letters (USDC, MUSD, VBTLX)
+- [191](./191.md) — Multi-line narration silently altered on save (amount-like lines padded, trailing spaces/\r dropped)
+- [192](./192.md) — Open Account name check vs engine: Persian/full-width digits pass then fail; ZWNJ words blocked
