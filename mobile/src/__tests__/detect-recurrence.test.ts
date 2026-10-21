@@ -407,3 +407,48 @@ describe("detectRecurrence with a pre-entered payment", () => {
     expect(verdict?.isOverdue).toBe(false);
   });
 });
+
+// w21/170: bills on the 1st and 15th read "Every 2 weeks", Next 2–3 days early.
+describe("detectRecurrence twice a month", () => {
+  const paid = (date: string): SeriesPoint => ({
+    date,
+    currency: "USD",
+    amount: 120,
+  });
+  const months = ["01", "02", "03", "04", "05", "06", "07", "08", "09", "10"];
+  const lastDays = ["31", "28", "31", "30", "31", "30", "31", "31", "30"];
+
+  it("reads the 1st and 15th as twice a month, next on the 1st", () => {
+    const series = months.flatMap((m) => [
+      paid(`2026-${m}-01`),
+      paid(`2026-${m}-15`),
+    ]);
+    const verdict = detectRecurrence(series, "2026-10-21");
+    expect(verdict?.cadence).toBe("semimonthly");
+    expect(verdict?.nextExpected).toBe("2026-11-01");
+    expect(verdict?.isOverdue).toBe(false);
+  });
+
+  it("follows the last day of the month, February included", () => {
+    const series = [
+      ...months
+        .slice(0, 9)
+        .flatMap((m, i) => [
+          paid(`2026-${m}-15`),
+          paid(`2026-${m}-${lastDays[i]}`),
+        ]),
+      paid("2026-10-15"),
+    ];
+    const verdict = detectRecurrence(series, "2026-10-21");
+    expect(verdict?.cadence).toBe("semimonthly");
+    expect(verdict?.nextExpected).toBe("2026-10-31");
+  });
+
+  it("keeps a true 14-day cadence as every two weeks", () => {
+    const start = parseLedgerDay("2026-06-05")!;
+    const series = Array.from({ length: 10 }, (_, i) =>
+      paid(formatLedgerDay(start + i * 14)),
+    );
+    expect(detectRecurrence(series, "2026-10-21")?.cadence).toBe("biweekly");
+  });
+});

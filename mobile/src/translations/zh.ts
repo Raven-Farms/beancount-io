@@ -77,6 +77,7 @@ export const zh: Translations = {
   merchantsRecurringBadge: "定期",
   merchantsCadenceWeekly: "每周",
   merchantsCadenceBiweekly: "每两周",
+  merchantsCadenceSemimonthly: "每月两次",
   merchantsCadenceMonthly: "每月",
   merchantsCadenceQuarterly: "每季",
   merchantsCadenceYearly: "每年",

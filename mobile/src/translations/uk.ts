@@ -93,6 +93,7 @@ export const uk: Translations = {
   merchantsRecurringBadge: "Регулярний",
   merchantsCadenceWeekly: "Щотижня",
   merchantsCadenceBiweekly: "Раз на 2 тижні",
+  merchantsCadenceSemimonthly: "Двічі на місяць",
   merchantsCadenceMonthly: "Щомісяця",
   merchantsCadenceQuarterly: "Щокварталу",
   merchantsCadenceYearly: "Щороку",

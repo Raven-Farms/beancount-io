@@ -82,6 +82,7 @@ export const en = {
   merchantsRecurringBadge: "Recurring",
   merchantsCadenceWeekly: "Weekly",
   merchantsCadenceBiweekly: "Every 2 weeks",
+  merchantsCadenceSemimonthly: "Twice a month",
   merchantsCadenceMonthly: "Monthly",
   merchantsCadenceQuarterly: "Quarterly",
   merchantsCadenceYearly: "Yearly",

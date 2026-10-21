@@ -89,6 +89,7 @@ export const bg: Translations = {
   merchantsRecurringBadge: "Повтарящ се",
   merchantsCadenceWeekly: "Седмично",
   merchantsCadenceBiweekly: "На 2 седмици",
+  merchantsCadenceSemimonthly: "Два пъти месечно",
   merchantsCadenceMonthly: "Месечно",
   merchantsCadenceQuarterly: "На тримесечие",
   merchantsCadenceYearly: "Годишно",

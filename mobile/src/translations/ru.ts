@@ -94,6 +94,7 @@ export const ru: Translations = {
   merchantsRecurringBadge: "Регулярный",
   merchantsCadenceWeekly: "Еженедельно",
   merchantsCadenceBiweekly: "Раз в 2 недели",
+  merchantsCadenceSemimonthly: "Дважды в месяц",
   merchantsCadenceMonthly: "Ежемесячно",
   merchantsCadenceQuarterly: "Ежеквартально",
   merchantsCadenceYearly: "Ежегодно",

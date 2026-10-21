@@ -9,7 +9,7 @@
 import { utcDate, utcTime } from "../../../common/calendar-date";
 
 export type Cadence =
-  "weekly" | "biweekly" | "monthly" | "quarterly" | "yearly";
+  "weekly" | "biweekly" | "semimonthly" | "monthly" | "quarterly" | "yearly";
 
 /** One posting event feeding detection. Dates are ledger `YYYY-MM-DD`. */
 export interface SeriesPoint {
@@ -166,6 +166,58 @@ function monthDayAnchor(
   return kept ? anchor : null;
 }
 
+/** The least distance between a semi-monthly bill's two days. */
+const SEMIMONTHLY_MIN_SPREAD = 10;
+
+/**
+ * The two days of the month a series alternates between (the 1st and 15th,
+ * or the 15th and the last day, clamped at a short month's end), or null.
+ * Their gaps run 14, 16, 17 days, so the median read biweekly and Next came
+ * two to three days early every cycle (w21/170).
+ */
+function semiMonthlyDays(
+  eventDays: readonly number[],
+): { first: number; second: number } | null {
+  if (eventDays.length < 4) return null;
+  const days = eventDays.map(calendarDay);
+  const first = Math.min(...days.map((d) => d.day));
+  const second = Math.max(...days.map((d) => d.day));
+  if (second - first < SEMIMONTHLY_MIN_SPREAD) return null;
+  const slot = (d: CalendarDay) =>
+    d.day === first
+      ? 0
+      : d.day === Math.min(second, daysInMonth(d.year, d.month))
+        ? 1
+        : null;
+  const monthIndex = (d: CalendarDay) => d.year * 12 + d.month;
+  for (let i = 0; i < days.length; i++) {
+    const current = slot(days[i]!);
+    if (current === null) return null;
+    if (i === 0) continue;
+    const previous = slot(days[i - 1]!);
+    const months = monthIndex(days[i]!) - monthIndex(days[i - 1]!);
+    // first → second within a month, second → first into the next.
+    const steps =
+      (previous === 0 && current === 1 && months === 0) ||
+      (previous === 1 && current === 0 && months === 1);
+    if (!steps) return null;
+  }
+  return { first, second };
+}
+
+/** The semi-monthly day after `dayNumber`, on one of the two `days`. */
+function nextSemiMonthlyDay(
+  dayNumber: number,
+  days: { first: number; second: number },
+): number {
+  const { year, month, day } = calendarDay(dayNumber);
+  if (day === days.first) {
+    const target = Math.min(days.second, daysInMonth(year, month));
+    return dayNumber + (target - day);
+  }
+  return addMonthsClamped(dayNumber, 1, days.first);
+}
+
 function sortedCopy(values: readonly number[]): number[] {
   return [...values].sort((a, b) => a - b);
 }
@@ -292,12 +344,16 @@ export function detectRecurrence(
     return null;
   }
 
-  const dispersion = mad(gaps, medianGap) / medianGap;
-  if (dispersion >= MAX_GAP_DISPERSION) {
-    return null;
+  // Two stable days a month is its own cadence, not a biweekly one.
+  const semiMonthly = semiMonthlyDays(eventDays);
+  if (!semiMonthly) {
+    const dispersion = mad(gaps, medianGap) / medianGap;
+    if (dispersion >= MAX_GAP_DISPERSION) {
+      return null;
+    }
   }
 
-  const cadence = classifyCadence(medianGap);
+  const cadence = semiMonthly ? "semimonthly" : classifyCadence(medianGap);
   if (!cadence) {
     return null;
   }
@@ -346,8 +402,9 @@ export function detectRecurrence(
   const months = CADENCE_MONTHS[cadence];
   const anchor =
     months === undefined ? null : monthDayAnchor(eventDays, months);
-  const nextExpectedDay =
-    months !== undefined && anchor !== null
+  const nextExpectedDay = semiMonthly
+    ? nextSemiMonthlyDay(lastDay, semiMonthly)
+    : months !== undefined && anchor !== null
       ? addMonthsClamped(lastDay, months, anchor)
       : lastDay + gapDays;
   const graceDays = Math.max(1, Math.round(gapDays * OVERDUE_GRACE_FRACTION));

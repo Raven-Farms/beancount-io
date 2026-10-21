@@ -93,6 +93,7 @@ export const sk: Translations = {
   merchantsRecurringBadge: "Opakujúci sa",
   merchantsCadenceWeekly: "Týždenne",
   merchantsCadenceBiweekly: "Každé 2 týždne",
+  merchantsCadenceSemimonthly: "Dvakrát mesačne",
   merchantsCadenceMonthly: "Mesačne",
   merchantsCadenceQuarterly: "Štvrťročne",
   merchantsCadenceYearly: "Ročne",

@@ -89,6 +89,7 @@ export const nl: Translations = {
   merchantsRecurringBadge: "Terugkerend",
   merchantsCadenceWeekly: "Wekelijks",
   merchantsCadenceBiweekly: "Om de 2 weken",
+  merchantsCadenceSemimonthly: "Twee keer per maand",
   merchantsCadenceMonthly: "Maandelijks",
   merchantsCadenceQuarterly: "Per kwartaal",
   merchantsCadenceYearly: "Jaarlijks",

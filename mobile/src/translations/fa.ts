@@ -89,6 +89,7 @@ export const fa: Translations = {
   merchantsRecurringBadge: "دوره‌ای",
   merchantsCadenceWeekly: "هفتگی",
   merchantsCadenceBiweekly: "هر ۲ هفته",
+  merchantsCadenceSemimonthly: "دو بار در ماه",
   merchantsCadenceMonthly: "ماهانه",
   merchantsCadenceQuarterly: "فصلی",
   merchantsCadenceYearly: "سالانه",

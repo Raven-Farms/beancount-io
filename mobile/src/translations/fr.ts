@@ -92,6 +92,7 @@ export const fr: Translations = {
   merchantsRecurringBadge: "Récurrent",
   merchantsCadenceWeekly: "Hebdomadaire",
   merchantsCadenceBiweekly: "Toutes les 2 semaines",
+  merchantsCadenceSemimonthly: "Deux fois par mois",
   merchantsCadenceMonthly: "Mensuel",
   merchantsCadenceQuarterly: "Trimestriel",
   merchantsCadenceYearly: "Annuel",
