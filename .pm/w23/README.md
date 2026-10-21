@@ -6,6 +6,7 @@
 
 ## Inbox
 
+- [039](./039.md) — MCP whole-file `content` replace and delete take no base `sha` (REST requires one): a read-modify-write silently drops commits made in between
 - [038](./038.md) — `commits` silently caps `limit` at 50 (1000 → 50), undeclared on every surface
 - [037](./037.md) — over-long ledger description refused with raw "[Description]: MaxSize"; no surface declares the limit
 - [036](./036.md) — `updateEntrySource` accepts `option`/`include`/several directives as one entry's replacement (018 class on the source-slice path)
