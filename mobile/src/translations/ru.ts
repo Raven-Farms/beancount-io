@@ -378,6 +378,8 @@ export const ru: Translations = {
   reports: "Отчёты",
   netProfit: "Чистая прибыль",
   cashFlow: "Денежный поток",
+  cashFlowRefunds: "Возвраты",
+  cashFlowClawbacks: "Удержания",
   moneyFlow: "Движение денег",
   cashFlowEmpty: "Нет денежного потока за этот период",
   savings: "Сбережения",

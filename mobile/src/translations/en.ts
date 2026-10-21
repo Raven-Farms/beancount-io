@@ -364,6 +364,8 @@ export const en = {
   reports: "Reports",
   netProfit: "Net Profit",
   cashFlow: "Cash flow",
+  cashFlowRefunds: "Refunds",
+  cashFlowClawbacks: "Clawbacks",
   moneyFlow: "Money flow",
   cashFlowEmpty: "No cash flow in this range",
   incomeExpenseChartSummary: {

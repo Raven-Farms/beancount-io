@@ -371,6 +371,8 @@ export const bg: Translations = {
   reports: "Справки",
   netProfit: "Нетна печалба",
   cashFlow: "Паричен поток",
+  cashFlowRefunds: "Възстановявания",
+  cashFlowClawbacks: "Удръжки",
   moneyFlow: "Движение на пари",
   cashFlowEmpty: "Няма паричен поток за този период",
   savings: "Спестявания",

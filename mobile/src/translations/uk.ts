@@ -376,6 +376,8 @@ export const uk: Translations = {
   reports: "Звіти",
   netProfit: "Чистий прибуток",
   cashFlow: "Грошовий потік",
+  cashFlowRefunds: "Повернення",
+  cashFlowClawbacks: "Утримання",
   moneyFlow: "Рух грошей",
   cashFlowEmpty: "Немає грошового потоку за цей період",
   savings: "Заощадження",

@@ -205,17 +205,38 @@ describe("transformToSankeyData", () => {
     });
 
     expect(result.links.every((l) => l.value > 0)).toBe(true);
+    // A refunded category flows in as Refunds, clawed-back income out as
+    // Clawbacks: no negative ribbon, and every dollar balances (w21/112).
     expect(result.links.map((l) => l.source + "→" + l.target)).toEqual([
       "Income:Salary→cash-flow",
       "cash-flow→Expenses:Food",
+      "__refunds__→cash-flow",
+      "cash-flow→__clawbacks__",
       "cash-flow→savings",
     ]);
     // Statement totals still include the negatives so they match the cards.
     expect(result.totalIncome).toBe(950);
     expect(result.totalExpenses).toBe(380);
-    // Savings balances the *drawn* flows (1000 − 400), not the statement
-    // totals — otherwise the hub would outgrow the income ribbon.
-    expect(result.links.find((l) => l.target === SAVINGS_ID)?.value).toBe(600);
+    // Savings is Net Profit (950 − 380), as the bar chart above reports it.
+    expect(result.links.find((l) => l.target === SAVINGS_ID)?.value).toBe(570);
+  });
+
+  it("matches Net Profit with a refund, and the deficit with a clawback", () => {
+    // The note's fixture: salary 900, food 300, a 100 transport refund.
+    const refund = transformToSankeyData({
+      income: [node("Income:Salary", 900)],
+      expenses: [node("Expenses:Food", 300), node("Expenses:Transport", -100)],
+      ...labels,
+    });
+    expect(refund.links.find((l) => l.target === SAVINGS_ID)?.value).toBe(700);
+    const clawback = transformToSankeyData({
+      income: [node("Income:Salary", -50)],
+      expenses: [node("Expenses:Food", 300)],
+      ...labels,
+    });
+    expect(clawback.links.find((l) => l.source === SHORTFALL_ID)?.value).toBe(
+      350,
+    );
   });
 
   it("keeps drawn inflows and outflows equal when there is a surplus", () => {

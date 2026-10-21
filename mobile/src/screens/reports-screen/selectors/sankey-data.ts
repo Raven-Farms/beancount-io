@@ -30,6 +30,13 @@ export const SAVINGS_ID = "savings";
  * so on the source side it reads as money from savings.
  */
 export const SHORTFALL_ID = "shortfall";
+/**
+ * Categories whose period net ran against their side: refunded spending flows
+ * into the hub, clawed-back income out of it. Left off, Savings was drawn from
+ * the other ribbons alone and disagreed with Net Profit (w21/112).
+ */
+const REFUNDS_ID = "__refunds__";
+const CLAWBACKS_ID = "__clawbacks__";
 export const OTHER_INCOME_ACCOUNT = "__other_income__";
 export const OTHER_EXPENSES_ACCOUNT = "__other_expenses__";
 
@@ -161,10 +168,10 @@ export function sankeyRoleForId(id: string): SankeyRole {
   if (id === SAVINGS_ID || id === SHORTFALL_ID) {
     return "savings";
   }
-  if (id === OTHER_INCOME_ACCOUNT) {
+  if (id === OTHER_INCOME_ACCOUNT || id === REFUNDS_ID) {
     return "source";
   }
-  if (id === OTHER_EXPENSES_ACCOUNT) {
+  if (id === OTHER_EXPENSES_ACCOUNT || id === CLAWBACKS_ID) {
     return "operating";
   }
   const category = categorizeAccount(id);
@@ -206,6 +213,9 @@ type TransformOptions = {
   otherLabel: string;
   cashFlowLabel: string;
   savingsLabel: string;
+  /** The inflow of refunded spending, and the outflow of clawed-back income. */
+  refundsLabel?: string;
+  clawbacksLabel?: string;
   /**
    * Labels an income or expense group whose name the other side also uses
    * (`Income:Crypto` and `Expenses:Crypto` both read "Crypto"), so the two
@@ -296,6 +306,8 @@ export function transformToSankeyData(options: TransformOptions): SankeyData {
     otherLabel,
     cashFlowLabel,
     savingsLabel,
+    refundsLabel = "Refunds",
+    clawbacksLabel = "Clawbacks",
     incomeNodeLabel = (name: string) => name,
     expensesNodeLabel = (name: string) => name,
     depth = SANKEY_DEPTH,
@@ -340,7 +352,19 @@ export function transformToSankeyData(options: TransformOptions): SankeyData {
   const links: SankeyLinkDatum[] = [];
   const seen = new Set<string>();
 
-  const hasFlows = incomeRows.length > 0 || expenseRows.length > 0;
+  // What ran against its side, as positive amounts (w21/112).
+  const against = (values: Map<string, number>) =>
+    Array.from(values.values())
+      .filter((value) => value <= -HALF_CENT)
+      .reduce((sum, value) => sum - value, 0);
+  const refunds = against(expenseValues);
+  const clawbacks = against(incomeValues);
+
+  const hasFlows =
+    incomeRows.length > 0 ||
+    expenseRows.length > 0 ||
+    refunds >= HALF_CENT ||
+    clawbacks >= HALF_CENT;
   if (!hasFlows) {
     return { nodes, links, totalIncome, totalExpenses };
   }
@@ -388,13 +412,25 @@ export function transformToSankeyData(options: TransformOptions): SankeyData {
     });
   }
 
-  // Balance the graph from the links we actually drew, not the statement
-  // totals: refunds and other non-positive rows still count toward
-  // `totalIncome` / `totalExpenses` (so those match the cards) but never
-  // become ribbons — using them for Savings would make the hub taller than
-  // the income flow and break conservation on screen. Conservation runs both
-  // ways: a surplus leaves the hub as Savings, and a deficit enters it from
-  // savings, or the hub stood taller than everything feeding it (w0/034).
+  // A category's own ribbon never goes negative; what ran against its side
+  // has one ribbon of its own instead, so the hub balances on every dollar
+  // and Savings equals Net Profit (w21/112).
+  if (refunds >= HALF_CENT) {
+    pushNode(nodes, seen, REFUNDS_ID, refundsLabel, "source");
+    links.push({ source: REFUNDS_ID, target: CASH_FLOW_ID, value: refunds });
+  }
+  if (clawbacks >= HALF_CENT) {
+    pushNode(nodes, seen, CLAWBACKS_ID, clawbacksLabel, "operating");
+    links.push({
+      source: CASH_FLOW_ID,
+      target: CLAWBACKS_ID,
+      value: clawbacks,
+    });
+  }
+
+  // Balance the graph from the links drawn. Conservation runs both ways: a
+  // surplus leaves the hub as Savings, and a deficit enters it from savings,
+  // or the hub stood taller than everything feeding it (w0/034).
   const linkedIncome = links
     .filter((l) => l.target === CASH_FLOW_ID)
     .reduce((sum, l) => sum + l.value, 0);

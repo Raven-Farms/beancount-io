@@ -371,6 +371,8 @@ export const nl: Translations = {
   reports: "Rapporten",
   netProfit: "Nettowinst",
   cashFlow: "Kasstroom",
+  cashFlowRefunds: "Terugbetalingen",
+  cashFlowClawbacks: "Terugvorderingen",
   moneyFlow: "Geldstroom",
   cashFlowEmpty: "Geen kasstroom in deze periode",
   savings: "Spaargeld",

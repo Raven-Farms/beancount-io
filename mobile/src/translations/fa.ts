@@ -365,6 +365,8 @@ export const fa: Translations = {
   reports: "گزارش‌ها",
   netProfit: "سود خالص",
   cashFlow: "جریان نقدی",
+  cashFlowRefunds: "بازپرداخت‌ها",
+  cashFlowClawbacks: "بازپس‌گیری‌ها",
   moneyFlow: "جریان پول",
   cashFlowEmpty: "در این بازه جریان نقدی نیست",
   savings: "پس‌انداز",

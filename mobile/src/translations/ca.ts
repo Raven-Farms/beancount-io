@@ -380,6 +380,8 @@ export const ca: Translations = {
   reports: "Informes",
   netProfit: "Benefici net",
   cashFlow: "Flux de caixa",
+  cashFlowRefunds: "Reemborsaments",
+  cashFlowClawbacks: "Reintegraments",
   moneyFlow: "Flux monetari",
   cashFlowEmpty: "Sense flux de caixa en aquest període",
   savings: "Estalvis",

@@ -381,6 +381,8 @@ export const pt: Translations = {
   reports: "Relatórios",
   netProfit: "Lucro líquido",
   cashFlow: "Fluxo de caixa",
+  cashFlowRefunds: "Reembolsos",
+  cashFlowClawbacks: "Estornos",
   moneyFlow: "Fluxo de dinheiro",
   cashFlowEmpty: "Sem fluxo de caixa neste período",
   savings: "Poupança",

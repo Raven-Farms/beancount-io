@@ -336,6 +336,8 @@ export const zh: Translations = {
   reports: "报表",
   netProfit: "净利润",
   cashFlow: "现金流",
+  cashFlowRefunds: "退款",
+  cashFlowClawbacks: "收回",
   moneyFlow: "资金流向",
   cashFlowEmpty: "此区间没有现金流",
   savings: "储蓄",

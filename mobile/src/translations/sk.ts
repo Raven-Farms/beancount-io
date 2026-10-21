@@ -380,6 +380,8 @@ export const sk: Translations = {
   reports: "Prehľady",
   netProfit: "Čistý zisk",
   cashFlow: "Peňažný tok",
+  cashFlowRefunds: "Vrátené platby",
+  cashFlowClawbacks: "Spätné vymáhania",
   moneyFlow: "Pohyb peňazí",
   cashFlowEmpty: "V tomto období nie je peňažný tok",
   savings: "Úspory",
