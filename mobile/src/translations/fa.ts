@@ -341,6 +341,7 @@ export const fa: Translations = {
   open: "افتتاح",
   close: "بستن",
   balance: "مانده",
+  balanceOffBy: "اختلاف {{amount}}",
   note: "یادداشت",
   document: "سند",
   pad: "تعدیل",

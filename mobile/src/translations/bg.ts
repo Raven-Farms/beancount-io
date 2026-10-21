@@ -347,6 +347,7 @@ export const bg: Translations = {
   open: "Откриване",
   close: "Закриване",
   balance: "Салдо",
+  balanceOffBy: "Разлика {{amount}}",
   note: "Бележка",
   document: "Документ",
   pad: "Изравняване",

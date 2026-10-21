@@ -352,6 +352,7 @@ export const uk: Translations = {
   open: "Відкриття",
   close: "Закриття",
   balance: "Баланс",
+  balanceOffBy: "Розбіжність {{amount}}",
   note: "Нотатка",
   document: "Документ",
   pad: "Вирівнювання",

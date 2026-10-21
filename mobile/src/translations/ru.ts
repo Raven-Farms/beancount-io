@@ -354,6 +354,7 @@ export const ru: Translations = {
   open: "Открытие",
   close: "Закрытие",
   balance: "Баланс",
+  balanceOffBy: "Расхождение {{amount}}",
   note: "Заметка",
   document: "Документ",
   pad: "Выравнивание",

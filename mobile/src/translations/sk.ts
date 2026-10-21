@@ -356,6 +356,7 @@ export const sk: Translations = {
   open: "Otvorenie",
   close: "Uzavretie",
   balance: "Zostatok",
+  balanceOffBy: "Rozdiel {{amount}}",
   note: "Poznámka",
   document: "Doklad",
   pad: "Vyrovnanie",

@@ -340,6 +340,7 @@ export const en = {
   open: "Open",
   close: "Close",
   balance: "Balance",
+  balanceOffBy: "Off by {{amount}}",
   note: "Note",
   document: "Document",
   pad: "Pad",

@@ -357,6 +357,7 @@ export const de: Translations = {
   open: "Eröffnen",
   close: "Schließen",
   balance: "Saldo",
+  balanceOffBy: "Abweichung {{amount}}",
   note: "Notiz",
   document: "Beleg",
   pad: "Ausgleich",

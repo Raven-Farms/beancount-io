@@ -50,11 +50,19 @@ const getStyles = (theme: ColorTheme) =>
       alignItems: "flex-start",
       marginTop: 4,
     },
-    middle: {
+    middleColumn: {
       flex: 1,
+    },
+    middle: {
       flexDirection: "row",
       alignItems: "center",
       gap: 6,
+    },
+    detail: {
+      marginTop: 2,
+      fontSize: fontSizes.sm,
+      color: theme.black60,
+      textAlign: LEADING_TEXT_ALIGN,
     },
     title: {
       fontSize: fontSizes.lg,
@@ -147,25 +155,55 @@ export function AccountEntryRow({
         })
       : null;
   const balanceLine = `${t("balance")}: ${balanceText}`;
+  const detail = row.detail;
+  const detailText =
+    detail === undefined
+      ? null
+      : detail.kind === "balance"
+        ? `${t("balance")} ${detail.amount}`
+        : detail.text;
+  const offByText =
+    detail?.kind === "balance" && detail.offBy
+      ? t("balanceOffBy", { amount: detail.offBy })
+      : null;
 
   const leading = (
     <>
       <AccountTypeIcon postings={row.postings} payee={row.payee} />
 
-      <View style={styles.middle}>
-        <Text style={styles.title} numberOfLines={stacked ? undefined : 1}>
-          {title}
-        </Text>
-        {typeLabelKey && (
-          <View style={styles.typeBadge}>
-            <Text style={styles.typeBadgeText}>{t(typeLabelKey)}</Text>
-          </View>
-        )}
-        {isPending && (
-          <View style={styles.badge}>
-            <Text style={styles.badgeText}>P</Text>
-          </View>
-        )}
+      <View style={styles.middleColumn}>
+        <View style={styles.middle}>
+          <Text style={styles.title} numberOfLines={stacked ? undefined : 1}>
+            {title}
+          </Text>
+          {typeLabelKey && (
+            <View style={styles.typeBadge}>
+              <Text style={styles.typeBadgeText}>{t(typeLabelKey)}</Text>
+            </View>
+          )}
+          {isPending && (
+            <View style={styles.badge}>
+              <Text style={styles.badgeText}>P</Text>
+            </View>
+          )}
+        </View>
+        {detailText !== null ? (
+          <Text
+            testID="account-entry-detail"
+            style={styles.detail}
+            numberOfLines={stacked ? undefined : 2}
+          >
+            {detailText}
+          </Text>
+        ) : null}
+        {offByText !== null ? (
+          <AmountText
+            testID="account-entry-off-by"
+            style={[styles.detail, { color: theme.error }]}
+          >
+            {offByText}
+          </AmountText>
+        ) : null}
       </View>
     </>
   );
@@ -199,6 +237,8 @@ export function AccountEntryRow({
         accessibilityRole="button"
         accessibilityLabel={[
           title,
+          detailText,
+          offByText,
           changeText,
           costText,
           balanceLine,

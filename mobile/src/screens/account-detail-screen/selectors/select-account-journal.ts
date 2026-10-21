@@ -30,6 +30,12 @@ export type AccountJournalRow = {
    * transaction on that account; the row renders a label for it.
    */
   directiveType?: string;
+  /**
+   * What a Note, Balance or Document says, which its title (the account) and
+   * type chip do not: the note's text, the asserted amount and how far a
+   * failed assertion was off, the document's file (w21/050).
+   */
+  detail?: AccountJournalDetail;
   change: number;
   balance: number;
   /** Recorded scale for operating-currency rows; drives journal amount formatting. */
@@ -162,6 +168,50 @@ export function hasMoreAccountJournal(
   return true;
 }
 
+/** A non-transaction row's own content; see `AccountJournalRow.detail`. */
+type AccountJournalDetail =
+  | { kind: "note"; text: string }
+  | { kind: "document"; text: string }
+  | {
+      kind: "balance";
+      /** The asserted amount, as recorded ("49.75 USD"). */
+      amount: string;
+      /** How far the account was off, when the assertion failed. */
+      offBy: string | null;
+    };
+
+type RawAmount = { number?: string | number | null; currency?: string | null };
+
+function amountText(raw: unknown): string | null {
+  const amount = raw as RawAmount | null | undefined;
+  if (amount?.number == null || !amount.currency) return null;
+  return `${amount.number} ${amount.currency}`;
+}
+
+function entryDetail(
+  entry: AccountJournalItem["entry"],
+): AccountJournalDetail | undefined {
+  const raw = entry as Record<string, unknown>;
+  switch (raw.directive_type) {
+    case "Note": {
+      const text = typeof raw.comment === "string" ? raw.comment.trim() : "";
+      return text ? { kind: "note", text } : undefined;
+    }
+    case "Document": {
+      const text = typeof raw.filename === "string" ? raw.filename : "";
+      return text ? { kind: "document", text } : undefined;
+    }
+    case "Balance": {
+      const amount = amountText(raw.amount);
+      return amount
+        ? { kind: "balance", amount, offBy: amountText(raw.diff_amount) }
+        : undefined;
+    }
+    default:
+      return undefined;
+  }
+}
+
 function entryTitle(entry: AccountJournalItem["entry"]): string {
   return (
     asString(entry.payee) ||
@@ -270,6 +320,7 @@ export function selectAccountJournalRows(
         undefined,
       postings: entryPostings(item.entry),
       directiveType: asString(item.entry.directive_type) || undefined,
+      detail: entryDetail(item.entry),
     };
     if (!units) {
       // Each map resolves its own key: an empty change map falls back to USD,

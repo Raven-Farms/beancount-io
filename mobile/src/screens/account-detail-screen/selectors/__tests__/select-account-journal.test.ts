@@ -129,6 +129,7 @@ describe("selectAccountJournalRows", () => {
         payee: "Blue Bottle",
         postings: [],
         directiveType: undefined,
+        detail: undefined,
         change: -4.5,
         balance: 120.5,
         moneyScale: 1,
@@ -587,5 +588,68 @@ describe("account-journal rows in a commodity's units", () => {
     });
     const [section] = groupAccountJournalRowsToSections(rows, "USD");
     expect(section.totalChange).toBe("+5.528 RGAGX");
+  });
+});
+
+// w21/050: Note, Balance and Document rows read only "Assets:Cash · Note",
+// with the note's text, the asserted amount and the file nowhere in the app.
+describe("selectAccountJournalRows: what a directive says", () => {
+  const directive = (entry: Record<string, unknown>) =>
+    selectAccountJournalRows("USD", [
+      item(
+        {
+          entry_hash: String(entry.directive_type),
+          date: "2026-10-11",
+          account: "Assets:Cash",
+          ...entry,
+        },
+        {},
+        { USD: "49.75" },
+      ),
+    ])[0]!.detail;
+
+  it("carries a note's text", () => {
+    expect(
+      directive({
+        directive_type: "Note",
+        comment: 'qa-20261020 note "quoted" text',
+      }),
+    ).toEqual({ kind: "note", text: 'qa-20261020 note "quoted" text' });
+  });
+
+  it("carries a document's file", () => {
+    expect(
+      directive({
+        directive_type: "Document",
+        filename: "qa-20261020/receipt.pdf",
+      }),
+    ).toEqual({ kind: "document", text: "qa-20261020/receipt.pdf" });
+  });
+
+  it("carries a balance assertion's amount, and how far a failed one was off", () => {
+    expect(
+      directive({
+        directive_type: "Balance",
+        amount: { number: "49.75", currency: "USD" },
+        diff_amount: null,
+      }),
+    ).toEqual({ kind: "balance", amount: "49.75 USD", offBy: null });
+    expect(
+      directive({
+        directive_type: "Balance",
+        amount: { number: "50.00", currency: "USD" },
+        diff_amount: { number: "-0.25", currency: "USD" },
+      }),
+    ).toEqual({ kind: "balance", amount: "50.00 USD", offBy: "-0.25 USD" });
+  });
+
+  it("adds nothing to a transaction", () => {
+    expect(directive({ directive_type: "Transaction", payee: "Cafe" })).toBe(
+      undefined,
+    );
+  });
+
+  it("words the failed difference in every locale", () => {
+    expect(en.balanceOffBy).toBe("Off by {{amount}}");
   });
 });

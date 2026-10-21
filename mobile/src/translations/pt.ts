@@ -357,6 +357,7 @@ export const pt: Translations = {
   open: "Abertura",
   close: "Encerramento",
   balance: "Saldo",
+  balanceOffBy: "Diferença de {{amount}}",
   note: "Nota",
   document: "Documento",
   pad: "Ajuste",

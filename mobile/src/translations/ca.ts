@@ -356,6 +356,7 @@ export const ca: Translations = {
   open: "Obertura",
   close: "Tancament",
   balance: "Saldo",
+  balanceOffBy: "Desviació de {{amount}}",
   note: "Nota",
   document: "Document",
   pad: "Ajust",

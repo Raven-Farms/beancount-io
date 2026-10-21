@@ -313,6 +313,7 @@ export const zh: Translations = {
   open: "开户",
   close: "关户",
   balance: "余额",
+  balanceOffBy: "差额 {{amount}}",
   note: "注释",
   document: "单据",
   pad: "补齐",

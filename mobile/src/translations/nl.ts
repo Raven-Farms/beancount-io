@@ -347,6 +347,7 @@ export const nl: Translations = {
   open: "Openen",
   close: "Sluiten",
   balance: "Saldo",
+  balanceOffBy: "Afwijking {{amount}}",
   note: "Notitie",
   document: "Document",
   pad: "Aanvulling",
