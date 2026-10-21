@@ -176,3 +176,8 @@
 - [351](./351.md) — Mid-save connection drop says "Nothing was saved"; retry duplicates
 - [352](./352.md) — Log out hangs ~60 s on a captive network, no busy state
 - [353](./353.md) — Load more fails silently on Transactions and Account detail
+- [354](./354.md) — Toasts/inline errors silent under iOS VoiceOver (liveRegion is Android-only)
+- [355](./355.md) — Text fields named only by placeholder/example value
+- [356](./356.md) — iOS drops tab role; collapsed rows never say they expand
+- [357](./357.md) — Picker/text-input dialogs ignore VoiceOver escape; titles not headings
+- [358](./358.md) — Legacy keypad Delete key unnamed; guardrail misses Feather
