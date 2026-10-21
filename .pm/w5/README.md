@@ -98,6 +98,7 @@
 - [931 — Match FX transfer counterparts with plain bank amounts](./931.md) — major CLI double-booking gap; a price or cost on a cash leg hides the other bank's plain statement row, changing balances and net worth at exit 0, reproduced 2026-10-21.
 - [932 — Avoid intermediate year zero in representable fiscal periods](./932.md) — minor CLI date-boundary gap; FY0001 and valid first-year quarters refuse while equivalent calendar periods work, reproduced 2026-10-21.
 - [933 — Do not count a forecast overlay as a second independent root](./933.md) — minor CLI split-ledger regression; a forecast ancestor creates false ambiguity for leaf adds/imports and is suggested as the root, reproduced 2026-10-21.
+- [934 — Recognize native directive dates when locating a leaf's root](./934.md) — major CLI invalidating writes; unpadded/compact opens permit a duplicate leaf open or let an overlay validate a false balance, reproduced 2026-10-21.
 
 The 27 findings from the MCP QA auth sweep against the hosted endpoint (023–054, less the five under [Dropped](#dropped)) were fixed in `backend-cluster/backend-v2` and closed on 2026-10-02 and 2026-10-03; each note under [`done/`](./done/) records what shipped and in which commit. None has been re-observed against the hosted endpoint yet — the fixes reach it with the next backend deploy.
 
