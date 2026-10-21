@@ -161,3 +161,16 @@
 - [315](./315.md) — In-app commits signed with Gitea username and real email (no full_name, no noreply)
 - [316](./316.md) — VoiceOver can't read or step through Home/account balance charts
 - [317](./317.md) — Balance chart's end dot and cursor jump ahead of the animating line on range change
+- [318](./318.md) — After a reinstall Sign In still offers one-tap Approve for the old account (154 doesn't set the account-choice mark)
+- [319](./319.md) — Narration suggestions get the keyboard inset twice on iOS after 145
+- [320](./320.md) — More section titles still aren't VoiceOver headings (143 follow-up)
+- [321](./321.md) — Zero-total receipt prefill and the auto leg still seed a real "0.00" (159 follow-up)
+- [322](./322.md) — Exact 9+-decimal prices shown as "≈"; bare metadata key reads "key: null" (160/162 follow-ups)
+- [323](./323.md) — BQL still returns the padded balance after 135
+- [324](./324.md) — Same-day ordering reverts when a plugin adds directives (134 follow-up)
+- [325](./325.md) — parseFile still sends HEIC to the model (108 covered receipts only)
+- [326](./326.md) — Create Ledger: hidden invalid amount under "Decide later" silently blocks Next
+- [327](./327.md) — A gateway 5xx says "You're offline. Nothing was saved." though the write may have committed
+- [328](./328.md) — Legacy journal endpoint's account filter still matches substrings (113 follow-up)
+- [329](./329.md) — Leftovers: amber text contrast, shell "5e-7" sums, logout "session ended" race
+- [330](./330.md) — Create Ledger currency/date with surrounding spaces refused late with raw English
