@@ -50,12 +50,15 @@ function load(file: string): any {
           return { useGuest: () => guest };
         if (id === "@/common/ledger-access")
           return require("../../ledger-access");
+        if (id === "@/common/graphql-error-codes")
+          return require("../../graphql-error-codes");
         if (id === "@/generated-graphql/graphql")
           return {
             useListLedgersQuery: () => {
               listReads += 1;
               return {};
             },
+            useLedgerReadContextQuery: () => ({}),
             useGetLedgerQuery: (options: { skip: boolean }) => {
               permissionSkip = options.skip;
               return {
@@ -88,6 +91,7 @@ function load(file: string): any {
             LedgerDirectoryProvider: () => {
               throw new Error("Guest must not mount an account directory");
             },
+            useOptionalLedgerDirectory: () => null,
           };
         throw new Error(`Unexpected dependency: ${id}`);
       },

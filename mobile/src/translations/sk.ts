@@ -47,6 +47,9 @@ export const sk: Translations = {
     "Akciu sa nepodarilo dokončiť. Skontrolujte pripojenie a prístup ku knihe a skúste to znova.",
   ledgerReadOnly:
     "Táto kniha je iba na čítanie. Na vykonanie zmien vyberte knihu, ktorú môžete upravovať.",
+  ledgerGoneTitle: "Táto kniha už nie je dostupná",
+  ledgerGoneMessage:
+    "Bola odstránená, premenovaná alebo už nie je zdieľaná. Pokračujte výberom inej knihy.",
   ledgerEditorNotUtf8:
     "Tento súbor nie je text v UTF-8. Úprava tu by zmenila niektoré znaky, preto sa otvára iba na čítanie. Upravte ho na počítači.",
 

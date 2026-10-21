@@ -47,6 +47,9 @@ export const fr: Translations = {
     "Impossible de terminer cette action. Vérifiez votre connexion et votre accès au livre, puis réessayez.",
   ledgerReadOnly:
     "Ce livre est en lecture seule. Choisissez un livre que vous pouvez modifier.",
+  ledgerGoneTitle: "Ce livre n’est plus disponible",
+  ledgerGoneMessage:
+    "Il a été supprimé, renommé ou n’est plus partagé. Choisissez un autre livre pour continuer.",
   ledgerEditorNotUtf8:
     "Ce fichier n’est pas du texte UTF-8. Le modifier ici changerait certains de ses caractères ; il s’ouvre donc en lecture seule. Modifiez-le sur un ordinateur.",
 

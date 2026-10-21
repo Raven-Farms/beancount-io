@@ -14,7 +14,12 @@ import { ColorTheme } from "@/types/theme-props";
 import { Ionicons } from "@expo/vector-icons";
 import { useReactiveVar } from "@apollo/client";
 import { ledgerVar } from "@/common/vars";
-import { useListLedgersQuery } from "@/generated-graphql/graphql";
+import {
+  useLedgerReadContextQuery,
+  useListLedgersQuery,
+} from "@/generated-graphql/graphql";
+import { isLedgerGone } from "@/common/graphql-error-codes";
+import { useOptionalLedgerDirectory } from "@/common/ledger-directory/ledger-directory-provider";
 import { useGuest } from "@/common/guest/guest-context";
 
 interface LedgerGuardContextValue {
@@ -114,6 +119,19 @@ const LedgerGuardProviderComponent = ({
     }
   }, [ledgerId, firstLedgerId]);
 
+  // The selected ledger may have been deleted elsewhere. Say so once, here,
+  // instead of a "Try again" on every card, and drop it from the drawer
+  // (w21/054). Shares the read context Home already makes.
+  const readContext = useLedgerReadContextQuery({
+    variables: { ledgerId: ledgerId ?? "" },
+    skip: !ledgerId,
+  });
+  const gone = Boolean(ledgerId) && isLedgerGone(readContext.error);
+  const directory = useOptionalLedgerDirectory();
+  useEffect(() => {
+    if (gone) void directory?.refresh().catch(() => {});
+  }, [gone, directory]);
+
   if (!ledgerId) {
     if (loading || firstLedgerId) {
       return (
@@ -163,6 +181,39 @@ const LedgerGuardProviderComponent = ({
             >
               <Ionicons name="search-outline" size={20} color={theme.black} />
               <Text style={[styles.buttonText, styles.buttonTextSecondary]}>
+                {t("createLedgerEmptyDiscover")}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+    );
+  }
+
+  if (gone) {
+    return (
+      <View style={styles.container} testID="ledger-guard-gone">
+        <View style={styles.content}>
+          <Ionicons
+            name="alert-circle-outline"
+            size={64}
+            color={theme.black40}
+            style={styles.icon}
+          />
+          <Text style={styles.title}>{t("ledgerGoneTitle")}</Text>
+          <Text style={styles.message}>{t("ledgerGoneMessage")}</Text>
+          <View style={styles.actions}>
+            <TouchableOpacity
+              style={styles.button}
+              onPress={() => {
+                router.push("/(app)/ledger-selection");
+              }}
+              activeOpacity={0.7}
+              accessibilityRole="button"
+              accessibilityLabel={t("createLedgerEmptyDiscover")}
+            >
+              <Ionicons name="search-outline" size={20} color={theme.white} />
+              <Text style={styles.buttonText}>
                 {t("createLedgerEmptyDiscover")}
               </Text>
             </TouchableOpacity>

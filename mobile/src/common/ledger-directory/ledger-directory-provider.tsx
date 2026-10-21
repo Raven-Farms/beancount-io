@@ -18,7 +18,8 @@ export function LedgerDirectoryProvider({
   const client = useApolloClient();
   const directory = useMemo(() => new LedgerDirectory(client), [client]);
   useEffect(() => {
-    void directory.load().catch(() => {}); // Error is rendered by the drawer.
+    // Cached rows first, then a revalidation; an error is rendered by the drawer.
+    void directory.revalidate().catch(() => {});
     return directory.dispose;
   }, [directory]);
   return <Context.Provider value={directory}>{children}</Context.Provider>;
@@ -32,4 +33,9 @@ export function useLedgerDirectory() {
     directory.getSnapshot,
   );
   return { ...state, refresh: directory.refresh };
+}
+
+/** The directory when one is provided (the signed-in app), otherwise null. */
+export function useOptionalLedgerDirectory(): LedgerDirectory | null {
+  return useContext(Context);
 }

@@ -47,6 +47,9 @@ export const ca: Translations = {
     "No s’ha pogut completar l’acció. Comprova la connexió i l’accés al llibre i torna-ho a provar.",
   ledgerReadOnly:
     "Aquest llibre és de només lectura. Tria un llibre que puguis editar per fer-hi canvis.",
+  ledgerGoneTitle: "Aquest llibre ja no està disponible",
+  ledgerGoneMessage:
+    "S’ha eliminat, reanomenat o deixat de compartir. Tria un altre llibre per continuar.",
   ledgerEditorNotUtf8:
     "Aquest fitxer no és text UTF-8. Editar-lo aquí en canviaria alguns caràcters, així que s’obre només en lectura. Edita’l en un ordinador.",
 

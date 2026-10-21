@@ -40,6 +40,8 @@ export const zh: Translations = {
   discoveryLoadError: "无法加载账本，请重试。",
   discoveryActionError: "操作未完成。请检查网络连接和账本访问权限后重试。",
   ledgerReadOnly: "此账本为只读。请选择你有编辑权限的账本进行修改。",
+  ledgerGoneTitle: "此账本已不可用",
+  ledgerGoneMessage: "它已被删除、重命名或取消共享。请选择其他账本继续。",
   ledgerEditorNotUtf8:
     "此文件不是 UTF-8 文本。在此编辑会改变其中部分字符，因此以只读方式打开。请在电脑上编辑。",
 

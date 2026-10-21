@@ -44,6 +44,25 @@ export class LedgerDirectory {
   // Keep a confirmed creation visible even if the subsequent refresh fails.
   refresh = (created?: Ledger) => this.load(true, created);
 
+  /**
+   * The cached list at once, then one network read that replaces it whole
+   * (w21/054). The cache is persisted, so a plain `load()` never asked again
+   * after the first fetch, and a ledger deleted on the web stayed in the
+   * drawer through every relaunch. A failed revalidation keeps the cached
+   * list without reporting an error: it is a background check, and the
+   * drawer's pull to refresh still says when the network is down.
+   */
+  revalidate = async (): Promise<void> => {
+    await this.load();
+    const cached = this.snapshot;
+    try {
+      await this.load(true);
+    } catch (error) {
+      if (cached.ledgers.length === 0) throw error;
+      this.publish({ ...cached, loading: false, error: false });
+    }
+  };
+
   async load(refresh = false, created?: Ledger): Promise<void> {
     this.request?.abort();
     const request = new AbortController();

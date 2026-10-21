@@ -48,6 +48,9 @@ export const de: Translations = {
     "Die Aktion konnte nicht abgeschlossen werden. Prüfen Sie die Verbindung und den Zugriff auf das Buch und versuchen Sie es erneut.",
   ledgerReadOnly:
     "Dieses Buch ist schreibgeschützt. Wählen Sie ein Buch, das Sie bearbeiten können.",
+  ledgerGoneTitle: "Dieses Buch ist nicht mehr verfügbar",
+  ledgerGoneMessage:
+    "Es wurde gelöscht, umbenannt oder nicht mehr freigegeben. Wählen Sie ein anderes Buch, um fortzufahren.",
   ledgerEditorNotUtf8:
     "Diese Datei ist kein UTF-8-Text. Eine Bearbeitung hier würde einige Zeichen verändern, daher wird sie schreibgeschützt geöffnet. Bearbeiten Sie sie am Computer.",
 

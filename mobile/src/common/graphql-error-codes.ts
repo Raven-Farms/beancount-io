@@ -19,3 +19,13 @@ export function graphQLErrorCodes(err: unknown): string[] {
     typeof code === "string" ? [code] : [],
   );
 }
+
+/**
+ * Whether a read of the selected ledger answered that it no longer exists —
+ * deleted, renamed, or access withdrawn on the web. Every Home card used to
+ * show its own "Failed to load · Try again", which could never succeed
+ * (w21/054). A network failure is not "gone".
+ */
+export function isLedgerGone(err: unknown): boolean {
+  return graphQLErrorCodes(err).includes("NOT_FOUND");
+}

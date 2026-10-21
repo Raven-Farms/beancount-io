@@ -184,3 +184,40 @@ describe("cached ledger directory", () => {
     client.stop();
   });
 });
+
+// w21/054: the drawer read the persisted cache and never asked again, so a
+// ledger deleted on the web stayed listed through every relaunch.
+describe("revalidating the directory on start", () => {
+  it("shows the cached list, then drops a ledger the server no longer has", async () => {
+    const { client, state, directory } = setup(3);
+    await directory.load();
+    // Deleted elsewhere, while the cached pages still hold it.
+    state.rows = state.rows.filter((row) => row.id !== "2");
+    const restarted = new LedgerDirectory(client);
+    const seen: string[][] = [];
+    restarted.subscribe(() =>
+      seen.push(restarted.getSnapshot().ledgers.map((row) => row.id)),
+    );
+    await restarted.revalidate();
+    // The cached rows first, then the server's.
+    expect(seen.some((ids) => ids.includes("2"))).toBe(true);
+    expect(restarted.getSnapshot().ledgers.map((row) => row.id)).toEqual([
+      "0",
+      "1",
+    ]);
+    expect(restarted.getSnapshot().error).toBe(false);
+    client.stop();
+  });
+
+  it("keeps the cached list without an error when the revalidation fails", async () => {
+    const { client, state, directory } = setup(3);
+    await directory.load();
+    state.failPage = 1;
+    const restarted = new LedgerDirectory(client);
+    await restarted.revalidate();
+    expect(restarted.getSnapshot().ledgers.length).toBe(3);
+    expect(restarted.getSnapshot().error).toBe(false);
+    expect(restarted.getSnapshot().loading).toBe(false);
+    client.stop();
+  });
+});

@@ -12,7 +12,6 @@
 
 ## Inbox
 
-- [054](./054.md) — The drawer keeps listing a ledger that no longer exists across cold starts; choosing it shows only "Failed to load"
 - [055](./055.md) — Reports keeps a "−$0.00 · 0%" row for a category that nets to zero; the Sankey can draw phantom nodes (float sums vs exact zero)
 - [056](./056.md) — An account opened from the Accounts tab doesn't appear there after Done (`getLedger` not evicted by the write)
 - [057](./057.md) — Mixed-currency entries get the wrong headline amount: a card purchase earning miles shows "+1,500.00 MILES"; an exchange flips sign by which leg has the `@`
