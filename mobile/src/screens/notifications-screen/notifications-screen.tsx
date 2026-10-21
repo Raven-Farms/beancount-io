@@ -206,9 +206,16 @@ function NotificationsScreenImpl(): JSX.Element {
   const {
     errors,
     loaded: errorsLoaded,
+    loading: errorsLoading,
+    error: errorsError,
     count: errorCount,
     refetch: refetchErrors,
   } = useLedgerErrors();
+  const errorsLoadState = selectCardLoadState({
+    loading: errorsLoading,
+    hasData: errorsLoaded,
+    error: errorsError,
+  });
 
   const [refreshing, setRefreshing] = useState(false);
   const {
@@ -230,6 +237,7 @@ function NotificationsScreenImpl(): JSX.Element {
   }));
   const { errorsPending, commitsPending } = selectSectionsPending({
     errorsLoaded,
+    errorsFailed: errorsLoadState === "failed",
     commitsLoading,
     commitsLoaded: commitsData !== undefined,
   });
@@ -269,7 +277,9 @@ function NotificationsScreenImpl(): JSX.Element {
             <SkeletonRows />
           ) : (
             <FadeInView>
-              {errorCount === 0 ? (
+              {errorsLoadState === "failed" ? (
+                <CardLoadFailure onRetry={() => void refetchErrors()} />
+              ) : errorCount === 0 ? (
                 <View style={styles.emptyRow}>
                   <Ionicons
                     name="checkmark-circle-outline"
