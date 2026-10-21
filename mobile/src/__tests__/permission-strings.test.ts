@@ -14,6 +14,7 @@ const app = JSON.parse(
   fs.readFileSync(path.join(__dirname, "..", "..", "app.json"), "utf8"),
 ).expo as {
   ios: { infoPlist: Record<string, unknown> };
+  locales?: Record<string, string>;
   android: { permissions?: string[] };
   plugins: Plugin[];
 };
@@ -51,5 +52,38 @@ describe("permission strings", () => {
         "android.permission.RECORD_AUDIO",
       ),
     ).toBe(false);
+  });
+});
+
+// w21/176: the purpose strings were set in English only, so a German prompt
+// had a German title and buttons around an English body.
+describe("localized purpose strings", () => {
+  const languages = app.ios.infoPlist.CFBundleLocalizations as string[];
+  const strings = (language: string) =>
+    JSON.parse(
+      fs.readFileSync(
+        path.join(__dirname, "..", "..", app.locales?.[language] ?? ""),
+        "utf8",
+      ),
+    ) as Record<string, string>;
+
+  it("gives every bundle language its own file", () => {
+    expect(Object.keys(app.locales ?? {}).sort()).toEqual(
+      [...languages].sort(),
+    );
+  });
+
+  it("explains the camera and photos in each of them", () => {
+    for (const language of languages) {
+      const { NSCameraUsageDescription, NSPhotoLibraryUsageDescription } =
+        strings(language);
+      expect(Boolean(NSCameraUsageDescription?.trim())).toBe(true);
+      expect(Boolean(NSPhotoLibraryUsageDescription?.trim())).toBe(true);
+      if (language !== "en") {
+        expect(NSCameraUsageDescription === CAMERA).toBe(false);
+      }
+    }
+    expect(strings("en").NSCameraUsageDescription).toBe(CAMERA);
+    expect(strings("en").NSPhotoLibraryUsageDescription).toBe(PHOTOS);
   });
 });

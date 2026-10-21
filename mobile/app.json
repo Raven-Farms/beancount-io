@@ -48,6 +48,21 @@
       },
       "buildNumber": "50"
     },
+    "locales": {
+      "en": "./locales/ios/en.json",
+      "zh": "./locales/ios/zh.json",
+      "bg": "./locales/ios/bg.json",
+      "ca": "./locales/ios/ca.json",
+      "de": "./locales/ios/de.json",
+      "es": "./locales/ios/es.json",
+      "fa": "./locales/ios/fa.json",
+      "fr": "./locales/ios/fr.json",
+      "nl": "./locales/ios/nl.json",
+      "pt": "./locales/ios/pt.json",
+      "ru": "./locales/ios/ru.json",
+      "sk": "./locales/ios/sk.json",
+      "uk": "./locales/ios/uk.json"
+    },
     "android": {
       "versionCode": 50,
       "package": "io.beancount.android",
