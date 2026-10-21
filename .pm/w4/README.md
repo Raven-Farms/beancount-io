@@ -30,9 +30,10 @@
 - [290 — Commit the print generation timestamp before native capture](./290.md) — minor; dashboard QA, 2026-10-20.
 - [291 — Leave file-editor Escape to the active text composition](./291.md) — minor; dashboard QA, 2026-10-20.
 - [292 — Keep composing Escape from dismissing input dialogs](./292.md) — minor; dashboard QA, 2026-10-20.
-- [293 — Keep the DatePicker calendar reachable in short viewports](./293.md) — minor; dashboard QA, 2026-10-20.
 
 ## Milestones
+
+- [ ] **m40** — [Keep picker popups sized and scrollable inside modals](./m40/README.md) (6 tasks) ← dashboard QA, 2026-10-20; minor, promoted 293 with independently reproduced Combobox wheel scope.
 
 - [ ] **m39** — [Recover Journal and dashboard from malformed saved lists](./m39/README.md) (6 tasks) ← dashboard QA, 2026-10-20; minor, preference decoding and cross-tab recovery.
 
@@ -101,6 +102,8 @@
 - [x] **m13** — [Preserve ledger pages through loading and hydration](./done/m13/README.md) (6 tasks) ← repeated dashboard QA, promoted w4/073, 2026-09-17
 
 ## Dropped
+
+- ~~**293**~~ — Keep the DatePicker calendar reachable in short viewports — dropped 2026-10-20: promoted to [m40](./m40/README.md), preserving all evidence and adding the independent modal Combobox wheel failure; the shared repair and regression scope exceed one hour.
 
 - ~~**016**~~ — Commodity accounts are shown as an unlabelled USD cost basis — and a commodity with no cost renders as $0.00 — dropped 2026-09-26: promotion to [m11](./done/m11/README.md) completed; the milestone's verification record carries the outcome, and w4/m26 superseded its valuation basis.
 
