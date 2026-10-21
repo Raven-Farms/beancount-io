@@ -28,3 +28,4 @@
 - [032](./032.md) — A merchant whose name contains `"` opens with no header: the BQL escape `\"` is a syntax error on the rustledger engine
 - [033](./033.md) — The Budget chart colors months before the budget existed red, as "over target"
 - [034](./034.md) — Update Budget's amount field shows a stock "500" placeholder that reads as the current budget
+- [035](./035.md) — Offset paging repeats a row when an entry is added between pages, and the lists append it without dedupe
