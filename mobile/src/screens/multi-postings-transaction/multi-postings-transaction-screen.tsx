@@ -137,8 +137,9 @@ const getStyles = (theme: ColorTheme) =>
       fontWeight: fontWeights.medium,
       color: theme.text01,
     },
+    // The input placeholder token, not the hairline one (1.34:1, w21/128).
     postingAccountPlaceholder: {
-      color: theme.black40,
+      color: theme.controlPlaceholder,
       fontWeight: fontWeights.regular,
     },
     postingAmountWrap: {
@@ -176,7 +177,8 @@ const getStyles = (theme: ColorTheme) =>
     // filled and weighted, the disabled one a plain outline.
     postingAutoTag: {
       fontSize: fontSizes.xs,
-      color: theme.black40,
+      // Secondary text: the hairline colour read 1.34:1 (w21/128).
+      color: theme.black80,
       marginStart: 2,
       paddingHorizontal: 4,
       paddingVertical: 1,

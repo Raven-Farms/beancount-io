@@ -22,6 +22,19 @@ type Case = {
 };
 
 const CASES: Case[] = [
+  // w21/128: the hairline token (black40) as text, about 1.34:1 in light.
+  {
+    name: "empty posting account placeholder",
+    file: "screens/multi-postings-transaction/multi-postings-transaction-screen.tsx",
+    text: "postingAccountPlaceholder",
+    surface: { theme: "white" },
+  },
+  {
+    name: "inactive Auto tag",
+    file: "screens/multi-postings-transaction/multi-postings-transaction-screen.tsx",
+    text: "postingAutoTag",
+    surface: { theme: "white" },
+  },
   // w21/127: white on amber was 1.9:1 dark, 2.7:1 light.
   {
     name: "pending badge on a transaction row",
@@ -216,4 +229,25 @@ describe("informative text contrast", () => {
       });
     }
   }
+});
+
+// w21/128: placeholders take the input placeholder token, never the hairline.
+describe("input placeholders", () => {
+  it("never use the hairline border colour", () => {
+    const walk = (dir: string): string[] =>
+      fs.readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
+        const full = path.join(dir, entry.name);
+        if (entry.isDirectory())
+          return entry.name === "__tests__" ? [] : walk(full);
+        return /\.tsx$/.test(entry.name) ? [full] : [];
+      });
+    const offenders = walk(path.join(__dirname, ".."))
+      .filter((file) =>
+        fs
+          .readFileSync(file, "utf8")
+          .includes("placeholderTextColor={theme.black40}"),
+      )
+      .map((file) => path.relative(path.join(__dirname, ".."), file));
+    expect(offenders.join(", ")).toBe("");
+  });
 });

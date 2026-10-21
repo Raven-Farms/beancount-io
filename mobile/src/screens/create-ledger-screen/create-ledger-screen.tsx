@@ -576,7 +576,7 @@ export function CreateLedgerScreen(): JSX.Element {
                     autoCapitalize="none"
                     autoCorrect={false}
                     placeholder={t("createLedgerNamePlaceholder")}
-                    placeholderTextColor={theme.black40}
+                    placeholderTextColor={theme.controlPlaceholder}
                     style={styles.input}
                     accessibilityLabel={t("createLedgerName")}
                   />
@@ -603,7 +603,7 @@ export function CreateLedgerScreen(): JSX.Element {
                     onChangeText={onChange}
                     onBlur={onBlur}
                     placeholder={t("createLedgerDescriptionPlaceholder")}
-                    placeholderTextColor={theme.black40}
+                    placeholderTextColor={theme.controlPlaceholder}
                     style={styles.input}
                     accessibilityLabel={t("createLedgerDescription")}
                   />
@@ -665,7 +665,7 @@ export function CreateLedgerScreen(): JSX.Element {
                     autoCapitalize="none"
                     autoCorrect={false}
                     placeholder="YYYY-MM-DD"
-                    placeholderTextColor={theme.black40}
+                    placeholderTextColor={theme.controlPlaceholder}
                     style={styles.input}
                     accessibilityLabel={t("createLedgerHistoryStart")}
                   />
@@ -730,7 +730,7 @@ export function CreateLedgerScreen(): JSX.Element {
                               : "numeric"
                           }
                           placeholder="0"
-                          placeholderTextColor={theme.black40}
+                          placeholderTextColor={theme.controlPlaceholder}
                           style={styles.input}
                           accessibilityLabel={t(openingAmountLabelKey)}
                         />
