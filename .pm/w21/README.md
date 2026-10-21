@@ -14,7 +14,6 @@
 
 - [064](./blocked/064.md) — A token refresh whose response is lost signs the user out on the next refresh (rotated token replayed → grant revoked) — **blocked:** needs an owner decision (ADR) on a refresh-token reuse grace window
 - [065](./blocked/065.md) — One early-year entry (e.g. 0050) makes the balance sheet 23,718 monthly points (3 MB) and the app stalls — **blocked:** needs an approach decision (per-pill fetch vs server downsample) and a simulator profile of the stall
-- [086](./086.md) — Cancelling the RTL restart prompt leaves layout and language mismatched, and the prompt can't be brought back
 - [087](./087.md) — A failing balance assertion looks like a passing one: the ledger service always sends `diff_amount: null`
 - [088](./088.md) — Deleting a folder's last file will strand Files on "Failed to load" once w23/014's NOT_FOUND listing deploys
 - [089](./089.md) — File editor error banner shows errors from same-named files in other folders

@@ -49,13 +49,24 @@ export function isRtlLocale(locale: string): boolean {
 }
 
 /**
- * Whether moving from `from` to `to` crosses the direction boundary.
+ * What picking `to` in the language picker does, given the saved language and
+ * the layout direction actually live on screen.
  *
- * The language picker needs this rather than `to === "fa"`: `de` → `fr` must
- * stay instant, and only a crossing costs the user a restart.
+ * The restart prompt follows the live layout, not the saved languages: after
+ * a cancelled prompt the layout and the language disagree, and comparing
+ * saved locales then never prompted again (picking Persian a second time was
+ * a no-op, English → Deutsch stayed mirrored) or prompted when nothing needed
+ * a restart (w21/086). `de` → `fr` stays instant.
  */
-export function layoutDirectionChanges(from: string, to: string): boolean {
-  return isRtlLocale(from) !== isRtlLocale(to);
+export function languageChangePlan(
+  from: string,
+  to: string,
+  layoutIsRtl: boolean,
+): { switchLanguage: boolean; promptRestart: boolean } {
+  return {
+    switchLanguage: from !== to,
+    promptRestart: layoutIsRtl !== isRtlLocale(to),
+  };
 }
 
 /**

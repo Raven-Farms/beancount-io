@@ -100,15 +100,16 @@ describe("rtl", () => {
     });
   });
 
-  describe("layoutDirectionChanges", () => {
-    it("is true for exactly the pairs that cross the boundary", () => {
+  describe("languageChangePlan", () => {
+    it("prompts for exactly the pairs that cross the boundary when the layout matches", () => {
       const { rtl } = load(false);
       const locales = allLocales();
       const crossing: string[] = [];
 
       for (const from of locales) {
         for (const to of locales) {
-          if (rtl.layoutDirectionChanges(from, to)) {
+          const live = rtl.isRtlLocale(from);
+          if (rtl.languageChangePlan(from, to, live).promptRestart) {
             crossing.push(`${from}->${to}`);
           }
         }
@@ -119,8 +120,58 @@ describe("rtl", () => {
       // `de` -> `fr` is a bug the user feels immediately.
       expect(crossing.length).toBe(24);
       expect(crossing.filter((pair) => !pair.includes("fa")).length).toBe(0);
-      expect(rtl.layoutDirectionChanges("de", "fr")).toBe(false);
-      expect(rtl.layoutDirectionChanges("fa", "fa")).toBe(false);
+      expect(rtl.languageChangePlan("de", "fr", false)).toEqual({
+        switchLanguage: true,
+        promptRestart: false,
+      });
+    });
+
+    // w21/086: after a cancelled prompt the layout and the language disagree.
+    it("re-offers the restart for the same language while its layout is pending", () => {
+      const { rtl } = load(false);
+      // A: English -> Persian, cancelled; Persian text in a left-to-right layout.
+      expect(rtl.languageChangePlan("fa", "fa", false)).toEqual({
+        switchLanguage: false,
+        promptRestart: true,
+      });
+    });
+
+    it("prompts between two left-to-right languages under a live RTL layout", () => {
+      const { rtl } = load(false);
+      // B: Persian -> English, cancelled, then English -> Deutsch.
+      expect(rtl.languageChangePlan("en", "de", true).promptRestart).toBe(true);
+    });
+
+    it("does not prompt when the live layout already matches", () => {
+      const { rtl } = load(false);
+      // C: after A, Persian -> English with the layout still left to right.
+      expect(rtl.languageChangePlan("fa", "en", false)).toEqual({
+        switchLanguage: true,
+        promptRestart: false,
+      });
+      expect(rtl.languageChangePlan("en", "en", false)).toEqual({
+        switchLanguage: false,
+        promptRestart: false,
+      });
+    });
+
+    it("is what the language picker decides by", () => {
+      const source = require("fs").readFileSync(
+        require("path").join(
+          __dirname,
+          "..",
+          "..",
+          "screens",
+          "setting",
+          "main-content.tsx",
+        ),
+        "utf8",
+      ) as string;
+      expect(
+        source.includes(
+          "const plan = languageChangePlan(locale, changeTo, isRtlLayout());",
+        ),
+      ).toBe(true);
     });
   });
 

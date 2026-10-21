@@ -11,7 +11,11 @@ import { useSession } from "@/common/hooks/use-session";
 import { actionLogout } from "./logout";
 import { runAccountDeletion } from "./delete-account";
 import { flushLocale, localeVar, themeVar } from "@/common/vars";
-import { applyLayoutDirection, layoutDirectionChanges } from "@/common/rtl";
+import {
+  applyLayoutDirection,
+  isRtlLayout,
+  languageChangePlan,
+} from "@/common/rtl";
 import { reloadApp } from "@/common/reload-app";
 import { useReactiveVar } from "@apollo/client";
 import { router } from "expo-router";
@@ -233,19 +237,22 @@ export const MainContent = () => {
         items={languageSource}
         onSelect={async (item) => {
           const changeTo = item.value ? String(item.value) : "en";
-          if (changeTo === locale) {
+          // A layout that disagrees with the language costs a restart:
+          // `I18nManager.forceRTL` is read by the native side at startup.
+          // Decided from the live layout, so a cancelled prompt can be
+          // brought back by picking the language again (w21/086).
+          const plan = languageChangePlan(locale, changeTo, isRtlLayout());
+          if (!plan.switchLanguage && !plan.promptRestart) {
             return;
           }
-          localeVar(changeTo);
-          i18n.locale = changeTo;
-          setLocale(changeTo);
+          if (plan.switchLanguage) {
+            localeVar(changeTo);
+            i18n.locale = changeTo;
+            setLocale(changeTo);
+          }
           setLanguageModalVisible(false);
 
-          // Crossing the left-to-right / right-to-left boundary is the only
-          // language change that costs a restart: `I18nManager.forceRTL` is
-          // read by the native side at startup, so until the app relaunches
-          // the layout and the text disagree. `de` → `fr` stays instant.
-          if (!layoutDirectionChanges(locale, changeTo)) {
+          if (!plan.promptRestart) {
             return;
           }
           Alert.alert(
