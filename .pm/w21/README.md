@@ -14,7 +14,6 @@
 
 - [064](./blocked/064.md) — A token refresh whose response is lost signs the user out on the next refresh (rotated token replayed → grant revoked) — **blocked:** needs an owner decision (ADR) on a refresh-token reuse grace window
 - [065](./blocked/065.md) — One early-year entry (e.g. 0050) makes the balance sheet 23,718 monthly points (3 MB) and the app stalls — **blocked:** needs an approach decision (per-pill fetch vs server downsample) and a simulator profile of the stall
-- [131](./131.md) — App link with a differently-cased owner opens your own ledger read-only, without "Current"
 - [132](./132.md) — Commit FILES list shows a rename as two "+0 −0" files; created and deleted files look identical
 - [133](./133.md) — Commit per-file counts read 0 under `lib/`-style dirs and miss `---`/`++` content lines
 - [134](./134.md) — Same-day entries are ordered by type, not file order, so account-journal running balances around a pad/note are wrong

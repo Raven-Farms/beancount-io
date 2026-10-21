@@ -123,3 +123,50 @@ describe("an app link to another ledger with a dirty editor", () => {
     );
   });
 });
+
+// w21/131: the owner in a link is matched case-insensitively, but the typed
+// spelling was selected, so the app read its own ledger as read-only.
+describe("an app link with a differently-cased owner", () => {
+  const canonicalClient = {
+    query: async () => ({ data: { getLedger: { id: "alice.smith/books" } } }),
+  };
+  const openAs = async (target: { ledgerFullName: string; href: unknown }) =>
+    JSON.stringify(
+      await openAppLinkTarget({
+        client: canonicalClient,
+        target,
+        sourceUrl: "https://beancount.io/ledger/Alice.Smith/books",
+        isCurrentSession: () => true,
+      }),
+    );
+
+  beforeEach(() => {
+    ledger = "alice.smith/books";
+    replaced.length = 0;
+  });
+
+  it("selects the ledger id the server returned", async () => {
+    expect(
+      await openAs({ ledgerFullName: "Alice.Smith/books", href: "/" }),
+    ).toBe(JSON.stringify({ ok: true }));
+    expect(ledger).toBe("alice.smith/books");
+  });
+
+  it("binds a detail screen to that id too", async () => {
+    await openAs({
+      ledgerFullName: "Alice.Smith/books",
+      href: {
+        pathname: "/account-detail",
+        params: { account: "Assets:Cash", ledger: "Alice.Smith/books" },
+      },
+    });
+    expect(JSON.stringify(replaced)).toBe(
+      JSON.stringify([
+        {
+          pathname: "/account-detail",
+          params: { account: "Assets:Cash", ledger: "alice.smith/books" },
+        },
+      ]),
+    );
+  });
+});

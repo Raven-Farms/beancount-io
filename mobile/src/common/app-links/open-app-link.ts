@@ -28,6 +28,27 @@ function afterNavigatorReady(): Promise<void> {
 }
 
 /**
+ * The link's target under the ledger id the server returned. The owner part of
+ * a link is matched case-insensitively, so `Alice/books` opens `alice/books`;
+ * kept as typed, the selection matched no ledger the app knows, which read as
+ * no write access and no "Current" in Browse ledgers (w21/131).
+ */
+function canonicalAppLinkTarget(
+  target: AppLinkTarget,
+  ledgerId: string | null | undefined,
+): AppLinkTarget {
+  if (!ledgerId || ledgerId === target.ledgerFullName) return target;
+  const { href } = target;
+  return {
+    ledgerFullName: ledgerId,
+    href:
+      typeof href === "object" && href.params?.ledger === target.ledgerFullName
+        ? { ...href, params: { ...href.params, ledger: ledgerId } }
+        : href,
+  };
+}
+
+/**
  * Select the target ledger via the same readability probe as ledger discovery,
  * then navigate. On failure leave the current selection intact and open the
  * original URL in the browser.
@@ -38,13 +59,15 @@ export async function openAppLinkTarget(args: {
   sourceUrl: string;
   isCurrentSession: () => boolean;
 }): Promise<OpenAppLinkResult> {
-  const { client, target, sourceUrl, isCurrentSession } = args;
+  const { client, sourceUrl, isCurrentSession } = args;
+  let target = args.target;
   try {
-    await client.query<GetLedgerQuery>({
+    const { data } = await client.query<GetLedgerQuery>({
       query: GetLedgerDocument,
       variables: { ledgerId: target.ledgerFullName },
       fetchPolicy: "network-only",
     });
+    target = canonicalAppLinkTarget(target, data?.getLedger?.id);
   } catch {
     if (isCurrentSession()) {
       await Linking.openURL(sourceUrl);
