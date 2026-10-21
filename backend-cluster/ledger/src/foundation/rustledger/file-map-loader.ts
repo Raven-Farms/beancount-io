@@ -9,9 +9,26 @@ import { NotFoundError, ResourceLimitReachedError } from "@/shared/errors";
 import { toSafeRepoUrlPath } from "@/shared/safe-repo-path";
 import {
   readGiteaFileText,
+  UndecodableTextError,
   type GiteaRawFileClient,
   type GiteaTextContents,
 } from "@/features/gitea/utils/gitea-file-content";
+
+/**
+ * A ledger source file that is not UTF-8 text (w23/011).
+ *
+ * The loader reads every `.bean` file in the repository, because which ones
+ * the entry point reaches is only known after their includes are read. One
+ * stray Latin-1 export used to fail that whole read — every report, query and
+ * check, with an error naming no file — although Beancount reads only what the
+ * main file includes. So an undecodable file is kept in the FileMap under this
+ * marker instead: strict decoding rejects NUL, so no real file has this
+ * content, and the marker survives the per-commit FileMap cache unchanged.
+ * The engine parses it as an empty file (`parseableFiles`); when the entry
+ * point reaches it, the parse reports an error naming it
+ * (`reportUndecodableSources`).
+ */
+export const UNDECODABLE_SOURCE = "\0";
 
 /**
  * Build the `FileMap` (`path -> contents`) that `@rustledger/wasm`'s
@@ -498,15 +515,25 @@ export async function fetchBeanFileMap(
       urlPath,
       contentsQuery,
     );
-    const text = await readGiteaFileText(
-      client.repos,
-      owner,
-      repo,
-      urlPath,
-      contents.data,
-      contentsQuery,
-      { maxBytes: MAX_LEDGER_SOURCE_FILE_BYTES, requireUtf8: true },
-    );
+    let text: string;
+    try {
+      text = await readGiteaFileText(
+        client.repos,
+        owner,
+        repo,
+        urlPath,
+        contents.data,
+        contentsQuery,
+        { maxBytes: MAX_LEDGER_SOURCE_FILE_BYTES, requireUtf8: true },
+      );
+    } catch (error) {
+      // One undecodable file must not make the whole ledger unreadable; the
+      // parse reports it only if the entry point reaches it (w23/011).
+      if (!(error instanceof UndecodableTextError)) throw error;
+      loadedFileCount += 1;
+      files[path] = UNDECODABLE_SOURCE;
+      return;
+    }
     const nextBytes = loadedBytes + Buffer.byteLength(text, "utf-8");
     if (nextBytes > MAX_LEDGER_FILE_MAP_BYTES) {
       throw new ResourceLimitReachedError(

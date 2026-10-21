@@ -30,6 +30,10 @@ import {
 import { reconcileDocumentErrors } from "./document-validation";
 import { isDocumentValidationError } from "./document-validation";
 import { reportUrlIncludes } from "./url-include-errors";
+import {
+  parseableFiles,
+  reportUndecodableSources,
+} from "./undecodable-sources";
 import { OPTION_LINE_RE } from "./beancount-options";
 import { directiveToText } from "./journal-serialize";
 import {
@@ -123,7 +127,7 @@ export async function withLedger<T>(
   fn: (ledger: Ledger) => T,
 ): Promise<T> {
   const mod = await loadRustledger();
-  const ledger = mod.Ledger.fromFiles(files, entryPoint);
+  const ledger = mod.Ledger.fromFiles(parseableFiles(files), entryPoint);
   try {
     return fn(ledger);
   } finally {
@@ -610,6 +614,7 @@ async function parseLedgerFilesUncached(
   // inventory (`repoPaths`), then recompute validity from the resulting errors.
   errors = reconcileDocumentErrors(errors, options.repoPaths);
   errors = reportUrlIncludes(errors, files);
+  errors = reportUndecodableSources(errors, files, entryPoint);
 
   directives = mergePaddingTransactions(directives, paddingTransactions);
 
@@ -720,7 +725,7 @@ export async function queryLedgerFilesResultInProcess(
     key,
     async () => {
       const mod = await loadRustledger();
-      return mod.Ledger.fromFiles(queryFiles, queryEntryPoint);
+      return mod.Ledger.fromFiles(parseableFiles(queryFiles), queryEntryPoint);
     },
     (ledger) => {
       if (materialized !== undefined) {

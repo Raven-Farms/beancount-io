@@ -39,6 +39,13 @@ function assertWithinByteLimit(size: number, maxBytes?: number): void {
   }
 }
 
+/**
+ * A file `requireUtf8` refused: invalid UTF-8, or NUL-bearing binary data.
+ * Its own class so the FileMap loader can keep the ledger readable around a
+ * file nothing includes (w23/011).
+ */
+export class UndecodableTextError extends BadUserInputError {}
+
 function decodeText(buffer: Buffer, limits: GiteaTextReadLimits): string {
   assertWithinByteLimit(buffer.byteLength, limits.maxBytes);
   if (limits.requireUtf8 !== true) return buffer.toString("utf-8");
@@ -46,12 +53,12 @@ function decodeText(buffer: Buffer, limits: GiteaTextReadLimits): string {
   try {
     text = new TextDecoder("utf-8", { fatal: true }).decode(buffer);
   } catch {
-    throw new BadUserInputError(
+    throw new UndecodableTextError(
       "Included ledger files must be valid UTF-8 text",
     );
   }
   if (text.includes("\0")) {
-    throw new BadUserInputError(
+    throw new UndecodableTextError(
       "Included ledger files must be text, not binary data",
     );
   }

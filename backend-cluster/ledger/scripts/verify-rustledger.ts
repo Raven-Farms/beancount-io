@@ -37,6 +37,7 @@ import {
   queryResultToText,
 } from "@/features/ledger/service/ledger-shell-mappers";
 import { stripBqlBlockComments } from "@/features/ledger/service/bql-comments";
+import { UNDECODABLE_SOURCE } from "@/foundation/rustledger/file-map-loader";
 import { LedgerDataService } from "@/features/ledger/service/ledger-data-service";
 import { LedgerFinanceService } from "@/features/ledger/service/ledger-finance-service";
 import { LedgerJournalService } from "@/features/ledger/service/ledger-journal-service";
@@ -1594,6 +1595,36 @@ async function main(): Promise<void> {
   );
 
   await verifyMultilineSources();
+
+  // w23/011: an undecodable source the entry point does not reach changes
+  // nothing; one it includes is reported by path, and the rest still parses.
+  const strayExport = await parseLedgerFiles(
+    {
+      "main.bean": "2024-01-01 open Assets:Cash USD\n",
+      "export.bean": UNDECODABLE_SOURCE,
+    },
+    "main.bean",
+  );
+  assert(
+    strayExport.valid && strayExport.directiveCount === 1,
+    "an undecodable file nothing includes leaves the ledger valid (w23/011)",
+  );
+  const includedExport = await parseLedgerFiles(
+    {
+      "main.bean":
+        'include "export.bean"\n2024-01-01 open Assets:Cash USD\n',
+      "export.bean": UNDECODABLE_SOURCE,
+    },
+    "main.bean",
+  );
+  assert(
+    !includedExport.valid &&
+      includedExport.directiveCount === 1 &&
+      includedExport.errors.length === 1 &&
+      includedExport.errors[0]?.code === "INVALID_UTF8" &&
+      includedExport.errors[0]?.file === "export.bean",
+    "an included undecodable file is the one error, naming it (w23/011)",
+  );
 
   console.log("\nAll rustledger engine checks passed.");
 }

@@ -12,6 +12,7 @@ import {
   MAX_INCLUDE_GLOB_WORK,
   MAX_LEDGER_FILE_MAP_FILES,
   MAX_LEDGER_SOURCE_FILE_BYTES,
+  UNDECODABLE_SOURCE,
   type GiteaClientLike,
 } from "../file-map-loader";
 
@@ -645,7 +646,9 @@ describe("loadLedgerFileMap", () => {
 
 describe("include targets", () => {
   it("recognizes a URL target by its scheme", () => {
-    expect(isUrlIncludeTarget("https://beancount.io/prices/BTC-USD")).toBe(true);
+    expect(isUrlIncludeTarget("https://beancount.io/prices/BTC-USD")).toBe(
+      true,
+    );
     expect(isUrlIncludeTarget("S3://bucket/prices.bean")).toBe(true);
     expect(isUrlIncludeTarget("accounts/opens.bean")).toBe(false);
     expect(isUrlIncludeTarget("accounts//opens.bean")).toBe(false);
@@ -698,5 +701,50 @@ describe("include targets", () => {
 
     expect(Object.keys(result.files)).toEqual(["main.bean"]);
     expect(repoGetContents).toHaveBeenCalledTimes(1);
+  });
+});
+
+/**
+ * w23/011. One Latin-1 `.bean` that nothing included made every read of the
+ * ledger fail with `BAD_USER_INPUT` naming no file.
+ */
+describe("a source file that is not UTF-8 text", () => {
+  function clientWith(bytes: Record<string, Buffer>): GiteaClientLike {
+    return {
+      repos: {
+        getTree: async () => ({
+          data: {
+            sha: "abc",
+            tree: Object.keys(bytes).map((path) => ({ path, type: "blob" })),
+            truncated: false,
+          },
+        }),
+        repoGetContents: async (_o: string, _r: string, path: string) => ({
+          data: {
+            type: "file",
+            encoding: "base64",
+            content: bytes[path].toString("base64"),
+          },
+        }),
+      },
+    } as unknown as GiteaClientLike;
+  }
+
+  it.each([
+    ["invalid UTF-8", Buffer.from([0x3b, 0x20, 0x63, 0x61, 0x66, 0xe9, 0x0a])],
+    ["binary data", Buffer.from("; text\0more\n")],
+  ])("keeps the ledger loadable around a file of %s", async (_case, stray) => {
+    const result = await loadLedgerFileMap(
+      clientWith({
+        "main.bean": Buffer.from("2024-01-01 open Assets:Cash USD\n"),
+        "export.bean": stray,
+      }),
+      "alice",
+      "book",
+    );
+    expect(result.files["main.bean"]).toContain("open Assets:Cash");
+    expect(result.files["export.bean"]).toBe(UNDECODABLE_SOURCE);
+    // Nothing includes it, so it is not one of the ledger's source files.
+    expect(result.sourceFiles).toEqual(["main.bean"]);
   });
 });

@@ -6,7 +6,6 @@
 
 ## Inbox
 
-- [011](./011.md) — one non-UTF-8 `.bean` anywhere in the repo, even unincluded, breaks every read with an unnamed `BAD_USER_INPUT`
 - [012](./012.md) — BQL `cost(sum(position))` over mixed currencies returns one mislabelled amount (rustledger 0.24.0)
 - [013](./013.md) — statement summaries add balances as floats (`netWorth: 906.5799999999999`)
 - [014](./014.md) — listing a nonexistent directory returns `[]` on every surface, indistinguishable from empty
