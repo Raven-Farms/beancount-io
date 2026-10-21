@@ -158,21 +158,6 @@ function getEntryAccounts(directive: DirectiveJson): string[] {
   }
 }
 
-/**
- * beancount `account.has_component` — whole `:`-delimited component match.
- * Returns a closure over a regex compiled ONCE per filter evaluation: the
- * previous per-call `new RegExp` compiled entries×accounts times per request
- * (~30k compiles on a 10k-entry ledger). The regex has no flags (notably not
- * `g`/`y`), so `.test` is stateless and the instance is safe to reuse.
- */
-function makeComponentMatcher(
-  component: string,
-): (accountName: string) => boolean {
-  const escaped = escapeRegExp(component);
-  const regex = new RegExp(`(^|:)${escaped}(:|$)`);
-  return (accountName: string): boolean => regex.test(accountName);
-}
-
 function escapeRegExp(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
@@ -222,18 +207,41 @@ function makeMatcher(search: string): FilterValueMatcher {
   }
 }
 
+/** Characters that make a filter value a pattern rather than an account name. */
+const REGEX_SYNTAX = /[.*+?^${}()|[\]\\]/;
+
+/**
+ * The account filter. A plain account name (letters, digits, `-` and `:`, as
+ * Beancount allows) matches that account, its children, or a whole run of
+ * components anywhere ("Food" → `Expenses:Food`), case-insensitively. Fava's
+ * unanchored search made `Assets:Cash` also return `Assets:CashApp`, and
+ * `Assets:Cas` match at all, under a picker that names one account (w21/113;
+ * the CLI's w5/292). A value with regex syntax keeps Fava's search, so a
+ * pattern such as `^Expenses:(Food|Rent)` still works. One rule for REST,
+ * GraphQL and MCP, which all filter here.
+ */
 function applyAccountFilter(
   directives: DirectiveJson[],
   value: string,
 ): DirectiveJson[] {
   if (!value) return directives;
-  const match = makeMatcher(value);
-  const hasComponent = makeComponentMatcher(value);
+  const matches = REGEX_SYNTAX.test(value)
+    ? makeMatcher(value)
+    : makeComponentRunMatcher(value);
   return directives.filter((directive) =>
-    getEntryAccounts(directive).some(
-      (name) => hasComponent(name) || match(name),
-    ),
+    getEntryAccounts(directive).some((name) => matches(name)),
   );
+}
+
+/** A whole run of `:`-delimited components, case-insensitively. */
+function makeComponentRunMatcher(run: string): FilterValueMatcher {
+  if (run.length > MAX_FILTER_PATTERN_LENGTH) {
+    throw new AdvancedFilterParseError(
+      `Filter pattern exceeds ${MAX_FILTER_PATTERN_LENGTH} characters`,
+    );
+  }
+  const regex = new RegExp(`(^|:)${escapeRegExp(run)}(:|$)`, "i");
+  return (value): boolean => regex.test(stringifyFilterValue(value));
 }
 
 // ── Advanced filter (core/filters.py FilterSyntaxLexer + FilterSyntaxParser) ──
