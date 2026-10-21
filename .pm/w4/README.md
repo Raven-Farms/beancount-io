@@ -8,7 +8,6 @@
 - [261 — Keep switch states visible in forced colors](./blocked/261.md) — minor; dashboard QA, 2026-10-20. — **blocked:** fix shipped in `17b703796`; awaiting forced-colors pixel check
 - [262 — Keep Journal, Account, Overview and Files row focus visible in forced colors](./blocked/262.md) — minor; dashboard QA, 2026-10-20. — **blocked:** fix shipped in `def18543d`; awaiting forced-colors pixel check
 - [265 — Keep financial text and private paths out of GA4 automatic events](./blocked/265.md) — major; dashboard QA, 2026-10-20; stream-editor completion dependency. — **blocked:** checklist shipped in `181e7a996`; needs a GA4 Editor to turn off Site search / history page views
-- [266 — Disable import and receipt file pickers until hydration](./266.md) — minor; dashboard QA, 2026-10-20.
 - [267 — Keep Trial Balance reconciliation independent of display signs](./267.md) — major; dashboard QA, 2026-10-20.
 - [268 — Preserve an existing UTF-8 BOM when saving text files](./268.md) — minor; dashboard QA, 2026-10-20.
 - [269 — Preserve Markdown blocks without a language label](./269.md) — minor; dashboard QA, 2026-10-20.
