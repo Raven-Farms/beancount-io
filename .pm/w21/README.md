@@ -142,3 +142,14 @@
 - [252](./252.md) — Edit Transaction in a CRLF file rewrites the entry with LF and adds a blank line
 - [253](./253.md) — Edit on an entry changed elsewhere: "Failed to load transaction" with no Retry, every time
 - [254](./254.md) — VoiceOver calls the transaction ⋯ menu "Details"
+- [255](./255.md) — Account picker: a search with a space ("credit card") finds nothing and offers an invalid Create
+- [256](./256.md) — NFD account names can't be found; Open Account creates a second "Expenses:Café"
+- [257](./257.md) — Payee/narration suggestions miss Turkish İ and NFD text; duplicate-looking rows
+- [258](./258.md) — Loose fuzzy matches hide Create for new names ("uber", "fuel", "pets")
+- [259](./259.md) — Create from an expense posting's picker prefills the Assets root
+- [260](./260.md) — Create's auto-capitalisation skips Cyrillic/Greek, landing on a refused name
+- [261](./261.md) — Home's Recent Transactions rows show no date (future payments look past)
+- [262](./262.md) — Non-USD ledger's Home shows $0 in USD until (or if never) the read context loads
+- [263](./263.md) — Spending's "Not in total" nets both months, so a refund hides this month's spend
+- [264](./264.md) — Home's lower-card skeletons are short; content jumps 160–260 pt on load
+- [265](./265.md) — All Home "See all" buttons share one VoiceOver name
