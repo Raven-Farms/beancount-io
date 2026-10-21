@@ -132,3 +132,5 @@
 - [182](./182.md) — A ledger-service outage at launch permanently drops the selected ledger
 - [183](./183.md) — Lossy/captive network: cold start waits ~60 s on the splash although the cache is ready
 - [184](./184.md) — Offline next day, Home's Spending card fails: its cache key changes daily
+- [185](./185.md) — A text file over 10 MiB opens empty and editable; saving replaces the whole file (data loss)
+- [186](./186.md) — Files between 1 and 10 MiB open editable but every save is refused after editing
