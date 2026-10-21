@@ -116,3 +116,8 @@
 - [166](./166.md) — One future-dated transaction moves every Reports range onto next month (1M on Oct 21 shows only November)
 - [167](./167.md) — Merchants: a pre-entered payment counts as paid; "Next" skips it and a missed bill isn't Overdue
 - [168](./168.md) — Budget ALL: one future entry makes every header describe next month at a $0 budget
+- [169](./169.md) — Merchant spelled two ways: recurrence uses one spelling (false "Overdue" / no detection / lost override)
+- [170](./170.md) — 1st-and-15th bills labelled "Every 2 weeks"; Next comes 2–3 days early
+- [171](./171.md) — After a price rise, Recurring "typical amount" keeps the old price with no "~"
+- [172](./172.md) — Brand matcher treats accented letters as word boundaries ("Café Amazonía" → Amazon logo)
+- [173](./173.md) — Transfer-only payees never detected; marking Recurring says "Not enough history"
