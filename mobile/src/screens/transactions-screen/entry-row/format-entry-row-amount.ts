@@ -28,8 +28,9 @@ export function formatEntryRowAmount(text: string, value: number): string {
 export function selectEntryRowAmount(
   txn: JournalTransaction,
   mixedLabel: string,
+  operatingCurrency?: string,
 ): { amountStr: string; isPositive: boolean | null } {
-  const amount = selectTransactionAmount(txn);
+  const amount = selectTransactionAmount(txn, operatingCurrency);
   if (!amount) return { amountStr: "", isPositive: null };
   if (isMixedPostingsAmount(amount)) {
     return { amountStr: mixedLabel, isPositive: null };

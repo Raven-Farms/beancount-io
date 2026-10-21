@@ -8,6 +8,7 @@ import {
 } from "react-native";
 import { useThemeStyle } from "@/common/hooks";
 import { useTranslations } from "@/common/hooks/use-translations";
+import { useOperatingCurrency } from "@/common/hooks/use-operating-currency";
 import {
   fontSizes,
   fontWeights,
@@ -116,6 +117,7 @@ const getStyles = (theme: ColorTheme) =>
 const getDisplayInfo = (
   entry: JournalDirectiveType,
   mixedLabel: string,
+  operatingCurrency: string | undefined,
 ): { name: string; amountStr: string; isPositive: boolean | null } => {
   if (isJournalOpen(entry)) {
     const currencies = entry.currencies?.join(", ") ?? "";
@@ -136,7 +138,10 @@ const getDisplayInfo = (
 
   const name = entry.payee || entry.narration || entry.directive_type;
 
-  return { name, ...selectEntryRowAmount(entry, mixedLabel) };
+  return {
+    name,
+    ...selectEntryRowAmount(entry, mixedLabel, operatingCurrency),
+  };
 };
 
 interface EntryRowProps {
@@ -151,9 +156,11 @@ export const EntryRow: React.FC<EntryRowProps> = ({ entry, onPress }) => {
   const stacked = prefersStackedLayout(fontScale);
 
   const { t } = useTranslations();
+  const operatingCurrency = useOperatingCurrency();
   const { name, amountStr, isPositive } = getDisplayInfo(
     entry,
     t("multiplePostings"),
+    operatingCurrency,
   );
   const secondary = isJournalTransaction(entry)
     ? entryRowSecondaryText(entry)

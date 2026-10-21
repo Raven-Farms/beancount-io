@@ -61,6 +61,7 @@ import { shouldShowTransactionWriteActions } from "./selectors/select-transactio
 import { isEntryGone } from "./selectors/select-entry-gone";
 import { selectEntryErrors } from "./selectors/select-entry-errors";
 import { useLedgerErrors } from "@/common/hooks/use-ledger-errors";
+import { useOperatingCurrency } from "@/common/hooks/use-operating-currency";
 import { deleteTransaction } from "./delete-transaction";
 import { ledgerWriteFailureMessage } from "@/common/ledger-refusal";
 import { i18n } from "@/translations";
@@ -296,6 +297,7 @@ const TransactionDetailImpl = ({
   originAccount?: string;
 }): JSX.Element => {
   const ledgerId = useLedgerGuard();
+  const operatingCurrency = useOperatingCurrency();
   const { canWrite } = useLedgerAccess();
   const router = useRouter();
   const guest = useGuest();
@@ -500,7 +502,11 @@ const TransactionDetailImpl = ({
     );
   }
 
-  const hero = selectHeroAmount(entry, t("multiplePostings"));
+  const hero = selectHeroAmount(
+    entry,
+    t("multiplePostings"),
+    operatingCurrency,
+  );
   const postingRows = selectPostingRows(entry);
   const title = selectTransactionTitle(entry) || t("transaction");
   const isPending = entry.flag === "!";

@@ -272,14 +272,18 @@ describe("selectTransactionAmount", () => {
     });
   });
 
-  it("falls back to the largest bucket when no leg quotes a cost", () => {
+  it("reads an exchange with no cost as neutral, in the operating currency", () => {
     const tx = makeTransaction({
       postings: [
         makePosting("Assets:Wallet:BTC", "0.25", "BTC"),
         makePosting("Assets:Checking", "-12000.00"),
       ],
     });
-    expect(entryAmount(tx).currency).toBe("USD");
+    expect(selectTransactionAmount(tx, "USD")).toEqual({
+      text: "$12,000.00",
+      value: 0,
+      currency: "USD",
+    });
   });
 
   it("falls back to the largest single posting when no cash accounts exist", () => {
@@ -525,6 +529,112 @@ describe("selectTransactionAmount", () => {
 // ---------------------------------------------------------------------------
 // groupToSections
 // ---------------------------------------------------------------------------
+
+// w21/057: the bucket was picked by comparing magnitudes across currencies, so
+// a $500 fare that earned 1500 miles read "+1,500.00 MILES", and an exchange
+// read as an inflow or an outflow depending on which leg carried the `@`.
+describe("selectTransactionAmount: mixed currencies", () => {
+  const withPrice = (
+    account: string,
+    number: string,
+    currency: string,
+    price: { number: string; currency: string },
+  ) => ({ ...makePosting(account, number, currency), price });
+
+  const airline = makeTransaction({
+    postings: [
+      makePosting("Liabilities:CreditCard:Visa", "-500.00"),
+      makePosting("Expenses:Transport", "500.00"),
+      makePosting("Assets:Rewards:Miles", "1500", "MILES"),
+      makePosting("Income:Rewards", "-1500", "MILES"),
+    ],
+  });
+
+  it("shows a card purchase that earns miles as the money spent", () => {
+    for (const operating of ["USD", undefined]) {
+      expect(selectTransactionAmount(airline, operating)).toEqual({
+        text: "$500.00",
+        value: -500,
+        currency: "USD",
+      });
+    }
+  });
+
+  const fxA = makeTransaction({
+    postings: [
+      withPrice("Assets:Bank:Checking", "-100.00", "USD", {
+        number: "150",
+        currency: "JPY",
+      }),
+      makePosting("Assets:Bank:Jpy", "15000", "JPY"),
+    ],
+  });
+  const fxB = makeTransaction({
+    postings: [
+      {
+        ...makePosting("Assets:Bank:Jpy", "15000", "JPY"),
+        price: { number: "100.00", currency: "USD" },
+      },
+      makePosting("Assets:Bank:Checking", "-100.00"),
+    ],
+  });
+
+  it("reads one exchange the same whichever leg carries the price", () => {
+    for (const operating of ["USD", undefined, "JPY"]) {
+      expect(selectTransactionAmount(fxA, operating)).toEqual(
+        selectTransactionAmount(fxB, operating),
+      );
+    }
+    expect(selectTransactionAmount(fxA, "USD")).toEqual({
+      text: "$100.00",
+      value: 0,
+      currency: "USD",
+    });
+    // With no operating currency the first currency by name sizes it.
+    expect(selectTransactionAmount(fxB)).toEqual({
+      text: "15,000.00 JPY",
+      value: 0,
+      currency: "JPY",
+    });
+  });
+
+  it("keeps a cost-basis buy and sell on their cash side", () => {
+    const buy = makeTransaction({
+      postings: [
+        makePosting("Assets:Broker:AAPL", "10", "AAPL", {
+          number: "150.00",
+          currency: "USD",
+        }),
+        makePosting("Assets:Broker:Cash", "-1500.00"),
+      ],
+    });
+    const sell = makeTransaction({
+      postings: [
+        {
+          ...makePosting("Assets:Broker:AAPL", "-10", "AAPL", {
+            number: "150.00",
+            currency: "USD",
+          }),
+          price: { number: "160.00", currency: "USD" },
+        },
+        makePosting("Assets:Broker:Cash", "1600.00"),
+        makePosting("Income:Gains", "-100.00"),
+      ],
+    });
+    for (const operating of ["USD", undefined]) {
+      expect(selectTransactionAmount(buy, operating)).toEqual({
+        text: "$1,500.00",
+        value: -1500,
+        currency: "USD",
+      });
+      expect(selectTransactionAmount(sell, operating)).toEqual({
+        text: "$1,600.00",
+        value: 1600,
+        currency: "USD",
+      });
+    }
+  });
+});
 
 describe("groupToSections", () => {
   it("returns an empty array for no entries", () => {

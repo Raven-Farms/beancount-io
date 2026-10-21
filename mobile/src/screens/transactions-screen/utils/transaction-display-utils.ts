@@ -70,6 +70,9 @@ export const isMixedPostingsAmount = (
 const moneyCurrencyOf = (p: JournalPosting): string | undefined =>
   p.cost?.currency ?? p.price?.currency ?? undefined;
 
+const isBalanceSheet = (account: string): boolean =>
+  account.startsWith("Assets:") || account.startsWith("Liabilities:");
+
 /**
  * The one number to show for a transaction, in a single currency.
  *
@@ -79,9 +82,18 @@ const moneyCurrencyOf = (p: JournalPosting): string | undefined =>
  * means nothing. So legs are bucketed by currency and summed within a bucket,
  * never across.
  *
- * With several buckets we want the money leg, not the commodity leg: prefer the
- * currency some posting quotes its cost or price in (in a trade that is the
- * cash side), and otherwise the bucket with the largest magnitude. When no
+ * With several buckets the pick goes by meaning, never by comparing numbers
+ * in different units (w21/057):
+ *
+ * - A trade, where some posting holds a commodity `{cost}`, shows the bucket
+ *   its cost or price is quoted in: the cash side.
+ * - An exchange between own accounts (every posting on the balance sheet, no
+ *   cost) has no direction, so it reads unsigned and neutral, sized by its
+ *   operating-currency leg, or else its alphabetically first currency, so the
+ *   same exchange reads the same whichever leg carries the `@`.
+ * - Anything else (a card purchase that also earns miles) shows the operating
+ *   currency, then the currency an Expenses posting is in, then the bucket a
+ *   price is quoted in, then the largest magnitude. When no
  * Assets/Liabilities posting exists at all (an Income → Expenses entry, say),
  * fall back to the single largest posting.
  *
@@ -91,20 +103,19 @@ const moneyCurrencyOf = (p: JournalPosting): string | undefined =>
  * improvements and depreciation spreads it over several accounts, and its sum
  * is then an unexplained partial subtotal, so that trade is reported as mixed.
  *
+ * @param operatingCurrency - The ledger's first `operating_currency`, when known.
  * @returns The amount; `{ mixed: true }` for a trade whose money side spans
  *   several balance-sheet accounts; or null when the transaction has no usable
  *   posting.
  */
 export const selectTransactionAmount = (
   txn: JournalTransaction,
+  operatingCurrency?: string,
 ): TransactionAmount | null => {
   const postings = txn.postings ?? [];
   if (!postings.length) return null;
 
-  const cashPostings = postings.filter(
-    (p) =>
-      p.account.startsWith("Assets:") || p.account.startsWith("Liabilities:"),
-  );
+  const cashPostings = postings.filter((p) => isBalanceSheet(p.account));
 
   if (cashPostings.length > 0) {
     // A sum is only as coarse as its finest leg, so a bucket carries the
@@ -146,18 +157,46 @@ export const selectTransactionAmount = (
     if (buckets.length > 0) {
       let picked = buckets[0];
       if (buckets.length > 1) {
-        const moneyCurrencies = new Set(
-          postings.map(moneyCurrencyOf).filter(Boolean),
+        const isTrade = postings.some((p) => p.cost?.currency);
+        const operating = buckets.find(([c]) => c === operatingCurrency);
+        if (!isTrade && postings.every((p) => isBalanceSheet(p.account))) {
+          const [currency, bucket] =
+            operating ??
+            [...buckets].sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))[0];
+          const size =
+            Math.abs(bucket.value) < 0.5 * 10 ** -bucket.scale
+              ? bucket.largestLeg
+              : Math.abs(bucket.value);
+          return {
+            text: formatAmount(size, currency, bucket.scale),
+            value: 0,
+            currency,
+          };
+        }
+        const expenseCurrencies = new Set(
+          postings
+            .filter((p) => p.account.startsWith("Expenses:"))
+            .map((p) => p.units.currency),
         );
-        const money = buckets.filter(([currency]) =>
-          moneyCurrencies.has(currency),
-        );
-        const candidates = money.length > 0 ? money : buckets;
-        picked = candidates.reduce((best, bucket) =>
-          Math.abs(bucket[1].value) > Math.abs(best[1].value) ? bucket : best,
-        );
-        if (money.length > 0 && picked[1].accounts.size > 1) {
-          return { mixed: true };
+        const spent = isTrade
+          ? undefined
+          : (operating ?? buckets.find(([c]) => expenseCurrencies.has(c)));
+        if (spent) {
+          picked = spent;
+        } else {
+          const moneyCurrencies = new Set(
+            postings.map(moneyCurrencyOf).filter(Boolean),
+          );
+          const money = buckets.filter(([currency]) =>
+            moneyCurrencies.has(currency),
+          );
+          const candidates = money.length > 0 ? money : buckets;
+          picked = candidates.reduce((best, bucket) =>
+            Math.abs(bucket[1].value) > Math.abs(best[1].value) ? bucket : best,
+          );
+          if (money.length > 0 && picked[1].accounts.size > 1) {
+            return { mixed: true };
+          }
         }
       }
       const [currency, { value, scale, legs, largestLeg }] = picked;

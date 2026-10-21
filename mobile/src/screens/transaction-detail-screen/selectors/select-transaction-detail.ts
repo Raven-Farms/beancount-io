@@ -42,8 +42,9 @@ export type HeroAmount = {
 export function selectHeroAmount(
   txn: JournalTransaction,
   mixedLabel: string,
+  operatingCurrency?: string,
 ): HeroAmount {
-  const amount = selectTransactionAmount(txn);
+  const amount = selectTransactionAmount(txn, operatingCurrency);
   if (!amount) {
     return { text: "", isPositive: null };
   }
