@@ -20,6 +20,7 @@ import { useApolloClient, useReactiveVar } from "@apollo/client";
 import { Ionicons } from "@expo/vector-icons";
 import { ColorTheme } from "@/types/theme-props";
 import {
+  fonts,
   fontSizes,
   fontWeights,
   gutter,
@@ -64,6 +65,7 @@ import {
   selectTransactionMenuActions,
   selectTransactionTitle,
   type TransactionMenuAction,
+  userMetadataLines,
 } from "./selectors/select-transaction-detail";
 import { shouldShowTransactionWriteActions } from "./selectors/select-transaction-write-actions";
 import {
@@ -231,6 +233,12 @@ const getStyles = (theme: ColorTheme) =>
     metadataBody: {
       flex: 1,
       minWidth: 0,
+    },
+    metadataLine: {
+      fontSize: fontSizes.sm,
+      fontFamily: fonts.mono,
+      color: theme.text01,
+      textAlign: LEADING_TEXT_ALIGN,
     },
     metadataLabel: {
       fontSize: fontSizes.xs,
@@ -550,7 +558,10 @@ const TransactionDetailImpl = ({
     account: posting.account,
     amount: Number.parseFloat(posting.units.number),
   }));
-  const hasMetadata = Boolean(entry.tags?.length || entry.links?.length);
+  const entryMeta = userMetadataLines(entry.meta);
+  const hasMetadata = Boolean(
+    entry.tags?.length || entry.links?.length || entryMeta.length,
+  );
   // Source and balance context is read-only, so any reader of a
   // source-backed entry sees it; only edit/delete need write access.
   const showEntryContext = !isGenerated;
@@ -749,6 +760,30 @@ const TransactionDetailImpl = ({
                         </View>
                       ))}
                     </View>
+                  </View>
+                </View>
+              ) : null}
+              {entryMeta.length ? (
+                <View
+                  style={[
+                    styles.metadataRow,
+                    Boolean(entry.tags?.length || entry.links?.length) &&
+                      styles.metadataRowDivider,
+                  ]}
+                >
+                  <Ionicons
+                    name="document-text-outline"
+                    size={20}
+                    color={theme.black80}
+                    style={styles.metadataIcon}
+                  />
+                  <View style={styles.metadataBody}>
+                    <Text style={styles.metadataLabel}>{t("metadata")}</Text>
+                    {entryMeta.map((line) => (
+                      <Text style={styles.metadataLine} key={line} selectable>
+                        {line}
+                      </Text>
+                    ))}
                   </View>
                 </View>
               ) : null}

@@ -5,6 +5,7 @@ import {
   postingBasisText,
   selectHeroAmount as selectHeroAmountWithLabel,
   selectPostingRows,
+  userMetadataLines,
   selectTransactionMenuActions,
   selectTransactionTitle,
 } from "../select-transaction-detail";
@@ -435,5 +436,56 @@ describe("a posting flagged pending", () => {
       true,
     );
     expect(row.includes("{posting.pending ? (")).toBe(true);
+  });
+});
+
+// w21/162: metadata was readable only in the raw source.
+describe("user metadata", () => {
+  it("lists the user's keys, without the source position or internal keys", () => {
+    expect(
+      userMetadataLines({
+        filename: "main.bean",
+        lineno: 12,
+        __tolerances__: { USD: "0.005" },
+        invoice: "INV-0914",
+        paid: true,
+        total: { number: "12.00", currency: "USD" },
+      }),
+    ).toEqual(["invoice: INV-0914", "paid: true", "total: 12.00 USD"]);
+    expect(userMetadataLines(null)).toEqual([]);
+  });
+
+  it("puts a posting's metadata under its own row", () => {
+    const [transport, cash] = selectPostingRows(
+      txn([
+        {
+          ...posting("Expenses:Transport", "1.00"),
+          meta: { filename: "main.bean", lineno: 5, note: "posting meta" },
+        },
+        posting("Assets:Cash", "-1.00"),
+      ]),
+    );
+    expect(transport.meta).toEqual(["note: posting meta"]);
+    expect("meta" in cash).toBe(false);
+  });
+
+  it("is shown in Details and under the posting", () => {
+    const screen = fs.readFileSync(
+      path.join(__dirname, "..", "..", "transaction-detail-screen.tsx"),
+      "utf8",
+    );
+    expect(
+      screen.includes("const entryMeta = userMetadataLines(entry.meta);"),
+    ).toBe(true);
+    expect(
+      screen.includes(
+        "entry.tags?.length || entry.links?.length || entryMeta.length",
+      ),
+    ).toBe(true);
+    const row = fs.readFileSync(
+      path.join(__dirname, "..", "..", "components", "posting-row.tsx"),
+      "utf8",
+    );
+    expect(row.includes("{posting.meta?.map((line) => (")).toBe(true);
   });
 });

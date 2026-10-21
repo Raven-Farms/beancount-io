@@ -75,6 +75,8 @@ export type PostingDisplayRow = {
    * reconciling. Dropped, the transaction read as fully cleared (w21/161).
    */
   pending?: true;
+  /** The posting's own metadata as "key: value" lines (w21/162). */
+  meta?: string[];
 };
 
 /**
@@ -115,6 +117,40 @@ function formatPostingUnits(
     return { amount: `-${magnitude}`, sign: -1 };
   }
   return { amount: `+${magnitude}`, sign: 1 };
+}
+
+/** Keys the server adds to every entry: where it was written, not what. */
+const SOURCE_META_KEYS = new Set(["filename", "lineno"]);
+
+function metaValueText(value: unknown): string {
+  if (typeof value === "string") return value;
+  if (typeof value === "number" || typeof value === "boolean") {
+    return String(value);
+  }
+  if (value && typeof value === "object") {
+    const { number, currency } = value as {
+      number?: unknown;
+      currency?: unknown;
+    };
+    if (typeof number === "string" && typeof currency === "string") {
+      return `${number} ${currency}`;
+    }
+  }
+  return JSON.stringify(value);
+}
+
+/**
+ * An entry's or posting's own metadata (`invoice: "INV-0914"`) as
+ * "key: value" lines, without the source position the server adds or its
+ * internal `__…` keys. Metadata never reached the detail screen, so an
+ * invoice number was readable only in the raw source (w21/162).
+ */
+export function userMetadataLines(
+  meta: Record<string, unknown> | null | undefined,
+): string[] {
+  return Object.entries(meta ?? {})
+    .filter(([key]) => !SOURCE_META_KEYS.has(key) && !key.startsWith("__"))
+    .map(([key, value]) => `${key}: ${metaValueText(value)}`);
 }
 
 /** More fractional digits than anyone writes: a total divided per unit. */
@@ -176,6 +212,9 @@ export function selectPostingRows(
         ? { price: formatPerUnit(p.price) }
         : {}),
       ...(p.flag === "!" ? { pending: true as const } : {}),
+      ...(userMetadataLines(p.meta).length > 0
+        ? { meta: userMetadataLines(p.meta) }
+        : {}),
     };
   });
 }

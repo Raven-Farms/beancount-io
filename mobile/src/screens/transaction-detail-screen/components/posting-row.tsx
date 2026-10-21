@@ -72,6 +72,13 @@ const getStyles = (theme: ColorTheme) =>
       textAlign: LEADING_TEXT_ALIGN,
       flexShrink: 1,
     },
+    metaLine: {
+      fontSize: fontSizes.xs,
+      fontFamily: fonts.mono,
+      color: theme.black80,
+      marginTop: 2,
+      textAlign: LEADING_TEXT_ALIGN,
+    },
     accountLine: {
       flexDirection: "row",
       alignItems: "center",
@@ -161,7 +168,7 @@ export function PostingRow({
       onPress={onPress}
       activeOpacity={0.7}
       accessibilityRole="button"
-      accessibilityLabel={`${directionLabel ? `${directionLabel}: ` : ""}${posting.account}, ${posting.amount}${basis ? `, ${basis}` : ""}${posting.pending ? `, ${t("pending")}` : ""}`}
+      accessibilityLabel={`${directionLabel ? `${directionLabel}: ` : ""}${posting.account}, ${posting.amount}${basis ? `, ${basis}` : ""}${posting.pending ? `, ${t("pending")}` : ""}${posting.meta ? `, ${posting.meta.join(", ")}` : ""}`}
     >
       <View
         style={[styles.accountColumn, stacked && styles.accountColumnStacked]}
@@ -183,6 +190,11 @@ export function PostingRow({
             </View>
           ) : null}
         </View>
+        {posting.meta?.map((line) => (
+          <Text style={styles.metaLine} key={line} numberOfLines={2}>
+            {line}
+          </Text>
+        ))}
       </View>
       {stacked ? (
         <View style={styles.stackedAmountLine}>
