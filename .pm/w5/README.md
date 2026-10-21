@@ -76,7 +76,7 @@
 - [909 — Keep cost lots in the funded-close check](./909.md) — minor CLI closing-guard follow-up to w2/092; offsetting quantities with a residual book balance reproduced 2026-10-21.
 - [910 — Check funded children closed by `close_tree`](./910.md) — minor CLI closing-guard follow-up to w2/092; generated descendant closes reproduced 2026-10-21.
 - [911 — Honor valid remembered custom date formats](./911.md) — minor CLI import-recall follow-up to w1/m24/t007; unchanged-file refusals and unsafe replacement hints reproduced 2026-10-21.
-- [912 — Keep child source accounts in parent-importer identity](./912.md) — major CLI skipped-payment follow-up to 223; separate child-account statements collide despite `--duplicates include`, reproduced 2026-10-21.
+- [912 — Keep child source accounts in parent-importer identity](./912.md) — major CLI identity gap; generated IDs skip different children and native IDs accept swapped child amounts as exact duplicates, reproduced 2026-10-21.
 - [913 — Warn about native imports closing funded accounts](./913.md) — minor CLI diagnostic follow-up to w2/092; silent closes over 100 USD reproduced in JSON and human output on 2026-10-21.
 - [914 — Clarify note/document import lifecycle exceptions](./914.md) — trivial CLI guide follow-up to 351; valid post-close annotations and opening-date controls reproduced 2026-10-21.
 - [915 — Preserve empty labels in booked-cost exports and imports](./915.md) — minor CLI printer follow-up to 805; PRINT merges lots and native Cost imports lose the label, reproduced 2026-10-21.
