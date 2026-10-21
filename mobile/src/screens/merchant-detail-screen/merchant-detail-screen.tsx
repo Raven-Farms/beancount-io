@@ -549,14 +549,10 @@ function MerchantDetailBody({
 
   // A failed header query used to drop the header silently whenever the rows
   // loaded, hiding the count, the totals and the Recurring toggle (w21/032).
-  const statsMessage =
-    (metaError ?? totalsError)?.message ?? t("merchantDetailLoadError");
+  // A whole translated sentence, never transport text (w21/118).
   const statsError = (
     <View style={styles.errorContainer}>
-      <Text style={styles.errorText}>
-        {t("merchantDetailLoadError")}
-        {statsMessage}
-      </Text>
+      <Text style={styles.errorText}>{t("merchantDetailLoadError")}</Text>
       <TouchableOpacity
         style={styles.retryButton}
         onPress={onRetry}
@@ -577,10 +573,7 @@ function MerchantDetailBody({
     if (listError) {
       return (
         <View style={styles.errorContainer}>
-          <Text style={styles.errorText}>
-            {t("merchantDetailLoadError")}
-            {listError.message}
-          </Text>
+          <Text style={styles.errorText}>{t("merchantDetailLoadError")}</Text>
           <TouchableOpacity
             style={styles.retryButton}
             onPress={onRetry}

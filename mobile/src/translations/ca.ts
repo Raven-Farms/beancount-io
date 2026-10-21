@@ -84,7 +84,7 @@ export const ca: Translations = {
   merchantsEmptyMessage:
     "Els beneficiaris de les teves transaccions apareixeran aquí com un directori cercable.",
   merchantsNoSearchResults: "Cap comerciant coincideix amb la cerca.",
-  merchantsLoadError: "No s'han pogut carregar els comerciants: ",
+  merchantsLoadError: "No s'han pogut carregar els comerciants",
   merchantsSortByCount: "Ordena per nombre de transaccions",
   merchantsSortAlphabetical: "Ordena alfabèticament",
   merchantsRecurringSection: "Recurrent",
@@ -103,7 +103,7 @@ export const ca: Translations = {
   merchantsRecurringToggleHelper:
     "Fixa aquest comerç a Recurrent. L’elecció manual preval sobre la detecció i es guarda en aquest dispositiu.",
   merchantDetailDateRange: "{{first}} – {{last}}",
-  merchantDetailLoadError: "No s'ha pogut carregar el comerç: ",
+  merchantDetailLoadError: "No s'ha pogut carregar el comerç",
   merchantDetailRetry: "Torna-ho a provar",
   merchantDetailEmptyTitle: "Sense transaccions",
   merchantDetailEmptyMessage:

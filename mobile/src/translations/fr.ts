@@ -84,7 +84,7 @@ export const fr: Translations = {
   merchantsEmptyMessage:
     "Les bénéficiaires de vos transactions apparaîtront ici sous forme d'annuaire consultable.",
   merchantsNoSearchResults: "Aucun commerçant ne correspond à votre recherche.",
-  merchantsLoadError: "Échec du chargement des commerçants : ",
+  merchantsLoadError: "Échec du chargement des commerçants",
   merchantsSortByCount: "Trier par nombre de transactions",
   merchantsSortAlphabetical: "Trier par ordre alphabétique",
   merchantsRecurringSection: "Récurrent",
@@ -103,7 +103,7 @@ export const fr: Translations = {
   merchantsRecurringToggleHelper:
     "Épingler ce commerçant dans Récurrent. Un choix manuel prime sur la détection et reste sur cet appareil.",
   merchantDetailDateRange: "{{first}} – {{last}}",
-  merchantDetailLoadError: "Échec du chargement du commerçant : ",
+  merchantDetailLoadError: "Échec du chargement du commerçant",
   merchantDetailRetry: "Réessayer",
   merchantDetailEmptyTitle: "Aucune transaction",
   merchantDetailEmptyMessage:

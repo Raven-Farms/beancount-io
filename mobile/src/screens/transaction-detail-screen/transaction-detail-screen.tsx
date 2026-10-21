@@ -764,6 +764,7 @@ const TransactionDetailImpl = ({
               contextData={data?.getLedgerEntryContext}
               contextLoading={loading}
               contextError={error}
+              onRetryContext={() => void refetchContext().catch(() => {})}
             />
           </View>
         ) : null}

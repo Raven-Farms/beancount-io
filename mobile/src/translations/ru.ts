@@ -86,7 +86,7 @@ export const ru: Translations = {
   merchantsEmptyMessage:
     "Получатели из ваших транзакций появятся здесь в виде каталога с поиском.",
   merchantsNoSearchResults: "Нет получателей, соответствующих поиску.",
-  merchantsLoadError: "Не удалось загрузить получателей: ",
+  merchantsLoadError: "Не удалось загрузить получателей",
   merchantsSortByCount: "Сортировать по числу транзакций",
   merchantsSortAlphabetical: "Сортировать по алфавиту",
   merchantsRecurringSection: "Регулярные",
@@ -105,7 +105,7 @@ export const ru: Translations = {
   merchantsRecurringToggleHelper:
     "Закрепить этого контрагента в «Регулярные». Ручной выбор важнее автоопределения и хранится на этом устройстве.",
   merchantDetailDateRange: "{{first}} – {{last}}",
-  merchantDetailLoadError: "Не удалось загрузить контрагента: ",
+  merchantDetailLoadError: "Не удалось загрузить контрагента",
   merchantDetailRetry: "Повторить",
   merchantDetailEmptyTitle: "Нет транзакций",
   merchantDetailEmptyMessage:

@@ -81,7 +81,7 @@ export const fa: Translations = {
   merchantsEmptyMessage:
     "طرف‌حساب‌های تراکنش‌هایتان اینجا به‌صورت فهرست قابل جستجو ظاهر می‌شوند.",
   merchantsNoSearchResults: "هیچ پذیرنده‌ای با جستجوی شما مطابقت ندارد.",
-  merchantsLoadError: "بارگذاری پذیرندگان ناموفق بود: ",
+  merchantsLoadError: "بارگذاری پذیرندگان ناموفق بود",
   merchantsSortByCount: "مرتب‌سازی بر اساس تعداد تراکنش",
   merchantsSortAlphabetical: "مرتب‌سازی الفبایی",
   merchantsRecurringSection: "دوره‌ای",
@@ -100,7 +100,7 @@ export const fa: Translations = {
   merchantsRecurringToggleHelper:
     "این فروشنده را در بخش دوره‌ای ثابت کنید. انتخاب دستی بر تشخیص خودکار اولویت دارد و فقط روی این دستگاه می‌ماند.",
   merchantDetailDateRange: "{{first}} – {{last}}",
-  merchantDetailLoadError: "بارگذاری فروشنده ناموفق بود: ",
+  merchantDetailLoadError: "بارگذاری فروشنده ناموفق بود",
   merchantDetailRetry: "تلاش دوباره",
   merchantDetailEmptyTitle: "بدون تراکنش",
   merchantDetailEmptyMessage: "هیچ تراکنشی دقیقاً با این فروشنده مطابقت ندارد.",

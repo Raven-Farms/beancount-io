@@ -85,7 +85,7 @@ export const uk: Translations = {
   merchantsEmptyMessage:
     "Отримувачі з ваших транзакцій з’являться тут як каталог із пошуком.",
   merchantsNoSearchResults: "Немає отримувачів, що відповідають пошуку.",
-  merchantsLoadError: "Не вдалося завантажити отримувачів: ",
+  merchantsLoadError: "Не вдалося завантажити отримувачів",
   merchantsSortByCount: "Сортувати за кількістю транзакцій",
   merchantsSortAlphabetical: "Сортувати за алфавітом",
   merchantsRecurringSection: "Регулярні",
@@ -104,7 +104,7 @@ export const uk: Translations = {
   merchantsRecurringToggleHelper:
     "Закріпити цього контрагента в «Регулярні». Ручний вибір важливіший за автовизначення й зберігається на цьому пристрої.",
   merchantDetailDateRange: "{{first}} – {{last}}",
-  merchantDetailLoadError: "Не вдалося завантажити контрагента: ",
+  merchantDetailLoadError: "Не вдалося завантажити контрагента",
   merchantDetailRetry: "Спробувати знову",
   merchantDetailEmptyTitle: "Немає транзакцій",
   merchantDetailEmptyMessage:

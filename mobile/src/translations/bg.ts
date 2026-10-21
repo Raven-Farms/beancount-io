@@ -81,7 +81,7 @@ export const bg: Translations = {
   merchantsEmptyMessage:
     "Получателите от вашите транзакции ще се появят тук като директория за търсене.",
   merchantsNoSearchResults: "Няма търговци, които да съвпадат с търсенето.",
-  merchantsLoadError: "Неуспешно зареждане на търговци: ",
+  merchantsLoadError: "Неуспешно зареждане на търговци",
   merchantsSortByCount: "Сортиране по брой транзакции",
   merchantsSortAlphabetical: "Сортиране по азбучен ред",
   merchantsRecurringSection: "Повтарящи се",
@@ -100,7 +100,7 @@ export const bg: Translations = {
   merchantsRecurringToggleHelper:
     "Закачи този търговец в Повтарящи се. Ръчният избор надделява над откриването и остава на това устройство.",
   merchantDetailDateRange: "{{first}} – {{last}}",
-  merchantDetailLoadError: "Неуспешно зареждане на търговеца: ",
+  merchantDetailLoadError: "Неуспешно зареждане на търговеца",
   merchantDetailRetry: "Опитай отново",
   merchantDetailEmptyTitle: "Няма транзакции",
   merchantDetailEmptyMessage:

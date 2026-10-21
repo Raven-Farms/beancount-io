@@ -84,7 +84,7 @@ export const pt: Translations = {
   merchantsEmptyMessage:
     "Os beneficiários das suas transações aparecerão aqui como um diretório pesquisável.",
   merchantsNoSearchResults: "Nenhum comerciante corresponde à sua pesquisa.",
-  merchantsLoadError: "Falha ao carregar comerciantes: ",
+  merchantsLoadError: "Falha ao carregar comerciantes",
   merchantsSortByCount: "Ordenar por número de transações",
   merchantsSortAlphabetical: "Ordenar alfabeticamente",
   merchantsRecurringSection: "Recorrente",
@@ -103,7 +103,7 @@ export const pt: Translations = {
   merchantsRecurringToggleHelper:
     "Fixe este comerciante em Recorrente. A escolha manual prevalece sobre a detecção e fica neste dispositivo.",
   merchantDetailDateRange: "{{first}} – {{last}}",
-  merchantDetailLoadError: "Falha ao carregar o comerciante: ",
+  merchantDetailLoadError: "Falha ao carregar o comerciante",
   merchantDetailRetry: "Tentar de novo",
   merchantDetailEmptyTitle: "Sem transações",
   merchantDetailEmptyMessage:

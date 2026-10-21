@@ -1,3 +1,4 @@
+import { CardLoadFailure } from "@/components/card-load-failure";
 import React, { useState } from "react";
 import {
   Text,
@@ -167,6 +168,8 @@ interface EntryContextProps {
   contextData?: GetLedgerEntryContextQuery["getLedgerEntryContext"] | null;
   contextLoading?: boolean;
   contextError?: Error;
+  /** Retries the caller's own context read, when it supplies one. */
+  onRetryContext?: () => void;
 }
 
 /**
@@ -180,6 +183,7 @@ export const EntryContext: React.FC<EntryContextProps> = ({
   contextData,
   contextLoading = false,
   contextError,
+  onRetryContext,
 }) => {
   const styles = useThemeStyle(getStyles);
   const theme = useTheme().colorTheme;
@@ -189,7 +193,7 @@ export const EntryContext: React.FC<EntryContextProps> = ({
   // The detail screen already fetches this context to resolve the source
   // checksum and deep-link fallback entry. Reuse it there; the journal sheet
   // still fetches its own data when no context is supplied.
-  const { data, loading, error } = useGetLedgerEntryContextQuery({
+  const { data, loading, error, refetch } = useGetLedgerEntryContextQuery({
     variables: {
       entryHash: entry?.entry_hash || "",
       ledgerId: ledgerId,
@@ -224,15 +228,16 @@ export const EntryContext: React.FC<EntryContextProps> = ({
     );
   }
 
-  if (entryError) {
-    return (
-      <View style={styles.errorContainer}>
-        <Text style={styles.errorText}>
-          {t("journalError")}: {entryError.message}
-        </Text>
-      </View>
-    );
+  // Only a failure with nothing cached replaces the context: translated, with
+  // a Retry, never transport text. Cached context stays under a note
+  // (w21/118).
+  const retry = onRetryContext ?? (() => void refetch().catch(() => {}));
+  if (entryError && !entryContext) {
+    return <CardLoadFailure onRetry={retry} />;
   }
+  const staleNote = entryError ? (
+    <Text style={styles.contextLocation}>{t("staleDataNotice")}</Text>
+  ) : null;
 
   if (!entryContext) {
     return (
@@ -261,6 +266,7 @@ export const EntryContext: React.FC<EntryContextProps> = ({
               {entryFilename}:{entryLineNumber}
             </Text>
           ) : null}
+          {staleNote}
         </View>
         <Ionicons
           name={isContextOpen ? "chevron-up" : "chevron-down"}

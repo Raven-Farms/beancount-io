@@ -74,7 +74,7 @@ export const en = {
   merchantsEmptyMessage:
     "Payees from your transactions will show up here as a searchable directory.",
   merchantsNoSearchResults: "No merchants match your search.",
-  merchantsLoadError: "Failed to load merchants: ",
+  merchantsLoadError: "Failed to load merchants",
   merchantsSortByCount: "Sort by transaction count",
   merchantsSortAlphabetical: "Sort alphabetically",
   merchantsRecurringSection: "Recurring",
@@ -95,7 +95,7 @@ export const en = {
   merchantsRecurringToggleHelper:
     "Whether this merchant is treated as recurring. Manual choices beat automatic detection and stay on this device.",
   merchantDetailDateRange: "{{first}} – {{last}}",
-  merchantDetailLoadError: "Failed to load merchant: ",
+  merchantDetailLoadError: "Failed to load merchant",
   merchantDetailRetry: "Try again",
   merchantDetailEmptyTitle: "No transactions",
   merchantDetailEmptyMessage: "No transactions matched this merchant exactly.",

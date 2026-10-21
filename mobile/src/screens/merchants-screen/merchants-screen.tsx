@@ -1,3 +1,4 @@
+import { CardLoadFailure } from "@/components/card-load-failure";
 import { useCallback, useMemo, useState } from "react";
 import {
   SectionList,
@@ -172,7 +173,6 @@ function MerchantsDirectory() {
     detections,
     enoughHistory,
     loading: seriesLoading,
-    error: seriesError,
     refetch: refetchSeries,
   } = usePayeeRecurrence(ledgerId);
 
@@ -203,7 +203,9 @@ function MerchantsDirectory() {
   );
 
   const loading = rollupLoading || seriesLoading;
-  const error = rollupError ?? seriesError;
+  // Only the directory's own read can empty it: a failed recurrence series
+  // leaves the list and its rows, without cadence (w21/118).
+  const error = rollupData === undefined ? rollupError : undefined;
   const isInitialLoading = loading && !rollupData && !error;
   const showBlankEmpty = !isInitialLoading && !error && merchants.length === 0;
   const showNoResults =
@@ -281,11 +283,12 @@ function MerchantsDirectory() {
       return <MerchantsListSkeleton />;
     }
     if (error) {
+      // A whole translated sentence and a Retry, never transport text.
       return (
-        <Text style={styles.errorText}>
-          {t("merchantsLoadError")}
-          {error.message}
-        </Text>
+        <View>
+          <Text style={styles.errorText}>{t("merchantsLoadError")}</Text>
+          <CardLoadFailure onRetry={() => void onRefresh()} />
+        </View>
       );
     }
     if (showBlankEmpty) {

@@ -85,7 +85,7 @@ export const sk: Translations = {
   merchantsEmptyMessage:
     "Príjemcovia z vašich transakcií sa tu zobrazia ako prehľadávateľný adresár.",
   merchantsNoSearchResults: "Žiadni obchodníci nezodpovedajú vášmu hľadaniu.",
-  merchantsLoadError: "Nepodarilo sa načítať obchodníkov: ",
+  merchantsLoadError: "Nepodarilo sa načítať obchodníkov",
   merchantsSortByCount: "Zoradiť podľa počtu transakcií",
   merchantsSortAlphabetical: "Zoradiť abecedne",
   merchantsRecurringSection: "Opakujúce sa",
@@ -104,7 +104,7 @@ export const sk: Translations = {
   merchantsRecurringToggleHelper:
     "Pripnite tohto obchodníka do Opakujúce sa. Manuálna voľba má prednosť pred detekciou a ostáva na tomto zariadení.",
   merchantDetailDateRange: "{{first}} – {{last}}",
-  merchantDetailLoadError: "Nepodarilo sa načítať obchodníka: ",
+  merchantDetailLoadError: "Nepodarilo sa načítať obchodníka",
   merchantDetailRetry: "Skúsiť znova",
   merchantDetailEmptyTitle: "Žiadne transakcie",
   merchantDetailEmptyMessage:

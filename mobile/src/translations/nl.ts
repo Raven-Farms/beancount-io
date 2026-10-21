@@ -81,7 +81,7 @@ export const nl: Translations = {
   merchantsEmptyMessage:
     "Begunstigden uit je transacties verschijnen hier als een doorzoekbare directory.",
   merchantsNoSearchResults: "Geen winkels komen overeen met je zoekopdracht.",
-  merchantsLoadError: "Winkels laden mislukt: ",
+  merchantsLoadError: "Winkels laden mislukt",
   merchantsSortByCount: "Sorteren op aantal transacties",
   merchantsSortAlphabetical: "Alfabetisch sorteren",
   merchantsRecurringSection: "Terugkerend",
@@ -100,7 +100,7 @@ export const nl: Translations = {
   merchantsRecurringToggleHelper:
     "Zet deze handelaar vast onder Terugkerend. Handmatige keuze wint van detectie en blijft op dit apparaat.",
   merchantDetailDateRange: "{{first}} – {{last}}",
-  merchantDetailLoadError: "Handelaar laden mislukt: ",
+  merchantDetailLoadError: "Handelaar laden mislukt",
   merchantDetailRetry: "Opnieuw proberen",
   merchantDetailEmptyTitle: "Geen transacties",
   merchantDetailEmptyMessage:

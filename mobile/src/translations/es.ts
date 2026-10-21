@@ -83,7 +83,7 @@ export const es: Translations = {
   merchantsEmptyMessage:
     "Los beneficiarios de tus transacciones aparecerán aquí como un directorio buscable.",
   merchantsNoSearchResults: "Ningún comerciante coincide con tu búsqueda.",
-  merchantsLoadError: "Error al cargar comerciantes: ",
+  merchantsLoadError: "Error al cargar comerciantes",
   merchantsSortByCount: "Ordenar por número de transacciones",
   merchantsSortAlphabetical: "Ordenar alfabéticamente",
   merchantsRecurringSection: "Recurrente",
@@ -102,7 +102,7 @@ export const es: Translations = {
   merchantsRecurringToggleHelper:
     "Fija este comercio en Recurrente. La elección manual prevalece sobre la detección y se guarda en este dispositivo.",
   merchantDetailDateRange: "{{first}} – {{last}}",
-  merchantDetailLoadError: "Error al cargar el comercio: ",
+  merchantDetailLoadError: "Error al cargar el comercio",
   merchantDetailRetry: "Reintentar",
   merchantDetailEmptyTitle: "Sin transacciones",
   merchantDetailEmptyMessage:

@@ -82,7 +82,7 @@ export const de: Translations = {
   merchantsEmptyMessage:
     "Zahlungsempfänger aus Ihren Transaktionen erscheinen hier als durchsuchbares Verzeichnis.",
   merchantsNoSearchResults: "Keine Händler entsprechen Ihrer Suche.",
-  merchantsLoadError: "Händler konnten nicht geladen werden: ",
+  merchantsLoadError: "Händler konnten nicht geladen werden",
   merchantsSortByCount: "Nach Transaktionsanzahl sortieren",
   merchantsSortAlphabetical: "Alphabetisch sortieren",
   merchantsRecurringSection: "Wiederkehrend",
@@ -101,7 +101,7 @@ export const de: Translations = {
   merchantsRecurringToggleHelper:
     "Diesen Händler unter Wiederkehrend anheften. Manuelle Wahl schlägt die Erkennung und bleibt auf diesem Gerät.",
   merchantDetailDateRange: "{{first}} – {{last}}",
-  merchantDetailLoadError: "Händler konnte nicht geladen werden: ",
+  merchantDetailLoadError: "Händler konnte nicht geladen werden",
   merchantDetailRetry: "Erneut versuchen",
   merchantDetailEmptyTitle: "Keine Transaktionen",
   merchantDetailEmptyMessage:

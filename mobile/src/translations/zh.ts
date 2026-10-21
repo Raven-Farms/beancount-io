@@ -69,7 +69,7 @@ export const zh: Translations = {
   merchantsEmptyTitle: "还没有商户",
   merchantsEmptyMessage: "交易中的收款方会出现在这里，方便搜索和浏览。",
   merchantsNoSearchResults: "没有匹配的商户。",
-  merchantsLoadError: "加载商户失败：",
+  merchantsLoadError: "加载商户失败",
   merchantsSortByCount: "按交易次数排序",
   merchantsSortAlphabetical: "按名称排序",
   merchantsRecurringSection: "定期",
@@ -88,7 +88,7 @@ export const zh: Translations = {
   merchantsRecurringToggleHelper:
     "将此商户固定在「定期」分组。手动选择优先于自动检测，且只保存在本设备。",
   merchantDetailDateRange: "{{first}} – {{last}}",
-  merchantDetailLoadError: "加载商户失败：",
+  merchantDetailLoadError: "加载商户失败",
   merchantDetailRetry: "重试",
   merchantDetailEmptyTitle: "没有交易",
   merchantDetailEmptyMessage: "没有与此商户完全匹配的交易。",
