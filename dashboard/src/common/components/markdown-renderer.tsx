@@ -30,8 +30,57 @@ interface HastNode {
   type: string;
   tagName?: string;
   value?: string;
-  properties?: { className?: unknown };
+  properties?: {
+    className?: unknown;
+    id?: unknown;
+    name?: unknown;
+    href?: unknown;
+  };
   children?: HastNode[];
+}
+
+/** rehype-sanitize's DOM-clobbering guard prefix for authored ids and names. */
+const CLOBBER_PREFIX = "user-content-";
+
+function hastElements(node: HastNode, found: HastNode[] = []): HastNode[] {
+  if (node.type === "element") found.push(node);
+  for (const child of node.children ?? []) hastElements(child, found);
+  return found;
+}
+
+/**
+ * Sanitizing prefixes an authored `id="target"` to `user-content-target` but
+ * leaves `[jump](#target)` alone, so the link went nowhere (w4/282). Point a
+ * fragment-only link at the prefixed id when this document has that id and
+ * not the bare one; a missing target, or one already written with the prefix,
+ * keeps its authored href.
+ */
+function rehypeLinkSanitizedFragments() {
+  return (tree: HastNode) => {
+    const elements = hastElements(tree);
+    const targets = new Set(
+      elements.flatMap(({ properties }) =>
+        [properties?.id, properties?.name].filter(
+          (value): value is string => typeof value === "string",
+        ),
+      ),
+    );
+    for (const element of elements) {
+      const href = element.properties?.href;
+      if (element.tagName !== "a" || typeof href !== "string") continue;
+      if (!href.startsWith("#")) continue;
+      let fragment: string;
+      try {
+        fragment = decodeURIComponent(href.slice(1));
+      } catch {
+        continue;
+      }
+      if (targets.has(fragment) || !targets.has(CLOBBER_PREFIX + fragment)) {
+        continue;
+      }
+      element.properties!.href = `#${CLOBBER_PREFIX}${href.slice(1)}`;
+    }
+  };
 }
 
 function hastText(node: HastNode): string {
@@ -255,7 +304,11 @@ export function MarkdownRenderer({
     >
       <ReactMarkdown
         remarkPlugins={[remarkGfm, remarkBreaks]}
-        rehypePlugins={[rehypeRaw, rehypeSanitize]}
+        rehypePlugins={[
+          rehypeRaw,
+          rehypeSanitize,
+          rehypeLinkSanitizedFragments,
+        ]}
         components={renderedComponents}
       >
         {content}
