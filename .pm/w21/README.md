@@ -17,3 +17,6 @@
 - [067](./067.md) — Transactions filter "Custom" seeds a 0–2 day window near month-end instead of last month
 - [068](./068.md) — Notifications' Ledger Errors section shimmers forever when the errors query fails
 - [069](./069.md) — Receipt capture prefills the amount at 2 decimals, so 3-decimal currencies lose precision
+- [070](./070.md) — A JPY ledger shows "円1,500.00": wrong yen sign, prefix position, and forced decimals
+- [071](./071.md) — Auth-error sign-out leaves the previous account's Create Ledger draft, Recent accounts and overrides
+- [072](./072.md) — Account detail paging dedupes an overlap but never refetches, so a new entry stays missing
