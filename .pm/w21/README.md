@@ -159,3 +159,6 @@
 - [295](./295.md) — Ledger list fails to load → guard says "No ledger selected" with Create, no error or Retry
 - [296](./296.md) — Cold-opened transaction detail shows any load failure as "No entry context data", no Retry
 - [297](./297.md) — Commit detail: no not-found state; missing sha shows a blank title over "No diff available"
+- [298](./298.md) — A second app link arriving while the first opens is dropped; user lands on the first ledger
+- [299](./299.md) — "Saving…" toast disappears after 2 s while the save is still running
+- [300](./300.md) — A failed star in Browse ledgers toasts over whatever screen the user moved to
