@@ -7,3 +7,4 @@
 ## Inbox
 
 - [001](./001.md) — `/.well-known/mcp.json` omits the four prompts; `docs/mcp.md` misdescribes its scopes
+- [002](./002.md) — `docs/mcp.md` misses `previewLedgerSetup` and `createLedger` `setup`/`requestId`; says there is no preview
