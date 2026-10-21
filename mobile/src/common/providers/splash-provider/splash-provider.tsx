@@ -6,7 +6,13 @@ import { View, StyleSheet } from "react-native";
 import { loadLocale } from "@/common/vars/locale";
 import { loadLedger, ledgerVar } from "@/common/vars/ledger";
 import { loadTheme } from "@/common/vars/theme";
-import { loadSession, sessionVar } from "@/common/vars/session";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import {
+  forgetSessionFromPreviousInstall,
+  loadSession,
+  sessionVar,
+} from "@/common/vars/session";
+import { claimInstallMarker } from "@/common/install-marker";
 import {
   getServerUrl,
   loadServerUrlOverride,
@@ -53,6 +59,11 @@ const SplashProviderComponent = ({
         // The server determines both endpoint routing and session/cache scope,
         // so it is the one required dependency before all other startup work.
         // Nothing below can mount a query until this provider is ready.
+        // A reinstall finds the previous account's session still in the
+        // Keychain; drop it before anything restores it (w21/154).
+        if ((await claimInstallMarker(AsyncStorage)) === "fresh-install") {
+          await forgetSessionFromPreviousInstall().catch(() => undefined);
+        }
         await loadServerUrlOverride();
         const [, locale, loadedSession, loadedLedger] = await Promise.all([
           Font.loadAsync(Ionicons.font),
