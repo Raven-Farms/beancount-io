@@ -67,6 +67,44 @@ export function pointsToMonthlySeries(
   );
 }
 
+/**
+ * A balance series with every month between its first and last point: a
+ * month with no postings repeats the balance it closed with, dated its last
+ * day. Spaced by index, a dormant month otherwise had no point or scrub stop,
+ * and the curve drew a September "~$1,750" where the close was $2,000
+ * (w21/164). For balances only: a per-period change series is zero in a
+ * dormant month, not the month before.
+ */
+export function forwardFillMonths(
+  series: readonly SeriesPoint[],
+): SeriesPoint[] {
+  const filled: SeriesPoint[] = [];
+  for (const point of series) {
+    const previous = filled[filled.length - 1];
+    if (previous) {
+      let year = Number(previous.date.slice(0, 4));
+      let month = Number(previous.date.slice(5, 7));
+      const target = point.date.slice(0, 7);
+      for (;;) {
+        month += 1;
+        if (month > 12) {
+          month = 1;
+          year += 1;
+        }
+        const key = `${String(year).padStart(4, "0")}-${String(month).padStart(2, "0")}`;
+        if (key >= target) break;
+        const lastDay = new Date(Date.UTC(year, month, 0)).getUTCDate();
+        filled.push({
+          date: `${key}-${String(lastDay).padStart(2, "0")}`,
+          value: previous.value,
+        });
+      }
+    }
+    filled.push(point);
+  }
+  return filled;
+}
+
 /** The balance map of a series' latest point (series are chronological). */
 export function latestBalance(
   points: ReadonlyArray<DateBalancePoint | null | undefined> | null | undefined,

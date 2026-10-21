@@ -2,6 +2,7 @@ import { AccountReportQuery } from "@/generated-graphql/graphql";
 import {
   SeriesPoint,
   latestBalance,
+  forwardFillMonths,
   pointsToMonthlySeries,
 } from "../../../common/series-util";
 import {
@@ -84,10 +85,12 @@ export function selectAccountUnitsSeries(
   commodity: string,
   data?: AccountReportQuery,
 ): SeriesPoint[] {
-  return pointsToMonthlySeries(
-    commodity,
-    data?.getLedgerAccountReport?.linechartData,
-    (balance, currency) => amountIn(balance, currency).number,
+  return forwardFillMonths(
+    pointsToMonthlySeries(
+      commodity,
+      data?.getLedgerAccountReport?.linechartData,
+      (balance, currency) => amountIn(balance, currency).number,
+    ),
   );
 }
 
@@ -119,8 +122,11 @@ export function selectAccountBalanceSeries(
   currency: string,
   data?: AccountReportQuery,
 ): SeriesPoint[] {
-  return pointsToMonthlySeries(
-    currency,
-    data?.getLedgerAccountReport?.linechartData,
+  // The ledger sends a point only where the balance changed (w21/164).
+  return forwardFillMonths(
+    pointsToMonthlySeries(
+      currency,
+      data?.getLedgerAccountReport?.linechartData,
+    ),
   );
 }

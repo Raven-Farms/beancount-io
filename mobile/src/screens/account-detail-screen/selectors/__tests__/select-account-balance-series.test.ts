@@ -187,3 +187,29 @@ describe("selectAccountUnitsScale", () => {
     ).toBe(true);
   });
 });
+
+// w21/164: the ledger sends points only where the balance changed, and the
+// chart spaces them by index, so a dormant month vanished.
+describe("a month with no postings", () => {
+  it("repeats the balance it closed with, dated its last day", () => {
+    const data = createReport([
+      { date: "2026-08-05", balance: { USD: "2000" } },
+      { date: "2026-10-12", balance: { USD: "1500" } },
+    ]);
+    expect(selectAccountBalanceSeries("USD", data)).toEqual([
+      { date: "2026-08-05", value: 2000 },
+      { date: "2026-09-30", value: 2000 },
+      { date: "2026-10-12", value: 1500 },
+    ]);
+  });
+
+  it("fills across a year end, in units too", () => {
+    const data = createReport([
+      { date: "2025-11-20", balance: { ITOT: "3" } },
+      { date: "2026-02-02", balance: { ITOT: "5" } },
+    ]);
+    expect(
+      selectAccountUnitsSeries("ITOT", data).map((point) => point.date),
+    ).toEqual(["2025-11-20", "2025-12-31", "2026-01-31", "2026-02-02"]);
+  });
+});
