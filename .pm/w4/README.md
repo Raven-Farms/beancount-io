@@ -20,7 +20,7 @@
 
 - [ ] **m40** — [Keep picker popups sized and scrollable inside modals](./m40/README.md) (6 tasks) ← dashboard QA, 2026-10-20; minor, promoted 293 with independently reproduced Combobox wheel scope.
 
-- [ ] **m39** — [Recover Journal and dashboard from malformed saved lists](./m39/README.md) (6 tasks) ← dashboard QA, 2026-10-20; minor, preference decoding and cross-tab recovery.
+- [ ] **m39** — [Recover Journal and dashboard from malformed saved lists](./blocked/m39/README.md) (6 tasks) ← dashboard QA, 2026-10-20; minor, preference decoding and cross-tab recovery. — **blocked:** fix shipped in `48d13ad09`; awaiting fresh browser recovery checks
 
 - [x] **m38** — [Accept supported early-year dates across directive writes](./done/m38/README.md) (6 tasks) ← dashboard QA API controls, 2026-10-20; minor, backend-v2 shared date validation and eligible adapter parity.
 
