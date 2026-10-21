@@ -62,6 +62,8 @@
 
 ## Milestones
 
+- [ ] **m44** — [Refuse CSV currency-symbol conflicts before importing](./m44/README.md) (6 tasks) ← dashboard QA, 2026-10-21; major, accepted euro/pound tokens prepare as USD/EUR without conflict guidance; five real-UI requests preblocked, no hosted import.
+
 - [ ] **m43** — [Keep contrast selections visible and readable](./m43/README.md) (11 tasks) ← dashboard QA, 2026-10-21; minor, promoted 273 with filter/tab label backplates and independently reproduced Calendar/Billing/Net Worth/Budget/Accounts/creation-radio selected-state cues.
 
 - [ ] **m42** — [Keep keyboard focus owned during and after modal submissions](./m42/README.md) (5 tasks) ← dashboard QA, 2026-10-20; minor, pending reverse-Tab escapes New Entry and failed submits lose the retry position.
