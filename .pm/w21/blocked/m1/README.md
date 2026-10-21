@@ -95,3 +95,5 @@
 The file-editor warning (item 3) was verified earlier in this section. Every write was restored byte-for-byte (sha256 checked, clean `getLedgerErrors`).
 
 **Unblock (narrowed):** only the MCP arm remains. Run `node .agents/skills/qa-shared/scripts/qa-mcp.mjs --credentials-file <file with QA_MCP_TOKEN>` against `mcp-agent-eval`: the delete and edit source tools refuse both repros, and the same calls with `allowInvalid: true` commit. Then restore and run `/pm done w21/m1/t007`. **Who:** whoever holds the QA MCP token (the user), or the MCP QA loop.
+
+**Independent re-run 2026-10-20 ~19:40 (worker1)** — GraphQL and REST, delete and re-date, refused and then committed with `allowInvalid`: 8/8 pass with the same messages (main.bean:84 / :87). Every write was restored byte-for-byte, with 0 errors at the end. Minting a QA MCP key from the QA session is refused with "Minting API keys is a paid feature. Existing keys keep working." So the MCP arm needs an existing key (`QA_MCP_TOKEN`), a QA account allowed to mint, or the user's decision to accept the backend-v2 parity suite (`source-slice-parity.test.ts`, MCP adapter included) in place of the live call.
