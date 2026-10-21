@@ -24,3 +24,14 @@ export function mergeJournalPage<T extends { entry_hash?: string | null }>(
   }
   return { data, overlapped };
 }
+
+/**
+ * What a journal list is, beyond its paging. Apollo runs a load-more page's
+ * `updateQuery` against the query's variables when the page lands, so a page
+ * requested before a filter change or ledger switch was appended to the new
+ * list, its total included (w21/116); a screen compares this key from the
+ * request with the one current when the page arrives.
+ */
+export function journalListKey(ledgerId: string, query: object): string {
+  return JSON.stringify([ledgerId, query]);
+}

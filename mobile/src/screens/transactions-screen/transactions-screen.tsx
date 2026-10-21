@@ -41,7 +41,7 @@ import {
 } from "./utils/transaction-display-utils";
 import { toPlainSearchFilter } from "./utils/plain-search-filter";
 import { searchForLedger, type ScopedSearch } from "./filters/scoped-search";
-import { mergeJournalPage } from "./utils/merge-journal-page";
+import { journalListKey, mergeJournalPage } from "./utils/merge-journal-page";
 import {
   countActiveFilters,
   selectFiltersForLedger,
@@ -180,8 +180,13 @@ const TransactionList = () => {
     [transactions, locale],
   );
 
+  // The list the query shows now, read when a page lands (w21/116).
+  const listKeyRef = useRef("");
+  listKeyRef.current = journalListKey(ledgerId, { filter, ...filterQuery });
+
   const loadMore = useCallback(async () => {
     if (isLoadingMore || !hasMore || loading || !ledgerId) return;
+    const requestedFor = listKeyRef.current;
 
     // An entry added elsewhere shifted the pages; reload from the top, where
     // it now sits (w21/035).
@@ -199,6 +204,8 @@ const TransactionList = () => {
           },
         },
         updateQuery: (prev, { fetchMoreResult }) => {
+          // Requested for a list no longer shown (w21/116).
+          if (listKeyRef.current !== requestedFor) return prev;
           if (!fetchMoreResult?.getLedgerJournal?.data) return prev;
           const { data, overlapped } = mergeJournalPage(
             prev.getLedgerJournal.data || [],

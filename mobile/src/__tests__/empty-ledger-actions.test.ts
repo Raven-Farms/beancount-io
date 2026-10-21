@@ -87,6 +87,7 @@ let routes: any[];
 let journalRefetches: number;
 let homeRefetches: string[];
 let journalVariables: any;
+let fetchMoreOptions: any;
 const refetchJournal = async () => {
   journalRefetches += 1;
 };
@@ -181,7 +182,9 @@ function load(relative: string): any {
             return {
               ...journal,
               refetch: refetchJournal,
-              fetchMore: async () => {},
+              fetchMore: async (options: any) => {
+                fetchMoreOptions = options;
+              },
               networkStatus: 7,
             };
           },
@@ -525,5 +528,60 @@ describe("Transactions search across a ledger switch", () => {
     const switched = render(TransactionsScreen);
     expect(find(switched, "TransactionsHeader")[0].props.searchQuery).toBe("");
     expect(journalVariables.query.filter).toBe(undefined);
+  });
+});
+
+// w21/116: a load-more page requested before a ledger switch or filter change
+// was appended to the new list when it landed.
+describe("Transactions load-more across a list change", () => {
+  const latePage = {
+    fetchMoreResult: {
+      getLedgerJournal: {
+        data: [{ ...transaction, entry_hash: "entry-2" }],
+        total: 2,
+      },
+    },
+  };
+  const startLoadMore = async () => {
+    journal.data!.getLedgerJournal = { data: [transaction], total: 2 };
+    fetchMoreOptions = undefined;
+    const tree = render(TransactionsScreen);
+    await find(tree, "SectionList")[0].props.onEndReached();
+    expect(fetchMoreOptions === undefined).toBe(false);
+  };
+
+  it("drops a page that lands after the ledger changed", async () => {
+    await startLoadMore();
+    ledgerId = "user/other";
+    permissionLedgerId = ledgerId;
+    render(TransactionsScreen);
+    const prev = { getLedgerJournal: { data: [], total: 0 } };
+    expect(fetchMoreOptions.updateQuery(prev, latePage)).toBe(prev);
+  });
+
+  it("still appends a page for the list it was requested for", async () => {
+    await startLoadMore();
+    const prev = { getLedgerJournal: { data: [transaction], total: 2 } };
+    const next = fetchMoreOptions.updateQuery(prev, latePage);
+    expect(
+      next.getLedgerJournal.data.map((row: any) => row.entry_hash).join(","),
+    ).toBe("entry-1,entry-2");
+  });
+});
+
+describe("merchant detail load-more across a list change", () => {
+  it("drops a page requested for a list no longer shown", () => {
+    const source = fs.readFileSync(
+      path.join(
+        sourceRoot,
+        "screens",
+        "merchant-detail-screen",
+        "merchant-detail-screen.tsx",
+      ),
+      "utf8",
+    );
+    expect(
+      source.includes("if (listKeyRef.current !== requestedFor) return prev;"),
+    ).toBe(true);
   });
 });

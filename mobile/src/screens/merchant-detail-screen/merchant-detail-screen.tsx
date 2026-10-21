@@ -43,7 +43,10 @@ import { cadenceLabelKey } from "@/screens/merchants-screen/selectors/merchant-s
 import { resolveRecurringVerdict } from "@/screens/merchants-screen/selectors/resolve-recurring";
 import { usePayeeRecurrence } from "@/screens/merchants-screen/use-payee-recurrence";
 import { EntryRow } from "@/screens/transactions-screen/entry-row";
-import { mergeJournalPage } from "@/screens/transactions-screen/utils/merge-journal-page";
+import {
+  journalListKey,
+  mergeJournalPage,
+} from "@/screens/transactions-screen/utils/merge-journal-page";
 import { DateSectionHeader } from "@/screens/transactions-screen/date-section-header";
 import {
   DirectiveType,
@@ -353,10 +356,17 @@ function MerchantDetailBody({
     [detection, overrides, ledgerId, payee, enoughHistory],
   );
 
+  // The list the query shows now, read when a page lands (w21/116).
+  const listKeyRef = useRef("");
+  listKeyRef.current = journalListKey(ledgerId ?? "", {
+    filter: journalFilter || undefined,
+  });
+
   const loadMore = useCallback(async () => {
     if (isLoadingMore || !hasMore || journalLoading || !ledgerId) {
       return;
     }
+    const requestedFor = listKeyRef.current;
     // An entry added elsewhere shifted the pages; reload from the top, where
     // it now sits (w21/035).
     let listMoved = false;
@@ -372,6 +382,8 @@ function MerchantDetailBody({
           },
         },
         updateQuery: (prev, { fetchMoreResult }) => {
+          // Requested for a list no longer shown (w21/116).
+          if (listKeyRef.current !== requestedFor) return prev;
           if (!fetchMoreResult?.getLedgerJournal?.data) {
             return prev;
           }
