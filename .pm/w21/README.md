@@ -71,3 +71,8 @@
 - [121](./121.md) — Update Budget keeps Currency editable; a non-operating currency silently becomes the first option
 - [122](./122.md) — Account picker offers "Create" for a closed account; Open Account then says "already open"
 - [123](./123.md) — Profile Save silently does nothing for a first/last name over 100 characters
+- [124](./124.md) — Holdings bought in a non-operating currency get the wrong "priced / at cost (no price)" label
+- [125](./125.md) — Holdings below 0.000001 units read "0 BTC" (exponential balance strings)
+- [126](./126.md) — Fresh install ignores device language (English; Persian gets English in RTL that Settings can't undo)
+- [127](./127.md) — Pending "P" badge is white on amber (~1.9:1 dark, 2.7:1 light)
+- [128](./128.md) — Placeholders/labels use the hairline-border color as text (~1.34:1 light): Create Ledger, posting "Account", "Auto" tag
