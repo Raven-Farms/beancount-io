@@ -60,6 +60,7 @@
 - [893 — Avoid opening remembered CSV rules paths that became FIFOs](./893.md) — minor CLI unattended-hang follow-up to 582 and 792; reproduced 2026-10-20.
 - [894 — Validate device-login expiry before replacing the stored credential](./894.md) — minor CLI false-success finding; reproduced 2026-10-20.
 - [895 — Resolve Debit and Credit decimals independently to preserve withdrawal amounts](./895.md) — major CLI bookkeeping error; reproduced 2026-10-20.
+- [896 — Match multi-fill sales to their booked cost lots without importing them twice](./896.md) — major CLI brokerage deduplication gap after 467 and 603; reproduced 2026-10-20.
 
 The 27 findings from the MCP QA auth sweep against the hosted endpoint (023–054, less the five under [Dropped](#dropped)) were fixed in `backend-cluster/backend-v2` and closed on 2026-10-02 and 2026-10-03; each note under [`done/`](./done/) records what shipped and in which commit. None has been re-observed against the hosted endpoint yet — the fixes reach it with the next backend deploy.
 
