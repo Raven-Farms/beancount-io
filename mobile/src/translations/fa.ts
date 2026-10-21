@@ -208,6 +208,8 @@ export const fa: Translations = {
   // reuses `balance`; each root row states its own valuation basis.
   account: "حساب",
   atCost: "{{amount}} به بهای تمام‌شده",
+  postingCost: "بهای تمام‌شده {{amount}}",
+  postingPrice: "قیمت {{amount}}",
   notInTotal: "در جمع لحاظ نشده: {{amounts}}",
   atMarket: "{{amount}} به ارزش بازار",
   atMarketValue: "به ارزش بازار",

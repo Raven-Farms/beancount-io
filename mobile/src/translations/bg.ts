@@ -211,6 +211,8 @@ export const bg: Translations = {
   // reuses `balance`; each root row states its own valuation basis.
   account: "Сметка",
   atCost: "{{amount}} по себестойност",
+  postingCost: "себестойност {{amount}}",
+  postingPrice: "цена {{amount}}",
   notInTotal: "Не е включено в общата сума: {{amounts}}",
   atMarket: "{{amount}} по пазарна стойност",
   atMarketValue: "По пазарна стойност",

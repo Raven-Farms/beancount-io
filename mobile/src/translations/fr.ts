@@ -213,6 +213,8 @@ export const fr: Translations = {
   // reuses `balance`; each root row states its own valuation basis.
   account: "Compte",
   atCost: "{{amount}} au coût",
+  postingCost: "coût {{amount}}",
+  postingPrice: "prix {{amount}}",
   notInTotal: "Hors total : {{amounts}}",
   atMarket: "{{amount}} à la valeur de marché",
   atMarketValue: "À la valeur de marché",

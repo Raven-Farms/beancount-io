@@ -213,6 +213,8 @@ export const uk: Translations = {
   // reuses `balance`; each root row states its own valuation basis.
   account: "Рахунок",
   atCost: "{{amount}} за собівартістю",
+  postingCost: "собівартість {{amount}}",
+  postingPrice: "ціна {{amount}}",
   notInTotal: "Не входить до підсумку: {{amounts}}",
   atMarket: "{{amount}} за ринковою вартістю",
   atMarketValue: "За ринковою вартістю",

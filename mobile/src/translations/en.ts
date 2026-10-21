@@ -204,6 +204,8 @@ export const en = {
   // reuses `balance`; each root row states its own valuation basis.
   account: "Account",
   atCost: "{{amount}} at cost",
+  postingCost: "cost {{amount}}",
+  postingPrice: "price {{amount}}",
   notInTotal: "Not in total: {{amounts}}",
   atMarket: "{{amount}} at market",
   atMarketValue: "At market value",

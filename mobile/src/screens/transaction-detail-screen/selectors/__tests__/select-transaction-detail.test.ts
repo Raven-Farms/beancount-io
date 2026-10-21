@@ -1,11 +1,13 @@
 import {
   hasEditableSource,
+  postingBasisText,
   selectHeroAmount as selectHeroAmountWithLabel,
   selectPostingRows,
   selectTransactionMenuActions,
   selectTransactionTitle,
 } from "../select-transaction-detail";
 import { DirectiveType } from "../../../transactions-screen/types";
+import { en } from "../../../../translations/en";
 import type {
   JournalPosting,
   JournalTransaction,
@@ -284,5 +286,79 @@ describe("selectTransactionMenuActions", () => {
       "copyLink",
       "deleteTransaction",
     ]);
+  });
+});
+
+// w21/059: Money flow showed a sale as "−4 QAX" with no cost basis or price.
+describe("selectPostingRows: cost and price", () => {
+  const t = (key: "postingCost" | "postingPrice", params: { amount: string }) =>
+    en[key].replace("{{amount}}", params.amount);
+  const sale = txn([
+    {
+      ...posting("Assets:Brokerage", "-4", "QAX"),
+      cost: { number: "1.50", currency: "USD", date: "2026-10-01" },
+      price: { number: "2.00", currency: "USD" },
+    },
+    posting("Assets:Bank:Checking", "8.00"),
+    posting("Income:Salary", "-2.00"),
+  ]);
+
+  it("shows a sale's cost basis and price under its units", () => {
+    const [lot, cash] = selectPostingRows(sale);
+    expect(lot).toEqual({
+      account: "Assets:Brokerage",
+      amount: "-4 QAX",
+      sign: -1,
+      cost: "$1.50",
+      price: "$2.00",
+    });
+    expect(postingBasisText(lot, t)).toBe("cost $1.50 · price $2.00");
+    expect(postingBasisText(cash, t)).toBe(null);
+  });
+
+  it("names a cost alone, and a price alone as the ledger writes it", () => {
+    const [buy] = selectPostingRows(
+      txn([
+        {
+          ...posting("Assets:Brokerage", "10", "QAX"),
+          cost: { number: "1.50", currency: "USD", date: "2026-10-01" },
+        },
+      ]),
+    );
+    expect(postingBasisText(buy, t)).toBe("cost $1.50");
+    const [eur] = selectPostingRows(
+      txn([
+        {
+          ...posting("Assets:Bank:Eur", "50.00", "EUR"),
+          price: { number: "1.10", currency: "USD" },
+        },
+      ]),
+    );
+    expect(eur.amount).toBe("+50.00 EUR");
+    expect(postingBasisText(eur, t)).toBe("@ $1.10");
+  });
+
+  it("leaves an ordinary posting unchanged", () => {
+    const [row] = selectPostingRows(txn([posting("Expenses:Food", "4.50")]));
+    expect(row).toEqual({
+      account: "Expenses:Food",
+      amount: "+$4.50",
+      sign: 1,
+    });
+    expect(postingBasisText(row, t)).toBe(null);
+  });
+
+  it("is read out with the row", () => {
+    const source = require("fs").readFileSync(
+      require("path").join(
+        __dirname,
+        "..",
+        "..",
+        "components",
+        "posting-row.tsx",
+      ),
+      "utf8",
+    ) as string;
+    expect(source.includes('${basis ? `, ${basis}` : ""}')).toBe(true);
   });
 });

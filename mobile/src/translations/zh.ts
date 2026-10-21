@@ -190,6 +190,8 @@ export const zh: Translations = {
   // reuses `balance`; each root row states its own valuation basis.
   account: "账户",
   atCost: "成本 {{amount}}",
+  postingCost: "成本 {{amount}}",
+  postingPrice: "价格 {{amount}}",
   notInTotal: "未计入合计：{{amounts}}",
   atMarket: "市值 {{amount}}",
   atMarketValue: "按市值计",

@@ -64,6 +64,10 @@ export type PostingDisplayRow = {
   account: string;
   amount: string;
   sign: -1 | 0 | 1;
+  /** Per-unit lot cost, unsigned, when the posting holds one (`{1.50 USD}`). */
+  cost?: string;
+  /** Per-unit price, unsigned, when the posting carries one (`@ 2.00 USD`). */
+  price?: string;
 };
 
 /**
@@ -106,6 +110,13 @@ function formatPostingUnits(
   return { amount: `+${magnitude}`, sign: 1 };
 }
 
+/** A per-unit cost or price at its recorded scale, without a sign. */
+const formatPerUnit = (amount: { number: string; currency: string }): string =>
+  formatPostingUnits(amount.number, amount.currency).amount.replace(
+    /^[+-]/,
+    "",
+  );
+
 export function selectPostingRows(
   txn: JournalTransaction,
 ): PostingDisplayRow[] {
@@ -118,8 +129,35 @@ export function selectPostingRows(
       account: p.account,
       amount,
       sign,
+      // A trade's cost basis and sale price explain its gain; the row used
+      // to show only the units (w21/059).
+      ...(p.cost?.number && p.cost.currency
+        ? { cost: formatPerUnit(p.cost) }
+        : {}),
+      ...(p.price?.number && p.price.currency
+        ? { price: formatPerUnit(p.price) }
+        : {}),
     };
   });
+}
+
+/**
+ * The line under a posting's units naming its cost and price, or null for an
+ * ordinary posting. A price alone reads as the ledger writes it, `@ 1.10 USD`.
+ */
+export function postingBasisText(
+  row: Pick<PostingDisplayRow, "cost" | "price">,
+  t: (
+    key: "postingCost" | "postingPrice",
+    params: { amount: string },
+  ) => string,
+): string | null {
+  if (row.cost && row.price) {
+    return `${t("postingCost", { amount: row.cost })} · ${t("postingPrice", { amount: row.price })}`;
+  }
+  if (row.cost) return t("postingCost", { amount: row.cost });
+  if (row.price) return `@ ${row.price}`;
+  return null;
 }
 
 export function selectTransactionTitle(txn: JournalTransaction): string {

@@ -214,6 +214,8 @@ export const sk: Translations = {
   // reuses `balance`; each root row states its own valuation basis.
   account: "Účet",
   atCost: "{{amount}} v obstarávacej cene",
+  postingCost: "obstarávacia cena {{amount}}",
+  postingPrice: "cena {{amount}}",
   notInTotal: "Nie je v súčte: {{amounts}}",
   atMarket: "{{amount}} v trhovej hodnote",
   atMarketValue: "V trhovej hodnote",

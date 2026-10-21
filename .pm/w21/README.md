@@ -12,7 +12,6 @@
 
 ## Inbox
 
-- [059](./059.md) — Transaction detail's Money flow drops lot cost and price (mobile counterpart of w4/220)
 - [060](./060.md) — Account search misses accounts containing "İ" (Turkish dotted capital I)
 - [061](./061.md) — Create Ledger suggests USD for Bulgaria (euro since 2026), Ukraine, Romania, Czechia…: hand-rolled list diverges from the setup catalog
 - [062](./062.md) — The file editor converts CRLF files to LF on save: one added line rewrites every line ending

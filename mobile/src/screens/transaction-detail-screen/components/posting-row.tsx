@@ -16,7 +16,11 @@ import {
 } from "@/common/theme";
 import { AmountText } from "@/components/amount-text";
 import { useThemeStyle } from "@/common/hooks/use-theme-style";
-import { PostingDisplayRow } from "../selectors/select-transaction-detail";
+import {
+  PostingDisplayRow,
+  postingBasisText,
+} from "../selectors/select-transaction-detail";
+import { useTranslations } from "@/common/hooks/use-translations";
 import {
   directionalIcon,
   LEADING_TEXT_ALIGN,
@@ -72,6 +76,15 @@ const getStyles = (theme: ColorTheme) =>
       flexShrink: 0,
       color: theme.text01,
     },
+    amountColumn: {
+      flexShrink: 0,
+      alignItems: "flex-end",
+    },
+    basis: {
+      fontSize: fontSizes.xs,
+      color: theme.black80,
+      marginTop: 2,
+    },
     stackedAmountLine: {
       flexDirection: "row",
       alignItems: "center",
@@ -97,11 +110,16 @@ export function PostingRow({
   const theme = useTheme().colorTheme;
   const { fontScale } = useWindowDimensions();
   const stacked = prefersStackedLayout(fontScale);
+  const { t } = useTranslations();
+  const basis = postingBasisText(posting, t);
 
   const amount = (
-    <AmountText mono="medium" style={styles.amount}>
-      {posting.amount}
-    </AmountText>
+    <View style={styles.amountColumn}>
+      <AmountText mono="medium" style={styles.amount}>
+        {posting.amount}
+      </AmountText>
+      {basis ? <Text style={styles.basis}>{basis}</Text> : null}
+    </View>
   );
   const chevron = (
     <Ionicons
@@ -121,7 +139,7 @@ export function PostingRow({
       onPress={onPress}
       activeOpacity={0.7}
       accessibilityRole="button"
-      accessibilityLabel={`${directionLabel ? `${directionLabel}: ` : ""}${posting.account}, ${posting.amount}`}
+      accessibilityLabel={`${directionLabel ? `${directionLabel}: ` : ""}${posting.account}, ${posting.amount}${basis ? `, ${basis}` : ""}`}
     >
       <View
         style={[styles.accountColumn, stacked && styles.accountColumnStacked]}
