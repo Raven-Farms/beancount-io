@@ -35,3 +35,8 @@
 - [085](./085.md) — Open Account offers only operating currencies; its default sticks at "No currency" after a failed first load
 - [086](./086.md) — Cancelling the RTL restart prompt leaves layout and language mismatched, and the prompt can't be brought back
 - [087](./087.md) — A failing balance assertion looks like a passing one: the ledger service always sends `diff_amount: null`
+- [088](./088.md) — Deleting a folder's last file will strand Files on "Failed to load" once w23/014's NOT_FOUND listing deploys
+- [089](./089.md) — File editor error banner shows errors from same-named files in other folders
+- [090](./090.md) — An app link to another ledger silently discards unsaved file-editor changes
+- [091](./091.md) — File editor error rows say "line N" in English in every language
+- [092](./092.md) — Entry Context balances: blank for zero, multi-currency run together as "100.00 USD,50.00 EUR"
