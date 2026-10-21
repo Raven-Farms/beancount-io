@@ -73,6 +73,8 @@ import {
 } from "./postings-utils";
 import { isTransactionDraftDirty, TransactionDraft } from "./draft-dirty";
 import { inlineSaveError } from "./inline-save-error";
+import { seedPostingsFromPayee } from "./payee-seed";
+import { useTwoPostingSuggestions } from "@/screens/add-transaction-screen/hooks/use-two-posting-suggestions";
 
 const SIGN_TOGGLE_SIZE = 28;
 const POSTING_ROW_PADDING_V = 14;
@@ -462,6 +464,24 @@ const MultiPostingsTransactionScreenComponent = () => {
   const navigation = useNavigation();
   const [isDatePickerVisible, setDatePickerVisible] = useState(false);
 
+  // A picked payee brings its usual accounts while the postings are still as
+  // the form opened (w21/023). A receipt's parsed accounts are kept.
+  const [seedPayee, setSeedPayee] = useState("");
+  const payeeHistory = useTwoPostingSuggestions({
+    ledgerId: ledgerId ?? "",
+    payee: seedPayee,
+  });
+  useEffect(() => {
+    if (!seedPayee || payeeHistory.loading) return;
+    const seededPostings = seedPostingsFromPayee(
+      postings,
+      initialDraft.postings,
+      payeeHistory,
+    );
+    if (seededPostings) setPostings(seededPostings);
+    setSeedPayee("");
+  }, [seedPayee, payeeHistory, postings, initialDraft.postings]);
+
   useEffect(() => {
     if (!seeded && !metaLoading && assets.length > 0) {
       const secondAccount =
@@ -639,7 +659,12 @@ const MultiPostingsTransactionScreenComponent = () => {
             content={payee}
             showDivider
             onPress={() => {
-              SelectedPayee.setFn((v: string) => setPayee(v));
+              SelectedPayee.setFn((v: string) => {
+                setPayee(v);
+                if (!prefillSourceAccount && !prefillTargetAccount) {
+                  setSeedPayee(v);
+                }
+              });
               router.navigate({
                 pathname: "/(app)/payee-input",
                 params: { payee },
