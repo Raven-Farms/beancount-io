@@ -4,6 +4,10 @@
 
 ## Milestones
 
+## Dropped
+
+- ~~**046**~~ — social follower/following/starred lists answer an unknown user with an empty success — dropped 2026-10-21: documented behavior (`backend-cluster/backend-v2/docs/mcp.md`, social reads: "returns an empty page on upstream failure, so an empty result does not establish that the user has no followers or stars")
+
 ## Inbox
 
 - [052](./052.md) — `updateLedgerFiles` small gaps: identical old/new makes an empty commit ("Committed 1 change(s)"); empty `old_string` "matches 47 times"; unknown key → "files.0: Invalid input"
@@ -12,7 +16,6 @@
 - [049](./049.md) — guided setup writes account names and the title raw: a `blank@1` account name injects directives; a title ending in `\` leaves `main.bean` unparseable
 - [048](./048.md) — guided setup with a known opening builds a broken ledger: `Equity:OpeningBalances` opened twice in 6 of 8 presets; no validation despite ADR021
 - [047](./047.md) — every ledger-service 404 reads "Ledger resource not found": stale entry hashes and unknown branches tell the agent its ledger is missing
-- [046](./046.md) — social follower/following/starred lists answer an unknown user (or a host outage) with an empty success; the profile read says `NOT_FOUND`
 - [045](./045.md) — activity feed accepts negative/fractional `offset`/`limit`: `limit=-1` returns 97 of 98 items, `offset=-3` the oldest two (REST, GraphQL, MCP)
 - [044](./044.md) — `plaintext-journal` has no limit/paging: 276 KB in one read on `open_ledger/example`, unbounded for premium (010 class)
 - [043](./043.md) — structured amount `.5` passes the decimal check but is written raw: opaque "parse errors in main.bean"
