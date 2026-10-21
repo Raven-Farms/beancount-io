@@ -676,3 +676,37 @@ describe("reseeding a new entry's accounts", () => {
     ).toBe(true);
   });
 });
+
+// w21/159: a typed leg seeded as the text "0.00" was typed onto after an iOS
+// tap, so "12.50" became "0.0012.50".
+describe("a new posting's amount field", () => {
+  it("starts empty so the placeholder shows and typing starts the value", () => {
+    expect(makePosting().amountInput).toBe("");
+    expect(makePosting({ isAuto: false }).amountInput).toBe("");
+    const [typed, auto] = createInitialPostings("Assets:Cash", "Expenses:Food");
+    expect(typed.amountInput).toBe("");
+    expect(typed.amount).toBe(null);
+    expect(auto.amountInput).toBe("0.00");
+    // The zero auto leg a new posting turns into a typed one starts empty
+    // too; a computed amount is kept.
+    expect(addPosting([typed, auto])[1].amountInput).toBe("");
+    expect(toggleLastPostingAuto([typed, auto])[1].amountInput).toBe("");
+    const owed = updatePostingAmount([typed, auto], 0, "12.50");
+    expect(addPosting(owed)[1].amountInput).toBe("-12.50");
+  });
+
+  it("balances the auto leg from the first digits typed", () => {
+    const postings = updatePostingAmount(
+      createInitialPostings("Assets:Cash", "Expenses:Food"),
+      0,
+      "12.50",
+    );
+    expect(postings[0].amountInput).toBe("12.50");
+    expect(postings[1].amountInput).toBe("-12.50");
+  });
+
+  it("still reads an untouched leg as a zero amount, not an invalid one", () => {
+    const [typed] = createInitialPostings("Assets:Cash", "Expenses:Food");
+    expect(hasUnparsedAmount(typed)).toBe(false);
+  });
+});

@@ -150,7 +150,12 @@ function applyAutoFill(postings: Posting[]): Posting[] {
 }
 
 export function makePosting(partial?: Partial<Posting>): Posting {
-  const amountInput = partial?.amountInput ?? "0.00";
+  // An amount the user types starts empty, so the "0.00" placeholder shows
+  // and the first digit starts the value. Seeded as text, "0.00" was typed
+  // onto: an iOS tap leaves the caret after it with nothing selected, and
+  // "12.50" became "0.0012.50" (w21/159). The auto leg's "0.00" is computed
+  // display, never typed into.
+  const amountInput = partial?.amountInput ?? (partial?.isAuto ? "0.00" : "");
   const amount =
     partial && "amount" in partial
       ? (partial.amount ?? null)
@@ -301,17 +306,28 @@ export function updatePostingAmount(
   return applyAutoFill(updated);
 }
 
+/**
+ * An auto leg the user now types into. A computed amount is kept as the
+ * starting value; a zero one starts empty, like a new leg, rather than as a
+ * "0.00" the next digits would be typed onto (w21/159).
+ */
+function asTyped(posting: Posting): Posting {
+  return isZeroExact(posting.amount)
+    ? { ...posting, isAuto: false, amountInput: "", amount: null }
+    : { ...posting, isAuto: false };
+}
+
 export function toggleLastPostingAuto(postings: Posting[]): Posting[] {
   const lastIdx = postings.length - 1;
   const updated = postings.map((p, i) =>
-    i === lastIdx ? { ...p, isAuto: !p.isAuto } : p,
+    i !== lastIdx ? p : p.isAuto ? asTyped(p) : { ...p, isAuto: true },
   );
   return applyAutoFill(updated);
 }
 
 export function addPosting(postings: Posting[]): Posting[] {
   const withNoAuto = postings.map((p, i) =>
-    i === postings.length - 1 ? { ...p, isAuto: false } : p,
+    i === postings.length - 1 ? asTyped(p) : p,
   );
   return applyAutoFill([...withNoAuto, makePosting({ isAuto: true })]);
 }
