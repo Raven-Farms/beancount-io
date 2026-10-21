@@ -70,6 +70,7 @@ import {
   postingAmountAccessibility,
   removePosting,
   remainder,
+  shouldReseed,
   toggleLastPostingAuto,
   updatePostingAccount,
   updatePostingAmount,
@@ -536,7 +537,7 @@ const MultiPostingsTransactionScreenComponent = () => {
   useEffect(() => {
     // Waits for the close dates too, so a cold start cannot seed a closed
     // account (w21/103).
-    if (!seeded && !metaLoading && closeDatesSettled && assets.length > 0) {
+    if (!metaLoading && closeDatesSettled && assets.length > 0) {
       const isOpen = (account: string) => isOpenOn(account, date, closeDates);
       const { source, target } = defaultPostingAccounts(
         assets,
@@ -556,10 +557,21 @@ const MultiPostingsTransactionScreenComponent = () => {
             prefillAmount,
           )
         : createInitialPostings(source, target);
+      // Seeded once, then again only while untouched: the first seed can come
+      // from last session's persisted ranking (w21/110).
+      if (
+        seeded &&
+        !shouldReseed(postings, initialDraft.postings, seededPostings)
+      ) {
+        return;
+      }
       setPostings(seededPostings);
       setInitialDraft((draft) => ({ ...draft, postings: seededPostings }));
       setSeeded(true);
     }
+    // `postings` and the seed are read only to compare; a reseed is driven by
+    // the ledger's ranking, the close dates and the date.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     seeded,
     metaLoading,

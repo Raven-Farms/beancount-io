@@ -1,6 +1,7 @@
 import {
   addPosting,
   buildEntryInput,
+  createInitialPostings,
   createPrefilledPostings,
   defaultPostingAccounts,
   formatExactAmount,
@@ -13,6 +14,7 @@ import {
   postingAmountAccessibility,
   removePosting,
   remainder,
+  shouldReseed,
   toggleLastPostingAuto,
   updatePostingAccount,
   updatePostingAmount,
@@ -624,5 +626,53 @@ describe("the accounts a new entry opens with", () => {
     expect(source.includes("closeDatesSettled && assets.length > 0")).toBe(
       true,
     );
+  });
+});
+
+// w21/110: the first seed came from last session's persisted ranking and
+// named an account since removed; the network's ranking never replaced it.
+describe("reseeding a new entry's accounts", () => {
+  const stale = createInitialPostings(
+    "Assets:Bank:Qa20261020Old",
+    "Expenses:Transport",
+  );
+  const fresh = createInitialPostings(
+    "Assets:Bank:Checking",
+    "Expenses:Food:Groceries",
+  );
+
+  it("replaces an untouched stale seed with the fresh one", () => {
+    expect(shouldReseed(stale, stale, fresh)).toBe(true);
+  });
+
+  it("never overwrites a posting the user changed", () => {
+    const edited = updatePostingAccount(stale, 0, "Assets:Cash");
+    expect(shouldReseed(edited, stale, fresh)).toBe(false);
+    const typed = updatePostingAmount(stale, 0, "12");
+    expect(shouldReseed(typed, stale, fresh)).toBe(false);
+  });
+
+  it("does nothing when the seed is unchanged", () => {
+    const again = createInitialPostings(
+      "Assets:Bank:Qa20261020Old",
+      "Expenses:Transport",
+    );
+    expect(shouldReseed(stale, stale, again)).toBe(false);
+  });
+
+  it("is what the form reseeds by", () => {
+    const source = require("fs").readFileSync(
+      require("path").join(
+        __dirname,
+        "..",
+        "multi-postings-transaction-screen.tsx",
+      ),
+      "utf8",
+    ) as string;
+    expect(
+      source.includes(
+        "!shouldReseed(postings, initialDraft.postings, seededPostings)",
+      ),
+    ).toBe(true);
   });
 });

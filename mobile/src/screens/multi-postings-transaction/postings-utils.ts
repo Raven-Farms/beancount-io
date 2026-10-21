@@ -414,3 +414,38 @@ export function defaultPostingAccounts(
     (assets.length > 1 ? assets[1] : source);
   return { source, target };
 }
+
+/** What a posting says, as the draft keeps it. */
+type PostingShape = Pick<Posting, "account" | "amountInput">;
+
+/**
+ * Whether two posting lists say the same thing: their accounts and typed
+ * amounts, ignoring ids.
+ */
+function samePostings(
+  a: readonly PostingShape[],
+  b: readonly PostingShape[],
+): boolean {
+  return (
+    a.length === b.length &&
+    a.every(
+      (posting, i) =>
+        posting.account === b[i].account &&
+        posting.amountInput === b[i].amountInput,
+    )
+  );
+}
+
+/**
+ * Whether a fresh seed should replace the form's postings. The first seed
+ * came from last session's persisted ranking, which can name an account since
+ * removed; the network's arrives later (w21/110). Replace only postings the
+ * user has not touched, and only when the seed changed.
+ */
+export function shouldReseed(
+  current: readonly PostingShape[],
+  lastSeed: readonly PostingShape[],
+  nextSeed: readonly PostingShape[],
+): boolean {
+  return samePostings(current, lastSeed) && !samePostings(nextSeed, lastSeed);
+}
