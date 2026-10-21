@@ -690,6 +690,7 @@ export const ca: Translations = {
   profileUsernameHint:
     "Les adreces web dels teus llibres comencen amb el teu nom d'usuari, així que canviar-lo també les canvia.",
   profileUsernameRequired: "Introdueix un nom d'usuari",
+  profileNameTooLong: "Com a màxim 100 caràcters.",
   profileUsernameRule:
     "Fes servir d'1 a 20 caràcters: minúscules a–z, xifres 0–9 o guions baixos.",
   profileUsernameTaken: "Aquest nom d'usuari ja està agafat",

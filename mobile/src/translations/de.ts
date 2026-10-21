@@ -688,6 +688,7 @@ export const de: Translations = {
   profileUsernameHint:
     "Die Webadressen Ihrer Hauptbücher beginnen mit Ihrem Benutzernamen – wenn Sie ihn ändern, ändern sie sich mit.",
   profileUsernameRequired: "Geben Sie einen Benutzernamen ein",
+  profileNameTooLong: "Höchstens 100 Zeichen.",
   profileUsernameRule:
     "Verwenden Sie 1–20 Zeichen: Kleinbuchstaben a–z, Ziffern 0–9 oder Unterstriche.",
   profileUsernameTaken: "Dieser Benutzername ist bereits vergeben",

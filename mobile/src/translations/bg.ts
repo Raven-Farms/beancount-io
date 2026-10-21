@@ -672,6 +672,7 @@ export const bg: Translations = {
   profileUsernameHint:
     "Уеб адресите на книгите ви започват с потребителското ви име, затова промяната му променя и тях.",
   profileUsernameRequired: "Въведете потребителско име",
+  profileNameTooLong: "Най-много 100 знака.",
   profileUsernameRule:
     "Използвайте 1–20 знака: малки букви a–z, цифри 0–9 или долни черти.",
   profileUsernameTaken: "Това потребителско име вече е заето",

@@ -689,6 +689,7 @@ export const uk: Translations = {
   profileUsernameHint:
     "Вебадреси ваших книг починаються з імені користувача, тож його зміна змінить і їх.",
   profileUsernameRequired: "Введіть ім’я користувача",
+  profileNameTooLong: "Не більше 100 символів.",
   profileUsernameRule:
     "Використовуйте від 1 до 20 символів: малі літери a–z, цифри 0–9 або підкреслення.",
   profileUsernameTaken: "Це ім’я користувача вже зайняте",

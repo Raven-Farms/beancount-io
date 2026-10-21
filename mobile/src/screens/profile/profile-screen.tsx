@@ -47,6 +47,9 @@ import {
   type ProfileValues,
 } from "./profile-changes";
 
+/** The longest first or last name the form accepts. */
+const NAME_MAX = 100;
+
 const AVATAR_SIZE = 96;
 const skeletonWidths = [120, 96, 140, 180];
 
@@ -229,8 +232,10 @@ export function ProfileScreen(): JSX.Element {
   const schema = useMemo(
     () =>
       z.object({
-        firstName: z.string().max(100),
-        lastName: z.string().max(100),
+        // Rendered under its field: a hidden error blocked Save with no word
+        // (w21/123).
+        firstName: z.string().max(NAME_MAX, t("profileNameTooLong")),
+        lastName: z.string().max(NAME_MAX, t("profileNameTooLong")),
         username: z
           .string()
           .trim()
@@ -293,7 +298,11 @@ export function ProfileScreen(): JSX.Element {
   const textField = (
     name: keyof ProfileValues,
     label: string,
-    options: { autoCapitalize: "words" | "none"; testID: string },
+    options: {
+      autoCapitalize: "words" | "none";
+      testID: string;
+      maxLength?: number;
+    },
   ) => (
     <View style={styles.card}>
       <Text style={styles.label}>{label}</Text>
@@ -314,11 +323,19 @@ export function ProfileScreen(): JSX.Element {
             style={styles.input}
             accessibilityLabel={label}
             returnKeyType="done"
+            maxLength={options.maxLength}
           />
         )}
       />
     </View>
   );
+
+  const nameError = (message: string | undefined) =>
+    message ? (
+      <Text style={[styles.hint, styles.hintError]} accessibilityRole="alert">
+        {message}
+      </Text>
+    ) : null;
 
   let body: JSX.Element;
   if (user) {
@@ -354,11 +371,15 @@ export function ProfileScreen(): JSX.Element {
         {textField("firstName", t("profileFirstName"), {
           autoCapitalize: "words",
           testID: "profile-first-name",
+          maxLength: NAME_MAX,
         })}
+        {nameError(errors.firstName?.message)}
         {textField("lastName", t("profileLastName"), {
           autoCapitalize: "words",
           testID: "profile-last-name",
+          maxLength: NAME_MAX,
         })}
+        {nameError(errors.lastName?.message)}
         {textField("username", t("profileUsername"), {
           autoCapitalize: "none",
           testID: "profile-username",

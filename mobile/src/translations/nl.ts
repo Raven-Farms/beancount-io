@@ -676,6 +676,7 @@ export const nl: Translations = {
   profileUsernameHint:
     "De webadressen van je grootboeken beginnen met je gebruikersnaam, dus als je die wijzigt, veranderen ze mee.",
   profileUsernameRequired: "Voer een gebruikersnaam in",
+  profileNameTooLong: "Maximaal 100 tekens.",
   profileUsernameRule:
     "Gebruik 1–20 tekens: kleine letters a–z, cijfers 0–9 of underscores.",
   profileUsernameTaken: "Die gebruikersnaam is al in gebruik",

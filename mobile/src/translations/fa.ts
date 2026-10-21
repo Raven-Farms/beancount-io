@@ -663,6 +663,7 @@ export const fa: Translations = {
   profileUsernameHint:
     "نشانی وب دفترهای کل شما با نام کاربری‌تان شروع می‌شود، پس تغییر آن نشانی‌ها را هم تغییر می‌دهد.",
   profileUsernameRequired: "یک نام کاربری وارد کنید",
+  profileNameTooLong: "حداکثر ۱۰۰ نویسه.",
   profileUsernameRule:
     "از ۱ تا ۲۰ نویسه استفاده کنید: حروف کوچک a–z، ارقام 0–9 یا زیرخط.",
   profileUsernameTaken: "این نام کاربری قبلاً گرفته شده است",
