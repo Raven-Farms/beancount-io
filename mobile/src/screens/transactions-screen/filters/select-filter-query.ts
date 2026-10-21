@@ -31,7 +31,7 @@ export type FilterQuery = {
   account?: string;
 };
 
-const monthsBack = (today: Date, months: number): Date => {
+export const monthsBack = (today: Date, months: number): Date => {
   const date = new Date(today.getTime());
   const day = date.getDate();
   date.setMonth(date.getMonth() - months);

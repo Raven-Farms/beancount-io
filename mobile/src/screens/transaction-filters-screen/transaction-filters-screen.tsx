@@ -36,6 +36,7 @@ import {
 } from "@/screens/transactions-screen/filters/types";
 import {
   isDateRangeValid,
+  monthsBack,
   selectFiltersForLedger,
 } from "@/screens/transactions-screen/filters/select-filter-query";
 import { transactionFiltersVar } from "@/screens/transactions-screen/filters/var";
@@ -223,14 +224,13 @@ const TransactionFiltersSheet = ({
         return { ...prev, range };
       }
       // Seed a usable window so a half-filled custom range never silently
-      // filters nothing: last month through today.
+      // filters nothing: last month through today, clamped like the 1M pill
+      // so 31 March seeds 28 February rather than 3 March.
       const today = new Date();
-      const monthAgo = new Date(today.getTime());
-      monthAgo.setMonth(monthAgo.getMonth() - 1);
       return {
         ...prev,
         range,
-        startDate: prev.startDate ?? getFormatDate(monthAgo),
+        startDate: prev.startDate ?? getFormatDate(monthsBack(today, 1)),
         endDate: prev.endDate ?? getFormatDate(today),
       };
     });

@@ -1,9 +1,11 @@
 import fs from "fs";
 import path from "path";
+import { getFormatDate } from "../../../../common/format-util";
 import {
   countActiveFilters,
   formatTimeFilter,
   isDateRangeValid,
+  monthsBack,
   resolveDateRange,
   selectFiltersForLedger,
   toFilterQuery,
@@ -348,5 +350,39 @@ describe("transactionFiltersVar readers", () => {
       .map((file) => path.relative(srcDir, file));
 
     expect(offenders.join(", ")).toBe("");
+  });
+});
+
+// w21/067: the Custom seed used an unclamped setMonth, so on 31 March "last
+// month through today" began on 3 March.
+describe("the Custom range seed", () => {
+  it("clamps last month to its final day", () => {
+    const seed = (y: number, m: number, d: number) =>
+      getFormatDate(monthsBack(new Date(y, m, d, 12), 1));
+    expect(seed(2026, 2, 31)).toBe("2026-02-28");
+    expect(seed(2026, 2, 29)).toBe("2026-02-28");
+    expect(seed(2026, 4, 31)).toBe("2026-04-30");
+    expect(seed(2026, 11, 31)).toBe("2026-11-30");
+    expect(seed(2026, 9, 21)).toBe("2026-09-21");
+  });
+
+  it("is what the filter screen seeds Custom with", () => {
+    const source = fs.readFileSync(
+      path.join(
+        __dirname,
+        "..",
+        "..",
+        "..",
+        "transaction-filters-screen",
+        "transaction-filters-screen.tsx",
+      ),
+      "utf8",
+    );
+    expect(
+      source.includes(
+        "startDate: prev.startDate ?? getFormatDate(monthsBack(today, 1)),",
+      ),
+    ).toBe(true);
+    expect(source.includes("setMonth(")).toBe(false);
   });
 });
