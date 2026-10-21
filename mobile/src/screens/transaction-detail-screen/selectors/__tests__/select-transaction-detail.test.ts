@@ -1,3 +1,5 @@
+import fs from "fs";
+import path from "path";
 import {
   hasEditableSource,
   postingBasisText,
@@ -407,5 +409,31 @@ describe("selectPostingRows: cost and price", () => {
       "utf8",
     ) as string;
     expect(source.includes('${basis ? `, ${basis}` : ""}')).toBe(true);
+  });
+});
+
+// w21/161: a `!` on one posting was dropped, so the transaction read as
+// fully cleared everywhere.
+describe("a posting flagged pending", () => {
+  it("is marked on its own row only", () => {
+    const [transport, cash] = selectPostingRows(
+      txn([
+        { ...posting("Expenses:Transport", "8.00"), flag: "!" },
+        posting("Assets:Cash", "-8.00"),
+      ]),
+    );
+    expect(transport.pending).toBe(true);
+    expect("pending" in cash).toBe(false);
+  });
+
+  it("shows the P badge and reads pending on that row", () => {
+    const row = fs.readFileSync(
+      path.join(__dirname, "..", "..", "components", "posting-row.tsx"),
+      "utf8",
+    );
+    expect(row.includes('{posting.pending ? `, ${t("pending")}` : ""}')).toBe(
+      true,
+    );
+    expect(row.includes("{posting.pending ? (")).toBe(true);
   });
 });

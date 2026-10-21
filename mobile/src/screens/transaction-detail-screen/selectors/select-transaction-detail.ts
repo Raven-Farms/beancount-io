@@ -70,6 +70,11 @@ export type PostingDisplayRow = {
   cost?: string;
   /** Per-unit price, unsigned, when the posting carries one (`@ 2.00 USD`). */
   price?: string;
+  /**
+   * The posting's own `!` flag: one leg left unconfirmed, as when
+   * reconciling. Dropped, the transaction read as fully cleared (w21/161).
+   */
+  pending?: true;
 };
 
 /**
@@ -170,6 +175,7 @@ export function selectPostingRows(
       ...(p.price?.number && p.price.currency
         ? { price: formatPerUnit(p.price) }
         : {}),
+      ...(p.flag === "!" ? { pending: true as const } : {}),
     };
   });
 }

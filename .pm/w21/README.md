@@ -14,7 +14,6 @@
 
 - [064](./blocked/064.md) — A token refresh whose response is lost signs the user out on the next refresh (rotated token replayed → grant revoked) — **blocked:** needs an owner decision (ADR) on a refresh-token reuse grace window
 - [065](./blocked/065.md) — One early-year entry (e.g. 0050) makes the balance sheet 23,718 monthly points (3 MB) and the app stalls — **blocked:** needs an approach decision (per-pill fetch vs server downsample) and a simulator profile of the stall
-- [161](./161.md) — A posting-level `!` flag is dropped everywhere (row, detail, VoiceOver)
 - [162](./162.md) — Transaction and posting metadata never appear on transaction detail
 - [163](./163.md) — Account detail shows "−$0.00"/"+$0.00" on a day that nets to zero (float residue)
 - [164](./164.md) — Account balance chart skips postingless months and spaces points by index, inventing balances

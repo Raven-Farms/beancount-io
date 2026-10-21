@@ -70,6 +70,24 @@ const getStyles = (theme: ColorTheme) =>
       fontFamily: fonts.mono,
       color: theme.text01,
       textAlign: LEADING_TEXT_ALIGN,
+      flexShrink: 1,
+    },
+    accountLine: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 6,
+    },
+    // The list row's pending "P", on the leg the `!` is on (w21/161).
+    badge: {
+      paddingHorizontal: 5,
+      paddingVertical: 1,
+      borderRadius: 4,
+      backgroundColor: theme.warning,
+    },
+    badgeText: {
+      fontSize: fontSizes.xs,
+      fontWeight: fontWeights.medium,
+      color: theme.onWarning,
     },
     amount: {
       fontSize: fontSizes.md,
@@ -143,7 +161,7 @@ export function PostingRow({
       onPress={onPress}
       activeOpacity={0.7}
       accessibilityRole="button"
-      accessibilityLabel={`${directionLabel ? `${directionLabel}: ` : ""}${posting.account}, ${posting.amount}${basis ? `, ${basis}` : ""}`}
+      accessibilityLabel={`${directionLabel ? `${directionLabel}: ` : ""}${posting.account}, ${posting.amount}${basis ? `, ${basis}` : ""}${posting.pending ? `, ${t("pending")}` : ""}`}
     >
       <View
         style={[styles.accountColumn, stacked && styles.accountColumnStacked]}
@@ -155,9 +173,16 @@ export function PostingRow({
             {directionLabel}
           </Text>
         ) : null}
-        <Text style={styles.account} numberOfLines={1} ellipsizeMode="middle">
-          {posting.account}
-        </Text>
+        <View style={styles.accountLine}>
+          <Text style={styles.account} numberOfLines={1} ellipsizeMode="middle">
+            {posting.account}
+          </Text>
+          {posting.pending ? (
+            <View style={styles.badge}>
+              <Text style={styles.badgeText}>P</Text>
+            </View>
+          ) : null}
+        </View>
       </View>
       {stacked ? (
         <View style={styles.stackedAmountLine}>
