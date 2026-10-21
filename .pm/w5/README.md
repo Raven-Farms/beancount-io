@@ -103,6 +103,7 @@
 - [936 — Keep four-digit years in relative periods and ISO-week parsing](./936.md) — minor CLI early-date edge case; valid historical periods lose year padding between parser stages and refuse while equivalent calendar dates work, reproduced 2026-10-21.
 - [937 — Do not treat calculated transaction copies as written entries](./937.md) — major CLI provenance/import gap; calculated copies appear on disk and an inherited bank reference can make a changed source amount an exact duplicate, reproduced 2026-10-21.
 - [938 — Exclude calculated prices from quote duplicate and conflict checks](./938.md) — major CLI skipped-correction gap; add/import count generated quotes as authored, and a forced price correction leaves net worth unchanged at exit 0, reproduced 2026-10-21.
+- [939 — Use display columns for query-to-tree conversion](./939.md) — minor CLI integration gap; wide CJK accounts make valid BQL tables refuse, while wide narrations leave ordinary accounts flat in a successful partial tree, reproduced 2026-10-21.
 
 The 27 findings from the MCP QA auth sweep against the hosted endpoint (023–054, less the five under [Dropped](#dropped)) were fixed in `backend-cluster/backend-v2` and closed on 2026-10-02 and 2026-10-03; each note under [`done/`](./done/) records what shipped and in which commit. None has been re-observed against the hosted endpoint yet — the fixes reach it with the next backend deploy.
 
