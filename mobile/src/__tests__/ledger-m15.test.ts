@@ -263,11 +263,45 @@ test("filterFileErrors: matches by exact path", () => {
   if (filtered[0].message !== "err") throw new Error("wrong error returned");
 });
 
-test("filterFileErrors: matches by filename only (no path)", () => {
-  const errors = [{ message: "oops", filename: "expenses.bean", lineno: 10 }];
+// w21/089: a bare or same-named path is another file's error.
+test("filterFileErrors: leaves out a same-named file in another folder", () => {
+  const errors = [
+    { message: "oops", filename: "expenses.bean", lineno: 10 },
+    { message: "oops", filename: "2023/expenses.bean", lineno: 12 },
+  ];
   const filtered = filterFileErrors(errors, "2024/expenses.bean");
-  if (filtered.length !== 1)
-    throw new Error(`expected 1 match by filename, got ${filtered.length}`);
+  if (filtered.length !== 0)
+    throw new Error(`expected no match by basename, got ${filtered.length}`);
+});
+
+test("filterFileErrors: leaves the root main.bean's errors off sub/main.bean", () => {
+  const errors = [{ message: "oops", filename: "main.bean", lineno: 3 }];
+  if (filterFileErrors(errors, "sub/main.bean").length !== 0)
+    throw new Error("root main.bean errors matched sub/main.bean");
+  if (filterFileErrors(errors, "main.bean").length !== 1)
+    throw new Error("root main.bean lost its own errors");
+});
+
+test("filterFileErrors: a path in a null-filename message must be this file's", () => {
+  const errors = [
+    {
+      message: "parse errors in 2023/expenses.bean",
+      filename: null,
+      lineno: null,
+    },
+  ];
+  if (filterFileErrors(errors, "2024/expenses.bean").length !== 0)
+    throw new Error("another folder's path in the message matched");
+  if (filterFileErrors(errors, "2023/expenses.bean").length !== 1)
+    throw new Error("the file's own path in the message did not match");
+});
+
+test("filterFileErrors: ignores a leading ./", () => {
+  const errors = [
+    { message: "oops", filename: "./2024/expenses.bean", lineno: 1 },
+  ];
+  if (filterFileErrors(errors, "2024/expenses.bean").length !== 1)
+    throw new Error("./-prefixed path did not match");
 });
 
 test("filterFileErrors: matches by suffix path", () => {

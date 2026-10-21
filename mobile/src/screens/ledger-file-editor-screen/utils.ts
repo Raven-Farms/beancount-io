@@ -1,4 +1,5 @@
 import type { ColorTheme } from "@/types/theme-props";
+import { sameLedgerFile } from "../../common/ledger-file-path";
 
 type FileError = {
   message: string;
@@ -6,24 +7,38 @@ type FileError = {
   filename?: string | null;
 };
 
+/**
+ * Whether a message names this file. A path in the message must be this
+ * file's whole path, so `2023/x.bean` is not `2024/x.bean` (w21/089); a bare
+ * filename is all the message says, and still counts.
+ */
+function messageNamesFile(message: string, filePath: string): boolean {
+  const fileName = filePath.split("/").pop() ?? filePath;
+  let from = message.indexOf(fileName);
+  while (from >= 0) {
+    const start = message.slice(0, from).search(/\S*$/);
+    const named = message.slice(start, from + fileName.length);
+    if (named === fileName || sameLedgerFile(named, filePath)) return true;
+    from = message.indexOf(fileName, from + 1);
+  }
+  return false;
+}
+
 export function filterFileErrors(
   allErrors: FileError[],
   filePath: string,
 ): FileError[] {
-  const fileName = filePath.split("/").pop() ?? filePath;
   return allErrors.filter((e) => {
     if (e.filename != null && e.filename !== "") {
-      return (
-        e.filename === filePath ||
-        e.filename === fileName ||
-        e.filename.endsWith("/" + fileName)
-      );
+      return sameLedgerFile(e.filename, filePath);
     }
     // `getLedgerErrors` can return a null filename and name the file in the
     // message instead ("parse errors in main.bean"). Verified against a live
     // ledger: without this fallback the banner matched nothing and never
     // rendered for any file, however broken the ledger was.
-    return typeof e.message === "string" && e.message.includes(fileName);
+    return (
+      typeof e.message === "string" && messageNamesFile(e.message, filePath)
+    );
   });
 }
 

@@ -48,6 +48,23 @@ describe("selectEntryErrors", () => {
     ).toBe(1);
   });
 
+  // w21/089: a same-named file elsewhere is not this entry's file.
+  it("leaves out errors from a same-named file in another folder", () => {
+    const nested = { ...SOURCE, filename: "2026/transactions.bean", lineno: 3 };
+    expect(
+      selectEntryErrors([at(4, "e", "2025/transactions.bean")], nested),
+    ).toEqual([]);
+    expect(
+      selectEntryErrors([at(90, "e", "main.bean")], {
+        ...SOURCE,
+        filename: "qa/main.bean",
+      }),
+    ).toEqual([]);
+    expect(
+      selectEntryErrors([at(4, "e", "2026/transactions.bean")], nested).length,
+    ).toBe(1);
+  });
+
   it("shows nothing without the entry's source location", () => {
     expect(selectEntryErrors([at(89)], null)).toEqual([]);
   });

@@ -1,3 +1,5 @@
+import { sameLedgerFile } from "../../../common/ledger-file-path";
+
 type LedgerError = {
   message: string;
   filename?: string | null;
@@ -9,16 +11,6 @@ export type EntrySource = {
   filename: string;
   lineno: number;
   slice: string;
-};
-
-const sameFile = (errorFile: string, entryFile: string) => {
-  const name = entryFile.split("/").pop() ?? entryFile;
-  return (
-    errorFile === entryFile ||
-    errorFile === name ||
-    errorFile.endsWith(`/${name}`) ||
-    entryFile.endsWith(`/${errorFile}`)
-  );
 };
 
 /**
@@ -38,7 +30,7 @@ export function selectEntryErrors<T extends LedgerError>(
     (error) =>
       error.filename != null &&
       error.lineno != null &&
-      sameFile(error.filename, source.filename) &&
+      sameLedgerFile(error.filename, source.filename) &&
       error.lineno >= source.lineno &&
       error.lineno <= last,
   );
