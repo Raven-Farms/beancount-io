@@ -8,7 +8,6 @@
 
 ## Inbox
 
-- [016](./016.md) — Config plugins override the app's permission strings: a vague camera prompt, plus microphone and Face ID permissions the app never uses
 - [017](./017.md) — With camera access denied, Scan Receipt hides "Choose from photos", so a receipt already in the library can't be scanned
 - [018](./018.md) — Home's Spending chart gives VoiceOver axis ticks but never the two amounts it compares
 - [019](./019.md) — In Persian, UI text left at natural alignment sits on the physical left, against `rtl.ts`'s documented rule
