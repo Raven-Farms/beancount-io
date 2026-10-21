@@ -314,6 +314,9 @@ export const fa: Translations = {
   openAccountSaving: "در حال افتتاح...",
   openAccountFailed: "افتتاح حساب ناموفق بود. دوباره تلاش کنید.",
   ledgerWouldBreak: "این کار یک خطا به دفتر شما اضافه می‌کند: {{detail}}",
+  ledgerWriteOffline: "آفلاین هستید. چیزی ذخیره نشد.",
+  ledgerWriteRateLimited:
+    "تغییرات زیادی هم‌زمان انجام شد. کمی صبر کنید و دوباره امتحان کنید.",
   openAccountInvalidRoot: "یک نوع حساب معتبر انتخاب کنید.",
   openAccountNameRequired: "دست‌کم یک بخش از نام حساب را وارد کنید.",
   openAccountEmptyComponent: "بخش‌های نام حساب نمی‌توانند خالی باشند.",

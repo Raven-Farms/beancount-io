@@ -309,6 +309,9 @@ export const en = {
   openAccountSaving: "Opening...",
   openAccountFailed: "Couldn't open the account. Please try again.",
   ledgerWouldBreak: "This would add an error to your ledger: {{detail}}",
+  ledgerWriteOffline: "You're offline. Nothing was saved.",
+  ledgerWriteRateLimited:
+    "Too many changes at once. Wait a moment and try again.",
   openAccountInvalidRoot: "Choose a valid account type.",
   openAccountNameRequired: "Enter at least one account name component.",
   openAccountEmptyComponent: "Account components cannot be empty.",

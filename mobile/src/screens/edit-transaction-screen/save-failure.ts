@@ -23,8 +23,9 @@ export function selectSaveFailure(
 /**
  * The failure of a save as Edit Transaction reports it. A refusal reads as
  * what the edit would break (w21/m1) — "This would add an error to your
- * ledger: …" — not the server's "Validation failed for entry: …" prose; any
- * other error keeps its own message, which is what conflict detection reads.
+ * ledger: …" — not the server's "Validation failed for entry: …" prose; a
+ * ledger validation keeps its text, and a failure that never reached the
+ * ledger reads as offline, in the user's language (w21/117).
  */
 export function selectOutcomeFailure(
   outcome: Extract<LedgerWriteOutcome, { ok: false }>,
@@ -34,6 +35,10 @@ export function selectOutcomeFailure(
   // is answered NOT_FOUND before any checksum is compared — the same stale
   // edit a checksum conflict reports, and it gets the same Reload (w21/028).
   if (isEntryGone(outcome.error)) return { kind: "conflict" };
+  // A stale checksum is read from the server's own text; what is shown is
+  // the user's language, never transport text (w21/117).
+  const raw = outcome.error instanceof Error ? outcome.error.message : "";
+  if (isConflictError(raw)) return { kind: "conflict" };
   return selectSaveFailure(
     ledgerWriteFailureMessage(outcome.error, i18n) ?? outcome.message,
   );

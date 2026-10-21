@@ -28,8 +28,10 @@ describe("selectSaveFailure", () => {
 // (w21/m1); Edit Transaction shows what it would break inline.
 describe("selectOutcomeFailure", () => {
   const i18n = {
-    t: (_key: "ledgerWouldBreak", { detail }: { detail: string }) =>
-      `This would add an error to your ledger: ${detail}`,
+    t: (key: string, params?: Record<string, string>) =>
+      key === "ledgerWouldBreak"
+        ? `This would add an error to your ledger: ${params?.detail}`
+        : key,
   };
   const BALANCE_FAILED =
     "Balance failed for Assets:Cash: expected 49.75 USD, got 73.25 USD (main.bean:87)";

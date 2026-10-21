@@ -327,6 +327,9 @@ export const sk: Translations = {
   openAccountSaving: "Otvára sa...",
   openAccountFailed: "Účet sa nepodarilo otvoriť. Skúste to znova.",
   ledgerWouldBreak: "Toto by pridalo chybu do vašej knihy: {{detail}}",
+  ledgerWriteOffline: "Ste offline. Nič sa neuložilo.",
+  ledgerWriteRateLimited:
+    "Príliš veľa zmien naraz. Chvíľu počkajte a skúste to znova.",
   openAccountInvalidRoot: "Vyberte platný typ účtu.",
   openAccountNameRequired: "Zadajte aspoň jednu časť názvu účtu.",
   openAccountEmptyComponent: "Časti názvu účtu nemôžu byť prázdne.",

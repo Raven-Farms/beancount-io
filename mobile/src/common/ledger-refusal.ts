@@ -1,4 +1,7 @@
-import { graphQLErrorExtensions } from "./graphql-error-codes";
+import {
+  graphQLErrorCodes,
+  graphQLErrorExtensions,
+} from "./graphql-error-codes";
 
 /**
  * What a refused write says it would break, or null when the error is anything
@@ -18,6 +21,11 @@ function newLedgerErrorDetail(error: unknown): string | null {
   return null;
 }
 
+/** Translates the keys this module uses. */
+type Translate = {
+  t(key: string, params?: Record<string, string>): string;
+};
+
 /**
  * The refusal in the app's words — "This would add an error to your ledger:
  * …" — or null, so the caller keeps its own failure copy. Takes the
@@ -25,23 +33,55 @@ function newLedgerErrorDetail(error: unknown): string | null {
  */
 export function describeLedgerRefusal(
   error: unknown,
-  i18n: { t(key: "ledgerWouldBreak", params: { detail: string }): string },
+  i18n: Translate,
 ): string | null {
   const detail = newLedgerErrorDetail(error);
   return detail ? i18n.t("ledgerWouldBreak", { detail }) : null;
 }
 
+/** Codes whose message is the ledger's own text about the write. */
+const LEDGER_TEXT_CODES = new Set([
+  "VALIDATION_FAILED",
+  "BAD_USER_INPUT",
+  "UNBALANCED",
+]);
+
 /**
- * The inline error for a failed write on a screen that shows its own: the
- * refusal in the app's words, else the error's message, else null so the
- * screen falls back to its generic copy. Open Account and Add Budget share it.
+ * Transport failures that never reached the ledger: Apollo's network error,
+ * a non-2xx response, or the app's own token refresh failing offline.
+ */
+const TRANSPORT_FAILURE =
+  /Network request failed|Received status code|OAuth refresh failed|Failed to fetch/i;
+
+function isTransportFailure(error: unknown): boolean {
+  if (typeof error !== "object" || error === null) return false;
+  if ((error as { networkError?: unknown }).networkError) return true;
+  const message = (error as { message?: unknown }).message;
+  return typeof message === "string" && TRANSPORT_FAILURE.test(message);
+}
+
+/**
+ * The inline error for a failed write, in the user's language. A refusal says
+ * what it would break; a ledger validation keeps the server's text, which
+ * names the problem; a write that never reached the server says so ("You're
+ * offline. Nothing was saved."); rate limiting gets its own copy. Anything
+ * else is null, so the screen shows its generic failure. Transport text such
+ * as "Network request failed" used to reach the screen raw, in English, under
+ * copy about ledger validation (w21/117).
  */
 export function ledgerWriteFailureMessage(
   error: unknown,
-  i18n: Parameters<typeof describeLedgerRefusal>[1],
+  i18n: Translate,
 ): string | null {
-  return (
-    describeLedgerRefusal(error, i18n) ??
-    (error instanceof Error ? error.message : null)
-  );
+  const refusal = describeLedgerRefusal(error, i18n);
+  if (refusal) return refusal;
+  const codes = graphQLErrorCodes(error);
+  if (codes.some((code) => LEDGER_TEXT_CODES.has(code))) {
+    return error instanceof Error && error.message.trim()
+      ? error.message
+      : null;
+  }
+  if (codes.includes("RATE_LIMITED")) return i18n.t("ledgerWriteRateLimited");
+  if (isTransportFailure(error)) return i18n.t("ledgerWriteOffline");
+  return null;
 }

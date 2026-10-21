@@ -1,3 +1,4 @@
+import { ledgerWriteFailureMessage } from "@/common/ledger-refusal";
 import { useGuest } from "@/common/guest/guest-context";
 import { useLedgerAccess } from "@/common/hooks/use-ledger-access";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -365,12 +366,9 @@ export function LedgerFileBrowserScreen(): JSX.Element {
     setRefreshing(true);
     try {
       await refetch();
-    } catch (refreshError: unknown) {
-      const message =
-        refreshError instanceof Error
-          ? refreshError.message
-          : t("ledgerLoadError");
-      toast.showToast({ message, type: "error" });
+    } catch {
+      // A read: the generic load failure, not the transport's text (w21/117).
+      toast.showToast({ message: t("ledgerLoadError"), type: "error" });
     } finally {
       setRefreshing(false);
     }
@@ -437,9 +435,8 @@ export function LedgerFileBrowserScreen(): JSX.Element {
       } catch (createError: unknown) {
         haptics.error();
         const message =
-          createError instanceof Error
-            ? createError.message
-            : t("ledgerCreateFileFailed");
+          ledgerWriteFailureMessage(createError, { t }) ??
+          t("ledgerCreateFileFailed");
         toast.showToast({ message, type: "error" });
       } finally {
         createInFlightRef.current = false;
@@ -494,9 +491,8 @@ export function LedgerFileBrowserScreen(): JSX.Element {
       } catch (deleteError: unknown) {
         haptics.error();
         const message =
-          deleteError instanceof Error
-            ? deleteError.message
-            : t("ledgerDeleteFileFailed");
+          ledgerWriteFailureMessage(deleteError, { t }) ??
+          t("ledgerDeleteFileFailed");
         toast.showToast({ message, type: "error" });
       } finally {
         deleteInFlightRef.current = false;

@@ -316,6 +316,9 @@ export const nl: Translations = {
   openAccountSaving: "Openen...",
   openAccountFailed: "Account openen is mislukt. Probeer het opnieuw.",
   ledgerWouldBreak: "Dit zou een fout aan je grootboek toevoegen: {{detail}}",
+  ledgerWriteOffline: "Je bent offline. Er is niets opgeslagen.",
+  ledgerWriteRateLimited:
+    "Te veel wijzigingen tegelijk. Wacht even en probeer het opnieuw.",
   openAccountInvalidRoot: "Kies een geldig accounttype.",
   openAccountNameRequired: "Voer minstens één naamdeel in.",
   openAccountEmptyComponent: "Naamdelen mogen niet leeg zijn.",

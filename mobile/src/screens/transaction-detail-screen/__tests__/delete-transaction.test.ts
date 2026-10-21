@@ -35,8 +35,10 @@ const refused = Object.assign(
   },
 );
 const i18n = {
-  t: (_key: "ledgerWouldBreak", { detail }: { detail: string }) =>
-    `This would add an error to your ledger: ${detail}`,
+  t: (key: string, params?: Record<string, string>) =>
+    key === "ledgerWouldBreak"
+      ? `This would add an error to your ledger: ${params?.detail}`
+      : key,
 };
 
 function harness(perform: () => Promise<unknown>) {
@@ -94,13 +96,14 @@ describe("deleteTransaction", () => {
     expect(record.refreshed).toBe(0);
   });
 
-  it("shows any other failure's own message in the dialog", async () => {
+  // w21/117: transport text showed raw, in English, as if the ledger refused.
+  it("shows a failure that never reached the ledger as offline", async () => {
     const { run, record } = harness(async () => {
       throw new Error("Network request failed");
     });
 
     expect(await run).toBe(false);
-    expect(record.dialogs[0]?.message).toBe("Network request failed");
+    expect(record.dialogs[0]?.message).toBe("ledgerWriteOffline");
   });
 
   it("confirms, refreshes and returns on success with no dialog", async () => {

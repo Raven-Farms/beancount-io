@@ -1,3 +1,5 @@
+import { i18n } from "@/translations";
+import { ledgerWriteFailureMessage } from "@/common/ledger-refusal";
 import { useCallback, useState } from "react";
 import { useApolloClient } from "@apollo/client";
 import {
@@ -59,7 +61,8 @@ export function useDeleteBudgetEntry(ledgerId: string) {
       } catch (caught) {
         return {
           ok: false,
-          message: caught instanceof Error ? caught.message : null,
+          // In the user's language, not the transport's (w21/117).
+          message: ledgerWriteFailureMessage(caught, i18n),
         };
       } finally {
         setDeleting(false);

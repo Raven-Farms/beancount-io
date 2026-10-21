@@ -325,6 +325,9 @@ export const de: Translations = {
     "Konto konnte nicht eröffnet werden. Bitte erneut versuchen.",
   ledgerWouldBreak:
     "Das würde Ihrem Hauptbuch einen Fehler hinzufügen: {{detail}}",
+  ledgerWriteOffline: "Sie sind offline. Es wurde nichts gespeichert.",
+  ledgerWriteRateLimited:
+    "Zu viele Änderungen auf einmal. Warten Sie kurz und versuchen Sie es erneut.",
   openAccountInvalidRoot: "Wählen Sie einen gültigen Kontotyp.",
   openAccountNameRequired: "Geben Sie mindestens einen Namensbestandteil ein.",
   openAccountEmptyComponent: "Namensbestandteile dürfen nicht leer sein.",

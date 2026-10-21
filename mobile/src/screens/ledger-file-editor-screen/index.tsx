@@ -1,3 +1,4 @@
+import { ledgerWriteFailureMessage } from "@/common/ledger-refusal";
 import { useGuest } from "@/common/guest/guest-context";
 import { useLedgerAccess } from "@/common/hooks/use-ledger-access";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -538,8 +539,7 @@ function LedgerFileEditorSession({
         return true;
       } catch (err: unknown) {
         haptics.error();
-        const msg = err instanceof Error ? err.message : String(err);
-        if (isConflictError(msg)) {
+        if (isConflictError(err instanceof Error ? err.message : "")) {
           Alert.alert(
             t("ledgerEditorConflictTitle"),
             t("ledgerEditorConflictMessage"),
@@ -553,7 +553,12 @@ function LedgerFileEditorSession({
             ],
           );
         } else {
-          Alert.alert(t("ledgerEditorSaveFailed"), msg);
+          // The ledger's own text for a refusal, translated copy otherwise;
+          // never "Network request failed" (w21/117).
+          Alert.alert(
+            t("ledgerEditorSaveFailed"),
+            ledgerWriteFailureMessage(err, { t }) ?? undefined,
+          );
         }
         return false;
       } finally {

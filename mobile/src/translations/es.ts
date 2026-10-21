@@ -323,6 +323,9 @@ export const es: Translations = {
   openAccountSaving: "Abriendo...",
   openAccountFailed: "No se pudo abrir la cuenta. Inténtalo de nuevo.",
   ledgerWouldBreak: "Esto añadiría un error a tu libro: {{detail}}",
+  ledgerWriteOffline: "Estás sin conexión. No se guardó nada.",
+  ledgerWriteRateLimited:
+    "Demasiados cambios a la vez. Espera un momento e inténtalo de nuevo.",
   openAccountInvalidRoot: "Elige un tipo de cuenta válido.",
   openAccountNameRequired: "Escribe al menos un componente del nombre.",
   openAccountEmptyComponent:

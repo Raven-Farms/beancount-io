@@ -20,8 +20,8 @@ const wouldBreak = (named: string) =>
 const DUPLICATE_OPEN =
   "Duplicate open directive for Assets:Cash (main.bean:74)";
 const i18n = {
-  t: (_key: "ledgerWouldBreak", { detail }: { detail: string }) =>
-    `Would break: ${detail}`,
+  t: (key: string, params?: Record<string, string>) =>
+    key === "ledgerWouldBreak" ? `Would break: ${params?.detail}` : key,
 };
 
 describe("describeLedgerRefusal", () => {
@@ -126,10 +126,51 @@ describe("ledgerWriteFailureMessage", () => {
     );
   });
 
-  it("keeps any other error's own message", () => {
+  // w21/117: transport text reached the screen raw, in English, as if the
+  // ledger had refused the write.
+  it("says offline, in the user's language, for a write that never arrived", () => {
     expect(
       ledgerWriteFailureMessage(new Error("Network request failed"), i18n),
-    ).toBe("Network request failed");
+    ).toBe(i18n.t("ledgerWriteOffline"));
+    expect(
+      ledgerWriteFailureMessage(
+        Object.assign(new Error("Response not successful"), {
+          networkError: new Error("Received status code 502"),
+        }),
+        i18n,
+      ),
+    ).toBe(i18n.t("ledgerWriteOffline"));
+    expect(
+      ledgerWriteFailureMessage(new Error("OAuth refresh failed"), i18n),
+    ).toBe(i18n.t("ledgerWriteOffline"));
+  });
+
+  it("keeps a ledger validation's own text", () => {
+    const refused = Object.assign(new Error("Transaction does not balance"), {
+      graphQLErrors: [
+        {
+          message: "Transaction does not balance",
+          extensions: { code: "UNBALANCED" },
+        },
+      ],
+    });
+    expect(ledgerWriteFailureMessage(refused, i18n)).toBe(
+      "Transaction does not balance",
+    );
+  });
+
+  it("names rate limiting, and leaves anything else to the screen", () => {
+    const limited = Object.assign(new Error("Too many requests"), {
+      graphQLErrors: [
+        { message: "Too many requests", extensions: { code: "RATE_LIMITED" } },
+      ],
+    });
+    expect(ledgerWriteFailureMessage(limited, i18n)).toBe(
+      i18n.t("ledgerWriteRateLimited"),
+    );
+    expect(
+      ledgerWriteFailureMessage(new Error("Internal server error"), i18n),
+    ).toBe(null);
   });
 
   it("returns null when there is nothing to say, so the screen's copy shows", () => {
