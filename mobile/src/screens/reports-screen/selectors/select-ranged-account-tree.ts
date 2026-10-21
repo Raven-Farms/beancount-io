@@ -83,8 +83,17 @@ function rollup(trie: Trie, sums: Map<string, number>): number {
   for (const child of trie.children.values()) {
     total += rollup(child, sums);
   }
-  return total;
+  return withoutResidue(total);
 }
+
+/**
+ * A sum of decimal amounts without its float residue: 10.10 + 20.20 − 30.30
+ * is -3.55e-15 as floats, which kept a category that nets to zero as a
+ * "−$0.00 · 0%" row and fed the Sankey a phantom node (w21/055). Ten decimals
+ * is beyond any recorded scale; `|| 0` also turns -0 into 0.
+ */
+const withoutResidue = (value: number): number =>
+  Number(value.toFixed(10)) || 0;
 
 function toTreeNode(
   trie: Trie,
@@ -156,7 +165,7 @@ export function selectRangedAccountTree(
         continue;
       }
       const value = resolveCurrencyBalance(balances ?? {}, currency);
-      sums.set(account, (sums.get(account) ?? 0) + value);
+      sums.set(account, withoutResidue((sums.get(account) ?? 0) + value));
       const topLevel = account.split(":")[1] ?? account;
       for (const holding of notInTotalOf(balances, currency)) {
         const key = `${topLevel}\0${holding.currency}`;
@@ -216,7 +225,7 @@ export function selectRangedAccountTree(
     fakeRoot,
     CATEGORY_SIGN[category],
   );
-  const total = tree.reduce((sum, node) => sum + node.value, 0);
+  const total = withoutResidue(tree.reduce((sum, node) => sum + node.value, 0));
   return { tree, total, notInTotal };
 }
 

@@ -83,9 +83,13 @@ const signedAmount = (
   digits = 2,
 ): { sign: string; amount: string } => {
   const normalized = Number.isFinite(value) ? value : 0;
+  const amount = groupThousands(normalized, digits);
+  // The sign of what is shown, not of the raw float: a residue such as
+  // -3.55e-15 rounds to 0.00 and must not read "-$0.00" (w21/055).
+  const shownZero = !/[1-9]/.test(amount);
   return {
-    sign: normalized < 0 ? "-" : includePlus ? "+" : "",
-    amount: groupThousands(normalized, digits),
+    sign: normalized < 0 && !shownZero ? "-" : includePlus ? "+" : "",
+    amount,
   };
 };
 

@@ -3,6 +3,13 @@ import { leafName } from "../../../common/account-util";
 import { topNWithOther } from "./select-breakdown-rows";
 import { formatShortMoneyWithCurrency } from "../../../common/number-utils";
 
+/**
+ * Below half a cent a flow is float residue, not money: a month whose income
+ * equals its expenses drew a "Savings" node of 5.55e-17, and a category that
+ * nets to zero a node with no ribbon (w21/055). Budget variance already treats
+ * it as zero (w4/130).
+ */
+const HALF_CENT = 0.005;
 /** Depth of account path the Sankey draws — matches the web transformer. */
 const SANKEY_DEPTH = 2;
 
@@ -235,7 +242,7 @@ function extractAtDepth(
       // Zero is dropped here so a balanced-to-nothing category does not
       // occupy a node; negatives are kept in the map so totals still match
       // the statement, then stripped from *links* below.
-      if (node.value !== 0) {
+      if (Math.abs(node.value) >= HALF_CENT) {
         out.set(key, (out.get(key) ?? 0) + node.value);
       }
     } else {
@@ -249,7 +256,7 @@ function toRankedNodes(
   labelOf: (id: string) => string,
 ): AccountNode[] {
   return Array.from(values.entries())
-    .filter(([, value]) => value > 0)
+    .filter(([, value]) => value >= HALF_CENT)
     .map(([account, value]) => ({
       account,
       name: labelOf(account),
@@ -395,14 +402,14 @@ export function transformToSankeyData(options: TransformOptions): SankeyData {
     .filter((l) => l.source === CASH_FLOW_ID)
     .reduce((sum, l) => sum + l.value, 0);
   const savings = linkedIncome - linkedExpenses;
-  if (savings > 0) {
+  if (savings >= HALF_CENT) {
     pushNode(nodes, seen, SAVINGS_ID, savingsLabel, "savings");
     links.push({
       source: CASH_FLOW_ID,
       target: SAVINGS_ID,
       value: savings,
     });
-  } else if (savings < 0) {
+  } else if (savings <= -HALF_CENT) {
     pushNode(nodes, seen, SHORTFALL_ID, savingsLabel, "savings");
     links.push({
       source: SHORTFALL_ID,
