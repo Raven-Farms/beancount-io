@@ -26,7 +26,10 @@ import { AmountText } from "@/components/amount-text";
 import { DashboardCard } from "@/components/dashboard-card";
 import { LoadingTile } from "@/components/loading-tile";
 import { AccountNode } from "@/components/account-list/select-account-list";
-import { breakdownRowAccessibilityValue } from "../selectors/select-breakdown-rows";
+import {
+  breakdownRowAccessibilityValue,
+  breakdownShare,
+} from "../selectors/select-breakdown-rows";
 import { LEADING_TEXT_ALIGN, directionalIcon } from "@/common/rtl";
 
 /** One step of tree indent for expanded sub-rows (matches AccountListPage). */
@@ -288,10 +291,10 @@ export function CategoryBreakdown({
   const renderTop = (node: AccountNode): JSX.Element => {
     const hasChildren = node.children.length > 0;
     const isExpanded = overrides[node.account] ?? false;
-    // Share of the section total. Negative rows (a net-refunded category) can't
-    // draw a meaningful slice, so the bar is hidden but the amount still shows.
-    const pct =
-      total > 0 ? Math.max(0, Math.min(100, (node.value / total) * 100)) : 0;
+    // Share of the section total. Negative rows (a net-refunded category) and a
+    // section that nets to zero or below have none: the bar is hidden and no
+    // percentage is printed or spoken, but the amount still shows (w21/039).
+    const pct = breakdownShare(node.value, total);
 
     const amountText = formatSignedMoneyWithCurrency(
       node.value,
@@ -336,11 +339,13 @@ export function CategoryBreakdown({
           <View
             style={[
               styles.fill,
-              { width: `${pct}%`, backgroundColor: tone(theme) },
+              { width: `${pct ?? 0}%`, backgroundColor: tone(theme) },
             ]}
           />
         </View>
-        <Text style={styles.pctLabel}>{Math.round(pct)}%</Text>
+        <Text style={styles.pctLabel}>
+          {pct === null ? "" : `${Math.round(pct)}%`}
+        </Text>
       </View>
     );
 

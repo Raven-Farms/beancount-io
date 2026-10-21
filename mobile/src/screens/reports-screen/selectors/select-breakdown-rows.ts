@@ -37,6 +37,17 @@ export function topNWithOther(
 }
 
 /**
+ * A top-level row's share of its section, in percent, or `null` when it has
+ * none worth stating: a section that nets to zero or below, or a net-refunded
+ * row. Those used to print and speak a literal "0%" beside a lone -$250.00
+ * clawback that was the whole section (w21/039).
+ */
+export function breakdownShare(value: number, total: number): number | null {
+  if (total <= 0 || value < 0) return null;
+  return Math.max(0, Math.min(100, (value / total) * 100));
+}
+
+/**
  * What an expandable breakdown row announces *besides* its account name.
  *
  * An expandable row is a `TouchableOpacity` labelled with the account name, and

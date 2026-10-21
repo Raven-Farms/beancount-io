@@ -12,7 +12,6 @@
 
 ## Inbox
 
-- [039](./039.md) — Reports labels a net-negative category "0%" of its section
 - [040](./040.md) — Mobile Budget applies the older of two same-date budget directives (mobile counterpart of w4/232)
 - [041](./041.md) — Mobile Open Account rejects valid Hindi, decomposed-accent and titlecase names (mobile counterpart of w4/279)
 - [042](./042.md) — Mobile file editor silently corrupts non-UTF-8 files on save: "Café" becomes "Caf\uFFFD" (mobile counterpart of w4/276)

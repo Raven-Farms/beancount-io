@@ -1,6 +1,7 @@
 import { AccountNode } from "@/components/account-list/select-account-list";
 import {
   breakdownRowAccessibilityValue,
+  breakdownShare,
   topNWithOther,
   OTHER_ACCOUNT,
 } from "../select-breakdown-rows";
@@ -79,5 +80,29 @@ describe("breakdownRowAccessibilityValue", () => {
 
   it("speaks only the amount for a sub-account row, which draws no bar", () => {
     expect(breakdownRowAccessibilityValue("-$20.00", null, t)).toBe("-$20.00");
+  });
+});
+
+// w21/039: a lone -$250.00 clawback read "0%" of its section.
+describe("breakdownShare", () => {
+  it("states a positive row's share of a positive section", () => {
+    expect(breakdownShare(25, 100)).toBe(25);
+    expect(breakdownShare(150, 100)).toBe(100);
+  });
+
+  it("has no share for a section that nets to zero or below", () => {
+    expect(breakdownShare(-250, -250)).toBe(null);
+    expect(breakdownShare(10, 0)).toBe(null);
+  });
+
+  it("has no share for a refunded row in an otherwise positive section", () => {
+    expect(breakdownShare(-40, 100)).toBe(null);
+    expect(breakdownShare(140, 100)).toBe(100);
+  });
+
+  it("speaks only the amount when there is no share", () => {
+    expect(
+      breakdownRowAccessibilityValue("-$250.00", breakdownShare(-250, -250), t),
+    ).toBe("-$250.00");
   });
 });
