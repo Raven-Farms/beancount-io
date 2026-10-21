@@ -112,3 +112,4 @@
 - [162](./162.md) — Transaction and posting metadata never appear on transaction detail
 - [163](./163.md) — Account detail shows "−$0.00"/"+$0.00" on a day that nets to zero (float residue)
 - [164](./164.md) — Account balance chart skips postingless months and spaces points by index, inventing balances
+- [165](./165.md) — Home's budget panel ranks only the first 12 budgets alphabetically; an overspent 13th never appears
