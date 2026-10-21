@@ -41,3 +41,4 @@
 - [091](./091.md) — File editor error rows say "line N" in English in every language
 - [092](./092.md) — Entry Context balances: blank for zero, multi-currency run together as "100.00 USD,50.00 EUR"
 - [093](./093.md) — A trailing-space payee splits a merchant: header "2 transactions · $3.00" over three listed rows totalling $7
+- [094](./094.md) — A detail screen lower in the stack keeps showing a deleted or rewritten entry; its Edit then fails
