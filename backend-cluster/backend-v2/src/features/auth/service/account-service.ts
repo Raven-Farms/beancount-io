@@ -82,6 +82,15 @@ export interface IAccountService {
   ): Promise<UserSearchMatch[]>;
 }
 
+/** The ledger service's answer for a user that is already gone. */
+function isAlreadyPurged(error: unknown): boolean {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    (error as { status?: unknown }).status === 404
+  );
+}
+
 export class AccountService implements IAccountService {
   constructor(
     private readonly models: Pick<
@@ -315,6 +324,21 @@ export class AccountService implements IAccountService {
       throw new NotFoundError("User", userId);
     }
 
+    // The ledger purge goes first: it is the step most likely to fail, and
+    // Stripe and Plaid below cannot be undone. Run after them, a failed purge
+    // rolled the deletion back with the subscription already cancelled and
+    // the banks unlinked (w21/157). A user already purged (a retry after a
+    // lost response) answers 404, which is done, not a failure.
+    if (user.ledger_username) {
+      try {
+        await this.favaClientFactory
+          .getAdminClient()
+          .admin.deleteUser(user.ledger_username);
+      } catch (error) {
+        if (!isAlreadyPurged(error)) throw error;
+      }
+    }
+
     const paidCustomers = await this.models.paidCustomer.findByUserId(
       this.db,
       userId,
@@ -398,10 +422,6 @@ export class AccountService implements IAccountService {
       // surviving key still resolved to the deleted identity (w21/156).
       await this.models.apiKey.deleteByUserId(tx, userId);
       await this.models.user.deleteByUserId(tx, userId);
-      const favaAdminApiClient = this.favaClientFactory.getAdminClient();
-      if (user?.ledger_username) {
-        await favaAdminApiClient.admin.deleteUser(user.ledger_username);
-      }
     });
 
     // Delete Redis data (separate storage, outside transaction)

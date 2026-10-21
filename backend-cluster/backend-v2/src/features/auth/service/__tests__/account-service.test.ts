@@ -536,6 +536,51 @@ describe("AccountService", () => {
       expect(mockModels.user.deleteByUserId).toHaveBeenCalledWith(tx, userId);
     });
 
+    // w21/157: Stripe and Plaid ran before the purge, so a failed purge left
+    // a live account with its subscription cancelled and its banks unlinked.
+    it("touches neither billing nor banks when the ledger purge fails", async () => {
+      const userId = "user-123";
+      mockModels.user.getById = jest
+        .fn()
+        .mockResolvedValue({ email: "test@example.com", ledger_username: "t" });
+      mockModels.paidCustomer.findByUserId = jest
+        .fn()
+        .mockResolvedValue([{ userId, clientId: "client_123" }]);
+      mockStripe.listSubscriptions.mockResolvedValue([
+        { id: "sub_123", clientId: "client_123", status: "active" } as any,
+      ]);
+      mockModels.plaidItem.getByUserId = jest
+        .fn()
+        .mockResolvedValue([{ id: "item_1", accessToken: "x" }]);
+      const admin = mockFavaClientFactory.getAdminClient().admin;
+      (admin.deleteUser as jest.Mock).mockRejectedValue(
+        new Error("Ledger service unavailable"),
+      );
+
+      await expect(
+        accountService.deleteAccount(identity(userId)),
+      ).rejects.toThrow("Ledger service unavailable");
+      expect(mockStripe.deleteSubscription).not.toHaveBeenCalled();
+      expect(mockPlaidClient.removeItem).not.toHaveBeenCalled();
+      expect(mockModels.user.deleteByUserId).not.toHaveBeenCalled();
+    });
+
+    it("completes a retry whose purge already happened (404)", async () => {
+      const userId = "user-123";
+      mockModels.user.getById = jest
+        .fn()
+        .mockResolvedValue({ email: "test@example.com", ledger_username: "t" });
+      const admin = mockFavaClientFactory.getAdminClient().admin;
+      (admin.deleteUser as jest.Mock).mockRejectedValue(
+        Object.assign(new Error("Not Found"), { status: 404 }),
+      );
+
+      await expect(
+        accountService.deleteAccount(identity(userId)),
+      ).resolves.toBe(true);
+      expect(mockModels.user.deleteByUserId).toHaveBeenCalled();
+    });
+
     // w21/156: `api_keys` has no foreign key, so nothing cascaded.
     it("deletes the user's API keys in the deletion transaction", async () => {
       const userId = "user-123";
