@@ -96,6 +96,7 @@ export const nl: Translations = {
   merchantsCadenceUnknown: "Te weinig geschiedenis",
   merchantsNextExpected: "Volgende {{date}}",
   merchantsOverdue: "Achterstallig",
+  merchantsScheduled: "Gepland op {{date}}",
   merchantsRecurringToggle: "Terugkerend",
   merchantsRecurringToggleHelper:
     "Zet deze handelaar vast onder Terugkerend. Handmatige keuze wint van detectie en blijft op dit apparaat.",

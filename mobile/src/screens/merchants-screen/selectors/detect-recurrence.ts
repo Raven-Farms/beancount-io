@@ -31,6 +31,12 @@ export interface RecurrenceVerdict {
   nextExpected: string;
   /** True when `today` is past `nextExpected` by more than the grace window. */
   isOverdue: boolean;
+  /**
+   * The earliest pre-entered event after today, `YYYY-MM-DD`. It is the
+   * upcoming occurrence, not a payment made: counted as paid, a pre-entered
+   * rent cheque hid the missed month before it (w21/167).
+   */
+  scheduled?: string;
 }
 
 /** Minimum distinct event dates before a cadence can be inferred. */
@@ -250,10 +256,17 @@ export function detectRecurrence(
     return null;
   }
 
+  // Only what has happened says how often it happens, when it last did, and
+  // whether it is late; a pre-entered future event is the next one (w21/167).
   const byDay = new Map<number, SeriesPoint[]>();
+  let scheduledDay: number | null = null;
   for (const point of series) {
     const day = parseLedgerDay(point.date);
     if (day === null || !Number.isFinite(point.amount)) {
+      continue;
+    }
+    if (day > todayDay) {
+      if (scheduledDay === null || day < scheduledDay) scheduledDay = day;
       continue;
     }
     const bucket = byDay.get(day);
@@ -346,5 +359,8 @@ export function detectRecurrence(
     isApproximate,
     nextExpected: formatLedgerDay(nextExpectedDay),
     isOverdue,
+    ...(scheduledDay === null
+      ? {}
+      : { scheduled: formatLedgerDay(scheduledDay) }),
   };
 }

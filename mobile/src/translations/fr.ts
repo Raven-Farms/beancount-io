@@ -99,6 +99,7 @@ export const fr: Translations = {
   merchantsCadenceUnknown: "Historique insuffisant",
   merchantsNextExpected: "Prochain {{date}}",
   merchantsOverdue: "En retard",
+  merchantsScheduled: "Prévu le {{date}}",
   merchantsRecurringToggle: "Récurrent",
   merchantsRecurringToggleHelper:
     "Épingler ce commerçant dans Récurrent. Un choix manuel prime sur la détection et reste sur cet appareil.",

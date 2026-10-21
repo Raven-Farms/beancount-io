@@ -84,6 +84,7 @@ export const zh: Translations = {
   merchantsCadenceUnknown: "历史记录不足",
   merchantsNextExpected: "下次 {{date}}",
   merchantsOverdue: "已逾期",
+  merchantsScheduled: "已安排于 {{date}}",
   merchantsRecurringToggle: "定期",
   merchantsRecurringToggleHelper:
     "将此商户固定在「定期」分组。手动选择优先于自动检测，且只保存在本设备。",

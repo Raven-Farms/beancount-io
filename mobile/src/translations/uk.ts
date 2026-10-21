@@ -100,6 +100,7 @@ export const uk: Translations = {
   merchantsCadenceUnknown: "Замало історії",
   merchantsNextExpected: "Наступний {{date}}",
   merchantsOverdue: "Прострочено",
+  merchantsScheduled: "Заплановано на {{date}}",
   merchantsRecurringToggle: "Регулярний",
   merchantsRecurringToggleHelper:
     "Закріпити цього контрагента в «Регулярні». Ручний вибір важливіший за автовизначення й зберігається на цьому пристрої.",

@@ -16,6 +16,7 @@ import {
 } from "@/common/theme";
 import { useThemeStyle } from "@/common/hooks";
 import { useTranslations } from "@/common/hooks/use-translations";
+import { useToday } from "@/common/hooks/use-today";
 import { LEADING_TEXT_ALIGN, letterSpacing } from "@/common/rtl";
 import { AccountTypeIcon } from "@/components/account-type-icon";
 import { ColorTheme } from "@/types/theme-props";
@@ -154,6 +155,7 @@ interface MerchantRowProps {
 export function MerchantRow({ item, onPress }: MerchantRowProps) {
   const styles = useThemeStyle(getStyles);
   const { t, locale } = useTranslations();
+  const today = useToday();
   const { fontScale } = useWindowDimensions();
   const stacked = prefersStackedLayout(fontScale);
   const { merchant, inRecurringSection } = item;
@@ -165,7 +167,7 @@ export function MerchantRow({ item, onPress }: MerchantRowProps) {
     trailingMeta,
     trailingOverdue,
     accessibilityLabel,
-  } = merchantRowText(item, t, locale);
+  } = merchantRowText(item, t, locale, today);
 
   const leading = (
     <>

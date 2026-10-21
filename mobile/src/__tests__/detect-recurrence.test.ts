@@ -366,3 +366,44 @@ describe("hasEnoughHistory", () => {
     expect(hasEnoughHistory([])).toBe(false);
   });
 });
+
+// w21/167: a pre-entered future payment counted as paid, so a missed bill
+// before it no longer read Overdue.
+describe("detectRecurrence with a pre-entered payment", () => {
+  const rent = (date: string): SeriesPoint => ({
+    date,
+    currency: "USD",
+    amount: 1500,
+  });
+
+  it("stays Overdue for a missed month and names the payment as scheduled", () => {
+    const verdict = detectRecurrence(
+      [
+        rent("2026-07-01"),
+        rent("2026-08-01"),
+        rent("2026-09-01"),
+        rent("2026-11-01"),
+      ],
+      "2026-10-21",
+    );
+    expect(verdict?.cadence).toBe("monthly");
+    expect(verdict?.nextExpected).toBe("2026-10-01");
+    expect(verdict?.isOverdue).toBe(true);
+    expect(verdict?.scheduled).toBe("2026-11-01");
+  });
+
+  it("expects the pre-entered month next when nothing was missed", () => {
+    const verdict = detectRecurrence(
+      [
+        rent("2026-07-01"),
+        rent("2026-08-01"),
+        rent("2026-09-01"),
+        rent("2026-10-01"),
+        rent("2026-11-01"),
+      ],
+      "2026-10-21",
+    );
+    expect(verdict?.nextExpected).toBe("2026-11-01");
+    expect(verdict?.isOverdue).toBe(false);
+  });
+});

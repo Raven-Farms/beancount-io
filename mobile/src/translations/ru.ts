@@ -101,6 +101,7 @@ export const ru: Translations = {
   merchantsCadenceUnknown: "Мало истории",
   merchantsNextExpected: "Следующий {{date}}",
   merchantsOverdue: "Просрочено",
+  merchantsScheduled: "Запланировано на {{date}}",
   merchantsRecurringToggle: "Регулярный",
   merchantsRecurringToggleHelper:
     "Закрепить этого контрагента в «Регулярные». Ручной выбор важнее автоопределения и хранится на этом устройстве.",

@@ -99,6 +99,7 @@ export const ca: Translations = {
   merchantsCadenceUnknown: "Historial insuficient",
   merchantsNextExpected: "Proper {{date}}",
   merchantsOverdue: "Vençut",
+  merchantsScheduled: "Programat per al {{date}}",
   merchantsRecurringToggle: "Recurrent",
   merchantsRecurringToggleHelper:
     "Fixa aquest comerç a Recurrent. L’elecció manual preval sobre la detecció i es guarda en aquest dispositiu.",

@@ -96,6 +96,7 @@ export const bg: Translations = {
   merchantsCadenceUnknown: "Недостатъчна история",
   merchantsNextExpected: "Следващо {{date}}",
   merchantsOverdue: "Просрочено",
+  merchantsScheduled: "Планирано за {{date}}",
   merchantsRecurringToggle: "Повтарящ се",
   merchantsRecurringToggleHelper:
     "Закачи този търговец в Повтарящи се. Ръчният избор надделява над откриването и остава на това устройство.",

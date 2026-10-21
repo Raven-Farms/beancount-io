@@ -97,6 +97,7 @@ export const de: Translations = {
   merchantsCadenceUnknown: "Zu wenig Verlauf",
   merchantsNextExpected: "Nächste {{date}}",
   merchantsOverdue: "Überfällig",
+  merchantsScheduled: "Geplant für {{date}}",
   merchantsRecurringToggle: "Wiederkehrend",
   merchantsRecurringToggleHelper:
     "Diesen Händler unter Wiederkehrend anheften. Manuelle Wahl schlägt die Erkennung und bleibt auf diesem Gerät.",

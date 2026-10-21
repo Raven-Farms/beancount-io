@@ -31,6 +31,7 @@ export function merchantRowText(
   item: MerchantListItem,
   t: Translate,
   locale: string,
+  today: string,
 ) {
   const { merchant, resolved, inRecurringSection } = item;
   const showBadge = resolved.isRecurring && !inRecurringSection;
@@ -39,9 +40,15 @@ export function merchantRowText(
   const countLabel = t("merchantsTransactionCount", {
     count: merchant.transactionCount,
   });
-  const lastDate = merchant.lastDate
-    ? formatLedgerDateShort(merchant.lastDate, locale)
-    : "";
+  // A last date after today is a pre-entered payment, not one made
+  // (w21/167).
+  const lastDate = !merchant.lastDate
+    ? ""
+    : merchant.lastDate > today
+      ? t("merchantsScheduled", {
+          date: formatLedgerDateShort(merchant.lastDate, locale),
+        })
+      : formatLedgerDateShort(merchant.lastDate, locale);
 
   let subtitle = countLabel;
   let cadenceLabel: string | null = null;
@@ -62,7 +69,13 @@ export function merchantRowText(
     if (detection?.nextExpected) {
       const next = formatLedgerDateShort(detection.nextExpected, locale);
       if (detection.isOverdue) {
-        trailingMeta = t("merchantsOverdue");
+        // A missed bill stays Overdue with the next one pre-entered; the
+        // pre-entered one is named as scheduled (w21/167).
+        trailingMeta = detection.scheduled
+          ? `${t("merchantsOverdue")} · ${t("merchantsScheduled", {
+              date: formatLedgerDateShort(detection.scheduled, locale),
+            })}`
+          : t("merchantsOverdue");
         trailingOverdue = true;
       } else {
         trailingMeta = t("merchantsNextExpected", { date: next });

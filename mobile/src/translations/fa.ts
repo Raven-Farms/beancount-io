@@ -96,6 +96,7 @@ export const fa: Translations = {
   merchantsCadenceUnknown: "سابقه کافی نیست",
   merchantsNextExpected: "بعدی {{date}}",
   merchantsOverdue: "سررسید گذشته",
+  merchantsScheduled: "زمان‌بندی‌شده برای {{date}}",
   merchantsRecurringToggle: "دوره‌ای",
   merchantsRecurringToggleHelper:
     "این فروشنده را در بخش دوره‌ای ثابت کنید. انتخاب دستی بر تشخیص خودکار اولویت دارد و فقط روی این دستگاه می‌ماند.",
