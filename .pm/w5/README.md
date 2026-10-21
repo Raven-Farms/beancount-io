@@ -86,6 +86,7 @@
 - [919 — Keep accented bank references stable on repeat import](./919.md) — major CLI native-ID lookup gap; unchanged NFD references lose exact matching and changed amounts double-book with exit 0, reproduced 2026-10-21.
 - [920 — Treat signed zero as the same amount on native-ID reimport](./920.md) — minor CLI false conflict; an unchanged zero row blocks repeat and overlapping exports, reproduced 2026-10-21.
 - [921 — Classify report series by root components](./921.md) — major CLI accounting mismatch; prefix-sharing roots contaminate income and net-worth breakdowns while headlines remain correct, reproduced 2026-10-21.
+- [922 — Detect CSV separators after complete skipped records](./922.md) — minor CLI framing/memory gap; a quoted multiline preamble defeats detection and an unchanged flag-free repeat, reproduced 2026-10-21.
 
 The 27 findings from the MCP QA auth sweep against the hosted endpoint (023–054, less the five under [Dropped](#dropped)) were fixed in `backend-cluster/backend-v2` and closed on 2026-10-02 and 2026-10-03; each note under [`done/`](./done/) records what shipped and in which commit. None has been re-observed against the hosted endpoint yet — the fixes reach it with the next backend deploy.
 
