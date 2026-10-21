@@ -167,3 +167,8 @@
 - [329](./329.md) — Leftovers: amber text contrast, shell "5e-7" sums, logout "session ended" race
 - [330](./330.md) — Create Ledger currency/date with surrounding spaces refused late with raw English
 - [331](./331.md) — Accounts tab still lacks the parent "(own)" row: graftZeroAccounts' clone drops balance (174 follow-up)
+- [332](./332.md) — Budget ALL still counts a pre-entered entry inside the current period (168 follow-up)
+- [333](./333.md) — Brands next to CJK/kana no longer match after 172 ("Amazon购物")
+- [334](./334.md) — A fee leg makes a transfer payee lose its recurring series (173 follow-up)
+- [335](./335.md) — Future events still count as history: manual mark reads "Irregular" (167 follow-up)
+- [336](./336.md) — Float-exact "~" on steady prices (171) and uncancelled budget batches (165)
