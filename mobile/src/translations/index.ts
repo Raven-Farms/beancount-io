@@ -1,5 +1,6 @@
 import * as Localization from "expo-localization";
 import { I18n } from "i18n-js";
+import { pickSupportedLocale } from "@/common/pick-locale";
 import { en } from "@/translations/en";
 import { zh } from "@/translations/zh";
 import { bg } from "@/translations/bg";
@@ -40,19 +41,11 @@ const translations = {
 
 const SUPPORTED_LOCALES = Object.keys(translations);
 
-const getLocale = () => {
-  const locales = Localization.getLocales();
-  for (let i = 0; i < locales.length; i++) {
-    const locale = locales[i];
-    if (
-      locale.languageCode &&
-      SUPPORTED_LOCALES.includes(locale.languageCode)
-    ) {
-      return locale.languageCode;
-    }
-  }
-  return "en";
-};
+const getLocale = () =>
+  pickSupportedLocale(
+    Localization.getLocales().map((locale) => locale.languageCode),
+    SUPPORTED_LOCALES,
+  );
 
 export const i18n = new I18n(translations);
 i18n.enableFallback = true;
