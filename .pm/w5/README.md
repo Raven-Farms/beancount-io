@@ -73,6 +73,7 @@
 - [906 — Infer grouped three-decimal CSV amounts consistently](./906.md) — minor CLI import follow-up to w1/130 and w5/753; space and apostrophe groupings reproduced 2026-10-20.
 - [907 — Correct XCD's minor-unit import advice](./907.md) — trivial CLI advisory follow-up to 753; checked against SIX and reproduced 2026-10-21.
 - [908 — Keep known zero holding values visible in account trees](./908.md) — trivial CLI report-display follow-up to w3/357 and w1/072; zero-cost and zero-price cases reproduced 2026-10-21.
+- [909 — Keep cost lots in the funded-close check](./909.md) — minor CLI closing-guard follow-up to w2/092; offsetting quantities with a residual book balance reproduced 2026-10-21.
 
 The 27 findings from the MCP QA auth sweep against the hosted endpoint (023–054, less the five under [Dropped](#dropped)) were fixed in `backend-cluster/backend-v2` and closed on 2026-10-02 and 2026-10-03; each note under [`done/`](./done/) records what shipped and in which commit. None has been re-observed against the hosted endpoint yet — the fixes reach it with the next backend deploy.
 
