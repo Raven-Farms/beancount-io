@@ -13,6 +13,7 @@ import {
   columnIndex,
   type QueryResultTableLike,
 } from "./bql-table";
+import { utcDate } from "../../../common/calendar-date";
 
 /**
  * How far back the series statement looks. ~37 months fits three yearly events
@@ -79,9 +80,9 @@ export function shiftLedgerMonths(
   const zeroBased = month - 1 + months;
   const nextYear = year + Math.floor(zeroBased / 12);
   const nextMonth = (((zeroBased % 12) + 12) % 12) + 1;
-  const lastDay = new Date(Date.UTC(nextYear, nextMonth, 0)).getUTCDate();
+  const lastDay = utcDate(nextYear, nextMonth, 0).getUTCDate();
   const nextDay = Math.min(day, lastDay);
-  return `${nextYear}-${String(nextMonth).padStart(2, "0")}-${String(nextDay).padStart(2, "0")}`;
+  return `${String(nextYear).padStart(4, "0")}-${String(nextMonth).padStart(2, "0")}-${String(nextDay).padStart(2, "0")}`;
 }
 
 /** Cutoff date for the series window ending on `today`. */

@@ -6,6 +6,7 @@
  * pin the overdue boundary without flaking. Free of `@/` value imports so the
  * jest-lite runner can require it.
  */
+import { utcDate, utcTime } from "../../../common/calendar-date";
 
 export type Cadence =
   "weekly" | "biweekly" | "monthly" | "quarterly" | "yearly";
@@ -74,7 +75,7 @@ export function parseLedgerDay(date: string): number | null {
   const year = Number(match[1]);
   const month = Number(match[2]);
   const day = Number(match[3]);
-  const ms = Date.UTC(year, month - 1, day);
+  const ms = utcTime(year, month - 1, day);
   if (!Number.isFinite(ms)) {
     return null;
   }
@@ -93,7 +94,8 @@ export function parseLedgerDay(date: string): number | null {
 export function formatLedgerDay(dayNumber: number): string {
   const ms = dayNumber * MS_PER_DAY;
   const date = new Date(ms);
-  const year = date.getUTCFullYear();
+  // Four digits, as a ledger writes 0050 (w21/043).
+  const year = String(date.getUTCFullYear()).padStart(4, "0");
   const month = String(date.getUTCMonth() + 1).padStart(2, "0");
   const day = String(date.getUTCDate()).padStart(2, "0");
   return `${year}-${month}-${day}`;
@@ -118,7 +120,7 @@ function calendarDay(dayNumber: number): CalendarDay {
 }
 
 function daysInMonth(year: number, month: number): number {
-  return new Date(Date.UTC(year, month + 1, 0)).getUTCDate();
+  return utcDate(year, month + 1, 0).getUTCDate();
 }
 
 /** `months` calendar months after `dayNumber`, on day `anchor` clamped to the month. */
@@ -128,7 +130,7 @@ function addMonthsClamped(
   anchor = calendarDay(dayNumber).day,
 ): number {
   const { year, month } = calendarDay(dayNumber);
-  const target = new Date(Date.UTC(year, month + months, 1));
+  const target = utcDate(year, month + months, 1);
   const lastDay = daysInMonth(target.getUTCFullYear(), target.getUTCMonth());
   return (
     Math.floor(target.getTime() / MS_PER_DAY) + Math.min(anchor, lastDay) - 1

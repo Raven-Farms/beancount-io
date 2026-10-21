@@ -1,3 +1,5 @@
+import { localDate } from "../../common/calendar-date";
+
 /**
  * The open date Open Account starts on. Reached from a dated entry form, the
  * account opens on that entry's date, so a back-dated receipt with a new
@@ -13,7 +15,7 @@ export function initialOpenDate(param: string | undefined, now: Date): Date {
   if (!match) return now;
   const [year, month, day] = match.slice(1).map(Number);
   // Local midnight, as `parseFormatDate` reads a ledger date.
-  const date = new Date(year!, month! - 1, day!);
+  const date = localDate(year!, month! - 1, day!);
   const real =
     date.getFullYear() === year &&
     date.getMonth() === month! - 1 &&

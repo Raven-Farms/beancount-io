@@ -13,6 +13,7 @@
  * Import-free, so the unit-test runner can require it and assert real formatted
  * output rather than mocking a formatter.
  */
+import { utcDate } from "./calendar-date";
 
 /**
  * The calendar is pinned to Gregorian, deliberately.
@@ -47,7 +48,7 @@ function gregorian(locale: string): string {
 export function formatLedgerDate(isoDate: string, locale: string): string {
   try {
     const [year, month, day] = isoDate.split("-").map(Number);
-    const date = new Date(Date.UTC(year, month - 1, day));
+    const date = utcDate(year, month - 1, day);
     if (isNaN(date.getTime())) {
       return isoDate;
     }
@@ -71,7 +72,7 @@ export function formatLedgerDate(isoDate: string, locale: string): string {
 export function formatLedgerDateShort(isoDate: string, locale: string): string {
   try {
     const [year, month, day] = isoDate.split("-").map(Number);
-    const date = new Date(Date.UTC(year, month - 1, day));
+    const date = utcDate(year, month - 1, day);
     if (isNaN(date.getTime())) {
       return isoDate;
     }

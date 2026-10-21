@@ -20,6 +20,7 @@ import type {
   JournalAmount,
   JournalCustom,
 } from "../../transactions-screen/types";
+import { utcTime } from "../../../common/calendar-date";
 
 /**
  * A `custom "budget"` directive as the journal serializes it: the positional
@@ -83,12 +84,12 @@ function parseISODate(iso: string): YearMonthDay | null {
 function formatISODate({ year, month, day }: YearMonthDay): string {
   const mm = String(month).padStart(2, "0");
   const dd = String(day).padStart(2, "0");
-  return `${year}-${mm}-${dd}`;
+  return `${String(year).padStart(4, "0")}-${mm}-${dd}`;
 }
 
 /** Epoch ms at UTC midnight — the canonical form for all day arithmetic. */
 function toEpoch({ year, month, day }: YearMonthDay): number {
-  return Date.UTC(year, month - 1, day);
+  return utcTime(year, month - 1, day);
 }
 
 function fromEpoch(epoch: number): YearMonthDay {
