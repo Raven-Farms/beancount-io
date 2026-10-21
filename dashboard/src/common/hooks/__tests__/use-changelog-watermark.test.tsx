@@ -194,6 +194,67 @@ describe("useChangelogWatermark", () => {
     warn.mockRestore();
   });
 
+  /** Wrong-shaped saved read identities must not crash the dashboard (w4/m39). */
+  describe("malformed saved read identities", () => {
+    const READ_IDS = "beancount.changelog.readIds";
+    beforeEach(() => {
+      vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    });
+    afterEach(() => {
+      vi.restoreAllMocks();
+    });
+
+    it.each([{}, null, 7, "blog/a", { length: 1 }])(
+      "treats a saved %j as nothing read yet",
+      (value) => {
+        localStorage.setItem(READ_IDS, JSON.stringify(value));
+        arrange({
+          items: [release("a", daysAgo(3)), release("b", daysAgo(5))],
+        });
+        const { result } = renderHook(() => useChangelogWatermark());
+
+        expect(result.current.unreadCount).toBe(2);
+        act(() => result.current.markRead(result.current.items[0]));
+        expect(result.current.unreadCount).toBe(1);
+      },
+    );
+
+    it("keeps the valid identities of a mixed saved list", () => {
+      localStorage.setItem(READ_IDS, JSON.stringify(["blog/a", 3, { id: 1 }]));
+      arrange({ items: [release("a", daysAgo(3)), release("b", daysAgo(5))] });
+      const { result } = renderHook(() => useChangelogWatermark());
+
+      expect(result.current.isUnread(result.current.items[0])).toBe(false);
+      expect(result.current.unreadCount).toBe(1);
+    });
+
+    it("keeps the last good list when another tab writes a wrong shape", () => {
+      arrange({ items: [release("a", daysAgo(3)), release("b", daysAgo(5))] });
+      const { result } = renderHook(() => useChangelogWatermark());
+      act(() => result.current.markRead(result.current.items[0]));
+      expect(result.current.unreadCount).toBe(1);
+
+      act(() => {
+        window.dispatchEvent(
+          new StorageEvent("storage", { key: READ_IDS, newValue: "{}" }),
+        );
+      });
+      expect(result.current.unreadCount).toBe(1);
+      expect(result.current.isUnread(result.current.items[0])).toBe(false);
+
+      act(() => {
+        window.dispatchEvent(
+          new StorageEvent("storage", {
+            key: READ_IDS,
+            newValue: JSON.stringify(["blog/b"]),
+          }),
+        );
+      });
+      expect(result.current.isUnread(result.current.items[0])).toBe(true);
+      expect(result.current.isUnread(result.current.items[1])).toBe(false);
+    });
+  });
+
   it("keeps a partially read release read across a language switch", () => {
     // Two releases so opening one records it instead of advancing the
     // watermark past everything.
