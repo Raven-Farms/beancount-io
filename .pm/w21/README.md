@@ -14,7 +14,6 @@
 
 - [064](./blocked/064.md) — A token refresh whose response is lost signs the user out on the next refresh (rotated token replayed → grant revoked) — **blocked:** needs an owner decision (ADR) on a refresh-token reuse grace window
 - [065](./blocked/065.md) — One early-year entry (e.g. 0050) makes the balance sheet 23,718 monthly points (3 MB) and the app stalls — **blocked:** needs an approach decision (per-pill fetch vs server downsample) and a simulator profile of the stall
-- [143](./143.md) — No headings in journals, lists or cards; the Headings rotor can't navigate
 - [144](./144.md) — File editor can't dismiss the keyboard for writable non-.bean files
 - [145](./145.md) — Payee suggestions, Account Picker and Browse Ledgers can't bring last rows above the keyboard
 - [146](./146.md) — New Transaction: with 4+ postings the number pad covers Add posting, Remainder and save errors

@@ -357,6 +357,7 @@ export const ru: Translations = {
   // entry context (transactions screen)
   journalError: "Ошибка",
   journalNoData: "Данные контекста записи недоступны",
+  dateSectionHeaderTotal: "{{date}}, итого {{total}}",
   journalEntryContext: "Контекст записи",
   journalBalancesBefore: "Балансы до записи",
   journalBalancesAfter: "Балансы после записи",

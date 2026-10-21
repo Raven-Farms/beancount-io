@@ -314,6 +314,7 @@ export const zh: Translations = {
   // entry context (transactions screen)
   journalError: "错误",
   journalNoData: "没有可用的条目上下文数据",
+  dateSectionHeaderTotal: "{{date}}，合计 {{total}}",
   journalEntryContext: "条目上下文",
   journalBalancesBefore: "条目前余额",
   journalBalancesAfter: "条目后余额",

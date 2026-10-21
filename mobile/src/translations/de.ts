@@ -362,6 +362,7 @@ export const de: Translations = {
   // entry context (transactions screen)
   journalError: "Fehler",
   journalNoData: "Keine Eintragskontextdaten verfügbar",
+  dateSectionHeaderTotal: "{{date}}, gesamt {{total}}",
   journalEntryContext: "Eintragskontext",
   journalBalancesBefore: "Salden vor Eintrag",
   journalBalancesAfter: "Salden nach Eintrag",

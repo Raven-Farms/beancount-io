@@ -344,6 +344,7 @@ export const en = {
   // entry context (transactions screen)
   journalError: "Error",
   journalNoData: "No entry context data available",
+  dateSectionHeaderTotal: "{{date}}, total {{total}}",
   journalEntryContext: "Entry Context",
   journalBalancesBefore: "Balances Before Entry",
   journalBalancesAfter: "Balances After Entry",

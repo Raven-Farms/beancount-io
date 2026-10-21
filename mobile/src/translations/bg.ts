@@ -351,6 +351,7 @@ export const bg: Translations = {
   // entry context (transactions screen)
   journalError: "Грешка",
   journalNoData: "Няма налични данни за контекст на запис",
+  dateSectionHeaderTotal: "{{date}}, общо {{total}}",
   journalEntryContext: "Контекст на запис",
   journalBalancesBefore: "Салда преди запис",
   journalBalancesAfter: "Салда след запис",

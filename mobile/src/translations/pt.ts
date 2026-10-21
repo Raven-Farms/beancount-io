@@ -361,6 +361,7 @@ export const pt: Translations = {
   // entry context (transactions screen)
   journalError: "Erro",
   journalNoData: "Nenhum dado de contexto de entrada disponível",
+  dateSectionHeaderTotal: "{{date}}, total do dia {{total}}",
   journalEntryContext: "Contexto da entrada",
   journalBalancesBefore: "Saldos antes da entrada",
   journalBalancesAfter: "Saldos depois da entrada",

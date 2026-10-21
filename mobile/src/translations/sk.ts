@@ -360,6 +360,7 @@ export const sk: Translations = {
   // entry context (transactions screen)
   journalError: "Chyba",
   journalNoData: "Údaje kontextu záznamu nie sú k dispozícii",
+  dateSectionHeaderTotal: "{{date}}, spolu {{total}}",
   journalEntryContext: "Kontext záznamu",
   journalBalancesBefore: "Zostatky pred záznamom",
   journalBalancesAfter: "Zostatky po zázname",

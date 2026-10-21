@@ -271,7 +271,9 @@ function MerchantsDirectory() {
       }
       return (
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionHeaderText}>{t(section.titleKey)}</Text>
+          <Text style={styles.sectionHeaderText} accessibilityRole="header">
+            {t(section.titleKey)}
+          </Text>
         </View>
       );
     },

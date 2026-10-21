@@ -588,7 +588,14 @@ function AccountPickerScreenComponent(): JSX.Element {
         onScrollBeginDrag={onScrollBeginDrag}
         renderSectionHeader={({ section }) =>
           section.title ? (
-            <View style={styles.sectionHeader}>
+            <View
+              style={styles.sectionHeader}
+              // A heading named by its title alone, without the clock glyph
+              // (w21/143).
+              accessible
+              accessibilityRole="header"
+              accessibilityLabel={section.title}
+            >
               {section.source === "recents" && (
                 // The same clock the history suggestion chips wear, so "we saw
                 // you use this" reads the same wherever it appears.

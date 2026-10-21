@@ -356,6 +356,7 @@ export const uk: Translations = {
   // entry context (transactions screen)
   journalError: "Помилка",
   journalNoData: "Дані контексту запису недоступні",
+  dateSectionHeaderTotal: "{{date}}, разом {{total}}",
   journalEntryContext: "Контекст запису",
   journalBalancesBefore: "Баланси до запису",
   journalBalancesAfter: "Баланси після запису",

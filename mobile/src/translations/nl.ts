@@ -352,6 +352,7 @@ export const nl: Translations = {
   // entry context (transactions screen)
   journalError: "Fout",
   journalNoData: "Geen contextgegevens van vermelding beschikbaar",
+  dateSectionHeaderTotal: "{{date}}, totaal {{total}}",
   journalEntryContext: "Context van vermelding",
   journalBalancesBefore: "Saldi voor vermelding",
   journalBalancesAfter: "Saldi na vermelding",

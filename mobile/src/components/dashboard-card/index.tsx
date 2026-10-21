@@ -123,6 +123,7 @@ export function DashboardCard({
             <Text
               key={fontScale}
               style={[styles.title, stacked && { flex: 0 }]}
+              accessibilityRole="header"
             >
               {title}
             </Text>

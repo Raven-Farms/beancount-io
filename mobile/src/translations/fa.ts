@@ -350,6 +350,7 @@ export const fa: Translations = {
   journalSource: "کد منبع", // TODO: needs native speaker review
   // directive types & entry filters
   open: "افتتاح",
+  dateSectionHeaderTotal: "{{date}}، جمع {{total}}",
   close: "بستن",
   balance: "مانده",
   balanceOffBy: "اختلاف {{amount}}",
