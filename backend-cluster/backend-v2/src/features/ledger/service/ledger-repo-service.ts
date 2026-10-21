@@ -35,6 +35,12 @@ export type LedgerFileEntry = {
   path: string;
   name: string;
   type: "file" | "dir";
+  /** Bytes, as the ledger service lists them (GraphQL returns it too). */
+  size: number;
+  /** Blob SHA: the optimistic lock a delete or update sends back. */
+  sha: string;
+  /** The commit that last touched the entry, when the listing knows it. */
+  lastCommitSha: string | null;
 };
 
 export type LedgerFileWithContent = {
@@ -193,7 +199,14 @@ export class LedgerRepoService
         if (a.type === b.type) return a.name.localeCompare(b.name);
         return a.type === "dir" ? -1 : 1;
       })
-      .map((e) => ({ path: e.path, name: e.name, type: e.type }));
+      .map((e) => ({
+        path: e.path,
+        name: e.name,
+        type: e.type,
+        size: e.size,
+        sha: e.sha,
+        lastCommitSha: e.last_commit_sha ?? null,
+      }));
   }
 
   async getFilesContent(params: {

@@ -116,12 +116,28 @@
               "file",
               "dir"
             ]
+          },
+          "size": {
+            "type": "integer",
+            "description": "Size in bytes"
+          },
+          "sha": {
+            "type": "string",
+            "description": "Blob SHA: send it back as the optimistic lock of a delete or update"
+          },
+          "lastCommitSha": {
+            "type": "string",
+            "nullable": true,
+            "description": "The commit that last touched the entry, when known"
           }
         },
         "required": [
           "path",
           "name",
-          "type"
+          "type",
+          "size",
+          "sha",
+          "lastCommitSha"
         ],
         "description": "One file or directory at a level of the repository"
       },

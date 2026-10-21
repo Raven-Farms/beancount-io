@@ -61,11 +61,25 @@ describe("executeBqlQuery", () => {
 });
 
 describe("executeListLedgerFiles", () => {
-  it("narrows service entries to {path, type} for the tool's output schema", async () => {
+  it("returns the listing's name, size, sha and last commit with each entry", async () => {
     const ledgerRepo = {
       listDirContent: jest.fn().mockResolvedValue([
-        { path: "main.bean", name: "main.bean", type: "file" },
-        { path: "sub", name: "sub", type: "dir" },
+        {
+          path: "main.bean",
+          name: "main.bean",
+          type: "file",
+          size: 12,
+          sha: "abc",
+          lastCommitSha: "c1",
+        },
+        {
+          path: "sub",
+          name: "sub",
+          type: "dir",
+          size: 0,
+          sha: "def",
+          lastCommitSha: null,
+        },
       ]),
     };
     const result = await executeListLedgerFiles(
@@ -79,8 +93,22 @@ describe("executeListLedgerFiles", () => {
     expect(result).toEqual({
       ok: true,
       result: [
-        { path: "main.bean", type: "file" },
-        { path: "sub", type: "dir" },
+        {
+          path: "main.bean",
+          name: "main.bean",
+          type: "file",
+          size: 12,
+          sha: "abc",
+          lastCommitSha: "c1",
+        },
+        {
+          path: "sub",
+          name: "sub",
+          type: "dir",
+          size: 0,
+          sha: "def",
+          lastCommitSha: null,
+        },
       ],
     });
   });

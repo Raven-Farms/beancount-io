@@ -31,8 +31,10 @@ const entry = (path: string, type: "file" | "dir") => ({
   name: path.split("/").at(-1)!,
   path,
   type,
-  sha: "sha",
-  size: 1,
+  sha: `sha-${path}`,
+  size: path.length,
+  // One entry has no last commit, which every surface reports as null.
+  last_commit_sha: path === "imports" ? undefined : `commit-${path}`,
 });
 // The ledger service's answers: a listing per existing directory, `[]` for a
 // missing one, and 404 when the path names a file.
@@ -132,6 +134,28 @@ async function fixture() {
             ),
       };
     },
+    /** Each surface's full entries, for the field-level comparison. */
+    fields: async () => {
+      const restBody = (await (
+        await fetch(`${rest.url}/api-gateway/v1/ledgers/alice/main/files`)
+      ).json()) as Array<Record<string, unknown>>;
+      const tool = await client.callTool({
+        name: "listLedgerFiles",
+        arguments: {},
+      });
+      const gql = await graphql({
+        schema,
+        source: `{ getLedgerDirContent(ledgerId: "alice/main") { path name type size sha lastCommitSha } }`,
+        contextValue: { identity: pinnedReadToken },
+      });
+      return {
+        rest: restBody,
+        mcp: (
+          tool.structuredContent as { result: Array<Record<string, unknown>> }
+        ).result,
+        gql: gql.data?.getLedgerDirContent as Array<Record<string, unknown>>,
+      };
+    },
     close: async () => {
       await client.close();
       await server.close();
@@ -152,6 +176,39 @@ describe("directory listing on REST, MCP and GraphQL", () => {
       expect(imports.rest).toEqual(["imports/2026.bean"]);
       expect(imports.mcp).toEqual(imports.rest);
       expect(imports.gql).toEqual(imports.rest);
+    } finally {
+      await f.close();
+    }
+  });
+
+  // w21/200: REST and MCP dropped size, sha and lastCommitSha, which GraphQL
+  // returned, so a client could not do a sha-guarded delete from a listing.
+  it("returns the same fields for the same directory on every surface", async () => {
+    const f = await fixture();
+    try {
+      const { rest, mcp, gql } = await f.fields();
+      expect(rest).toEqual([
+        {
+          path: "imports",
+          name: "imports",
+          type: "dir",
+          size: 7,
+          sha: "sha-imports",
+          lastCommitSha: null,
+        },
+        {
+          path: "main.bean",
+          name: "main.bean",
+          type: "file",
+          size: 9,
+          sha: "sha-main.bean",
+          lastCommitSha: "commit-main.bean",
+        },
+      ]);
+      expect(mcp).toEqual(rest);
+      // GraphQL's enum value for `type` is the same word, and its nullable
+      // fields are null when the listing does not know them.
+      expect(JSON.parse(JSON.stringify(gql))).toEqual(rest);
     } finally {
       await f.close();
     }

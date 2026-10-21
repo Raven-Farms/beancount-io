@@ -208,9 +208,16 @@ describe("LedgerRepoService", () => {
         data: {
           success: true,
           data: [
-            { path: "z.bean", name: "z.bean", type: "file" },
-            { path: "sub", name: "sub", type: "dir" },
-            { path: "a.bean", name: "a.bean", type: "file" },
+            { path: "z.bean", name: "z.bean", type: "file", size: 9, sha: "sz" },
+            { path: "sub", name: "sub", type: "dir", size: 0, sha: "ss" },
+            {
+              path: "a.bean",
+              name: "a.bean",
+              type: "file",
+              size: 4,
+              sha: "sa",
+              last_commit_sha: "c1",
+            },
           ],
         },
       });
@@ -220,10 +227,32 @@ describe("LedgerRepoService", () => {
         identity: IDENTITY,
       });
 
+      // w21/200: size, sha and the last commit travel with the listing.
       expect(result).toEqual([
-        { path: "sub", name: "sub", type: "dir" },
-        { path: "a.bean", name: "a.bean", type: "file" },
-        { path: "z.bean", name: "z.bean", type: "file" },
+        {
+          path: "sub",
+          name: "sub",
+          type: "dir",
+          size: 0,
+          sha: "ss",
+          lastCommitSha: null,
+        },
+        {
+          path: "a.bean",
+          name: "a.bean",
+          type: "file",
+          size: 4,
+          sha: "sa",
+          lastCommitSha: "c1",
+        },
+        {
+          path: "z.bean",
+          name: "z.bean",
+          type: "file",
+          size: 9,
+          sha: "sz",
+          lastCommitSha: null,
+        },
       ]);
     });
 

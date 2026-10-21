@@ -54,6 +54,14 @@ const dirEntrySchema = z
     path: z.string(),
     name: z.string(),
     type: z.enum(["file", "dir"]),
+    size: z.number().int().openapi({ description: "Size in bytes" }),
+    sha: z.string().openapi({
+      description:
+        "Blob SHA: send it back as the optimistic lock of a delete or update",
+    }),
+    lastCommitSha: z.string().nullable().openapi({
+      description: "The commit that last touched the entry, when known",
+    }),
   })
   .openapi("LedgerDirEntry", {
     description: "One file or directory at a level of the repository",
