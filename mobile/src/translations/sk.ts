@@ -521,6 +521,7 @@ export const sk: Translations = {
   ledgerEditorKeepEditing: "Pokračovať v úpravách",
   keyboardAccessoryInsert: "Vložiť {{symbol}}",
   keyboardAccessoryDismiss: "Skryť klávesnicu",
+  ledgerEditorErrorLine: "riadok {{line}}",
   ledgerEditorErrorCount: {
     one: "{{count}} chyba",
     few: "{{count}} chyby",

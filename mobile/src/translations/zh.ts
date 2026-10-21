@@ -462,6 +462,7 @@ export const zh: Translations = {
   ledgerEditorKeepEditing: "继续编辑",
   keyboardAccessoryInsert: "插入 {{symbol}}",
   keyboardAccessoryDismiss: "隐藏键盘",
+  ledgerEditorErrorLine: "第 {{line}} 行",
   ledgerEditorErrorCount: {
     other: "{{count}} 个错误",
   },

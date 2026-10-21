@@ -520,6 +520,7 @@ export const de: Translations = {
   ledgerEditorKeepEditing: "Weiter bearbeiten",
   keyboardAccessoryInsert: "{{symbol}} einfügen",
   keyboardAccessoryDismiss: "Tastatur ausblenden",
+  ledgerEditorErrorLine: "Zeile {{line}}",
   ledgerEditorErrorCount: {
     one: "{{count}} Fehler",
     other: "{{count}} Fehler",

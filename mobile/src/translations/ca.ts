@@ -518,6 +518,7 @@ export const ca: Translations = {
   ledgerEditorKeepEditing: "Continua editant",
   keyboardAccessoryInsert: "Insereix {{symbol}}",
   keyboardAccessoryDismiss: "Amaga el teclat",
+  ledgerEditorErrorLine: "línia {{line}}",
   ledgerEditorErrorCount: {
     one: "{{count}} error",
     many: "{{count}} errors",

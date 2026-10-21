@@ -519,6 +519,7 @@ export const fr: Translations = {
   ledgerEditorKeepEditing: "Continuer",
   keyboardAccessoryInsert: "Insérer {{symbol}}",
   keyboardAccessoryDismiss: "Masquer le clavier",
+  ledgerEditorErrorLine: "ligne {{line}}",
   ledgerEditorErrorCount: {
     one: "{{count}} erreur",
     many: "{{count}} erreurs",

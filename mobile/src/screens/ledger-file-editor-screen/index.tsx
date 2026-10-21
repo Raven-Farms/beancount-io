@@ -263,9 +263,10 @@ function ErrorBanner({
                     {err.message}
                   </Text>
                   {err.lineno != null && (
-                    <Text
-                      style={styles.errorLocation}
-                    >{`line ${err.lineno}`}</Text>
+                    // Translated, as the banner's count is (w21/091).
+                    <Text style={styles.errorLocation}>
+                      {t("ledgerEditorErrorLine", { line: err.lineno })}
+                    </Text>
                   )}
                 </View>
                 {err.lineno != null && (

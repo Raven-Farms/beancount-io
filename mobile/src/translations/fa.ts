@@ -501,6 +501,7 @@ export const fa: Translations = {
   ledgerEditorKeepEditing: "ادامهٔ ویرایش",
   keyboardAccessoryInsert: "درج {{symbol}}",
   keyboardAccessoryDismiss: "پنهان کردن صفحه‌کلید",
+  ledgerEditorErrorLine: "خط {{line}}",
   ledgerEditorErrorCount: {
     one: "{{count}} خطا",
     other: "{{count}} خطا",

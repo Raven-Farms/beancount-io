@@ -517,6 +517,7 @@ export const ru: Translations = {
   ledgerEditorKeepEditing: "Продолжить правку",
   keyboardAccessoryInsert: "Вставить {{symbol}}",
   keyboardAccessoryDismiss: "Скрыть клавиатуру",
+  ledgerEditorErrorLine: "строка {{line}}",
   ledgerEditorErrorCount: {
     one: "{{count}} ошибка",
     few: "{{count}} ошибки",

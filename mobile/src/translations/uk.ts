@@ -515,6 +515,7 @@ export const uk: Translations = {
   ledgerEditorKeepEditing: "Продовжити редагування",
   keyboardAccessoryInsert: "Вставити {{symbol}}",
   keyboardAccessoryDismiss: "Сховати клавіатуру",
+  ledgerEditorErrorLine: "рядок {{line}}",
   ledgerEditorErrorCount: {
     one: "{{count}} помилка",
     few: "{{count}} помилки",

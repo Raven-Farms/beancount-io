@@ -508,6 +508,7 @@ export const nl: Translations = {
   ledgerEditorKeepEditing: "Doorgaan met bewerken",
   keyboardAccessoryInsert: "{{symbol}} invoegen",
   keyboardAccessoryDismiss: "Toetsenbord verbergen",
+  ledgerEditorErrorLine: "regel {{line}}",
   ledgerEditorErrorCount: {
     one: "{{count}} fout",
     other: "{{count}} fouten",

@@ -507,6 +507,7 @@ export const bg: Translations = {
   ledgerEditorKeepEditing: "Продължи редактирането",
   keyboardAccessoryInsert: "Вмъкване на {{symbol}}",
   keyboardAccessoryDismiss: "Скриване на клавиатурата",
+  ledgerEditorErrorLine: "ред {{line}}",
   ledgerEditorErrorCount: {
     one: "Грешка: {{count}}",
     other: "Грешки: {{count}}",
