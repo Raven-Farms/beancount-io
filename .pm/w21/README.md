@@ -8,7 +8,6 @@
 
 ## Inbox
 
-- [021](./021.md) — The account picker's Recent block ignores the selected root chip
 - [022](./022.md) — A refund month's negative Expenses bar runs off the bottom of the Reports chart, through the month label
 - [023](./023.md) — Picking a known payee in New Transaction doesn't bring its usual accounts, a capability lost when multi-posting became the default
 - [024](./024.md) — Returning to the app never refreshes a mounted screen, so Home can contradict Transactions after an outside change
