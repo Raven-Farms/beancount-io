@@ -177,3 +177,8 @@ A minimal native Claude Code 2.1.304 Sonnet request still returns first-party HT
 
 
 Close/options 1.0.1 subsequently pass fresh native installs in both supported hosts with all 29 authored files matching per host. This completes individual install verification of the accepted eleven-skill release alongside the prior results; Hermes init retains its recorded exception. See the [registry rehearsal](../../../../docs/skills/clawhub-rehearsal.md#eleven-synchronization-updates-public--2026-10-21-utc) for audit labels and retained scanner findings. No current thirteen-skill release or new authenticated agent-query journey is claimed.
+
+
+## Independent task-level progress — 2026-10-21 UTC
+
+The [current release preflight](../../../../docs/skills/clawhub-release-preflight-20261021.md) completes the fresh bundle equivalence, anonymous publication previews, thirteen-skill install/discovery, standalone Codex controls and protected-environment readiness portions of t013. Continue remaining substeps against their actual prerequisites; t013 remains open for the documented Claude/adoption, publication and current-host conditions.

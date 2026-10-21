@@ -227,3 +227,8 @@ Fresh anonymous native installs verify the two newly promoted versions on the sa
 Both hosts' metadata confirms version 1.0.1. Each fresh Hermes `skills-guard-v10` scan retains one MEDIUM `unpinned_pip_install` finding in `compatibility.md` while allowing installation. Neither host uses force or warning-acknowledgment flags. These two-version checks complete the individual supported-host verification of all accepted 0.3.3 content, alongside the earlier nine OpenClaw/eight Hermes results. Init retains the previously recorded Hermes restriction. This is installation/scanner evidence, not a new authenticated query journey or publication of the thirteen-skill source release.
 
 Raw native results, exact pins, all installed file hashes and the installed bundles are retained under `scripts/skills/tmp/w6-m6-20261021/host-install/`. The task-only restored Hermes source/runtime and anonymous profiles/caches are removed after collection.
+
+
+## Standalone current-release controls — 2026-10-21 UTC
+
+The [current release preflight](clawhub-release-preflight-20261021.md) records a fresh 119-file equivalence check, six publication previews/seven unchanged skips, thirteen-skill install/discovery and two standalone native Codex controls. Both controls pass with unchanged ledgers; an initial capacity failure and ancestor-guidance limits remain explicit. Current Claude/adoption checks and subsequent protected publication/current-content host checks remain open.
