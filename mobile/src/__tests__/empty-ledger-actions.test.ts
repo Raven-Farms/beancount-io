@@ -227,6 +227,14 @@ function load(relative: string): any {
         return { ThemedRefreshControl: "RefreshControl" };
       if (id === "@/components/valuation-sheet")
         return { ValuationSheet: "ValuationSheet" };
+      if (id.endsWith("/use-today"))
+        return {
+          useToday: () => {
+            const now = new Date();
+            const pad = (n: number) => String(n).padStart(2, "0");
+            return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+          },
+        };
       if (id.endsWith("/use-keyboard-height"))
         return { useKeyboardHeight: () => 0 };
       if (id === "./transactions-header")

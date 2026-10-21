@@ -20,7 +20,7 @@ import {
   type Valuation,
 } from "@/common/valuation";
 import { ValuationSheet } from "@/components/valuation-sheet";
-import { getFormatDate } from "@/common/format-util";
+import { useToday } from "@/common/hooks/use-today";
 import {
   AccountChartsCard,
   type ChartKey,
@@ -107,7 +107,7 @@ const HomeScreenImpl = (): JSX.Element => {
     refetch: pricesRefetch,
     error: pricesError,
   } = useLedgerPrices(ledgerId);
-  const today = useMemo(() => getFormatDate(new Date()), []);
+  const today = useToday();
   const { valuations, chartCaptions, chartFootnotes } = useMemo(() => {
     const valuationOf = (series: SheetSeries) =>
       selectSeriesValuation(

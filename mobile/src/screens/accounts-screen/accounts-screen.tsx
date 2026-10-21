@@ -19,7 +19,7 @@ import { LedgerGuard, useLedgerGuard } from "@/components/ledger-guard";
 import { useLedgerReadContext } from "@/common/hooks/use-ledger-read-context";
 import { useTrialBalance } from "@/screens/accounts-screen/hooks/use-trial-balance";
 import { useLedgerPrices } from "@/common/hooks/use-ledger-prices";
-import { getFormatDate } from "@/common/format-util";
+import { useToday } from "@/common/hooks/use-today";
 import { isShowingStaleDataFromQueries } from "@/common/apollo/stale-data";
 
 // Skeleton rows sized to the loaded table's rhythm: each tile plus its vertical
@@ -115,7 +115,7 @@ const AccountsScreenImpl = (): JSX.Element => {
     refetch: pricesRefetch,
     error: pricesError,
   } = useLedgerPrices(ledgerId);
-  const today = useMemo(() => getFormatDate(new Date()), []);
+  const today = useToday();
   const displays = useMemo(
     () =>
       selectTrialBalanceDisplays(

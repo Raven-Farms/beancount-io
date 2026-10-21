@@ -33,7 +33,7 @@ import {
 import { BALANCE_CONVERSION } from "@/common/balance-util";
 import { balanceNotes } from "@/common/valuation";
 import { useLedgerPrices } from "@/common/hooks/use-ledger-prices";
-import { getFormatDate } from "@/common/format-util";
+import { useToday } from "@/common/hooks/use-today";
 import { formatUnits } from "@/common/number-utils";
 import {
   selectAccountBalanceDisplay,
@@ -175,7 +175,7 @@ const AccountDetailScreenImpl = ({
   } = useTrialBalance(ledgerId);
   const valuationPending =
     (pricesLoading && !pricesData) || (accountsLoading && !accountsData);
-  const today = useMemo(() => getFormatDate(new Date()), []);
+  const today = useToday();
   const display = useMemo(
     () =>
       selectAccountBalanceDisplay(

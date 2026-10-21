@@ -1,4 +1,6 @@
 import { useGuest } from "@/common/guest/guest-context";
+import { parseFormatDate } from "@/common/format-util";
+import { useToday } from "@/common/hooks/use-today";
 import { useLedgerAccess } from "@/common/hooks/use-ledger-access";
 import { useMemo, useCallback, useRef, useState } from "react";
 import { useRouter, useScrollToTop } from "expo-router";
@@ -124,10 +126,13 @@ const TransactionList = () => {
     () => selectFiltersForLedger(scopedFilters, ledgerId),
     [scopedFilters, ledgerId],
   );
-  const activeFilterCount = countActiveFilters(filters, new Date());
+  // Relative ranges (1M, 3M, YTD) end today, which moves at midnight and on
+  // a return to the app; captured once, they hid newer entries (w21/078).
+  const today = useToday();
+  const activeFilterCount = countActiveFilters(filters, parseFormatDate(today));
   const filterQuery = useMemo(
-    () => toFilterQuery(filters, new Date()),
-    [filters],
+    () => toFilterQuery(filters, parseFormatDate(today)),
+    [filters, today],
   );
 
   const { data, loading, error, refetch, fetchMore, networkStatus } =

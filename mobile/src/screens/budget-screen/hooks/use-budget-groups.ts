@@ -1,5 +1,6 @@
 import { useEffect, useMemo } from "react";
 import { useGetLedgerJournalQuery } from "@/generated-graphql/graphql";
+import { useToday } from "@/common/hooks/use-today";
 import { DirectiveType } from "@/screens/transactions-screen/types";
 import {
   groupBudgetEntries,
@@ -44,12 +45,17 @@ export function useBudgetGroups(ledgerId?: string, refreshSignal = 0) {
     }
   }, [refreshSignal, ledgerId, refetch]);
 
+  // Which directive is in effect depends on the day: a change scheduled for
+  // 1 November must take over on a Home or Budget screen left open across it,
+  // where Apollo hands back the same `data` (w21/078).
+  const today = useToday();
   const groups = useMemo(
     () =>
       groupBudgetEntries(
         (data?.getLedgerJournal.data ?? []) as unknown as BudgetEntry[],
+        today,
       ),
-    [data],
+    [data, today],
   );
 
   return { groups, loading, error, refetch };
