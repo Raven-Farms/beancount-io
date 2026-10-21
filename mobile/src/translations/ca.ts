@@ -462,8 +462,16 @@ export const ca: Translations = {
   commitDetailFiles: "Fitxers",
   commitDetailDiff: "Diferències",
   commitDetailNoDiff: "No hi ha diferències disponibles.",
-  commitDetailAdditions: "+{{count}} línies",
-  commitDetailDeletions: "-{{count}} línies",
+  commitDetailAdditions: {
+    one: "+{{count}} línia",
+    many: "+{{count}} línies",
+    other: "+{{count}} línies",
+  },
+  commitDetailDeletions: {
+    one: "-{{count}} línia",
+    many: "-{{count}} línies",
+    other: "-{{count}} línies",
+  },
   // ledger file browser
   ledgerLoadError: "No s'ha pogut carregar",
   ledgerEmpty: "Cap fitxer",

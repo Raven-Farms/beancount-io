@@ -447,8 +447,14 @@ export const fa: Translations = {
   commitDetailFiles: "فایل‌ها",
   commitDetailDiff: "تفاوت‌ها",
   commitDetailNoDiff: "تفاوتی در دسترس نیست.",
-  commitDetailAdditions: "+{{count}} خط",
-  commitDetailDeletions: "-{{count}} خط",
+  commitDetailAdditions: {
+    one: "+{{count}} خط",
+    other: "+{{count}} خط",
+  },
+  commitDetailDeletions: {
+    one: "-{{count}} خط",
+    other: "-{{count}} خط",
+  },
   // ledger file browser
   ledgerLoadError: "بارگذاری ناموفق بود",
   ledgerEmpty: "بدون فایل",

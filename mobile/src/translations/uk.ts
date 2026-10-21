@@ -458,8 +458,18 @@ export const uk: Translations = {
   commitDetailFiles: "Файли",
   commitDetailDiff: "Зміни",
   commitDetailNoDiff: "Змін немає.",
-  commitDetailAdditions: "+{{count}} рядків",
-  commitDetailDeletions: "-{{count}} рядків",
+  commitDetailAdditions: {
+    one: "+{{count}} рядок",
+    few: "+{{count}} рядки",
+    many: "+{{count}} рядків",
+    other: "+{{count}} рядка",
+  },
+  commitDetailDeletions: {
+    one: "-{{count}} рядок",
+    few: "-{{count}} рядки",
+    many: "-{{count}} рядків",
+    other: "-{{count}} рядка",
+  },
   // ledger file browser
   ledgerLoadError: "Не вдалося завантажити",
   ledgerEmpty: "Немає файлів",

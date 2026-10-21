@@ -460,8 +460,18 @@ export const ru: Translations = {
   commitDetailFiles: "Файлы",
   commitDetailDiff: "Изменения",
   commitDetailNoDiff: "Изменения недоступны.",
-  commitDetailAdditions: "+{{count}} строк",
-  commitDetailDeletions: "-{{count}} строк",
+  commitDetailAdditions: {
+    one: "+{{count}} строка",
+    few: "+{{count}} строки",
+    many: "+{{count}} строк",
+    other: "+{{count}} строки",
+  },
+  commitDetailDeletions: {
+    one: "-{{count}} строка",
+    few: "-{{count}} строки",
+    many: "-{{count}} строк",
+    other: "-{{count}} строки",
+  },
   // ledger file browser
   ledgerLoadError: "Не удалось загрузить",
   ledgerEmpty: "Нет файлов",

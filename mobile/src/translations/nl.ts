@@ -453,8 +453,14 @@ export const nl: Translations = {
   commitDetailFiles: "Bestanden",
   commitDetailDiff: "Verschillen",
   commitDetailNoDiff: "Geen verschillen beschikbaar.",
-  commitDetailAdditions: "+{{count}} regels",
-  commitDetailDeletions: "-{{count}} regels",
+  commitDetailAdditions: {
+    one: "+{{count}} regel",
+    other: "+{{count}} regels",
+  },
+  commitDetailDeletions: {
+    one: "-{{count}} regel",
+    other: "-{{count}} regels",
+  },
   // ledger file browser
   ledgerLoadError: "Laden mislukt",
   ledgerEmpty: "Geen bestanden",

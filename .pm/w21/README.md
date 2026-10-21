@@ -14,7 +14,6 @@
 
 - [064](./blocked/064.md) — A token refresh whose response is lost signs the user out on the next refresh (rotated token replayed → grant revoked) — **blocked:** needs an owner decision (ADR) on a refresh-token reuse grace window
 - [065](./blocked/065.md) — One early-year entry (e.g. 0050) makes the balance sheet 23,718 monthly points (3 MB) and the app stalls — **blocked:** needs an approach decision (per-pill fetch vs server downsample) and a simulator profile of the stall
-- [077](./077.md) — Commit detail's VoiceOver stats label never pluralises ("+1 additions"; wrong ru/uk/sk/bg forms)
 - [078](./078.md) — Transactions' 1M/3M/YTD filters freeze "today" when applied; after midnight new entries stay hidden
 - [079](./079.md) — Entry writes leave the Files tab's file sha stale, so deleting that file fails until a refresh
 - [080](./080.md) — A failed first load on Reports, Accounts and Home's budget panel reads as \$0.00 or "No accounts" (siblings of w4/067)

@@ -461,8 +461,16 @@ export const es: Translations = {
   commitDetailFiles: "Archivos",
   commitDetailDiff: "Diferencias",
   commitDetailNoDiff: "No hay diferencias disponibles.",
-  commitDetailAdditions: "+{{count}} líneas",
-  commitDetailDeletions: "-{{count}} líneas",
+  commitDetailAdditions: {
+    one: "+{{count}} línea",
+    many: "+{{count}} líneas",
+    other: "+{{count}} líneas",
+  },
+  commitDetailDeletions: {
+    one: "-{{count}} línea",
+    many: "-{{count}} líneas",
+    other: "-{{count}} líneas",
+  },
   // ledger file browser
   ledgerLoadError: "Error al cargar",
   ledgerEmpty: "Sin archivos",

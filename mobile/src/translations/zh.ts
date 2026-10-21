@@ -412,8 +412,12 @@ export const zh: Translations = {
   commitDetailFiles: "文件",
   commitDetailDiff: "差异",
   commitDetailNoDiff: "没有可显示的差异。",
-  commitDetailAdditions: "新增 {{count}} 行",
-  commitDetailDeletions: "删除 {{count}} 行",
+  commitDetailAdditions: {
+    other: "新增 {{count}} 行",
+  },
+  commitDetailDeletions: {
+    other: "删除 {{count}} 行",
+  },
   // ledger file browser
   ledgerLoadError: "加载失败",
   ledgerEmpty: "没有文件",

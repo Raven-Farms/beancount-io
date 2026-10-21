@@ -462,8 +462,18 @@ export const sk: Translations = {
   commitDetailFiles: "Súbory",
   commitDetailDiff: "Rozdiely",
   commitDetailNoDiff: "Nie sú dostupné žiadne rozdiely.",
-  commitDetailAdditions: "+{{count}} riadkov",
-  commitDetailDeletions: "-{{count}} riadkov",
+  commitDetailAdditions: {
+    one: "+{{count}} riadok",
+    few: "+{{count}} riadky",
+    many: "+{{count}} riadka",
+    other: "+{{count}} riadkov",
+  },
+  commitDetailDeletions: {
+    one: "-{{count}} riadok",
+    few: "-{{count}} riadky",
+    many: "-{{count}} riadka",
+    other: "-{{count}} riadkov",
+  },
   // ledger file browser
   ledgerLoadError: "Načítanie zlyhalo",
   ledgerEmpty: "Žiadne súbory",

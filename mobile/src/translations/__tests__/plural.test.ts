@@ -105,3 +105,23 @@ describe("rendering counts", () => {
     expect(render("zh", 5)).toBe("5 个价格自 Sep 8, 2017 起未更新");
   });
 });
+
+// w21/077: commit detail's stats label was a plain string, so VoiceOver said
+// "+1 additions" and "+1 строк".
+describe("commit detail stats", () => {
+  const i18n = new I18n({ en, ru });
+  registerPluralizers(i18n, ["en", "ru"]);
+  const say = (key: string, locale: string, count: number) =>
+    i18n.t(key, { locale, count });
+
+  it("pluralises in English", () => {
+    expect(say("commitDetailAdditions", "en", 1)).toBe("+1 addition");
+    expect(say("commitDetailDeletions", "en", 2)).toBe("-2 deletions");
+  });
+
+  it("uses Russian's one, few and many forms", () => {
+    expect(say("commitDetailAdditions", "ru", 1)).toBe("+1 строка");
+    expect(say("commitDetailAdditions", "ru", 2)).toBe("+2 строки");
+    expect(say("commitDetailDeletions", "ru", 5)).toBe("-5 строк");
+  });
+});

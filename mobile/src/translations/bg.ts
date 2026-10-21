@@ -453,8 +453,14 @@ export const bg: Translations = {
   commitDetailFiles: "Файлове",
   commitDetailDiff: "Разлики",
   commitDetailNoDiff: "Няма налични разлики.",
-  commitDetailAdditions: "+{{count}} реда",
-  commitDetailDeletions: "-{{count}} реда",
+  commitDetailAdditions: {
+    one: "+{{count}} ред",
+    other: "+{{count}} реда",
+  },
+  commitDetailDeletions: {
+    one: "-{{count}} ред",
+    other: "-{{count}} реда",
+  },
   // ledger file browser
   ledgerLoadError: "Зареждането е неуспешно",
   ledgerEmpty: "Няма файлове",

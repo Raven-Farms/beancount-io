@@ -464,8 +464,14 @@ export const de: Translations = {
   commitDetailFiles: "Dateien",
   commitDetailDiff: "Diff",
   commitDetailNoDiff: "Kein Diff verfügbar.",
-  commitDetailAdditions: "+{{count}} Zeilen",
-  commitDetailDeletions: "-{{count}} Zeilen",
+  commitDetailAdditions: {
+    one: "+{{count}} Zeile",
+    other: "+{{count}} Zeilen",
+  },
+  commitDetailDeletions: {
+    one: "-{{count}} Zeile",
+    other: "-{{count}} Zeilen",
+  },
   // ledger file browser
   ledgerLoadError: "Laden fehlgeschlagen",
   ledgerEmpty: "Keine Dateien",

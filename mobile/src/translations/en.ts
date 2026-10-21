@@ -458,8 +458,14 @@ export const en = {
   commitDetailFiles: "Files",
   commitDetailDiff: "Diff",
   commitDetailNoDiff: "No diff available.",
-  commitDetailAdditions: "+{{count}} additions",
-  commitDetailDeletions: "-{{count}} deletions",
+  commitDetailAdditions: {
+    one: "+{{count}} addition",
+    other: "+{{count}} additions",
+  },
+  commitDetailDeletions: {
+    one: "-{{count}} deletion",
+    other: "-{{count}} deletions",
+  },
   // ledger file browser
   ledgerLoadError: "Failed to load",
   ledgerEmpty: "No files",
