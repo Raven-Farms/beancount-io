@@ -1,6 +1,6 @@
 # w6 · m9 — Reach developer marketplaces and galleries
 
-**Worker:** worker1 **Goal:** Developers discover and connect the hosted MCP server through the supported Docker, Cursor, Cline, and GitHub/VS Code galleries. **Status:** todo (t001 done; t002 blocked on dedicated QA consent; t003 blocked on native QA and final publisher agreement; t004 blocked on native Cline QA rehearsal; t005 blocked on operator inclusion request and native QA)
+**Worker:** worker1 **Goal:** Developers discover and connect the hosted MCP server through the supported Docker, Cursor, Cline, and GitHub/VS Code galleries. **Status:** blocked (t001 done; validated/prepared payloads shipped; remaining tasks await QA, operator agreement/contact and platform review)
 
 **Implementation estimate:** ~4½h, excluding external review queues and the standing closing tasks.
 
@@ -60,3 +60,5 @@
 - **t004:** required icon/setup/issue payload is prepared; Cline is not rehearsed and required template confirmations stay unchecked. **Unblock:** dedicated QA/native Cline session, README-only setup and OAuth/query/preview/catalog-dedup evidence, then review. **Owner:** QA/client account holder, repository worker and Cline reviewers.
 
 - **t005:** concrete GitHub nomination is prepared and unsent; actual VS Code gallery/Copilot journey remains unverified under w1/m34/t003. **Unblock:** authorized operator request, curated acceptance and fresh native QA discovery/OAuth/query/preview. **Owner:** publisher, GitHub reviewers and QA/client account holder.
+
+- **Milestone / t006–t010:** every open implementation task is blocked, so publication verification and standing closing tasks depend on unresolved prerequisites. **Unblock:** complete each t002–t005 gate and the actual accepted listing/connection journeys, then run adoption/simplification/coverage/closeout. **Owners:** recorded account holder/publisher/platforms, then repository worker. Current preparation: Docker fbe47be0e, Cursor 7ed1cfe05, Cline 6e5a556b8, GitHub/VS Code bb3f23e4a. No submission or new eligible gallery publication is claimed.
