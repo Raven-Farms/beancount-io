@@ -48,7 +48,7 @@
 - [881 — Deduplicate stable import IDs on source transactions omitted by a view plugin](./881.md) — major CLI duplicate-booking finding; reproduced 2026-10-20.
 - [882 — Pair transfer counterparts one-to-one across ID and date matchers](./882.md) — major CLI duplicate-booking / skipped-deposit follow-up to 821; reproduced 2026-10-20.
 - [883 — Render valid account components containing non-ASCII spaces in treeify](./883.md) — minor CLI grammar follow-up to 137; reproduced 2026-10-20.
-- [884 — Check sufficient inventory before preserving a same-day batch sale's order](./884.md) — minor CLI bulk-ordering follow-up to 730 and 543; reproduced 2026-10-20.
+- [884 — Order same-day bulk trades from bookable lots](./884.md) — minor CLI ordering follow-up to 730 and 543; partial holdings, cost-lot selectors, inferred purchases and short covers reproduced 2026-10-20.
 - [885 — Refuse non-regular ingest configs before reading them in AST preflight](./885.md) — minor CLI unattended-hang follow-up to 582 and 851; reproduced 2026-10-20.
 - [886 — Merge per-file import sign changes under the memory lock](./886.md) — major CLI opposite-sign booking race after parallel previews; reproduced 2026-10-20.
 - [887 — Render control-bearing success paths inertly and keep init hints replayable](./887.md) — minor CLI human-output/path-hint finding; reproduced 2026-10-20.
