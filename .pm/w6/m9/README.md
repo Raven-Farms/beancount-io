@@ -1,6 +1,6 @@
 # w6 · m9 — Reach developer marketplaces and galleries
 
-**Worker:** worker1 **Goal:** Developers discover and connect the hosted MCP server through the supported Docker, Cursor, Cline, and GitHub/VS Code galleries. **Status:** todo (t001 done; t002 next)
+**Worker:** worker1 **Goal:** Developers discover and connect the hosted MCP server through the supported Docker, Cursor, Cline, and GitHub/VS Code galleries. **Status:** todo (t001 done; t002 blocked on dedicated QA consent; t003 next)
 
 **Implementation estimate:** ~4½h, excluding external review queues and the standing closing tasks.
 
@@ -9,7 +9,7 @@
 | id | title | est | depends_on |
 | --- | --- | --- | --- |
 | [t001](./done/t001.md) | Confirm developer-gallery eligibility and existing records — **DONE** | 30m | w6/m8/t001 |
-| [t002](./t002.md) | Prepare and submit Docker's remote MCP catalog entry | 60m | t001 |
+| [t002](./t002.md) | Prepare and submit Docker's remote MCP catalog entry — **BLOCKED** | 60m | t001 |
 | [t003](./t003.md) | Package the remote connection for Cursor's official and community marketplaces | 60m | t001 |
 | [t004](./t004.md) | Prepare Cline's eligible marketplace submission and remote connection evidence | 45m | t001 |
 | [t005](./t005.md) | Prepare GitHub inclusion and verify VS Code's discovery path | 45m | t001 |
@@ -50,3 +50,7 @@
 - [cursor.directory submissions](https://cursor.directory/plugins/new?type=mcp_server)
 - [Cline submissions](https://github.com/cline/mcp-marketplace)
 - [GitHub inclusion route](https://github.blog/ai-and-ml/generative-ai/how-to-find-install-and-manage-mcp-servers-with-the-github-mcp-registry/)
+
+## Blocked
+
+- **t002:** validated payload and standalone discovery/DCR are ready, but the browser has a non-QA account; no grant/read/preview or submission occurred. **Unblock:** dedicated QA browser session/consent, successful gateway query/preview and callback, then documented upstream review. **Owner:** QA account holder, repository worker and Docker reviewers in that order. Other gallery preparations proceed independently.
