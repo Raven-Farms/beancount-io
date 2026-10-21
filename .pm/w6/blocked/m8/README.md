@@ -1,6 +1,6 @@
 # w6 · m8 — Claim and publish the hosted connector on Smithery and Glama
 
-**Worker:** worker1 **Goal:** Users find one accurate, owned, authenticated listing per platform for the existing hosted MCP endpoint. **Status:** todo (t001 done; t002 blocked by removed Smithery publisher mutation; t003 blocked on w2/088)
+**Worker:** worker1 **Goal:** Users find one accurate, owned, authenticated listing per platform for the existing hosted MCP endpoint. **Status:** blocked (t001 done; remaining tasks depend on removed Smithery intake or w2/088)
 
 **Implementation estimate:** ~3h, excluding external review queues and the standing closing tasks.
 
@@ -52,3 +52,5 @@
 - **t003:** w2/088 is already blocked on operator Glama admin access and a private QA test profile. Its unauthenticated 401/discovery check is complete on origin/main; this milestone does not repeat that repair. **Unblock:** the operator claims the existing connector, configures the dedicated QA synthetic-ledger test profile privately, records a full day of successful checks, and resolves w2/088; then t003 aligns the remaining listing metadata. **Owner:** the publisher/operator. t001 and t002 can proceed independently.
 
 - **t002:** the signed-in legacy Smithery wizard returns 403 “Updating servers has been removed”; the candidate listing remains not found. **Unblock:** a working supported direct-directory intake/claim route, followed by ownership/scan and fresh connection proof. **Owner:** Smithery/Arcade and publisher. Details and preserved packet: t002; d9c3490f0.
+
+- **Milestone / t004–t008:** t002 and t003 are unresolved prerequisites. Fresh discovery-to-OAuth verification, adoption, simplification/coverage review and closeout depend on those actual listings; none is marked done. **Unblock:** resolve Smithery’s supported direct listing intake and existing w2/088 Glama claim/test-profile/full-day health, then complete each dependent task in order. **Owners:** platform/publisher for external gates; repository worker for dependent checks. All independent shared materials shipped in d9c3490f0.
