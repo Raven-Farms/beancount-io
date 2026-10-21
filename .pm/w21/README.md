@@ -169,3 +169,4 @@
 - [328](./328.md) — Legacy journal endpoint's account filter still matches substrings (113 follow-up)
 - [329](./329.md) — Leftovers: amber text contrast, shell "5e-7" sums, logout "session ended" race
 - [330](./330.md) — Create Ledger currency/date with surrounding spaces refused late with raw English
+- [331](./331.md) — Accounts tab still lacks the parent "(own)" row: graftZeroAccounts' clone drops balance (174 follow-up)
