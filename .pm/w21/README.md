@@ -14,7 +14,6 @@
 
 - [064](./blocked/064.md) — A token refresh whose response is lost signs the user out on the next refresh (rotated token replayed → grant revoked) — **blocked:** needs an owner decision (ADR) on a refresh-token reuse grace window
 - [065](./blocked/065.md) — One early-year entry (e.g. 0050) makes the balance sheet 23,718 monthly points (3 MB) and the app stalls — **blocked:** needs an approach decision (per-pill fetch vs server downsample) and a simulator profile of the stall
-- [082](./082.md) — The Narration input never shows suggestions (the multiline layout dropped the list)
 - [083](./083.md) — A ledger link opened while signed in stays stashed and replays on the next sign-in
 - [084](./084.md) — Returning to the app resets a guest's example ledger: navigation and filters are thrown away
 - [085](./085.md) — Open Account offers only operating currencies; its default sticks at "No currency" after a failed first load

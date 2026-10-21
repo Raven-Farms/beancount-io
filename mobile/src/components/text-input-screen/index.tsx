@@ -189,6 +189,66 @@ export const TextInputScreen: React.FC<TextInputScreenProps> = ({
     router.back();
   };
 
+  // The suggestions card. Narration's multiline layout (w3/211) rendered only
+  // the input, so the ledger's narrations were fetched and never shown
+  // (w21/082).
+  const suggestionsList =
+    matches.length > 0 || showSkeleton ? (
+      <ScrollView
+        style={styles.suggestionsScroll}
+        contentContainerStyle={styles.suggestionsContent}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
+        <Text style={styles.sectionTitle}>
+          {i18n.t("suggestions").toUpperCase()}
+        </Text>
+        <View style={styles.card}>
+          {showSkeleton &&
+            SKELETON_ROW_WIDTHS.map((width, index) => (
+              <View
+                key={index}
+                style={[
+                  styles.suggestionRow,
+                  index > 0 && styles.suggestionRowDivider,
+                ]}
+              >
+                <LoadingTile style={styles.iconTile} />
+                <LoadingTile
+                  style={StyleSheet.flatten([styles.textTile, { width }])}
+                />
+              </View>
+            ))}
+          {!showSkeleton && (
+            <FadeInView>
+              {matches.map((suggestion, index) => (
+                <Pressable
+                  key={suggestion}
+                  style={({ pressed }) => [
+                    styles.suggestionRow,
+                    index > 0 && styles.suggestionRowDivider,
+                    pressed && styles.suggestionRowPressed,
+                  ]}
+                  onPress={() => commit(suggestion)}
+                  accessibilityRole="button"
+                  accessibilityLabel={suggestion}
+                >
+                  <Ionicons
+                    name="time-outline"
+                    size={16}
+                    color={theme.black60}
+                  />
+                  <Text style={styles.suggestionText} numberOfLines={1}>
+                    {suggestion}
+                  </Text>
+                </Pressable>
+              ))}
+            </FadeInView>
+          )}
+        </View>
+      </ScrollView>
+    ) : null;
+
   return (
     <SafeAreaView edges={["bottom"]} style={styles.container}>
       <Stack.Screen
@@ -218,6 +278,8 @@ export const TextInputScreen: React.FC<TextInputScreenProps> = ({
           behavior={Platform.OS === "ios" ? "padding" : undefined}
           keyboardVerticalOffset={keyboardVerticalOffset}
         >
+          {/* Input and list share the space above the keyboard, so a long
+              draft stays visible while the list narrows. */}
           <View style={[styles.inputContainer, styles.multilineBody]}>
             <TextInput
               style={[styles.input, styles.inputMultiline]}
@@ -234,6 +296,7 @@ export const TextInputScreen: React.FC<TextInputScreenProps> = ({
               autoCapitalize="none"
             />
           </View>
+          {suggestionsList}
         </KeyboardAvoidingView>
       ) : (
         <>
@@ -251,61 +314,7 @@ export const TextInputScreen: React.FC<TextInputScreenProps> = ({
               autoCapitalize="none"
             />
           </View>
-          {(matches.length > 0 || showSkeleton) && (
-            <ScrollView
-              style={styles.suggestionsScroll}
-              contentContainerStyle={styles.suggestionsContent}
-              keyboardShouldPersistTaps="handled"
-              showsVerticalScrollIndicator={false}
-            >
-              <Text style={styles.sectionTitle}>
-                {i18n.t("suggestions").toUpperCase()}
-              </Text>
-              <View style={styles.card}>
-                {showSkeleton &&
-                  SKELETON_ROW_WIDTHS.map((width, index) => (
-                    <View
-                      key={index}
-                      style={[
-                        styles.suggestionRow,
-                        index > 0 && styles.suggestionRowDivider,
-                      ]}
-                    >
-                      <LoadingTile style={styles.iconTile} />
-                      <LoadingTile
-                        style={StyleSheet.flatten([styles.textTile, { width }])}
-                      />
-                    </View>
-                  ))}
-                {!showSkeleton && (
-                  <FadeInView>
-                    {matches.map((suggestion, index) => (
-                      <Pressable
-                        key={suggestion}
-                        style={({ pressed }) => [
-                          styles.suggestionRow,
-                          index > 0 && styles.suggestionRowDivider,
-                          pressed && styles.suggestionRowPressed,
-                        ]}
-                        onPress={() => commit(suggestion)}
-                        accessibilityRole="button"
-                        accessibilityLabel={suggestion}
-                      >
-                        <Ionicons
-                          name="time-outline"
-                          size={16}
-                          color={theme.black60}
-                        />
-                        <Text style={styles.suggestionText} numberOfLines={1}>
-                          {suggestion}
-                        </Text>
-                      </Pressable>
-                    ))}
-                  </FadeInView>
-                )}
-              </View>
-            </ScrollView>
-          )}
+          {suggestionsList}
         </>
       )}
     </SafeAreaView>
