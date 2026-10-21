@@ -8,4 +8,3 @@
 
 ## Inbox
 
-- [037](./037.md) — In Persian, the "Invite Friends" title still sits on the physical left (residual of w21/019)
