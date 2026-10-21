@@ -6,6 +6,10 @@
 
 - [x] **m1** — [Entry edits and deletes refuse changes that would break the ledger](./done/m1/README.md) (7 tasks) ← from mobile QA 2026-10-20
 
+## Dropped
+
+- ~~**052**~~ — Drawer header words split mid-word at the largest text size — dropped 2026-10-21: reproduces only at AX5; at AX2 (`accessibility-large`) the header renders whole words (`.pm/DO_NOT_DO.md`, AX2 ceiling).
+
 ## Inbox
 
 - [038](./038.md) — Reports silently drops spending in other currencies; Home and Accounts say "not in total", Reports says nothing
@@ -22,6 +26,5 @@
 - [049](./049.md) — Files locks every file named `main.bean`, not just the root one
 - [050](./050.md) — Account detail shows Note, Balance and Document rows without their text, asserted amount or file
 - [051](./051.md) — New ledger's "Books begin" defaults to the UTC date, so evening ledgers in the Americas start tomorrow
-- [052](./052.md) — At the largest text size the drawer's header breaks single words mid-word
 - [053](./053.md) — Create Ledger keeps its draft forever in AsyncStorage, opening balance included, and resumes stale dates
 - [054](./054.md) — The drawer keeps listing a ledger that no longer exists across cold starts; choosing it shows only "Failed to load"
