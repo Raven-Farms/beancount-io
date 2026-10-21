@@ -163,7 +163,7 @@ const FilterChip = ({
       accessibilityState={{ selected: active }}
     >
       <Text
-        key={fontScale}
+        key={`chip-${fontScale}`}
         style={[styles.chipText, active && styles.chipTextActive]}
       >
         {label}
@@ -284,7 +284,7 @@ const TransactionFiltersSheet = ({
               accessibilityRole="button"
             >
               <Text
-                key={fontScale}
+                key={`header-reset-${fontScale}`}
                 style={styles.headerAction}
                 numberOfLines={1}
                 maxFontSizeMultiplier={headerActionMaxFontSizeMultiplier}
@@ -300,7 +300,7 @@ const TransactionFiltersSheet = ({
               accessibilityRole="button"
             >
               <Text
-                key={fontScale}
+                key={`header-close-${fontScale}`}
                 style={styles.headerAction}
                 numberOfLines={1}
                 maxFontSizeMultiplier={headerActionMaxFontSizeMultiplier}
@@ -314,7 +314,7 @@ const TransactionFiltersSheet = ({
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.section}>
-          <Text key={fontScale} style={styles.sectionTitle}>
+          <Text key={`status-title-${fontScale}`} style={styles.sectionTitle}>
             {t("filterStatus")}
           </Text>
           <View style={styles.chipRow}>
@@ -330,7 +330,7 @@ const TransactionFiltersSheet = ({
         </View>
 
         <View style={styles.section}>
-          <Text key={fontScale} style={styles.sectionTitle}>
+          <Text key={`range-title-${fontScale}`} style={styles.sectionTitle}>
             {t("filterDateRange")}
           </Text>
           <View style={styles.chipRow}>
@@ -362,7 +362,7 @@ const TransactionFiltersSheet = ({
           )}
           {draft.range === "custom" && !isRangeValid ? (
             <Text
-              key={fontScale}
+              key={`range-error-${fontScale}`}
               style={styles.rangeError}
               testID="filter-range-error"
             >
@@ -372,13 +372,13 @@ const TransactionFiltersSheet = ({
         </View>
 
         <View style={styles.section}>
-          <Text key={fontScale} style={styles.sectionTitle}>
+          <Text key={`account-title-${fontScale}`} style={styles.sectionTitle}>
             {t("filterAccount")}
           </Text>
           <View style={[styles.rows, styles.accountRow]}>
             <View style={styles.accountRowItem}>
               <ListItem
-                key={fontScale}
+                key={`account-row-${fontScale}`}
                 // title={t("account").toUpperCase()}
                 content={draft.account ?? t("allAccounts")}
                 onPress={pickAccount}
@@ -402,7 +402,11 @@ const TransactionFiltersSheet = ({
       </ScrollView>
 
       <View style={styles.footer}>
-        <Button key={fontScale} onPress={apply} disabled={!isRangeValid}>
+        <Button
+          key={`apply-${fontScale}`}
+          onPress={apply}
+          disabled={!isRangeValid}
+        >
           {t("apply")}
         </Button>
       </View>
