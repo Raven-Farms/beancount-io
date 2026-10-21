@@ -8,7 +8,6 @@
 
 ## Inbox
 
-- [030](./030.md) — A transaction the ledger reports as broken opens with no sign of its error
 - [031](./031.md) — New Transaction shows a green "✓ $0.00" remainder for an amount it refused to parse
 - [032](./032.md) — A merchant whose name contains `"` opens with no header: the BQL escape `\"` is a syntax error on the rustledger engine
 - [033](./033.md) — The Budget chart colors months before the budget existed red, as "over target"
