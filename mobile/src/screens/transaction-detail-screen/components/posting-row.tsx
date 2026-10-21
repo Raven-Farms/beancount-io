@@ -79,11 +79,15 @@ const getStyles = (theme: ColorTheme) =>
     amountColumn: {
       flexShrink: 0,
       alignItems: "flex-end",
+      // The basis line wraps here instead of squeezing the account name to
+      // an ellipsis (w21/160).
+      maxWidth: "60%",
     },
     basis: {
       fontSize: fontSizes.xs,
       color: theme.black80,
       marginTop: 2,
+      textAlign: "right",
     },
     stackedAmountLine: {
       flexDirection: "row",

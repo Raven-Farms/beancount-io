@@ -112,12 +112,43 @@ function formatPostingUnits(
   return { amount: `+${magnitude}`, sign: 1 };
 }
 
+/** More fractional digits than anyone writes: a total divided per unit. */
+const DERIVED_SCALE = 8;
+/** Significant decimals a derived per-unit figure is shown to. */
+const DERIVED_DIGITS = 4;
+
+/**
+ * A per-unit figure the ledger derived from a total (`@@ 10.00 USD` on three
+ * units, `{{…}}`), rounded half-up to four significant decimals. Divided at
+ * full precision it read "@ $3.3333333333333333333333333333" and squeezed
+ * the account name to an ellipsis (w21/160). Null for a figure as written.
+ */
+function roundDerivedPerUnit(number: string): string | null {
+  const negative = number.startsWith("-");
+  const [whole, frac = ""] = number.replace(/^[+-]/, "").split(".");
+  if (frac.length <= DERIVED_SCALE) return null;
+  const leadingZeros = /^0*/.exec(whole === "0" ? frac : "")![0].length;
+  const scale = Math.min(frac.length, leadingZeros + DERIVED_DIGITS);
+  const digits = BigInt(`${whole}${frac.slice(0, scale)}`);
+  const rounded = Number(frac[scale]) >= 5 ? digits + 1n : digits;
+  const text = rounded.toString().padStart(scale + 1, "0");
+  const roundedFrac = text.slice(-scale).replace(/0+$/, "");
+  const roundedWhole = text.slice(0, -scale);
+  return `${negative ? "-" : ""}${roundedWhole}${roundedFrac ? `.${roundedFrac}` : ""}`;
+}
+
 /** A per-unit cost or price at its recorded scale, without a sign. */
-const formatPerUnit = (amount: { number: string; currency: string }): string =>
-  formatPostingUnits(amount.number, amount.currency).amount.replace(
-    /^[+-]/,
-    "",
-  );
+const formatPerUnit = (amount: {
+  number: string;
+  currency: string;
+}): string => {
+  const derived = roundDerivedPerUnit(amount.number.trim());
+  const shown = formatPostingUnits(
+    derived ?? amount.number,
+    amount.currency,
+  ).amount.replace(/^[+-]/, "");
+  return derived === null ? shown : `≈${shown}`;
+};
 
 export function selectPostingRows(
   txn: JournalTransaction,

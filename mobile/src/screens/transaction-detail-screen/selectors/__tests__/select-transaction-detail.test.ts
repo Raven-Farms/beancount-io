@@ -338,6 +338,53 @@ describe("selectPostingRows: cost and price", () => {
     expect(postingBasisText(eur, t)).toBe("@ $1.10");
   });
 
+  // w21/160: a total divided per unit came through at full precision.
+  it("rounds a per-unit figure derived from @@ or {{…}}, marked approximate", () => {
+    const [fx] = selectPostingRows(
+      txn([
+        {
+          ...posting("Expenses:Qa20261020Fx", "3.00", "EUR"),
+          price: { number: "3.3333333333333333333333333333", currency: "USD" },
+        },
+      ]),
+    );
+    expect(postingBasisText(fx, t)).toBe("@ ≈$3.3333");
+    const [lot] = selectPostingRows(
+      txn([
+        {
+          ...posting("Assets:Brokerage", "3", "QAX"),
+          cost: {
+            number: "33.333333333333333333333333333",
+            currency: "USD",
+            date: "2026-10-01",
+          },
+        },
+      ]),
+    );
+    expect(postingBasisText(lot, t)).toBe("cost ≈$33.3333");
+    const [dust] = selectPostingRows(
+      txn([
+        {
+          ...posting("Assets:Wallet", "3", "QAX"),
+          price: { number: "0.0000666666666666666666", currency: "USD" },
+        },
+      ]),
+    );
+    expect(postingBasisText(dust, t)).toBe("@ ≈$0.00006667");
+  });
+
+  it("keeps a price as written, however many decimals it has", () => {
+    const [btc] = selectPostingRows(
+      txn([
+        {
+          ...posting("Assets:Bank:Checking", "-50.00"),
+          price: { number: "0.00001234", currency: "BTC" },
+        },
+      ]),
+    );
+    expect(postingBasisText(btc, t)).toBe("@ 0.00001234 BTC");
+  });
+
   it("leaves an ordinary posting unchanged", () => {
     const [row] = selectPostingRows(txn([posting("Expenses:Food", "4.50")]));
     expect(row).toEqual({
