@@ -15,7 +15,7 @@
 - [064](./blocked/064.md) — A token refresh whose response is lost signs the user out on the next refresh (rotated token replayed → grant revoked) — **blocked:** needs an owner decision (ADR) on a refresh-token reuse grace window
 - [065](./blocked/065.md) — One early-year entry (e.g. 0050) makes the balance sheet 23,718 monthly points (3 MB) and the app stalls — **blocked:** needs an approach decision (per-pill fetch vs server downsample) and a simulator profile of the stall
 - [180](./blocked/180.md) — Budget actuals use raw prefix match (`Transport` counts `Transportation`), unlike Reports — **blocked:** needs an owner decision between component matching on the server (a Fava break) and a per-account breakdown for the client
-- [201](./201.md) — Missing file: GraphQL returns null, REST/MCP NOT_FOUND; directory path differs too
+- [201](./blocked/201.md) — Missing file: GraphQL returns null, REST/MCP NOT_FOUND; directory path differs too — **blocked:** needs an owner decision on the file-read contract (null vs NOT_FOUND), which the dashboard's README reads and shipped mobile builds rely on
 - [202](./202.md) — Default conversion: GraphQL USD vs REST/MCP operating currency (trial balance, account report, interval totals)
 - [203](./203.md) — createLedger: title/requestId limits only on REST/MCP; empty requestId disables idempotency on GraphQL
 - [204](./204.md) — Receipt "Upload failed. Please try again." has no retry; Retake discards the photo
