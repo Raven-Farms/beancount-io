@@ -77,6 +77,9 @@ function newRequestId(): string {
   return `req-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 }
 
+/** The step holding every field the form validates (name, amounts, dates). */
+const FORM_STEP = 1;
+
 const getStyles = (theme: ColorTheme) =>
   StyleSheet.create({
     container: {
@@ -334,45 +337,52 @@ export function CreateLedgerScreen(): JSX.Element {
   const slugPreview = ledgerSlugPreview(nameValue ?? "");
   const busy = loading || isSubmitting;
 
-  const onSubmit = handleSubmit(async (values) => {
-    const name = slugifyLedgerName(values.name);
-    try {
-      const result = await createLedger({
-        variables: {
-          name,
-          private: values.private,
-          description: values.description.trim() || undefined,
-          ...(startKind === "sample"
-            ? { template: LedgerTemplate.Sample }
-            : {}),
-          ...(startKind === "preset" ? { setup: buildSetup(values) } : {}),
-          requestId: requestIdRef.current,
-        },
-      });
-      void clearCreateLedgerDraft();
-      const id = result.data?.createLedger?.id;
-      if (!id) {
+  // Field errors render on the form step, so a refused Create returns there;
+  // left on Review, the spinner stopped and nothing said why (w21/105).
+  const onSubmit = handleSubmit(
+    async (values) => {
+      const name = slugifyLedgerName(values.name);
+      try {
+        const result = await createLedger({
+          variables: {
+            name,
+            private: values.private,
+            description: values.description.trim() || undefined,
+            ...(startKind === "sample"
+              ? { template: LedgerTemplate.Sample }
+              : {}),
+            ...(startKind === "preset" ? { setup: buildSetup(values) } : {}),
+            requestId: requestIdRef.current,
+          },
+        });
+        void clearCreateLedgerDraft();
+        const id = result.data?.createLedger?.id;
+        if (!id) {
+          setError("root", { message: t("createLedgerGenericError") });
+          return;
+        }
+        // The creation already succeeded. A failed list refresh must not invite
+        // another submission; the directory retains the confirmed new ledger.
+        await refresh(result.data!.createLedger).catch(() => {});
+        ledgerVar(id);
+        router.replace("/(app)/(tabs)");
+      } catch (error) {
+        const kind = classifyCreateLedgerError(error);
+        if (kind === "conflict") {
+          // The name's error renders on the form step, not on Review.
+          setError("name", { message: t("createLedgerNameConflict") });
+          setStep(FORM_STEP);
+          return;
+        }
+        if (kind === "tier") {
+          setError("root", { message: t("createLedgerTierLimit") });
+          return;
+        }
         setError("root", { message: t("createLedgerGenericError") });
-        return;
       }
-      // The creation already succeeded. A failed list refresh must not invite
-      // another submission; the directory retains the confirmed new ledger.
-      await refresh(result.data!.createLedger).catch(() => {});
-      ledgerVar(id);
-      router.replace("/(app)/(tabs)");
-    } catch (error) {
-      const kind = classifyCreateLedgerError(error);
-      if (kind === "conflict") {
-        setError("name", { message: t("createLedgerNameConflict") });
-        return;
-      }
-      if (kind === "tier") {
-        setError("root", { message: t("createLedgerTierLimit") });
-        return;
-      }
-      setError("root", { message: t("createLedgerGenericError") });
-    }
-  });
+    },
+    () => setStep(FORM_STEP),
+  );
 
   return (
     <SafeAreaView style={styles.container} edges={["bottom"]}>
@@ -384,7 +394,10 @@ export function CreateLedgerScreen(): JSX.Element {
               onPress={() => {
                 if (step < 2) {
                   void (async () => {
-                    if (step === 1 && !(await trigger("name"))) return;
+                    // Every field the schema checks is on this step, the
+                    // opening amount included: one left invalid used to
+                    // surface only as a Create that did nothing (w21/105).
+                    if (step === 1 && !(await trigger())) return;
                     setStep((current) => Math.min(current + 1, 2));
                   })();
                 } else {
