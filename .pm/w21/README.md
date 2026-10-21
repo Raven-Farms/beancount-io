@@ -153,3 +153,11 @@
 - [214](./214.md) — Every discovery mismatch reads "does not expose the required Beancount.io API"; no hint of the right URL
 - [215](./215.md) — Sign-in discovery has no timeout (~60 s spinner); changing the server doesn't release it
 - [216](./216.md) — Server URLs with Unicode host, trailing ?/#, or trailing dot pass validation but never match the issuer
+- [217](./217.md) — Settings sits behind the ledger guard: with no usable ledger you can't log out or delete the account
+- [218](./218.md) — Home budget panel announces a beaten income target as "Below target" and ranks it most at risk
+- [219](./219.md) — Quarterly/weekly budget's last bar labelled with today (OCT on YTD, DEC on ALL)
+- [220](./220.md) — Budget chart sized for full screen width overflows its card by 32 pt; first bar and label clipped
+- [221](./221.md) — "%XX" in free text is decoded twice between screens: narration "50%50" comes back "50P"
+- [222](./222.md) — New File's "already exists" check misses files inside folders
+- [223](./223.md) — Dashboard file links lose ?lineNumber= when opened in the app
+- [224](./224.md) — VoiceOver reads a Recent changes row as the subject only (no author, date or SHA)
