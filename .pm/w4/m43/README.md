@@ -2,7 +2,7 @@
 
 **Worker:** worker1 **Goal:** Readers can see the selected state and read active choices before applying them in a contrast theme. **Status:** todo
 
-**Severity:** minor. **Estimate:** 290m across ten tasks, dashboard only.
+**Severity:** minor. **Estimate:** 340m across eleven tasks, dashboard only.
 
 ## Tasks (in order)
 
@@ -14,9 +14,10 @@
 | [t008](./t008.md) | Keep the Net Worth view visibly selected in forced colors | 20m | t001 |
 | [t009](./t009.md) | Keep Budget filters visibly selected in forced colors | 20m | t001 |
 | [t010](./t010.md) | Keep the Accounts type visibly selected in forced colors | 20m | t001 |
-| [t002](./t002.md) | Verify the contrast behavior on its adoption surfaces | 55m | t006, t007, t008, t009, t010 |
+| [t011](./t011.md) | Keep ledger creation radio choices visibly selected in forced colors | 30m | t001 |
+| [t002](./t002.md) | Verify the contrast behavior on its adoption surfaces | 65m | t006, t007, t008, t009, t010, t011 |
 | [t003](./t003.md) | Simplify the bounded contrast repair | 10m | t002 |
-| [t004](./t004.md) | Prove actual label and selected-state paint | 65m | t002 |
+| [t004](./t004.md) | Prove actual label and selected-state paint | 75m | t002 |
 | [t005](./t005.md) | Close out and archive the milestone | 10m | t003, t004 |
 
 ## Definition of done
@@ -26,6 +27,7 @@
 - [ ] Billing's Monthly/Yearly cycle remains visibly selected after focus leaves the group in forced light/dark at both widths. Keep both labels readable, a separate focus cue, correct aria-pressed and price/disclosure updates; cycle selection dispatches no checkout/subscription mutation.
 - [ ] Net Worth's Chart/Table mode stays visibly selected away from focus in both forced palettes and widths. Preserve its pressed semantics, native focus, actual renderer, URL view, period/ledger context and named table scroll region.
 - [ ] Both Budget filter groups and the Accounts type filter visibly distinguish the selected choice after focus leaves in both forced palettes and widths. Preserve readable labels, exactly-one pressed state per group, wrapping/overflow, native focus, real filtered results, Accounts URL/reload state and ordinary themes.
+- [ ] Ledger creation's start-kind and preset radio cards visibly distinguish the checked choice away from focus in both forced palettes and widths. Preserve readable labels/icons, native group/checked semantics, separate keyboard focus, stable card geometry and ordinary themes; no creation action is necessary.
 - [ ] Preserve the user's system palette, inactive labels, ordinary themes, dimensions, separate focus cues, pointer behavior and selection models. Any local adjustment exception must keep explicit system foreground/background values effective, including dark/theme overrides and descendant labels; no page-wide forced-color opt-out.
 - [ ] Account and ledger targets, report year, Journal filters and directive tabs still apply the same values. Preserve input focus/active descendants, native dialog return focus, retained account period and intentional cross-ledger filter clearing. No hosted write is necessary.
 - [ ] Preserve readable dark pill tabs, native Select options, underline profile tabs, shared Button focus, Switch and custom-row repairs. Audit callers and distinguish tested aliases from compatibility scope.
@@ -34,10 +36,10 @@
 
 ## Source + Goal linkage
 
-- **Source:** Promoted W4/273 after its deployed recheck, independently reproduced JournalFilters/default Tabs extensions, and separate Calendar, Billing cycle, Net Worth view, Budget and Accounts selected-cue controls, October 20–21 dashboard QA. Original evidence is preserved in [FINDINGS.md](./FINDINGS.md).
+- **Source:** Promoted W4/273 after its deployed recheck, independently reproduced JournalFilters/default Tabs extensions, and separate Calendar, Billing cycle, Net Worth view, Budget, Accounts and ledger-creation radio selected-cue controls, October 20–21 dashboard QA. Original evidence is preserved in [FINDINGS.md](./FINDINGS.md).
 - **Goal linkage:** **A2 — Frictionless onboarding:** keyboard and contrast-theme readers must read the active bookkeeping choice before Enter, Space or a pointer action applies it.
-- **Expected outcome:** Account/year/ledger choices, Journal filters, directive/report tabs, calendar dates, Billing cycle, Net Worth representation, Budget filters and Accounts type retain readable labels/icons and visible selected state.
-- **Why now:** The moving-highlight repair is deployed, but PNG inspection reveals solid text backplates masking labels and independently absent Calendar/Billing/Net Worth/Budget/Accounts selected cues. Nine styling targets, state-versus-focus checks, real caller checks, dark/theme-order preservation and rendered regressions exceed the original sub-hour note. Adoption surface is included because the change affects user-facing controls.
+- **Expected outcome:** Account/year/ledger choices, Journal filters, directive/report tabs, calendar dates, Billing cycle, Net Worth representation, Budget filters, Accounts type and creation radio cards retain readable labels/icons and visible selected state.
+- **Why now:** The moving-highlight repair is deployed, but PNG inspection reveals solid text backplates masking labels and independently absent Calendar/Billing/Net Worth/Budget/Accounts/creation-radio selected cues. Ten styling targets, state-versus-focus checks, real caller checks, dark/theme-order preservation and rendered regressions exceed the original sub-hour note. Adoption surface is included because the change affects user-facing controls.
 
 ## Scope and dedupe
 
@@ -50,3 +52,5 @@ Own selected CommandItem/Combobox option styles, journal-filter-button-state.ts 
 [t008](./t008.md) separately owns NetWorthCard's persistent Chart/Table selected cue. The current W4/086 pressed semantics and real renderer/URL changes pass; the selected-control images still become identical under forced colors. Keep the repair local to these semantic view controls rather than redefining every secondary Button.
 
 [t009](./t009.md) owns the shared BudgetFilterPills treatment used by Interval and Time span. [t010](./t010.md) owns Accounts' type buttons: their transparent inactive borders become visible in forced colors, so a border alone does not distinguish the selection. Both were independently tested; their labels and filtering remain correct. Extend this existing contrast milestone rather than opening overlapping inbox findings or changing the shared Button's action semantics.
+
+[t011](./t011.md) owns LedgerForm's start-kind and preset radio-card treatment. Native checked semantics change correctly while their author fills/borders/rings lose the persistent cue; the sr-only inputs supply no visible native marker. Both groups were independently exercised in ordinary and forced themes. W4/314–317 own that form's separate behavior defects; this task changes selection paint only and does not submit the wizard.
