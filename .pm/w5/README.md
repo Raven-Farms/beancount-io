@@ -100,6 +100,7 @@
 - [933 — Do not count a forecast overlay as a second independent root](./933.md) — minor CLI split-ledger regression; a forecast ancestor creates false ambiguity for leaf adds/imports and is suggested as the root, reproduced 2026-10-21.
 - [934 — Recognize native directive dates when locating a leaf's root](./934.md) — major CLI invalidating writes; unpadded/compact opens permit a duplicate leaf open or let an overlay validate a false balance, reproduced 2026-10-21.
 - [935 — Reject reserved literal words in init's currency check](./935.md) — trivial CLI validation follow-up; TRUE/FALSE/NULL fail later as generated-ledger syntax errors at exit 1 instead of invalid currency options at exit 2, reproduced 2026-10-21.
+- [936 — Keep four-digit years in relative periods and ISO-week parsing](./936.md) — minor CLI early-date edge case; valid historical periods lose year padding between parser stages and refuse while equivalent calendar dates work, reproduced 2026-10-21.
 
 The 27 findings from the MCP QA auth sweep against the hosted endpoint (023–054, less the five under [Dropped](#dropped)) were fixed in `backend-cluster/backend-v2` and closed on 2026-10-02 and 2026-10-03; each note under [`done/`](./done/) records what shipped and in which commit. None has been re-observed against the hosted endpoint yet — the fixes reach it with the next backend deploy.
 
