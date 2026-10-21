@@ -1,6 +1,6 @@
 import { FlatList, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Stack, useLocalSearchParams } from "expo-router";
+import { Stack } from "expo-router";
 import { ColorTheme } from "@/types/theme-props";
 import { fonts } from "@/common/theme";
 import { useThemeStyle } from "@/common/hooks";
@@ -24,6 +24,7 @@ import {
 } from "@/screens/notifications-screen/formatting";
 import { CardLoadFailure } from "@/components/card-load-failure";
 import { selectCardLoadState } from "@/common/apollo/card-load-state";
+import { useRouteParams } from "@/common/hooks/use-route-params";
 
 /** "Added", "Deleted" or "Renamed from …"; nothing for an edited file. */
 function fileStatusText(
@@ -370,7 +371,7 @@ function CommitDetailRoute({
   ledger,
 }: {
   sha: string;
-  ledger?: string | string[];
+  ledger?: string;
 }): JSX.Element {
   const { t } = useTranslations();
   const binding = bindRouteLedger(ledger, useLedgerGuard());
@@ -392,9 +393,9 @@ function CommitDetailRoute({
 export function CommitDetailScreen(): JSX.Element {
   // `ledger` binds the entry to the ledger it was opened for; see
   // `common/route-ledger` for why the ambient selection is not enough.
-  const params = useLocalSearchParams<{
-    sha?: string | string[];
-    ledger?: string | string[];
+  const params = useRouteParams<{
+    sha?: string;
+    ledger?: string;
   }>();
 
   return (

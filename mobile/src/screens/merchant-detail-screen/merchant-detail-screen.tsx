@@ -9,7 +9,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { useLocalSearchParams, Stack, useRouter } from "expo-router";
+import { Stack, useRouter } from "expo-router";
 import { NetworkStatus, useReactiveVar } from "@apollo/client";
 import {
   fontSizes,
@@ -73,6 +73,7 @@ import {
 import { formatMerchantTotal } from "./selectors/format-merchant-total";
 import { MerchantDetailSkeleton } from "./merchant-detail-skeleton";
 import { merchantKey } from "@/common/merchant-key";
+import { useRouteParams } from "@/common/hooks/use-route-params";
 
 const PAGE_SIZE = 20;
 /** Free-text filter inflates pages; stop after this many raw fetches. */
@@ -654,7 +655,7 @@ function MerchantDetailRoute({
 }: {
   payee: string;
   otherSpellings: readonly string[];
-  ledger?: string | string[];
+  ledger?: string;
 }) {
   const { t } = useTranslations();
   const binding = bindRouteLedger(ledger, useLedgerGuard());
@@ -680,10 +681,10 @@ function MerchantDetailRoute({
 export function MerchantDetailScreen() {
   // `ledger` binds the entry to the ledger it was opened for; see
   // `common/route-ledger` for why the ambient selection is not enough.
-  const params = useLocalSearchParams<{
-    payee?: string | string[];
-    otherSpellings?: string | string[];
-    ledger?: string | string[];
+  const params = useRouteParams<{
+    payee?: string;
+    otherSpellings?: string;
+    ledger?: string;
   }>();
   const raw = params.payee;
   const payee = Array.isArray(raw) ? raw[0] : raw;

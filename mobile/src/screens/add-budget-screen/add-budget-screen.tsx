@@ -10,7 +10,7 @@ import {
   View,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { Stack, useLocalSearchParams, useRouter } from "expo-router";
+import { Stack, useRouter } from "expo-router";
 import { budgetAmountPlaceholder } from "./amount-placeholder";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { haptics } from "@/common/haptics";
@@ -45,6 +45,7 @@ import {
   trailingInputTextAlign,
 } from "@/common/rtl";
 import { useIsHere } from "@/common/hooks/use-is-here";
+import { useRouteParams } from "@/common/hooks/use-route-params";
 
 const getStyles = (theme: ColorTheme) =>
   StyleSheet.create({
@@ -188,7 +189,7 @@ function AddBudgetScreenImpl(): JSX.Element {
   const { saveBudget, loading } = useSaveBudget(ledgerId);
   const isHere = useIsHere();
 
-  const params = useLocalSearchParams<{
+  const params = useRouteParams<{
     account?: string;
     interval?: string;
     currency?: string;

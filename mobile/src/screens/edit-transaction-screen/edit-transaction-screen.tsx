@@ -4,7 +4,7 @@ import {
   SafeAreaView,
   useSafeAreaInsets,
 } from "react-native-safe-area-context";
-import { Stack, useLocalSearchParams, useRouter } from "expo-router";
+import { Stack, useRouter } from "expo-router";
 import { useApolloClient } from "@apollo/client";
 import {
   fontSizes,
@@ -50,6 +50,7 @@ import { isEntryGone } from "@/screens/transaction-detail-screen/selectors/selec
 import { RouteLedgerUnavailable } from "@/components/route-ledger-unavailable";
 import { i18n } from "@/translations";
 import { useIsHere } from "@/common/hooks/use-is-here";
+import { useRouteParams } from "@/common/hooks/use-route-params";
 
 const SKELETON_WIDTHS = [220, 160, 280, 120, 200, 260, 140];
 
@@ -117,7 +118,7 @@ export const EditTransactionScreen = (): JSX.Element => {
   const client = useApolloClient();
   const { canWrite } = useLedgerAccess();
   const { userId } = useSession();
-  const { entryHash, ledgerId, originAccount } = useLocalSearchParams<{
+  const { entryHash, ledgerId, originAccount } = useRouteParams<{
     entryHash: string;
     ledgerId: string;
     originAccount?: string;

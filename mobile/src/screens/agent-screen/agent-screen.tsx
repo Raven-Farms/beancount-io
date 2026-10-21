@@ -10,7 +10,7 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Stack, useLocalSearchParams } from "expo-router";
+import { Stack } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { isToolUIPart } from "ai";
 
@@ -25,6 +25,7 @@ import { MessageBubble } from "./message-bubble";
 import { messageText } from "./message-text";
 import { classifyAgentError, isRetryable } from "./agent-errors";
 import { AGENT_PRESET_KEYS } from "./presets";
+import { useRouteParams } from "@/common/hooks/use-route-params";
 
 const getStyles = (theme: ColorTheme) =>
   StyleSheet.create({
@@ -169,7 +170,7 @@ function AgentScreenImpl() {
   const theme = useTheme().colorTheme;
   const { t } = useTranslations();
 
-  const params = useLocalSearchParams<{ q?: string }>();
+  const params = useRouteParams<{ q?: string }>();
   const {
     messages,
     sendMessage,

@@ -1,7 +1,8 @@
 import { LedgerWriteGuard } from "@/components/ledger-write-guard";
 import { AddTransactionNextScreen } from "@/screens/add-transaction-screen/add-transaction-next-screen";
-import { Redirect, Stack, useLocalSearchParams } from "expo-router";
+import { Redirect, Stack } from "expo-router";
 import { i18n } from "@/translations";
+import { useRouteParams } from "@/common/hooks/use-route-params";
 
 /**
  * Parked with the keypad flow, off every UI path.
@@ -14,7 +15,7 @@ export default function AddTransactionNext() {
   // The keypad always passes the amount it confirmed. Opened by URL without one
   // there is nothing to confirm, so go to the live flow instead of crashing on
   // the missing amount.
-  const { currentMoney } = useLocalSearchParams<{ currentMoney?: string }>();
+  const { currentMoney } = useRouteParams<{ currentMoney?: string }>();
   if (!currentMoney) {
     return <Redirect href="/add-transaction" />;
   }

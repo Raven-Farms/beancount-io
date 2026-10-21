@@ -8,7 +8,7 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Stack, useLocalSearchParams, useRouter } from "expo-router";
+import { Stack, useRouter } from "expo-router";
 import { NetworkStatus } from "@apollo/client";
 import { ColorTheme } from "@/types/theme-props";
 import { fontSizes, fontWeights, useTheme } from "@/common/theme";
@@ -64,6 +64,7 @@ import { AccountJournalListEmpty } from "./components/account-journal-empty";
 import { selectAccountDetailTarget } from "@/screens/account-detail-screen/select-account-detail-target";
 import { LEADING_TEXT_ALIGN } from "@/common/rtl";
 import { RouteLedgerUnavailable } from "@/components/route-ledger-unavailable";
+import { useRouteParams } from "@/common/hooks/use-route-params";
 
 /** Leaf segment for the compact navigation title. */
 function accountLeafName(account: string): string {
@@ -547,7 +548,7 @@ const AccountDetailRoute = ({
 export const AccountDetailScreen = (): JSX.Element => {
   // `ledger` binds the entry to the ledger it was opened for; see
   // `select-account-detail-target` for why the ambient selection is not enough.
-  const params = useLocalSearchParams<{ account?: string; ledger?: string }>();
+  const params = useRouteParams<{ account?: string; ledger?: string }>();
 
   return (
     <LedgerGuard>

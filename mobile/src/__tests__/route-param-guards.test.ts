@@ -45,4 +45,27 @@ describe("route param guards", () => {
       ),
     ).toBe(true);
   });
+
+  // w21/198: a repeated query parameter (`?path=a&path=b`) reaches a screen as
+  // `string[]`, and `.split`/`.trim` on it crashed three link-reachable
+  // screens. Every route reads its params through `useRouteParams`.
+  it("reads every route's params through useRouteParams", () => {
+    const walk = (dir: string): string[] =>
+      fs
+        .readdirSync(path.join(MOBILE_ROOT, dir), { withFileTypes: true })
+        .flatMap((entry) => {
+          const rel = path.join(dir, entry.name);
+          if (entry.isDirectory())
+            return entry.name === "__tests__" ? [] : walk(rel);
+          return /\.tsx?$/.test(entry.name) ? [rel] : [];
+        });
+    const direct = [...walk("src"), ...walk("app")].filter((file) =>
+      read(file).includes("useLocalSearchParams"),
+    );
+    // The hook itself, and the OAuth callback, which reads every value as
+    // `string | string[]` already.
+    expect(direct.sort()).toEqual(
+      ["app/oauth/callback.tsx", "src/common/hooks/use-route-params.ts"].sort(),
+    );
+  });
 });

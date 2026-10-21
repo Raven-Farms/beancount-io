@@ -14,7 +14,7 @@ import {
   View,
   useWindowDimensions,
 } from "react-native";
-import { Redirect, Stack, useLocalSearchParams, useRouter } from "expo-router";
+import { Redirect, Stack, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import {
   SafeAreaView,
@@ -76,6 +76,7 @@ import { firstNewLedgerError } from "@/common/new-ledger-error";
 import { filterFileErrors, readOnlyNoticeColors } from "./utils";
 import { selectLedgerFileEditorState } from "./select-editor-state";
 import { LEADING_TEXT_ALIGN, directionalIcon } from "@/common/rtl";
+import { useRouteParams } from "@/common/hooks/use-route-params";
 
 // ─── Styles ──────────────────────────────────────────────────────────────────
 
@@ -309,7 +310,7 @@ function ErrorBanner({
 export function LedgerFileEditorScreen(): JSX.Element {
   const ledgerId = useLedgerGuard();
   const guest = useGuest();
-  const { path, initialLine } = useLocalSearchParams<{
+  const { path, initialLine } = useRouteParams<{
     path?: string;
     initialLine?: string;
   }>();

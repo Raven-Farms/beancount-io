@@ -10,12 +10,7 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import {
-  Stack,
-  useFocusEffect,
-  useLocalSearchParams,
-  useRouter,
-} from "expo-router";
+import { Stack, useFocusEffect, useRouter } from "expo-router";
 import { useApolloClient, useReactiveVar } from "@apollo/client";
 import { Ionicons } from "@expo/vector-icons";
 import { ColorTheme } from "@/types/theme-props";
@@ -89,6 +84,7 @@ import { getServerUrl } from "@/common/vars/server-url";
 import { HERO_AMOUNT_FIT } from "@/components/amount-text/hero-amount-fit";
 import { LEADING_TEXT_ALIGN, letterSpacing } from "@/common/rtl";
 import { createSingleFlight } from "@/common/single-flight";
+import { useRouteParams } from "@/common/hooks/use-route-params";
 
 const getStyles = (theme: ColorTheme) =>
   StyleSheet.create({
@@ -848,7 +844,7 @@ const TransactionDetailRoute = ({
 export const TransactionDetailScreen = (): JSX.Element => {
   // `ledger` binds the entry to the ledger it was opened for; see
   // `common/route-ledger` for why the ambient selection is not enough.
-  const params = useLocalSearchParams<{
+  const params = useRouteParams<{
     entry_hash?: string;
     ledger?: string;
     origin_account?: string;

@@ -1,6 +1,6 @@
 import { memo, useEffect, useRef, useState } from "react";
 import { Alert, StyleSheet, View } from "react-native";
-import { useRouter, useLocalSearchParams } from "expo-router";
+import { useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import * as ImagePicker from "expo-image-picker";
 import * as LegacyFS from "expo-file-system/legacy";
@@ -16,6 +16,7 @@ import {
 import { CameraView, type CapturedShot } from "./camera-view";
 import { PreviewView } from "./preview-view";
 import { CHROME } from "./chrome";
+import { useRouteParams } from "@/common/hooks/use-route-params";
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: CHROME.background },
@@ -41,7 +42,7 @@ const ReceiptCaptureScreenImpl = () => {
   const router = useRouter();
   const ledgerId = useLedgerGuard();
   const workflow = useReceiptWorkflow();
-  const { testMode } = useLocalSearchParams<{ testMode?: string }>();
+  const { testMode } = useRouteParams<{ testMode?: string }>();
 
   const [shot, setShot] = useState<CapturedShot | null>(null);
   const launched = useRef(false);

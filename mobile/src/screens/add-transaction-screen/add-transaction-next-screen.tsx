@@ -15,7 +15,7 @@ import { useLedgerMeta } from "@/common/hooks/use-ledger-meta";
 import { useSession } from "@/common/hooks/use-session";
 import { getCurrencySymbol } from "@/common/currency-util";
 import { ColorTheme } from "@/types/theme-props";
-import { Stack, useLocalSearchParams, useRouter } from "expo-router";
+import { Stack, useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { ListItem } from "@/screens/multi-postings-transaction/list-item";
 import { SuggestionChips } from "@/screens/add-transaction-screen/suggestion-chips";
@@ -34,6 +34,7 @@ import {
 } from "@/common/globalFnFactory";
 import { pushAccountPicker } from "@/screens/account-picker-screen/push-account-picker";
 import { letterSpacing } from "@/common/rtl";
+import { useRouteParams } from "@/common/hooks/use-route-params";
 
 /** Keep only non-empty string arguments (drops undefined option names). */
 function pickDefined(...values: (string | undefined)[]): string[] {
@@ -104,7 +105,7 @@ const AddTransactionNextScreenComponent = () => {
     currentExpense,
     currentCurrency,
     currentPayee,
-  } = useLocalSearchParams<{
+  } = useRouteParams<{
     currentMoney: string;
     currentAsset: string;
     currentExpense: string;

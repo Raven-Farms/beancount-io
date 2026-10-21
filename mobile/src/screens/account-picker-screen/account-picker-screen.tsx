@@ -36,7 +36,7 @@ import {
   type PickerSection,
 } from "./picker-sections";
 import { ColorTheme } from "@/types/theme-props";
-import { useLocalSearchParams, useRouter } from "expo-router";
+import { useRouter } from "expo-router";
 import { SelectedAccount } from "@/common/globalFnFactory";
 import { pushOpenAccount } from "@/screens/open-account-screen/push-open-account";
 import { accountOrderFor } from "./push-account-picker";
@@ -67,6 +67,7 @@ import { accountUsageVar, recordAccountUsage } from "@/common/vars";
 import { usageFor, type RankingContext } from "@/common/account-frecency";
 import { LEADING_TEXT_ALIGN, directionalIcon } from "@/common/rtl";
 import { capitalizeAccountPrefill } from "./create-account-prefill";
+import { useRouteParams } from "@/common/hooks/use-route-params";
 
 const SKELETON_ROW_WIDTHS = [200, 160, 220, 140, 180, 210, 150, 190];
 
@@ -259,7 +260,7 @@ function AccountPickerScreenComponent(): JSX.Element {
   const router = useRouter();
   const guest = useGuest();
   const ledgerId = useLedgerGuard();
-  const { type, selectedItem, entryDate } = useLocalSearchParams<{
+  const { type, selectedItem, entryDate } = useRouteParams<{
     type: string;
     selectedItem?: string;
     entryDate?: string;

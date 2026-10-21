@@ -14,7 +14,7 @@ import {
   View,
   useWindowDimensions,
 } from "react-native";
-import { Stack, useLocalSearchParams, useRouter } from "expo-router";
+import { Stack, useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Swipeable } from "react-native-gesture-handler";
 import { Ionicons } from "@expo/vector-icons";
@@ -77,6 +77,7 @@ import { inlineSaveError } from "./inline-save-error";
 import { seedPostingsFromPayee } from "./payee-seed";
 import { useTwoPostingSuggestions } from "@/screens/add-transaction-screen/hooks/use-two-posting-suggestions";
 import { useIsHere } from "@/common/hooks/use-is-here";
+import { useRouteParams } from "@/common/hooks/use-route-params";
 
 const SIGN_TOGGLE_SIZE = 28;
 const POSTING_ROW_PADDING_V = 14;
@@ -459,7 +460,7 @@ const MultiPostingsTransactionScreenComponent = () => {
     prefillSourceAccount,
     prefillTargetAccount,
     prefillAmount,
-  } = useLocalSearchParams<{
+  } = useRouteParams<{
     prefillDate?: string;
     prefillPayee?: string;
     prefillNarration?: string;

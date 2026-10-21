@@ -11,7 +11,7 @@ import {
   View,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { Stack, useLocalSearchParams, useRouter } from "expo-router";
+import { Stack, useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import {
   AccountCreated,
@@ -57,6 +57,7 @@ import { initialOpenDate } from "./open-date";
 import { LEADING_TEXT_ALIGN, directionalIcon } from "@/common/rtl";
 import { revealAccountVar } from "@/common/vars/reveal-account";
 import { useIsHere } from "@/common/hooks/use-is-here";
+import { useRouteParams } from "@/common/hooks/use-route-params";
 
 const VALIDATION_KEYS: Record<AccountNameValidationReason, string> = {
   invalidRoot: "openAccountInvalidRoot",
@@ -220,7 +221,7 @@ export function OpenAccountScreenComponent(): JSX.Element {
   // as `prefillRoot`; `pushOpenAccount` registers who receives the account.
   // `prefillRoot` is validated because route params can arrive from any deep
   // link, not just the picker.
-  const { prefill, prefillRoot, openDate } = useLocalSearchParams<{
+  const { prefill, prefillRoot, openDate } = useRouteParams<{
     prefill?: string;
     prefillRoot?: string;
     openDate?: string;
