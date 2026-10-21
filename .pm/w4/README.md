@@ -5,7 +5,6 @@
 ## Inbox
 
 - [243 — Keep narrow Documents columns readable](./blocked/243.md) — minor; dashboard QA, 2026-10-20. — **blocked:** fix shipped in `19547f970`; awaiting live 390px geometry check
-- [258 — Use the SVG MIME type in file previews](./258.md) — minor; dashboard QA, 2026-10-20.
 - [259 — Reject new drops while an upload batch is pending](./259.md) — minor; dashboard QA, 2026-10-20, DOM drop coverage.
 - [260 — Allow downloading existing zero-byte files](./260.md) — minor; dashboard QA, 2026-10-20.
 - [261 — Keep switch states visible in forced colors](./261.md) — minor; dashboard QA, 2026-10-20.
