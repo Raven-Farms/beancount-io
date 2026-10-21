@@ -140,3 +140,12 @@
 - [235](./235.md) — Renamed-roots ledger: Reports' Cash flow says "No cash flow" under a full chart (Sankey missed by 073)
 - [236](./236.md) — Bar charts never scale below 1 unit: BTC spending draws as slivers on a 0–1 axis
 - [237](./237.md) — Balance cards can read "+$0.00 (−0.00%)": percentage sign/colour from the unrounded change
+- [238](./238.md) — Create Ledger keeps a field's error after it's corrected (until Next)
+- [239](./239.md) — Account detail: a failed refresh swaps the loaded chart for a permanent skeleton, no stale banner
+- [240](./240.md) — Account detail's 1M/3M/6M anchor on the account's last posting, so quiet accounts show old changes
+- [241](./241.md) — Account detail titles a bare transaction "Transaction" in English in every language
+- [242](./242.md) — Opening a ledger from Browse/Create stacks another full tab bar on each switch
+- [243](./243.md) — VoiceOver ledger rows omit Private/Public, description and unavailable reason
+- [244](./244.md) — Drawer ledger filter misses "my book" and description words that Browse matches
+- [245](./245.md) — Explore search finds nothing for "crypto example" or a bare owner name (Gitea substring)
+- [246](./246.md) — At AX2 the Transactions header reads "Transacti…"
