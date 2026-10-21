@@ -64,3 +64,6 @@
 - [114](./114.md) — Transactions search text carries over to another ledger after a drawer switch
 - [115](./115.md) — Transaction filters survive sign-out and sign-in (missing from clearServerScopedState)
 - [116](./116.md) — A load-more page landing after a filter/ledger change is appended to the new list
+- [117](./117.md) — Saves/deletes show raw transport text ("Network request failed", "OAuth refresh failed"); no mobile raw-error guard
+- [118](./118.md) — Merchants, merchant detail and Entry Context load errors append the raw Apollo message; two lack Retry
+- [119](./119.md) — Session ending mid-action jumps to Welcome unexplained, under a raw "OAuth grant is no longer valid" alert
