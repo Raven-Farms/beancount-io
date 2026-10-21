@@ -31,6 +31,17 @@ const UNDATED_KEYWORDS = new Set([
 ]);
 
 /**
+ * Undated statements that configure the ledger rather than record anything
+ * (w23/018). An appended `option "operating_currency"` changes every report's
+ * currency, `plugin "…auto_accounts"` switches off the open-account check this
+ * tool's own validation relies on, and `include` pulls in a whole file — each
+ * reported "No new bean-check errors". They are refused as text to append;
+ * a deliberate configuration change is a file edit. `pushtag`/`poptag` and
+ * `pushmeta`/`popmeta` only annotate the entries between them, so they stay.
+ */
+const CONFIGURATION_KEYWORDS = new Set(["option", "plugin", "include"]);
+
+/**
  * Dated directive keywords, mapped to the file-routing type
  * `resolveEntryFile` understands. Anything else after a date is a transaction
  * flag — `*`, `!`, `txn`, and the other flag characters Beancount allows.
@@ -110,8 +121,10 @@ export function parseDirectiveText(text: string): ParsedDirective[] {
   // whatever comes next — a `; groceries` line above a transaction is that
   // transaction's comment — and are dropped if nothing does.
   let pending: string[] = [];
-  let current: { head: ReturnType<typeof directiveHead>; lines: string[] } | null =
-    null;
+  let current: {
+    head: ReturnType<typeof directiveHead>;
+    lines: string[];
+  } | null = null;
 
   const flush = () => {
     if (!current?.head) return;
@@ -148,6 +161,14 @@ export function parseDirectiveText(text: string): ParsedDirective[] {
         `line ${index + 1}: not a Beancount directive: ${line.trim()}`,
       );
     }
+    const keyword = /^([a-z]+)\b/.exec(line)?.[1];
+    if (keyword && CONFIGURATION_KEYWORDS.has(keyword)) {
+      throw new BadUserInputError(
+        `line ${index + 1}: \`${keyword}\` configures the ledger and is not appended as an entry: ${line.trim()}`,
+        "text",
+        "Append dated directives only. To change the ledger's options, plugins or includes deliberately, edit the main file with `updateLedgerFiles`.",
+      );
+    }
     flush();
     current = { head, lines: [...pending, line] };
     pending = [];
@@ -156,7 +177,7 @@ export function parseDirectiveText(text: string): ParsedDirective[] {
 
   if (directives.length === 0) {
     throw new BadUserInputError(
-      "text contains no Beancount directives. Send directive text such as `2026-01-02 * \"Payee\" \"Narration\"` with its postings indented beneath.",
+      'text contains no Beancount directives. Send directive text such as `2026-01-02 * "Payee" "Narration"` with its postings indented beneath.',
     );
   }
   return directives;

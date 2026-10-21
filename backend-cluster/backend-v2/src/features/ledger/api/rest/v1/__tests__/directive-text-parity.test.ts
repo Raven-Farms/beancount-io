@@ -533,6 +533,33 @@ describe("appending Beancount text through the real adapters", () => {
     },
   );
 
+  // w23/018: ledger configuration is not an entry to append.
+  describe.each(["rest", "gql", "mcp"] as const)(
+    "refuses ledger configuration via %s",
+    (surface) => {
+      it.each([
+        'option "operating_currency" "EUR"',
+        'plugin "beancount.plugins.auto_accounts"',
+        'include "other.bean"',
+      ])("%s, previewed or not, before any check or write", async (line) => {
+        const f = await fixture();
+        try {
+          for (const dryRun of [true, false]) {
+            const result = await f.call(surface, { text: line, dryRun });
+            expect(result.ok).toBe(false);
+            expect(JSON.stringify(result.error)).toContain(
+              "configures the ledger",
+            );
+          }
+          expect(f.checkProjectedErrors).not.toHaveBeenCalled();
+          expect(f.changeLedgerFiles).not.toHaveBeenCalled();
+        } finally {
+          await f.close();
+        }
+      });
+    },
+  );
+
   it("refuses more than fifty directives in one call", async () => {
     const f = await fixture();
     try {

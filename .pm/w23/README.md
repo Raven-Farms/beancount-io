@@ -6,7 +6,6 @@
 
 ## Inbox
 
-- [018](./018.md) — `appendLedgerText` accepts `option`/`plugin`/`include` lines, silently reconfiguring the ledger
 - [019](./019.md) — ledger search silently accepts `order=sideways`, `limit=0`, negative ids
 - [020](./020.md) — BQL `BALANCES AT value` returns units; `BALANCES FROM <window>` fails "No matching lot" (rustledger 0.24.0)
 - [021](./021.md) — OAuth grants unknown scopes verbatim (`ledger.superuser` lands in the signed token)

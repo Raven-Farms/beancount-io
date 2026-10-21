@@ -25,12 +25,12 @@ describe("parseDirectiveText", () => {
   it("splits several directives and classifies each for file routing", () => {
     const directives = parseDirectiveText(
       [
-        '2026-01-01 open Assets:Cash USD',
+        "2026-01-01 open Assets:Cash USD",
         "",
         txn("2026-02-01", "Shop"),
         "",
         "2026-02-02 price USD 1.00 USD",
-        '2026-02-03 balance Assets:Cash 90.00 USD',
+        "2026-02-03 balance Assets:Cash 90.00 USD",
       ].join("\n"),
     );
     expect(directives.map((d) => [d.date, d.kind])).toEqual([
@@ -48,13 +48,38 @@ describe("parseDirectiveText", () => {
     expect(directive.text.startsWith("; groceries\n")).toBe(true);
   });
 
-  it("accepts the undated directives that have no date to sort by", () => {
+  it("accepts the undated tag stack around the entries it annotates", () => {
     expect(
-      parseDirectiveText('option "title" "My Ledger"\ninclude "2026.bean"'),
+      parseDirectiveText(
+        'pushtag #trip\n2026-01-02 * "Cafe"\n  Assets:Cash  -3 USD\n  Expenses:Food\npoptag #trip',
+      ).map(({ date, kind }) => ({ date, kind })),
     ).toEqual([
-      { date: null, kind: "Custom", text: 'option "title" "My Ledger"' },
-      { date: null, kind: "Custom", text: 'include "2026.bean"' },
+      { date: null, kind: "Custom" },
+      { date: "2026-01-02", kind: "Transaction" },
+      { date: null, kind: "Custom" },
     ]);
+  });
+
+  // w23/018: these reconfigure the whole ledger, and were appended with "No
+  // new bean-check errors".
+  it.each([
+    ['option "operating_currency" "EUR"', "option"],
+    ['plugin "beancount.plugins.auto_accounts"', "plugin"],
+    ['include "other.bean"', "include"],
+  ])("refuses %s, naming the line and the file-edit route", (line, keyword) => {
+    const text = `2026-01-02 open Assets:Cash USD\n${line}`;
+    expect(() => parseDirectiveText(text)).toThrow(
+      new RegExp(`line 2: \`${keyword}\` configures the ledger`),
+    );
+    try {
+      parseDirectiveText(text);
+    } catch (error) {
+      expect(error).toBeInstanceOf(BadUserInputError);
+      expect((error as BadUserInputError).metadata).toMatchObject({
+        field: "text",
+        hint: expect.stringContaining("updateLedgerFiles"),
+      });
+    }
   });
 
   it("refuses content that is not directives, naming the line", () => {
@@ -125,7 +150,9 @@ describe("insertDirectives", () => {
   it("puts the newest directive last", () => {
     const [directive] = parseDirectiveText(txn("2026-12-31", "Dec"));
     const { content } = insertDirectives(existing, [directive]);
-    expect(content.trimEnd().endsWith("  Assets:Cash    -10.00 USD")).toBe(true);
+    expect(content.trimEnd().endsWith("  Assets:Cash    -10.00 USD")).toBe(
+      true,
+    );
     const dates = [...content.matchAll(/^(\d{4}-\d{2}-\d{2}) \*/gm)].map(
       (match) => match[1],
     );
@@ -133,9 +160,11 @@ describe("insertDirectives", () => {
   });
 
   it("appends to an unsorted file rather than reordering somebody's ledger", () => {
-    const unsorted = [txn("2026-05-01", "Late"), "", txn("2026-01-01", "Early")].join(
-      "\n",
-    );
+    const unsorted = [
+      txn("2026-05-01", "Late"),
+      "",
+      txn("2026-01-01", "Early"),
+    ].join("\n");
     const [directive] = parseDirectiveText(txn("2026-03-01", "Mid"));
     const result = insertDirectives(unsorted, [directive]);
 
