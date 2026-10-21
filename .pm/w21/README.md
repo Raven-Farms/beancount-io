@@ -177,3 +177,8 @@
 - [356](./356.md) — iOS drops tab role; collapsed rows never say they expand
 - [357](./357.md) — Picker/text-input dialogs ignore VoiceOver escape; titles not headings
 - [358](./358.md) — Legacy keypad Delete key unnamed; guardrail misses Feather
+- [359](./359.md) — 176's iOS locale files gitignored, never committed; unit suite fails
+- [360](./360.md) — Budget chart y-axis fixed 50 px clips localized labels (177 sibling)
+- [361](./361.md) — Merchant exact-payee filter can exceed 256-char limit (181)
+- [362](./362.md) — Splash late ledger check clears a ledger picked after launch (183)
+- [363](./363.md) — Pending account reveal keeps re-expanding collapsed rows (175)
