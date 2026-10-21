@@ -165,3 +165,8 @@
 - [305](./305.md) — VoiceOver can't tell Transactions filters are on; account ✕ announced as a second "Reset"
 - [306](./306.md) — All three status chips selected counts as an active filter though it filters nothing
 - [307](./307.md) — A Custom filter ending 9999-12-31 passes validation but breaks the journal load
+- [308](./308.md) — Beancount default options (account_previous_balances, account_rounding) raise red E7002/E7007 errors
+- [309](./309.md) — Option errors carry no file/line: untappable rows, no editor banner
+- [310](./310.md) — Subfolder file named like a root file shows the root file's error in its banner
+- [311](./311.md) — GraphQL getLedgerErrors drops code and hint that REST/MCP return
+- [312](./312.md) — Editor error banner cuts long messages at two lines
