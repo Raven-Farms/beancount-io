@@ -12,3 +12,4 @@
 - [004](./004.md) — `banks/{itemId}` looks the item up before authorizing (`BAD_USER_INPUT` vs. concealed `NOT_FOUND`) and ignores the path ledger
 - [005](./005.md) — `readLedgerFiles` `totalLines` and write-preview diffs count a phantom line after the final newline
 - [006](./006.md) — journal `directiveTypes` is case-sensitive and unvalidated; `["transaction"]` returns an empty success on REST, GraphQL and MCP
+- [007](./007.md) — `updateEntrySource` summary prints the new hash as the old one
