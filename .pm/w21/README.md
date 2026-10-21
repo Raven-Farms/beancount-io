@@ -150,3 +150,4 @@
 - [263](./263.md) — Spending's "Not in total" nets both months, so a refund hides this month's spend
 - [264](./264.md) — Home's lower-card skeletons are short; content jumps 160–260 pt on load
 - [265](./265.md) — All Home "See all" buttons share one VoiceOver name
+- [266](./266.md) — Reports' Recent transactions says "No transactions yet" while the statement loads or after it fails
