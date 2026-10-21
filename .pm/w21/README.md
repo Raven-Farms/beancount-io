@@ -147,3 +147,4 @@
 - [244](./244.md) — Drawer ledger filter misses "my book" and description words that Browse matches
 - [245](./245.md) — Explore search finds nothing for "crypto example" or a bare owner name (Gitea substring)
 - [246](./246.md) — At AX2 the Transactions header reads "Transacti…"
+- [247](./247.md) — Regression from 111: drawer line heights double-scaled at AX2 (rows ~2× tall, names split far apart)
