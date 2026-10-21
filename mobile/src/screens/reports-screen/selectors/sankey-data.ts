@@ -482,9 +482,10 @@ export function cashFlowChartSummary(
   data: SankeyData,
   currency: string,
   t: (key: string, params?: Record<string, unknown>) => string,
+  locale = "en",
 ): string {
   const money = (value: number) =>
-    formatShortMoneyWithCurrency(value, currency);
+    formatShortMoneyWithCurrency(value, currency, locale);
   const totals = {
     income: money(data.totalIncome),
     expenses: money(data.totalExpenses),

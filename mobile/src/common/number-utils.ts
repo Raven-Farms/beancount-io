@@ -9,7 +9,94 @@ const SHORT_NUMBER_SUFFIXES = [
   { value: 1e15, symbol: "Q" },
 ];
 
-export const shortNumber = (number: number | string): string => {
+type CompactStyle = {
+  decimal: string;
+  /** One per `SHORT_NUMBER_SUFFIXES` tier, spacing included. */
+  suffixes: readonly string[];
+  /** Whether the currency follows the number ("1,5 Tsd. $"). */
+  currencyAfter: boolean;
+};
+
+/**
+ * Each app language's short scale, after CLDR's short compact forms. The
+ * English "K/M/B" read wrong elsewhere: German "B" is no abbreviation and
+ * German *Billion* is 10¹² (w21/177). Hand-kept rather than
+ * `Intl.NumberFormat`'s compact notation, which Hermes on iOS cannot be
+ * relied on for. Compact values never appear in a `.bean` file, so unlike
+ * full amounts (w3/189) they follow the language.
+ */
+const COMPACT_STYLES: Record<string, CompactStyle> = {
+  en: {
+    decimal: ".",
+    suffixes: ["", "K", "M", "B", "T", "Q"],
+    currencyAfter: false,
+  },
+  zh: {
+    decimal: ".",
+    suffixes: ["", "千", "百万", "十亿", "万亿", "千万亿"],
+    currencyAfter: false,
+  },
+  bg: {
+    decimal: ",",
+    suffixes: ["", " хил.", " млн.", " млрд.", " трлн.", " квадрлн."],
+    currencyAfter: true,
+  },
+  ca: {
+    decimal: ",",
+    suffixes: ["", " k", " M", " kM", " B", " kB"],
+    currencyAfter: true,
+  },
+  de: {
+    decimal: ",",
+    suffixes: ["", " Tsd.", " Mio.", " Mrd.", " Bio.", " Brd."],
+    currencyAfter: true,
+  },
+  es: {
+    decimal: ",",
+    suffixes: ["", " mil", " M", " mil M", " B", " mil B"],
+    currencyAfter: true,
+  },
+  fa: {
+    decimal: ".",
+    suffixes: ["", " هزار", " میلیون", " میلیارد", " تریلیون", " کوادریلیون"],
+    currencyAfter: false,
+  },
+  fr: {
+    decimal: ",",
+    suffixes: ["", " k", " M", " Md", " Bn", " Bd"],
+    currencyAfter: true,
+  },
+  nl: {
+    decimal: ",",
+    suffixes: ["", "K", " mln.", " mld.", " bln.", " bld."],
+    currencyAfter: false,
+  },
+  pt: {
+    decimal: ",",
+    suffixes: ["", " mil", " mi", " bi", " tri", " quatri"],
+    currencyAfter: false,
+  },
+  ru: {
+    decimal: ",",
+    suffixes: ["", " тыс.", " млн", " млрд", " трлн", " квадрлн"],
+    currencyAfter: true,
+  },
+  sk: {
+    decimal: ",",
+    suffixes: ["", " tis.", " mil.", " mld.", " bil.", " bld."],
+    currencyAfter: true,
+  },
+  uk: {
+    decimal: ",",
+    suffixes: ["", " тис.", " млн", " млрд", " трлн", " квадрлн"],
+    currencyAfter: true,
+  },
+};
+
+const compactStyle = (locale: string): CompactStyle =>
+  COMPACT_STYLES[locale.split(/[-_]/)[0]] ?? COMPACT_STYLES.en;
+
+export const shortNumber = (number: number | string, locale = "en"): string => {
   // Convert string to number if needed
   const num = typeof number === "string" ? parseFloat(number) : number;
 
@@ -34,13 +121,14 @@ export const shortNumber = (number: number | string): string => {
     tier++;
   }
 
-  const { value, symbol } = SHORT_NUMBER_SUFFIXES[tier];
+  const { value } = SHORT_NUMBER_SUFFIXES[tier];
+  const style = compactStyle(locale);
   const shortNum = absNum / value;
   // Whole values drop the decimal at every magnitude: "0", "50", "1K".
   const digits = Number.isInteger(shortNum)
     ? shortNum.toString()
-    : shortNum.toFixed(1);
-  return sign + digits + symbol;
+    : shortNum.toFixed(1).replace(".", style.decimal);
+  return sign + digits + style.suffixes[tier];
 };
 
 /** `Number.prototype.toFixed` rejects anything above this. */
@@ -191,9 +279,14 @@ export const formatSignedMoneyWithCurrency = (
 export const formatShortMoneyWithCurrency = (
   value: number,
   currency: string,
-): string =>
-  annotateCurrency(
-    value < 0 ? "-" : "",
-    shortNumber(Math.abs(value)),
-    currency,
-  );
+  locale = "en",
+): string => {
+  const sign = value < 0 ? "-" : "";
+  const amount = shortNumber(Math.abs(value), locale);
+  const symbol = getCurrencySymbol(currency);
+  // Where the language writes the currency after the number (w21/177).
+  if (symbol && compactStyle(locale).currencyAfter) {
+    return `${sign}${amount} ${symbol}`;
+  }
+  return annotateCurrency(sign, amount, currency);
+};

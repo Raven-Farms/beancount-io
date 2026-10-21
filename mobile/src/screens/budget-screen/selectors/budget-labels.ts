@@ -198,6 +198,7 @@ export function budgetChartSummary(
     currency: string;
   },
   t: (key: string, params?: Record<string, unknown>) => string,
+  locale = "en",
 ): string | undefined {
   const { labels, actuals, budgets, favorables, currency } = series;
   if (labels.length === 0) return undefined;
@@ -206,6 +207,7 @@ export function budgetChartSummary(
     formatShortMoneyWithCurrency(
       values.reduce((sum, value) => sum + value, 0),
       currency,
+      locale,
     );
   const span =
     labels.length === 1

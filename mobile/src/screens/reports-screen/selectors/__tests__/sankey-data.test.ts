@@ -417,7 +417,7 @@ describe("cashFlowChartSummary", () => {
       fs.readFileSync(path.join(__dirname, "..", "..", ...parts), "utf8");
     expect(
       read("components", "cash-flow-sankey.tsx").includes(
-        "accessibilityLabel={cashFlowChartSummary(data, currency, t)}",
+        "accessibilityLabel={cashFlowChartSummary(data, currency, t, locale)}",
       ),
     ).toBe(true);
     expect(

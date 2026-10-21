@@ -333,7 +333,7 @@ export function BudgetGroupCard({
           <FadeInView>
             <BudgetBarChartD3
               {...chartSeries}
-              accessibilityLabel={budgetChartSummary(chartSeries, t)}
+              accessibilityLabel={budgetChartSummary(chartSeries, t, locale)}
               height={CHART_HEIGHT}
             />
           </FadeInView>

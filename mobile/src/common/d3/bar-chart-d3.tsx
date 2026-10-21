@@ -38,7 +38,7 @@ function BarChart({
   accessibilityLabel,
 }: BarChartProps): JSX.Element {
   const theme = useTheme().colorTheme;
-  const { t } = useTranslations();
+  const { t, locale } = useTranslations();
 
   // Chart dimensions
   const chartWidth = ScreenWidth - contentPadding * 2;
@@ -56,7 +56,7 @@ function BarChart({
   // Y axis ticks
   const yTicks = yScale.ticks(5);
   const tickLabels = yTicks.map((tick) =>
-    formatShortMoneyWithCurrency(tick, currency),
+    formatShortMoneyWithCurrency(tick, currency, locale),
   );
   // The gutter fits the widest formatted tick; bars share what remains.
   const { axisWidth, barWidth, barX, labelX } = barChartLayout(

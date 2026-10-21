@@ -272,3 +272,30 @@ describe("amountScale with exponent notation", () => {
     );
   });
 });
+
+// w21/177: compact amounts used English K/M/B in every language.
+describe("compact amounts in the app's language", () => {
+  it("abbreviates as each language does", () => {
+    expect(formatShortMoneyWithCurrency(1500, "USD", "de")).toBe("1,5 Tsd. $");
+    expect(formatShortMoneyWithCurrency(305e9, "USD", "de")).toBe("305 Mrd. $");
+    expect(formatShortMoneyWithCurrency(1500, "USD", "ru")).toBe("1,5 тыс. $");
+    expect(formatShortMoneyWithCurrency(-2.5e6, "USD", "fr")).toBe("-2,5 M $");
+    expect(formatShortMoneyWithCurrency(1500, "USD", "zh")).toBe("$1.5千");
+  });
+
+  it("leaves English as it was", () => {
+    expect(formatShortMoneyWithCurrency(1500, "USD")).toBe("$1.5K");
+    expect(formatShortMoneyWithCurrency(1500, "USD", "en")).toBe("$1.5K");
+    expect(formatShortMoneyWithCurrency(305e9, "USD", "en")).toBe("$305B");
+  });
+
+  it("labels a currency with no symbol by its code", () => {
+    expect(formatShortMoneyWithCurrency(1500, "MUSD", "de")).toBe(
+      "1,5 Tsd. MUSD",
+    );
+  });
+
+  it("falls back to English for an unknown language", () => {
+    expect(formatShortMoneyWithCurrency(1500, "USD", "xx")).toBe("$1.5K");
+  });
+});

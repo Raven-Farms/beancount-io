@@ -67,7 +67,7 @@ function IncomeExpenseBarChart({
   height = DEFAULT_CHART_HEIGHT,
 }: IncomeExpenseBarChartProps): JSX.Element {
   const theme = useTheme().colorTheme;
-  const { t } = useTranslations();
+  const { t, locale } = useTranslations();
 
   const chartHeight = height;
 
@@ -93,7 +93,7 @@ function IncomeExpenseBarChart({
   const zeroY = yScale(0);
   const yTicks = yScale.ticks(5);
   const axisWidth = axisLabelWidth(
-    yTicks.map((tick) => formatShortMoneyWithCurrency(tick, currency)),
+    yTicks.map((tick) => formatShortMoneyWithCurrency(tick, currency, locale)),
     AXIS_FONT_SIZE,
     LEFT_PADDING,
   );
@@ -162,14 +162,17 @@ function IncomeExpenseBarChart({
         income: formatShortMoneyWithCurrency(
           income.reduce((sum, v) => sum + v, 0),
           currency,
+          locale,
         ),
         expense: formatShortMoneyWithCurrency(
           expense.reduce((sum, v) => sum + v, 0),
           currency,
+          locale,
         ),
         net: formatShortMoneyWithCurrency(
           net.reduce((sum, v) => sum + v, 0),
           currency,
+          locale,
         ),
       })}
       legend={
