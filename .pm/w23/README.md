@@ -6,6 +6,7 @@
 
 ## Inbox
 
+- [031](./031.md) — deleting `main.bean` commits with "No new bean-check errors" (post-write check fails open) and breaks every read; its dry run says `SERVICE_UNAVAILABLE`
 - [030](./030.md) — `updateLedgerFiles`, append and include rewrites decode non-UTF-8 files leniently and commit U+FFFD over untouched bytes
 - [029](./029.md) — `renameLedgerFile` matches include lines literally: misses relative includes in subdirectories, falsely refuses, and with `updateIncludes` rewrites an unrelated include to a missing file
 - [028](./028.md) — two `old_string` edits to one file in one `updateLedgerFiles` call: preview shows both, commit silently keeps only the last
