@@ -20,3 +20,4 @@
 - [070](./070.md) — A JPY ledger shows "円1,500.00": wrong yen sign, prefix position, and forced decimals
 - [071](./071.md) — Auth-error sign-out leaves the previous account's Create Ledger draft, Recent accounts and overrides
 - [072](./072.md) — Account detail paging dedupes an overlap but never refetches, so a new entry stays missing
+- [073](./073.md) — Renamed roots (`name_assets` …): Open Account can only write `Assets:…`; Reports' Recent transactions always empty
