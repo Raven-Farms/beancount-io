@@ -67,6 +67,8 @@ interface AccountMappingTableProps {
   transactionCount?: number;
   /** Fired after a local draft edit so the wizard can persist configure state. */
   onDraftChange?: () => void;
+  /** Freezes selection, targets and AI Fill while the import is pending. */
+  disabled?: boolean;
 }
 
 type AmountFilter = "all" | "positive" | "negative";
@@ -78,6 +80,7 @@ export function AccountMappingTable({
   aiLoading = false,
   transactionCount = 0,
   onDraftChange,
+  disabled = false,
 }: AccountMappingTableProps) {
   const { t, i18n } = useTranslations();
   const formatError = useErrorMessage();
@@ -245,7 +248,7 @@ export function AccountMappingTable({
                         : false
                   }
                   onCheckedChange={handleToggleAll}
-                  disabled={filteredCount === 0}
+                  disabled={disabled || filteredCount === 0}
                   aria-label={t("importer.accountMapping.selectAll")}
                 />
               </TableHead>
@@ -268,7 +271,7 @@ export function AccountMappingTable({
                   {onAICategorize && (
                     <Button
                       onClick={handleAICategorize}
-                      disabled={loading || transactionCount === 0}
+                      disabled={disabled || loading || transactionCount === 0}
                       variant="ghost"
                       size="sm"
                       type="button"
@@ -322,6 +325,7 @@ export function AccountMappingTable({
                       <Checkbox
                         checked={txn.selected}
                         onCheckedChange={() => handleToggleRow(index)}
+                        disabled={disabled}
                         aria-label={`${t("importer.accountMapping.selectTransaction")} ${index + 1}`}
                       />
                     </TableCell>
@@ -368,7 +372,7 @@ export function AccountMappingTable({
                                 placeholder={t(
                                   "importer.accountMapping.selectAccountPlaceholder",
                                 )}
-                                disabled={!txn.selected}
+                                disabled={disabled || !txn.selected}
                                 className={cn(
                                   isMissingAccount &&
                                     "border-destructive ring-destructive",

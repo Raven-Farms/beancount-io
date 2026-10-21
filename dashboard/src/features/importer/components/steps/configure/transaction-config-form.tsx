@@ -206,6 +206,9 @@ export function TransactionConfigForm({
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
+            {/* Every control that shapes the payload is frozen while its
+                batch is pending: the request already holds the old values,
+                and success discards the form (w4/280). */}
             <div className="grid grid-cols-2 gap-4">
               <FormField
                 control={form.control}
@@ -220,6 +223,7 @@ export function TransactionConfigForm({
                         ledgerId={ledgerId}
                         value={field.value}
                         onValueChange={field.onChange}
+                        disabled={isSubmitting}
                         placeholder={t(
                           "importer.configure.sourceAccountPlaceholder",
                         )}
@@ -246,6 +250,7 @@ export function TransactionConfigForm({
                         ledgerId={ledgerId}
                         value={field.value}
                         onValueChange={field.onChange}
+                        disabled={isSubmitting}
                         className={cn(
                           !field.value && "border-destructive ring-destructive",
                         )}
@@ -270,6 +275,7 @@ export function TransactionConfigForm({
                 onAICategorize={handleAICategorize}
                 aiLoading={aiLoading}
                 transactionCount={validRows.length}
+                disabled={isSubmitting}
               />
             </div>
 
