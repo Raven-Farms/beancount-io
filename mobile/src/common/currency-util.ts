@@ -9,9 +9,50 @@ export const getPrimaryCurrency = (
   fallback = "USD",
 ): string => (currencies.length > 0 ? currencies[0] : fallback);
 
-export const getCurrencySymbol = (currency: string) => {
-  if (currency === "CNY") {
-    return "¥";
-  }
-  return CurrencyIcons[currency]?.symbol || "";
+// Where `currency-icons` gives a local-script or word symbol that does not
+// read as a prefix: JPY's is "円", which rendered "円1,500.00" (w21/070).
+const SYMBOL_OVERRIDES: Record<string, string> = {
+  CNY: "¥",
+  JPY: "¥",
 };
+
+export const getCurrencySymbol = (currency: string) =>
+  SYMBOL_OVERRIDES[currency] ?? (CurrencyIcons[currency]?.symbol || "");
+
+// ISO 4217 minor units that differ from the usual two. The yen and won have no
+// minor unit, so "¥1,500.00" was wrong; the dinars carry three (w21/070).
+const MINOR_UNITS: Record<string, number> = {
+  BIF: 0,
+  CLP: 0,
+  DJF: 0,
+  GNF: 0,
+  ISK: 0,
+  JPY: 0,
+  KMF: 0,
+  KRW: 0,
+  PYG: 0,
+  RWF: 0,
+  UGX: 0,
+  UYI: 0,
+  VND: 0,
+  VUV: 0,
+  XAF: 0,
+  XOF: 0,
+  XPF: 0,
+  BHD: 3,
+  IQD: 3,
+  JOD: 3,
+  KWD: 3,
+  LYD: 3,
+  OMR: 3,
+  TND: 3,
+  CLF: 4,
+  UYW: 4,
+};
+
+/**
+ * Decimal places money in `currency` is shown with: its ISO 4217 minor unit,
+ * or two for any other code, custom commodities included.
+ */
+export const currencyMinorUnits = (currency: string): number =>
+  MINOR_UNITS[currency] ?? 2;

@@ -235,3 +235,26 @@ describe("formatUnits", () => {
     expect(formatUnits(1.5, "XYZ", 99)).toBe("1.50000000000000000000 XYZ");
   });
 });
+
+// w21/070: a JPY ledger read "円1,500.00" — currency-icons' 円 as a prefix and
+// cents on a currency with no minor unit.
+describe("money at its currency's minor unit", () => {
+  it("shows the yen and won whole, with the ¥ sign", () => {
+    expect(formatMoneyWithCurrency(1500, "JPY")).toBe("¥1,500");
+    expect(formatSignedMoneyWithCurrency(1500, "JPY", true)).toBe("+¥1,500");
+    expect(formatMoneyWithCurrency(50000, "KRW")).toBe("₩50,000");
+    expect(formatShortMoneyWithCurrency(1500, "JPY")).toBe("¥1.5K");
+  });
+
+  it("gives three-decimal dinars their third place", () => {
+    const kwd = formatSignedMoneyWithCurrency(-12.345, "KWD");
+    expect(kwd.startsWith("-")).toBe(true);
+    expect(kwd.endsWith("12.345")).toBe(true);
+  });
+
+  it("leaves two-decimal currencies and custom commodities alone", () => {
+    expect(formatMoneyWithCurrency(1234.5, "USD")).toBe("$1,234.50");
+    expect(formatMoneyWithCurrency(1234.5, "MUSD")).toBe("1,234.50 MUSD");
+    expect(formatMoneyWithCurrency(10, "CNY")).toBe("¥10.00");
+  });
+});

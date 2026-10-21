@@ -592,7 +592,7 @@ describe("selectTransactionAmount: mixed currencies", () => {
     });
     // With no operating currency the first currency by name sizes it.
     expect(selectTransactionAmount(fxB)).toEqual({
-      text: "15,000.00 JPY",
+      text: "15,000 JPY",
       value: 0,
       currency: "JPY",
     });
@@ -726,5 +726,18 @@ describe("groupToSections", () => {
     const sections = groupToSections([close, tx], "");
     expect(sections.length).toBe(1);
     expect(sections[0].data.length).toBe(2);
+  });
+});
+
+// w21/070: Home Recent read "+1,500.00 JPY" for the posting account detail
+// shows as "+1,500 JPY".
+describe("formatAmount at the currency's minor unit", () => {
+  it("drops the cents a zero-decimal currency never had", () => {
+    expect(formatAmount(1500, "JPY", amountScale("1500"))).toBe("1,500 JPY");
+    expect(formatAmount(50000, "KRW")).toBe("50,000 KRW");
+    expect(formatAmount(12.345, "KWD", amountScale("12.345"))).toBe(
+      "12.345 KWD",
+    );
+    expect(formatAmount(1.5, "USD", amountScale("1.5"))).toBe("$1.50");
   });
 });

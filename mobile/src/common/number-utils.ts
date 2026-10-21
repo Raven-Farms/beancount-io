@@ -1,4 +1,4 @@
-import { getCurrencySymbol } from "./currency-util";
+import { currencyMinorUnits, getCurrencySymbol } from "./currency-util";
 
 const SHORT_NUMBER_SUFFIXES = [
   { value: 1, symbol: "" },
@@ -138,15 +138,20 @@ const annotateCurrency = (
 };
 
 /**
- * An unsigned money string annotated with its currency (e.g. "$1,234.50" or
- * "1,234.50 MUSD"). Use for absolute figures where the sign is not shown — a
+ * An unsigned money string annotated with its currency (e.g. "$1,234.50",
+ * "¥1,500" or "1,234.50 MUSD"), at the currency's minor unit. Use for absolute figures where the sign is not shown — a
  * running balance, a category total, an account row. Resolves the symbol from
  * the currency code and falls back to appending the code.
  */
 export const formatMoneyWithCurrency = (
   value: number,
   currency: string,
-): string => annotateCurrency("", groupThousands(value), currency);
+): string =>
+  annotateCurrency(
+    "",
+    groupThousands(value, currencyMinorUnits(currency)),
+    currency,
+  );
 
 /**
  * A signed money string annotated with its currency, resolving the symbol from
@@ -161,7 +166,11 @@ export const formatSignedMoneyWithCurrency = (
   currency: string,
   includePlus = false,
 ): string => {
-  const { sign, amount } = signedAmount(value, includePlus);
+  const { sign, amount } = signedAmount(
+    value,
+    includePlus,
+    currencyMinorUnits(currency),
+  );
   return annotateCurrency(sign, amount, currency);
 };
 

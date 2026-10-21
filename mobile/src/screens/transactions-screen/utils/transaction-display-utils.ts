@@ -1,4 +1,5 @@
 import { formatLedgerDate } from "../../../common/date-format";
+import { currencyMinorUnits } from "../../../common/currency-util";
 import { amountScale } from "../../../common/number-utils";
 import {
   JournalDirectiveType,
@@ -13,7 +14,7 @@ export type JournalSection = {
   data: JournalDirectiveType[];
 };
 
-/** Display floor: money always reads with cents, so 1.5 shows as 1.50. */
+/** Default scale: money reads with cents, so 1.5 shows as 1.50. */
 const MIN_FRACTION_DIGITS = 2;
 /** `Intl.NumberFormat` rejects anything above this. */
 const MAX_FRACTION_DIGITS = 20;
@@ -30,12 +31,15 @@ export const formatAmount = (
   currency: string,
   scale = MIN_FRACTION_DIGITS,
 ): string => {
+  // The display floor is the currency's minor unit: "1,500 JPY" as account
+  // detail shows it, not "1,500.00 JPY" (w21/070).
+  const minimumFractionDigits = currencyMinorUnits(currency);
   const maximumFractionDigits = Math.min(
     MAX_FRACTION_DIGITS,
-    Math.max(MIN_FRACTION_DIGITS, scale),
+    Math.max(minimumFractionDigits, scale),
   );
   const formatted = Math.abs(value).toLocaleString("en-US", {
-    minimumFractionDigits: MIN_FRACTION_DIGITS,
+    minimumFractionDigits,
     maximumFractionDigits,
   });
   return currency === "USD" ? `$${formatted}` : `${formatted} ${currency}`;
