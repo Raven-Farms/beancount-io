@@ -6,7 +6,7 @@
 
 - [243 — Keep narrow Documents columns readable](./blocked/243.md) — minor; dashboard QA, 2026-10-20. — **blocked:** fix shipped in `19547f970`; awaiting live 390px geometry check
 - [261 — Keep switch states visible in forced colors](./blocked/261.md) — minor; dashboard QA, 2026-10-20. — **blocked:** fix shipped in `17b703796`; awaiting forced-colors pixel check
-- [262 — Keep Journal, Account, Overview and Files row focus visible in forced colors](./262.md) — minor; dashboard QA, 2026-10-20.
+- [262 — Keep Journal, Account, Overview and Files row focus visible in forced colors](./blocked/262.md) — minor; dashboard QA, 2026-10-20. — **blocked:** fix shipped in `def18543d`; awaiting forced-colors pixel check
 - [263 — Resolve file jumps with tab-separated Git headers](./263.md) — minor; dashboard QA, 2026-10-20.
 - [264 — Make Try Again recover failed ledger child pages](./264.md) — minor; dashboard QA, 2026-10-20.
 - [265 — Keep financial text and private paths out of GA4 automatic events](./265.md) — major; dashboard QA, 2026-10-20; stream-editor completion dependency.
