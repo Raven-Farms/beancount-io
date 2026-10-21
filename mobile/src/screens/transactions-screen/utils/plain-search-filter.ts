@@ -8,6 +8,9 @@
  * Free of `@/` imports so the jest-lite runner can require it.
  */
 
+/** One tag or link token, in Beancount's tag/link character set. */
+const TAG_OR_LINK = /^[#^][A-Za-z0-9_\-./]+$/;
+
 function escapeRegExp(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
@@ -19,6 +22,11 @@ function escapeRegExp(value: string): string {
 export function toPlainSearchFilter(raw: string): string | undefined {
   const trimmed = raw.trim();
   if (!trimmed) return undefined;
+
+  // A lone `#tag` or `^link` is Fava filter syntax for that tag or link, and
+  // only works unquoted: quoted, it matched payee and narration only, so a
+  // search for the tags the detail screen shows found nothing (w21/025).
+  if (TAG_OR_LINK.test(trimmed)) return trimmed;
 
   // Lexer forms: `"[^"]*"` and `'[^']*'`, with no escape processing inside.
   // Prefer double quotes; fall back to single quotes when the needle itself

@@ -73,3 +73,20 @@ describe("toPlainSearchFilter", () => {
     expect(toPlainSearchFilter('The "Best" Cafe')).toBe("'The \"Best\" Cafe'");
   });
 });
+
+// A lone tag or link is Fava filter syntax and must reach it unquoted: the
+// quoted form matched payee and narration only (w21/025).
+describe("toPlainSearchFilter tags and links", () => {
+  it("passes a single tag or link token through", () => {
+    expect(toPlainSearchFilter(" #work ")).toBe("#work");
+    expect(toPlainSearchFilter("^qa-receipt-001")).toBe("^qa-receipt-001");
+    expect(toPlainSearchFilter("#trip/2026.q3")).toBe("#trip/2026.q3");
+  });
+
+  it("keeps quoting anything that is not exactly one token", () => {
+    expect(toPlainSearchFilter("#a b")).toBe('"#a b"');
+    expect(toPlainSearchFilter("#")).toBe('"#"');
+    expect(toPlainSearchFilter("coffee #work")).toBe('"coffee #work"');
+    expect(toPlainSearchFilter("#café")).toBe('"#café"');
+  });
+});
