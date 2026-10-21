@@ -32,6 +32,7 @@ import { useTheme } from "@/common/theme";
 import { Ionicons } from "@expo/vector-icons";
 import { useCurrentUser } from "@/common/hooks/use-current-user";
 import { UserAvatar } from "@/components/user-avatar";
+import { deleteConfirmationCheck } from "./delete-confirmation";
 
 export const MainContent = () => {
   const session = useSession();
@@ -106,7 +107,13 @@ export const MainContent = () => {
   const handleDeleteAccountConfirm = (inputText: string) => {
     setDeleteAccountModalVisible(false);
     // Proceed with deletion only if the input matches
-    if (inputText === t("deleteAccountConfirmPhrase")) {
+    if (
+      deleteConfirmationCheck(
+        inputText,
+        t("deleteAccountConfirmPhrase"),
+        t("deleteAccountConfirmMismatch"),
+      ) === true
+    ) {
       handleDeleteAccount();
     }
   };
@@ -312,7 +319,13 @@ export const MainContent = () => {
         confirmButtonText={t("deleteAccountAlertConfirm")}
         cancelButtonText={t("deleteAccountAlertCancel")}
         destructive
-        validateInput={(text) => text === t("deleteAccountConfirmPhrase")}
+        validateInput={(text) =>
+          deleteConfirmationCheck(
+            text,
+            t("deleteAccountConfirmPhrase"),
+            t("deleteAccountConfirmMismatch"),
+          )
+        }
       />
     </>
   );

@@ -125,6 +125,7 @@ export const zh: Translations = {
   deleteAccountConfirmTitle: "确认删除账号",
   deleteAccountConfirmMessage: '请在下方输入 "sudo delete my account" 以确认：',
   deleteAccountConfirmPhrase: "sudo delete my account",
+  deleteAccountConfirmMismatch: "请完全按照显示的内容输入该短语。",
   deleteAccountConfirmPlaceholder: "在此输入短语",
   deleteAccountSuccess: "账号已删除",
   deleteAccountFailed: "无法删除账号，请重试。",

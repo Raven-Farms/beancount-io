@@ -144,6 +144,7 @@ export const ru: Translations = {
   deleteAccountConfirmMessage:
     'Для подтверждения введите "sudo delete my account" ниже:',
   deleteAccountConfirmPhrase: "sudo delete my account",
+  deleteAccountConfirmMismatch: "Введите фразу точно так, как показано.",
   deleteAccountConfirmPlaceholder: "Введите фразу здесь",
   deleteAccountSuccess: "Аккаунт удалён",
   deleteAccountFailed: "Не удалось удалить аккаунт. Попробуйте ещё раз.",

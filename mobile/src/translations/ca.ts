@@ -143,6 +143,7 @@ export const ca: Translations = {
   deleteAccountConfirmMessage:
     'Per confirmar, si us plau escriu "sudo delete my account" a continuació:',
   deleteAccountConfirmPhrase: "sudo delete my account",
+  deleteAccountConfirmMismatch: "Escriviu la frase exactament com es mostra.",
   deleteAccountConfirmPlaceholder: "Escriu la frase aquí",
   deleteAccountSuccess: "Compte eliminat",
   deleteAccountFailed: "No s'ha pogut eliminar el compte. Torna-ho a provar.",

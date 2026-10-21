@@ -139,6 +139,8 @@ export const fa: Translations = {
   deleteAccountConfirmMessage:
     'برای تأیید، لطفاً "sudo delete my account" را در زیر بنویسید:',
   deleteAccountConfirmPhrase: "sudo delete my account",
+  deleteAccountConfirmMismatch:
+    "عبارت را دقیقاً همان‌طور که نشان داده شده بنویسید.",
   deleteAccountConfirmPlaceholder: "عبارت را اینجا بنویسید",
   deleteAccountSuccess: "حساب حذف شد",
   deleteAccountFailed: "حذف حساب انجام نشد. دوباره تلاش کنید.",

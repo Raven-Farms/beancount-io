@@ -144,6 +144,7 @@ export const sk: Translations = {
   deleteAccountConfirmMessage:
     'Pre potvrdenie zadajte "sudo delete my account" nižšie:',
   deleteAccountConfirmPhrase: "sudo delete my account",
+  deleteAccountConfirmMismatch: "Napíšte frázu presne tak, ako je zobrazená.",
   deleteAccountConfirmPlaceholder: "Zadajte frázu tu",
   deleteAccountSuccess: "Účet bol vymazaný",
   deleteAccountFailed: "Účet sa nepodarilo vymazať. Skúste to znova.",

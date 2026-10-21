@@ -14,7 +14,6 @@
 
 - [064](./blocked/064.md) — A token refresh whose response is lost signs the user out on the next refresh (rotated token replayed → grant revoked) — **blocked:** needs an owner decision (ADR) on a refresh-token reuse grace window
 - [065](./blocked/065.md) — One early-year entry (e.g. 0050) makes the balance sheet 23,718 monthly points (3 MB) and the app stalls — **blocked:** needs an approach decision (per-pill fetch vs server downsample) and a simulator profile of the stall
-- [158](./158.md) — Delete Account phrase must match exactly; a trailing space greys out Delete with no reason
 - [159](./159.md) — New Transaction amounts start with a real "0.00" a tap doesn't select; typing gives "0.0012.50" and an error
 - [160](./160.md) — Money flow prints per-unit price/cost to 28 digits for `@@` / `{{}}` totals
 - [161](./161.md) — A posting-level `!` flag is dropped everywhere (row, detail, VoiceOver)

@@ -143,6 +143,7 @@ export const uk: Translations = {
   deleteAccountConfirmMessage:
     'Для підтвердження введіть "sudo delete my account" нижче:',
   deleteAccountConfirmPhrase: "sudo delete my account",
+  deleteAccountConfirmMismatch: "Введіть фразу точно так, як показано.",
   deleteAccountConfirmPlaceholder: "Введіть фразу тут",
   deleteAccountSuccess: "Обліковий запис видалено",
   deleteAccountFailed: "Не вдалося видалити обліковий запис. Спробуйте ще раз.",

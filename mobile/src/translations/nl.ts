@@ -139,6 +139,7 @@ export const nl: Translations = {
   deleteAccountConfirmMessage:
     'Om te bevestigen, typ "sudo delete my account" hieronder:',
   deleteAccountConfirmPhrase: "sudo delete my account",
+  deleteAccountConfirmMismatch: "Typ de zin precies zoals getoond.",
   deleteAccountConfirmPlaceholder: "Typ de zin hier",
   deleteAccountSuccess: "Account verwijderd",
   deleteAccountFailed:

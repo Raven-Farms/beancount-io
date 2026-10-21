@@ -141,6 +141,7 @@ export const es: Translations = {
   deleteAccountConfirmMessage:
     'Para confirmar, escribe "sudo delete my account" a continuación:',
   deleteAccountConfirmPhrase: "sudo delete my account",
+  deleteAccountConfirmMismatch: "Escribe la frase exactamente como se muestra.",
   deleteAccountConfirmPlaceholder: "Escribe la frase aquí",
   deleteAccountSuccess: "Cuenta eliminada",
   deleteAccountFailed: "No se pudo eliminar la cuenta. Inténtalo de nuevo.",
