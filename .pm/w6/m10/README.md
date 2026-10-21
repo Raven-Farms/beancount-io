@@ -1,6 +1,6 @@
 # w6 · m10 — List the connector in independent web directories
 
-**Worker:** worker1 **Goal:** People comparing accounting MCP servers find accurate, usable remote listings on the eligible independent directories. **Status:** todo (t001 submitted/free, blocked on moderation; t002 next)
+**Worker:** worker1 **Goal:** People comparing accounting MCP servers find accurate, usable remote listings on the eligible independent directories. **Status:** todo (t001 submitted/free, blocked on moderation; t002 submitted/free repository queue, blocked on review; t003 next)
 
 **Implementation estimate:** ~2h, excluding external review queues and the standing closing tasks.
 
@@ -9,7 +9,7 @@
 | id | title | est | depends_on |
 | --- | --- | --- | --- |
 | [t001](./t001.md) | Submit or correct MCPServers.org's free remote listing — **BLOCKED: submitted** | 30m | w6/m8/t001 |
-| [t002](./t002.md) | Submit or correct MCPMarket's free remote listing | 30m | w6/m8/t001 |
+| [t002](./t002.md) | Submit or correct MCPMarket's free remote listing — **BLOCKED: free repository submission** | 30m | w6/m8/t001 |
 | [t003](./t003.md) | Establish LobeHub eligibility and prepare its supported connector listing | 45m | w6/m8/t001 |
 | [t004](./t004.md) | Verify the independent-directory listings after moderation | 15m | t001, t002, t003 |
 | [t005](./t005.md) | Adoption surface | 30m | t004 |
@@ -50,3 +50,5 @@
 ## Blocked
 
 - **t001:** Free $0 submission succeeded on 2026-10-21; review advertised within two weeks. **Unblock:** moderator approval/public URL, then actual metadata/connection verification. **Owner:** MCPServers.org moderators, then repository worker. Do not duplicate the pending submission.
+
+- **t002:** actual Free Queue repository submission succeeded; ~4–6 weeks stated. Live Remote MCP form costs $69 and was not submitted. **Unblock:** reviewers publish the source listing and the worker verifies/corrects actual hosted endpoint/OAuth metadata and setup. **Owner:** MCPMarket reviewers, then repository worker/publisher. No payment or duplicate submission.

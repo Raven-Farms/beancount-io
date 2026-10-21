@@ -1,0 +1,22 @@
+{
+  "checkedDateUTC": "2026-10-21",
+  "target": "MCPMarket",
+  "submissionUrl": "https://mcpmarket.com/submit",
+  "submittedSource": "GitHub repo",
+  "submittedRepository": "https://github.com/bex-co/beancount-io",
+  "plan": "Free Queue",
+  "feeUSD": 0,
+  "receiptHeading": "Success",
+  "receiptText": "Submitted! You're in the free queue \u2014 current wait is ~4\u20136 weeks. We'll email you when it's live.",
+  "review": "About 4\u20136 weeks; email on publication",
+  "state": "Submitted; pending review; no public listing URL or receipt ID exposed",
+  "dedupSearch": "https://mcpmarket.com/search?q=beancount",
+  "dedupResult": "Other authors/projects found; no canonical bex-co hosted connector match in inspected live results",
+  "routeCorrection": "Remote MCP selection has a $69 official listing and no free queue in the live UI. GitHub repository selection has Free Queue $0 and optional $29 priority. Used the genuine free repository route.",
+  "metadataBoundary": "Repository route accepts repository and private contact only; endpoint/authentication are not separate submitted fields. Actual published metadata still must be verified against the source.",
+  "requiredHostedEndpoint": "https://beancount.io/api-gateway/mcp",
+  "requiredAuthentication": "OAuth",
+  "requiredRegistryIdentity": "io.beancount/beancount",
+  "contact": "Publisher public-profile contact supplied privately; omitted here",
+  "authenticatedConnection": "Not run through this directory; verify actual listing recipe after publication"
+}
