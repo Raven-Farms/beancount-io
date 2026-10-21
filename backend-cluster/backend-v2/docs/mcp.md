@@ -252,7 +252,7 @@ the principal inputs; inspect the schema before constructing a call.
 
 | Tool                         | Inputs and behavior                                                                                                                                                       | Capability |
 | ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------- |
-| `runBqlQuery`                | `{ "query": "BALANCES" }`; returns formatted query output as a string.                                                                                                    | Read       |
+| `runBqlQuery`                | `{ "query": "BALANCES" }`; returns formatted query output as a string, cut at 1,000 rows or 100 KB with a closing `[truncated: …]` line.                                  | Read       |
 | `runBqlQueryStructured`      | `{ "query": "BALANCES" }`; returns typed column metadata and rows, or a structured text result, matching REST JSON and GraphQL `queryShell`.                              | Read       |
 | `listLedgers`                | Optional `page`, `limit` (at most 100); omit both for every ledger. A pinned credential returns its one ledger. Start here, then `getLedgerContext`.                      | Read       |
 | `checkLedger`                | `{}`; bean-check errors with file and line, entry counts, and the latest commit, in one call. Call after any write.                                                       | Read       |
@@ -945,7 +945,13 @@ The text block is what a person would read and `structuredContent` is what a
 program parses. `runBqlQuery` leads its text block with the canonical row count
 from the same query execution, followed by the rendered table. Multiline cells
 and directive postings do not add result rows. `structuredContent.result`
-remains the exact rendered string, including embedded and trailing newlines.
+remains the exact rendered string, including embedded and trailing newlines, up
+to a ceiling: past 1,002 lines (header, separator, and 1,000 rows) or 100 KB,
+the text is cut at a line boundary and ends with a `[truncated: showing the
+first N of M lines (B of T bytes) …]` line. The lead line then reads
+`3209 rows (output truncated; …)`. The count is still the whole result's. Add
+`LIMIT` or a narrower `WHERE`, or use `runBqlQueryStructured`, to see the rest.
+REST and GraphQL `queryShellText` return the full text.
 
 When an older ledger service omits count metadata, or reports an unknown count,
 the text begins `BQL result — row count unavailable` and preserves the readable

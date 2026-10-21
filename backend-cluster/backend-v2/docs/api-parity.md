@@ -273,6 +273,13 @@ the milestone open even if all currently implemented tests pass.
   with controlled authorization and ledger-client dependencies. It checks typed
   cells, text results, and refusal before querying. These are adapter/service
   contract tests, not deployment or live-PDP evidence.
+- Deliberate protocol difference: both MCP BQL tools bound what they hand a
+  model. `runBqlQueryStructured` returns at most 1,000 rows with `truncated`;
+  `runBqlQuery` cuts its text at 1,002 lines (header, separator, 1,000 rows) or
+  100 KB, at a line boundary, ending with a `[truncated: …]` line. Its text
+  block's lead line still gives the whole result's row count and says the
+  output was truncated. REST and GraphQL `queryShell`/`queryShellText` return
+  the full result (w23/010).
 
 The live registry now has 0 REST and 0 MCP deferred operations. The frozen
 baseline remains unchanged; none of these changes closes the milestone or

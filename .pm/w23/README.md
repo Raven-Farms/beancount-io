@@ -6,7 +6,6 @@
 
 ## Inbox
 
-- [010](./010.md) — `runBqlQuery` has no row cap; one `JOURNAL` returns 5.2 MB of text
 - [011](./011.md) — one non-UTF-8 `.bean` anywhere in the repo, even unincluded, breaks every read with an unnamed `BAD_USER_INPUT`
 - [012](./012.md) — BQL `cost(sum(position))` over mixed currencies returns one mislabelled amount (rustledger 0.24.0)
 - [013](./013.md) — statement summaries add balances as floats (`netWorth: 906.5799999999999`)

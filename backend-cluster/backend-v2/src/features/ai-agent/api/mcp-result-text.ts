@@ -1,4 +1,4 @@
-import { BQL_ROW_COUNT } from "../tools/bql-result-metadata";
+import { BQL_ROW_COUNT, BQL_TRUNCATED } from "../tools/bql-result-metadata";
 
 /**
  * What a tool result looks like as *text* (w2/m28:t001).
@@ -37,6 +37,7 @@ export function renderToolText(toolName: string, result: unknown): string {
     return renderBqlTable(
       payload,
       Reflect.get(result as object, BQL_ROW_COUNT),
+      Reflect.get(result as object, BQL_TRUNCATED) === true,
     );
   }
 
@@ -57,11 +58,20 @@ export function renderToolText(toolName: string, result: unknown): string {
  * group, and a WHERE nothing matches all return zero rows, and the count
  * cannot tell them apart (w6/014).
  */
-function renderBqlTable(table: string, rows: unknown): string {
+function renderBqlTable(
+  table: string,
+  rows: unknown,
+  truncated: boolean,
+): string {
   const known = typeof rows === "number" && Number.isInteger(rows) && rows >= 0;
-  const summary = known
+  const count = known
     ? countNoun(rows, "row")
     : "BQL result — row count unavailable";
+  // The count is of the whole result; the text below it is not, so the lead
+  // line says so before an agent reads a partial table as complete (w23/010).
+  const summary = truncated
+    ? `${count} (output truncated; the last line says where — add LIMIT or a narrower WHERE)`
+    : count;
   const readable = table.trimEnd();
   return readable ? `${summary}\n${readable}` : summary;
 }

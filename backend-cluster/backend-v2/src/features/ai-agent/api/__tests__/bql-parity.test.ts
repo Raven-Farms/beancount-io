@@ -495,7 +495,9 @@ describe("canonical BQL text counts through the actual service and adapters", ()
     },
   );
 
-  it("full text counts 1005 rows while the structured MCP result keeps its 1000-row cap", async () => {
+  // w23/010: MCP's text is cut at the same 1,000-row ceiling (plus header
+  // lines) and says so; REST and GraphQL text keep every row.
+  it("counts 1005 rows while both MCP results stop at the 1000-row ceiling", async () => {
     const bql = "SELECT date, 9007199254740993.12 AS number";
     const table: CanonicalTable = {
       types: [
@@ -517,9 +519,21 @@ describe("canonical BQL text counts through the actual service and adapters", ()
         name: "runBqlQuery",
         arguments: { query: bql },
       });
-      expect(full.structuredContent).toEqual({ ok: true, result: text });
+      const capped = full.structuredContent as { ok: true; result: string };
+      const lines = capped.result.trimEnd().split("\n");
+      // Header, separator, the first 1000 rows, then the truncation line.
+      expect(lines).toHaveLength(1003);
+      expect(lines.slice(0, 1002).join("\n")).toBe(
+        text.split("\n").slice(0, 1002).join("\n"),
+      );
+      expect(lines.at(-1)).toMatch(
+        /^\[truncated: showing the first 1002 of 1007 lines .*Add LIMIT/,
+      );
       expect(full.content).toEqual([
-        { type: "text", text: `1005 rows\n${text.replace(/\s+$/, "")}` },
+        {
+          type: "text",
+          text: `1005 rows (output truncated; the last line says where — add LIMIT or a narrower WHERE)\n${capped.result.trimEnd()}`,
+        },
       ]);
       expect(f.queryShellText).toHaveBeenCalledTimes(1);
       expect(f.queryShell).not.toHaveBeenCalled();
