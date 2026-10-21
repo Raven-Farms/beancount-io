@@ -187,6 +187,8 @@ export const fr: Translations = {
   multiPostingsInvalidBalance: "La somme des écritures doit être nulle",
   multiPostingsMissingAccount: "Chaque écriture doit avoir un compte",
   multiPostingsZeroAmount: "Chaque écriture doit avoir un montant non nul",
+  multiPostingsAmountFormat:
+    "Utilisez des chiffres et un seul point décimal, par exemple 1234.56",
   accountPicker: "Sélecteur de compte",
   accountPickerSearchPlaceholder: "Rechercher des comptes",
   accountPickerRecent: "Récents",

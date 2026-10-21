@@ -184,6 +184,8 @@ export const nl: Translations = {
   multiPostingsInvalidBalance: "De boekingen moeten samen nul zijn",
   multiPostingsMissingAccount: "Elke boeking heeft een account nodig",
   multiPostingsZeroAmount: "Elke boeking heeft een bedrag anders dan nul nodig",
+  multiPostingsAmountFormat:
+    "Gebruik cijfers en één decimaalpunt, zoals 1234.56",
   accountPicker: "Account kiezen",
   accountPickerSearchPlaceholder: "Rekeningen zoeken",
   accountPickerRecent: "Recent",

@@ -189,6 +189,8 @@ export const pt: Translations = {
   multiPostingsMissingAccount: "Todo lançamento precisa de uma conta",
   multiPostingsZeroAmount:
     "Todo lançamento precisa de um valor diferente de zero",
+  multiPostingsAmountFormat:
+    "Use dígitos e um único ponto decimal, como 1234.56",
   accountPicker: "Seletor de conta",
   accountPickerSearchPlaceholder: "Pesquisar contas",
   accountPickerRecent: "Recentes",

@@ -177,6 +177,7 @@ export const en = {
   multiPostingsInvalidBalance: "Postings must sum to zero",
   multiPostingsMissingAccount: "All postings need an account",
   multiPostingsZeroAmount: "All postings need a non-zero amount",
+  multiPostingsAmountFormat: "Use digits and one decimal point, like 1234.56",
   removePosting: "Remove posting",
   toggleAmountSign: "Toggle amount sign",
   accountPicker: "Account Picker",

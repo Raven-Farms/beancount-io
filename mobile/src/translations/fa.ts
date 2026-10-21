@@ -182,6 +182,8 @@ export const fa: Translations = {
   multiPostingsInvalidBalance: "جمع ثبت‌ها باید صفر شود",
   multiPostingsMissingAccount: "هر ثبت به یک حساب نیاز دارد",
   multiPostingsZeroAmount: "هر ثبت به مبلغی غیر از صفر نیاز دارد",
+  multiPostingsAmountFormat:
+    "از ارقام و یک نقطهٔ اعشار استفاده کنید، مانند 1234.56",
   accountPicker: "انتخاب حساب",
   accountPickerSearchPlaceholder: "جستجوی حساب‌ها",
   accountPickerRecent: "اخیر",

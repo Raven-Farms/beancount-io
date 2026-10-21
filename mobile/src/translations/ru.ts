@@ -188,6 +188,8 @@ export const ru: Translations = {
   multiPostingsInvalidBalance: "Сумма проводок должна быть равна нулю",
   multiPostingsMissingAccount: "У каждой проводки должен быть счёт",
   multiPostingsZeroAmount: "Сумма каждой проводки должна быть отлична от нуля",
+  multiPostingsAmountFormat:
+    "Используйте цифры и одну десятичную точку, например 1234.56",
   accountPicker: "Выбор счёта",
   accountPickerSearchPlaceholder: "Поиск счетов",
   accountPickerRecent: "Недавние",

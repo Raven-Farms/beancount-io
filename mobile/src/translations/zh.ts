@@ -166,6 +166,7 @@ export const zh: Translations = {
   multiPostingsInvalidBalance: "各条分录金额之和必须为零",
   multiPostingsMissingAccount: "每条分录都需要选择账户",
   multiPostingsZeroAmount: "每条分录的金额都不能为零",
+  multiPostingsAmountFormat: "请使用数字和一个小数点，例如 1234.56",
   accountPicker: "账户选择",
   accountPickerSearchPlaceholder: "搜索账户",
   accountPickerRecent: "最近使用",

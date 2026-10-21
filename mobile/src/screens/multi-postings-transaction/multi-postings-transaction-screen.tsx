@@ -62,6 +62,7 @@ import {
   createPrefilledPostings,
   formatExactAmount,
   hasNonZeroAmount,
+  hasUnparsedAmount,
   isRemainderBalanced,
   lastPostingAutoToggle,
   makePosting,
@@ -285,11 +286,14 @@ const PostingRow = ({
     ? posting.amountInput.slice(1)
     : posting.amountInput;
   const hasAmount = hasNonZeroAmount(posting);
-  const amountColor = !hasAmount
-    ? theme.black60
-    : isNegative
-      ? theme.error
-      : theme.success;
+  const unparsed = hasUnparsedAmount(posting);
+  const amountColor = unparsed
+    ? theme.error
+    : !hasAmount
+      ? theme.black60
+      : isNegative
+        ? theme.error
+        : theme.success;
   const toggleBg = !hasAmount
     ? theme.black10
     : isNegative
@@ -395,7 +399,9 @@ const PostingRow = ({
             selectTextOnFocus
             accessibilityLabel={amountA11y.label}
             accessibilityValue={{ text: amountA11y.value }}
-            accessibilityHint={t("postingAmountHint")}
+            accessibilityHint={
+              unparsed ? t("multiPostingsAmountFormat") : t("postingAmountHint")
+            }
           />
           {/* Mounted for the whole life of the final row, not only while it is
               automatic: gating the mount on `isAuto` made the switch vanish the
@@ -545,6 +551,7 @@ const MultiPostingsTransactionScreenComponent = () => {
   const rem = remainder(postings);
   const isBalanced = isRemainderBalanced(rem);
   const validationError = validatePostings(postings);
+  const amountUnreadable = validationError === "invalidAmount";
   const canSave = validationError === null && !saved;
   const hasUnsavedChanges = isTransactionDraftDirty(initialDraft, {
     date,
@@ -588,7 +595,7 @@ const MultiPostingsTransactionScreenComponent = () => {
       else if (validationError === "zeroAmount")
         msg = t("multiPostingsZeroAmount");
       else if (validationError === "invalidAmount")
-        msg = t("multiPostingsInvalidBalance");
+        msg = t("multiPostingsAmountFormat");
       toast.showToast({ message: msg, type: "error" });
       AccessibilityInfo.announceForAccessibility(msg);
       return;
@@ -771,17 +778,36 @@ const MultiPostingsTransactionScreenComponent = () => {
 
         <View style={styles.balanceRow}>
           <Text style={styles.balanceLabel}>{t("remainderLabel")}</Text>
+          {/* An unparsed amount counts as nothing, so the sum is not a
+              verdict: neutral, never a green check (w21/031). */}
           <AmountText
             style={[
               styles.balanceAmount,
-              { color: isBalanced ? theme.success : theme.error },
+              {
+                color: amountUnreadable
+                  ? theme.black60
+                  : isBalanced
+                    ? theme.success
+                    : theme.error,
+              },
             ]}
           >
-            {isBalanced
-              ? `✓  ${formatMoneyWithCurrency(0, currency)}`
-              : formatRemainder(rem)}
+            {amountUnreadable
+              ? "—"
+              : isBalanced
+                ? `✓  ${formatMoneyWithCurrency(0, currency)}`
+                : formatRemainder(rem)}
           </AmountText>
         </View>
+        {amountUnreadable ? (
+          <Text
+            style={styles.saveError}
+            accessibilityLiveRegion="polite"
+            testID="new-transaction-amount-format"
+          >
+            {t("multiPostingsAmountFormat")}
+          </Text>
+        ) : null}
         {saveError ? (
           <Text
             style={styles.saveError}

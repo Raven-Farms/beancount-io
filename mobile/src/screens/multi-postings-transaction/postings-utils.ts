@@ -26,15 +26,23 @@ type Scaled = { coeff: bigint; scale: number };
 /**
  * Parse a complete decimal amount. Accepts optional leading `-`, a single
  * `.` decimal separator, or a single `,` as a decimal separator (`1,25` →
- * `1.25`). Rejects grouping commas, partial forms (`1.`, `-`), and any
- * other junk — never silently takes a numeric prefix the way parseFloat does.
+ * `1.25`). Thousands grouping is accepted only where it can't be a decimal
+ * comma: with a `.` after the groups (`1,234.56`) or two groups or more
+ * (`1,234,567`) (w21/031). `1,250` stays the decimal comma 1.250. Rejects
+ * partial forms (`1.`, `-`) and any other junk — never silently takes a
+ * numeric prefix the way parseFloat does.
  */
 export function parseExactAmount(input: string): string | null {
   const trimmed = input.trim();
   if (!trimmed) return null;
 
   let normalized = trimmed;
-  if (/^-?\d+,\d+$/.test(normalized)) {
+  if (
+    /^-?\d{1,3}(,\d{3})+\.\d+$/.test(normalized) ||
+    /^-?\d{1,3}(,\d{3}){2,}$/.test(normalized)
+  ) {
+    normalized = normalized.replace(/,/g, "");
+  } else if (/^-?\d+,\d+$/.test(normalized)) {
     normalized = normalized.replace(",", ".");
   } else if (normalized.includes(",")) {
     return null;
@@ -344,6 +352,15 @@ export function buildEntryInput(
       amount: `${formatExactAmount(posting.amount ?? "0")} ${opts.currency}`,
     })),
   };
+}
+
+/**
+ * Typed text the parser could not read as an amount. Such a posting adds
+ * nothing to the remainder, which then read as a green, balanced zero
+ * (w21/031); the form shows it as an error instead.
+ */
+export function hasUnparsedAmount(posting: Posting): boolean {
+  return posting.amountInput.trim() !== "" && posting.amount === null;
 }
 
 export function hasNonZeroAmount(posting: Posting): boolean {

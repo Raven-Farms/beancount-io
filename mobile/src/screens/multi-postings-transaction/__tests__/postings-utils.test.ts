@@ -3,6 +3,7 @@ import {
   buildEntryInput,
   createPrefilledPostings,
   formatExactAmount,
+  hasUnparsedAmount,
   isRemainderBalanced,
   lastPostingAutoToggle,
   makePosting,
@@ -46,6 +47,42 @@ test("parseExactAmount rejects incomplete or prefix-only junk", () => {
   expect(parseExactAmount("abc")).toBe(null);
   expect(parseExactAmount("1.00USD")).toBe(null);
   expect(parseExactAmount("")).toBe(null);
+});
+
+// Thousands grouping is read only where it can't be a decimal comma (w21/031).
+test("parseExactAmount accepts unambiguous thousands grouping", () => {
+  expect(parseExactAmount("1,234.56")).toBe("1234.56");
+  expect(parseExactAmount("-12,345.6")).toBe("-12345.6");
+  expect(parseExactAmount("1,234,567")).toBe("1234567");
+  // One group with no point is still a decimal comma.
+  expect(parseExactAmount("1,250")).toBe("1.250");
+  expect(parseExactAmount("12,34.5")).toBe(null);
+});
+
+// An unparsed amount added nothing, so the remainder read as a green balanced
+// zero while Done stayed disabled without a reason (w21/031).
+test("an unparsed amount is flagged, not counted as balanced", () => {
+  const unreadable = posting("Assets:Cash", "1.2.3", null);
+  const auto = posting("Expenses:Food", "", null, true);
+  expect(hasUnparsedAmount(unreadable)).toBe(true);
+  expect(hasUnparsedAmount(auto)).toBe(false);
+  expect(validatePostings([unreadable, auto])).toBe("invalidAmount");
+  expect(en.multiPostingsAmountFormat.includes("1234.56")).toBe(true);
+});
+
+test("the remainder row goes neutral with the format message", () => {
+  const fs = require("fs");
+  const path = require("path");
+  const screen = fs.readFileSync(
+    path.join(__dirname, "..", "multi-postings-transaction-screen.tsx"),
+    "utf8",
+  );
+  expect(
+    screen.includes(
+      'const amountUnreadable = validationError === "invalidAmount";',
+    ),
+  ).toBe(true);
+  expect(screen.includes('testID="new-transaction-amount-format"')).toBe(true);
 });
 
 // ──────────────────────────────────────────────────────────────────────────────

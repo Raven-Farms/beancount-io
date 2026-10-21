@@ -189,6 +189,8 @@ export const ca: Translations = {
   multiPostingsInvalidBalance: "Els apunts han de sumar zero",
   multiPostingsMissingAccount: "Cada apunt necessita un compte",
   multiPostingsZeroAmount: "Cada apunt necessita un import diferent de zero",
+  multiPostingsAmountFormat:
+    "Fes servir xifres i un sol punt decimal, com 1234.56",
   accountPicker: "Selector de compte",
   accountPickerSearchPlaceholder: "Cerca comptes",
   accountPickerRecent: "Recents",

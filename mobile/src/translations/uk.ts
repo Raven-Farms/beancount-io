@@ -187,6 +187,8 @@ export const uk: Translations = {
   multiPostingsInvalidBalance: "Сума проведень має дорівнювати нулю",
   multiPostingsMissingAccount: "Кожне проведення потребує рахунку",
   multiPostingsZeroAmount: "Кожне проведення потребує ненульової суми",
+  multiPostingsAmountFormat:
+    "Використайте цифри й одну десяткову крапку, наприклад 1234.56",
   accountPicker: "Вибір рахунку",
   accountPickerSearchPlaceholder: "Пошук рахунків",
   accountPickerRecent: "Нещодавні",

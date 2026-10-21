@@ -187,6 +187,8 @@ export const es: Translations = {
   multiPostingsInvalidBalance: "Los apuntes deben sumar cero",
   multiPostingsMissingAccount: "Cada apunte necesita una cuenta",
   multiPostingsZeroAmount: "Cada apunte necesita un importe distinto de cero",
+  multiPostingsAmountFormat:
+    "Usa dígitos y un solo punto decimal, como 1234.56",
   accountPicker: "Selector de cuenta",
   accountPickerSearchPlaceholder: "Buscar cuentas",
   accountPickerRecent: "Recientes",

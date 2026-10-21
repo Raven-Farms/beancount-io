@@ -185,6 +185,8 @@ export const bg: Translations = {
   multiPostingsInvalidBalance: "Сборът на редовете трябва да е нула",
   multiPostingsMissingAccount: "Всеки ред се нуждае от сметка",
   multiPostingsZeroAmount: "Всеки ред се нуждае от сума, различна от нула",
+  multiPostingsAmountFormat:
+    "Използвайте цифри и една десетична точка, например 1234.56",
   accountPicker: "Избор на сметка",
   accountPickerSearchPlaceholder: "Търсене на сметки",
   accountPickerRecent: "Скорошни",

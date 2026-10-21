@@ -189,6 +189,8 @@ export const de: Translations = {
   multiPostingsInvalidBalance: "Die Buchungen müssen in Summe null ergeben",
   multiPostingsMissingAccount: "Jede Buchung braucht ein Konto",
   multiPostingsZeroAmount: "Jede Buchung braucht einen Betrag ungleich null",
+  multiPostingsAmountFormat:
+    "Verwenden Sie Ziffern und einen Dezimalpunkt, z. B. 1234.56",
   accountPicker: "Kontoauswahl",
   accountPickerSearchPlaceholder: "Konten suchen",
   accountPickerRecent: "Zuletzt verwendet",

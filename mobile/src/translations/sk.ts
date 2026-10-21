@@ -188,6 +188,8 @@ export const sk: Translations = {
   multiPostingsInvalidBalance: "Súčet zápisov musí byť nula",
   multiPostingsMissingAccount: "Každý zápis potrebuje účet",
   multiPostingsZeroAmount: "Každý zápis potrebuje nenulovú sumu",
+  multiPostingsAmountFormat:
+    "Použite číslice a jednu desatinnú bodku, napríklad 1234.56",
   accountPicker: "Výber účtu",
   accountPickerSearchPlaceholder: "Hľadať účty",
   accountPickerRecent: "Nedávne",
