@@ -169,6 +169,51 @@ export function filterSeriesByRange(
 }
 
 /**
+ * The month a report's flow ranges end on: the latest month with data, but
+ * never after the current one. A single pre-entered rent cheque for next
+ * month otherwise moved every range onto a month that had not happened, so
+ * "1M" in October showed only November (w21/166). A stale ledger, whose data
+ * ends earlier, keeps its latest month.
+ */
+/** The device's current "YYYY-MM". */
+export function currentYearMonth(now: Date = new Date()): string {
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+}
+
+export function flowAnchorMonth(
+  latestDataMonth: string,
+  currentMonth: string,
+): string {
+  return latestDataMonth < currentMonth ? latestDataMonth : currentMonth;
+}
+
+/**
+ * Range filter for **flow series** in Reports (income, expenses, net profit):
+ * the range ends on `flowAnchorMonth`, so a future month falls outside every
+ * range except "ALL". Balance series keep `filterBalanceSeriesByRange`, which
+ * stays consistent with headlines that include future entries.
+ */
+export function filterFlowSeriesByRange(
+  series: SeriesPoint[],
+  range: TimeRange,
+  currentMonth: string,
+  currentYear?: number,
+): SeriesPoint[] {
+  if (range === "ALL" || series.length === 0) {
+    return series;
+  }
+  const anchor = flowAnchorMonth(
+    series[series.length - 1].date.slice(0, 7),
+    currentMonth,
+  );
+  const cutoffKey = rangeStartMonth(range, anchor, currentYear);
+  return series.filter((point) => {
+    const month = point.date.slice(0, 7);
+    return month >= cutoffKey && month <= anchor;
+  });
+}
+
+/**
  * Range filter for **balance (stock) series** — net worth, assets, liabilities,
  * an account's balance — where the window's first point is the baseline the
  * change is measured from. Our series are monthly, so a "1M" window holds

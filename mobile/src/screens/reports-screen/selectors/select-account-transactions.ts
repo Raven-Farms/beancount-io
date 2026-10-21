@@ -69,7 +69,12 @@ export function selectAccountTransactions(
   }
 
   const cutoffKey = rangeStartMonth(timeRange, anchorMonth, currentYear);
+  // Bounded above too: the anchor stops at the current month, and an entry
+  // dated after it belongs to no range but "ALL" (w21/166).
   return matching
-    .filter((entry) => entry.date.slice(0, 7) >= cutoffKey)
+    .filter((entry) => {
+      const month = entry.date.slice(0, 7);
+      return month >= cutoffKey && month <= anchorMonth;
+    })
     .slice(0, limit);
 }

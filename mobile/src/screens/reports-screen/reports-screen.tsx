@@ -5,6 +5,7 @@ import { StyleSheet, View } from "react-native";
 import { ColorTheme } from "@/types/theme-props";
 import { useThemeStyle } from "@/common/hooks";
 import { useTranslations } from "@/common/hooks/use-translations";
+import { useToday } from "@/common/hooks/use-today";
 import { getPrimaryCurrency } from "@/common/currency-util";
 import { gutter } from "@/common/theme";
 import { LedgerDrawerHeader } from "@/components/ledger-drawer/ledger-drawer-header";
@@ -102,6 +103,10 @@ const ReportsScreenImpl = (): JSX.Element => {
     label: t(RANGE_LABEL_KEYS[key]),
   }));
 
+  // The current month caps every flow range (w21/166); `useToday` rolls it
+  // over at midnight.
+  const currentMonth = useToday().slice(0, 7);
+
   // Combined chart: income and net profit are credit-normal in the API, so
   // negate both at the presentation boundary; expenses stay as debits.
   const chart = useMemo(
@@ -112,8 +117,9 @@ const ReportsScreenImpl = (): JSX.Element => {
         stmt?.expensesData,
         stmt?.netProfitData,
         timeRange,
+        currentMonth,
       ),
-    [currency, stmt, timeRange],
+    [currency, stmt, timeRange, currentMonth],
   );
 
   // One anchor month for the whole report, derived from the same statement the
@@ -122,11 +128,12 @@ const ReportsScreenImpl = (): JSX.Element => {
   const anchorMonth = useMemo(
     () =>
       selectStatementAnchorMonth(
+        currentMonth,
         stmt?.incomeData,
         stmt?.expensesData,
         stmt?.netProfitData,
       ),
-    [stmt],
+    [stmt, currentMonth],
   );
 
   const expense = useMemo(
@@ -136,8 +143,9 @@ const ReportsScreenImpl = (): JSX.Element => {
         stmt?.expensesData ?? [],
         timeRange,
         "expenses",
+        currentMonth,
       ),
-    [currency, stmt, timeRange],
+    [currency, stmt, timeRange, currentMonth],
   );
   const income = useMemo(
     () =>
@@ -146,8 +154,9 @@ const ReportsScreenImpl = (): JSX.Element => {
         stmt?.incomeData ?? [],
         timeRange,
         "income",
+        currentMonth,
       ),
-    [currency, stmt, timeRange],
+    [currency, stmt, timeRange, currentMonth],
   );
 
   // A failed first load has nothing to show; the cards would read an empty

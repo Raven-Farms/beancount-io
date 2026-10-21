@@ -273,12 +273,15 @@ describe("selectStatementAnchorMonth", () => {
   const point = (date: string) => ({ date, balance: { USD: 1 } });
 
   it("is null while the statement is unresolved", () => {
-    expect(selectStatementAnchorMonth(undefined, null, [])).toBe(null);
+    expect(selectStatementAnchorMonth("2099-12", undefined, null, [])).toBe(
+      null,
+    );
   });
 
   it("takes the latest month across every statement series", () => {
     expect(
       selectStatementAnchorMonth(
+        "2099-12",
         [point("2026-01-31"), point("2026-05-31")],
         [point("2026-07-31")],
         [point("2026-06-30")],
@@ -288,13 +291,21 @@ describe("selectStatementAnchorMonth", () => {
 
   it("ignores holes in the series", () => {
     expect(
-      selectStatementAnchorMonth([null, undefined, point("2026-03-31")]),
+      selectStatementAnchorMonth("2099-12", [
+        null,
+        undefined,
+        point("2026-03-31"),
+      ]),
     ).toBe("2026-03");
   });
 
   it("compares months lexically across a year boundary", () => {
     expect(
-      selectStatementAnchorMonth([point("2026-01-31")], [point("2025-12-31")]),
+      selectStatementAnchorMonth(
+        "2099-12",
+        [point("2026-01-31")],
+        [point("2025-12-31")],
+      ),
     ).toBe("2026-01");
   });
 });

@@ -13,7 +13,12 @@ import {
   type Holding,
   type Translate,
 } from "../../../common/balance-display";
-import { rangeStartMonth, type TimeRange } from "../../../common/series-util";
+import {
+  currentYearMonth,
+  flowAnchorMonth,
+  rangeStartMonth,
+  type TimeRange,
+} from "../../../common/series-util";
 
 /** A monthly income/expense point carrying per-account balances. */
 type MonthlyAccountPoint = {
@@ -130,6 +135,7 @@ export function selectRangedAccountTree(
     readonly (MonthlyAccountPoint | null | undefined)[] | null | undefined,
   range: TimeRange,
   category: CategoryKey,
+  currentMonth: string = currentYearMonth(),
 ): RangedAccountTree {
   if (!currency || !points || points.length === 0) {
     return EMPTY;
@@ -141,12 +147,18 @@ export function selectRangedAccountTree(
     return EMPTY;
   }
   dated.sort((a, b) => a.date.localeCompare(b.date));
-  const cutoff = rangeStartMonth(
-    range,
+  // Never past the current month, so a pre-entered rent cheque does not move
+  // the window onto next month (w21/166). "ALL" keeps everything.
+  const anchor = flowAnchorMonth(
     dated[dated.length - 1].date.slice(0, 7),
+    currentMonth,
   );
+  const cutoff = rangeStartMonth(range, anchor);
   const ranged = cutoff
-    ? dated.filter((p) => p.date.slice(0, 7) >= cutoff)
+    ? dated.filter((p) => {
+        const month = p.date.slice(0, 7);
+        return month >= cutoff && month <= anchor;
+      })
     : dated;
 
   // Sum each account's resolved balance across the window, and set aside what
