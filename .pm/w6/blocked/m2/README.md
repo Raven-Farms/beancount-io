@@ -29,6 +29,13 @@
 
 ## Live finding
 
+**Independent adoption work, 2026-10-21:** t004 now documents the current
+inferred dtype boundary in `backend-cluster/ledger/README.md`, including aliases,
+empty/all-null columns and preserving identifier text. The pinned package
+remains 0.24.0; upstream main at `51cf2326e7d6d61cb4e38dd00b9a0007b9bc851d`
+still has no expression schema in its WASM query result. This documentation
+substep does not satisfy the missing producer contract or close any task.
+
 Production `https://beancount.io`, 2026-10-14; local main `f2b01a4f`. MCP `beancount-mcp` 1.0.0, protocol `2025-11-25`; deployed SHA unavailable. Existing designated unpinned QA API key, scopes `ledger.read ledger.write ledger.admin`. Only public synthetic `open_ledger/example` was read.
 
 Call `runBqlQueryStructured` with the ledger above and each query:
