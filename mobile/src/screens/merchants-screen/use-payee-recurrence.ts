@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { useQueryShellQuery } from "@/generated-graphql/graphql";
 import { getFormatDate } from "@/common/format-util";
+import { useLedgerRootNames } from "@/common/hooks/use-ledger-root-names";
 import {
   detectRecurrence,
   hasEnoughHistory,
@@ -19,9 +20,13 @@ import {
 export function usePayeeRecurrence(ledgerId: string | null | undefined) {
   const today = useMemo(() => getFormatDate(new Date()), []);
   const seriesCutoff = useMemo(() => payeeSeriesCutoff(today), [today]);
+  const { expenses, income } = useLedgerRootNames();
   const seriesBql = useMemo(
-    () => (seriesCutoff ? buildPayeeSeriesBql(seriesCutoff) : null),
-    [seriesCutoff],
+    () =>
+      seriesCutoff
+        ? buildPayeeSeriesBql(seriesCutoff, { expenses, income })
+        : null,
+    [seriesCutoff, expenses, income],
   );
 
   const query = useQueryShellQuery({

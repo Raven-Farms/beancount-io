@@ -1,3 +1,5 @@
+import type { AccountRoot, RootNames } from "../../common/account-root";
+
 /** The five canonical Beancount account roots, in conventional display order. */
 export const ACCOUNT_ROOT_PREFIXES = [
   "Assets",
@@ -8,6 +10,19 @@ export const ACCOUNT_ROOT_PREFIXES = [
 ] as const;
 
 export type AccountRootPrefix = (typeof ACCOUNT_ROOT_PREFIXES)[number];
+
+/**
+ * What a ledger calls a root: its `option "name_assets" "Activos"` when it
+ * renames one, else the canonical name. Open Account offered and wrote only
+ * the English roots, so a renamed ledger got an `open Assets:…` for a root it
+ * does not have (w21/073).
+ */
+export function ledgerRootName(
+  root: AccountRootPrefix,
+  roots: RootNames = {},
+): string {
+  return roots[root.toLowerCase() as AccountRoot] || root;
+}
 
 export type AccountNameValidationReason =
   | "invalidRoot"
@@ -20,10 +35,7 @@ export type AccountNameValidation =
   { ok: true } | { ok: false; reason: AccountNameValidationReason };
 
 /** Join a selected root to a user-entered sub-path. */
-export function composeAccountName(
-  rootPrefix: AccountRootPrefix,
-  subPath: string,
-): string {
+export function composeAccountName(rootName: string, subPath: string): string {
   // NFC, so a keyboard's decomposed "É" (E + U+0301) is written composed and
   // the already-open check compares like with like (w21/041).
   const components = subPath
@@ -32,7 +44,7 @@ export function composeAccountName(
     .map((component) => component.trim())
     .filter(Boolean);
 
-  return [rootPrefix, ...components].join(":");
+  return [rootName, ...components].join(":");
 }
 
 /**
@@ -46,15 +58,17 @@ export function composeAccountName(
 export function splitPrefillAccountName(
   input: string,
   fallbackRoot: AccountRootPrefix = "Assets",
+  roots: RootNames = {},
 ): { rootPrefix: AccountRootPrefix; subPath: string } {
   const trimmed = input.trim();
   const lower = trimmed.toLowerCase();
   for (const root of ACCOUNT_ROOT_PREFIXES) {
-    if (lower === root.toLowerCase()) {
+    const name = ledgerRootName(root, roots);
+    if (lower === name.toLowerCase()) {
       return { rootPrefix: root, subPath: "" };
     }
-    if (lower.startsWith(`${root.toLowerCase()}:`)) {
-      return { rootPrefix: root, subPath: trimmed.slice(root.length + 1) };
+    if (lower.startsWith(`${name.toLowerCase()}:`)) {
+      return { rootPrefix: root, subPath: trimmed.slice(name.length + 1) };
     }
   }
   return { rootPrefix: fallbackRoot, subPath: trimmed };
@@ -72,13 +86,14 @@ export function splitPrefillAccountName(
 export function peelTypedRoot(
   typed: string,
   currentRoot: AccountRootPrefix,
+  roots: RootNames = {},
 ): { rootPrefix: AccountRootPrefix; subPath: string } {
   const lower = typed.trimStart().toLowerCase();
   const root = ACCOUNT_ROOT_PREFIXES.find((candidate) =>
-    lower.startsWith(`${candidate.toLowerCase()}:`),
+    lower.startsWith(`${ledgerRootName(candidate, roots).toLowerCase()}:`),
   );
   return root
-    ? splitPrefillAccountName(typed, root)
+    ? splitPrefillAccountName(typed, root, roots)
     : { rootPrefix: currentRoot, subPath: typed };
 }
 
@@ -119,17 +134,12 @@ export function validateAccountName(
     return { ok: false, reason: "emptyComponent" };
   }
 
-  // The root is one of the five canonical ASCII names (already checked above),
-  // so it keeps the strict ASCII rules. Subcomponents follow the Beancount
-  // grammar, which allows any Unicode uppercase letter or a digit as the initial
-  // ("Assets:Épargne", "Assets:US:401k") and Unicode letters, digits and hyphens
-  // in the body. Lowercase-led names, underscores and spaces stay rejected.
-  if (!/^[A-Z]/.test(components[0])) {
-    return { ok: false, reason: "componentMustStartUppercase" };
-  }
-  if (!/^[A-Za-z0-9-]+$/.test(components[0])) {
-    return { ok: false, reason: "invalidCharacters" };
-  }
+  // The root is one of the ledger's own root names (checked above), which the
+  // ledger already accepts, renamed ones included (w21/073). Subcomponents
+  // follow the Beancount grammar, which allows any Unicode uppercase letter or a
+  // digit as the initial ("Assets:Épargne", "Assets:US:401k") and Unicode
+  // letters, digits and hyphens in the body. Lowercase-led names, underscores
+  // and spaces stay rejected.
 
   // Combining marks (`\p{M}`) may follow the initial: Devanagari vowel signs
   // in "हिंदी", or the U+0301 of a decomposed "É" that NFC cannot always fold.

@@ -8,6 +8,8 @@ import {
 } from "react-native";
 import { useThemeStyle } from "@/common/hooks";
 import { useTranslations } from "@/common/hooks/use-translations";
+import type { RootNames } from "@/common/account-root";
+import { useLedgerRootNames } from "@/common/hooks/use-ledger-root-names";
 import { useOperatingCurrency } from "@/common/hooks/use-operating-currency";
 import {
   fontSizes,
@@ -118,6 +120,7 @@ const getDisplayInfo = (
   entry: JournalDirectiveType,
   mixedLabel: string,
   operatingCurrency: string | undefined,
+  roots: RootNames,
 ): { name: string; amountStr: string; isPositive: boolean | null } => {
   if (isJournalOpen(entry)) {
     const currencies = entry.currencies?.join(", ") ?? "";
@@ -140,7 +143,7 @@ const getDisplayInfo = (
 
   return {
     name,
-    ...selectEntryRowAmount(entry, mixedLabel, operatingCurrency),
+    ...selectEntryRowAmount(entry, mixedLabel, operatingCurrency, roots),
   };
 };
 
@@ -157,10 +160,12 @@ export const EntryRow: React.FC<EntryRowProps> = ({ entry, onPress }) => {
 
   const { t } = useTranslations();
   const operatingCurrency = useOperatingCurrency();
+  const roots = useLedgerRootNames();
   const { name, amountStr, isPositive } = getDisplayInfo(
     entry,
     t("multiplePostings"),
     operatingCurrency,
+    roots,
   );
   const secondary = isJournalTransaction(entry)
     ? entryRowSecondaryText(entry)

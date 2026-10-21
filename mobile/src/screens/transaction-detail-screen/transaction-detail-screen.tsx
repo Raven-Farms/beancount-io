@@ -61,6 +61,7 @@ import { shouldShowTransactionWriteActions } from "./selectors/select-transactio
 import { isEntryGone } from "./selectors/select-entry-gone";
 import { selectEntryErrors } from "./selectors/select-entry-errors";
 import { useLedgerErrors } from "@/common/hooks/use-ledger-errors";
+import { useLedgerRootNames } from "@/common/hooks/use-ledger-root-names";
 import { useOperatingCurrency } from "@/common/hooks/use-operating-currency";
 import { deleteTransaction } from "./delete-transaction";
 import { ledgerWriteFailureMessage } from "@/common/ledger-refusal";
@@ -298,6 +299,7 @@ const TransactionDetailImpl = ({
 }): JSX.Element => {
   const ledgerId = useLedgerGuard();
   const operatingCurrency = useOperatingCurrency();
+  const roots = useLedgerRootNames();
   const { canWrite } = useLedgerAccess();
   const router = useRouter();
   const guest = useGuest();
@@ -506,6 +508,7 @@ const TransactionDetailImpl = ({
     entry,
     t("multiplePostings"),
     operatingCurrency,
+    roots,
   );
   const postingRows = selectPostingRows(entry);
   const title = selectTransactionTitle(entry) || t("transaction");

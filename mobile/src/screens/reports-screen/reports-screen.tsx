@@ -67,6 +67,14 @@ const ReportsScreenImpl = (): JSX.Element => {
     error: ledgerMetaError,
   } = useLedgerReadContext(ledgerId);
   const currency = getPrimaryCurrency(currencies);
+  // The ledger may rename its roots (`option "name_expenses" "Gastos"`), and
+  // Recent transactions found nothing under the English names (w21/073).
+  const incomeRoot = ledgerMeta?.getLedger.options.nameIncome || "Income";
+  const expensesRoot = ledgerMeta?.getLedger.options.nameExpenses || "Expenses";
+  const moneyRoots = useMemo(
+    () => [incomeRoot, expensesRoot],
+    [incomeRoot, expensesRoot],
+  );
 
   const {
     data: incomeData,
@@ -229,7 +237,7 @@ const ReportsScreenImpl = (): JSX.Element => {
 
         <AccountTransactionsCard
           ledgerId={ledgerId}
-          accountPrefix={["Income", "Expenses"]}
+          accountPrefix={moneyRoots}
           titleKey="recentTransactions"
           emptyKey="recentTransactionsEmpty"
           timeRange={timeRange}

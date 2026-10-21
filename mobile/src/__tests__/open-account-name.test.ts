@@ -432,7 +432,9 @@ describe("Open Account sub-path field", () => {
       ),
       "utf8",
     );
-    expect(source.includes("peelTypedRoot(value, rootPrefix)")).toBe(true);
+    expect(source.includes("peelTypedRoot(value, rootPrefix, roots)")).toBe(
+      true,
+    );
   });
 });
 

@@ -1,4 +1,5 @@
 import { formatLedgerDate } from "../../../common/date-format";
+import { getAccountRoot, type RootNames } from "../../../common/account-root";
 import { currencyMinorUnits } from "../../../common/currency-util";
 import { amountScale } from "../../../common/number-utils";
 import {
@@ -74,8 +75,10 @@ export const isMixedPostingsAmount = (
 const moneyCurrencyOf = (p: JournalPosting): string | undefined =>
   p.cost?.currency ?? p.price?.currency ?? undefined;
 
-const isBalanceSheet = (account: string): boolean =>
-  account.startsWith("Assets:") || account.startsWith("Liabilities:");
+const isBalanceSheet = (account: string, roots: RootNames): boolean => {
+  const root = getAccountRoot(account, roots);
+  return root === "assets" || root === "liabilities";
+};
 
 /**
  * The one number to show for a transaction, in a single currency.
@@ -108,6 +111,8 @@ const isBalanceSheet = (account: string): boolean =>
  * is then an unexplained partial subtotal, so that trade is reported as mixed.
  *
  * @param operatingCurrency - The ledger's first `operating_currency`, when known.
+ * @param roots - The ledger's renamed roots, so `Activos:Banco` counts as a
+ *   balance-sheet leg and `Gastos:…` as spending (w21/073).
  * @returns The amount; `{ mixed: true }` for a trade whose money side spans
  *   several balance-sheet accounts; or null when the transaction has no usable
  *   posting.
@@ -115,11 +120,12 @@ const isBalanceSheet = (account: string): boolean =>
 export const selectTransactionAmount = (
   txn: JournalTransaction,
   operatingCurrency?: string,
+  roots: RootNames = {},
 ): TransactionAmount | null => {
   const postings = txn.postings ?? [];
   if (!postings.length) return null;
 
-  const cashPostings = postings.filter((p) => isBalanceSheet(p.account));
+  const cashPostings = postings.filter((p) => isBalanceSheet(p.account, roots));
 
   if (cashPostings.length > 0) {
     // A sum is only as coarse as its finest leg, so a bucket carries the
@@ -163,7 +169,10 @@ export const selectTransactionAmount = (
       if (buckets.length > 1) {
         const isTrade = postings.some((p) => p.cost?.currency);
         const operating = buckets.find(([c]) => c === operatingCurrency);
-        if (!isTrade && postings.every((p) => isBalanceSheet(p.account))) {
+        if (
+          !isTrade &&
+          postings.every((p) => isBalanceSheet(p.account, roots))
+        ) {
           const [currency, bucket] =
             operating ??
             [...buckets].sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))[0];
@@ -179,7 +188,7 @@ export const selectTransactionAmount = (
         }
         const expenseCurrencies = new Set(
           postings
-            .filter((p) => p.account.startsWith("Expenses:"))
+            .filter((p) => getAccountRoot(p.account, roots) === "expenses")
             .map((p) => p.units.currency),
         );
         const spent = isTrade

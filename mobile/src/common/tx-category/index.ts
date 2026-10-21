@@ -2,6 +2,7 @@ import {
   AccountRoot,
   getAccountRoot,
   orderAccountsByRootPriority,
+  type RootNames,
 } from "../account-root";
 
 /** A posting reduced to what the row icon needs: which account, how much. */
@@ -39,9 +40,10 @@ const CATEGORY_ROOTS = new Set<AccountRoot>(["expenses", "income", "equity"]);
  */
 export function pickPrimaryAccount(
   postings: PostingLite[],
+  roots: RootNames = {},
 ): string | typeof TRANSFER | null {
   const categoryLegs = postings.filter((p) => {
-    const root = getAccountRoot(p.account);
+    const root = getAccountRoot(p.account, roots);
     return root != null && CATEGORY_ROOTS.has(root);
   });
 
@@ -56,7 +58,10 @@ export function pickPrimaryAccount(
           : best,
       ).account;
     }
-    return orderAccountsByRootPriority(categoryLegs.map((p) => p.account))[0];
+    return orderAccountsByRootPriority(
+      categoryLegs.map((p) => p.account),
+      roots,
+    )[0];
   }
 
   const distinct = Array.from(
@@ -309,8 +314,11 @@ function segmentMatches(tokens: string[], keywords: string[]): boolean {
  *
  * @returns an Ionicons glyph name, or null when no category is recognised.
  */
-export function matchCategory(account: string): string | null {
-  if (getAccountRoot(account) !== "expenses") return null;
+export function matchCategory(
+  account: string,
+  roots: RootNames = {},
+): string | null {
+  if (getAccountRoot(account, roots) !== "expenses") return null;
   const segments = account.split(":").slice(1); // drop the "Expenses" root
   for (const segment of segments) {
     const tokens = tokenize(segment);

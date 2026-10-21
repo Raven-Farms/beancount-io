@@ -11,6 +11,7 @@ import {
   asNumber,
   asString,
   columnIndex,
+  moneyRootsBqlFilter,
   type QueryResultTableLike,
 } from "./bql-table";
 import { utcDate } from "../../../common/calendar-date";
@@ -41,11 +42,14 @@ const COL = {
  * (aliases `txn_date`/`amount` work; `account ~ '^Expenses' OR '^Income'`
  * filters dual legs; Decimal amounts arrive as strings).
  */
-export function buildPayeeSeriesBql(cutoffDate: string): string {
+export function buildPayeeSeriesBql(
+  cutoffDate: string,
+  roots?: { expenses?: string; income?: string },
+): string {
   return (
     "SELECT date as txn_date, payee, number as amount, currency " +
     "WHERE payee != '' " +
-    "AND (account ~ '^Expenses' OR account ~ '^Income') " +
+    `AND ${moneyRootsBqlFilter(roots)} ` +
     `AND date >= ${cutoffDate}`
   );
 }

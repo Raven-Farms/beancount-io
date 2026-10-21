@@ -2,7 +2,8 @@ import React, { useState } from "react";
 import { Image, StyleSheet, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme, withAlpha } from "@/common/theme";
-import { getAccountRoot } from "@/common/account-root";
+import { getAccountRoot, type RootNames } from "@/common/account-root";
+import { useLedgerRootNames } from "@/common/hooks/use-ledger-root-names";
 import { resolveBrandDomain, buildLogoUrl } from "@/common/brand-matcher";
 import {
   PostingLite,
@@ -56,18 +57,21 @@ const styles = StyleSheet.create({
  * a tax leg), while the glyph refines to a spending category when recognised;
  * pure account-to-account moves get a neutral transfer glyph.
  */
-function resolveGlyph(postings: PostingLite[]): {
+function resolveGlyph(
+  postings: PostingLite[],
+  roots: RootNames,
+): {
   glyph: GlyphName;
   tone: RootIcon["tone"];
 } {
-  const primary = pickPrimaryAccount(postings);
+  const primary = pickPrimaryAccount(postings, roots);
   const base = getRootIcon(
-    primary && primary !== TRANSFER ? getAccountRoot(primary) : null,
+    primary && primary !== TRANSFER ? getAccountRoot(primary, roots) : null,
   );
   if (primary === TRANSFER) {
     return { glyph: TRANSFER_GLYPH as GlyphName, tone: base.tone };
   }
-  const category = primary ? matchCategory(primary) : null;
+  const category = primary ? matchCategory(primary, roots) : null;
   return { glyph: (category as GlyphName) ?? base.glyph, tone: base.tone };
 }
 
@@ -98,8 +102,10 @@ export const AccountTypeIcon: React.FC<AccountTypeIconProps> = ({
   // brand re-attempts its logo instead of staying on the previous failure.
   const [failedDomain, setFailedDomain] = useState<string | null>(null);
 
+  // A ledger's renamed roots (`Gastos:…`) still read as expenses (w21/073).
+  const roots = useLedgerRootNames();
   const accounts = postings.map((p) => p.account);
-  const domain = resolveBrandDomain(payee, accounts);
+  const domain = resolveBrandDomain(payee, accounts, roots);
   const logoUrl = domain ? buildLogoUrl(domain, config.logoProxyUrl) : null;
 
   if (logoUrl && failedDomain !== domain) {
@@ -124,7 +130,7 @@ export const AccountTypeIcon: React.FC<AccountTypeIconProps> = ({
     );
   }
 
-  const { glyph, tone } = resolveGlyph(postings);
+  const { glyph, tone } = resolveGlyph(postings, roots);
   const color = tone(colorTheme);
   const alpha = name === "dark" ? TINT_ALPHA.dark : TINT_ALPHA.light;
 

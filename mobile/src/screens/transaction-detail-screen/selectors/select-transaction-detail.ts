@@ -1,3 +1,4 @@
+import type { RootNames } from "../../../common/account-root";
 import type { JournalTransaction } from "../../transactions-screen/types";
 import {
   isMixedPostingsAmount,
@@ -43,8 +44,9 @@ export function selectHeroAmount(
   txn: JournalTransaction,
   mixedLabel: string,
   operatingCurrency?: string,
+  roots?: RootNames,
 ): HeroAmount {
-  const amount = selectTransactionAmount(txn, operatingCurrency);
+  const amount = selectTransactionAmount(txn, operatingCurrency, roots);
   if (!amount) {
     return { text: "", isPositive: null };
   }

@@ -11,6 +11,7 @@ import {
   asNumber,
   asString,
   columnIndex,
+  moneyRootsBqlFilter,
   type QueryResultTableLike,
 } from "../../merchants-screen/selectors/bql-table";
 
@@ -60,11 +61,12 @@ function anyPayee(payees: string | readonly string[]): string {
  */
 export function buildMerchantCurrencyTotalsBql(
   payees: string | readonly string[],
+  roots?: { expenses?: string; income?: string },
 ): string {
   return (
     "SELECT currency, sum(number) as total " +
     `WHERE ${anyPayee(payees)} ` +
-    "AND (account ~ '^Expenses' OR account ~ '^Income') " +
+    `AND ${moneyRootsBqlFilter(roots)} ` +
     "GROUP BY currency ORDER BY currency"
   );
 }

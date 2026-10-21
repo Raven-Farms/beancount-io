@@ -1,3 +1,4 @@
+import type { RootNames } from "../../../common/account-root";
 import type { JournalTransaction } from "../types";
 import {
   isMixedPostingsAmount,
@@ -29,8 +30,9 @@ export function selectEntryRowAmount(
   txn: JournalTransaction,
   mixedLabel: string,
   operatingCurrency?: string,
+  roots?: RootNames,
 ): { amountStr: string; isPositive: boolean | null } {
-  const amount = selectTransactionAmount(txn, operatingCurrency);
+  const amount = selectTransactionAmount(txn, operatingCurrency, roots);
   if (!amount) return { amountStr: "", isPositive: null };
   if (isMixedPostingsAmount(amount)) {
     return { amountStr: mixedLabel, isPositive: null };

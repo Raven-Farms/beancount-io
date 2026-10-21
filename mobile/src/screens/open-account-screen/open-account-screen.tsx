@@ -15,6 +15,7 @@ import {
   AccountCreated,
   runAccountCreatedCallback,
 } from "@/common/globalFnFactory";
+import { useLedgerRootNames } from "@/common/hooks/use-ledger-root-names";
 import { useLedgerMeta } from "@/common/hooks/use-ledger-meta";
 import { useSession } from "@/common/hooks/use-session";
 import { useThemeStyle } from "@/common/hooks/use-theme-style";
@@ -39,6 +40,7 @@ import {
   ACCOUNT_ROOT_PREFIXES,
   composeAccountName,
   typedSubPathIssue,
+  ledgerRootName,
   peelTypedRoot,
   splitPrefillAccountName,
   type AccountNameValidationReason,
@@ -221,12 +223,17 @@ export function OpenAccountScreenComponent(): JSX.Element {
     prefillRoot?: string;
     openDate?: string;
   }>();
+  // The ledger may rename its roots (`option "name_assets" "Activos"`); the
+  // state keeps the canonical root, which picks the icon and colour, and the
+  // name written is the ledger's own (w21/073).
+  const roots = useLedgerRootNames();
   const [seed] = useState(() =>
     splitPrefillAccountName(
       prefill ?? "",
       ACCOUNT_ROOT_PREFIXES.includes(prefillRoot as AccountRootPrefix)
         ? (prefillRoot as AccountRootPrefix)
         : "Assets",
+      roots,
     ),
   );
 
@@ -254,8 +261,14 @@ export function OpenAccountScreenComponent(): JSX.Element {
     }
   }, [currencies, currencyInitialized, metaLoading]);
 
-  const account = composeAccountName(rootPrefix, subPath);
-  const validation = validateAccountName(account);
+  const account = composeAccountName(
+    ledgerRootName(rootPrefix, roots),
+    subPath,
+  );
+  const validation = validateAccountName(
+    account,
+    ACCOUNT_ROOT_PREFIXES.map((root) => ledgerRootName(root, roots)),
+  );
   // The typed text, before composition tidies it: "Investments:" is a name
   // still being typed, not a request for `Assets:Investments`.
   const typedIssue = typedSubPathIssue(subPath);
@@ -277,9 +290,12 @@ export function OpenAccountScreenComponent(): JSX.Element {
     const key = prefix.toLowerCase() as AccountRoot;
     const icon = getRootIcon(key);
     const tone = icon.tone(theme);
+    const name = ledgerRootName(prefix, roots);
     return {
       value: prefix,
-      label: t(key),
+      // A renamed root reads as the ledger names it; the canonical ones keep
+      // their translated label.
+      label: name === prefix ? t(key) : name,
       icon: (
         <View
           style={[styles.rootIcon, { backgroundColor: withAlpha(tone, 0.18) }]}
@@ -387,7 +403,9 @@ export function OpenAccountScreenComponent(): JSX.Element {
                 >
                   <Ionicons name={rootIcon.glyph} size={14} color={rootTone} />
                 </View>
-                <Text style={styles.prefixText}>{rootPrefix}:</Text>
+                <Text style={styles.prefixText}>
+                  {ledgerRootName(rootPrefix, roots)}:
+                </Text>
                 <Ionicons
                   style={styles.prefixChevron}
                   name="chevron-down"
@@ -400,7 +418,7 @@ export function OpenAccountScreenComponent(): JSX.Element {
                 testID="open-account-name-input"
                 value={subPath}
                 onChangeText={(value) => {
-                  const typed = peelTypedRoot(value, rootPrefix);
+                  const typed = peelTypedRoot(value, rootPrefix, roots);
                   setRootPrefix(typed.rootPrefix);
                   setSubPath(typed.subPath);
                   setSubmitError(null);

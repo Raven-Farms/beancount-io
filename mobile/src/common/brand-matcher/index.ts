@@ -1,5 +1,5 @@
 import { leafName } from "../account-util";
-import { orderAccountsByRootPriority } from "../account-root";
+import { orderAccountsByRootPriority, type RootNames } from "../account-root";
 
 // Curated payee → domain map. Keys are lowercase; sorted longest-first at
 // runtime so "uber eats" wins over "uber" when both could match.
@@ -259,12 +259,13 @@ export function matchBrand(text: string): string | null {
 export function resolveBrandDomain(
   payee: string | undefined,
   accounts: string[],
+  roots: RootNames = {},
 ): string | null {
   if (payee) {
     const byPayee = matchBrand(payee);
     if (byPayee) return byPayee;
   }
-  for (const account of orderAccountsByRootPriority(accounts ?? [])) {
+  for (const account of orderAccountsByRootPriority(accounts ?? [], roots)) {
     const byAccount = matchBrand(leafName(account));
     if (byAccount) return byAccount;
   }

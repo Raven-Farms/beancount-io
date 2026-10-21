@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useLedgerRootNames } from "@/common/hooks/use-ledger-root-names";
 import {
   ActivityIndicator,
   SectionList,
@@ -257,9 +258,10 @@ function MerchantDetailBody({
   const pagesFetchedRef = useRef(1);
 
   const metaBql = useMemo(() => buildMerchantMetaBql(spellings), [spellings]);
+  const { expenses, income } = useLedgerRootNames();
   const totalsBql = useMemo(
-    () => buildMerchantCurrencyTotalsBql(spellings),
-    [spellings],
+    () => buildMerchantCurrencyTotalsBql(spellings, { expenses, income }),
+    [spellings, expenses, income],
   );
 
   const {
