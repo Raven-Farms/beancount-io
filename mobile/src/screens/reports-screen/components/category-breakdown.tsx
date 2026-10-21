@@ -158,6 +158,12 @@ const getStyles = (theme: ColorTheme) =>
       backgroundColor: theme.black20,
       marginHorizontal: gutter,
     },
+    note: {
+      marginTop: space.xs,
+      textAlign: LEADING_TEXT_ALIGN,
+      fontSize: fontSizes.sm,
+      color: theme.black80,
+    },
     empty: {
       paddingHorizontal: gutter,
       fontSize: fontSizes.md,
@@ -175,6 +181,11 @@ type CategoryBreakdownProps = {
   currency: string;
   /** Bar fill accent, echoing the chart legend (expenses=error, income=success). */
   tone: (theme: ColorTheme) => string;
+  /**
+   * What the total leaves out, e.g. "Not in total: 50 EUR (Travel)", shown
+   * under the headline (w21/038).
+   */
+  note?: string | null;
 };
 
 /**
@@ -190,6 +201,7 @@ export function CategoryBreakdown({
   items,
   currency,
   tone,
+  note,
 }: CategoryBreakdownProps): JSX.Element {
   const styles = useThemeStyle(getStyles);
   const theme = useTheme().colorTheme;
@@ -369,6 +381,11 @@ export function CategoryBreakdown({
         <AmountText style={styles.headline}>
           {formatSignedMoneyWithCurrency(total, currency, false)}
         </AmountText>
+        {note ? (
+          <Text testID="category-breakdown-not-in-total" style={styles.note}>
+            {note}
+          </Text>
+        ) : null}
       </View>
       {items.length === 0 ? (
         <Text style={styles.empty}>{t("noAccounts")}</Text>

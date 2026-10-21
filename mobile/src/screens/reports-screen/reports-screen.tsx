@@ -22,7 +22,10 @@ import { RANGE_LABEL_KEYS, TIME_RANGES, TimeRange } from "@/common/series-util";
 import { useLedgerReadContext } from "@/common/hooks/use-ledger-read-context";
 import { isShowingStaleDataFromQueries } from "@/common/apollo/stale-data";
 import { useIncomeStatement } from "./hooks/use-income-statement";
-import { selectRangedAccountTree } from "./selectors/select-ranged-account-tree";
+import {
+  notInTotalNote,
+  selectRangedAccountTree,
+} from "./selectors/select-ranged-account-tree";
 import {
   selectIncomeExpenseChartSeries,
   selectStatementAnchorMonth,
@@ -201,6 +204,7 @@ const ReportsScreenImpl = (): JSX.Element => {
                 items={topNWithOther(expense.tree, BREAKDOWN_TOP_N, t("other"))}
                 currency={currency}
                 tone={(theme) => theme.error}
+                note={notInTotalNote(expense.notInTotal, t)}
               />
             </DashboardCard>
           </FadeInView>
@@ -217,6 +221,7 @@ const ReportsScreenImpl = (): JSX.Element => {
                 items={topNWithOther(income.tree, BREAKDOWN_TOP_N, t("other"))}
                 currency={currency}
                 tone={(theme) => theme.success}
+                note={notInTotalNote(income.notInTotal, t)}
               />
             </DashboardCard>
           </FadeInView>

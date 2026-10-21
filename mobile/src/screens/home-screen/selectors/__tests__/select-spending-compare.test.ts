@@ -30,6 +30,7 @@ describe("selectSpendingCompare", () => {
     expect(selectSpendingCompare([], "USD", REF)).toEqual({
       thisMonth: 0,
       lastMonth: 0,
+      notInTotal: [],
       thisMonthKey: "2026-10",
       lastMonthKey: "2026-09",
     });
@@ -120,5 +121,51 @@ describe("spendingChartSummary", () => {
         "accessibilityLabel={spendingChartSummary(",
       ),
     ).toBe(true);
+  });
+});
+
+// w21/038: a 50 EUR expense in a USD ledger read "This month $0" with no hint.
+describe("selectSpendingCompare: other currencies", () => {
+  it("names the spending the bars cannot include", () => {
+    const result = selectSpendingCompare(
+      [
+        { date: "2026-10-05", balance: { USD: "12.00", EUR: "50.00" } },
+        { date: "2026-09-12", balance: { EUR: "20.10" } },
+        // Outside the two months: not counted, not disclosed.
+        { date: "2026-08-01", balance: { EUR: "999.00" } },
+      ],
+      "USD",
+      REF,
+    );
+    expect(result.thisMonth).toBe(12);
+    expect(result.lastMonth).toBe(0);
+    expect(result.notInTotal).toEqual([
+      { currency: "EUR", number: 70.1, scale: 2 },
+    ]);
+  });
+
+  it("discloses nothing for a single-currency ledger", () => {
+    expect(
+      selectSpendingCompare(
+        [{ date: "2026-10-05", balance: { USD: "12.00" } }],
+        "USD",
+        REF,
+      ).notInTotal,
+    ).toEqual([]);
+  });
+});
+
+describe("spendingChartSummary: other currencies", () => {
+  it("speaks the not-in-total line after the amounts", () => {
+    const t = (_key: string, params: Record<string, string>) =>
+      `${params.lastMonth} then ${params.thisMonth}`;
+    expect(
+      spendingChartSummary(
+        { lastMonth: 0, thisMonth: 12 },
+        "USD",
+        t,
+        "Not in total: 50.00 EUR",
+      ),
+    ).toBe("$0.00 then $12.00. Not in total: 50.00 EUR");
   });
 });

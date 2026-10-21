@@ -1,10 +1,17 @@
 import { resolveCurrencyBalance } from "../../../common/balance-util";
+import { notInTotalOf, type Holding } from "../../../common/balance-display";
 import { formatMoneyWithCurrency } from "../../../common/number-utils";
 import { formatTimeFilter } from "../../transactions-screen/filters/select-filter-query";
 
 export type SpendingCompare = {
   thisMonth: number;
   lastMonth: number;
+  /**
+   * Spending over the two months in other currencies, which the bars cannot
+   * include: the card used to read "This month $0" over a 50 EUR expense with
+   * no hint (w21/038).
+   */
+  notInTotal: Holding[];
   thisMonthKey: string;
   lastMonthKey: string;
 };
@@ -59,13 +66,27 @@ export function selectSpendingCompare(
   const { thisMonthKey, lastMonthKey } = monthKeys(referenceDate);
   let thisMonth = 0;
   let lastMonth = 0;
+  const omitted = new Map<string, Holding>();
   for (const month of months) {
     const key = month.date.slice(0, 7);
+    if (key !== thisMonthKey && key !== lastMonthKey) continue;
     const spent = resolveCurrencyBalance(month.balance, currency);
     if (key === thisMonthKey) thisMonth += spent;
-    else if (key === lastMonthKey) lastMonth += spent;
+    else lastMonth += spent;
+    for (const holding of notInTotalOf(month.balance, currency)) {
+      const prior = omitted.get(holding.currency);
+      const scale = Math.max(prior?.scale ?? 0, holding.scale);
+      omitted.set(holding.currency, {
+        currency: holding.currency,
+        scale,
+        number: Number(((prior?.number ?? 0) + holding.number).toFixed(scale)),
+      });
+    }
   }
-  return { thisMonth, lastMonth, thisMonthKey, lastMonthKey };
+  const notInTotal = [...omitted.values()].filter(
+    (holding) => holding.number !== 0,
+  );
+  return { thisMonth, lastMonth, notInTotal, thisMonthKey, lastMonthKey };
 }
 
 /**
@@ -76,9 +97,12 @@ export function spendingChartSummary(
   { lastMonth, thisMonth }: Pick<SpendingCompare, "lastMonth" | "thisMonth">,
   currency: string,
   t: (key: "spendingChartSummary", params: Record<string, string>) => string,
+  /** The card's "Not in total" line, spoken after the amounts (w21/038). */
+  note?: string,
 ): string {
-  return t("spendingChartSummary", {
+  const summary = t("spendingChartSummary", {
     lastMonth: formatMoneyWithCurrency(lastMonth, currency),
     thisMonth: formatMoneyWithCurrency(thisMonth, currency),
   });
+  return note ? `${summary}. ${note}` : summary;
 }

@@ -22,6 +22,7 @@ import {
 import { CardLoadFailure } from "@/components/card-load-failure";
 import { selectCardLoadState } from "@/common/apollo/card-load-state";
 import { useGuest } from "@/common/guest/guest-context";
+import { notInTotalNotes } from "@/common/balance-display";
 
 // Static x-axis labels (translation keys) for the two comparison bars.
 const SPENDING_LABELS = ["lastMonth", "thisMonth"];
@@ -31,6 +32,13 @@ const getStyles = (theme: ColorTheme) =>
     subtitle: {
       paddingHorizontal: 16,
       marginBottom: 12,
+      fontSize: fontSizes.sm,
+      color: theme.black80,
+      textAlign: LEADING_TEXT_ALIGN,
+    },
+    note: {
+      paddingHorizontal: 16,
+      marginTop: 8,
       fontSize: fontSizes.sm,
       color: theme.black80,
       textAlign: LEADING_TEXT_ALIGN,
@@ -102,7 +110,11 @@ export function SpendingCard({
   }, [refreshSignal, ledgerId, refetch]);
 
   const months = data?.getLedgerIntervalTotals ?? [];
-  const { thisMonth, lastMonth } = selectSpendingCompare(months, currency);
+  const { thisMonth, lastMonth, notInTotal } = selectSpendingCompare(
+    months,
+    currency,
+  );
+  const [note] = notInTotalNotes(notInTotal, t);
 
   return (
     <DashboardCard
@@ -134,8 +146,18 @@ export function SpendingCard({
               { lastMonth, thisMonth },
               currency,
               t,
+              note,
             )}
           />
+          {note ? (
+            <Text
+              key={`note-${fontScale}`}
+              testID="spending-not-in-total"
+              style={styles.note}
+            >
+              {note}
+            </Text>
+          ) : null}
         </FadeInView>
       )}
     </DashboardCard>

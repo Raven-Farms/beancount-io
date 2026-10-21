@@ -408,7 +408,10 @@ describe("read-only file notice live font-scale remeasurement", () => {
 // text-size change. Checked on the source, like the file editor above: the
 // cards run queries this runner cannot execute.
 const HOME_CARD_TEXTS: [string, string[]][] = [
-  ["screens/home-screen/components/spending-card.tsx", ["{styles.subtitle}"]],
+  [
+    "screens/home-screen/components/spending-card.tsx",
+    ["{styles.subtitle}", "{styles.note}"],
+  ],
   [
     "screens/home-screen/components/budget-card.tsx",
     ["{styles.account}", "{styles.emptyText}"],

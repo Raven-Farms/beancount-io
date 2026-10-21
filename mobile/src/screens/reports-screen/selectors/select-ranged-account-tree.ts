@@ -7,6 +7,12 @@ import type {
   CategoryKey,
 } from "../../../components/account-list/select-account-list";
 import { resolveCurrencyBalance } from "../../../common/balance-util";
+import {
+  formatHolding,
+  notInTotalOf,
+  type Holding,
+  type Translate,
+} from "../../../common/balance-display";
 import { rangeStartMonth, type TimeRange } from "../../../common/series-util";
 
 /** A monthly income/expense point carrying per-account balances. */
@@ -17,6 +23,22 @@ type MonthlyAccountPoint = {
   // so we cast at the boundary below.
   accountBalances: unknown;
 };
+
+/**
+ * An amount the card's total cannot include: a currency other than the one the
+ * report is in, summed over the window under the top-level account it belongs
+ * to (`Travel` for `Expenses:Travel:Hotel`), with the card's display sign.
+ */
+export type NotInTotalAmount = { account: string; holding: Holding };
+
+/** The selector's result: the tree, its total, and what the total leaves out. */
+export type RangedAccountTree = {
+  tree: AccountNode[];
+  total: number;
+  notInTotal: NotInTotalAmount[];
+};
+
+const EMPTY: RangedAccountTree = { tree: [], total: 0, notInTotal: [] };
 
 /** Node in the SerializableTreeNode shape `selectAccountTreeFromRoot` reads. */
 type TreeNode = {
@@ -99,15 +121,15 @@ export function selectRangedAccountTree(
     readonly (MonthlyAccountPoint | null | undefined)[] | null | undefined,
   range: TimeRange,
   category: CategoryKey,
-): { tree: AccountNode[]; total: number } {
+): RangedAccountTree {
   if (!currency || !points || points.length === 0) {
-    return { tree: [], total: 0 };
+    return EMPTY;
   }
 
   // Window: anchored to the latest point's month (matches filterSeriesByRange).
   const dated = points.filter((p): p is MonthlyAccountPoint => !!p?.date);
   if (dated.length === 0) {
-    return { tree: [], total: 0 };
+    return EMPTY;
   }
   dated.sort((a, b) => a.date.localeCompare(b.date));
   const cutoff = rangeStartMonth(
@@ -118,8 +140,12 @@ export function selectRangedAccountTree(
     ? dated.filter((p) => p.date.slice(0, 7) >= cutoff)
     : dated;
 
-  // Sum each account's resolved balance across the window.
+  // Sum each account's resolved balance across the window, and set aside what
+  // that reading cannot include — another currency used to vanish from the
+  // card with no hint, where Home and Accounts say "not in total" (w21/038).
   const sums = new Map<string, number>();
+  const omitted = new Map<string, NotInTotalAmount>();
+  const sign = CATEGORY_SIGN[category];
   for (const point of ranged) {
     const accountBalances = (point.accountBalances ?? {}) as Record<
       string,
@@ -131,10 +157,31 @@ export function selectRangedAccountTree(
       }
       const value = resolveCurrencyBalance(balances ?? {}, currency);
       sums.set(account, (sums.get(account) ?? 0) + value);
+      const topLevel = account.split(":")[1] ?? account;
+      for (const holding of notInTotalOf(balances, currency)) {
+        const key = `${topLevel}\0${holding.currency}`;
+        const prior = omitted.get(key)?.holding;
+        const scale = Math.max(prior?.scale ?? 0, holding.scale);
+        omitted.set(key, {
+          account: topLevel,
+          holding: {
+            currency: holding.currency,
+            scale,
+            // Rounded to the recorded scale so summing decimals as floats
+            // cannot print 50.000000000000004.
+            number: Number(
+              ((prior?.number ?? 0) + sign * holding.number).toFixed(scale),
+            ),
+          },
+        });
+      }
     }
   }
+  const notInTotal = [...omitted.values()].filter(
+    ({ holding }) => holding.number !== 0,
+  );
   if (sums.size === 0) {
-    return { tree: [], total: 0 };
+    return EMPTY;
   }
 
   // Build a trie from the account paths, roll up leaf sums, and convert to the
@@ -156,7 +203,7 @@ export function selectRangedAccountTree(
     }
   }
   if (topLevel.length === 0) {
-    return { tree: [], total: 0 };
+    return { ...EMPTY, notInTotal };
   }
 
   const fakeRoot: TreeNode = {
@@ -170,5 +217,24 @@ export function selectRangedAccountTree(
     CATEGORY_SIGN[category],
   );
   const total = tree.reduce((sum, node) => sum + node.value, 0);
-  return { tree, total };
+  return { tree, total, notInTotal };
+}
+
+/**
+ * The card's "Not in total: 50 EUR (Travel)" line, or nothing when the total
+ * leaves nothing out.
+ */
+export function notInTotalNote(
+  amounts: readonly NotInTotalAmount[],
+  t: Translate,
+): string | null {
+  return amounts.length === 0
+    ? null
+    : t("notInTotal", {
+        amounts: amounts
+          .map(
+            ({ account, holding }) => `${formatHolding(holding)} (${account})`,
+          )
+          .join(", "),
+      });
 }

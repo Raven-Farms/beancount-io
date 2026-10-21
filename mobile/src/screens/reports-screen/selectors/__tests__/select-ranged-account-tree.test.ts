@@ -1,4 +1,7 @@
-import { selectRangedAccountTree } from "../select-ranged-account-tree";
+import {
+  notInTotalNote,
+  selectRangedAccountTree,
+} from "../select-ranged-account-tree";
 
 // Backend `accountBalances` shape: { account: { currency: amount } }.
 type AcctBal = Record<string, Record<string, number | string>>;
@@ -16,10 +19,12 @@ describe("selectRangedAccountTree", () => {
     expect(selectRangedAccountTree("USD", undefined, "6M", "income")).toEqual({
       tree: [],
       total: 0,
+      notInTotal: [],
     });
     expect(selectRangedAccountTree("USD", [], "6M", "income")).toEqual({
       tree: [],
       total: 0,
+      notInTotal: [],
     });
   });
 
@@ -30,7 +35,7 @@ describe("selectRangedAccountTree", () => {
       "ALL",
       "income",
     );
-    expect(result).toEqual({ tree: [], total: 0 });
+    expect(result).toEqual({ tree: [], total: 0, notInTotal: [] });
   });
 
   it("lists top-level accounts sorted by balance for ALL range, total = sum", () => {
@@ -217,5 +222,63 @@ describe("selectRangedAccountTree", () => {
     );
     expect(result.tree[0].value).toBe(1234.5);
     expect(result.total).toBe(1234.5);
+  });
+});
+
+// w21/038: Reports dropped a 50 EUR Travel expense from the USD Expenses card
+// with no hint, where Home and Accounts say "not in total".
+describe("selectRangedAccountTree: other currencies", () => {
+  const t = (key: string, params?: Record<string, unknown>) =>
+    `${key}:${String(params?.amounts)}`;
+
+  it("totals the active currency and names what it leaves out, by top-level account", () => {
+    const result = selectRangedAccountTree(
+      "USD",
+      [
+        point("2026-08", {
+          "Expenses:Housing:Rent": { USD: "4000.00" },
+          "Expenses:Food": { USD: "76.00" },
+        }),
+        point("2026-09", {
+          "Expenses:Travel": { EUR: "30.00" },
+          "Expenses:Travel:Hotel": { EUR: "20.00" },
+        }),
+      ],
+      "6M",
+      "expenses",
+    );
+    expect(result.total).toBe(4076);
+    expect(result.notInTotal).toEqual([
+      { account: "Travel", holding: { currency: "EUR", number: 50, scale: 2 } },
+    ]);
+    expect(notInTotalNote(result.notInTotal, t)).toBe(
+      "notInTotal:50.00 EUR (Travel)",
+    );
+  });
+
+  it("gives income its display sign", () => {
+    const result = selectRangedAccountTree(
+      "USD",
+      [point("2026-09", { "Income:Salary": { USD: "-100", EUR: "-25.5" } })],
+      "6M",
+      "income",
+    );
+    expect(result.notInTotal).toEqual([
+      {
+        account: "Salary",
+        holding: { currency: "EUR", number: 25.5, scale: 1 },
+      },
+    ]);
+  });
+
+  it("discloses nothing for a single-currency ledger", () => {
+    const result = selectRangedAccountTree(
+      "USD",
+      [point("2026-09", { "Expenses:Food": { USD: "10" } })],
+      "6M",
+      "expenses",
+    );
+    expect(result.notInTotal).toEqual([]);
+    expect(notInTotalNote(result.notInTotal, t)).toBe(null);
   });
 });
