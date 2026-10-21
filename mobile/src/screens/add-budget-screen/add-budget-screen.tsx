@@ -1,3 +1,4 @@
+import { budgetCurrencyOptions } from "./currency-options";
 import { useState } from "react";
 import {
   Pressable,
@@ -274,10 +275,11 @@ function AddBudgetScreenImpl(): JSX.Element {
     label: t(intervalLabelKey(value)),
   }));
 
-  const currencyItems =
-    currencies.length > 0
-      ? currencies.map((value) => ({ value, label: value }))
-      : [{ value: "USD", label: "USD" }];
+  // The current value is always an option, so the wheel never falls back to
+  // the first one and switches a non-operating currency silently (w21/121).
+  const currencyItems = budgetCurrencyOptions(currencies, currency).map(
+    (value) => ({ value, label: value }),
+  );
 
   return (
     <SafeAreaView edges={["bottom"]} style={styles.container}>
@@ -358,7 +360,10 @@ function AddBudgetScreenImpl(): JSX.Element {
           <FormRow
             label={t("currency")}
             value={currency}
-            onPress={() => setPicker("currency")}
+            // Locked with the account: the currency is the other half of the
+            // budget's identity, so changing it started a second budget and
+            // left this one as it was (w21/121).
+            onPress={isUpdate ? undefined : () => setPicker("currency")}
           />
         </View>
 
