@@ -18,7 +18,7 @@
  *
  * Free of `@/` imports so the jest-lite runner can require it.
  */
-import { operatingKey, resolveCurrencyBalance } from "./balance-util";
+import { resolveCurrencyBalance } from "./balance-util";
 import {
   amountIn,
   holdingsOf,
@@ -277,11 +277,9 @@ export function selectValuation({
   const marketValue = resolveCurrencyBalance(market, currency);
   const costValue =
     cost == null ? null : resolveCurrencyBalance(cost, currency);
-  const key = operatingKey(market, currency);
   const converted = holdingsOf(units).filter(
     (holding) =>
       holding.currency !== currency &&
-      holding.currency !== key &&
       amountIn(market, holding.currency).number === 0,
   );
   const reference = date !== undefined && date < today ? date : today;

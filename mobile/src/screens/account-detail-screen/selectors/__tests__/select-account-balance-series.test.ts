@@ -150,7 +150,7 @@ describe("selectAccountUnitsSeries", () => {
     expect(selectAccountUnitsSeries("RGAGX", data)).toEqual([
       { date: "2017-01-31", value: 0 },
     ]);
-    // The money series keeps its USD fallback.
-    expect(selectAccountBalanceSeries("EUR", data)[0].value).toBe(250);
+    // Nor does the money series read cash in another currency (w21/058).
+    expect(selectAccountBalanceSeries("EUR", data)[0].value).toBe(0);
   });
 });

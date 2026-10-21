@@ -39,8 +39,8 @@ const RANGE_MONTHS: Record<Exclude<TimeRange, "ALL" | "YTD">, number> = {
  * Convert a `{ date, balance }` series (net worth, an account's balance
  * history, …) into a monthly `SeriesPoint[]` in the active currency: one
  * (most recent) point per month, ascending by date. Reads each balance with the
- * shared currency-balance resolver (active currency, USD fallback, string
- * coercion) unless `read` says otherwise — a units series reads strictly.
+ * shared currency-balance resolver (active currency, string coercion) unless
+ * `read` says otherwise — a units series reads strictly.
  */
 export function pointsToMonthlySeries(
   currency: string,

@@ -1,6 +1,5 @@
 import { AccountJournalQuery } from "@/generated-graphql/graphql";
 import { PostingLite } from "@/common/tx-category";
-import { operatingKey } from "../../../common/balance-util";
 import { amountIn } from "../../../common/balance-display";
 import { formatUnits } from "../../../common/number-utils";
 import { formatAccountJournalChange } from "../utils/format-account-journal-balance";
@@ -323,13 +322,8 @@ export function selectAccountJournalRows(
       detail: entryDetail(item.entry),
     };
     if (!units) {
-      // Each map resolves its own key: an empty change map falls back to USD,
-      // and borrowing that key would read a non-USD running balance as zero.
-      const change = amountIn(item.change, operatingKey(item.change, currency));
-      const balance = amountIn(
-        item.balance,
-        operatingKey(item.balance, currency),
-      );
+      const change = amountIn(item.change, currency);
+      const balance = amountIn(item.balance, currency);
       return {
         ...row,
         change: change.number,

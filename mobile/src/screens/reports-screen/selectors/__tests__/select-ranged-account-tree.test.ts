@@ -196,7 +196,7 @@ describe("selectRangedAccountTree", () => {
     expect(result.total).toBe(37000);
   });
 
-  it("resolves the active currency and falls back to USD", () => {
+  it("totals the active currency and discloses the rest (w21/058)", () => {
     const result = selectRangedAccountTree(
       "CNY",
       [
@@ -208,9 +208,14 @@ describe("selectRangedAccountTree", () => {
       "ALL",
       "income",
     );
-    expect(result.tree.map((n) => n.name)).toEqual(["Salary", "UsdJob"]);
-    expect(result.tree.map((n) => n.value)).toEqual([6500, 1000]);
-    expect(result.total).toBe(7500);
+    expect(result.tree.map((n) => n.name)).toEqual(["Salary"]);
+    expect(result.total).toBe(6500);
+    expect(result.notInTotal).toEqual([
+      {
+        account: "UsdJob",
+        holding: { currency: "USD", scale: 0, number: 1000 },
+      },
+    ]);
   });
 
   it("parses string balances", () => {

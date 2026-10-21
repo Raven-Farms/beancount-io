@@ -100,12 +100,14 @@ describe("selectLiabilitiesSeries", () => {
     ]);
   });
 
-  it("falls back to USD when the active currency is absent", () => {
+  // w21/058: USD history read as EUR made net worth "crash" 98% at the first
+  // EUR posting.
+  it("reads a point without the active currency as zero, not its USD", () => {
     const data = createBalanceSheet({
       liabilitiesData: [{ date: "2025-01-31", balance: { USD: -1200 } }],
     });
     expect(selectLiabilitiesSeries("EUR", data)).toEqual([
-      { date: "2025-01-31", value: -1200 },
+      { date: "2025-01-31", value: 0 },
     ]);
   });
 });

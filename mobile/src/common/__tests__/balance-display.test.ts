@@ -130,12 +130,22 @@ describe("selectBalanceDisplay", () => {
 });
 
 describe("notInTotalOf", () => {
-  it("excludes the key the total is read from, including the USD fallback", () => {
-    // resolveCurrencyBalance falls back to USD when the currency is absent, so
-    // USD is part of that total and must not also be reported as left out.
+  it("discloses USD under a EUR total, which no longer reads it (w21/058)", () => {
     expect(notInTotalOf({ USD: "5", GLD: "2" }, "EUR")).toEqual([
+      { currency: "USD", number: 5, scale: 0 },
       { currency: "GLD", number: 2, scale: 0 },
     ]);
+    expect(notInTotalOf({ EUR: "200.00", USD: "5" }, "EUR")).toEqual([
+      { currency: "USD", number: 5, scale: 0 },
+    ]);
+  });
+
+  it("reads a lone USD balance under EUR in its own units", () => {
+    expect(selectBalanceDisplay({ USD: "50.00" }, {}, "EUR")).toEqual({
+      kind: "units",
+      units: { currency: "USD", number: 50, scale: 2 },
+      value: null,
+    });
   });
 
   it("ignores zero entries", () => {

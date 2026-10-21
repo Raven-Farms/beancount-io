@@ -301,14 +301,15 @@ describe("selectAccountTreeFromRoot", () => {
     ]);
   });
 
-  it("parses string balances and falls back to USD when the currency is missing", () => {
+  it("parses string balances and reads 0 when the currency is missing", () => {
     const root = createIncomeRoot("Income", [
       { account: "Income:Salary", balanceChildren: { USD: "5000.50" } },
       { account: "Income:Euro", balanceChildren: { EUR: 900 } },
     ]);
+    expect(selectAccountTreeFromRoot("USD", root)[0].value).toBe(5000.5);
+    // A USD account in a CNY ledger is not CNY 5,000.50 (w21/058).
     const result = selectAccountTreeFromRoot("CNY", root);
-    expect(result.map((n) => n.name)).toEqual(["Salary"]);
-    expect(result[0].value).toBe(5000.5);
+    expect(result.every((n) => n.value === 0)).toBe(true);
   });
 });
 

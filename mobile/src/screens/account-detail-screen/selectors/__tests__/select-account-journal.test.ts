@@ -194,7 +194,7 @@ describe("selectAccountJournalRows", () => {
     expect(row.balance).toBe(1200.5);
   });
 
-  it("falls back to USD per map, independently", () => {
+  it("reads each map in the active currency only (w21/058)", () => {
     const [usdBalance] = selectAccountJournalRows("MRMB", [
       item(
         { entry_hash: "u1", date: "2026-07-01", directive_type: "Balance" },
@@ -203,8 +203,7 @@ describe("selectAccountJournalRows", () => {
       ),
     ]);
     expect(usdBalance.change).toBe(0);
-    expect(usdBalance.balance).toBe(55911000000);
-    expect(usdBalance.moneyScale).toBe(2);
+    expect(usdBalance.balance).toBe(0);
 
     const [usdChange] = selectAccountJournalRows("MRMB", [
       item(
@@ -213,7 +212,7 @@ describe("selectAccountJournalRows", () => {
         { MRMB: -40 },
       ),
     ]);
-    expect(usdChange.change).toBe(-7);
+    expect(usdChange.change).toBe(0);
     expect(usdChange.balance).toBe(-40);
   });
 

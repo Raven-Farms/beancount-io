@@ -53,15 +53,15 @@ describe("pointsToMonthlySeries", () => {
     ]);
   });
 
-  it("parses string amounts and falls back to USD when the currency is absent", () => {
+  it("parses string amounts and reads a point without the currency as zero", () => {
     const points: DateBalancePoint[] = [
       { date: "2025-01-01", balance: { EUR: "1500.50" } },
       { date: "2025-02-01", balance: { USD: 900 } },
     ];
-    // Active currency EUR: first point matches EUR; second falls back to USD.
+    // Active currency EUR: the USD point is not euros (w21/058).
     expect(pointsToMonthlySeries("EUR", points)).toEqual([
       { date: "2025-01-01", value: 1500.5 },
-      { date: "2025-02-01", value: 900 },
+      { date: "2025-02-01", value: 0 },
     ]);
   });
 

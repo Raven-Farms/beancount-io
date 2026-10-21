@@ -18,7 +18,7 @@
  *
  * Free of `@/` imports so the jest-lite runner can require it.
  */
-import { operatingKey, resolveCurrencyBalance } from "./balance-util";
+import { resolveCurrencyBalance } from "./balance-util";
 import { amountScale, formatUnits } from "./number-utils";
 import type { Valuation } from "./valuation";
 
@@ -66,7 +66,7 @@ export type BalanceDisplay =
 
 /**
  * One currency's entry in a balance map with its recorded scale, read strictly:
- * a missing or unparseable entry is zero, never the USD fallback.
+ * a missing or unparseable entry is zero.
  */
 export function amountIn(
   map: BalanceMap,
@@ -89,8 +89,7 @@ export function holdingsOf(map: BalanceMap): Holding[] {
 
 /** Holdings a total in `currency` leaves out of the figure it shows. */
 export function notInTotalOf(map: BalanceMap, currency: string): Holding[] {
-  const key = operatingKey(map, currency);
-  return holdingsOf(map).filter((holding) => holding.currency !== key);
+  return holdingsOf(map).filter((holding) => holding.currency !== currency);
 }
 
 /**
@@ -108,10 +107,9 @@ export function selectBalanceDisplay(
   const value = resolveCurrencyBalance(valued, currency);
   const notInTotal = notInTotalOf(valued, currency);
   const unitsHeld = holdingsOf(units);
-  const [map, held]: [BalanceMap, Holding[]] =
-    unitsHeld.length > 0 ? [units, unitsHeld] : [valued, holdingsOf(valued)];
+  const held = unitsHeld.length > 0 ? unitsHeld : holdingsOf(valued);
 
-  if (held.length === 1 && held[0].currency !== operatingKey(map, currency)) {
+  if (held.length === 1 && held[0].currency !== currency) {
     return {
       kind: "units",
       units: held[0],

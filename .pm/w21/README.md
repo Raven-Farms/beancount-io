@@ -12,7 +12,6 @@
 
 ## Inbox
 
-- [058](./058.md) — In a non-USD ledger every USD balance is relabelled in the ledger's currency ("Bank €17,202.01"); Home shows a fake −98% crash
 - [059](./059.md) — Transaction detail's Money flow drops lot cost and price (mobile counterpart of w4/220)
 - [060](./060.md) — Account search misses accounts containing "İ" (Turkish dotted capital I)
 - [061](./061.md) — Create Ledger suggests USD for Bulgaria (euro since 2026), Ukraine, Romania, Czechia…: hand-rolled list diverges from the setup catalog
