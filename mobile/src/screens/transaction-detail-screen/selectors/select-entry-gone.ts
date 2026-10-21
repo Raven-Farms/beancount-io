@@ -10,3 +10,20 @@ import { graphQLErrorCodes } from "../../../common/graphql-error-codes";
 export function isEntryGone(contextError: unknown): boolean {
   return graphQLErrorCodes(contextError).includes("NOT_FOUND");
 }
+
+/**
+ * Whether the ledger was written since the last check, read from
+ * `ledgerRevisionVar`, which every invalidation bumps. A detail screen lower in
+ * the stack kept showing an entry deleted or rewritten above it, because its
+ * entry context is never evicted (w21/094); on focus it rechecks only when
+ * this says so, so an unchanged ledger costs no request.
+ */
+export function createRevisionCheck(read: () => number): () => boolean {
+  let seen = read();
+  return () => {
+    const now = read();
+    if (now === seen) return false;
+    seen = now;
+    return true;
+  };
+}

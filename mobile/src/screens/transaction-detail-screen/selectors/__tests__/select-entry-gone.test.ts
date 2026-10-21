@@ -1,6 +1,6 @@
 import fs from "fs";
 import path from "path";
-import { isEntryGone } from "../select-entry-gone";
+import { createRevisionCheck, isEntryGone } from "../select-entry-gone";
 
 // A transaction removed elsewhere still opened from the list's cached copy,
 // with Share and Copy link live and "Error: Ledger resource not found" buried
@@ -45,6 +45,33 @@ describe("Transaction detail for a removed entry", () => {
     // Decided before the cached entry renders.
     expect(
       source.indexOf("if (entryGone) {") < source.indexOf("if (!entry) {"),
+    ).toBe(true);
+  });
+});
+
+// w21/094: a detail lower in the stack kept showing an entry deleted above it.
+describe("rechecking a detail screen on return", () => {
+  it("rechecks only after the ledger was written, and once per write", () => {
+    let revision = 3;
+    const changed = createRevisionCheck(() => revision);
+    // First focus right after the load: no extra request.
+    expect(changed()).toBe(false);
+    revision += 1; // a delete on the screen above
+    expect(changed()).toBe(true);
+    expect(changed()).toBe(false);
+  });
+
+  it("is what the detail screen refetches its entry context by", () => {
+    const source = fs.readFileSync(
+      path.join(__dirname, "..", "..", "transaction-detail-screen.tsx"),
+      "utf8",
+    );
+    expect(
+      source.includes("createRevisionCheck(() => ledgerRevisionVar())"),
+    ).toBe(true);
+    expect(source.includes("if (ledgerChangedSinceCheck()) {")).toBe(true);
+    expect(
+      source.includes("void refetchContext().catch(() => undefined);"),
     ).toBe(true);
   });
 });

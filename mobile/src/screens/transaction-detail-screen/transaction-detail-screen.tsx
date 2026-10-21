@@ -10,7 +10,12 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Stack, useLocalSearchParams, useRouter } from "expo-router";
+import {
+  Stack,
+  useFocusEffect,
+  useLocalSearchParams,
+  useRouter,
+} from "expo-router";
 import { useApolloClient, useReactiveVar } from "@apollo/client";
 import { Ionicons } from "@expo/vector-icons";
 import { ColorTheme } from "@/types/theme-props";
@@ -34,7 +39,10 @@ import {
   useDeleteLedgerEntrySourceSliceMutation,
   useGetLedgerEntryContextQuery,
 } from "@/generated-graphql/graphql";
-import { invalidateLedgerData } from "@/common/apollo/invalidate-ledger";
+import {
+  invalidateLedgerData,
+  ledgerRevisionVar,
+} from "@/common/apollo/invalidate-ledger";
 import { EntryContext } from "@/screens/transactions-screen/entry-context";
 import { openEditTransaction } from "@/screens/edit-transaction-screen";
 import {
@@ -58,7 +66,10 @@ import {
   type TransactionMenuAction,
 } from "./selectors/select-transaction-detail";
 import { shouldShowTransactionWriteActions } from "./selectors/select-transaction-write-actions";
-import { isEntryGone } from "./selectors/select-entry-gone";
+import {
+  createRevisionCheck,
+  isEntryGone,
+} from "./selectors/select-entry-gone";
 import { selectEntryErrors } from "./selectors/select-entry-errors";
 import { useLedgerErrors } from "@/common/hooks/use-ledger-errors";
 import { useLedgerRootNames } from "@/common/hooks/use-ledger-root-names";
@@ -321,10 +332,31 @@ const TransactionDetailImpl = ({
 
   // Also serves as the fallback entry source when the stash is cold (deep
   // link or remount) — the context payload carries the full entry JSON.
-  const { data, loading, error } = useGetLedgerEntryContextQuery({
+  const {
+    data,
+    loading,
+    error,
+    refetch: refetchContext,
+  } = useGetLedgerEntryContextQuery({
     variables: { entryHash, ledgerId },
     skip: !entryHash || !shouldLoadContext,
   });
+  // A write made from a screen above this one (a delete, an editor fix) leaves
+  // this entry's context cached as it was. Recheck on return, and only when
+  // the ledger was written meanwhile; a NOT_FOUND then shows the gone state
+  // below (w21/094).
+  const ledgerChangedSinceCheck = useMemo(
+    () => createRevisionCheck(() => ledgerRevisionVar()),
+    [],
+  );
+  useFocusEffect(
+    useCallback(() => {
+      if (!entryHash || !shouldLoadContext) return;
+      if (ledgerChangedSinceCheck()) {
+        void refetchContext().catch(() => undefined);
+      }
+    }, [entryHash, shouldLoadContext, ledgerChangedSinceCheck, refetchContext]),
+  );
 
   const [deleteMutation, { loading: deleting }] =
     useDeleteLedgerEntrySourceSliceMutation();
