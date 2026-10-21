@@ -23,3 +23,26 @@ describe("the editor's jump to a linked line", () => {
     ).toBe(true);
   });
 });
+
+// w21/195: leaving the editor during "Saving…" ran the unmount sweep before the
+// save set its flag, and nothing swept afterwards: other tabs stayed stale and
+// the next delete of the file was refused on a stale sha.
+describe("the editor's file sweep after a save", () => {
+  it("runs from the save itself once the screen has gone, with no alert", () => {
+    expect(source.includes("unmountedRef.current=true;")).toBe(true);
+    expect(
+      source.includes(
+        'voidinvalidateLedgerData(client,"file");returntrue;}voidreportNewErrors(before);',
+      ),
+    ).toBe(true);
+    expect(source.includes("if(unmountedRef.current){")).toBe(true);
+  });
+
+  it("still sweeps on unmount for a save that finished while it was open", () => {
+    expect(
+      source.includes(
+        'if(savedThisSessionRef.current){voidinvalidateLedgerData(client,"file");}',
+      ),
+    ).toBe(true);
+  });
+});

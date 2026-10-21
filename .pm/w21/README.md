@@ -15,7 +15,6 @@
 - [064](./blocked/064.md) — A token refresh whose response is lost signs the user out on the next refresh (rotated token replayed → grant revoked) — **blocked:** needs an owner decision (ADR) on a refresh-token reuse grace window
 - [065](./blocked/065.md) — One early-year entry (e.g. 0050) makes the balance sheet 23,718 monthly points (3 MB) and the app stalls — **blocked:** needs an approach decision (per-pill fetch vs server downsample) and a simulator profile of the stall
 - [180](./blocked/180.md) — Budget actuals use raw prefix match (`Transport` counts `Transportation`), unlike Reports — **blocked:** needs an owner decision between component matching on the server (a Fava break) and a per-account breakdown for the client
-- [195](./195.md) — Leaving the file editor mid-save skips its refresh; other tabs stale, next delete refused
 - [196](./196.md) — Create file then switch ledger: the editor opens that path in the other ledger
 - [197](./197.md) — Delete Transaction can fire twice in flight; the repeat reports failure after success
 - [198](./198.md) — A repeated query param crashes three link-reachable screens ("path.split is not a function")

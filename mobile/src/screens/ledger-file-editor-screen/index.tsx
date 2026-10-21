@@ -463,14 +463,19 @@ function LedgerFileEditorSession({
     [client, ledgerId, router, t],
   );
 
-  useEffect(
-    () => () => {
+  // Set when the screen goes, so a save still in flight can finish the sweep
+  // the unmount could not: that ran first with `savedThisSessionRef` still
+  // false, and nothing swept afterwards (w21/195).
+  const unmountedRef = useRef(false);
+  useEffect(() => {
+    unmountedRef.current = false;
+    return () => {
+      unmountedRef.current = true;
       if (savedThisSessionRef.current) {
         void invalidateLedgerData(client, "file");
       }
-    },
-    [client],
-  );
+    };
+  }, [client]);
 
   const handleReload = useCallback(async () => {
     // The error strip follows the cache after mount; a reload that swaps in
@@ -560,6 +565,11 @@ function LedgerFileEditorSession({
         // before the save — it is fetched once at mount, and this screen never
         // remounts while the user edits.
         savedThisSessionRef.current = true;
+        if (unmountedRef.current) {
+          // Left during "Saving…": sweep now, and no alert over another screen.
+          void invalidateLedgerData(client, "file");
+          return true;
+        }
         void reportNewErrors(before);
         return true;
       } catch (err: unknown) {
