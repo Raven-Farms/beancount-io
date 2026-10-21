@@ -30,6 +30,7 @@ import {
 } from "@/foundation/ledger-api-types";
 import BigNumber from "bignumber.js";
 import { hashEntry } from "./entry-hash";
+import { endsInsideString } from "./source-slice";
 import { perUnitFromTotalCostString } from "./total-cost";
 
 /**
@@ -835,7 +836,16 @@ function stripAndAlign(raw: string): string {
   // effect: align content lines, keep the trailing newline.
   const hadTrailingNewline = raw.endsWith("\n");
   const content = hadTrailingNewline ? lines.slice(0, -1) : lines;
+  // Text inside a quoted string is the user's, not layout: a narration line
+  // ending in "2 x Milk 3.50 EUR" was padded to the currency column, and
+  // trailing spaces and \r dropped, silently changing what was typed
+  // (w21/191). A line that starts inside a string is not aligned, and one that
+  // ends inside it is not stripped.
+  let inside = false;
   const alignedLines = content.map((line) => {
+    const startsInside = inside;
+    inside = endsInsideString(line, startsInside);
+    if (startsInside) return line;
     const match = ALIGN_RE.exec(line);
     if (match) {
       const [, prefix, number, rest] = match;
@@ -845,6 +855,11 @@ function stripAndAlign(raw: string): string {
     }
     return line;
   });
-  const rstripped = alignedLines.map((line) => line.replace(/\s+$/, ""));
+  inside = false;
+  const rstripped = alignedLines.map((line) => {
+    const startsInside = inside;
+    inside = endsInsideString(line, startsInside);
+    return inside ? line : line.replace(/\s+$/, "");
+  });
   return rstripped.join("\n") + (hadTrailingNewline ? "\n" : "");
 }

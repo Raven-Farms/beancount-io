@@ -264,7 +264,7 @@ function isTopLevelStart(line: string): boolean {
  * one was open at its start. Beancount strings escape `"` and `\\` with a
  * backslash; outside a string, `;` starts a comment that runs to line end.
  */
-function endsInsideString(line: string, startsInside: boolean): boolean {
+export function endsInsideString(line: string, startsInside: boolean): boolean {
   let inside = startsInside;
   for (let i = 0; i < line.length; i += 1) {
     const ch = line[i];
