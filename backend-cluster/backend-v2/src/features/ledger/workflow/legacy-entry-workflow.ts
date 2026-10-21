@@ -8,6 +8,7 @@ import type {
 import { resolveLegacyLedgerId } from "../utils/resolve-legacy-ledger";
 import { parseLedgerId } from "@/shared/str";
 import { BadUserInputError } from "@/shared/errors";
+import { parsePostingAmount } from "./legacy-posting-amount";
 
 export interface LegacyEntryInput {
   type: string;
@@ -29,24 +30,6 @@ export interface ILegacyEntryWorkflow {
     input: LegacyEntryCommand,
   ): Promise<{ data: string; success: boolean }>;
 }
-/** Parse a legacy amount string like "11.11 EUR" into a { number, currency } pair. */
-function parsePostingAmount(amount: string): {
-  number: string;
-  currency: string;
-} {
-  const amountMatch = amount.match(/^(-?[\d,.]+)\s+([A-Z]{3})$/);
-  if (amountMatch) {
-    const [, numberStr, currencyStr] = amountMatch;
-    return { number: numberStr.replace(/,/g, ""), currency: currencyStr };
-  }
-  // Fallback: no currency suffix found — treat the whole string as the number.
-  const stripped = amount.replace(/,/g, "");
-  return {
-    number: Number.isNaN(parseFloat(stripped)) ? "0" : stripped,
-    currency: "USD",
-  };
-}
-
 export class LegacyEntryWorkflow implements ILegacyEntryWorkflow {
   constructor(
     private readonly fava: IFavaClientFactory,

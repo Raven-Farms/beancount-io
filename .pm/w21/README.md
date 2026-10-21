@@ -15,7 +15,6 @@
 - [064](./blocked/064.md) — A token refresh whose response is lost signs the user out on the next refresh (rotated token replayed → grant revoked) — **blocked:** needs an owner decision (ADR) on a refresh-token reuse grace window
 - [065](./blocked/065.md) — One early-year entry (e.g. 0050) makes the balance sheet 23,718 monthly points (3 MB) and the app stalls — **blocked:** needs an approach decision (per-pill fetch vs server downsample) and a simulator profile of the stall
 - [180](./blocked/180.md) — Budget actuals use raw prefix match (`Transport` counts `Transportation`), unlike Reports — **blocked:** needs an owner decision between component matching on the server (a Fava break) and a per-account breakdown for the client
-- [190](./190.md) — Mobile can't add transactions on ledgers whose currency isn't 3 uppercase letters (USDC, MUSD, VBTLX)
 - [191](./191.md) — Multi-line narration silently altered on save (amount-like lines padded, trailing spaces/\r dropped)
 - [192](./192.md) — Open Account name check vs engine: Persian/full-width digits pass then fail; ZWNJ words blocked
 - [193](./193.md) — Add Budget Done re-enables during the post-save refresh; a second tap writes the budget twice
