@@ -14,7 +14,6 @@
 
 - [064](./blocked/064.md) — A token refresh whose response is lost signs the user out on the next refresh (rotated token replayed → grant revoked) — **blocked:** needs an owner decision (ADR) on a refresh-token reuse grace window
 - [065](./blocked/065.md) — One early-year entry (e.g. 0050) makes the balance sheet 23,718 monthly points (3 MB) and the app stalls — **blocked:** needs an approach decision (per-pill fetch vs server downsample) and a simulator profile of the stall
-- [136](./136.md) — Home's Latest Updates always requests the English feed
 - [137](./137.md) — Ledger rows in Home's Latest Updates do nothing when tapped
 - [138](./138.md) — Pull-to-refresh on Home doesn't refresh the bell's error badge
 - [139](./139.md) — VoiceOver reads a Merchants row as only the payee (drops count, Recurring, cadence, Overdue)

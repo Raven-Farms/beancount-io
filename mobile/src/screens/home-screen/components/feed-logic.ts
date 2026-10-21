@@ -18,3 +18,13 @@ export function feedSourceLabelKey(source: FeedSource): FeedSourceLabelKey {
       return "feedSourceBlog";
   }
 }
+
+/**
+ * The feed's query variables. The feed is asked for in the app's language:
+ * pinned to "en", a German app listed English titles that opened `/blog/…`
+ * instead of `/de/blog/…` (w21/136). Being a variable, a language change
+ * refetches.
+ */
+export function feedQueryVariables(limit: number, locale: string) {
+  return { offset: 0, limit, locale };
+}

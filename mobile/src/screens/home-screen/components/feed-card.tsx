@@ -17,7 +17,7 @@ import { DashboardCard } from "@/components/dashboard-card";
 import { useGetFeedQuery } from "@/generated-graphql/graphql";
 import { FeedSource } from "@/generated-graphql/types";
 import { formatFeedDate } from "@/common/date-format";
-import { feedSourceLabelKey } from "./feed-logic";
+import { feedQueryVariables, feedSourceLabelKey } from "./feed-logic";
 import { CardLoadFailure } from "@/components/card-load-failure";
 import { selectCardLoadState } from "@/common/apollo/card-load-state";
 
@@ -96,10 +96,10 @@ type FeedCardProps = {
 };
 
 export function FeedCard({ refreshSignal = 0 }: FeedCardProps): JSX.Element {
-  const { t } = useTranslations();
+  const { t, locale } = useTranslations();
 
   const { data, loading, error, refetch } = useGetFeedQuery({
-    variables: { offset: 0, limit: FEED_LIMIT, locale: "en" },
+    variables: feedQueryVariables(FEED_LIMIT, locale),
     fetchPolicy: "cache-and-network",
   });
 
