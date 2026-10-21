@@ -154,3 +154,9 @@
 - [269](./269.md) — Bimonthly and semi-annual bills never detected; manual mark says "Irregular"
 - [270](./270.md) — Merchant logos show the processor ("PAYPAL *NETFLIX" → PayPal); "#" bypasses common-word guard
 - [271](./271.md) — One weekend-shifted payment disables the day-of-month anchor; Next drifts a day
+- [272](./272.md) — CRLF commit diffs render double-spaced; every diff ends with a blank row
+- [273](./273.md) — File-editor save conflict is a dead end: Keep Editing never saves, Reload discards the text
+- [274](./274.md) — Android Back from a Files sub-folder leaves the tab instead of going up
+- [275](./275.md) — New File refuses names with a dot ("2024.q1") despite "extension added" copy
+- [276](./276.md) — File editor Save, error rows and Reload/Back aren't announced as buttons
+- [277](./277.md) — Deep Files breadcrumb truncates the current folder's name
