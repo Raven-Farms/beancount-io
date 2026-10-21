@@ -39,8 +39,10 @@ automatic approval of accounting writes.
 `submission.md` follows the current fields but deliberately leaves the required
 installation/stability confirmations unchecked.
 
-The public submission-issue search found no Beancount match; actual in-client
-catalog dedup remains open. In VS Code 1.135.0, the signed official Cline 4.1.25
+The public submission-issue search found no Beancount match. The exact public
+catalog feed used by the tagged extension also has no match, as recorded below;
+the blank native Marketplace panel does not prove what rendered there.
+In VS Code 1.135.0, the signed official Cline 4.1.25
 extension accepted this configuration and displayed **Authenticate**. The
 official `cline@3.0.73` CLI independently completed discovery and dynamic client
 registration, printed its authorization URL, and reached the real consent
@@ -59,3 +61,19 @@ testing used separate `CLINE_DIR`, `CLINE_DATA_DIR` and
 `CLINE_MCP_SETTINGS_PATH` paths, with auto-update disabled. CLI 3.0.73 has no
 supported per-server OAuth scope override. Any later model-driven rehearsal
 must explicitly disable its default automatic tool approval.
+
+## Native catalog feed control — 2026-10-21 UTC
+
+Cline 4.1.25's [tagged marketplace helper](https://github.com/cline/cline/blob/01b8a9724da905423e636396d7fb4acdf47796bb/apps/vscode/src/core/controller/marketplace/marketplace-helpers.ts#L50)
+uses the public [catalog feed](https://cline.github.io/marketplace/catalog.json).
+At 07:26 UTC that exact feed returns HTTP 200 and 203 entries, including 149
+MCP servers; its generation timestamp is 2026-09-18T20:15:28.359Z. Searching
+every entry finds zero matches for `beancount`, `io.beancount/beancount`, the
+canonical hosted endpoint or `bex-co/beancount-io`. Response SHA-256 is
+`187ebe2b130e25f261a805cc5930a19e275ece2c34ab21bd9df966a566b9848c`.
+
+This establishes the observed public feed's deduplication result, separately
+from the native Marketplace panel, which appeared blank. It does not diagnose
+that UI discrepancy or prove enterprise-filtered rendering. Native setup and
+catalog preparation do not satisfy the unchecked authenticated installation,
+query, preview or stability claims; no issue or listing was submitted.
