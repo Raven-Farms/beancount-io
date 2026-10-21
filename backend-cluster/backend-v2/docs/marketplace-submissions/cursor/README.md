@@ -19,7 +19,7 @@ customer skill trees. Format validation does not establish marketplace acceptanc
 | Destination | State / next action |
 | --- | --- |
 | [Official Cursor](https://cursor.com/marketplace/publish) | Publisher identity sign-in succeeded. Application is prepared but unsent; final Submit Application explicitly agrees to [Publisher Terms](https://cursor.com/marketplace-publisher-terms) and requires the operator’s action-time approval. The root index now supplies the supported nested-package layout; actual intake and review remain unverified. |
-| [cursor.directory](https://cursor.directory/plugins/new?type=mcp_server) | Identity sign-in succeeded. Live form offers Auto (GitHub) scan or Manual name/description/repository/homepage/keywords/component content and Publish Plugin. No publication was sent; no data PR is assumed. Search the live catalog for the canonical endpoint/repository before submission. |
+| [cursor.directory](https://cursor.directory/plugins/new?type=mcp_server) | Manual MCP-only submission accepted; [Beancount.io receipt](https://cursor.directory/plugins/beancountio) observed 2026-10-21 21:51 UTC says scanning, unpublished and hidden. Await the security agent, then verify public discovery and the marketplace installation. No duplicate submission or data PR is needed. |
 
 Cursor IDE 3.24.18 is now installed from the official vendor download after disk
 image, code-signature and Gatekeeper checks. Its separate, fresh QA profile opens
