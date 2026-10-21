@@ -162,3 +162,7 @@
 - [298](./298.md) — A second app link arriving while the first opens is dropped; user lands on the first ledger
 - [299](./299.md) — "Saving…" toast disappears after 2 s while the save is still running
 - [300](./300.md) — A failed star in Browse ledgers toasts over whatever screen the user moved to
+- [301](./301.md) — A new budget reads "Above target" at once: first period budgeted from today vs whole-period actuals ($16.13 vs $300, 1860%)
+- [302](./302.md) — A negative Expenses budget is stored as an income target: always red, 0% used
+- [303](./303.md) — Update Budget can save an income target with the wrong sign while ledger options load
+- [304](./304.md) — Budgets on Liabilities/Assets get favourability backwards (owner decision)
