@@ -95,7 +95,7 @@
 - [928 — Recognize opened legacy-include accounts in CSV validation](./928.md) — minor CLI root-scope gap; valid source/fallback/rule names refuse and full-account categories route to suspense despite a compatible include, reproduced 2026-10-21.
 - [929 — Keep missing dependencies from using old snapshot files](./929.md) — major CLI snapshot mismatch; a refresh loads old transactions or plugin code absent from the current source and the copy passes check, reproduced 2026-10-21.
 - [930 — Explain rejected locale date shorthand accurately](./930.md) — trivial CLI diagnostic follow-up to 783; `%x`/`%c` include the year but the guard claims they would read every row as 1900, reproduced 2026-10-21.
-- [931 — Recognize FX transfer counterparts across price placement](./931.md) — major CLI double-booking gap; a priced cash leg hides the other bank's unpriced statement row, changing balances and net worth at exit 0, reproduced 2026-10-21.
+- [931 — Match FX transfer counterparts with plain bank amounts](./931.md) — major CLI double-booking gap; a price or cost on a cash leg hides the other bank's plain statement row, changing balances and net worth at exit 0, reproduced 2026-10-21.
 
 The 27 findings from the MCP QA auth sweep against the hosted endpoint (023–054, less the five under [Dropped](#dropped)) were fixed in `backend-cluster/backend-v2` and closed on 2026-10-02 and 2026-10-03; each note under [`done/`](./done/) records what shipped and in which commit. None has been re-observed against the hosted endpoint yet — the fixes reach it with the next backend deploy.
 
