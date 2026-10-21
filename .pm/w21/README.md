@@ -8,7 +8,4 @@
 
 ## Inbox
 
-
-## Inbox
-
 - [038](./038.md) — Reports silently drops spending in other currencies; Home and Accounts say "not in total", Reports says nothing
