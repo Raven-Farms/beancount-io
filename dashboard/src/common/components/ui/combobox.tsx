@@ -336,8 +336,11 @@ export function Combobox({
                   data-combobox-item-index={`${instanceId}-${index}`}
                   className={cn(
                     "relative flex cursor-pointer items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-hidden select-none",
+                    // The accent palette disappears in forced colors; the
+                    // option Enter will apply keeps a system highlight
+                    // (w4/273).
                     highlightedIndex === index &&
-                      "bg-accent text-accent-foreground",
+                      "bg-accent text-accent-foreground forced-colors:bg-[Highlight] forced-colors:text-[HighlightText]",
                   )}
                   style={
                     option.indent
