@@ -81,6 +81,12 @@ let ledgerId: string;
 let permissionLedgerId: string;
 let permissions: { push: boolean; admin: boolean };
 let permissionError: Error | undefined;
+// A permission read answered that access is gone. A refetch that merely
+// failed in transit keeps the cached grant (w21/151).
+const accessLost = () =>
+  Object.assign(new Error("Forbidden"), {
+    graphQLErrors: [{ extensions: { code: "FORBIDDEN" } }],
+  });
 let guest: any;
 let filters: ScopedTransactionFilters;
 let routes: any[];
@@ -370,15 +376,14 @@ for (const [name, screen] of [
     for (const access of [
       "reader",
       "guest",
-      "failed permission query",
+      "lost access",
       "stale other ledger permissions",
     ] as const) {
       it(`does not offer write controls for ${access}`, () => {
         if (access === "reader") permissions = { push: false, admin: false };
         if (access === "guest")
           guest = { transactionFilters: transactionFiltersVar };
-        if (access === "failed permission query")
-          permissionError = new Error("Offline");
+        if (access === "lost access") permissionError = accessLost();
         if (access === "stale other ledger permissions")
           permissionLedgerId = "user/previous";
         const tree = render(screen);
@@ -481,14 +486,14 @@ describe("Home holdings sheet", () => {
     expect(sheetAccess()).toBe(true);
   });
 
-  it("withholds it from readers, guests and unknown permissions", () => {
+  it("withholds it from readers, guests and a lost grant", () => {
     permissions = { push: false, admin: false };
     expect(sheetAccess()).toBe(false);
     permissions = { push: true, admin: false };
     guest = { transactionFilters: transactionFiltersVar };
     expect(sheetAccess()).toBe(false);
     guest = null;
-    permissionError = new Error("Offline");
+    permissionError = accessLost();
     expect(sheetAccess()).toBe(false);
   });
 });

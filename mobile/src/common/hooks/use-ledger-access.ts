@@ -1,7 +1,7 @@
 import { useReactiveVar } from "@apollo/client";
 import { ledgerVar } from "@/common/vars";
 import { useGetLedgerQuery } from "@/generated-graphql/graphql";
-import { canWriteLedger } from "@/common/ledger-access";
+import { selectCanWrite } from "@/common/ledger-access";
 import { useGuest } from "@/common/guest/guest-context";
 
 export function useLedgerAccess() {
@@ -13,11 +13,7 @@ export function useLedgerAccess() {
     fetchPolicy: "cache-and-network",
   });
   return {
-    canWrite:
-      !guest &&
-      !error &&
-      data?.getLedger.id === ledgerId &&
-      canWriteLedger(data?.getLedger.permissions),
+    canWrite: selectCanWrite({ guest: !!guest, ledgerId, data, error }),
     loading,
     error,
     refetch,
