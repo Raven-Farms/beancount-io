@@ -4,6 +4,8 @@
 
 ## Inbox
 
+- [299 — Return focus after restoring a public reader's hidden dashboard](./299.md) — minor; dashboard QA, 2026-10-21; the empty-state opener disappears and public readers have no header fallback, so closing Customize leaves BODY focus.
+
 - [298 — Make calendar arrow keys follow the rendered RTL day grid](./298.md) — minor; dashboard QA, 2026-10-21; shared Calendar omits DayPicker direction, so Persian horizontal keys move against the visible grid.
 
 - [243 — Keep narrow Documents columns readable](./blocked/243.md) — minor; dashboard QA, 2026-10-20. — **blocked:** fix shipped in `19547f970`; awaiting live 390px geometry check
