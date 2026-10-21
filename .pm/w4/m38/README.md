@@ -1,6 +1,6 @@
 # w4 · m38 — Accept supported early-year dates across directive writes
 
-**Worker:** worker1 **Goal:** Valid canonical directive dates in years 0001–0099 survive shared validation, routing and serialization on every eligible API surface. **Status:** in progress (t001–t003 done)
+**Worker:** worker1 **Goal:** Valid canonical directive dates in years 0001–0099 survive shared validation, routing and serialization on every eligible API surface. **Status:** in progress (t001–t004 done)
 
 **Severity:** minor. **Estimate:** 130m across six tasks, backend-v2 only.
 
@@ -11,7 +11,7 @@
 | [t001](./done/t001.md) | Preserve the supplied year in directive calendar validation — **DONE** | 30m | — |
 | [t002](./done/t002.md) | Preserve early-year routing and serialization in both write workflows — **DONE** | 25m | t001 |
 | [t003](./done/t003.md) | Verify the date-input adoption surface — **DONE** | 10m | t002 |
-| [t004](./t004.md) | Simplify the bounded calendar-date repair | 10m | t003 |
+| [t004](./done/t004.md) | Simplify the bounded calendar-date repair — **DONE** | 10m | t003 |
 | [t005](./t005.md) | Prove strict-calendar behavior and eligible adapter parity | 45m | t003 |
 | [t006](./t006.md) | Close out and archive the milestone | 10m | t004, t005 |
 
