@@ -86,3 +86,11 @@
 - [136](./136.md) — Home's Latest Updates always requests the English feed
 - [137](./137.md) — Ledger rows in Home's Latest Updates do nothing when tapped
 - [138](./138.md) — Pull-to-refresh on Home doesn't refresh the bell's error badge
+- [139](./139.md) — VoiceOver reads a Merchants row as only the payee (drops count, Recurring, cadence, Overdue)
+- [140](./140.md) — VoiceOver on transaction rows omits narration and says "Pending" in English
+- [141](./141.md) — Controls read with icon-font glyphs ("…U+F23B"), missing button roles; guardrail can't catch them
+- [142](./142.md) — VoiceOver labels drop distinguishing text (file vs folder, template descriptions, which budget Update/Delete acts on)
+- [143](./143.md) — No headings in journals, lists or cards; the Headings rotor can't navigate
+- [144](./144.md) — File editor can't dismiss the keyboard for writable non-.bean files
+- [145](./145.md) — Payee suggestions, Account Picker and Browse Ledgers can't bring last rows above the keyboard
+- [146](./146.md) — New Transaction: with 4+ postings the number pad covers Add posting, Remainder and save errors
