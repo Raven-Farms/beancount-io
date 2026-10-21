@@ -17,7 +17,9 @@ import { config } from "@/config/config";
  * `?oneTimeToken=`. `page_referrer` is cut to its origin for the same reason,
  * since the page after a reset is referred by the token URL. Enhanced
  * Measurement "Page views" must stay OFF in GA4 Admin → Data Streams: it
- * reads the raw URL on every history change.
+ * reads the raw URL on every history change. Enhanced Measurement "Site
+ * search" must stay OFF too: it reads `?query=` itself and would send the
+ * full BQL text as `search_term`, which no option here can stop (w4/265).
  */
 export function GoogleAnalytics() {
   const { gaMeasurementId, gaDebugMode } = config;
