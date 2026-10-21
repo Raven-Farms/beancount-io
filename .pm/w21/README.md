@@ -14,7 +14,6 @@
 
 - [064](./blocked/064.md) — A token refresh whose response is lost signs the user out on the next refresh (rotated token replayed → grant revoked) — **blocked:** needs an owner decision (ADR) on a refresh-token reuse grace window
 - [065](./blocked/065.md) — One early-year entry (e.g. 0050) makes the balance sheet 23,718 monthly points (3 MB) and the app stalls — **blocked:** needs an approach decision (per-pill fetch vs server downsample) and a simulator profile of the stall
-- [114](./114.md) — Transactions search text carries over to another ledger after a drawer switch
 - [115](./115.md) — Transaction filters survive sign-out and sign-in (missing from clearServerScopedState)
 - [116](./116.md) — A load-more page landing after a filter/ledger change is appended to the new list
 - [117](./117.md) — Saves/deletes show raw transport text ("Network request failed", "OAuth refresh failed"); no mobile raw-error guard

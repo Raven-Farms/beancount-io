@@ -40,6 +40,7 @@ import {
   groupToSections,
 } from "./utils/transaction-display-utils";
 import { toPlainSearchFilter } from "./utils/plain-search-filter";
+import { searchForLedger, type ScopedSearch } from "./filters/scoped-search";
 import { mergeJournalPage } from "./utils/merge-journal-page";
 import {
   countActiveFilters,
@@ -107,12 +108,23 @@ const TransactionList = () => {
   const theme = useTheme().colorTheme;
   const { t, locale } = useTranslations();
   const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
-  const [searchQuery, setSearchQuery] = useState<string>("");
+  // Kept with its ledger, so a switch starts with an empty box (w21/114).
+  const [scopedSearch, setScopedSearch] = useState<ScopedSearch>({
+    ledgerId,
+    text: "",
+  });
+  const searchQuery = searchForLedger(scopedSearch, ledgerId);
+  const setSearchQuery = (text: string) => setScopedSearch({ ledgerId, text });
 
   // Search runs server-side through `query.filter`, so it reaches transactions
   // past the first page — but only once typing settles. Quote + escape so
   // ordinary merchant punctuation is a STRING literal, not advanced-filter syntax.
-  const search = useDebouncedValue(searchQuery.trim(), 300);
+  // The debounced copy carries its ledger too, so the last term typed on the
+  // previous ledger is never sent for this one while it settles.
+  const search = searchForLedger(
+    useDebouncedValue(scopedSearch, 300),
+    ledgerId,
+  ).trim();
   const filter = useMemo(() => toPlainSearchFilter(search), [search]);
 
   // Status / date range / account, picked in the filter modal. Like the search

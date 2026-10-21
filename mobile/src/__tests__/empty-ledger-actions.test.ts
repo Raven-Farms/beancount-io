@@ -507,3 +507,23 @@ describe("Transactions after a failed refresh", () => {
     expect(text(tree).includes("Network request failed")).toBe(false);
   });
 });
+
+// w21/114: a search typed on one ledger went on filtering the next one's
+// journal after a drawer switch.
+describe("Transactions search across a ledger switch", () => {
+  it("starts the other ledger with an empty box and the full journal", () => {
+    const tree = render(TransactionsScreen);
+    find(tree, "TransactionsHeader")[0].props.onSearchChange("farm");
+    const searched = render(TransactionsScreen);
+    expect(find(searched, "TransactionsHeader")[0].props.searchQuery).toBe(
+      "farm",
+    );
+    expect(journalVariables.query.filter).toBe('"farm"');
+
+    ledgerId = "user/other";
+    permissionLedgerId = ledgerId;
+    const switched = render(TransactionsScreen);
+    expect(find(switched, "TransactionsHeader")[0].props.searchQuery).toBe("");
+    expect(journalVariables.query.filter).toBe(undefined);
+  });
+});
