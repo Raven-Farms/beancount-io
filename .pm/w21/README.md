@@ -106,3 +106,4 @@
 - [156](./156.md) — Deleting an account leaves its API keys in place and still accepted for identity checks
 - [157](./157.md) — A failed account deletion has already cancelled the subscription and unlinked banks
 - [158](./158.md) — Delete Account phrase must match exactly; a trailing space greys out Delete with no reason
+- [159](./159.md) — New Transaction amounts start with a real "0.00" a tap doesn't select; typing gives "0.0012.50" and an error
