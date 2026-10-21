@@ -1,6 +1,6 @@
 # w6 · m8 — Claim and publish the hosted connector on Smithery and Glama
 
-**Worker:** worker1 **Goal:** Users find one accurate, owned, authenticated listing per platform for the existing hosted MCP endpoint. **Status:** todo (t001 done; t002 next; t003 blocked on existing w2/088)
+**Worker:** worker1 **Goal:** Users find one accurate, owned, authenticated listing per platform for the existing hosted MCP endpoint. **Status:** todo (t001 done; t002 blocked by removed Smithery publisher mutation; t003 blocked on w2/088)
 
 **Implementation estimate:** ~3h, excluding external review queues and the standing closing tasks.
 
@@ -9,7 +9,7 @@
 | id | title | est | depends_on |
 | --- | --- | --- | --- |
 | [t001](./done/t001.md) | Audit imported listings and prepare shared submission materials — **DONE** | 30m | — |
-| [t002](./t002.md) | Publish or claim Smithery's existing hosted-server listing | 45m | t001 |
+| [t002](./t002.md) | Publish or claim Smithery's existing hosted-server listing — **BLOCKED** | 45m | t001 |
 | [t003](./t003.md) | Align the existing Glama connector after w2/088's ownership and health repair — **BLOCKED** | 45m | t001, w2/088 |
 | [t004](./t004.md) | Verify both public listings through fresh authenticated connections | 60m | t002, t003 |
 | [t005](./t005.md) | Adoption surface | 30m | t004 |
@@ -50,3 +50,5 @@
 ## Blocked
 
 - **t003:** w2/088 is already blocked on operator Glama admin access and a private QA test profile. Its unauthenticated 401/discovery check is complete on origin/main; this milestone does not repeat that repair. **Unblock:** the operator claims the existing connector, configures the dedicated QA synthetic-ledger test profile privately, records a full day of successful checks, and resolves w2/088; then t003 aligns the remaining listing metadata. **Owner:** the publisher/operator. t001 and t002 can proceed independently.
+
+- **t002:** the signed-in legacy Smithery wizard returns 403 “Updating servers has been removed”; the candidate listing remains not found. **Unblock:** a working supported direct-directory intake/claim route, followed by ownership/scan and fresh connection proof. **Owner:** Smithery/Arcade and publisher. Details and preserved packet: t002; d9c3490f0.
