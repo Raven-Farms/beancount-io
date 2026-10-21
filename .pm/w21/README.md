@@ -171,3 +171,9 @@
 - [341](./341.md) — File editor text ignores Dynamic Type (fixed 14px), including AX2
 - [342](./342.md) — Web view process kill silently resets the editor draft and re-inserts the last shortcut
 - [343](./343.md) — Files over 10 MiB still return content: null on REST/GraphQL/MCP (185 server half)
+- [344](./344.md) — Journal app link drops ?account=/?time=, keeps old filter
+- [345](./345.md) — README live-demo link forces sign-in instead of guest mode
+- [346](./346.md) — Profile links / Android /ledger prefix land on Home or not-found
+- [347](./347.md) — File link on non-main branch opens main's file, editable
+- [348](./348.md) — beancount.io link opens same-named ledger on self-hosted server
+- [349](./349.md) — Accounts/Files-tree/new-entry links open Home or Transactions
