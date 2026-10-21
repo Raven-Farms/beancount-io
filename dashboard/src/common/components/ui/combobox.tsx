@@ -41,6 +41,11 @@ interface ComboboxProps extends ComboboxFieldProps {
   notice?: React.ReactNode;
 }
 
+/** A key event an input method is consuming; keyCode 229 is how some engines report it. */
+function isCompositionKey(event: KeyboardEvent): boolean {
+  return event.isComposing || event.keyCode === 229;
+}
+
 export function Combobox({
   options,
   value,
@@ -136,6 +141,10 @@ export function Combobox({
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    // Keys during an input-method composition belong to the IME: its Enter
+    // confirms the composed text and its Escape cancels it, so neither may
+    // select, commit or dismiss here (w4/286).
+    if (isCompositionKey(e.nativeEvent)) return;
     if (e.key === "Escape") {
       // Escape dismisses the suggestions and keeps editing focus. It must not
       // blur: in `triggerOn="blur"` mode a blur commits the draft, which turned
@@ -283,6 +292,11 @@ export function Combobox({
           }}
           align="start"
           onOpenAutoFocus={(e) => e.preventDefault()}
+          // Radix hears Escape before the input does; an IME's Escape only
+          // cancels its composition.
+          onEscapeKeyDown={(e) => {
+            if (isCompositionKey(e)) e.preventDefault();
+          }}
           onInteractOutside={(e) => {
             // Prevent closing when interacting with the input or clear button
             if (containerRef.current?.contains(e.target as Node)) {
