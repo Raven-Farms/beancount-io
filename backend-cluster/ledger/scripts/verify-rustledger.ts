@@ -1626,6 +1626,55 @@ async function main(): Promise<void> {
     "an included undecodable file is the one error, naming it (w23/011)",
   );
 
+  // w23/012: rustledger 0.24.0 collapses cost(sum(position)) over several
+  // currencies into one mislabelled Amount; the query path refuses that. When
+  // a bump fixes the engine, the first check fails and the guard can go.
+  const costFiles: FileMap = {
+    "main.bean": [
+      "2024-01-01 open Assets:Hours",
+      "2024-01-01 open Assets:Broker",
+      "2024-01-01 open Assets:Cash",
+      "2024-01-01 open Equity:Opening",
+      '2024-01-02 * "hours"',
+      "  Assets:Hours  -13 VACHR",
+      "  Equity:Opening",
+      '2024-01-03 * "buy"',
+      "  Assets:Broker  17 GLD {268.22 USD}",
+      "  Assets:Cash",
+      "",
+    ].join("\n"),
+  };
+  const rawCost = await withLedger(costFiles, "main.bean", (ledger) =>
+    ledger.query(
+      "SELECT cost(sum(position)) WHERE account ~ '^Assets:(Hours|Broker)'",
+    ),
+  );
+  assert(
+    JSON.stringify(rawCost.rows) ===
+      JSON.stringify([[{ number: "4546.74", currency: "VACHR" }]]),
+    "raw engine still collapses a multi-currency cost(sum(position)) (w23/012)",
+  );
+  const guardedCost = await queryLedgerFilesResult(
+    costFiles,
+    "main.bean",
+    "SELECT cost(sum(position)) WHERE account ~ '^Assets:(Hours|Broker)'",
+  );
+  assert(
+    guardedCost.rows.length === 0 &&
+      guardedCost.errors[0]?.message.includes("sum(cost(position))") === true,
+    "the query path refuses the collapsed cost and names sum(cost(position))",
+  );
+  const singleCost = await queryLedgerFilesResult(
+    costFiles,
+    "main.bean",
+    "SELECT cost(sum(position)) WHERE account ~ '^Assets:Broker'",
+  );
+  assert(
+    JSON.stringify(singleCost.rows) ===
+      JSON.stringify([[{ number: "4559.74", currency: "USD" }]]),
+    "a single-currency cost(sum(position)) is still answered",
+  );
+
   console.log("\nAll rustledger engine checks passed.");
 }
 

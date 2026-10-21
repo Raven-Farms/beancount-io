@@ -34,6 +34,7 @@ import {
   parseableFiles,
   reportUndecodableSources,
 } from "./undecodable-sources";
+import { collapsedCostOfSumError } from "./cost-of-sum-guard";
 import { OPTION_LINE_RE } from "./beancount-options";
 import { directiveToText } from "./journal-serialize";
 import {
@@ -742,7 +743,12 @@ export async function queryLedgerFilesResultInProcess(
         }
       }
       try {
-        return ledger.query(query);
+        const result = ledger.query(query);
+        return (
+          collapsedCostOfSumError(query, result, (probe) =>
+            ledger.query(probe),
+          ) ?? result
+        );
       } catch (error) {
         if (isUnsupportedIntegerResultError(error)) {
           return unsupportedIntegerResultQueryError(

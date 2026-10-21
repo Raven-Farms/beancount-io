@@ -6,7 +6,6 @@
 
 ## Inbox
 
-- [012](./012.md) — BQL `cost(sum(position))` over mixed currencies returns one mislabelled amount (rustledger 0.24.0)
 - [013](./013.md) — statement summaries add balances as floats (`netWorth: 906.5799999999999`)
 - [014](./014.md) — listing a nonexistent directory returns `[]` on every surface, indistinguishable from empty
 - [015](./015.md) — BQL position cells drop the lot date and label (`{197.06 USD}` vs `{197.06 USD, 2015-09-15}`)
