@@ -33,6 +33,7 @@ import {
   fontWeights,
   gutter,
   prefersStackedLayout,
+  scaleLineHeights,
   space,
   useTheme,
 } from "@/common/theme";
@@ -323,11 +324,25 @@ const getStyles = (theme: ColorTheme) =>
     identityNameSkeleton: { flex: 1, paddingVertical: 4 },
   });
 
+/**
+ * The drawer's styles, their line heights grown with the text size: fixed
+ * point line heights clipped "Ledgers", "+ New" and every ledger name to
+ * their top half at AX2 (w21/111).
+ */
+function useDrawerStyles() {
+  const styles = useThemeStyle(getStyles);
+  const { fontScale } = useWindowDimensions();
+  return useMemo(
+    () => scaleLineHeights(styles, fontScale),
+    [styles, fontScale],
+  );
+}
+
 /** Who is signed in, pinned under the drawer's menu. It is also the drawer's
  * way into Settings (Profile lives there), so it opens Settings in every
  * state: a skeleton while the profile loads, a plain Settings row if it can't. */
 function DrawerIdentityRow({ onPress }: { onPress: () => void }): JSX.Element {
-  const styles = useThemeStyle(getStyles);
+  const styles = useDrawerStyles();
   const { t } = useTranslations();
   const { user, displayName, loading } = useCurrentUser();
 
@@ -399,7 +414,7 @@ function DrawerMenuRow({
   onPress: () => void;
   disabled?: boolean;
 }): JSX.Element {
-  const styles = useThemeStyle(getStyles);
+  const styles = useDrawerStyles();
   const theme = useTheme().colorTheme;
 
   return (
@@ -468,7 +483,7 @@ export function LedgerDrawer({
   children,
   data,
 }: LedgerDrawerProps): JSX.Element {
-  const styles = useThemeStyle(getStyles);
+  const styles = useDrawerStyles();
   const theme = useTheme().colorTheme;
   const { t } = useTranslations();
   const toast = useToast();

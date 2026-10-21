@@ -36,3 +36,28 @@ export function prefersStackedLayout(fontScale: number | undefined): boolean {
   }
   return fontScale >= STACKED_LAYOUT_FONT_SCALE;
 }
+
+/**
+ * `styles` with each fixed `lineHeight` grown by the text size. Dynamic Type
+ * scales `fontSize` but not a point `lineHeight`, so at AX2 a single-line
+ * label's box held only the top half of its glyphs (w21/111). The default and
+ * smaller sizes keep their line heights exactly.
+ */
+export function scaleLineHeights<T extends Record<string, object>>(
+  styles: T,
+  fontScale: number | undefined,
+): T {
+  if (typeof fontScale !== "number" || !Number.isFinite(fontScale)) {
+    return styles;
+  }
+  if (fontScale <= 1) return styles;
+  const scaled: Record<string, object> = {};
+  for (const [name, style] of Object.entries(styles)) {
+    const lineHeight = (style as { lineHeight?: unknown }).lineHeight;
+    scaled[name] =
+      typeof lineHeight === "number"
+        ? { ...style, lineHeight: Math.ceil(lineHeight * fontScale) }
+        : style;
+  }
+  return scaled as T;
+}

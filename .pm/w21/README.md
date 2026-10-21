@@ -14,7 +14,6 @@
 
 - [064](./blocked/064.md) — A token refresh whose response is lost signs the user out on the next refresh (rotated token replayed → grant revoked) — **blocked:** needs an owner decision (ADR) on a refresh-token reuse grace window
 - [065](./blocked/065.md) — One early-year entry (e.g. 0050) makes the balance sheet 23,718 monthly points (3 MB) and the app stalls — **blocked:** needs an approach decision (per-pill fetch vs server downsample) and a simulator profile of the stall
-- [111](./111.md) — At AX2 the drawer clips "Ledgers", "+ New" and every ledger name to the top half of the text
 - [112](./112.md) — Cash flow Sankey leaves refunds out of Savings, so Savings ≠ Net Profit and the VoiceOver summary contradicts itself
 - [113](./113.md) — Journal account filter matches substrings: `Assets:Cash` also returns `Assets:CashApp` (REST/GraphQL/MCP)
 - [114](./114.md) — Transactions search text carries over to another ledger after a drawer switch
