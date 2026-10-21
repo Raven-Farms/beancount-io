@@ -5,6 +5,7 @@ import { getFormatDate } from "@/common/format-util";
 import {
   budgetForInterval,
   periodsThrough,
+  throughCurrentPeriod,
   prepareBudgetHistory,
   type BudgetGroup,
 } from "@/screens/budget-screen/selectors/budget-selectors";
@@ -66,12 +67,17 @@ export function useBudgetActuals({
   });
 
   const series: BudgetSeriesPoint[] = useMemo(() => {
-    const items = data?.getLedgerIntervalTotals ?? [];
+    // Actuals stop at today, so the budget they are measured against does too.
+    const today = getFormatDate(new Date());
+    const fetched = data?.getLedgerIntervalTotals ?? [];
+    // All time runs to the last posting, even a future one (w21/168).
+    const items =
+      time === undefined
+        ? throughCurrentPeriod(fetched, group.interval, today)
+        : fetched;
     // Prepared once per group: `budgetForInterval` runs per charted period, and
     // the `all` span can return a hundred of them.
     const history = prepareBudgetHistory(group.budgetHistory);
-    // Actuals stop at today, so the budget they are measured against does too.
-    const today = getFormatDate(new Date());
     // And start where the window does: its first period is often partial.
     const windowStart = timeWindowStart(time, today);
     const point = (date: string, actual: number) => ({

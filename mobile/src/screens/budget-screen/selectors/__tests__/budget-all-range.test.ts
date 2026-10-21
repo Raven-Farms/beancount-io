@@ -4,6 +4,7 @@ import {
   budgetForInterval,
   periodsThrough,
   prepareBudgetHistory,
+  throughCurrentPeriod,
   type BudgetGroup,
 } from "../budget-selectors";
 import { selectBudgetCardStats } from "../select-budget-card-stats";
@@ -90,6 +91,35 @@ describe("Budget card on ALL", () => {
     expect(source.includes("if (time === undefined && last)")).toBe(true);
     expect(
       source.includes("periodsThrough(last.date, group.interval, today)"),
+    ).toBe(true);
+  });
+});
+
+// w21/168: a pre-entered November rent cheque made every card on ALL
+// describe November at a budget of 0.
+describe("ALL with a future-dated entry", () => {
+  it("ends at the period containing today", () => {
+    const items = [
+      { date: "2026-09-30", balance: {} },
+      { date: "2026-10-31", balance: {} },
+      { date: "2026-11-30", balance: {} },
+    ];
+    expect(
+      throughCurrentPeriod(items, "monthly", "2026-10-21").map((i) => i.date),
+    ).toEqual(["2026-09-30", "2026-10-31"]);
+    // Nothing after today: unchanged.
+    expect(
+      throughCurrentPeriod(items.slice(0, 2), "monthly", "2026-10-21"),
+    ).toEqual(items.slice(0, 2));
+  });
+
+  it("is applied to the unwindowed range only", () => {
+    const source = fs.readFileSync(
+      path.join(__dirname, "..", "..", "hooks", "use-budget-actuals.ts"),
+      "utf8",
+    );
+    expect(
+      source.includes("? throughCurrentPeriod(fetched, group.interval, today)"),
     ).toBe(true);
   });
 });

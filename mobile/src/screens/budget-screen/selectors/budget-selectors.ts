@@ -290,6 +290,21 @@ export function groupBudgetEntries(
 }
 
 /**
+ * An all-time series cut at the period containing `today`. The totals query
+ * runs to the last posting, even a pre-entered one, so one rent cheque for
+ * next month made every card on ALL describe November, at a budget of 0
+ * (w21/168). Windowed ranges already end today on the server.
+ */
+export function throughCurrentPeriod<T extends { date: string }>(
+  items: readonly T[],
+  interval: string,
+  today: string,
+): T[] {
+  const { end } = currentPeriodRange(interval, today);
+  return items.filter((item) => item.date <= end);
+}
+
+/**
  * The period-end dates after `lastDate`'s period, through the period that
  * contains `today`. An all-time totals query returns only periods with
  * postings, so a budget active since the last one lost its recent, unspent
