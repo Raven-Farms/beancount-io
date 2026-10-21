@@ -152,3 +152,11 @@
 - [222](./222.md) — New File's "already exists" check misses files inside folders
 - [223](./223.md) — Dashboard file links lose ?lineNumber= when opened in the app
 - [224](./224.md) — VoiceOver reads a Recent changes row as the subject only (no author, date or SHA)
+- [225](./225.md) — Returning to the app refreshes Home's charts but not its budget panel or the drawer's ledger list
+- [226](./226.md) — Changing your username leaves the app on old ledger ids (FORBIDDEN everywhere; per-ledger state lost)
+- [227](./227.md) — Persisted cache is deleted past 1 MiB and never saved again that session
+- [228](./228.md) — New Transaction stamps the first operating currency on every posting; no currency or price control
+- [229](./229.md) — Posting picker and payee autofill offer accounts not yet open on a back-dated entry
+- [230](./230.md) — Persian / Arabic-Indic digits are refused in New Transaction amounts
+- [231](./231.md) — Zero-decimal currencies are written as "1500.00 JPY"
+- [232](./232.md) — Pasted " -12.50" saves negative but shows positive; the sign toggle then breaks it
