@@ -5,7 +5,8 @@ import {
   notInTotalOf,
   type Holding,
 } from "../../../common/balance-display";
-import { formatUnits } from "../../../common/number-utils";
+import { amountScale, formatUnits } from "../../../common/number-utils";
+import { currencyMinorUnits } from "../../../common/currency-util";
 import { formatAccountJournalChange } from "../utils/format-account-journal-balance";
 import { formatLedgerDate } from "../../../common/date-format";
 
@@ -97,9 +98,34 @@ function asString(value: number | string | undefined): string {
 /** A posting as the entry's untyped JSON may carry it; every field is optional. */
 type RawPosting = {
   account?: string;
-  units?: { number?: string | number } | null;
+  units?: { number?: string | number; currency?: string } | null;
   cost?: { number?: string | number; currency?: string } | null;
+  price?: { number?: string | number; currency?: string } | null;
 };
+
+/**
+ * The most fraction digits any posting recorded in `currency`: its own units,
+ * and the cost or price it was bought or sold at. A converted figure is a
+ * product of such numbers — 0.12345678 units at 60123.45 USD is 7422.647539491
+ * — and its scale is the sum of theirs, which says nothing about how precisely
+ * money was ever recorded (w21/207).
+ */
+function recordedScale(
+  items: readonly AccountJournalItem[],
+  currency: string,
+): number {
+  let widest = 0;
+  for (const item of items) {
+    for (const posting of postingsOf(item.entry)) {
+      for (const amount of [posting?.units, posting?.cost, posting?.price]) {
+        if (amount?.currency === currency && amount.number != null) {
+          widest = Math.max(widest, amountScale(String(amount.number)));
+        }
+      }
+    }
+  }
+  return widest;
+}
 
 /** The entry's postings. `entry` is an opaque JSON scalar, so read defensively. */
 function postingsOf(entry: AccountJournalItem["entry"]): RawPosting[] {
@@ -363,6 +389,13 @@ export function selectAccountJournalRows(
   items: AccountJournalItem[],
   units?: AccountJournalUnits,
 ): AccountJournalRow[] {
+  // Money views read at the precision the ledger recorded in the currency, not
+  // at whatever a unit-times-cost conversion happened to produce.
+  // Entries that carry no postings give nothing to measure against.
+  const moneyCap =
+    units || !items.some((item) => postingsOf(item.entry).length > 0)
+      ? Infinity
+      : Math.max(currencyMinorUnits(currency), recordedScale(items, currency));
   return items.map((item) => {
     const row = {
       key: accountJournalItemKey(item),
@@ -388,7 +421,7 @@ export function selectAccountJournalRows(
         ...otherChanges,
         change: change.number,
         balance: balance.number,
-        moneyScale: Math.max(change.scale, balance.scale),
+        moneyScale: Math.min(Math.max(change.scale, balance.scale), moneyCap),
       };
     }
     const balance = amountIn(item.balance, units.currency);

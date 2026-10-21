@@ -17,7 +17,6 @@
 - [180](./blocked/180.md) — Budget actuals use raw prefix match (`Transport` counts `Transportation`), unlike Reports — **blocked:** needs an owner decision between component matching on the server (a Fava break) and a per-account breakdown for the client
 - [201](./blocked/201.md) — Missing file: GraphQL returns null, REST/MCP NOT_FOUND; directory path differs too — **blocked:** needs an owner decision on the file-read contract (null vs NOT_FOUND), which the dashboard's README reads and shipped mobile builds rely on
 - [206](./blocked/206.md) — Refund/return receipts are always prefilled as a purchase — **blocked:** needs an owner-approved AI-quota evaluation and a parse-contract decision (`isRefund` vs signed amount)
-- [207](./207.md) — USD+commodity account journal shows dollars to 9–10 decimals ("+$7,422.647539491")
 - [208](./208.md) — Equal direct/inverse price quotes: holding labelled "at cost (no price)" though valued at market
 - [209](./209.md) — Home hides stale prices once the ledger is quiet this month; Accounts flags them
 - [210](./210.md) — Holdings sheet labels a user-typed price "Live price" and applies the feed's staleness rule

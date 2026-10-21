@@ -774,3 +774,84 @@ describe("a day that nets to zero", () => {
     expect(day.totalChange).toBe("+$12.30");
   });
 });
+
+// w21/207: buying a commodity at cost left the account's dollars at 9-10
+// decimals ("+$7,422.647539491") from the buy onward, though its Accounts row
+// read $8,427.65.
+describe("money precision in an account that holds a commodity", () => {
+  const buy = item(
+    {
+      date: "2026-08-04",
+      directive_type: "Transaction",
+      narration: "QA EXCH BUY",
+      postings: [
+        {
+          account: "Assets:Exch",
+          units: { number: "0.12345678", currency: "QABTC" },
+          cost: { number: "60123.45", currency: "USD" },
+        },
+        {
+          account: "Assets:Checking",
+          units: { number: "-7422.65", currency: "USD" },
+        },
+      ],
+    },
+    { USD: "7422.647539491" },
+    { USD: "8422.647539491" },
+  );
+  const deposit = item(
+    {
+      date: "2026-08-03",
+      directive_type: "Transaction",
+      postings: [
+        {
+          account: "Assets:Exch",
+          units: { number: "1000.00", currency: "USD" },
+        },
+      ],
+    },
+    { USD: "1000.00" },
+    { USD: "1000.00" },
+  );
+  const later = item(
+    {
+      date: "2026-09-01",
+      directive_type: "Transaction",
+      postings: [
+        { account: "Assets:Exch", units: { number: "5.00", currency: "USD" } },
+      ],
+    },
+    { USD: "5.00" },
+    { USD: "8427.647539491" },
+  );
+
+  it("reads a converted figure at the scale the ledger recorded in the currency", () => {
+    const rows = selectAccountJournalRows("USD", [deposit, buy, later]);
+    expect(rows.map((r) => r.moneyScale)).toEqual([2, 2, 2]);
+    const sections = groupAccountJournalRowsToSections(rows, "USD");
+    expect(sections.map((s) => s.totalChange)).toEqual([
+      "+$1,000.00",
+      "+$7,422.65",
+      "+$5.00",
+    ]);
+  });
+
+  it("keeps a sub-cent amount the ledger really recorded", () => {
+    const tax = item(
+      {
+        date: "2026-08-05",
+        directive_type: "Transaction",
+        postings: [
+          {
+            account: "Assets:Exch",
+            units: { number: "0.005", currency: "USD" },
+          },
+        ],
+      },
+      { USD: "0.005" },
+      { USD: "0.005" },
+    );
+    const [only] = selectAccountJournalRows("USD", [tax]);
+    expect(only.moneyScale).toBe(3);
+  });
+});
