@@ -37,4 +37,21 @@ describe("code editor keyboard chrome", () => {
       ),
     ).toBe(true);
   });
+
+  // w21/144: the bar was shown for Beancount files only, so a README.md or
+  // prices.csv had no way to hide the keyboard at all.
+  it("gives every writable file the dismiss control, shortcuts for .bean only", () => {
+    const editor = compactSource("screens/ledger-file-editor-screen/index.tsx");
+    expect(
+      editor.includes(
+        "constshowAccessory=canWrite&&isKeyboardVisible&&initialized;",
+      ),
+    ).toBe(true);
+    expect(editor.includes("shortcuts={beancount}")).toBe(true);
+    expect(
+      compactSource("components/keyboard-accessory-bar/index.tsx").includes(
+        "constbuttons=shortcuts?buildKeyboardShortcutButtons(today,operatingCurrencies):[];",
+      ),
+    ).toBe(true);
+  });
 });

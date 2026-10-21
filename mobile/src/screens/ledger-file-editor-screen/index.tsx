@@ -646,8 +646,10 @@ function LedgerFileEditorSession({
   const keyboardHeight = useKeyboardHeight();
 
   const isKeyboardVisible = keyboardHeight > 0;
-  const showAccessory =
-    canWrite && beancount && isKeyboardVisible && initialized;
+  // Every writable file gets the bar: its chevron is the only way to hide
+  // the keyboard once the web view's own ✓ is suppressed. Only Beancount
+  // files get the insert buttons (w21/144).
+  const showAccessory = canWrite && isKeyboardVisible && initialized;
   const keyboardOverlap = getKeyboardOverlap(keyboardHeight, insets.bottom);
   const editorKeyboardInset = isKeyboardVisible
     ? keyboardOverlap + (showAccessory ? KEYBOARD_ACCESSORY_BAR_HEIGHT : 0)
@@ -840,6 +842,7 @@ function LedgerFileEditorSession({
               onInsert={handleInsert}
               operatingCurrencies={operatingCurrencies}
               onDismiss={() => editorRef.current?.blur()}
+              shortcuts={beancount}
             />
           </View>
         )}

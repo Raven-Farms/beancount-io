@@ -72,18 +72,26 @@ type KeyboardAccessoryBarProps = {
    * bar, whose ✓ was the other way to dismiss it.
    */
   onDismiss?: () => void;
+  /**
+   * The Beancount insert buttons; off for a plain-text file, whose bar is
+   * then just the dismiss control it would otherwise lack (w21/144).
+   */
+  shortcuts?: boolean;
 };
 
 export function KeyboardAccessoryBar({
   onInsert,
   operatingCurrencies = [],
   onDismiss,
+  shortcuts = true,
 }: KeyboardAccessoryBarProps) {
   const styles = useThemeStyle(getStyles);
   const theme = useTheme().colorTheme;
   const { t } = useTranslations();
   const today = getFormatDate(new Date());
-  const buttons = buildKeyboardShortcutButtons(today, operatingCurrencies);
+  const buttons = shortcuts
+    ? buildKeyboardShortcutButtons(today, operatingCurrencies)
+    : [];
 
   return (
     <View testID="ledger-editor-quick-buttons" style={styles.bar}>
