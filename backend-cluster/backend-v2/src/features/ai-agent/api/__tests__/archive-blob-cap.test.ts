@@ -80,8 +80,10 @@ async function refusedAndUpstreamClosed() {
     data: {
       code: "OPERATION_NOT_ALLOWED",
       message: expect.stringContaining("8 MiB"),
-      hint: expect.stringContaining(
-        "beancount://alice/main/archive-download-url",
+      hint: expect.stringMatching(
+        // w23/023: the fallback URL refuses an MCP OAuth token, and the hint
+        // must not promise "the same credential" works there.
+        /beancount:\/\/alice\/main\/archive-download-url[\s\S]*personal API key[\s\S]*MCP OAuth token is scoped to the MCP endpoint/,
       ),
     },
   });

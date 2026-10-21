@@ -69,7 +69,7 @@ async function fixture(identity: Identity = readOnlyToken) {
   const originUrl = `http://127.0.0.1:${address.port}`;
   const config = {
     api: { scopeEnforcement: "enforce" },
-    server: { url: "" },
+    oauth: { issuer: "" },
     gitea: { internalBaseUrl: originUrl },
   } as AppConfig;
   const check = jest.fn().mockResolvedValue(true);
@@ -132,7 +132,7 @@ async function fixture(identity: Identity = readOnlyToken) {
     { apiKeys: false },
   );
   rest.setIdentity(identity);
-  config.server.url = rest.url;
+  config.oauth.issuer = rest.url;
   resolver = new LedgerAssetQueryResolver(service);
   schemaPromise ??= buildSchema({
     resolvers: [LedgerAssetQueryResolver],

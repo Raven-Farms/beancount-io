@@ -143,7 +143,7 @@ async function readArchive(
     throw new OperationNotAllowedError(
       "readArchive",
       `${archive} is larger than the ${MCP_ARCHIVE_BLOB_MAX_MIB} MiB an MCP resource returns`,
-      `Read \`beancount://${ledgerId}/archive-download-url\` for an HTTP URL that streams the archive at any size, and fetch it with this same credential.`,
+      `Read \`beancount://${ledgerId}/archive-download-url\` for an HTTP URL that streams the archive at any size. It is a REST endpoint: fetch it with a personal API key (\`x-api-key\`) or a signed-in browser session. An MCP OAuth token is scoped to the MCP endpoint and is refused there.`,
     );
   return {
     blob: bytes.toString("base64"),
@@ -560,7 +560,7 @@ export const MCP_RESOURCES: readonly McpResourceDescriptor[] = [
     name: "ledgerArchiveDownloadUrl",
     title: "Ledger Archive Download URL",
     description:
-      "Get the authenticated HTTP URL for main.zip. Fetch it with the same session cookie, OAuth bearer token, or API key; no credential is embedded in the URL. This resource discovers a URL and does not deliver archive bytes.",
+      "Get the authenticated HTTP URL for main.zip. It is a REST endpoint: fetch it with a personal API key (x-api-key) or a signed-in browser session; an MCP OAuth token is scoped to the MCP endpoint and is refused there. No credential is embedded in the URL. This resource discovers a URL and does not deliver archive bytes.",
     mimeType: "application/json",
     uriTemplate: "beancount://{owner}/{name}/archive-download-url",
     read: async (context, variables) =>

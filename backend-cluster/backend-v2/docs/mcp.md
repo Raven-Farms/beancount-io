@@ -472,8 +472,11 @@ credential pin and file-read permission, and signs the URL. REST exposes this
 at `GET /api-gateway/v1/asset-download-url` with the same query arguments.
 
 `beancount://{owner}/{name}/archive-download-url` returns the existing HTTP URL
-for `main.zip`. Fetch that URL using the same session cookie, OAuth bearer
-token, or API key. Every archive fetch checks access again and returns a
+for `main.zip`, on the server's public origin. It is a REST endpoint: fetch it
+with a personal API key (`x-api-key`) or a signed-in browser session. An MCP
+OAuth token (audience `{issuer}/api-gateway/mcp`) is scoped to the MCP
+endpoint by design ([ADR 0007](../../../docs/adrs/ADR007-backend-v2-mcp-surface.md)) and is refused there with
+`UNAUTHENTICATED`. Every archive fetch checks access again and returns a
 `private, no-store` response. Credentials are never embedded in archive URLs.
 
 Asset URLs use object-storage signatures and their configured expiry. Previously
@@ -497,10 +500,11 @@ The blob is capped at 8 MiB of archive bytes. A resource read is one JSON-RPC
 message, so the archive is held whole in memory, and base64 adds a third. A
 larger archive is refused with `OPERATION_NOT_ALLOWED` (JSON-RPC `-32003`) as
 soon as its `Content-Length` or the bytes read so far pass the cap, and the
-error's `hint` names `beancount://{owner}/{name}/archive-download-url`. Fetch
-the URL that resource returns with the same credential; it streams at any
-size. It names `main.zip`, and its last path segment takes any other
-`<ref>.zip` or `<ref>.tar.gz`.
+error's `hint` names `beancount://{owner}/{name}/archive-download-url`. The URL
+that resource returns streams at any size, but only with a personal API key or
+browser session, as above; a client connected only through MCP OAuth cannot
+fetch an archive larger than the cap. It names `main.zip`, and its last path
+segment takes any other `<ref>.zip` or `<ref>.tar.gz`.
 
 MCP and both REST spellings share the existing 30-downloads-per-minute
 credential bucket; a refused read still spends one. Every download checks
