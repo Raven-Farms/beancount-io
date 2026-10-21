@@ -30,6 +30,7 @@ const COL = {
   payee: "payee",
   amount: "amount",
   currency: "currency",
+  account: "account",
 } as const;
 
 /**
@@ -46,11 +47,24 @@ export function buildPayeeSeriesBql(
   cutoffDate: string,
   roots?: { expenses?: string; income?: string },
 ): string {
+  // Debited legs too, for a payee that is only ever a transfer (a card
+  // payment, an ATM withdrawal); `mapPayeeSeries` uses them only for such a
+  // payee (w21/173).
   return (
-    "SELECT date as txn_date, payee, number as amount, currency " +
+    "SELECT date as txn_date, payee, number as amount, currency, account " +
     "WHERE payee != '' " +
-    `AND ${moneyRootsBqlFilter(roots)} ` +
+    `AND (${moneyRootsBqlFilter(roots)} OR number > 0) ` +
     `AND date >= ${cutoffDate}`
+  );
+}
+
+/** Whether `account` sits under the ledger's Expenses or Income root. */
+function isMoneyLeg(
+  account: string,
+  roots: { expenses?: string; income?: string },
+): boolean {
+  return [roots.expenses || "Expenses", roots.income || "Income"].some(
+    (root) => account === root || account.startsWith(`${root}:`),
   );
 }
 
@@ -100,6 +114,7 @@ export function payeeSeriesCutoff(today: string): string | null {
  */
 export function mapPayeeSeries(
   table: QueryResultTableLike | null | undefined,
+  roots: { expenses?: string; income?: string } = {},
 ): Map<string, SeriesPoint[]> {
   const result = new Map<string, SeriesPoint[]>();
   if (!table?.types || !table.rows) {
@@ -113,9 +128,13 @@ export function mapPayeeSeries(
   if (dateIdx < 0 || payeeIdx < 0 || amountIdx < 0 || currencyIdx < 0) {
     return result;
   }
+  // Absent from older statements: every row is then a money leg.
+  const accountIdx = columnIndex(table.types, COL.account);
 
-  /** payee → `${date}\0${currency}` → summed amount */
+  /** payee → `${date}\0${currency}` → summed amount, Expenses/Income legs */
   const sums = new Map<string, Map<string, number>>();
+  /** The same from debited transfer legs, for payees with no money legs. */
+  const transfers = new Map<string, Map<string, number>>();
 
   for (const row of table.rows) {
     if (!Array.isArray(row)) {
@@ -128,13 +147,21 @@ export function mapPayeeSeries(
     if (!payee || !date || !currency || amount === null) {
       continue;
     }
-    let forPayee = sums.get(payee);
+    const account = accountIdx < 0 ? null : asString(row[accountIdx]);
+    const target =
+      account === null || isMoneyLeg(account, roots) ? sums : transfers;
+    let forPayee = target.get(payee);
     if (!forPayee) {
       forPayee = new Map();
-      sums.set(payee, forPayee);
+      target.set(payee, forPayee);
     }
     const key = `${date}\0${currency}`;
     forPayee.set(key, (forPayee.get(key) ?? 0) + amount);
+  }
+
+  // A payee that is only ever a transfer reads its debited legs instead.
+  for (const [payee, byKey] of transfers) {
+    if (!sums.has(payee)) sums.set(payee, byKey);
   }
 
   for (const [payee, byKey] of sums) {

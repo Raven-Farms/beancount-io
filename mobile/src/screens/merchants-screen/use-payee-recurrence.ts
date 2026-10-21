@@ -41,7 +41,10 @@ export function usePayeeRecurrence(ledgerId: string | null | undefined) {
   const { detections, enoughHistory } = useMemo(() => {
     // Keyed by merchant, every spelling's events together (w21/169).
     const seriesByPayee = seriesByMerchant(
-      mapPayeeSeries(query.data?.queryShell?.table ?? null),
+      mapPayeeSeries(query.data?.queryShell?.table ?? null, {
+        expenses,
+        income,
+      }),
     );
     const map = new Map<string, ReturnType<typeof detectRecurrence>>();
     // Payees with enough dates to analyse: a manual mark on any other reads
@@ -52,7 +55,7 @@ export function usePayeeRecurrence(ledgerId: string | null | undefined) {
       if (hasEnoughHistory(series)) enough.add(payee);
     }
     return { detections: map, enoughHistory: enough };
-  }, [query.data?.queryShell?.table, today]);
+  }, [query.data?.queryShell?.table, today, expenses, income]);
 
   return { ...query, today, detections, enoughHistory, seriesBql };
 }
