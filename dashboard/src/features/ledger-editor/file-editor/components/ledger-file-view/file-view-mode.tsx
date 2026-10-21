@@ -1,6 +1,6 @@
 import type { GetLedgerFileQuery } from "@/graphql/definitions";
 import { FileActionButtons } from "../non-text-file-views";
-import { downloadFile } from "../../../shared/lib/utils";
+import { downloadFile, downloadableContent } from "../../../shared/lib/utils";
 
 export interface ViewModeActionsProps {
   filename: string;
@@ -24,8 +24,9 @@ export function ViewModeActions({
   canEdit = true,
 }: ViewModeActionsProps) {
   const handleDownloadClick = () => {
-    if (!fileContent.content) return;
-    downloadFile(filename, fileContent.content);
+    const content = downloadableContent(fileContent);
+    if (content === null) return;
+    downloadFile(filename, content);
   };
 
   return (

@@ -32,6 +32,7 @@ import {
   formatFileSize,
   getFileExtension,
   downloadFile,
+  downloadableContent,
   getFilename,
 } from "../../shared/lib/utils";
 import LedgerFileBreadcrumb from "../../shared/components/ledger-file-breadcrumb";
@@ -163,7 +164,7 @@ export const FileActionButtons = ({
             <DropdownMenuContent align="end">
               <DropdownMenuItem
                 onClick={onDownload}
-                disabled={!fileContent.content}
+                disabled={downloadableContent(fileContent) === null}
               >
                 <Download className="h-4 w-4" />
                 {t("common.download")}
@@ -254,8 +255,9 @@ export const ImageFileView = ({
   const filename = getFilename(filePath);
 
   const handleDownloadClick = () => {
-    if (!fileContent.content) return;
-    downloadFile(filename, fileContent.content);
+    const content = downloadableContent(fileContent);
+    if (content === null) return;
+    downloadFile(filename, content);
   };
 
   const [failedImage, setFailedImage] = useState<string | null>(null);
@@ -336,8 +338,9 @@ export const PDFFileView = ({
   const filename = getFilename(filePath);
 
   const handleDownloadClick = () => {
-    if (!fileContent.content) return;
-    downloadFile(filename, fileContent.content);
+    const content = downloadableContent(fileContent);
+    if (content === null) return;
+    downloadFile(filename, content);
   };
 
   const renderPDFContent = () => {
@@ -392,8 +395,9 @@ export const UnknownFileView = ({
   const { t } = useTranslations();
 
   const handleDownloadClick = () => {
-    if (!fileContent.content) return;
-    downloadFile(filename, fileContent.content);
+    const content = downloadableContent(fileContent);
+    if (content === null) return;
+    downloadFile(filename, content);
   };
 
   const renderUnknownContent = () => {

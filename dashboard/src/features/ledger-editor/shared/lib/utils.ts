@@ -314,9 +314,21 @@ export const getDownloadMimeType = (filename: string): string => {
  * @param filename - The name of the file to download
  * @param base64Content - The base64 encoded file content
  */
-export const downloadFile = (filename: string, base64Content: string): void => {
-  if (!base64Content) return;
+/**
+ * The bytes a file can be downloaded as, base64: its content when the read
+ * returned some, empty for a file the API reports as size 0 (it sends no
+ * content for those), and null when the content is genuinely unavailable
+ * (w4/260).
+ */
+export const downloadableContent = (file: {
+  content?: string | null;
+  size?: number | null;
+}): string | null => {
+  if (file.content) return file.content;
+  return file.size === 0 ? "" : null;
+};
 
+export const downloadFile = (filename: string, base64Content: string): void => {
   // Handle image files
   if (isImageFile(filename)) {
     const mimeType = getMimeTypeFromExtension(filename);
