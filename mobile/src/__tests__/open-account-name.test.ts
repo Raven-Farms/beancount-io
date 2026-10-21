@@ -3,6 +3,7 @@ import path from "path";
 import {
   ACCOUNT_ROOT_PREFIXES,
   composeAccountName,
+  openAccountCurrencyChoices,
   openAccountSubmitState,
   peelTypedRoot,
   splitPrefillAccountName,
@@ -471,5 +472,42 @@ describe("validateAccountName: combining marks and titlecase initials", () => {
     const name = composeAccountName("Assets", `Qa:${decomposed}`);
     expect(name).toBe("Assets:Qa:Épargne");
     expect(name).toBe(name.normalize("NFC"));
+  });
+});
+
+// w21/085: Open Account offered only the operating currencies, and a failed
+// first meta read left the default on "No currency" for good.
+describe("Open Account currencies", () => {
+  it("offers every commodity, operating currencies first", () => {
+    expect(openAccountCurrencyChoices(["USD"], ["VTI", "EUR", "USD"])).toEqual([
+      "USD",
+      "EUR",
+      "VTI",
+    ]);
+    expect(openAccountCurrencyChoices([], ["EUR"])).toEqual(["EUR"]);
+  });
+
+  it("defaults once the meta has arrived, not once loading stops", () => {
+    const source = fs.readFileSync(
+      path.join(
+        __dirname,
+        "..",
+        "screens",
+        "open-account-screen",
+        "open-account-screen.tsx",
+      ),
+      "utf8",
+    );
+    expect(source.includes("const metaLoaded = meta !== undefined;")).toBe(
+      true,
+    );
+    expect(source.includes("if (!currencyInitialized && metaLoaded) {")).toBe(
+      true,
+    );
+    expect(
+      source.includes(
+        "...openAccountCurrencyChoices(currencies, meta?.currencies ?? []).map(",
+      ),
+    ).toBe(true);
   });
 });

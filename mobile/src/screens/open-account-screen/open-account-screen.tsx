@@ -41,6 +41,7 @@ import {
   composeAccountName,
   typedSubPathIssue,
   ledgerRootName,
+  openAccountCurrencyChoices,
   peelTypedRoot,
   splitPrefillAccountName,
   type AccountNameValidationReason,
@@ -206,11 +207,7 @@ export function OpenAccountScreenComponent(): JSX.Element {
   const styles = useThemeStyle(getStyles);
   const ledgerId = useLedgerGuard();
   const { userId } = useSession();
-  const {
-    data: meta,
-    currencies,
-    loading: metaLoading,
-  } = useLedgerMeta(userId, ledgerId);
+  const { data: meta, currencies } = useLedgerMeta(userId, ledgerId);
   const { openAccount, loading } = useOpenAccount(ledgerId);
 
   // The account picker's "Create <typed>" row lands here with the typed query
@@ -254,12 +251,15 @@ export function OpenAccountScreenComponent(): JSX.Element {
   // must never invite a duplicate resubmit (w1/032).
   const [saved, setSaved] = useState(false);
 
+  // Defaults once the meta has actually arrived: a failed first read used to
+  // settle it on "No currency" for good (w21/085).
+  const metaLoaded = meta !== undefined;
   useEffect(() => {
-    if (!currencyInitialized && !metaLoading) {
+    if (!currencyInitialized && metaLoaded) {
       setCurrency(currencies[0] ?? "");
       setCurrencyInitialized(true);
     }
-  }, [currencies, currencyInitialized, metaLoading]);
+  }, [currencies, currencyInitialized, metaLoaded]);
 
   const account = composeAccountName(
     ledgerRootName(rootPrefix, roots),
@@ -307,7 +307,9 @@ export function OpenAccountScreenComponent(): JSX.Element {
   });
   const currencyItems = [
     { value: "", label: t("openAccountNoCurrency") },
-    ...currencies.map((value) => ({ value, label: value })),
+    ...openAccountCurrencyChoices(currencies, meta?.currencies ?? []).map(
+      (value) => ({ value, label: value }),
+    ),
   ];
 
   const handleSubmit = async () => {

@@ -205,3 +205,20 @@ export function openAccountSubmitState(input: {
       !input.busy,
   };
 }
+
+/**
+ * The currencies Open Account offers: the operating currencies first, in the
+ * ledger's order, then every other commodity the ledger knows, sorted. Only
+ * the operating currencies were offered, so an EUR bank account or a VTI
+ * holding could not be constrained to its commodity (w21/085).
+ */
+export function openAccountCurrencyChoices(
+  operating: readonly string[],
+  all: readonly string[],
+): string[] {
+  const first = [...new Set(operating)];
+  const rest = [...new Set(all)]
+    .filter((currency) => !first.includes(currency))
+    .sort();
+  return [...first, ...rest];
+}
