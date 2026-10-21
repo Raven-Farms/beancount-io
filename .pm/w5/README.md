@@ -114,6 +114,7 @@
 - [947 — Keep closed holdings when their converted balance is zero](./947.md) — minor CLI balance-filter issue; closed holdings of 10 EUR and -10 USD disappear at a 1:1 rate with a false no-match result, while units/cost and the trial-balance report retain them, reproduced 2026-10-21.
 - [948 — Recognize reused bank references in overlapping statements before skipping rows](./948.md) — major CLI missed-payment issue; one already-imported occurrence makes two dated source payments look duplicate, so even include writes nothing and Cash stays -7.75 instead of -15.50 USD, reproduced 2026-10-21.
 - [949 — Preserve inferred compound-cost parts in single-add JSON round trips](./949.md) — minor CLI round-trip gap after 801; successful inferred-cost trades return JSON that bulk replay refuses as unbalanced, while resolved-cost controls work, reproduced 2026-10-21.
+- [950 — Resolve inferred compound costs before import hashing and comparison](./950.md) — major CLI missed-trade gap; distinct cash-priced purchases share a generated ID and the second is skipped, while unchanged bank-ID trades falsely conflict, reproduced 2026-10-21.
 
 The 27 findings from the MCP QA auth sweep against the hosted endpoint (023–054, less the five under [Dropped](#dropped)) were fixed in `backend-cluster/backend-v2` and closed on 2026-10-02 and 2026-10-03; each note under [`done/`](./done/) records what shipped and in which commit. None has been re-observed against the hosted endpoint yet — the fixes reach it with the next backend deploy.
 
