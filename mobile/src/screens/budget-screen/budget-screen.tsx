@@ -134,6 +134,8 @@ function BudgetScreenImpl(): JSX.Element {
               account: group.account,
               interval: group.interval.toUpperCase(),
               currency: group.currency,
+              // Shown as the Amount placeholder, never prefilled (w21/034).
+              currentAmount: group.amount,
             }
           : {},
       });

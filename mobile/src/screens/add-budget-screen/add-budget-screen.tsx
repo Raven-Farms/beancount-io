@@ -10,6 +10,7 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
+import { budgetAmountPlaceholder } from "./amount-placeholder";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { haptics } from "@/common/haptics";
 import { useLedgerMeta } from "@/common/hooks/use-ledger-meta";
@@ -188,6 +189,7 @@ function AddBudgetScreenImpl(): JSX.Element {
     account?: string;
     interval?: string;
     currency?: string;
+    currentAmount?: string;
   }>();
   // Reached from a card, the account is fixed: a budget's history belongs to
   // one account+currency pair, so changing it here would silently start a
@@ -340,7 +342,10 @@ function AddBudgetScreenImpl(): JSX.Element {
                 setSubmitError(null);
               }}
               style={styles.amountInput}
-              placeholder="500"
+              placeholder={budgetAmountPlaceholder(
+                isUpdate,
+                params.currentAmount,
+              )}
               placeholderTextColor={theme.controlPlaceholder}
               keyboardType="numbers-and-punctuation"
               returnKeyType="done"
