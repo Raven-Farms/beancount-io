@@ -29,6 +29,7 @@ import { restoreApolloCache } from "@/common/apollo/cache-persist";
 import { clearServerScopedState } from "@/common/server-url-actions";
 import { GetLedgerDocument } from "@/generated-graphql/graphql";
 import { shouldClearLedgerSelection } from "@/common/graphql-error-codes";
+import { settleWithin } from "@/common/settle-within";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -45,6 +46,9 @@ const styles = StyleSheet.create({
     flex: 1,
   },
 });
+
+/** How long the splash waits to confirm the selected ledger. */
+const LEDGER_CHECK_DEADLINE_MS = 5000;
 
 const SplashProviderComponent = ({
   children,
@@ -119,12 +123,24 @@ const SplashProviderComponent = ({
         // network-only: splash must learn about deleted ledgers when online.
         if (session && ledger) {
           try {
-            await apolloClient.query({
+            const check = apolloClient.query({
               query: GetLedgerDocument,
               variables: { ledgerId: ledger },
               // network-only: confirm the selection still exists when reachable.
               fetchPolicy: "network-only",
             });
+            // Bounded: on a lossy or captive network the check (and a token
+            // refresh before it) took the OS's ~60 s request timeout, with
+            // the cache ready all along. Past the deadline the app opens on
+            // the persisted selection and the check carries on behind it
+            // (w21/183).
+            const outcome = await settleWithin(check, LEDGER_CHECK_DEADLINE_MS);
+            if (outcome.status === "timeout") {
+              console.warn("Ledger check is slow; opening on the cache");
+              check.catch((late: unknown) => {
+                if (shouldClearLedgerSelection(late)) ledgerVar(null);
+              });
+            }
           } catch (e) {
             // Keep the persisted selection through offline, a ledger service
             // outage or a rate limit, so a cold start can still render cached
