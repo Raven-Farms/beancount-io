@@ -19,5 +19,12 @@
   "review": "Within 2 weeks; email on approval",
   "state": "Submitted; pending moderation; no public listing URL or receipt ID exposed",
   "contact": "Publisher public-profile contact supplied privately in form; omitted here",
-  "authenticatedConnection": "Not run through this directory; verify after publication"
+  "authenticatedConnection": "Not run through this directory; verify after publication",
+  "publicRecheck": {
+    "observedAtUTC": "2026-10-21T19:41:23Z",
+    "url": "https://mcpservers.org/search?query=beancount",
+    "result": "One unrelated StdioA result in the complete displayed result set; no canonical hosted connector match",
+    "action": "No resubmission; retain original pending receipt and advertised review window",
+    "limit": "Public search observation, not moderator queue/status access or authenticated connection proof"
+  }
 }
