@@ -27,6 +27,7 @@ import {
   isSearchQuery,
   showCreateAccountRow,
   visibleAccountSections,
+  withParentAccounts,
   type PickerSection,
 } from "./picker-sections";
 import { ColorTheme } from "@/types/theme-props";
@@ -290,7 +291,12 @@ function AccountPickerScreenComponent(): JSX.Element {
   const onSelectedRef = useRef(SelectedAccount.getFn());
   useEffect(() => () => SelectedAccount.deleteFn(), []);
 
-  const accounts = accountOrderFor(type) === "from" ? assets : expenses;
+  // Filtering by a category (`Expenses:Food`) is offered alongside the opened
+  // accounts; every other picker chooses an account a posting can use (w21/036).
+  const accounts = useMemo(() => {
+    const opened = accountOrderFor(type) === "from" ? assets : expenses;
+    return type === "filter" ? withParentAccounts(opened) : opened;
+  }, [type, assets, expenses]);
 
   // Grouped once: the chips are its titles, and the browse list is a slice of
   // it — two derivations of "root of an account" would have to stay in sync.

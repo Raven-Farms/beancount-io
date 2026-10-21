@@ -158,3 +158,31 @@ export function findAccountLocation(
   }
   return null;
 }
+
+/**
+ * The accounts plus every parent between their root and themselves, each
+ * parent just before its first child: `Expenses:Food` ahead of
+ * `Expenses:Food:Groceries`. The ledger lists only opened accounts, so a
+ * category could not be chosen to filter by, though the server filters by a
+ * parent and the Accounts tab opens one as a combined journal (w21/036).
+ * Only a filter may offer these — a posting can't target an unopened parent.
+ */
+export function withParentAccounts(accounts: readonly string[]): string[] {
+  const seen = new Set<string>();
+  const result: string[] = [];
+  for (const account of accounts) {
+    const parts = account.split(":");
+    for (let depth = 2; depth < parts.length; depth++) {
+      const parent = parts.slice(0, depth).join(":");
+      if (!seen.has(parent)) {
+        seen.add(parent);
+        result.push(parent);
+      }
+    }
+    if (!seen.has(account)) {
+      seen.add(account);
+      result.push(account);
+    }
+  }
+  return result;
+}
