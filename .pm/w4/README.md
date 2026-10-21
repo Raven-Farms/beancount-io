@@ -4,6 +4,8 @@
 
 ## Inbox
 
+- [304 — Keep late Create File success from redirecting after the user leaves](./304.md) — minor; dashboard QA, 2026-10-21; explicit pending-save departure reaches Journal, then the old successful completion takes both widths back to Files.
+
 - [303 — Preserve sanitized code anchors and authored direction through rendering](./303.md) — minor; dashboard QA, 2026-10-21; code wrappers drop allowed IDs and explicit LTR direction, breaking fragment targets and reversing Persian code lines.
 
 - [302 — Keep Activity cards unique when newer events shift the next page](./302.md) — minor; dashboard QA, 2026-10-21; live offset pages overlap after new events and raw concatenation repeats cards at desktop/narrow widths.
