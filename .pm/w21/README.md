@@ -8,5 +8,4 @@
 
 ## Inbox
 
-- [036](./036.md) — The Transactions account filter offers only leaf accounts, so "all Food spending" can't be filtered
 - [037](./037.md) — In Persian, the "Invite Friends" title still sits on the physical left (residual of w21/019)
