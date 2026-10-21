@@ -492,6 +492,8 @@ export const bg: Translations = {
   ledgerFileNameExtension: "Използвайте име с .bean или .beancount",
   ledgerFileNamePath: "Използвайте име без \\, .. или празни имена на папки",
   ledgerDeleteFile: "Изтрий {{name}}",
+  ledgerFilesFolderLabel: "{{name}}, папка",
+  ledgerFilesFileLabel: "{{name}}, файл",
   ledgerDeleteFileTitle: "Изтриване на файл на книгата",
   ledgerDeleteFileMessage:
     'Да се изтрие ли "{{name}}"? Действието е необратимо.',
@@ -571,6 +573,8 @@ export const bg: Translations = {
   budgetSaveFailed: "Неуспешно записване на бюджета",
   // delete
   budgetDelete: "Изтриване",
+  budgetUpdateNamed: "Актуализиране на бюджета за {{account}}, {{currency}}",
+  budgetDeleteNamed: "Изтриване на бюджетния запис от {{date}}, {{amount}}",
   budgetDeleteTitle: "Изтриване на бюджет",
   budgetDeleteMessage:
     "Да се изтрие ли {{interval}} бюджет от {{amount}} за {{account}}, в сила от {{date}}? Това премахва един запис и не може да бъде отменено.",

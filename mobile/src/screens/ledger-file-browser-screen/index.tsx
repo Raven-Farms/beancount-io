@@ -242,7 +242,11 @@ function FileRow({
         disabled={!tappable}
         onPress={onPress}
         accessibilityRole={tappable ? "button" : undefined}
-        accessibilityLabel={entry.name}
+        // The kind tells a folder from a file of the same name (w21/142).
+        accessibilityLabel={t(
+          isDir ? "ledgerFilesFolderLabel" : "ledgerFilesFileLabel",
+          { name: entry.name },
+        )}
         accessibilityState={{ disabled: !tappable }}
       >
         <View style={styles.rowIcon}>

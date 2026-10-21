@@ -501,6 +501,8 @@ export const uk: Translations = {
     "Використайте назву з розширенням .bean або .beancount",
   ledgerFileNamePath: "Використайте назву без \\, .. чи порожніх назв тек",
   ledgerDeleteFile: "Видалити {{name}}",
+  ledgerFilesFolderLabel: "{{name}}, тека",
+  ledgerFilesFileLabel: "{{name}}, файл",
   ledgerDeleteFileTitle: "Видалити файл книги",
   ledgerDeleteFileMessage: 'Видалити "{{name}}"? Скасувати це буде неможливо.',
   ledgerDeleteFileConfirm: "Видалити",
@@ -583,6 +585,8 @@ export const uk: Translations = {
   budgetSaveFailed: "Не вдалося зберегти бюджет",
   // delete
   budgetDelete: "Видалити",
+  budgetUpdateNamed: "Оновити бюджет для {{account}}, {{currency}}",
+  budgetDeleteNamed: "Видалити запис бюджету від {{date}}, {{amount}}",
   budgetDeleteTitle: "Видалити бюджет",
   budgetDeleteMessage:
     "Видалити {{interval}} бюджет {{amount}} для {{account}}, що діє з {{date}}? Буде видалено один запис, скасувати неможливо.",

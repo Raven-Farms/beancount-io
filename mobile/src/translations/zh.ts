@@ -446,6 +446,8 @@ export const zh: Translations = {
   ledgerFileNameExtension: "请使用 .bean 或 .beancount 文件名",
   ledgerFileNamePath: "名称中不能包含 \\、.. 或空的文件夹名",
   ledgerDeleteFile: "删除 {{name}}",
+  ledgerFilesFolderLabel: "{{name}}，文件夹",
+  ledgerFilesFileLabel: "{{name}}，文件",
   ledgerDeleteFileTitle: "删除账本文件",
   ledgerDeleteFileMessage: "确定删除“{{name}}”吗？此操作无法撤销。",
   ledgerDeleteFileConfirm: "删除",
@@ -520,6 +522,8 @@ export const zh: Translations = {
   budgetSaveFailed: "保存预算失败",
   // delete
   budgetDelete: "删除",
+  budgetUpdateNamed: "更新 {{account}} 的预算，{{currency}}",
+  budgetDeleteNamed: "删除 {{date}} 的预算条目，{{amount}}",
   budgetDeleteTitle: "删除预算",
   budgetDeleteMessage:
     "确定删除 {{account}} 自 {{date}} 起生效的{{interval}}预算 {{amount}} 吗？此操作仅删除一条记录且无法撤销。",

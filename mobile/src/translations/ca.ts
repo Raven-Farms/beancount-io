@@ -504,6 +504,8 @@ export const ca: Translations = {
   ledgerFileNameExtension: "Fes servir un nom .bean o .beancount",
   ledgerFileNamePath: "Fes servir un nom sense \\, .. ni noms de carpeta buits",
   ledgerDeleteFile: "Elimina {{name}}",
+  ledgerFilesFolderLabel: "{{name}}, carpeta",
+  ledgerFilesFileLabel: "{{name}}, fitxer",
   ledgerDeleteFileTitle: "Elimina el fitxer del llibre",
   ledgerDeleteFileMessage:
     'Vols eliminar "{{name}}"? L\'acció no es pot desfer.',
@@ -585,6 +587,9 @@ export const ca: Translations = {
   budgetSaveFailed: "No s'ha pogut desar el pressupost",
   // delete
   budgetDelete: "Elimina",
+  budgetUpdateNamed: "Actualitza el pressupost de {{account}}, {{currency}}",
+  budgetDeleteNamed:
+    "Suprimeix l'entrada de pressupost del {{date}}, {{amount}}",
   budgetDeleteTitle: "Elimina el pressupost",
   budgetDeleteMessage:
     "Vols eliminar el pressupost {{interval}} de {{amount}} per a {{account}} vigent des del {{date}}? Això elimina una sola entrada i no es pot desfer.",

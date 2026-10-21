@@ -506,6 +506,8 @@ export const de: Translations = {
   ledgerFileNamePath:
     "Verwenden Sie einen Namen ohne \\, .. oder leere Ordnernamen",
   ledgerDeleteFile: "{{name}} löschen",
+  ledgerFilesFolderLabel: "{{name}}, Ordner",
+  ledgerFilesFileLabel: "{{name}}, Datei",
   ledgerDeleteFileTitle: "Hauptbuchdatei löschen",
   ledgerDeleteFileMessage:
     '"{{name}}" löschen? Das kann nicht rückgängig gemacht werden.',
@@ -585,6 +587,8 @@ export const de: Translations = {
   budgetSaveFailed: "Budget konnte nicht gespeichert werden",
   // delete
   budgetDelete: "Löschen",
+  budgetUpdateNamed: "Budget für {{account}} aktualisieren, {{currency}}",
+  budgetDeleteNamed: "Budgeteintrag vom {{date}} löschen, {{amount}}",
   budgetDeleteTitle: "Budget löschen",
   budgetDeleteMessage:
     "Das {{interval}} Budget von {{amount}} für {{account}} mit Wirkung zum {{date}} löschen? Dies entfernt einen einzelnen Eintrag und kann nicht rückgängig gemacht werden.",

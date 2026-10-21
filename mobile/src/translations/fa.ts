@@ -486,6 +486,8 @@ export const fa: Translations = {
     "از نامی با پسوند ‎.bean یا ‎.beancount استفاده کنید",
   ledgerFileNamePath: "از نامی بدون \\، .. یا نام پوشهٔ خالی استفاده کنید",
   ledgerDeleteFile: "حذف {{name}}",
+  ledgerFilesFolderLabel: "{{name}}، پوشه",
+  ledgerFilesFileLabel: "{{name}}، فایل",
   ledgerDeleteFileTitle: "حذف فایل دفتر کل",
   ledgerDeleteFileMessage: "«{{name}}» حذف شود؟ این کار برگشت‌پذیر نیست.",
   ledgerDeleteFileConfirm: "حذف",
@@ -564,6 +566,8 @@ export const fa: Translations = {
   budgetSaveFailed: "ذخیره بودجه ناموفق بود",
   // delete
   budgetDelete: "حذف",
+  budgetUpdateNamed: "به‌روزرسانی بودجهٔ {{account}}، {{currency}}",
+  budgetDeleteNamed: "حذف ردیف بودجهٔ {{date}}، {{amount}}",
   budgetDeleteTitle: "حذف بودجه",
   budgetDeleteMessage:
     "بودجه {{interval}} به مبلغ {{amount}} برای {{account}} با اعتبار از {{date}} حذف شود؟ این کار تنها یک مورد را حذف می‌کند و قابل بازگشت نیست.",

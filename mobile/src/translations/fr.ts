@@ -504,6 +504,8 @@ export const fr: Translations = {
   ledgerFileNameExtension: "Utilisez un nom en .bean ou .beancount",
   ledgerFileNamePath: "Utilisez un nom sans \\, .. ni nom de dossier vide",
   ledgerDeleteFile: "Supprimer {{name}}",
+  ledgerFilesFolderLabel: "{{name}}, dossier",
+  ledgerFilesFileLabel: "{{name}}, fichier",
   ledgerDeleteFileTitle: "Supprimer le fichier de grand livre",
   ledgerDeleteFileMessage:
     'Supprimer "{{name}}" ? Cette action est irréversible.',
@@ -586,6 +588,8 @@ export const fr: Translations = {
   budgetSaveFailed: "Échec de l’enregistrement du budget",
   // delete
   budgetDelete: "Supprimer",
+  budgetUpdateNamed: "Mettre à jour le budget de {{account}}, {{currency}}",
+  budgetDeleteNamed: "Supprimer l'entrée de budget du {{date}}, {{amount}}",
   budgetDeleteTitle: "Supprimer le budget",
   budgetDeleteMessage:
     "Supprimer le budget {{interval}} de {{amount}} pour {{account}} en vigueur au {{date}} ? Cela supprime une seule entrée et est irréversible.",

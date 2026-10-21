@@ -501,6 +501,8 @@ export const en = {
   ledgerFileNameExtension: "Use a .bean or .beancount name",
   ledgerFileNamePath: "Use a name without \\, .. or empty folder names",
   ledgerDeleteFile: "Delete {{name}}",
+  ledgerFilesFolderLabel: "{{name}}, folder",
+  ledgerFilesFileLabel: "{{name}}, file",
   ledgerDeleteFileTitle: "Delete Ledger File",
   ledgerDeleteFileMessage: 'Delete "{{name}}"? This cannot be undone.',
   ledgerDeleteFileConfirm: "Delete",
@@ -580,6 +582,8 @@ export const en = {
   budgetSaveFailed: "Failed to save budget",
   // delete
   budgetDelete: "Delete",
+  budgetUpdateNamed: "Update budget for {{account}}, {{currency}}",
+  budgetDeleteNamed: "Delete budget entry of {{date}}, {{amount}}",
   budgetDeleteTitle: "Delete Budget",
   budgetDeleteMessage:
     "Delete the {{interval}} budget of {{amount}} for {{account}} effective {{date}}? This removes a single entry and cannot be undone.",

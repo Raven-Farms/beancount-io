@@ -504,6 +504,8 @@ export const pt: Translations = {
   ledgerFileNameExtension: "Use um nome .bean ou .beancount",
   ledgerFileNamePath: "Use um nome sem \\, .. ou nomes de pasta vazios",
   ledgerDeleteFile: "Excluir {{name}}",
+  ledgerFilesFolderLabel: "{{name}}, pasta",
+  ledgerFilesFileLabel: "{{name}}, arquivo",
   ledgerDeleteFileTitle: "Excluir arquivo do livro-razão",
   ledgerDeleteFileMessage: 'Excluir "{{name}}"? Isso não pode ser desfeito.',
   ledgerDeleteFileConfirm: "Excluir",
@@ -584,6 +586,8 @@ export const pt: Translations = {
   budgetSaveFailed: "Falha ao salvar o orçamento",
   // delete
   budgetDelete: "Excluir",
+  budgetUpdateNamed: "Atualizar o orçamento de {{account}}, {{currency}}",
+  budgetDeleteNamed: "Excluir a entrada de orçamento de {{date}}, {{amount}}",
   budgetDeleteTitle: "Excluir orçamento",
   budgetDeleteMessage:
     "Excluir o orçamento {{interval}} de {{amount}} para {{account}} em vigor em {{date}}? Isso remove uma única entrada e não pode ser desfeito.",

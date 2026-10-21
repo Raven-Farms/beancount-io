@@ -939,7 +939,12 @@ export function LedgerDrawer({
                     disabled={item.disabled}
                     activeOpacity={0.7}
                     accessibilityRole="button"
-                    accessibilityLabel={item.fullName}
+                    // A dimmed row says why, as its caption does (w21/142).
+                    accessibilityLabel={
+                      item.statusLabel
+                        ? `${item.fullName}, ${item.statusLabel}`
+                        : item.fullName
+                    }
                     accessibilityState={{
                       selected: isSelected,
                       disabled: Boolean(item.disabled),

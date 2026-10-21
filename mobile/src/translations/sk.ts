@@ -506,6 +506,8 @@ export const sk: Translations = {
   ledgerFileNamePath:
     "Použite názov bez \\, .. alebo prázdnych názvov priečinkov",
   ledgerDeleteFile: "Odstrániť {{name}}",
+  ledgerFilesFolderLabel: "{{name}}, priečinok",
+  ledgerFilesFileLabel: "{{name}}, súbor",
   ledgerDeleteFileTitle: "Odstrániť súbor knihy",
   ledgerDeleteFileMessage:
     'Odstrániť "{{name}}"? Túto akciu nemožno vrátiť späť.',
@@ -589,6 +591,8 @@ export const sk: Translations = {
   budgetSaveFailed: "Uloženie rozpočtu zlyhalo",
   // delete
   budgetDelete: "Odstrániť",
+  budgetUpdateNamed: "Aktualizovať rozpočet pre {{account}}, {{currency}}",
+  budgetDeleteNamed: "Odstrániť záznam rozpočtu z {{date}}, {{amount}}",
   budgetDeleteTitle: "Odstrániť rozpočet",
   budgetDeleteMessage:
     "Odstrániť {{interval}} rozpočet {{amount}} pre {{account}} platný od {{date}}? Odstráni sa jeden záznam a nedá sa to vrátiť späť.",

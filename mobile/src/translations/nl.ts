@@ -493,6 +493,8 @@ export const nl: Translations = {
   ledgerFileNameExtension: "Gebruik een naam op .bean of .beancount",
   ledgerFileNamePath: "Gebruik een naam zonder \\, .. of lege mapnamen",
   ledgerDeleteFile: "{{name}} verwijderen",
+  ledgerFilesFolderLabel: "{{name}}, map",
+  ledgerFilesFileLabel: "{{name}}, bestand",
   ledgerDeleteFileTitle: "Grootboekbestand verwijderen",
   ledgerDeleteFileMessage:
     '"{{name}}" verwijderen? Dit kan niet ongedaan worden gemaakt.',
@@ -573,6 +575,8 @@ export const nl: Translations = {
   budgetSaveFailed: "Budget kon niet worden opgeslagen",
   // delete
   budgetDelete: "Verwijderen",
+  budgetUpdateNamed: "Budget voor {{account}} bijwerken, {{currency}}",
+  budgetDeleteNamed: "Budgetregel van {{date}} verwijderen, {{amount}}",
   budgetDeleteTitle: "Budget verwijderen",
   budgetDeleteMessage:
     "Het {{interval}} budget van {{amount}} voor {{account}} met ingang van {{date}} verwijderen? Dit verwijdert één regel en kan niet ongedaan worden gemaakt.",

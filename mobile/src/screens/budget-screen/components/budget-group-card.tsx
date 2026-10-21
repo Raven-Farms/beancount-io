@@ -241,7 +241,11 @@ export function BudgetGroupCard({
               ]}
               onPress={() => onUpdate(group)}
               accessibilityRole="button"
-              accessibilityLabel={t("budgetUpdate")}
+              // Which budget: every card's button read "Update" (w21/142).
+              accessibilityLabel={t("budgetUpdateNamed", {
+                account: group.account,
+                currency,
+              })}
             >
               <Text style={styles.updateText}>{t("budgetUpdate")}</Text>
             </TouchableOpacity>

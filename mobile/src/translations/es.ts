@@ -503,6 +503,8 @@ export const es: Translations = {
   ledgerFileNameExtension: "Usa un nombre .bean o .beancount",
   ledgerFileNamePath: "Usa un nombre sin \\, .. ni nombres de carpeta vacíos",
   ledgerDeleteFile: "Eliminar {{name}}",
+  ledgerFilesFolderLabel: "{{name}}, carpeta",
+  ledgerFilesFileLabel: "{{name}}, archivo",
   ledgerDeleteFileTitle: "Eliminar archivo del libro",
   ledgerDeleteFileMessage: '¿Eliminar "{{name}}"? Esto no se puede deshacer.',
   ledgerDeleteFileConfirm: "Eliminar",
@@ -583,6 +585,9 @@ export const es: Translations = {
   budgetSaveFailed: "Error al guardar el presupuesto",
   // delete
   budgetDelete: "Eliminar",
+  budgetUpdateNamed: "Actualizar el presupuesto de {{account}}, {{currency}}",
+  budgetDeleteNamed:
+    "Eliminar la entrada de presupuesto del {{date}}, {{amount}}",
   budgetDeleteTitle: "Eliminar presupuesto",
   budgetDeleteMessage:
     "¿Eliminar el presupuesto {{interval}} de {{amount}} para {{account}} vigente desde {{date}}? Esto elimina una sola entrada y no se puede deshacer.",

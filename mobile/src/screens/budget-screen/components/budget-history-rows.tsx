@@ -181,7 +181,11 @@ export function BudgetHistoryRows({
                 disabled={deleteDisabled}
                 onPress={() => confirmDelete(row)}
                 accessibilityRole="button"
-                accessibilityLabel={t("budgetDelete")}
+                // Which entry: every row's button read "Delete" (w21/142).
+                accessibilityLabel={t("budgetDeleteNamed", {
+                  date: row.date,
+                  amount: row.amount,
+                })}
               >
                 <Ionicons
                   name="trash-outline"

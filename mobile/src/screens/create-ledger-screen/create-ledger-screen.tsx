@@ -512,6 +512,9 @@ export function CreateLedgerScreen(): JSX.Element {
                   accessibilityRole="button"
                   accessibilityState={{ selected: startKind === kind }}
                   accessibilityLabel={t(titleKey)}
+                  // The description is what tells the choices apart
+                  // (w21/142).
+                  accessibilityHint={t(hintKey)}
                 >
                   <Text style={styles.templateTitle}>{t(titleKey)}</Text>
                   <Text style={styles.hint}>{t(hintKey)}</Text>
@@ -528,6 +531,7 @@ export function CreateLedgerScreen(): JSX.Element {
                 accessibilityRole="button"
                 accessibilityState={{ selected: startKind === "sample" }}
                 accessibilityLabel={t("createLedgerTemplateSample")}
+                accessibilityHint={t("createLedgerTemplateSampleHint")}
               >
                 <Text style={styles.templateTitle}>
                   {t("createLedgerTemplateSample")}
@@ -550,6 +554,7 @@ export function CreateLedgerScreen(): JSX.Element {
                     accessibilityRole="button"
                     accessibilityState={{ selected: presetId === entry.id }}
                     accessibilityLabel={t(entry.titleKey)}
+                    accessibilityHint={t(entry.outcomeKey)}
                   >
                     <Text style={styles.templateTitle}>
                       {t(entry.titleKey)}
