@@ -402,3 +402,65 @@ describe("read-only file notice live font-scale remeasurement", () => {
     ]);
   });
 });
+
+// Home's lower cards (w21/015): Spending's subtitle, Budget's rows and empty
+// line, and Latest Updates' rows clipped or left blank bands after a live
+// text-size change. Checked on the source, like the file editor above: the
+// cards run queries this runner cannot execute.
+const HOME_CARD_TEXTS: [string, string[]][] = [
+  ["screens/home-screen/components/spending-card.tsx", ["{styles.subtitle}"]],
+  [
+    "screens/home-screen/components/budget-card.tsx",
+    ["{styles.account}", "{styles.emptyText}"],
+  ],
+  [
+    "screens/home-screen/components/feed-card.tsx",
+    ["{styles.title}", "{styles.metaText}"],
+  ],
+];
+for (const [file, styles] of HOME_CARD_TEXTS)
+  describe(`${file} live font-scale remeasurement`, () => {
+    const source = ts.createSourceFile(
+      file,
+      fs.readFileSync(path.join(__dirname, "..", file), "utf8"),
+      ts.ScriptTarget.Latest,
+      true,
+      ts.ScriptKind.TSX,
+    );
+    const elements: ts.JsxOpeningLikeElement[] = [];
+    const visit = (node: ts.Node) => {
+      if (ts.isJsxOpeningElement(node) || ts.isJsxSelfClosingElement(node)) {
+        elements.push(node);
+      }
+      ts.forEachChild(node, visit);
+    };
+    visit(source);
+    const attribute = (element: ts.JsxOpeningLikeElement, name: string) =>
+      element.attributes.properties
+        .filter(ts.isJsxAttribute)
+        .find((attr) => attr.name.getText() === name)
+        ?.initializer?.getText();
+
+    it("keys each of its texts on the live scale", () => {
+      for (const style of styles) {
+        const text = elements.find(
+          (element) =>
+            element.tagName.getText() === "Text" &&
+            attribute(element, "style") === style,
+        );
+        expect(Boolean(text)).toBe(true);
+        expect((attribute(text!, "key") ?? "").includes("fontScale")).toBe(
+          true,
+        );
+      }
+    });
+
+    it("keys only Text on the scale, never the card or its list", () => {
+      const keyed = elements.filter((element) =>
+        (attribute(element, "key") ?? "").includes("fontScale"),
+      );
+      expect(keyed.map((element) => element.tagName.getText())).toEqual(
+        styles.map(() => "Text"),
+      );
+    });
+  });

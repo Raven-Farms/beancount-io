@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { useRouter } from "expo-router";
-import { StyleSheet, Text } from "react-native";
+import { StyleSheet, Text, useWindowDimensions } from "react-native";
 import { ColorTheme } from "@/types/theme-props";
 import { fontSizes } from "@/common/theme";
 import { useThemeStyle } from "@/common/hooks/use-theme-style";
@@ -51,6 +51,9 @@ export function SpendingCard({
 }: SpendingCardProps): JSX.Element {
   const styles = useThemeStyle(getStyles);
   const { t } = useTranslations();
+  // Keyed on the text size: iOS keeps a Text's old measurement when it
+  // changes with the app open (mobile/AGENTS.md; w21/015).
+  const { fontScale } = useWindowDimensions();
   const router = useRouter();
   const guest = useGuest();
 
@@ -105,7 +108,9 @@ export function SpendingCard({
       bleed
       testID="spending-card"
     >
-      <Text style={styles.subtitle}>{t("spendingSubtitle")}</Text>
+      <Text key={`subtitle-${fontScale}`} style={styles.subtitle}>
+        {t("spendingSubtitle")}
+      </Text>
       {selectCardLoadState({
         loading: loading || !contextSettled,
         hasData: data !== undefined,

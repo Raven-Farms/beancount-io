@@ -1,4 +1,10 @@
-import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import {
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+  useWindowDimensions,
+} from "react-native";
 import { useRouter } from "expo-router";
 import { ColorTheme } from "@/types/theme-props";
 import { fontSizes, space } from "@/common/theme";
@@ -66,6 +72,9 @@ export function BudgetCard({
 }: BudgetCardProps): JSX.Element {
   const styles = useThemeStyle(getStyles);
   const { t } = useTranslations();
+  // Keyed on the text size: iOS keeps a Text's old measurement when it
+  // changes with the app open (mobile/AGENTS.md; w21/015).
+  const { fontScale } = useWindowDimensions();
   const router = useRouter();
   const guest = useGuest();
 
@@ -105,7 +114,11 @@ export function BudgetCard({
       accessibilityValue={{ text: budgetPanelRowAccessibilityValue(row, t) }}
     >
       <View style={styles.rowHeader}>
-        <Text style={styles.account} numberOfLines={1}>
+        <Text
+          key={`account-${fontScale}`}
+          style={styles.account}
+          numberOfLines={1}
+        >
           {row.shortAccount}
         </Text>
         <AmountText style={styles.amounts}>
@@ -135,7 +148,9 @@ export function BudgetCard({
             onPress={openBudget}
             accessibilityRole="button"
           >
-            <Text style={styles.emptyText}>{t("budgetPanelEmpty")}</Text>
+            <Text key={`empty-${fontScale}`} style={styles.emptyText}>
+              {t("budgetPanelEmpty")}
+            </Text>
           </TouchableOpacity>
         </FadeInView>
       );

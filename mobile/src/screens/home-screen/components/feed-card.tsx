@@ -1,5 +1,12 @@
 import { useEffect } from "react";
-import { Linking, Pressable, StyleSheet, Text, View } from "react-native";
+import {
+  Linking,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+  useWindowDimensions,
+} from "react-native";
 import { ColorTheme } from "@/types/theme-props";
 import { fontSizes, fontWeights } from "@/common/theme";
 import { useThemeStyle } from "@/common/hooks/use-theme-style";
@@ -50,6 +57,9 @@ type FeedRowProps = {
 };
 
 function FeedRow({ title, link, publishedAt, source, isFirst }: FeedRowProps) {
+  // Keyed on the text size: iOS keeps a Text's old measurement when it
+  // changes with the app open (mobile/AGENTS.md; w21/015).
+  const { fontScale } = useWindowDimensions();
   const styles = useThemeStyle(getStyles);
   const { t, locale } = useTranslations();
   const isExternal = link.startsWith("http");
@@ -69,11 +79,13 @@ function FeedRow({ title, link, publishedAt, source, isFirst }: FeedRowProps) {
       onPress={handlePress}
       style={[styles.row, isFirst && styles.firstRow]}
     >
-      <Text style={styles.title} numberOfLines={2}>
+      <Text key={`title-${fontScale}`} style={styles.title} numberOfLines={2}>
         {title}
       </Text>
       <View style={styles.meta}>
-        <Text style={styles.metaText}>{metaText}</Text>
+        <Text key={`meta-${fontScale}`} style={styles.metaText}>
+          {metaText}
+        </Text>
       </View>
     </Pressable>
   );
