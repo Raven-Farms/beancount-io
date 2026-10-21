@@ -105,6 +105,8 @@
 - [938 — Exclude calculated prices from quote duplicate and conflict checks](./938.md) — major CLI skipped-correction gap; add/import count generated quotes as authored, and a forced price correction leaves net worth unchanged at exit 0, reproduced 2026-10-21.
 - [939 — Use display columns for query-to-tree conversion](./939.md) — minor CLI integration gap; wide CJK accounts make valid BQL tables refuse, while wide narrations leave ordinary accounts flat in a successful partial tree, reproduced 2026-10-21.
 - [940 — Keep known net profit when unpriced income and expense cancel](./940.md) — minor CLI report inconsistency; equal foreign-commodity flows leave known 20 USD profit, but its sole period reports unavailable beside the correct headline, reproduced 2026-10-21.
+- [941 — Write an `import-id` on hosted bank imports so the shared dedup contract sees them](./941.md) — minor backend-v2 finding from w5/m5/t004; observed 2026-10-21.
+- [942 — Report the written file and entry hashes from `importStagedBankTransactions`](./942.md) — trivial backend-v2 finding from w5/m5/t004; observed 2026-10-21.
 
 The 27 findings from the MCP QA auth sweep against the hosted endpoint (023–054, less the five under [Dropped](#dropped)) were fixed in `backend-cluster/backend-v2` and closed on 2026-10-02 and 2026-10-03; each note under [`done/`](./done/) records what shipped and in which commit. None has been re-observed against the hosted endpoint yet — the fixes reach it with the next backend deploy.
 
