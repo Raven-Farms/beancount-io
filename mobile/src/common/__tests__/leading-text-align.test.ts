@@ -5,7 +5,8 @@ import path from "path";
  * In Persian, full-width UI text left at `natural` alignment sat on the
  * physical left beside correctly mirrored rows: Settings section titles, the
  * Spending subtitle, the Budget empty line, the drawer's row labels and Add
- * Budget's help and error lines (w0/049, w21/019). Each now takes
+ * Budget's help and error lines, and the Invite Friends heading and summary
+ * (w0/049, w21/019, w21/037). Each now takes
  * `LEADING_TEXT_ALIGN`; every style block of these names in these files must
  * keep it.
  */
@@ -16,6 +17,8 @@ const SURFACES: [string, string][] = [
   ["components/ledger-drawer/ledger-drawer.tsx", "menuItemText"],
   ["screens/add-budget-screen/add-budget-screen.tsx", "help"],
   ["screens/add-budget-screen/add-budget-screen.tsx", "error"],
+  ["screens/referral-screen/components/invite-section.tsx", "title"],
+  ["screens/referral-screen/components/invite-section.tsx", "summary"],
 ];
 
 function styleBlocks(source: string, name: string): string[] {

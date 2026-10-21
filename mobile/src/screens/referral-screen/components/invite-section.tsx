@@ -1,5 +1,6 @@
 import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
 import { useTheme } from "@/common/theme";
+import { LEADING_TEXT_ALIGN } from "@/common/rtl";
 import { contentPadding, onePx } from "@/common/screen-util";
 import { useTranslations } from "@/common/hooks/use-translations";
 import { GiftIcon } from "@/screens/referral-screen/components/gift-icon";
@@ -18,6 +19,7 @@ const getStyles = (theme: ColorTheme) =>
       fontWeight: "bold",
       marginBottom: 0.5 * contentPadding,
       color: theme.text01,
+      textAlign: LEADING_TEXT_ALIGN,
     },
     // `minHeight`, not `height`: the summary is a translated sentence, and a
     // fixed 80pt box clipped it in Spanish and at larger OS text sizes. The row
@@ -43,6 +45,7 @@ const getStyles = (theme: ColorTheme) =>
       fontSize: 16,
       lineHeight: 20,
       color: theme.text01,
+      textAlign: LEADING_TEXT_ALIGN,
     },
     // No fixed height — it stretches to whatever the copy makes the row, so the
     // 50x52 icon stays centred beside one line or three.
