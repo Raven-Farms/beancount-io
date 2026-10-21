@@ -110,6 +110,7 @@
 - [943 — Preserve a numeric zero import-id as a supplied identity](./943.md) — major CLI double-booking gap; zero is replaced with a content hash, so a corrected amount under the same supplied ID writes as a new payment at exit 0, reproduced 2026-10-21.
 - [944 — Normalize native Beancount query input with its loaded text](./944.md) — minor CLI query mismatch; decomposed accented filters omit real expenses and copied stored names refuse after the helper normalizes the source, reproduced 2026-10-21.
 - [945 — Refuse init when a case-variant target would shadow the existing default ledger](./945.md) — minor CLI onboarding gap; `main.BEAN` bypasses the sibling-root check on case-insensitive APFS, switching ordinary reports from the existing 100 USD book to an empty template, reproduced 2026-10-21.
+- [946 — Keep calculated allocation fractions out of a cents ledger's report display precision](./946.md) — minor CLI report issue; a plugin splitting a 10.00 USD expense into thirds makes every human USD total print 27 decimals, while source cents and exact JSON remain intact, reproduced 2026-10-21.
 
 The 27 findings from the MCP QA auth sweep against the hosted endpoint (023–054, less the five under [Dropped](#dropped)) were fixed in `backend-cluster/backend-v2` and closed on 2026-10-02 and 2026-10-03; each note under [`done/`](./done/) records what shipped and in which commit. None has been re-observed against the hosted endpoint yet — the fixes reach it with the next backend deploy.
 
