@@ -1,3 +1,5 @@
+import { selectCardLoadState } from "@/common/apollo/card-load-state";
+import { CardLoadFailure } from "@/components/card-load-failure";
 import {
   StyleSheet,
   Text,
@@ -79,15 +81,30 @@ export function BudgetCard({
   const router = useRouter();
   const guest = useGuest();
 
-  const { groups, loading: groupsLoading } = useBudgetGroups(
-    ledgerId,
-    refreshSignal,
-  );
-  const { rows, loading: rowsLoading } = useBudgetPanel({
+  const {
+    groups,
+    loaded: groupsLoaded,
+    loading: groupsLoading,
+    error: groupsError,
+    refetch: refetchGroups,
+  } = useBudgetGroups(ledgerId, refreshSignal);
+  const {
+    rows,
+    loading: rowsLoading,
+    failed: rowsFailed,
+    retry: retryRows,
+  } = useBudgetPanel({
     ledgerId,
     groups,
     refreshSignal,
   });
+  // A failed read is not "no budgets" and not "$0.00 spent" (w21/080).
+  const groupsFailed =
+    selectCardLoadState({
+      loading: groupsLoading,
+      hasData: groupsLoaded,
+      error: groupsError,
+    }) === "failed";
 
   const openBudget = () => {
     if (guest) {
@@ -138,6 +155,12 @@ export function BudgetCard({
           <LoadingTile height={34} />
         </>
       );
+    }
+    if (groupsFailed) {
+      return <CardLoadFailure onRetry={() => void refetchGroups()} />;
+    }
+    if (rowsFailed) {
+      return <CardLoadFailure onRetry={retryRows} />;
     }
     if (rows.length === 0) {
       // A brand-new feature people won't look for: the panel keeps a row that

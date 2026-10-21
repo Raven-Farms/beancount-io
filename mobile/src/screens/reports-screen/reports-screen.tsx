@@ -1,3 +1,5 @@
+import { selectCardLoadState } from "@/common/apollo/card-load-state";
+import { CardLoadFailure } from "@/components/card-load-failure";
 import { useCallback, useMemo, useState } from "react";
 import { StyleSheet, View } from "react-native";
 import { ColorTheme } from "@/types/theme-props";
@@ -148,7 +150,14 @@ const ReportsScreenImpl = (): JSX.Element => {
     [currency, stmt, timeRange],
   );
 
-  const isLoading = incomeLoading && !incomeData;
+  // A failed first load has nothing to show; the cards would read an empty
+  // statement as $0.00 and "no activity" (w21/080).
+  const statementState = selectCardLoadState({
+    loading: incomeLoading,
+    hasData: incomeData !== undefined,
+    error: incomeError,
+  });
+  const isLoading = statementState === "loading";
   const showStale = isShowingStaleDataFromQueries([
     { data: incomeData, error: incomeError },
     { data: ledgerMeta, error: ledgerMetaError },
@@ -168,71 +177,87 @@ const ReportsScreenImpl = (): JSX.Element => {
         onRefresh={onRefresh}
         contentContainerStyle={reportScrollStyles.content}
       >
-        <DashboardCard bleed>
-          {isLoading ? (
-            <LoadingTile
-              height={DEFAULT_CHART_HEIGHT + LEGEND_HEIGHT}
-              mx={gutter}
-            />
-          ) : (
-            <FadeInView>
-              <IncomeExpenseBarChartD3
-                currency={currency}
-                months={chart.months}
-                income={chart.income}
-                expense={chart.expense}
-                net={chart.net}
-              />
-            </FadeInView>
-          )}
-        </DashboardCard>
-
-        <DashboardCard bleed title={t("cashFlow")}>
-          {isLoading ? (
-            <CashFlowSankeySkeleton />
-          ) : (
-            <FadeInView>
-              <CashFlowSankey
-                income={income.tree}
-                expenses={expense.tree}
-                currency={currency}
-              />
-            </FadeInView>
-          )}
-        </DashboardCard>
-
-        {isLoading ? (
-          <CategoryBreakdownSkeleton />
+        {statementState === "failed" ? (
+          <DashboardCard>
+            <CardLoadFailure onRetry={() => void incomeRefetch()} />
+          </DashboardCard>
         ) : (
-          <FadeInView>
+          <>
             <DashboardCard bleed>
-              <CategoryBreakdown
-                label={t("expenses")}
-                total={expense.total}
-                items={topNWithOther(expense.tree, BREAKDOWN_TOP_N, t("other"))}
-                currency={currency}
-                tone={(theme) => theme.error}
-                note={notInTotalNote(expense.notInTotal, t)}
-              />
+              {isLoading ? (
+                <LoadingTile
+                  height={DEFAULT_CHART_HEIGHT + LEGEND_HEIGHT}
+                  mx={gutter}
+                />
+              ) : (
+                <FadeInView>
+                  <IncomeExpenseBarChartD3
+                    currency={currency}
+                    months={chart.months}
+                    income={chart.income}
+                    expense={chart.expense}
+                    net={chart.net}
+                  />
+                </FadeInView>
+              )}
             </DashboardCard>
-          </FadeInView>
-        )}
 
-        {isLoading ? (
-          <CategoryBreakdownSkeleton />
-        ) : (
-          <FadeInView>
-            <DashboardCard bleed>
-              <CategoryBreakdown
-                label={t("income")}
-                total={income.total}
-                items={topNWithOther(income.tree, BREAKDOWN_TOP_N, t("other"))}
-                currency={currency}
-                tone={(theme) => theme.success}
-                note={notInTotalNote(income.notInTotal, t)}
-              />
+            <DashboardCard bleed title={t("cashFlow")}>
+              {isLoading ? (
+                <CashFlowSankeySkeleton />
+              ) : (
+                <FadeInView>
+                  <CashFlowSankey
+                    income={income.tree}
+                    expenses={expense.tree}
+                    currency={currency}
+                  />
+                </FadeInView>
+              )}
             </DashboardCard>
-          </FadeInView>
+
+            {isLoading ? (
+              <CategoryBreakdownSkeleton />
+            ) : (
+              <FadeInView>
+                <DashboardCard bleed>
+                  <CategoryBreakdown
+                    label={t("expenses")}
+                    total={expense.total}
+                    items={topNWithOther(
+                      expense.tree,
+                      BREAKDOWN_TOP_N,
+                      t("other"),
+                    )}
+                    currency={currency}
+                    tone={(theme) => theme.error}
+                    note={notInTotalNote(expense.notInTotal, t)}
+                  />
+                </DashboardCard>
+              </FadeInView>
+            )}
+
+            {isLoading ? (
+              <CategoryBreakdownSkeleton />
+            ) : (
+              <FadeInView>
+                <DashboardCard bleed>
+                  <CategoryBreakdown
+                    label={t("income")}
+                    total={income.total}
+                    items={topNWithOther(
+                      income.tree,
+                      BREAKDOWN_TOP_N,
+                      t("other"),
+                    )}
+                    currency={currency}
+                    tone={(theme) => theme.success}
+                    note={notInTotalNote(income.notInTotal, t)}
+                  />
+                </DashboardCard>
+              </FadeInView>
+            )}
+          </>
         )}
 
         <AccountTransactionsCard

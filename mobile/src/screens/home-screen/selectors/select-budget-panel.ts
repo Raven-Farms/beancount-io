@@ -97,6 +97,29 @@ export function selectBudgetPanelRows(
 }
 
 /**
+ * The panel once every actuals read has settled. A read that failed with
+ * nothing cached fails the whole panel: its row would read "$0.00 of
+ * $500.00", a claim about spending the failed read cannot back (w21/080).
+ */
+export function settleBudgetPanel(
+  results: { input: BudgetPanelInput; failed: boolean }[],
+  limit: number,
+  asOf?: string,
+): { rows: BudgetPanelRow[]; failed: boolean } {
+  if (results.some((result) => result.failed)) {
+    return { rows: [], failed: true };
+  }
+  return {
+    rows: selectBudgetPanelRows(
+      results.map((result) => result.input),
+      limit,
+      asOf,
+    ),
+    failed: false,
+  };
+}
+
+/**
  * What a panel row announces beyond its account name.
  *
  * The row is one button wrapping the amounts and the meter, so an

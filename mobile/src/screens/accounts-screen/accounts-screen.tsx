@@ -1,3 +1,5 @@
+import { selectCardLoadState } from "@/common/apollo/card-load-state";
+import { CardLoadFailure } from "@/components/card-load-failure";
 import { useLedgerAccess } from "@/common/hooks/use-ledger-access";
 import { useCallback, useMemo, useState } from "react";
 import { StyleSheet, View } from "react-native";
@@ -157,6 +159,14 @@ const AccountsScreenImpl = (): JSX.Element => {
     (accountsLoading && !accountData) ||
     (unitsLoading && !unitsData && !unitsError) ||
     (pricesLoading && !pricesData && !pricesError);
+  // A failed first load has no accounts to list; the table read that as "No
+  // accounts" (w21/080).
+  const accountsFailed =
+    selectCardLoadState({
+      loading: accountsLoading,
+      hasData: accountData !== undefined,
+      error: accountsError,
+    }) === "failed";
   const showStale = isShowingStaleDataFromQueries([
     { data: accountData, error: accountsError },
     { data: unitsData, error: unitsError },
@@ -194,6 +204,8 @@ const AccountsScreenImpl = (): JSX.Element => {
             </View>
           ))}
         </View>
+      ) : accountsFailed ? (
+        <CardLoadFailure onRetry={() => void onRefresh()} />
       ) : (
         <FadeInView fill>
           <AccountTable

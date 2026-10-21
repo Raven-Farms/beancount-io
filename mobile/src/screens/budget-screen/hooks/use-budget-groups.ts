@@ -58,7 +58,8 @@ export function useBudgetGroups(ledgerId?: string, refreshSignal = 0) {
     [data, today],
   );
 
-  return { groups, loading, error, refetch };
+  // An empty `groups` cannot tell "no budgets" from "not loaded yet".
+  return { groups, loaded: data !== undefined, loading, error, refetch };
 }
 
 /**

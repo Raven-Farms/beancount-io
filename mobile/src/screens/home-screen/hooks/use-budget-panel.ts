@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useApolloClient, useReactiveVar } from "@apollo/client";
 import {
   GetLedgerIntervalTotalsDocument,
@@ -18,7 +18,7 @@ import {
   timeSpanToFilter,
 } from "@/screens/budget-screen/selectors/budget-labels";
 import {
-  selectBudgetPanelRows,
+  settleBudgetPanel,
   type BudgetPanelRow,
 } from "@/screens/home-screen/selectors/select-budget-panel";
 
@@ -53,7 +53,13 @@ export function useBudgetPanel({
   ledgerId?: string;
   groups: BudgetGroup[];
   refreshSignal?: number;
-}): { rows: BudgetPanelRow[]; loading: boolean } {
+}): {
+  rows: BudgetPanelRow[];
+  loading: boolean;
+  /** An actuals read failed with nothing cached: no row can say what was spent. */
+  failed: boolean;
+  retry: () => void;
+} {
   const client = useApolloClient();
   // These are one-off `client.query` reads, not observable queries, so a write
   // elsewhere in the app cannot reach them: `groupsKey` only changes when the
@@ -62,6 +68,8 @@ export function useBudgetPanel({
   const ledgerRevision = useReactiveVar(ledgerRevisionVar);
   const [rows, setRows] = useState<BudgetPanelRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [failed, setFailed] = useState(false);
+  const [attempt, setAttempt] = useState(0);
 
   // Identity of the budget set, so the effect re-runs when budgets change but
   // not on every re-render of an unchanged list.
@@ -78,11 +86,13 @@ export function useBudgetPanel({
 
     if (!ledgerId || groups.length === 0) {
       setRows([]);
+      setFailed(false);
       setLoading(false);
       return;
     }
 
     setLoading(true);
+    setFailed(false);
     const priced = groups.slice(0, BUDGET_PANEL_QUERY_CAP);
 
     // Deliberately the span the page opens on, not this budget's own current
@@ -108,31 +118,35 @@ export function useBudgetPanel({
         // spending (w21/006). Offline, that cache is still better than nothing.
         const items = await totals("network-only")
           .catch(() => totals("cache-only"))
-          // One unreachable account shouldn't blank the whole panel; it ranks
-          // as unspent and the page surfaces the error in full.
-          .catch(() => []);
+          // Nothing fetched and nothing cached: the row would read "$0.00 of
+          // $500.00", a claim about spending a failed read cannot back
+          // (w21/080).
+          .catch(() => null);
 
         // The last interval in the window is the one in progress.
-        const last = items.length > 0 ? items[items.length - 1] : null;
+        const last = items && items.length > 0 ? items[items.length - 1] : null;
         return {
-          group,
-          periodEnd: end,
-          actual: last
-            ? resolveCurrencyBalance(last.balance, group.currency)
-            : null,
+          input: {
+            group,
+            periodEnd: end,
+            actual: last
+              ? resolveCurrencyBalance(last.balance, group.currency)
+              : null,
+          },
+          failed: items === null,
         };
       }),
-    ).then((inputs) => {
+    ).then((results) => {
       if (cancelled) {
         return;
       }
-      setRows(
-        selectBudgetPanelRows(
-          inputs,
-          BUDGET_PANEL_ROWS,
-          getFormatDate(new Date()),
-        ),
+      const settled = settleBudgetPanel(
+        results,
+        BUDGET_PANEL_ROWS,
+        getFormatDate(new Date()),
       );
+      setRows(settled.rows);
+      setFailed(settled.failed);
       setLoading(false);
     });
 
@@ -140,7 +154,8 @@ export function useBudgetPanel({
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [client, ledgerId, groupsKey, refreshSignal, ledgerRevision]);
+  }, [client, ledgerId, groupsKey, refreshSignal, ledgerRevision, attempt]);
 
-  return { rows, loading };
+  const retry = useCallback(() => setAttempt((n) => n + 1), []);
+  return { rows, loading, failed, retry };
 }
