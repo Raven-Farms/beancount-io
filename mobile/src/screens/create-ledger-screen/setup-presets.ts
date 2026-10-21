@@ -1,6 +1,7 @@
 import type { LedgerSetupPreset } from "@/generated-graphql/types";
 import { getFormatDate } from "../../common/format-util";
 import { parseExactAmount } from "../multi-postings-transaction/postings-utils";
+import setupCurrencies from "./setup-currencies.json";
 
 /**
  * The mobile copy of the setup catalog (ADR021): preset identities and
@@ -134,53 +135,15 @@ export const SETUP_PRESETS: SetupPreset[] = [
   },
 ];
 
-const EUROZONE = new Set([
-  "AT",
-  "BE",
-  "CY",
-  "DE",
-  "EE",
-  "ES",
-  "FI",
-  "FR",
-  "GR",
-  "HR",
-  "IE",
-  "IT",
-  "LT",
-  "LU",
-  "LV",
-  "MT",
-  "NL",
-  "PT",
-  "SI",
-  "SK",
-]);
-
-const REGION_CURRENCY: Record<string, string> = {
-  US: "USD",
-  GB: "GBP",
-  JP: "JPY",
-  CN: "CNY",
-  AU: "AUD",
-  CA: "CAD",
-  CH: "CHF",
-  NZ: "NZD",
-  IN: "INR",
-  BR: "BRL",
-  KR: "KRW",
-  MX: "MXN",
-  ZA: "ZAR",
-  SG: "SGD",
-  HK: "HKD",
-  SE: "SEK",
-  NO: "NOK",
-  DK: "DKK",
-  PL: "PLN",
-  TR: "TRY",
-  ID: "IDR",
-  TH: "THB",
-};
+/**
+ * Region → currency, copied byte for byte from the canonical setup catalog
+ * (`backend-cluster/backend-v2/src/features/ledger/setup/currencies.json`,
+ * ADR021) that the hosted builder and `bea init` share. A hand-rolled list
+ * offered Bulgaria, Ukraine and Romania USD (w21/061); a drift test keeps the
+ * copy equal to the catalog.
+ */
+const REGION_CURRENCY: Readonly<Record<string, string>> =
+  setupCurrencies.regionCurrency;
 
 /**
  * Suggest a currency from the device's region only (ADR021): the region
@@ -189,7 +152,6 @@ const REGION_CURRENCY: Record<string, string> = {
 export function suggestCurrency(regionCode: string | null | undefined): string {
   const region = regionCode?.toUpperCase();
   if (!region || !/^[A-Z]{2}$/.test(region)) return "USD";
-  if (EUROZONE.has(region)) return "EUR";
   return REGION_CURRENCY[region] ?? "USD";
 }
 

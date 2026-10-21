@@ -70,3 +70,34 @@ describe("Create Ledger's Preset option", () => {
     expect(screen.includes('"createLedgerReviewDescription",\n')).toBe(false);
   });
 });
+
+// w21/061: a hand-rolled list offered Bulgaria (euro since 2026), Ukraine and
+// Romania USD; the table is now the canonical setup catalog's.
+describe("suggestCurrency: the setup catalog", () => {
+  it("suggests the catalog's currency for every region", () => {
+    expect(suggestCurrency("BG")).toBe("EUR");
+    expect(suggestCurrency("bg")).toBe("EUR");
+    expect(suggestCurrency("UA")).toBe("UAH");
+    expect(suggestCurrency("RO")).toBe("RON");
+    expect(suggestCurrency("XK")).toBe("EUR");
+    // A region the catalog has no row for still falls back to USD.
+    expect(suggestCurrency("AQ")).toBe("USD");
+  });
+
+  it("keeps the copy equal to the canonical catalog", () => {
+    const fs = require("fs");
+    const path = require("path");
+    const canonical = path.join(
+      __dirname,
+      ...Array(5).fill(".."),
+      "backend-cluster/backend-v2/src/features/ledger/setup/currencies.json",
+    );
+    // A checkout without the backend (a packaged test run) has nothing to
+    // compare against.
+    if (!fs.existsSync(canonical)) return;
+    const read = (file: string) => JSON.parse(fs.readFileSync(file, "utf8"));
+    expect(read(path.join(__dirname, "..", "setup-currencies.json"))).toEqual(
+      read(canonical),
+    );
+  });
+});
