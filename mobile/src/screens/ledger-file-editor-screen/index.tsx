@@ -14,13 +14,7 @@ import {
   View,
   useWindowDimensions,
 } from "react-native";
-import {
-  Redirect,
-  Stack,
-  useLocalSearchParams,
-  useFocusEffect,
-  useRouter,
-} from "expo-router";
+import { Redirect, Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import {
   SafeAreaView,
@@ -652,16 +646,17 @@ function LedgerFileEditorSession({
   const [jumpToLine, setJumpToLine] = useState<number | null>(
     !isNaN(initialLineNum ?? NaN) ? initialLineNum : null,
   );
-  // Re-arm the jump target whenever the screen gains focus.
-  // This handles screen reuse: if the user navigates away and back (or
-  // the same deep-link fires again), the jump re-triggers instead of
-  // being skipped because the state was already cleared.
-  useFocusEffect(
-    useCallback(() => {
-      const n = !isNaN(initialLineNum ?? NaN) ? initialLineNum : null;
-      if (n !== null) setJumpToLine(n);
-    }, [initialLineNum]),
-  );
+  // Re-arm the jump only when a link asks for a line, then clear the param:
+  // a link opened again sets it anew and jumps again. Re-arming on every
+  // focus also fired on an ordinary return to the screen (back from View
+  // errors), throwing the cursor to the old line and opening the keyboard
+  // (w21/152).
+  useEffect(() => {
+    const n = !isNaN(initialLineNum ?? NaN) ? initialLineNum : null;
+    if (n === null) return;
+    setJumpToLine(n);
+    router.setParams({ initialLine: undefined });
+  }, [initialLineNum, router]);
   // Only start the clear-timer once the file is loaded so CodeEditor has a
   // chance to receive the non-null value and scroll before we reset it.
   useEffect(() => {

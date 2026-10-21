@@ -14,7 +14,6 @@
 
 - [064](./blocked/064.md) — A token refresh whose response is lost signs the user out on the next refresh (rotated token replayed → grant revoked) — **blocked:** needs an owner decision (ADR) on a refresh-token reuse grace window
 - [065](./blocked/065.md) — One early-year entry (e.g. 0050) makes the balance sheet 23,718 monthly points (3 MB) and the app stalls — **blocked:** needs an approach decision (per-pill fetch vs server downsample) and a simulator profile of the stall
-- [152](./152.md) — Returning to the file editor jumps the cursor back to the original error line
 - [153](./153.md) — Sign-out leaves the browser session, so the next Sign In re-enters the old account with one Approve tap
 - [154](./154.md) — iOS reinstall silently signs the previous account back in from the Keychain
 - [155](./155.md) — On a non-default server, the app still sends merchant brands to the hosted logo service
