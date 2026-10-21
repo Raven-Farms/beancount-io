@@ -4,13 +4,14 @@
 
 ## Inbox
 
+- [301 — Resolve document attachments from the file that declares them](./301.md) — minor; dashboard QA, 2026-10-21; the ledger report returns included-source attachment paths without their source directory, producing a real missing-file result.
+
 - [300 — Let active sidebar groups collapse through their disclosure button](./300.md) — minor; dashboard QA, 2026-10-21; active-route expansion overrides Enter, Space and pointer toggles in desktop/narrow navigation.
 
 - [299 — Return focus after restoring a public reader's hidden dashboard](./299.md) — minor; dashboard QA, 2026-10-21; the empty-state opener disappears and public readers have no header fallback, so closing Customize leaves BODY focus.
 
 - [298 — Make calendar arrow keys follow the rendered RTL day grid](./298.md) — minor; dashboard QA, 2026-10-21; shared Calendar omits DayPicker direction, so Persian horizontal keys move against the visible grid.
 
-- [243 — Keep narrow Documents columns readable](./blocked/243.md) — minor; dashboard QA, 2026-10-20. — **blocked:** fix shipped in `19547f970`; awaiting live 390px geometry check
 - [265 — Keep financial text and private paths out of GA4 automatic events](./blocked/265.md) — major; dashboard QA, 2026-10-20; stream-editor completion dependency. — **blocked:** checklist shipped in `181e7a996`; needs a GA4 Editor to turn off Site search / history page views
 - [289 — Preserve long amount digits in portrait statement print output](./blocked/289.md) — minor; dashboard QA, 2026-10-20. — **blocked:** fix shipped in `68e973700`; awaiting portrait PDF check
 
