@@ -3,6 +3,7 @@ import {
   useParams,
   useNavigate,
   useLocation,
+  useRouter,
   useRouterState,
   trimPathRight,
   Outlet,
@@ -41,6 +42,7 @@ export function LedgerLayout() {
   const ledgerId = createLedgerId(ledgerOwner, ledgerName);
   const navigate = useNavigate();
   const location = useLocation();
+  const router = useRouter();
   // Only hide an outlet whose data scope is changing. Local list/query URL
   // edits must preserve its input focus and in-flight work. Comparing matches
   // uses the same pathname encoding and also covers the first SSR navigation.
@@ -172,7 +174,13 @@ export function LedgerLayout() {
                   ) : (
                     // Key by ledger so a switch never keeps the previous
                     // ledger's mounted page body under the new URL.
-                    <ErrorBoundary key={ledgerId}>
+                    // Try Again reruns the failed child loader (a commit or
+                    // file read), not only this boundary (w4/264).
+                    <ErrorBoundary
+                      key={ledgerId}
+                      resetKey={location.pathname}
+                      onRetry={() => router.invalidate()}
+                    >
                       <Outlet />
                     </ErrorBoundary>
                   )}

@@ -5,6 +5,14 @@ interface Props {
   children: ReactNode;
   /** Custom fallback UI; when omitted the localized default panel is shown */
   fallback?: ReactNode;
+  /**
+   * Recovery to run before Try Again re-renders the children, e.g. rerunning
+   * the route loader whose failure was caught here. Without it, Try Again
+   * only clears this boundary, which cannot recover a failed loader (w4/264).
+   */
+  onRetry?: () => unknown;
+  /** A change (e.g. the location) clears a caught error. */
+  resetKey?: string;
 }
 
 interface State {
@@ -49,8 +57,22 @@ export class ErrorBoundary extends Component<Props, State> {
     this.setState({ errorInfo });
   }
 
-  handleRetry = () => {
-    this.setState({ hasError: false, error: null, errorInfo: null });
+  componentDidUpdate(previous: Props) {
+    if (this.state.hasError && previous.resetKey !== this.props.resetKey) {
+      this.setState({ hasError: false, error: null, errorInfo: null });
+    }
+  }
+
+  handleRetry = async () => {
+    const clear = () =>
+      this.setState({ hasError: false, error: null, errorInfo: null });
+    // A plain panel retry stays immediate; only a recovery is awaited.
+    if (!this.props.onRetry) return clear();
+    try {
+      await this.props.onRetry();
+    } finally {
+      clear();
+    }
   };
 
   render() {
@@ -63,7 +85,7 @@ export class ErrorBoundary extends Component<Props, State> {
         <ErrorBoundaryFallback
           error={this.state.error}
           errorInfo={this.state.errorInfo}
-          onRetry={this.handleRetry}
+          onRetry={() => void this.handleRetry()}
         />
       );
     }
