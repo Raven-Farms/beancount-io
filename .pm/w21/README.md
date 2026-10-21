@@ -40,3 +40,4 @@
 - [090](./090.md) — An app link to another ledger silently discards unsaved file-editor changes
 - [091](./091.md) — File editor error rows say "line N" in English in every language
 - [092](./092.md) — Entry Context balances: blank for zero, multi-currency run together as "100.00 USD,50.00 EUR"
+- [093](./093.md) — A trailing-space payee splits a merchant: header "2 transactions · $3.00" over three listed rows totalling $7
