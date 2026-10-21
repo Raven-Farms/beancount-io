@@ -1011,9 +1011,11 @@ SSE responses. See the [OAuth deployment contract](../README.md#oauth-deployment
 and [well-known path inventory](../../../docs/adrs/ADR009-backend-v2-well-known-paths.md).
 
 `/.well-known/mcp.json` is a Beancount discovery manifest with the endpoint and
-descriptor-derived tool/resource catalogs. Its current `auth.scopes` field
-contains the old `read`/`write` labels; use OAuth protected-resource metadata and
-the `ledger.*` scope names above when requesting permissions.
+descriptor-derived tool, resource and prompt catalogs. Each prompt lists its
+arguments by name, description and requiredness, as `prompts/list` does. Its
+`auth.scopes` field lists the `ledger.*` scope names above; OAuth
+protected-resource metadata remains the authoritative source when requesting
+permissions.
 
 From `backend-cluster/backend-v2/`, run:
 

@@ -6,7 +6,6 @@
 
 ## Inbox
 
-- [001](./001.md) — `/.well-known/mcp.json` omits the four prompts; `docs/mcp.md` misdescribes its scopes
 - [002](./002.md) — `docs/mcp.md` misses `previewLedgerSetup` and `createLedger` `setup`/`requestId`; says there is no preview
 - [003](./003.md) — archive names without a format, or an unknown commit SHA, report `SERVICE_UNAVAILABLE` (the SHA after a 90s hang)
 - [004](./004.md) — `banks/{itemId}` looks the item up before authorizing (`BAD_USER_INPUT` vs. concealed `NOT_FOUND`) and ignores the path ledger
