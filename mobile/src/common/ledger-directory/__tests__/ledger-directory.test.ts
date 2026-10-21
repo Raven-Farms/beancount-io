@@ -221,3 +221,29 @@ describe("revalidating the directory on start", () => {
     client.stop();
   });
 });
+
+// w21/066: revalidation evicted the cached pages before fetching, so a failed
+// offline revalidation left the persisted cache empty and the second offline
+// launch showed no ledgers.
+describe("an offline revalidation", () => {
+  it("leaves the cached pages for the next offline launch", async () => {
+    const { client, state, directory } = setup(3);
+    await directory.load();
+    state.failPage = 1;
+    await new LedgerDirectory(client).revalidate();
+    expect(
+      client.readQuery<any>({
+        query: LedgerDirectoryDocument,
+        variables: { page: 1, limit: 30 },
+      })?.listLedgers.length,
+    ).toBe(3);
+    const second = new LedgerDirectory(client);
+    await second.revalidate();
+    expect(second.getSnapshot()).toEqual({
+      ledgers: state.rows,
+      loading: false,
+      error: false,
+    });
+    client.stop();
+  });
+});

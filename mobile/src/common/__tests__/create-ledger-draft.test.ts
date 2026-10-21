@@ -94,3 +94,41 @@ describe("the Create Ledger draft", () => {
     expect(signOut.includes("clearCreateLedgerDraft(),")).toBe(true);
   });
 });
+
+// w21/066: every keystroke saved a new savedAt, so a draft touched daily kept
+// a requestId older than the server's 24-hour window.
+describe("the Create Ledger draft's lifetime", () => {
+  it("runs from when its requestId was minted, not from the last save", () => {
+    const minted = new Date(2026, 9, 20, 9, 0).getTime();
+    const raw = serializeCreateLedgerDraft(
+      { ...draft, requestedAt: minted },
+      new Date(2026, 9, 21, 8, 0),
+    );
+    expect(JSON.parse(raw).requestedAt).toBe(minted);
+    expect(
+      restoreCreateLedgerDraft<Values>(raw, new Date(2026, 9, 21, 8, 30))
+        ?.requestId,
+    ).toBe("req-1");
+    expect(restoreCreateLedgerDraft(raw, new Date(2026, 9, 21, 9, 1))).toBe(
+      null,
+    );
+  });
+
+  it("is passed through every save of the screen", () => {
+    const source = require("fs").readFileSync(
+      require("path").join(
+        __dirname,
+        "..",
+        "..",
+        "screens",
+        "create-ledger-screen",
+        "create-ledger-screen.tsx",
+      ),
+      "utf8",
+    ) as string;
+    expect(source.includes("requestedAt: requestedAtRef.current,")).toBe(true);
+    expect(source.includes("requestedAtRef.current = draft.requestedAt;")).toBe(
+      true,
+    );
+  });
+});

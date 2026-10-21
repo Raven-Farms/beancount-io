@@ -186,6 +186,7 @@ export function CreateLedgerScreen(): JSX.Element {
   const [startKind, setStartKind] = useState<StartKind>("starter");
   const [presetId, setPresetId] = useState<string | null>(SETUP_PRESETS[0].id);
   const requestIdRef = useRef<string>(newRequestId());
+  const requestedAtRef = useRef(Date.now());
 
   const schema = useMemo(
     () =>
@@ -258,6 +259,9 @@ export function CreateLedgerScreen(): JSX.Element {
       setStartKind(draft.startKind);
       setPresetId(draft.presetId);
       requestIdRef.current = draft.requestId;
+      if (draft.requestedAt !== undefined) {
+        requestedAtRef.current = draft.requestedAt;
+      }
       reset(draft.values);
     });
   }, [reset]);
@@ -269,6 +273,7 @@ export function CreateLedgerScreen(): JSX.Element {
       startKind,
       presetId,
       requestId: requestIdRef.current,
+      requestedAt: requestedAtRef.current,
       values: watched,
     };
     void AsyncStorage.setItem(

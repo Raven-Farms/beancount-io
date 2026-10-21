@@ -23,6 +23,12 @@ export interface CreateLedgerDraft<Values> {
   startKind: string;
   presetId: string | null;
   requestId: string;
+  /**
+   * When `requestId` was minted. The lifetime runs from here, not from the
+   * last save: every keystroke saves, so a draft touched daily kept a
+   * requestId the server had long forgotten (w21/066).
+   */
+  requestedAt?: number;
   values: Values;
 }
 
@@ -35,6 +41,7 @@ export function serializeCreateLedgerDraft<Values extends DraftValues>(
 ): string {
   return JSON.stringify({
     ...draft,
+    requestedAt: draft.requestedAt ?? now.getTime(),
     values: { ...draft.values, openingAmount: "" },
     savedAt: now.getTime(),
   });
@@ -61,7 +68,11 @@ export function restoreCreateLedgerDraft<Values extends DraftValues>(
     typeof parsed.savedAt !== "number" ||
     typeof parsed.requestId !== "string" ||
     !parsed.values ||
-    now.getTime() - parsed.savedAt > DRAFT_LIFETIME_MS
+    now.getTime() -
+      (typeof parsed.requestedAt === "number"
+        ? parsed.requestedAt
+        : parsed.savedAt) >
+      DRAFT_LIFETIME_MS
   ) {
     return null;
   }

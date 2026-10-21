@@ -72,14 +72,13 @@ export class LedgerDirectory {
       : this.snapshot.ledgers;
     this.publish({ ledgers: previous, loading: true, error: false });
     try {
-      if (refresh) {
-        // Drop every argument variant, including unobserved pages used at sign-in.
-        await this.client.refetchQueries({
-          updateCache(cache) {
-            cache.evict({ id: "ROOT_QUERY", fieldName: "listLedgers" });
-          },
-        });
-      }
+      // A refresh holds its pages until the list is complete: evicting first
+      // left the persisted cache empty when the fetch failed, so the second
+      // offline launch showed no ledgers (w21/066).
+      const fetched: Array<{
+        variables: { page: number; limit: number };
+        data: LedgerDirectoryQuery;
+      }> = [];
       const ledgers: Ledger[] = [];
       const ids = new Set<string>();
       for (let page = 1; ; page++) {
@@ -105,11 +104,15 @@ export class LedgerDirectory {
           });
           if (request.signal.aborted) return;
           data = result.data;
-          this.client.writeQuery({
-            query: LedgerDirectoryDocument,
-            variables,
-            data,
-          });
+          if (refresh) {
+            fetched.push({ variables, data });
+          } else {
+            this.client.writeQuery({
+              query: LedgerDirectoryDocument,
+              variables,
+              data,
+            });
+          }
         }
         const before = ids.size;
         for (const ledger of data.listLedgers) {
@@ -119,6 +122,18 @@ export class LedgerDirectory {
         const complete = data.listLedgers.length < DIRECTORY_PAGE_SIZE;
         if (!complete && ids.size === before) {
           throw new Error("Ledger directory pagination made no progress");
+        }
+        if (complete && refresh) {
+          // Drop every argument variant, including unobserved pages used at
+          // sign-in, and write the new pages in the same broadcast.
+          this.client.cache.batch({
+            update: (cache) => {
+              cache.evict({ id: "ROOT_QUERY", fieldName: "listLedgers" });
+              for (const page of fetched) {
+                cache.writeQuery({ query: LedgerDirectoryDocument, ...page });
+              }
+            },
+          });
         }
         // First load is progressive. A refresh replaces the previous complete
         // list atomically so later-page rows never vanish while it is in flight.
