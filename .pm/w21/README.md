@@ -96,3 +96,4 @@
 - [146](./146.md) — New Transaction: with 4+ postings the number pad covers Add posting, Remainder and save errors
 - [147](./147.md) — Latest Updates shows Blog/Release dates one day early west of UTC
 - [148](./148.md) — Budget "Last year" uses the server's calendar, "This year" the device's — they disagree around New Year
+- [149](./149.md) — New Transaction doesn't seed a payee's usual accounts when the name has punctuation (`Dupar's`, `Mr. Marcel`, `Chase:Slate`)
