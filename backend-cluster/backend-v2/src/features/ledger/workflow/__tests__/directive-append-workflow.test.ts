@@ -226,4 +226,48 @@ describe("DirectiveAppendWorkflow", () => {
       "txns/2026.bean",
     ]);
   });
+
+  /** w4/m38: early-year text keeps its date in source and routing. */
+  it.each([
+    ["0001-01-01", "txns/0001.bean"],
+    ["0099-08-11", "txns/0099.bean"],
+    ["0100-08-11", "txns/0100.bean"],
+  ])("routes and writes a %s transaction to %s once", async (date, path) => {
+    const { workflow, ledgerRepo } = fixture({
+      transactionFile: "txns/{year}.bean",
+    });
+    const text = TXN.replace("2026-02-05", date);
+    const dry = await workflow.appendDirectiveText({
+      identity: IDENTITY,
+      ledgerId: LEDGER_ID,
+      input: { text, dryRun: true },
+    });
+    expect(dry.dryRun).toBe(true);
+    expect(dry.diff[0].diff).toContain(`${date} * "Cafe"`);
+    expect(ledgerRepo.changeGeneratedFiles).not.toHaveBeenCalled();
+
+    await workflow.appendDirectiveText({
+      identity: IDENTITY,
+      ledgerId: LEDGER_ID,
+      input: { text },
+    });
+    expect(ledgerRepo.changeGeneratedFiles).toHaveBeenCalledTimes(1);
+    const { operations } = ledgerRepo.changeGeneratedFiles.mock.calls[0][0];
+    expect(operations).toEqual([
+      expect.objectContaining({ operation: "create", path }),
+    ]);
+    expect(operations[0].content).toContain(`${date} * "Cafe"`);
+  });
+
+  it("refuses year 0000 text before reading anything", async () => {
+    const { workflow, ledgerRepo } = fixture();
+    await expect(
+      workflow.appendDirectiveText({
+        identity: IDENTITY,
+        ledgerId: LEDGER_ID,
+        input: { text: TXN.replace("2026-02-05", "0000-02-05") },
+      }),
+    ).rejects.toThrow(/not a calendar date/);
+    expect(ledgerRepo.getFilesContent).not.toHaveBeenCalled();
+  });
 });
