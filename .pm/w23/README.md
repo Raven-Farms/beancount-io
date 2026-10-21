@@ -10,6 +10,7 @@
 
 ## Inbox
 
+- [055](./055.md) — deleting an entry leaves the blank separator lines its insertion added: every add → delete cycle grows `main.bean`
 - [054](./054.md) — file paths accept control characters, bidi overrides and Windows-invalid names (`\n`, `aux.bean`, `a:b`): committed files break `git clone` on Windows and can't be `include`d
 - [053](./053.md) — `addLedgerEntries` writes numeric/date-looking string meta unquoted: `"00123"` reads back `123`, `"02134"` `2134` (hosted counterpart of CLI w5/128)
 - [052](./052.md) — `updateLedgerFiles` small gaps: identical old/new makes an empty commit ("Committed 1 change(s)"); empty `old_string` "matches 47 times"; unknown key → "files.0: Invalid input"
