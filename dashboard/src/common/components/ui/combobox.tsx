@@ -8,6 +8,7 @@ import {
   PopoverAnchor,
 } from "@/common/components/ui/popover.tsx";
 import { useTranslations } from "@/common/hooks/use-translations.ts";
+import { isCompositionKey } from "@/common/lib/keyboard/is-composition-key";
 
 export interface ComboboxOption {
   value: string;
@@ -39,11 +40,6 @@ interface ComboboxProps extends ComboboxFieldProps {
   triggerOn?: "change" | "blur"; // When to trigger onValueChange for custom values
   /** Rendered under the field, e.g. a failed-suggestions notice. */
   notice?: React.ReactNode;
-}
-
-/** A key event an input method is consuming; keyCode 229 is how some engines report it. */
-function isCompositionKey(event: KeyboardEvent): boolean {
-  return event.isComposing || event.keyCode === 229;
 }
 
 export function Combobox({

@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { isCompositionKey } from "@/common/lib/keyboard/is-composition-key";
 import {
   useHydrated,
   useLocation,
@@ -184,6 +185,9 @@ export default function GalleryPage() {
 
   // Handle keyboard navigation
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    // An IME's arrows and Enter pick and confirm its text; they must not
+    // move the highlight or open a ledger mid-composition (w4/287).
+    if (isCompositionKey(e.nativeEvent)) return;
     // Escape must dismiss empty and non-empty open lists before result guards.
     if (e.key === "Escape") {
       e.preventDefault();

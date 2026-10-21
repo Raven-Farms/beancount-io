@@ -627,4 +627,80 @@ describe("GalleryPage", () => {
     await user.keyboard("{Enter}");
     expect(ledgerNavigations()).toHaveLength(0);
   });
+
+  /** An IME's arrows and Enter stay with its composition (w4/287). */
+  it("leaves the highlight and navigation alone while composing", async () => {
+    mockQuery(
+      createMockLazyQueryTuple(mockSearchLedgers, {
+        data: {
+          searchLedgers: [
+            {
+              id: "open_ledger/stock-example",
+              name: "stock-example",
+              fullName: "open_ledger/stock-example",
+              description: null,
+              __typename: "Ledger",
+            },
+            {
+              id: "open_ledger/example",
+              name: "example",
+              fullName: "open_ledger/example",
+              description: null,
+              __typename: "Ledger",
+            },
+          ],
+        },
+        loading: false,
+        error: undefined,
+      }),
+    );
+    const user = userEvent.setup();
+    render(<GalleryPage />);
+    const searchInput = screen.getByRole("combobox");
+    await user.type(searchInput, "stock-example");
+    await screen.findAllByRole("option");
+
+    fireEvent.compositionStart(searchInput);
+    for (const keyCode of [40, 229]) {
+      fireEvent.keyDown(searchInput, {
+        key: "ArrowDown",
+        keyCode,
+        isComposing: true,
+      });
+    }
+    fireEvent.keyDown(searchInput, {
+      key: "Enter",
+      keyCode: 13,
+      isComposing: true,
+    });
+    expect(searchInput).not.toHaveAttribute("aria-activedescendant");
+    expect(ledgerNavigations()).toHaveLength(0);
+
+    // Ordinary keys after the composition, including from a highlight the
+    // composition then leaves in place.
+    fireEvent.compositionEnd(searchInput);
+    fireEvent.keyDown(searchInput, { key: "ArrowDown", keyCode: 40 });
+    expect(searchInput).toHaveAttribute(
+      "aria-activedescendant",
+      "ledger-search-option-0",
+    );
+    fireEvent.keyDown(searchInput, {
+      key: "ArrowDown",
+      keyCode: 40,
+      isComposing: true,
+    });
+    fireEvent.keyDown(searchInput, {
+      key: "Escape",
+      keyCode: 229,
+      isComposing: true,
+    });
+    expect(searchInput).toHaveAttribute(
+      "aria-activedescendant",
+      "ledger-search-option-0",
+    );
+    fireEvent.keyDown(searchInput, { key: "Enter", keyCode: 13 });
+    expect(ledgerNavigations()).toEqual([
+      expect.objectContaining({ to: expect.stringContaining("stock-example") }),
+    ]);
+  });
 });
