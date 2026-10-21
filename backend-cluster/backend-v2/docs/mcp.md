@@ -536,13 +536,30 @@ for review. The three mutations use POST; review bodies are `{}`.
 ### Ledger lifecycle
 
 `createLedger`, `updateLedger`, and `deleteLedger` require administrative
-authority and apply changes immediately. They offer no preview.
+authority and apply changes immediately. Creation can be previewed first with
+`previewLedgerSetup`; update and delete offer no preview.
 
-- `createLedger` requires `name` and accepts `description`, `private`, and `template`
-  (`STARTER` or `SAMPLE`; omission selects starter files). Names use lowercase
+- `previewLedgerSetup` requires `setup`, the same setup specification
+  `createLedger` accepts ([ADR 021](../../../docs/adrs/ADR021-backend-v2-ledger-creation-experience.md)). It creates nothing and
+  returns the resolved `preset`, `operatingCurrency`, and `historyStart`, the
+  `accounts` the ledger would open, and the `files` it would write, keyed by
+  path. A specification `createLedger` would refuse — an unknown preset or
+  capability, an unsupported currency, an invalid date — is refused here with
+  the same `setup` validation error. It needs the same account authority as
+  creation.
+- `createLedger` requires `name` and accepts `description`, `private`, and either
+  `template` (`STARTER` or `SAMPLE`) or `setup`; passing both is a validation
+  error, and omitting both selects starter files. `setup` takes a `preset` and
+  optional `title`, `operatingCurrency`, `historyStart`, `capabilities`, and
+  `accounts`. Names use lowercase
   letters, numbers, hyphens, and underscores, up to 100 characters. Creation
   uses the authenticated account and accepts no `ledger` selector; the existing
   account policy also permits creation with a ledger-pinned admin credential.
+- `createLedger` also accepts `requestId` (1–200 characters) for safe retries.
+  Repeating a creation with the same `requestId` and the same inputs returns
+  the ledger the first call created instead of creating a second one; reusing
+  it with different inputs is a validation error, and a repeat while the first
+  call is still running is a conflict. A `requestId` is remembered for 24 hours.
 - `private` controls who can read the ledger. On create, an omitted or null
   value keeps it private; `false` publishes it, readable by anyone.
 - `updateLedger` accepts `ledger` and optional `name`, `description`, and `private`;
@@ -551,8 +568,11 @@ authority and apply changes immediately. They offer no preview.
 
 For update/delete, unpinned credentials must supply `ledger`; pinned credentials
 may omit it and cannot select another ledger. Creation and update return ledger
-metadata and clone URLs. REST exposes `POST /api-gateway/v1/ledgers` and
-`PUT`/`DELETE /api-gateway/v1/ledgers/{owner}/{name}`.
+metadata and clone URLs. REST exposes `POST /api-gateway/v1/ledgers/preview`,
+`POST /api-gateway/v1/ledgers`, and
+`PUT`/`DELETE /api-gateway/v1/ledgers/{owner}/{name}`; GraphQL exposes the
+`previewLedgerSetup` query and the `createLedger`, `updateLedger`, and
+`deleteLedger` mutations.
 
 Deletion uses the same cleanup sequence as GraphQL: it attempts remote bank
 revocation, then deletes local bank metadata and the repository. If repository
