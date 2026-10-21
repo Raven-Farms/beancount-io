@@ -140,3 +140,8 @@
 - [190](./190.md) — Mobile can't add transactions on ledgers whose currency isn't 3 uppercase letters (USDC, MUSD, VBTLX)
 - [191](./191.md) — Multi-line narration silently altered on save (amount-like lines padded, trailing spaces/\r dropped)
 - [192](./192.md) — Open Account name check vs engine: Persian/full-width digits pass then fail; ZWNJ words blocked
+- [193](./193.md) — Add Budget Done re-enables during the post-save refresh; a second tap writes the budget twice
+- [194](./194.md) — A save/delete landing after the user left still navigates (pops the wrong screen); Discard doesn't stop the write
+- [195](./195.md) — Leaving the file editor mid-save skips its refresh; other tabs stale, next delete refused
+- [196](./196.md) — Create file then switch ledger: the editor opens that path in the other ledger
+- [197](./197.md) — Delete Transaction can fire twice in flight; the repeat reports failure after success
