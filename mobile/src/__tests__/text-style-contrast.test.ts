@@ -22,6 +22,19 @@ type Case = {
 };
 
 const CASES: Case[] = [
+  // w21/127: white on amber was 1.9:1 dark, 2.7:1 light.
+  {
+    name: "pending badge on a transaction row",
+    file: "screens/transactions-screen/entry-row/index.tsx",
+    text: "badgeText",
+    surface: { style: "badge" },
+  },
+  {
+    name: "pending badge on an account journal row",
+    file: "screens/account-detail-screen/components/account-entry-row.tsx",
+    text: "badgeText",
+    surface: { style: "badge" },
+  },
   {
     name: "account journal balance and cost captions",
     file: "screens/account-detail-screen/components/account-entry-row.tsx",

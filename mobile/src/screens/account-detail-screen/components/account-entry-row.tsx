@@ -82,7 +82,7 @@ const getStyles = (theme: ColorTheme) =>
     badgeText: {
       fontSize: fontSizes.xs,
       fontWeight: fontWeights.medium,
-      color: "#fff",
+      color: theme.onWarning,
     },
     typeBadge: {
       paddingHorizontal: 5,

@@ -57,6 +57,8 @@ export interface ColorTheme {
   error: string;
   success: string;
   warning: string;
+  /** Text on a `warning` fill, at least 4.5:1 in both themes (w21/127). */
+  onWarning: string;
   information: string;
   nav01: string;
   nav02: string;
