@@ -79,6 +79,7 @@
 - [912 — Keep child source accounts in parent-importer identity](./912.md) — major CLI skipped-payment follow-up to 223; separate child-account statements collide despite `--duplicates include`, reproduced 2026-10-21.
 - [913 — Warn about native imports closing funded accounts](./913.md) — minor CLI diagnostic follow-up to w2/092; silent closes over 100 USD reproduced in JSON and human output on 2026-10-21.
 - [914 — Clarify note/document import lifecycle exceptions](./914.md) — trivial CLI guide follow-up to 351; valid post-close annotations and opening-date controls reproduced 2026-10-21.
+- [915 — Preserve empty labels in booked-cost exports and imports](./915.md) — minor CLI printer follow-up to 805; PRINT merges lots and native Cost imports lose the label, reproduced 2026-10-21.
 
 The 27 findings from the MCP QA auth sweep against the hosted endpoint (023–054, less the five under [Dropped](#dropped)) were fixed in `backend-cluster/backend-v2` and closed on 2026-10-02 and 2026-10-03; each note under [`done/`](./done/) records what shipped and in which commit. None has been re-observed against the hosted endpoint yet — the fixes reach it with the next backend deploy.
 
