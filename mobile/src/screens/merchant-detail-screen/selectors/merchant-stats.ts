@@ -5,7 +5,7 @@
  * Free of `@/` value imports so the jest-lite runner can require it.
  */
 
-import { escapeBqlString } from "./escape-bql-string";
+import { bqlPayeeEquals } from "./escape-bql-string";
 import {
   asCount,
   asNumber,
@@ -33,11 +33,10 @@ export interface MerchantStats {
  * matched the Merchants directory bug).
  */
 export function buildMerchantMetaBql(payee: string): string {
-  const lit = escapeBqlString(payee);
   return (
     "SELECT count(*) as transaction_count, " +
     "min(date) as first_date, max(date) as last_date " +
-    `FROM #entries WHERE payee = ${lit}`
+    `FROM #entries WHERE ${bqlPayeeEquals(payee)}`
   );
 }
 
@@ -46,10 +45,9 @@ export function buildMerchantMetaBql(payee: string): string {
  * counterparts would cancel. Never summed across currencies by the selector.
  */
 export function buildMerchantCurrencyTotalsBql(payee: string): string {
-  const lit = escapeBqlString(payee);
   return (
     "SELECT currency, sum(number) as total " +
-    `WHERE payee = ${lit} ` +
+    `WHERE ${bqlPayeeEquals(payee)} ` +
     "AND (account ~ '^Expenses' OR account ~ '^Income') " +
     "GROUP BY currency ORDER BY currency"
   );

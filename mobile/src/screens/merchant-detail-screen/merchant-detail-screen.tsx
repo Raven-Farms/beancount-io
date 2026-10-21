@@ -515,30 +515,33 @@ function MerchantDetailBody({ payee }: { payee: string }) {
     </View>
   );
 
+  // A failed header query used to drop the header silently whenever the rows
+  // loaded, hiding the count, the totals and the Recurring toggle (w21/032).
+  const statsMessage =
+    (metaError ?? totalsError)?.message ?? t("merchantDetailLoadError");
+  const statsError = (
+    <View style={styles.errorContainer}>
+      <Text style={styles.errorText}>
+        {t("merchantDetailLoadError")}
+        {statsMessage}
+      </Text>
+      <TouchableOpacity
+        style={styles.retryButton}
+        onPress={onRetry}
+        accessibilityRole="button"
+        accessibilityLabel={t("merchantDetailRetry")}
+      >
+        <Text style={styles.retryText}>{t("merchantDetailRetry")}</Text>
+      </TouchableOpacity>
+    </View>
+  );
+
   const listEmpty = () => {
     if (isInitialLoading) {
       return <MerchantDetailSkeleton />;
     }
-    if (fatalError) {
-      const message =
-        (metaError ?? totalsError)?.message ?? t("merchantDetailLoadError");
-      return (
-        <View style={styles.errorContainer}>
-          <Text style={styles.errorText}>
-            {t("merchantDetailLoadError")}
-            {message}
-          </Text>
-          <TouchableOpacity
-            style={styles.retryButton}
-            onPress={onRetry}
-            accessibilityRole="button"
-            accessibilityLabel={t("merchantDetailRetry")}
-          >
-            <Text style={styles.retryText}>{t("merchantDetailRetry")}</Text>
-          </TouchableOpacity>
-        </View>
-      );
-    }
+    // The header already says why the stats failed (`statsError`).
+    if (fatalError) return null;
     if (listError) {
       return (
         <View style={styles.errorContainer}>
@@ -587,7 +590,7 @@ function MerchantDetailBody({ payee }: { payee: string }) {
           <DateSectionHeader displayDate={section.displayDate} />
         )}
         stickySectionHeadersEnabled={false}
-        ListHeaderComponent={fatalError ? null : listHeader}
+        ListHeaderComponent={fatalError ? statsError : listHeader}
         ListEmptyComponent={listEmpty}
         ListFooterComponent={
           isLoadingMore ? (
