@@ -26,6 +26,25 @@ const SEGMENT_MATCH_BONUS = 2;
  */
 const EXACT_MATCH_LENGTH_FACTOR = 3;
 
+/**
+ * `text` lowercased one UTF-16 unit at a time, so it stays index-aligned with
+ * `text`. `"İ".toLowerCase()` is two units (`i` + U+0307), and lowercasing the
+ * whole string shifted every later character by one, so "bank" stopped
+ * finding `Assets:İşBank` (w21/060); its first unit, `i`, is what a typed
+ * pattern holds.
+ */
+function lowerAligned(text: string): string {
+  const whole = text.toLowerCase();
+  if (whole.length === text.length) {
+    return whole;
+  }
+  let lower = "";
+  for (let index = 0; index < text.length; index += 1) {
+    lower += text[index].toLowerCase()[0];
+  }
+  return lower;
+}
+
 function isSegmentStart(text: string, index: number): boolean {
   return index === 0 || text[index - 1] === SEGMENT_SEPARATOR;
 }
@@ -74,7 +93,7 @@ export function fuzzyMatch(pattern: string, text: string): number {
   }
 
   // Lowercased once per candidate instead of per character compared.
-  const lowerText = text.toLowerCase();
+  const lowerText = lowerAligned(text);
   let patternIndex = 0;
   let runLength = 0;
   let score = 0;

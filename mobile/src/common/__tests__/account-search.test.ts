@@ -153,3 +153,21 @@ describe("filterAccounts", () => {
     });
   });
 });
+
+// w21/060: "İ" lowercases to two code units, which shifted every later
+// character, so "bank" missed Assets:İşBank and the picker offered Create.
+describe("account search with a dotted capital I", () => {
+  const accounts = ["Assets:İşBank", "Assets:ZiraatBank"];
+
+  it("finds İşBank by a lowercase query after the İ", () => {
+    expect(filterAccounts("bank", accounts).includes("Assets:İşBank")).toBe(
+      true,
+    );
+    expect(fuzzyMatch("bank", "Assets:İşBank") > 0).toBe(true);
+  });
+
+  it("finds it by iş and by İş", () => {
+    expect(filterAccounts("iş", accounts)).toEqual(["Assets:İşBank"]);
+    expect(filterAccounts("İş", accounts)).toEqual(["Assets:İşBank"]);
+  });
+});
