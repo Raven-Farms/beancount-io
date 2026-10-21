@@ -55,6 +55,11 @@ const ENTRIES_FIELDS = [
   "getLedgerCommodities",
   "getLedgerManagedPrices",
   "ledgerMeta",
+  // The account list (`attributes.accounts`) and close dates: opening or
+  // closing an account changes them, and a new account has no posting for any
+  // other read to carry — Accounts kept the pre-write tree (w21/056).
+  "getLedger",
+  "getLedgerAccountDirectives",
   // Every write is a git commit, so the notifications history moves too.
   "listCommits",
   // Fixed app-authored BQL aggregations (Merchants directory and later

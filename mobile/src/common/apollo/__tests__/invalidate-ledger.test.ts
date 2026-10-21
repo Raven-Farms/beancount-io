@@ -142,6 +142,11 @@ describe("invalidate-ledger", () => {
         "getLedgerErrors",
         "listCommits",
         "queryShell",
+        // An opened account appears in the Accounts tree only through the
+        // ledger's account list, and the pickers read its close dates
+        // (w21/056).
+        "getLedger",
+        "getLedgerAccountDirectives",
       ];
 
       expect(
