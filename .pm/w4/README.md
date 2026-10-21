@@ -9,7 +9,6 @@
 - [262 — Keep Journal, Account, Overview and Files row focus visible in forced colors](./blocked/262.md) — minor; dashboard QA, 2026-10-20. — **blocked:** fix shipped in `def18543d`; awaiting forced-colors pixel check
 - [265 — Keep financial text and private paths out of GA4 automatic events](./blocked/265.md) — major; dashboard QA, 2026-10-20; stream-editor completion dependency. — **blocked:** checklist shipped in `181e7a996`; needs a GA4 Editor to turn off Site search / history page views
 - [273 — Keep active picker options identifiable in forced colors](./blocked/273.md) — minor; dashboard QA, 2026-10-20; CommandItem and shared Combobox. — **blocked:** fix shipped in `7c4e21f4f`; awaiting forced-colors pixel check
-- [283 — Resolve supported early-year statement periods without a 1900 offset](./283.md) — minor; dashboard QA, 2026-10-20.
 - [284 — Protect the Accounts Open Account draft while its write is pending](./284.md) — minor; dashboard QA, 2026-10-20.
 - [285 — Preserve skipped civil days in the shared ISO date display formatter](./285.md) — minor; dashboard QA, 2026-10-20.
 - [286 — Keep IME composition keys from applying Combobox values](./286.md) — minor; dashboard QA, 2026-10-20.
