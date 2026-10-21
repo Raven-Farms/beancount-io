@@ -12,6 +12,7 @@ import { Calendar } from "@/common/components/ui/calendar";
 vi.unmock("react-i18next");
 
 vi.mock("@tanstack/react-router", () => ({
+  useHydrated: () => true,
   Link: ({
     children,
     ...props

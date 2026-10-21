@@ -1,6 +1,6 @@
 # w4 · m36 — Preserve profile and commit timestamps through hydration
 
-**Worker:** worker1 **Goal:** Commit, profile activity and repository-card timestamps hydrate without replacing focused controls and show exact browser-zone dates. **Status:** todo (t001, t002, t007, t004, t005 done; t008 repository-card repair is actionable)
+**Worker:** worker1 **Goal:** Commit, profile activity and repository-card timestamps hydrate without replacing focused controls and show exact browser-zone dates. **Status:** todo (t001, t002, t007, t004, t005, t008 done; t003 needs a deployed browser check)
 
 **Severity:** minor. **Estimate:** 260m across ten tasks, dashboard only.
 
@@ -11,7 +11,7 @@
 | [t001](./done/t001.md) | Stabilize initial commit relative-time rendering — **DONE** | 45m | — |
 | [t002](./done/t002.md) | Synchronize the exact timestamp name after hydration — **DONE** | 25m | t001 |
 | [t007](./done/t007.md) | Stabilize profile activity relative text and exact titles — **DONE** | 40m | t001 |
-| [t008](./t008.md) | Stabilize repository-card relative text and exact titles | 35m | t007 |
+| [t008](./done/t008.md) | Stabilize repository-card relative text and exact titles — **DONE** | 35m | t007 |
 | [t003](./t003.md) | Verify the timestamp and keyboard adoption surface | 20m | t002, t007, t008 |
 | [t004](./done/t004.md) | Simplify the initial commit/activity lifecycle — **DONE** | 10m | t007 |
 | [t005](./done/t005.md) | Prove the initial commit/activity SSR behavior — **DONE** | 40m | t007 |

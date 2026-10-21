@@ -21,6 +21,7 @@ vi.mock("@/common/hooks/use-translations", async () => {
         (en[key]?.message || key).replace(/\{(\w+)\}/g, (_, name: string) =>
           String(params[name]),
         ),
+      i18n: { language: "en" },
     }),
   };
 });

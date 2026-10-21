@@ -1,4 +1,4 @@
-import { Link } from "@tanstack/react-router";
+import { Link, useHydrated } from "@tanstack/react-router";
 import { ArrowUpRight, Globe2, LockKeyhole, Star } from "lucide-react";
 import { useFormatRelativeTime } from "@/common/hooks/use-date-locale";
 import { useTranslations } from "@/common/hooks/use-translations";
@@ -22,8 +22,17 @@ export function RepositoryListItem({
   starsCount,
   ownerUsername,
 }: RepositoryListItemProps) {
-  const { t } = useTranslations();
+  const { t, i18n } = useTranslations();
   const formatRelativeTime = useFormatRelativeTime();
+  // As in ProfileActivity: server and hydration renders share a UTC exact
+  // date, and the age and browser-zone title follow in place after
+  // hydration, so a focused profile control is kept (w4/m36).
+  const hydrated = useHydrated();
+  const exactTime = (value: Date, options: Intl.DateTimeFormatOptions) =>
+    value.toLocaleString(i18n.language, {
+      ...options,
+      timeZone: hydrated ? undefined : "UTC",
+    });
   const ledgerOwner = fullName.split("/")[0] || ownerUsername;
   const date = new Date(updatedAt);
   const hasDate = !Number.isNaN(date.getTime());
@@ -69,8 +78,16 @@ export function RepositoryListItem({
         {hasDate && (
           <span>
             {t("userProfile.updated")}{" "}
-            <time dateTime={date.toISOString()} title={date.toLocaleString()}>
-              {formatRelativeTime(date)}
+            <time
+              dateTime={date.toISOString()}
+              title={exactTime(date, {
+                dateStyle: "medium",
+                timeStyle: "long",
+              })}
+            >
+              {hydrated
+                ? formatRelativeTime(date)
+                : exactTime(date, { dateStyle: "medium" })}
             </time>
           </span>
         )}

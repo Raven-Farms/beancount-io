@@ -10,6 +10,7 @@ import { UserProfileTabs } from "../user-profile-tabs";
  */
 
 vi.mock("@tanstack/react-router", () => ({
+  useHydrated: () => true,
   Link: ({
     children,
     to,
@@ -91,6 +92,7 @@ vi.mock("@/common/hooks/use-translations", () => ({
         "userProfile.loadMoreError": "Could not load more results.",
         "common.tryAgain": "Try again",
       })[key] ?? key,
+    i18n: { language: "en" },
   }),
 }));
 

@@ -5,6 +5,7 @@ import { RepositoryListItem } from "../repository-list-item";
 
 // Mock TanStack Router
 vi.mock("@tanstack/react-router", () => ({
+  useHydrated: () => true,
   Link: ({ children, to, params, ...props }: any) => (
     <a
       href={`${to}/${params?.ledgerOwner || ""}/${params?.ledgerName || ""}`}
@@ -28,6 +29,7 @@ vi.mock("@/common/hooks/use-translations", () => ({
       };
       return translations[key] || key;
     },
+    i18n: { language: "en" },
   }),
 }));
 
