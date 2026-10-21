@@ -98,7 +98,10 @@ export async function executeReadLedgerFiles(
         if (raw === undefined) {
           throw new Error(`file not found: ${path}`);
         }
-        const lines = raw.split("\n");
+        // A trailing newline ends the last line; it does not start another,
+        // so the count matches `wc -l` and every editor (w23/005).
+        const terminated = raw.endsWith("\n");
+        const lines = (terminated ? raw.slice(0, -1) : raw).split("\n");
         // A start past the last line used to come back as an empty section
         // whose own metadata contradicted itself (startLine 10, endLine 9).
         // An end_line past the end is still clamped: "up to N lines" is an
@@ -113,12 +116,15 @@ export async function executeReadLedgerFiles(
         const s = (start_line ?? 1) - 1;
         const e = end_line ?? lines.length;
         const slice = lines.slice(s, e);
+        const reachesEnd = s + slice.length === lines.length;
         sections.push({
           path,
           startLine: s + 1,
           endLine: s + slice.length,
           totalLines: lines.length,
-          content: slice.join("\n"),
+          // The terminator goes back on when the slice reaches the end, so a
+          // whole-file read is still the file byte for byte.
+          content: slice.join("\n") + (terminated && reachesEnd ? "\n" : ""),
         });
       }
 

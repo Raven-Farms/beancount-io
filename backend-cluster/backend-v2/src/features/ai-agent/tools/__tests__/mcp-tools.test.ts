@@ -232,6 +232,72 @@ describe("executeReadLedgerFiles", () => {
     }
   });
 
+  // w23/005: a trailing newline ends the last line; it is not a line of its
+  // own. The count matches `wc -l`, and a full read is still byte-identical.
+  describe("a file that ends in a newline", () => {
+    const TERMINATED = "line1\nline2\nline3\n";
+    const read = (file: {
+      path: string;
+      start_line?: number;
+      end_line?: number;
+    }) =>
+      executeReadLedgerFiles(
+        {
+          services: { ledgerRepo: serviceReturning(TERMINATED) } as any,
+          identity: IDENTITY,
+          ledgerId: LEDGER_ID,
+        },
+        { files: [file] },
+      );
+
+    it("counts the lines wc -l counts and returns the bytes unchanged", async () => {
+      expect(await read({ path: "main.bean" })).toEqual({
+        ok: true,
+        result: [
+          {
+            path: "main.bean",
+            startLine: 1,
+            endLine: 3,
+            totalLines: 3,
+            content: TERMINATED,
+          },
+        ],
+      });
+    });
+
+    it("refuses a start on the phantom line after the final newline", async () => {
+      expect(await read({ path: "main.bean", start_line: 4 })).toMatchObject({
+        ok: false,
+        errorCode: "BAD_USER_INPUT",
+        error: expect.stringContaining("past the end of the file (3 lines)"),
+      });
+    });
+
+    it("keeps the terminator only on a slice that reaches the end", async () => {
+      const middle = await read({
+        path: "main.bean",
+        start_line: 2,
+        end_line: 2,
+      });
+      const tail = await read({
+        path: "main.bean",
+        start_line: 2,
+        end_line: 99,
+      });
+      expect(middle.ok && middle.result[0]).toMatchObject({
+        startLine: 2,
+        endLine: 2,
+        content: "line2",
+      });
+      expect(tail.ok && tail.result[0]).toMatchObject({
+        startLine: 2,
+        endLine: 3,
+        totalLines: 3,
+        content: "line2\nline3\n",
+      });
+    });
+  });
+
   it("fails the whole call when a requested path is missing from the response", async () => {
     const ledgerRepo = { getFilesContent: jest.fn().mockResolvedValue([]) };
     const result = await executeReadLedgerFiles(
@@ -588,7 +654,7 @@ describe("executeEditLedgerFiles", () => {
         diff: [
           {
             path: "main.bean",
-            diff: "--- a/main.bean\n+++ b/main.bean\n@@ -1,1 +1,1 @@\n-abc\n+aBc\n",
+            diff: "--- a/main.bean\n+++ b/main.bean\n@@ -1,1 +1,1 @@\n-abc\n\\ No newline at end of file\n+aBc\n\\ No newline at end of file\n",
           },
         ],
         summary:
@@ -644,7 +710,7 @@ describe("executeEditLedgerFiles", () => {
         diff: [
           {
             path: "main.bean",
-            diff: "--- a/main.bean\n+++ b/main.bean\n@@ -1,1 +1,1 @@\n-abc\n+aBc\n",
+            diff: "--- a/main.bean\n+++ b/main.bean\n@@ -1,1 +1,1 @@\n-abc\n\\ No newline at end of file\n+aBc\n\\ No newline at end of file\n",
           },
         ],
         summary:
@@ -701,7 +767,7 @@ describe("executeEditLedgerFiles", () => {
         diff: [
           {
             path: "gone.bean",
-            diff: "--- a/gone.bean\n+++ b/gone.bean\n@@ -1,1 +0,0 @@\n-bye\n",
+            diff: "--- a/gone.bean\n+++ b/gone.bean\n@@ -1,1 +0,0 @@\n-bye\n\\ No newline at end of file\n",
           },
         ],
         summary:
