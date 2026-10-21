@@ -653,6 +653,27 @@ describe("PlaidSyncService", () => {
       ).rejects.toThrow("Some transactions not found in database");
     });
 
+    // w5/m5/t004: an agent passed the staged row's `id` for its
+    // `transactionId` and got a refusal with nothing to go on.
+    it("names the id the lookup wants when a transaction is not found", async () => {
+      mockPlaidTransactionModel.getByTransactionIds.mockResolvedValue([]);
+
+      await expect(
+        service.submitTransactionsToLedger(
+          systemIdentity(userId),
+          ledgerOwner,
+          ledgerName,
+          txInputs,
+        ),
+      ).rejects.toMatchObject({
+        category: "BAD_USER_INPUT",
+        metadata: {
+          field: "transactionIds",
+          hint: expect.stringContaining("not its row `id`"),
+        },
+      });
+    });
+
     it("should throw when transaction already synced", async () => {
       mockPlaidTransactionModel.getByTransactionIds.mockResolvedValue([
         { ...mockTransactions[0], syncedToLedger: true },
@@ -1154,7 +1175,11 @@ describe("PlaidSyncService", () => {
       ]);
       mockPlaidClient.getAccounts.mockResolvedValue([
         { accountId: "account-ext-1", name: "Checking", type: "depository" },
-        { accountId: "account-ext-new", name: "New Savings", type: "depository" },
+        {
+          accountId: "account-ext-new",
+          name: "New Savings",
+          type: "depository",
+        },
       ]);
       mockPlaidClient.transactionsSync.mockResolvedValue({
         added: [

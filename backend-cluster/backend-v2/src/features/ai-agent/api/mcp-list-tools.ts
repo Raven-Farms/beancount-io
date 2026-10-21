@@ -55,7 +55,7 @@ export async function executeListBankConnections(
 // --- listStagedBankTransactions ---------------------------------------------
 
 export const listStagedBankTransactionsDescription =
-  "List bank transactions staged for import (the ids importStagedBankTransactions and discardStagedBankTransactions take); optional accountId filter.";
+  "List bank transactions staged for import. Each row's `transactionId` — not its `id` — is what importStagedBankTransactions and discardStagedBankTransactions take; optional accountId filter.";
 
 export const listStagedBankTransactionsInput = bankAccountQuery.strict();
 

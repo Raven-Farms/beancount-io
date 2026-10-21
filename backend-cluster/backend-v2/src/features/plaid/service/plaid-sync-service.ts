@@ -186,7 +186,13 @@ export class PlaidSyncService implements IPlaidSyncService {
       transactionIds,
     );
     if (transactions.length !== transactionIds.length) {
-      throw new BadUserInputError("Some transactions not found in database");
+      // An agent handed the staged row's `id` for its `transactionId` and got
+      // this with nothing to go on (w5/m5/t004, 2026-10-21).
+      throw new BadUserInputError(
+        "Some transactions not found in database",
+        "transactionIds",
+        "Pass each staged transaction's `transactionId`, as the staged-transaction list returns it, not its row `id`.",
+      );
     }
 
     const accounts = new Map<string, PlaidAccount>();
