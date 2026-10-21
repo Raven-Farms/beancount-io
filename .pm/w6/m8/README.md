@@ -1,0 +1,52 @@
+# w6 · m8 — Claim and publish the hosted connector on Smithery and Glama
+
+**Worker:** worker1 **Goal:** Users find one accurate, owned, authenticated listing per platform for the existing hosted MCP endpoint. **Status:** todo (t003 blocked on existing w2/088; t001 and t002 can proceed)
+
+**Implementation estimate:** ~3h, excluding external review queues and the standing closing tasks.
+
+## Tasks (in order)
+
+| id | title | est | depends_on |
+| --- | --- | --- | --- |
+| [t001](./t001.md) | Audit imported listings and prepare shared submission materials | 30m | — |
+| [t002](./t002.md) | Publish or claim Smithery's existing hosted-server listing | 45m | t001 |
+| [t003](./t003.md) | Align the existing Glama connector after w2/088's ownership and health repair — **BLOCKED** | 45m | t001, w2/088 |
+| [t004](./t004.md) | Verify both public listings through fresh authenticated connections | 60m | t002, t003 |
+| [t005](./t005.md) | Adoption surface | 30m | t004 |
+| [t006](./t006.md) | Simplify | 30m | t005 |
+| [t007](./t007.md) | Test coverage | 45m | t005, t006 |
+| [t008](./t008.md) | Closeout | 15m | t007 |
+
+## Definition of done
+
+- Smithery and Glama each have one canonical, public listing for io.beancount/beancount pointing to https://beancount.io/api-gateway/mcp.
+- The existing Glama connector is retained; w2/088's claim/test-profile/full-day health repair is reused and resolved rather than duplicated.
+- Fresh OAuth, a known synthetic ledger query, and one supported write preview succeed through each published connection path; date, client/version, and deployed revision when exposed are recorded.
+- Ownership, metadata, and authentication descriptions match the deployed surface. Submission receipts and pending review do not satisfy publication.
+- The public MCP setup guide and marketplace inventory link to verified listings, and all standing closing tasks pass.
+
+## Source + Goal linkage
+
+- **Source:** Approved brainstorm item 3, materialized at the user's request `$pm 3,4,5,6,7 to w6` on 2026-10-20. The user excluded the previously proposed Claude and ChatGPT milestones. Builds on completed w2/m36 and w6/m7.
+- **Goal linkage:** **A3 — Community & distribution** (primary), **A1 — Agent-native accounting** (secondary): distribute the existing accounting connector through supported catalogs and usable install paths.
+- **Expected outcome:** A person browsing either catalog can discover Beancount.io and reach a first authenticated ledger query. Signals: listing referrals and successful first MCP connections.
+- **Why now:** The official registry and OAuth surface already exist; these distributions can proceed while other channels review submissions. w6 has general-purpose capacity, and the existing Glama follow-up must retain one owner.
+- **Adoption surface:** included because the milestone ships public listings and agent-facing connection instructions. Reuse existing host evidence and canonical setup guidance.
+
+## Execution boundaries
+
+- Reuse `backend-cluster/backend-v2/server.json`, `backend-cluster/backend-v2/docs/mcp.md`, and the shared inventory `backend-cluster/backend-v2/docs/mcp-marketplaces.md`; stage any public submission payload in the owning backend package. Preserve existing REST/GraphQL/MCP parity and documented credential policy.
+- Use the hosted endpoint, dedicated QA account, and synthetic ledgers. A gateway/client rehearsal connects to that service; it does not provision another backend stack.
+- Search for imported records before submitting. Follow documented marketplace submission routes rather than bulk unsolicited PRs/issues.
+- Publisher account access, domain verification, operator contact, and review queues are concrete external gates. Prepare all independent repository work first; park any dependent task through /pm with its exact owner and unblock condition.
+- No Claude/ChatGPT publication milestone, ClawHub skills publication, new accounting capability, or paid placement is added here.
+
+## References
+
+- [Smithery publishing](https://smithery.ai/docs/build/publish)
+- [Glama connector FAQ](https://glama.ai/mcp/faq)
+- [Existing w2/088 health/claim follow-up](https://github.com/bex-co/beancount-io/blob/main/.pm/w2/blocked/088.md)
+
+## Blocked
+
+- **t003:** w2/088 is already blocked on operator Glama admin access and a private QA test profile. Its unauthenticated 401/discovery check is complete on origin/main; this milestone does not repeat that repair. **Unblock:** the operator claims the existing connector, configures the dedicated QA synthetic-ledger test profile privately, records a full day of successful checks, and resolves w2/088; then t003 aligns the remaining listing metadata. **Owner:** the publisher/operator. t001 and t002 can proceed independently.

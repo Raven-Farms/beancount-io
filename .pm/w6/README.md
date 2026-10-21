@@ -4,7 +4,7 @@
 
 ## Blocker triage — updated 2026-10-21 UTC
 
-All 23 top-level pending items on the published board remain blocked: twenty engine items, m6, and Hermes notes 039/040. Official npm and GitHub release checks at 05:08 UTC still report WASM 0.24.0, last published September 6. On inspected upstream main `51cf2326`, ten engine items have merged source candidates awaiting release; nine notes plus m2 still need contract or semantic changes. No published artifact clears an adoption prerequisite.
+The 23 previously published pending items remain blocked: twenty engine items, m6, and Hermes notes 039/040. Official npm and GitHub release checks at 05:08 UTC still report WASM 0.24.0, last published September 6. On inspected upstream main `51cf2326`, ten engine items have merged source candidates awaiting release; nine notes plus m2 still need contract or semantic changes. No published artifact clears an engine adoption prerequisite. Marketplace work continues independently under m8 below.
 
 m6/t001–t012 are complete, including authenticated first queries and default Hermes discovery. All eleven accepted suite 0.3.3 updates are public, all 105 authored files match, and individual installs have been verified in OpenClaw and supported Hermes (init exception retained). The current source suite is 0.3.5 with thirteen skills; its corrected cases, discovery/routing and w3/m55–m57 adoption gates still need Claude capacity. The last native Claude probe at 04:23 UTC returned a first-party weekly-limit error before inference; no changed capacity evidence warrants repeating it. Hermes's unchanged stable scanner still blocks init; a fresh native search recheck still finds all eleven through default/all search and none through the explicit ClawHub filter.
 
@@ -51,6 +51,8 @@ These are existing blocked findings prepared for an upstream hand-off; no issue,
 Prioritize the major correctness findings (PRINT/FROM/JOURNAL, authored locations, and quoted-column values), then type provenance and guard/regex compatibility. Coordinate one dependency upgrade for whichever fixes the published artifact actually contains, regenerate the ledger lockfile with Yarn, and verify each finding separately. Source-only fixes, unrelated releases, and adapter query rewrites do not meet the written unblock conditions. Hosted verification follows the normal deployment separately.
 
 ## Milestones
+
+- [ ] **m8** — [Claim and publish the hosted connector on Smithery and Glama](./m8/README.md) (8 tasks; A3/A1) ← existing local marketplace roadmap, continued under `$loopx w6` on 2026-10-21 UTC; Glama reuses w2/088, while t001/t002 can proceed
 
 - [x] **m7** — [Connect OpenClaw and Hermes Agent to the hosted MCP endpoint](./done/m7/README.md) (9 tasks; A1; backend-v2 fixtures and docs) ← user request 2026-10-16 to list Beancount.io on OpenClaw and Hermes Agent; ADR 019 D8
 
