@@ -352,6 +352,70 @@ describe("appending Beancount text through the real adapters", () => {
     );
   });
 
+  /** w4/m38: years 0001–0099 are real dates, not 1900s, on every surface. */
+  describe("early-year dates", () => {
+    const early = (date: string) => TXN.replace("2026-02-05", date);
+
+    it.each(["rest", "gql", "mcp"] as const)(
+      "routes and writes a 0099 directive once, after a non-writing dry run, via %s",
+      async (surface) => {
+        const f = await fixture();
+        f.state.routeTransactionsTo = "txns/{year}/{date}.bean";
+        try {
+          const dry = await f.call(surface, {
+            text: early("0099-08-11"),
+            dryRun: true,
+          });
+          expect(dry.ok).toBe(true);
+          const preview = dry.ok ? (dry.data as Record<string, never>) : {};
+          expect((preview.diff as { path: string; diff: string }[])[0]).toEqual(
+            {
+              path: "txns/0099/0099-08-11.bean",
+              diff: expect.stringContaining('+0099-08-11 * "Cafe" "Coffee"'),
+            },
+          );
+          expect(f.changeLedgerFiles).not.toHaveBeenCalled();
+
+          const result = await f.call(surface, { text: early("0099-08-11") });
+          expect(result.ok).toBe(true);
+          const data = result.ok ? (result.data as Record<string, never>) : {};
+          expect(data.wrote).toEqual([
+            { path: "txns/0099/0099-08-11.bean", line: 1 },
+          ]);
+          expect(f.commits).toHaveLength(1);
+          expect(
+            f.state.files.get("txns/0099/0099-08-11.bean")!.split("\n")[0],
+          ).toBe('0099-08-11 * "Cafe" "Coffee"');
+        } finally {
+          await f.close();
+        }
+      },
+    );
+
+    it.each(["rest", "gql", "mcp"] as const)(
+      "still refuses year 0000 as bad input, writing nothing, via %s",
+      async (surface) => {
+        const f = await fixture();
+        try {
+          const result = await f.call(surface, { text: early("0000-08-11") });
+          expect(result.ok).toBe(false);
+          const error = (result.ok === false ? result.error : {}) as {
+            code?: string;
+            message?: string;
+            originalError?: { category?: string };
+          };
+          expect(error.code ?? error.originalError?.category).toBe(
+            "BAD_USER_INPUT",
+          );
+          expect(error.message).toContain("0000-08-11");
+          expect(f.changeLedgerFiles).not.toHaveBeenCalled();
+        } finally {
+          await f.close();
+        }
+      },
+    );
+  });
+
   it("names the UNBALANCED code and a hint on the MCP surface", async () => {
     const f = await fixture();
     f.state.projectedErrors = [

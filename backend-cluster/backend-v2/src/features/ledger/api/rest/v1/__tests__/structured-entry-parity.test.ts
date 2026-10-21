@@ -116,6 +116,8 @@ async function fixture(
     failCommit: false,
     unbalanced: false,
     wouldBreak: false,
+    /** bcio `account_file` routing template, when the ledger routes opens. */
+    accountFile: null as string | null,
   };
   const errorCalls = { count: 0 };
   const envelope = (data: unknown) => ({ data: { success: true, data } });
@@ -165,7 +167,10 @@ async function fixture(
       entries: { addBulkEntries: write },
       reports: {
         getLedgerBcioOptions: async () =>
-          envelope({ default_file: "main.bean" }),
+          envelope({
+            default_file: "main.bean",
+            account_file: state.accountFile,
+          }),
       },
       ledgers: {
         getLedgerFile: async () => envelope({ path: "main.bean" }),
@@ -869,6 +874,61 @@ describe.each(["rest", "gql", "mcp"])(
         ]);
         expect(result.success).toBe(true);
         expect(f.committed).toHaveLength(1);
+      } finally {
+        await f.close();
+      }
+    });
+  },
+);
+
+/** w4/m38: years 0001–0099 are real dates, not 1900s, on every surface. */
+describe.each(["rest", "gql", "mcp"])(
+  "early-year entries via %s",
+  (surface) => {
+    const open = (date: string) => [
+      {
+        type: "open" as const,
+        entry: {
+          date,
+          account: "Assets:Qa-20261020:Date",
+          currencies: ["USD"],
+        },
+      },
+    ];
+
+    it.each([
+      ["0001-01-01", "accounts/0001.bean"],
+      ["0099-01-01", "accounts/0099.bean"],
+      ["0100-01-01", "accounts/0100.bean"],
+    ])("writes %s exactly once, routed to %s", async (date, filename) => {
+      const f = await fixture();
+      f.state.accountFile = "accounts/{year}.bean";
+      try {
+        expect((await f.call(surface, open(date))).success).toBe(true);
+        expect(f.write).toHaveBeenCalledTimes(1);
+        expect(f.committed).toEqual([
+          expect.objectContaining({
+            type: "open",
+            filename,
+            item: expect.objectContaining({ date }),
+          }),
+        ]);
+      } finally {
+        await f.close();
+      }
+    });
+
+    it("refuses year 0000 atomically, with the rest of its batch", async () => {
+      const f = await fixture();
+      try {
+        const result = await f.call(surface, [
+          ...open("0099-01-01"),
+          ...open("0000-01-01"),
+        ]);
+        expect(result.success).toBe(false);
+        expect(JSON.stringify(result)).toContain("0000-01-01");
+        expect(f.write).not.toHaveBeenCalled();
+        expect(f.committed).toEqual([]);
       } finally {
         await f.close();
       }
