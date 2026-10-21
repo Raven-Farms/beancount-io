@@ -537,6 +537,28 @@ describe("LedgerWorkflow", () => {
         expect(mockFavaApiClient.ledgers.createLedger).toHaveBeenCalledTimes(1);
       });
 
+      it("refuses an empty or oversized requestId and a too-long setup title, as REST and MCP do (w21/203)", async () => {
+        const { withStore } = workflowWithStore();
+        for (const requestId of ["", "r".repeat(201)]) {
+          await expect(
+            withStore.createLedger({
+              identity: IDENTITY,
+              input: { name: "setup-ledger", requestId },
+            }),
+          ).rejects.toThrow("requestId must be 1-200 characters");
+        }
+        await expect(
+          withStore.createLedger({
+            identity: IDENTITY,
+            input: {
+              name: "setup-ledger",
+              setup: { preset: "blank@1", title: "t".repeat(201) },
+            },
+          }),
+        ).rejects.toThrow("Title must be at most 200 characters");
+        expect(mockFavaApiClient.ledgers.createLedger).not.toHaveBeenCalled();
+      });
+
       it("refuses the same requestId with a different request", async () => {
         const { withStore } = workflowWithStore();
         await withStore.createLedger({

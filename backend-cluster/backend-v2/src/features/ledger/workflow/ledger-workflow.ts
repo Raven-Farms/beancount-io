@@ -74,6 +74,7 @@ import {
 } from "@/shared/errors";
 import {
   buildLedgerFiles,
+  CREATE_REQUEST_ID_MAX,
   previewLedgerSetup,
   type LedgerSetup,
   type LedgerSetupPreview,
@@ -551,6 +552,17 @@ export class LedgerWorkflow implements ILedgerWorkflow {
         "setup",
       );
     }
+    if (
+      input.requestId != null &&
+      (input.requestId.length < 1 ||
+        input.requestId.length > CREATE_REQUEST_ID_MAX)
+    ) {
+      // An empty id would silently turn idempotency off below.
+      throw new ValidationError(
+        `requestId must be 1-${CREATE_REQUEST_ID_MAX} characters`,
+        "requestId",
+      );
+    }
     const ledgerCreate: LedgerCreate = {
       name: input.name,
       description: input.description,
@@ -613,7 +625,10 @@ export class LedgerWorkflow implements ILedgerWorkflow {
         }
         await idempotency.store.setStrict(
           idempotency.key,
-          JSON.stringify({ requestHash: idempotency.hash, status: "in-progress" }),
+          JSON.stringify({
+            requestHash: idempotency.hash,
+            status: "in-progress",
+          }),
           TTL.HOUR_24,
         );
       }

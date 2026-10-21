@@ -2,6 +2,10 @@ import { requestPlatform } from "@/server/api/request-platform";
 import { z } from "@/shared/zod-openapi-setup";
 import { LedgerTemplate } from "@/features/ledger/workflow/ledger-workflow.types";
 import { setupCatalog, type PresetId } from "@/features/ledger/setup";
+import {
+  CREATE_REQUEST_ID_MAX,
+  SETUP_TITLE_MAX,
+} from "@/features/ledger/setup/build-ledger";
 import { v1Route } from "@/server/rest/v1-route";
 import { json } from "@/server/rest/v1-schemas";
 import { ledgerPathSchema, ledgerIdOf } from "./schemas";
@@ -26,9 +30,15 @@ const ledgerSetupInput = z
         ],
       )
       .describe("Setup preset id (ADR021)."),
-    title: z.string().max(200).optional(),
-    operatingCurrency: z.string().regex(/^[A-Z]{3}$/).optional(),
-    historyStart: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+    title: z.string().max(SETUP_TITLE_MAX).optional(),
+    operatingCurrency: z
+      .string()
+      .regex(/^[A-Z]{3}$/)
+      .optional(),
+    historyStart: z
+      .string()
+      .regex(/^\d{4}-\d{2}-\d{2}$/)
+      .optional(),
     capabilities: z
       .record(z.string(), z.enum(["enabled", "declined", "deferred"]))
       .optional(),
@@ -37,9 +47,15 @@ const ledgerSetupInput = z
         z
           .object({
             name: z.string(),
-            currency: z.string().regex(/^[A-Z]{3}$/).optional(),
+            currency: z
+              .string()
+              .regex(/^[A-Z]{3}$/)
+              .optional(),
             openingState: z.enum(["unknown", "zero", "known"]).optional(),
-            amount: z.string().regex(/^-?\d+(\.\d+)?$/).optional(),
+            amount: z
+              .string()
+              .regex(/^-?\d+(\.\d+)?$/)
+              .optional(),
           })
           .strict(),
       )
@@ -63,7 +79,7 @@ export const ledgerCreateInput = z
         "STARTER (the default) has options and accounts without transactions; SAMPLE has demonstration transactions.",
       ),
     setup: ledgerSetupInput.nullish(),
-    requestId: z.string().min(1).max(200).nullish(),
+    requestId: z.string().min(1).max(CREATE_REQUEST_ID_MAX).nullish(),
   })
   .strict();
 export const ledgerPreviewInput = z

@@ -8,7 +8,6 @@ import {
   type PresetId,
 } from "./index";
 
-
 interface SetupAccountSelection {
   name: string;
   currency?: string;
@@ -25,6 +24,11 @@ export interface LedgerSetup {
   capabilities?: Record<string, CapabilityState>;
   accounts?: SetupAccountSelection[];
 }
+
+/** Longest ledger title a setup may carry, on every surface (w21/203). */
+export const SETUP_TITLE_MAX = 200;
+/** Bounds of a ledger-creation `requestId`, on every surface (w21/203). */
+export const CREATE_REQUEST_ID_MAX = 200;
 
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 const AMOUNT_PATTERN = /^-?\d+(\.\d+)?$/;
@@ -98,6 +102,10 @@ export function previewLedgerSetup(
   const preset =
     presetById(setup.preset) ?? fail(`Unknown preset "${setup.preset}"`);
 
+  if (setup.title !== undefined && setup.title.length > SETUP_TITLE_MAX) {
+    fail(`Title must be at most ${SETUP_TITLE_MAX} characters`);
+  }
+
   const operatingCurrency = setup.operatingCurrency ?? "USD";
   if (!setupCurrencies.supportedCurrencies.includes(operatingCurrency)) {
     fail(`Unsupported operating currency "${operatingCurrency}"`);
@@ -162,9 +170,14 @@ export function previewLedgerSetup(
         `Account "${selection.name}" must not carry an amount unless its opening state is "known"`,
       );
     }
-    if (selection.currency !== undefined && selection.currency !== operatingCurrency) {
+    if (
+      selection.currency !== undefined &&
+      selection.currency !== operatingCurrency
+    ) {
       if (!setupCurrencies.supportedCurrencies.includes(selection.currency)) {
-        fail(`Unsupported currency "${selection.currency}" for "${selection.name}"`);
+        fail(
+          `Unsupported currency "${selection.currency}" for "${selection.name}"`,
+        );
       }
     }
     selected.set(selection.name, { ...selection, openingState });

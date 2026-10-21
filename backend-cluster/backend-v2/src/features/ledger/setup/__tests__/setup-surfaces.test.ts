@@ -54,6 +54,20 @@ describe("setup surfaces (w3/m53/t008)", () => {
     expect(() => ledgerPreviewInput.parse({})).toThrow();
   });
 
+  it("refuses a 201-character title on every surface (w21/203)", () => {
+    const setup = { ...SETUP, title: "t".repeat(201) };
+    // REST and MCP parse the one schema; GraphQL reaches only the builder.
+    expect(() =>
+      ledgerCreateInput.parse({ name: "household", setup }),
+    ).toThrow();
+    expect(() => previewLedgerSetup(setup)).toThrow(
+      "Title must be at most 200 characters",
+    );
+    expect(() =>
+      previewLedgerSetup({ ...SETUP, title: "t".repeat(200) }),
+    ).not.toThrow();
+  });
+
   it("MCP preview returns the builder result and create passes setup through", async () => {
     const calls: unknown[] = [];
     const context = {
