@@ -253,7 +253,7 @@ the principal inputs; inspect the schema before constructing a call.
 | Tool                         | Inputs and behavior                                                                                                                                                       | Capability |
 | ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------- |
 | `runBqlQuery`                | `{ "query": "BALANCES" }`; returns formatted query output as a string, cut at 1,000 rows or 100 KB with a closing `[truncated: …]` line.                                  | Read       |
-| `runBqlQueryStructured`      | `{ "query": "BALANCES" }`; returns typed column metadata and rows, or a structured text result, matching REST JSON and GraphQL `queryShell`.                              | Read       |
+| `runBqlQueryStructured`      | `{ "query": "BALANCES" }`; returns column metadata (`dtype` labels) and rows, or a structured text result, matching REST JSON and GraphQL `queryShell`.                       | Read       |
 | `listLedgers`                | Optional `page`, `limit` (at most 100); omit both for every ledger. A pinned credential returns its one ledger. Start here, then `getLedgerContext`.                      | Read       |
 | `checkLedger`                | `{}`; bean-check errors with file and line, entry counts, and the latest commit, in one call. Call after any write.                                                       | Read       |
 | `getLedgerContext`           | Optional `payeeLimit`; attributes, open accounts, currencies, payees, years, and source files with counts.                                                                | Read       |
@@ -963,9 +963,18 @@ REST and GraphQL `queryShellText` return the full text.
 
 When an older ledger service omits count metadata, or reports an unknown count,
 the text begins `BQL result — row count unavailable` and preserves the readable
-result. `runBqlQueryStructured` returns typed rows instead: its `rowCount` counts
+result. `runBqlQueryStructured` returns a table with column metadata instead: its `rowCount` counts
 the rows returned, capped at 1,000, and `truncated` says whether rows were
 dropped. Text results retain their full count.
+
+BQL `dtype` labels currently come from the ledger service's inference, not a
+native expression schema. Numeric-looking or date-looking text and renamed
+projections can be labelled incorrectly; empty or entirely null columns fall
+back to column names. Scalar text and decimal strings preserve their values,
+including leading zeros and precision. Do not convert an identifier to a number
+solely because its inferred `dtype` says `Decimal`. REST JSON, GraphQL
+`queryShell` and `runBqlQueryStructured` share the same producer metadata and
+this [known type limitation](../../ledger/README.md#bql-column-types).
 
 ```json
 { "ok": true, "result": "tool-specific payload" }
