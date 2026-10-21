@@ -44,6 +44,7 @@ import {
   directionalIcon,
   trailingInputTextAlign,
 } from "@/common/rtl";
+import { useIsHere } from "@/common/hooks/use-is-here";
 
 const getStyles = (theme: ColorTheme) =>
   StyleSheet.create({
@@ -185,6 +186,7 @@ function AddBudgetScreenImpl(): JSX.Element {
     loading: metaLoading,
   } = useLedgerMeta(userId, ledgerId);
   const { saveBudget, loading } = useSaveBudget(ledgerId);
+  const isHere = useIsHere();
 
   const params = useLocalSearchParams<{
     account?: string;
@@ -261,6 +263,10 @@ function AddBudgetScreenImpl(): JSX.Element {
     if (result.ok) {
       haptics.success();
       setSaved(true);
+      // Left during the save: leave the screen they are on alone (w21/194).
+      if (!isHere()) {
+        return;
+      }
       if (router.canGoBack()) {
         router.back();
       } else {

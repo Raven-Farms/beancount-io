@@ -49,6 +49,7 @@ import { selectOutcomeFailure } from "./save-failure";
 import { isEntryGone } from "@/screens/transaction-detail-screen/selectors/select-entry-gone";
 import { RouteLedgerUnavailable } from "@/components/route-ledger-unavailable";
 import { i18n } from "@/translations";
+import { useIsHere } from "@/common/hooks/use-is-here";
 
 const SKELETON_WIDTHS = [220, 160, 280, 120, 200, 260, 140];
 
@@ -112,6 +113,7 @@ export const EditTransactionScreen = (): JSX.Element => {
   const theme = useTheme().colorTheme;
   const insets = useSafeAreaInsets();
   const confirmWrite = useLedgerWrite();
+  const isHere = useIsHere();
   const client = useApolloClient();
   const { canWrite } = useLedgerAccess();
   const { userId } = useSession();
@@ -332,7 +334,10 @@ export const EditTransactionScreen = (): JSX.Element => {
         if (!stillDirty) {
           savedOutRef.current = true;
           const exit = resolveSaveExit(targetEntryHash, saved.entryHash);
-          if (exit.kind === "detail") {
+          // `dismiss(2)` pops two screens from wherever the user is now; left
+          // during "Saving…", they stay where they are (w21/194).
+          const here = isHere();
+          if (here && exit.kind === "detail") {
             // The write changed the entry's content-derived identity, so the
             // detail screen behind holds a dead entryHash. The server told us
             // the new one: pop back to that screen with its params replaced
@@ -349,7 +354,7 @@ export const EditTransactionScreen = (): JSX.Element => {
                   }
                 : { entry_hash: exit.entryHash, ledger: ledgerId },
             });
-          } else {
+          } else if (here) {
             // No usable new identity (an older server echoes the request
             // hash): land on the journal, which the entries invalidation just
             // refetched, rather than on a detail screen that can only error.
@@ -362,6 +367,7 @@ export const EditTransactionScreen = (): JSX.Element => {
       }
     },
     [
+      isHere,
       handleReload,
       canWrite,
       client,

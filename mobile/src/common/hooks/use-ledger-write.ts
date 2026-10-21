@@ -9,6 +9,7 @@ import {
   type LedgerWriteOutcome,
   type LedgerWriteSpec,
 } from "@/common/ledger-write";
+import { useIsHere } from "@/common/hooks/use-is-here";
 
 /**
  * Binds `runLedgerWrite` to this app's toast, haptics and router.
@@ -20,6 +21,7 @@ import {
 export const useLedgerWrite = () => {
   const toast = useToast();
   const router = useRouter();
+  const isHere = useIsHere();
 
   return useCallback(
     <T>(spec: LedgerWriteSpec<T>): Promise<LedgerWriteOutcome> =>
@@ -27,11 +29,14 @@ export const useLedgerWrite = () => {
         {
           showToast: (message, type) => toast.showToast({ message, type }),
           haptics,
-          goBack: () => router.back(),
+          // Only if the user is still on the screen that wrote (w21/194).
+          goBack: () => {
+            if (isHere()) router.back();
+          },
           describeRefusal: (error) => describeLedgerRefusal(error, i18n),
         },
         spec,
       ),
-    [toast, router],
+    [toast, router, isHere],
   );
 };

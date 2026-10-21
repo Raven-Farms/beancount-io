@@ -46,6 +46,7 @@ import {
   profileChanges,
   type ProfileValues,
 } from "./profile-changes";
+import { useIsHere } from "@/common/hooks/use-is-here";
 
 /** The longest first or last name the form accepts. */
 const NAME_MAX = 100;
@@ -248,6 +249,7 @@ export function ProfileScreen(): JSX.Element {
     [t, savedValues.username],
   );
 
+  const isHere = useIsHere();
   const {
     control,
     handleSubmit,
@@ -288,6 +290,9 @@ export function ProfileScreen(): JSX.Element {
     }
     setSaved(true);
     toast.showToast({ message: t("profileUpdated"), type: "success" });
+    // Left during the save: the toast is enough, and `back()` would close
+    // whatever the user opened meanwhile (w21/194).
+    if (!isHere()) return;
     if (router.canGoBack()) {
       router.back();
     } else {

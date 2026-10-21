@@ -76,6 +76,7 @@ import { isTransactionDraftDirty, TransactionDraft } from "./draft-dirty";
 import { inlineSaveError } from "./inline-save-error";
 import { seedPostingsFromPayee } from "./payee-seed";
 import { useTwoPostingSuggestions } from "@/screens/add-transaction-screen/hooks/use-two-posting-suggestions";
+import { useIsHere } from "@/common/hooks/use-is-here";
 
 const SIGN_TOGGLE_SIZE = 28;
 const POSTING_ROW_PADDING_V = 14;
@@ -438,6 +439,7 @@ const MultiPostingsTransactionScreenComponent = () => {
   const router = useRouter();
   const toast = useToast();
   const confirmWrite = useLedgerWrite();
+  const isHere = useIsHere();
   const ledgerId = useLedgerGuard();
   const { userId } = useSession();
   const {
@@ -647,6 +649,9 @@ const MultiPostingsTransactionScreenComponent = () => {
       // Mark the draft saved before leaving, so the discard guard stays quiet.
       savedOutRef.current = true;
       setSaved(true);
+      // The user left during "Saving…": the toast says it saved, and the
+      // screen they are on now stays put (w21/194).
+      if (!isHere()) return;
       if (router.canGoBack()) {
         router.back();
       } else {

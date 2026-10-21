@@ -56,6 +56,7 @@ import { getFormatDate } from "@/common/format-util";
 import { initialOpenDate } from "./open-date";
 import { LEADING_TEXT_ALIGN, directionalIcon } from "@/common/rtl";
 import { revealAccountVar } from "@/common/vars/reveal-account";
+import { useIsHere } from "@/common/hooks/use-is-here";
 
 const VALIDATION_KEYS: Record<AccountNameValidationReason, string> = {
   invalidRoot: "openAccountInvalidRoot",
@@ -212,6 +213,7 @@ export function OpenAccountScreenComponent(): JSX.Element {
   const { userId } = useSession();
   const { data: meta, currencies } = useLedgerMeta(userId, ledgerId);
   const { openAccount, loading } = useOpenAccount(ledgerId);
+  const isHere = useIsHere();
 
   // The account picker's "Create <typed>" row lands here with the typed query
   // as `prefill` and its context root (destination pickers suggest Expenses)
@@ -342,10 +344,14 @@ export function OpenAccountScreenComponent(): JSX.Element {
       // instead of raising an unhandled GO_BACK (w1/032). Nothing can be
       // registered for the created callback without a pushing picker, so the
       // delivery below is a no-op on that path.
-      if (router.canGoBack()) {
-        router.back();
-      } else {
-        router.replace("/(app)/(tabs)/accounts");
+      // Left during the save: pop nothing, but a picker still gets its account
+      // (w21/194).
+      if (isHere()) {
+        if (router.canGoBack()) {
+          router.back();
+        } else {
+          router.replace("/(app)/(tabs)/accounts");
+        }
       }
       runAccountCreatedCallback(account);
       return;
