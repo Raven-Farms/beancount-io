@@ -167,3 +167,8 @@
 - [335](./335.md) — Future events still count as history: manual mark reads "Irregular" (167 follow-up)
 - [336](./336.md) — Float-exact "~" on steady prices (171) and uncancelled budget batches (165)
 - [337](./337.md) — After 184, Home's budget panel/Spending count this month's pre-entered entries (panel "Above target" vs Budget $0)
+- [338](./338.md) — File editor: Enter twice after a posting indents the next transaction ("unexpected INDENT")
+- [339](./339.md) — File editor: no tabs (Makefiles/Python break); "" replaces a selection
+- [340](./340.md) — File editor: error-row jump lands behind the keyboard
+- [341](./341.md) — File editor text ignores Dynamic Type (fixed 14px), including AX2
+- [342](./342.md) — Web view process kill silently resets the editor draft and re-inserts the last shortcut
