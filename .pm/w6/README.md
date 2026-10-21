@@ -4,7 +4,7 @@
 
 ## Blocker triage — updated 2026-10-21 UTC
 
-The 23 previously published pending items remain blocked: twenty engine items, m6, and Hermes notes 039/040. Official npm and GitHub release checks at 05:08 UTC still report WASM 0.24.0, last published September 6. On inspected upstream main `51cf2326`, ten engine items have merged source candidates awaiting release; nine notes plus m2 still need contract or semantic changes. No published artifact clears an engine adoption prerequisite. Marketplace work continues independently under m8 below.
+The 23 previously published pending items remain blocked: twenty engine items, m6, and Hermes notes 039/040. Official npm and GitHub release checks at 05:08 UTC still report WASM 0.24.0, last published September 6. On inspected upstream main `51cf2326`, ten engine items have merged source candidates awaiting release; nine notes plus m2 still need contract or semantic changes. No published artifact clears an engine adoption prerequisite. Marketplace preparation and submissions continue independently under m9 and m10 below; m8 is parked on its external intake/health gates.
 
 m6/t001–t012 are complete, including authenticated first queries and default Hermes discovery. All eleven accepted suite 0.3.3 updates are public, all 105 authored files match, and individual installs have been verified in OpenClaw and supported Hermes (init exception retained). The current source suite is 0.3.5 with thirteen skills; its corrected cases, discovery/routing and w3/m55–m57 adoption gates still need Claude capacity. The last native Claude probe at 04:23 UTC returned a first-party weekly-limit error before inference; no changed capacity evidence warrants repeating it. Hermes's unchanged stable scanner still blocks init; a fresh native search recheck still finds all eleven through default/all search and none through the explicit ClawHub filter.
 
@@ -52,6 +52,9 @@ Prioritize the major correctness findings (PRINT/FROM/JOURNAL, authored location
 
 ## Milestones
 
+- [ ] **m9** — [Reach developer marketplaces and galleries](./m9/README.md) (10 tasks; A3/A1) ← approved local roadmap, synchronized under `$loopx w6` on 2026-10-21 UTC; depends only on completed m8/t001
+- [ ] **m10** — [List the connector in independent web directories](./m10/README.md) (8 tasks; A3/A1) ← approved local roadmap, synchronized under `$loopx w6` on 2026-10-21 UTC; free routes independent of other marketplace approvals
+
 - [ ] **m8** — [Claim and publish the hosted connector on Smithery and Glama](./blocked/m8/README.md) (8 tasks; A3/A1) ← existing local marketplace roadmap, continued under `$loopx w6` on 2026-10-21 UTC; t001 packet shipped; **blocked:** Smithery publisher returns removed-update 403, Glama awaits w2/088 claim and full-day health
 
 - [x] **m7** — [Connect OpenClaw and Hermes Agent to the hosted MCP endpoint](./done/m7/README.md) (9 tasks; A1; backend-v2 fixtures and docs) ← user request 2026-10-16 to list Beancount.io on OpenClaw and Hermes Agent; ADR 019 D8
@@ -69,6 +72,9 @@ Prioritize the major correctness findings (PRINT/FROM/JOURNAL, authored location
 - [x] **m1** — Count canonical BQL rows in MCP text summaries (7 tasks) ← from [003](./done/003.md).
 
 ## Inbox
+
+- [041](./blocked/041.md) — MCP.so publication — **blocked:** current $39 mandatory fee needs explicit approval or a documented free route; packet is ready.
+- [042](./blocked/042.md) — PulseMCP publication — **blocked:** new listings and changes remain paused; needs supported reopened intake.
 
 - [039](./blocked/039.md) — Recheck Hermes support for consent-gated ledger instruction scaffolding — **blocked:** needs a compatible Hermes host policy; retain the approved workflow and do not force installation.
 - [040](./blocked/040.md) — Recheck Hermes source-filtered ClawHub discovery — **blocked:** default search finds all eleven, but `--source clawhub` still returns none; needs a host/catalog correction.
