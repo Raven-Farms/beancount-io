@@ -1,6 +1,6 @@
 ---
 name: beancount-reconcile
-description: Reconcile one account in a local Beancount ledger against a CSV or PDF statement. Report missing entries, duplicates, amount mismatches and date drift; confirm missing-entry writes and a passing period-end balance assertion through bea. Use for checking whether an account matches its statement. Skip bulk imports, single manual entries (beancount-add), analytics, multi-account close orchestration, edits to existing entries, and ledgers hosted on Beancount.io.
+description: Reconcile one account in a local Beancount ledger against a CSV or PDF statement. For a PDF statement, read this SKILL.md before the PDF helper's guide to establish account comparison, duplicate review and confirmation rules, then use the helper for extraction. Report missing entries, duplicates, amount mismatches and date drift; confirm missing-entry writes and a passing period-end balance assertion through bea. Use for checking whether an account matches its statement. Skip bulk imports, single manual entries (beancount-add), analytics, multi-account close orchestration, edits to existing entries, and ledgers hosted on Beancount.io.
 license: MIT-0
 metadata:
   openclaw:

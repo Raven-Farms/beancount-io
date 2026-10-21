@@ -1,6 +1,6 @@
 ---
 name: beancount-ask
-description: Answer questions about a local Beancount ledger using shown, reproducible bea queries and reports for spending, trends, net worth, holdings, subscriptions and anomalies. Strictly read-only; figures come from executed queries. Skip ledgers hosted on Beancount.io, recording transactions (beancount-add), reconciliation, migration, ledger edits, option pricing or greeks, investment or tax advice, and general Beancount, BQL, or `bea` documentation questions (including what `bea ask` does).
+description: Answer explicit requests for facts from a local Beancount ledger using shown, reproducible bea queries and reports for spending, trends, net worth, holdings, subscriptions and anomalies. Do not select this skill merely to gather preliminary inputs for buy/sell decisions or tax recommendations, even if ledger facts could help. Strictly read-only; figures come from executed queries. Skip ledgers hosted on Beancount.io, recording transactions (beancount-add), reconciliation, migration, ledger edits, option pricing or greeks, investment or tax advice, and general Beancount, BQL, or `bea` documentation questions (including what `bea ask` does).
 license: MIT-0
 metadata:
   openclaw:

@@ -321,3 +321,124 @@ Both turns extracted salary +2,000 USD, groceries −50 USD and gas −25 USD, r
 These are composition controls, not completed write journeys: both sessions were read-only, and no approval or write was tested. Both agents also traversed ancestor `AGENTS.md` files despite their fresh nested Git roots; May read an older eight-skill catalog in the original checkout. The first two skill reads occurred before those ancestor reads, so the helper/import ordering is directly observed, while the later proposal has that additional instruction-context limitation. The controls show that opening the generic PDF helper can lead into the customer ledger workflow; they do not erase the poorer first-open sample or satisfy the missing Claude comparison. No customer description or routing scoring rule was changed to force a pass.
 
 Raw JSONL, final responses, exact prompts and before/after ledger snapshots are retained under `scripts/skills/tmp/w6-m6-resume/composition-runtime/runs/{may,june}/`, alongside setup/status and the synthetic PDFs under `composition/`. Temporary package/runtime caches were removed after both turns completed. Together with the preserved routing artifacts, this supports the next client/adoption review without claiming a regression-free routing gate.
+
+### Restored Claude comparison — 2026-10-21
+
+At 19:13 UTC a bounded default-native discovery turn succeeds and lists all
+thirteen customer skills. Claude Code is now **2.1.306**, observed default
+`claude-opus-5-5`; no model, authentication or persistent configuration override
+is passed. The earlier weekly-limit refusal remains historical evidence and no
+longer blocks this client check.
+
+Two native cohorts run at 19:16–19:23 UTC with the existing runner, two concurrent
+turns per cohort, strict process-local MCP isolation and editing tools disabled.
+Before uses archived accepted source `ac9510670`, eleven skills and 103 prompts.
+Current uses `fae10abc6` / suite 0.3.6, thirteen skills and all 113 prompts. Each
+cohort records its actual suite path separately from the runner checkout's
+revision. Labels and first-open scoring are unchanged.
+
+| Claude cohort | Correct first-open choices | Infrastructure errors |
+| --- | ---: | ---: |
+| Before, common 103 | 102/103 | 0 |
+| Current, common 103 | 103/103 | 0 |
+| Current, ten additional prompts | 10/10 | 0 |
+| Current, full set | 113/113 | 0 |
+
+The sole before miss is `none-sell-for-tax-benefit`, which opens ask instead of
+none; current chooses none. Financial PDF cases choose their expected import
+or reconcile workflow in both Claude cohorts.
+No new current-only regression appears in this one Claude comparison. This does
+not erase Codex's separately measured PDF first-open loss: each affected prompt
+remains 2/5 before versus 0/5 after, with successful full-turn composition
+controls recorded above under a different metric.
+
+The first 0.3.7 body-control snapshot changes only accruals/close instructions
+and eval expectations. Its thirteen frontmatter blocks are verified
+byte-identical to the measured 0.3.6 inputs. The later import, migrate, reconcile and ask description repairs
+have separate paired and full routing controls; the 113/113 result above is not
+substituted for that changed description's evaluation. The [client release
+record](./client-release-controls-20261021.md) distinguishes both snapshots and
+their native evidence.
+
+Evidence is retained in the original checkout's ignored
+`scripts/skills/tmp/w6-m6-claude-retry-20261021T1912/`: archived suites, exact
+prompts, raw events, cohort results, runner status and source maps. Relocation
+outside the active ship worktree preserves all 51 raw event/final/stdout/stderr/
+result hashes. Runtime caches and hash-map false positives are isolated without
+adding a secret-scan exemption.
+
+
+### Description repairs on 115 requests — 2026-10-21
+
+The unchanged first-open scorer and all original 113 prompt/label objects are
+retained. Two new `none` controls distinguish standalone PDF table extraction
+and scanned-document merging from a ledger import. The complete set is
+SHA-256 `3f0cfc54d18cc38913c72af94af693922b1dc4c92581b93cd78b026a2b461e4f`.
+Native clients use their configured defaults: Claude Code 2.1.306,
+`claude-opus-5-5[1m]`, and Codex 0.163.0, `gpt-6.1-sol / xhigh`. Each model has
+at most two simultaneous calls. Source freezes, raw opaque events, commands,
+first tool/skill reads and all unsuccessful observations are preserved; model
+reasoning is not reviewed.
+
+| Candidate | Target after: Claude / Codex | Complete after: Claude / Codex | Result |
+| --- | --- | --- | --- |
+| 1, import ordering | 6/6 / 2/6 (one repetition) | Not run | New record-rows miss; retained and rejected |
+| 2, ledger guide before PDF helper | 6/6 / 6/6 twice | 115/115 / 114/115, 113/115 | New migration/init and opening-lots/trade misses; rejected |
+| 3, migration owns new-ledger history | 16/16 / not run | 115/115 / not run | Codex held before calls because its target set omitted the new broker boundary |
+| 4, combined import/migrate/reconcile boundaries | 22/22 / 22/22 twice | 114/115 / 115/115 twice | New Claude tax-advice/ask miss; rejected |
+| 5, explicit factual intent for ask | 14/14 / 14/14 twice | Claude115/115 resolved after timeout recovery; Codex115/115 twice | Final candidate accepted; original failures retained |
+
+Candidate2's Claude before115 is explicitly composite: the frozen113 cohort
+plus two added generic-PDF before rows. Its Codex before115 similarly combines
+the prior113 cohorts with the two new rows; earlier orchestration/raw gaps
+remain qualified above. Later candidates reuse exact complete preceding-cohort
+rows as their before observations, preserving every miss. Target improvements
+never replace a failed complete cohort.
+
+The final intended changes preserve accounting bodies and helpers: import
+establishes ledger policy before PDF extraction and owns broker export/opening
+lot files; migrate owns finance-app history even when it needs a fresh ledger;
+reconcile establishes account-comparison policy before PDF extraction. Ask
+supports explicit ledger facts and does not select itself merely to gather
+preliminary inputs for buy/sell or tax recommendations. These are measured
+boundaries, not hidden helpers or changed labels.
+
+A predeclared six-pair diagnostic on candidate3/candidate4 chooses none in all
+twelve tax-advice turns. It does not replace candidate4's actual114/115 result
+or satisfy the rule requiring a correction before shipping. Candidate5 changes
+ask's description and starts a new paired target/full measurement. Its Claude
+target improves the exact candidate4 rows from13/14 to14/14, zero errors. Codex stays14/14 before and after in both target repetitions, also zero errors.
+The [client release record](./client-release-controls-20261021.md) gives source
+hashes, times, individual failures and separate body-control evidence.
+
+Evidence remains in the original checkout's ignored `scripts/skills/tmp/`:
+`w6-adoption-review-20261021/`, `w6-m6-routing-candidate4-20261021/`,
+`w6-m6-advice-routing-diagnostic-20261021/`,
+`w6-m6-advice-boundary-candidate5-20261021/` and
+`w6-m6-routing-candidate5-20261021/`. No release or completed write journey is
+implied by these routing probes.
+
+The routing runner shares one fresh workspace across a cohort, including
+synthetic files that Claude shell operations can create. These are first-open
+samples with frozen authored skill sources, not per-request fresh/immutable
+ledger controls. The hosted-reconcile timeout's shared workspace differs from
+its fresh recovery workspace; that context limit is retained in the dated
+client record. The separate behavioral accounting controls verify their own
+per-case ledger/file/Git invariants.
+
+Claude candidate5 records114 correct choices and one120-second timeout in its
+original full cohort. One120-second recovery also times out. A separate recovery
+at the runner's documented240-second default completes in123.8seconds and
+correctly chooses none, resolving the missing row. All115 logical observations
+are correct, with zero real misroutes; this is explicitly a resolved composite,
+not a fresh uninterrupted115/115 cohort. All original attempts and deadline
+settings remain recorded.
+
+Both complete candidate5 Codex cohorts finish115/115,230/230 total, with zero
+infrastructure errors or new paired misses against exact complete candidate4
+baselines. Common103 pass206/206, previously added ten pass20/20, and the two
+new generic-PDF controls pass4/4. There is no Codex recovery or replacement.
+With the separately qualified Claude resolved set above, the final source has
+no new paired routing miss. The original Codex PDF loss and all intermediate
+failed candidates remain historical observations. Release source/published bytes
+and native host installations are separate subsequent gates.

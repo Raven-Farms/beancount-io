@@ -192,6 +192,7 @@
       "expectations": [
         "Commentary figures agree with the ask variance answer (0 to 500.00, percentage not applicable)",
         "The driver cites the 2026-05-28 BEST BUY posting",
+        "Final commentary includes executed input queries and the calculation BQL or complete local calculation command with print/output statements, bound input values, actual period dates and matching output",
         "No driver is claimed for a change under the stated thresholds"
       ]
     },
@@ -204,7 +205,7 @@
       ],
       "expected_output": "Comparator -100 USD, current 200 USD, absolute delta +300 USD; relative percentage not applicable because the comparator is negative. Explain the refund-versus-purchase postings with dates; leave ledger unchanged. Commentary must agree with the corresponding beancount-ask case; do not claim the close is complete.",
       "expectations": [
-        "Both period totals and the +300 USD delta come from actual local reads/calculation, with commands shown.",
+        "Both period totals and the +300 USD delta come from actual local reads/calculation; final commentary shows the executed input queries and calculation BQL or complete local calculation command with print/output statements, bound inputs, actual period dates and matching output.",
         "Percentage is not applicable; do not report -300%, 300%, or another growth rate on the negative base.",
         "Absolute threshold crosses; evidence distinguishes the dated refund and current purchase without inventing business causality.",
         "Ledger bytes stay unchanged.",
@@ -223,7 +224,7 @@
         "Executed local reads recover quantities10/12, prices20/25 and booked totals200/300 from the two invoice entries.",
         "Bridge uses the explicitly requested convention: price60 plus volume40 equals actual100.",
         "No third10 interaction term is added and no unsupported product-mix or causal explanation is invented.",
-        "Threshold/delta/percentage are correct and supported by shown queries/calculation; ledger bytes stay unchanged.",
+        "Threshold/delta/percentage are correct; final commentary shows executed input queries and calculation BQL or a complete local calculation command with print/output statements, bound inputs, actual period dates and matching output. Ledger bytes stay unchanged.",
         "Commentary agrees with the ask answer on this same fixture and period; reconciliation stays unverified and no completed close, staging or commit is claimed."
       ]
     }

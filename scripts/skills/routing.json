@@ -1030,7 +1030,7 @@
     },
     {
       "id": "ask-historical-balance-only",
-      "prompt": "What was the balance of my savings account on June 30 in this local ledger? I only need that date’s balance.",
+      "prompt": "What was the balance of my savings account on June 30 in this local ledger? I only need that date\u2019s balance.",
       "expected": "beancount-ask",
       "confusable": [
         "beancount-roll-forward",
@@ -1046,6 +1046,25 @@
         "beancount-roll-forward"
       ],
       "why": "Two point-in-time balances rather than an opening-to-closing movement explanation."
+    },
+    {
+      "id": "none-pdf-statement-extract-only",
+      "prompt": "Extract the transaction table from ./may-statement.pdf into a CSV. Do not import it into a ledger.",
+      "expected": "none",
+      "confusable": [
+        "beancount-import",
+        "beancount-reconcile"
+      ],
+      "why": "PDF extraction only; no ledger import or reconciliation requested."
+    },
+    {
+      "id": "none-pdf-merge-only",
+      "prompt": "Merge these two scanned PDFs into one searchable PDF.",
+      "expected": "none",
+      "confusable": [
+        "beancount-import"
+      ],
+      "why": "Generic PDF manipulation/OCR belongs to a PDF helper, with no ledger workflow."
     }
   ]
 }

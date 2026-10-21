@@ -46,7 +46,8 @@
       "files": ["evals/files/eval4_ledger.beancount"],
       "expectations": [
         "The existing accrual:rent:2025-03 entry is found and shown",
-        "No second draft posting is proposed or written for March",
+        "No second draft posting is proposed or written for March, including under an invented replacement identity",
+        "Any correction of the original entry is left to the user; beancount-add is never presented as editing or replacing an existing entry",
         "The ledger is unchanged"
       ]
     },

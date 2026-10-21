@@ -14,7 +14,7 @@ The suite shares [command recipes](beancount-init/references/bea-cli.md) that se
 | [beancount-add](beancount-add/SKILL.md) | Record a purchase, transfer, new or closed account, price, or note you describe. |
 | [beancount-trade](beancount-trade/SKILL.md) | Record stock, fund, and crypto trades with correct lots, and report realized gains. |
 | [beancount-property](beancount-property/SKILL.md) | Record property purchases, mortgages, escrow, rent, deposits, and sales from the figures you provide. |
-| [beancount-import](beancount-import/SKILL.md) | Import and categorize bank exports with duplicate detection. |
+| [beancount-import](beancount-import/SKILL.md) | Import bank/card statements (including PDFs) and broker exports, with duplicate review and opening-lot support. |
 | [beancount-importer-author](beancount-importer-author/SKILL.md) | Write or repair a reusable, tested bank importer. |
 | [beancount-reconcile](beancount-reconcile/SKILL.md) | Compare an account with a bank or broker statement. |
 | [beancount-migrate](beancount-migrate/SKILL.md) | Migrate transaction history from another finance app. |

@@ -44,7 +44,7 @@ Read beancount-init's `references/bea-cli.md` (from this skill's folder, `../bea
 
 **Does:** for each schedule the user states (or confirms from support they provide), compute recognized-to-date, already-booked, and the required adjustment per the contract, present the balanced draft entries, and — only on an explicit yes — post them through the shared propose/confirm/check flow.
 
-**Does not:** invent a schedule from a missing recurring payment (absence is not an expense); post, auto-reverse, or schedule anything without the confirmation in this run; give tax or depreciation advice; modify existing entries — a wrong booked amount is surfaced, and its correction is the user's or beancount-add's.
+**Does not:** invent a schedule from a missing recurring payment (absence is not an expense); post, auto-reverse, or schedule anything without the confirmation in this run; give tax or depreciation advice; modify existing entries — surface a wrong booked amount and leave edits to the user. beancount-add appends only: if the user explicitly requests a separate adjusting entry, it can propose one through its own confirmation/check flow, but cannot edit or replace the original entry. Do not bypass the existing-identity stop with another identity for the same schedule and period.
 
 ## Workflow
 

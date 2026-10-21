@@ -1,6 +1,6 @@
 # w6 · m6 — Publish the ledger skills to ClawHub for OpenClaw and Hermes Agent
 
-**Worker:** worker1 **Goal:** An OpenClaw or Hermes Agent user installs any `beancount-*` skill by name from ClawHub, and it works on its own without a Git checkout or this repository's link installer. **Status:** blocked (t001–t012 done; all eleven 0.3.3 updates public; current thirteen-skill release needs Claude reruns and w3/m55–m57 adoption gates)
+**Worker:** worker1 **Goal:** An OpenClaw or Hermes Agent user installs any `beancount-*` skill by name from ClawHub, and it works on its own without a Git checkout or this repository's link installer. **Status:** blocked (t001–t012 done; all eleven 0.3.3 updates public; Claude capacity/discovery and body controls cleared; native routing passed; named adoption reconciliation and current thirteen-skill publication/host verification remain)
 
 **Research date:** 2026-10-16. Sources: ClawHub's quickstart, how-it-works, and skill-format pages at `docs.openclaw.ai/clawhub/`; Hermes Agent's skills page at `hermes-agent.nousresearch.com/docs/user-guide/features/skills`. Re-check the CLI flags against `clawhub --help` and `hermes skills --help` before relying on them.
 
@@ -20,7 +20,7 @@
 | [t010](done/t010.md) | Adoption surface — **DONE** | 30m | t009 |
 | [t011](done/t011.md) | Simplify — **DONE** | 30m | t010 |
 | [t012](done/t012.md) | Test coverage — **DONE** | 45m | t010, t011 |
-| [t013](t013.md) | Closeout after the listings are live — **BLOCKED** (current-suite Claude/client adoption checks remain) | 15m | t008, t012, w3/m55/t002, w3/m55/t003, w3/m56/t002, w3/m56/t003, w3/m57/t003, w3/m57/t004 |
+| [t013](t013.md) | Closeout after the listings are live — **BLOCKED** (named adoption reconciliation and current-content publication/host checks remain) | 15m | t008, t012, w3/m55/t002, w3/m55/t003, w3/m56/t002, w3/m56/t003, w3/m57/t003, w3/m57/t004 |
 
 ## Decisions — 2026-10-19
 

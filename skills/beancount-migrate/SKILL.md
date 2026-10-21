@@ -1,6 +1,6 @@
 ---
 name: beancount-migrate
-description: Migrate full transaction history from Mint, Monarch, QuickBooks Online or another category-tagged finance-app export into a fresh local Beancount ledger. Confirm account/category mappings, pair transfers, preserve source IDs, write through bea and reconcile source counts and balances. Skip ongoing bank imports, populated-ledger merges investment lot reconstruction, and ledgers hosted on Beancount.io.
+description: Migrate full transaction history from Mint, Monarch, QuickBooks Online or another category-tagged finance-app export into a fresh local Beancount ledger, including requests to create a new ledger and bring in that history. Read this SKILL.md before beancount-init's guide to establish source mappings, transfer pairing and source reconciliation; use init for scaffolding within the migration. Confirm account/category mappings, pair transfers, preserve source IDs, write through bea and reconcile source counts and balances. Skip empty-ledger setup with no history (beancount-init), ongoing bank imports (beancount-import), populated-ledger merges, investment lot reconstruction, and ledgers hosted on Beancount.io.
 license: MIT-0
 metadata:
   openclaw:
