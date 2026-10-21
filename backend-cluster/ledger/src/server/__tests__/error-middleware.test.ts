@@ -69,6 +69,26 @@ describe("toErrorResponse", () => {
     expect(res.body.error).toBe("");
   });
 
+  // w23/017: the loser of two concurrent commits got Gitea's raw 500, which
+  // backend-v2 reported as "dependency down".
+  it("answers a commit that lost the branch-ref race with 409", () => {
+    const lost = toErrorResponse({
+      status: 500,
+      error: {
+        message:
+          "PushRejected Error: exit status 1 - remote: error: cannot lock ref 'refs/heads/main': is at 4085f06 but expected d3b78fe",
+      },
+    });
+    expect(lost.status).toBe(409);
+    expect(lost.body.error).toContain("concurrent write");
+
+    const otherFailure = toErrorResponse({
+      status: 500,
+      error: { message: "PushRejected Error: pre-receive hook declined" },
+    });
+    expect(otherFailure.status).toBe(500);
+  });
+
   it("falls back to 500 Internal server error for unknown throwables", () => {
     const res = toErrorResponse(new Error("boom"));
     expect(res.status).toBe(500);

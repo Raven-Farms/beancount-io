@@ -5,6 +5,7 @@ import { executeEditLedgerFiles } from "../edit-ledger-files-tool";
 import { MCP_TOOLS } from "../../api/mcp-tools";
 import { VERB_TABLE } from "@/server/api/op-class";
 import type { Identity } from "@/server/api/identity";
+import { ConflictError } from "@/shared/errors";
 
 /**
  * Direct coverage of the four ADR-0006 tool executors' own logic (line
@@ -361,6 +362,109 @@ describe("executeReadLedgerFiles", () => {
 });
 
 describe("executeEditLedgerFiles", () => {
+  // w23/017: two agents editing one file at once. The loser used to report
+  // SERVICE_UNAVAILABLE; its exact-text edit now lands on the winner's text.
+  describe("after losing a concurrent commit", () => {
+    function racingRepo(winner: (text: string) => string) {
+      let remote = "; a\n; b\n";
+      let commits = 0;
+      const ledgerRepo = {
+        getFilesContent: jest.fn(async () => [
+          { path: "race.bean", content: remote, sha: `sha-${remote}` },
+        ]),
+        changeFiles: jest.fn(
+          async ({
+            operations,
+          }: {
+            operations: Array<{ content?: string }>;
+          }) => {
+            commits += 1;
+            if (commits === 1) {
+              remote = winner(remote);
+              throw new ConflictError(
+                "Ledger resource",
+                "the ledger changed under a concurrent write; re-read it and retry",
+              );
+            }
+            remote = operations[0]!.content!;
+          },
+        ),
+      };
+      const services = {
+        ledgerRepo,
+        ledgerData: { getErrors: jest.fn().mockResolvedValue([]) },
+      };
+      return { services, ledgerRepo, remote: () => remote };
+    }
+    const edit = (services: unknown, file: Record<string, unknown>) =>
+      executeEditLedgerFiles(
+        { services: services as any, identity: IDENTITY, ledgerId: LEDGER_ID },
+        { description: "edit", files: [file as any], dry_run: false },
+      );
+
+    it("re-reads and re-applies an exact-text edit", async () => {
+      const repo = racingRepo((text) => text.replace("; a\n", "; 0\n"));
+      const result = await edit(repo.services, {
+        operation: "update",
+        path: "race.bean",
+        old_string: "; b\n",
+        new_string: "; 1\n",
+      });
+      expect(result.ok).toBe(true);
+      expect(repo.ledgerRepo.changeFiles).toHaveBeenCalledTimes(2);
+      expect(repo.remote()).toBe("; 0\n; 1\n");
+    });
+
+    it("reports the edit's own text as gone when the winner removed it", async () => {
+      const repo = racingRepo((text) => text.replace("; b\n", "; B\n"));
+      const result = await edit(repo.services, {
+        operation: "update",
+        path: "race.bean",
+        old_string: "; b\n",
+        new_string: "; 1\n",
+      });
+      expect(result).toMatchObject({ ok: false, errorCode: "BAD_USER_INPUT" });
+      expect(repo.remote()).toBe("; a\n; B\n");
+    });
+
+    it("does not re-apply a whole-file replace over the winner's change", async () => {
+      const repo = racingRepo((text) => text.replace("; a\n", "; 0\n"));
+      const result = await edit(repo.services, {
+        operation: "replace",
+        path: "race.bean",
+        content: "; z\n",
+      });
+      expect(result).toMatchObject({ ok: false, errorCode: "CONFLICT" });
+      expect(repo.ledgerRepo.changeFiles).toHaveBeenCalledTimes(1);
+      expect(repo.remote()).toBe("; 0\n; b\n");
+    });
+
+    it("gives the conflict back after three lost commits", async () => {
+      const ledgerRepo = {
+        getFilesContent: jest.fn(async () => [
+          { path: "race.bean", content: "; a\n", sha: "sha" },
+        ]),
+        changeFiles: jest.fn(async () => {
+          throw new ConflictError("Ledger resource", "concurrent write");
+        }),
+      };
+      const result = await edit(
+        {
+          ledgerRepo,
+          ledgerData: { getErrors: jest.fn().mockResolvedValue([]) },
+        },
+        {
+          operation: "update",
+          path: "race.bean",
+          old_string: "; a\n",
+          new_string: "; 1\n",
+        },
+      );
+      expect(result).toMatchObject({ ok: false, errorCode: "CONFLICT" });
+      expect(ledgerRepo.changeFiles).toHaveBeenCalledTimes(3);
+    });
+  });
+
   it("create: base64-encodes content and never fetches existing content", async () => {
     const ledgerRepo = {
       getFilesContent: jest.fn(),

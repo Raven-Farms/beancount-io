@@ -42,9 +42,20 @@ export function giteaErrorMessage(error: unknown): string {
 const CONFLICT_MESSAGE_RE =
   /sha does not match|already exists?|not up to date/iu;
 
+/**
+ * How Gitea answers the loser of two commits racing for the branch ref: the
+ * contents API does not map the push failure, so it is a 500 whose message is
+ * the git error — observed on Gitea 1.24.7 as `PushRejected Error: … cannot
+ * lock ref 'refs/heads/main': is at X but expected Y` (w23/017). An
+ * out-of-date push is the same race lost later. Other push rejections (a hook
+ * declining the commit) are not races and are not matched.
+ */
+const LOST_REF_RACE_RE = /cannot lock ref|PushOutOfDate/u;
+
 export function isGiteaWriteConflict(error: unknown): boolean {
   const status = giteaErrorStatus(error);
   if (status === 409) return true;
   if (status === 422) return CONFLICT_MESSAGE_RE.test(giteaErrorMessage(error));
+  if (status === 500) return LOST_REF_RACE_RE.test(giteaErrorMessage(error));
   return false;
 }

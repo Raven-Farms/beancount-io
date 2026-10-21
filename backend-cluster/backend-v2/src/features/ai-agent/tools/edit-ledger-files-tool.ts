@@ -1,7 +1,11 @@
 import { tool } from "ai";
 import { z } from "zod";
 import { logger } from "@/shared/logger";
-import { BadUserInputError, NotFoundError } from "@/shared/errors";
+import {
+  BadUserInputError,
+  ConflictError,
+  NotFoundError,
+} from "@/shared/errors";
 import type { LedgerChangeFileOperation } from "@/foundation/fava/Api";
 import type { ToolContext } from "./types";
 import { toolOutputSchema, withWriteOutcome } from "./types";
@@ -15,6 +19,9 @@ import {
   withPostWriteValidation,
 } from "./write-validation";
 import { unifiedDiff } from "@/shared/unified-diff";
+
+/** Commits one edit call makes before a lost race is the caller's (w23/017). */
+const MAX_COMMIT_ATTEMPTS = 3;
 
 const toolLogger = logger.child({ module: "tool:edit-ledger-files" });
 
@@ -186,78 +193,91 @@ export async function executeEditLedgerFiles(
             .map((f) => f.path),
         ),
       ];
-      const fileCache = new Map<string, { content: string; sha: string }>();
-      if (pathsToFetch.length > 0) {
-        const cachedFiles = await services.ledgerRepo.getFilesContent({
-          ledgerId,
-          identity,
-          paths: pathsToFetch,
-        });
-        for (const file of cachedFiles) {
-          fileCache.set(file.path, { content: file.content, sha: file.sha });
-        }
-      }
-
-      const operations: LedgerChangeFileOperation[] = [];
-      for (const f of normalizedFiles) {
-        if (f.operation === "create") {
-          operations.push({
-            operation: "create",
-            path: f.path,
-            content: f.content,
+      // Reads each file and builds the commit from what it holds now. Run
+      // again when a concurrent write wins the commit, so exact-text edits
+      // land on the new content instead of failing the call (w23/017).
+      const prepare = async () => {
+        const fileCache = new Map<string, { content: string; sha: string }>();
+        if (pathsToFetch.length > 0) {
+          const cachedFiles = await services.ledgerRepo.getFilesContent({
+            ledgerId,
+            identity,
+            paths: pathsToFetch,
           });
-          continue;
+          for (const file of cachedFiles) {
+            fileCache.set(file.path, { content: file.content, sha: file.sha });
+          }
         }
 
-        const cached = fileCache.get(f.path);
-        // Categorized rather than left to the boundary's message sniffing,
-        // which made this NOT_FOUND only because of its wording (w5/051).
-        if (!cached) throw new NotFoundError("File", f.path);
+        const operations: LedgerChangeFileOperation[] = [];
+        for (const f of normalizedFiles) {
+          if (f.operation === "create") {
+            operations.push({
+              operation: "create",
+              path: f.path,
+              content: f.content,
+            });
+            continue;
+          }
 
-        if (f.operation === "replace") {
+          const cached = fileCache.get(f.path);
+          // Categorized rather than left to the boundary's message sniffing,
+          // which made this NOT_FOUND only because of its wording (w5/051).
+          if (!cached) throw new NotFoundError("File", f.path);
+
+          if (f.operation === "replace") {
+            operations.push({
+              operation: "update",
+              path: f.path,
+              content: f.content,
+              sha: cached.sha,
+            });
+            continue;
+          }
+
+          if (f.operation === "delete") {
+            operations.push({
+              operation: "delete",
+              path: f.path,
+              sha: cached.sha,
+            });
+            continue;
+          }
+
+          // update (str_replace)
+          const count = cached.content.split(f.old_string).length - 1;
+          if (count === 0)
+            // The file exists; it is the argument that does not match it. The
+            // same wording used to read as NOT_FOUND, as if the file were gone.
+            throw new BadUserInputError(
+              `${f.path}: old_string does not occur in the file`,
+              "old_string",
+              "Read the file's current text with `readLedgerFiles` and copy `old_string` from it exactly, whitespace included.",
+            );
+          if (count > 1)
+            // The caller's to fix by sending more context. As a plain Error it
+            // read as a server fault with a hint to retry (w5/036).
+            throw new BadUserInputError(
+              `${f.path}: old_string matches ${count} times (must match exactly once — add more context lines)`,
+              "old_string",
+              "Extend `old_string` with neighbouring lines until it is unique in the file, or use `replace` to overwrite the whole file.",
+            );
           operations.push({
             operation: "update",
             path: f.path,
-            content: f.content,
+            content: cached.content.replace(f.old_string, f.new_string),
             sha: cached.sha,
           });
-          continue;
         }
-
-        if (f.operation === "delete") {
-          operations.push({
-            operation: "delete",
-            path: f.path,
-            sha: cached.sha,
-          });
-          continue;
-        }
-
-        // update (str_replace)
-        const count = cached.content.split(f.old_string).length - 1;
-        if (count === 0)
-          // The file exists; it is the argument that does not match it. The
-          // same wording used to read as NOT_FOUND, as if the file were gone.
-          throw new BadUserInputError(
-            `${f.path}: old_string does not occur in the file`,
-            "old_string",
-            "Read the file's current text with `readLedgerFiles` and copy `old_string` from it exactly, whitespace included.",
-          );
-        if (count > 1)
-          // The caller's to fix by sending more context. As a plain Error it
-          // read as a server fault with a hint to retry (w5/036).
-          throw new BadUserInputError(
-            `${f.path}: old_string matches ${count} times (must match exactly once — add more context lines)`,
-            "old_string",
-            "Extend `old_string` with neighbouring lines until it is unique in the file, or use `replace` to overwrite the whole file.",
-          );
-        operations.push({
-          operation: "update",
-          path: f.path,
-          content: cached.content.replace(f.old_string, f.new_string),
-          sha: cached.sha,
-        });
-      }
+        return { fileCache, operations };
+      };
+      const { fileCache, operations } = await prepare();
+      // Only exact-text edits and creations are re-applied after a lost race:
+      // a whole-file `replace` or a `delete` would silently overwrite or drop
+      // the change that won, so those surface the conflict instead.
+      const retryable = normalizedFiles.every(
+        (f) => f.operation === "update" || f.operation === "create",
+      );
 
       const ops = operations.map((op) => ({
         operation: op.operation,
@@ -317,13 +337,27 @@ export async function executeEditLedgerFiles(
         services,
         identity,
         ledgerId,
-        () =>
-          services.ledgerRepo.changeFiles({
-            ledgerId,
-            identity,
-            operations,
-            message: description,
-          }),
+        async () => {
+          let attempt = operations;
+          for (let tries = 1; ; tries += 1) {
+            try {
+              return await services.ledgerRepo.changeFiles({
+                ledgerId,
+                identity,
+                operations: attempt,
+                message: description,
+              });
+            } catch (error) {
+              if (
+                !retryable ||
+                tries >= MAX_COMMIT_ATTEMPTS ||
+                !(error instanceof ConflictError)
+              )
+                throw error;
+              attempt = (await prepare()).operations;
+            }
+          }
+        },
       );
 
       toolLogger.info("File operations committed", {

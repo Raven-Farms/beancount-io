@@ -2,6 +2,7 @@ import type { Context, Next } from "koa";
 import { ZodError } from "zod";
 import { CATEGORY_HTTP_STATUS, DomainError } from "@/shared/errors";
 import { logger } from "@/shared/logger";
+import { isGiteaWriteConflict } from "@/features/gitea/utils/gitea-error";
 import { errorResponse, type ErrorEnvelope } from "./envelope";
 
 const log = logger.child({ module: "error-middleware" });
@@ -51,8 +52,7 @@ export function toErrorResponse(err: unknown): {
     const status =
       err.httpStatusHint ?? CATEGORY_HTTP_STATUS[err.category] ?? 500;
     const metadata = err.metadata as
-      | { code?: string; details?: Record<string, number | string> }
-      | undefined;
+      { code?: string; details?: Record<string, number | string> } | undefined;
     return {
       status,
       body: errorResponse(
@@ -70,6 +70,17 @@ export function toErrorResponse(err: unknown): {
     return { status: 422, body: errorResponse(`Validation error: ${details}`) };
   }
   if (isGiteaHttpError(err)) {
+    // Gitea answers the loser of two commits racing for the branch ref with a
+    // 500. Forwarded as-is it read as "dependency down, retry with backoff";
+    // it is a lost compare-and-swap, which callers re-read and retry (w23/017).
+    if (err.status >= 500 && isGiteaWriteConflict(err)) {
+      return {
+        status: 409,
+        body: errorResponse(
+          "the ledger changed under a concurrent write; re-read it and retry",
+        ),
+      };
+    }
     return { status: err.status, body: errorResponse(giteaErrorMessage(err)) };
   }
   return { status: 500, body: errorResponse("Internal server error") };
