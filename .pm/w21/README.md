@@ -21,3 +21,4 @@
 - [048](./048.md) — File editor's "File Changed → Reload" refreshes the text but keeps the old error list
 - [049](./049.md) — Files locks every file named `main.bean`, not just the root one
 - [050](./050.md) — Account detail shows Note, Balance and Document rows without their text, asserted amount or file
+- [051](./051.md) — New ledger's "Books begin" defaults to the UTC date, so evening ledgers in the Americas start tomorrow
