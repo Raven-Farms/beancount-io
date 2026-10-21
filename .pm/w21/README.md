@@ -8,7 +8,6 @@
 
 ## Inbox
 
-- [034](./034.md) — Update Budget's amount field shows a stock "500" placeholder that reads as the current budget
 - [035](./035.md) — Offset paging repeats a row when an entry is added between pages, and the lists append it without dedupe
 - [036](./036.md) — The Transactions account filter offers only leaf accounts, so "all Food spending" can't be filtered
 - [037](./037.md) — In Persian, the "Invite Friends" title still sits on the physical left (residual of w21/019)
