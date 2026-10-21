@@ -387,11 +387,16 @@ export const Picker: React.FC<PickerProps> = ({
       onRequestClose={handleCancel}
     >
       <Animated.View style={[styles.overlay, overlayAnimatedStyle]}>
-        <Pressable style={styles.mask} onPress={handleCancel}></Pressable>
+        <Pressable
+          style={styles.mask}
+          accessible={false}
+          onPress={handleCancel}
+        ></Pressable>
         <Animated.View style={[styles.modalContainer, animatedStyle]}>
           <View style={styles.header}>
             <TouchableOpacity
               testID="picker-cancel"
+              accessibilityRole="button"
               onPress={handleCancel}
               style={styles.headerAction}
             >
@@ -408,6 +413,7 @@ export const Picker: React.FC<PickerProps> = ({
             </Text>
             <TouchableOpacity
               testID="picker-confirm"
+              accessibilityRole="button"
               onPress={handleDone}
               style={styles.headerAction}
             >

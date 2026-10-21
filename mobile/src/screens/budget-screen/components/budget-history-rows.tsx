@@ -150,6 +150,8 @@ export function BudgetHistoryRows({
         style={styles.toggle}
         onPress={() => setExpanded((value) => !value)}
         accessibilityRole="button"
+        // Named by its text alone: the chevron glyph read as "U+F…" (w21/141).
+        accessibilityLabel={t("budgetHistoryCount", { count: rows.length })}
         accessibilityState={{ expanded }}
       >
         <Text style={styles.toggleText}>

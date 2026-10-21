@@ -183,7 +183,10 @@ export function AccountEntryRow({
 
   const leading = (
     <>
-      <AccountTypeIcon postings={row.postings} payee={row.payee} />
+      {/* Decorative: its glyph was a focus stop of its own (w21/141). */}
+      <View accessible={false} importantForAccessibility="no-hide-descendants">
+        <AccountTypeIcon postings={row.postings} payee={row.payee} />
+      </View>
 
       <View style={styles.middleColumn}>
         <View style={styles.middle}>
@@ -243,27 +246,29 @@ export function AccountEntryRow({
     </>
   );
 
+  // One name for the whole row, read from the visible text. The label also
+  // keeps the type icon's glyph out of the name.
+  const accessibilityLabel = [
+    title,
+    detailText,
+    offByText,
+    changeText,
+    notInTotalText,
+    costText,
+    balanceLine,
+    isPending ? t("pending") : null,
+  ]
+    .filter((part): part is string => Boolean(part))
+    .join(", ");
+
   if (onPress) {
     return (
       <TouchableOpacity
         style={[styles.row, stacked && styles.rowStacked]}
         onPress={onPress}
         activeOpacity={0.7}
-        // One named button for the whole row, read from the visible text.
-        // The label also keeps the type icon's glyph out of the name.
         accessibilityRole="button"
-        accessibilityLabel={[
-          title,
-          detailText,
-          offByText,
-          changeText,
-          notInTotalText,
-          costText,
-          balanceLine,
-          isPending ? t("pending") : null,
-        ]
-          .filter((part): part is string => Boolean(part))
-          .join(", ")}
+        accessibilityLabel={accessibilityLabel}
       >
         {content}
       </TouchableOpacity>
@@ -271,6 +276,12 @@ export function AccountEntryRow({
   }
 
   return (
-    <View style={[styles.row, stacked && styles.rowStacked]}>{content}</View>
+    <View
+      style={[styles.row, stacked && styles.rowStacked]}
+      accessible
+      accessibilityLabel={accessibilityLabel}
+    >
+      {content}
+    </View>
   );
 }

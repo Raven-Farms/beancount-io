@@ -1052,6 +1052,9 @@ export function LedgerDrawer({
           {revealed && (
             <Pressable
               testID="ledger-drawer-backdrop"
+              // A tap-outside target, not a control: VoiceOver closes the
+              // drawer with its own escape gesture.
+              accessible={false}
               style={StyleSheet.absoluteFill}
               onPress={onClose}
             />

@@ -210,6 +210,7 @@ export const TextInputModal: React.FC<TextInputModalProps> = ({
       <Animated.View style={[styles.overlay, overlayAnimatedStyle]}>
         <Pressable
           style={StyleSheet.absoluteFill}
+          accessible={false}
           onPress={onCancel}
         ></Pressable>
         <KeyboardAvoidingView
@@ -247,6 +248,7 @@ export const TextInputModal: React.FC<TextInputModalProps> = ({
             <View style={styles.buttonContainer}>
               <TouchableOpacity
                 style={styles.button}
+                accessibilityRole="button"
                 onPress={onCancel}
                 activeOpacity={0.6}
               >
@@ -255,6 +257,7 @@ export const TextInputModal: React.FC<TextInputModalProps> = ({
               <View style={styles.buttonDivider} />
               <TouchableOpacity
                 style={styles.button}
+                accessibilityRole="button"
                 onPress={handleConfirm}
                 activeOpacity={0.6}
                 disabled={isConfirmDisabled}

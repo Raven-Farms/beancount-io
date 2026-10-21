@@ -256,6 +256,14 @@ function ErrorBanner({
                 style={styles.errorRow}
                 activeOpacity={err.lineno != null ? 0.7 : 1}
                 onPress={() => err.lineno != null && onJump(err.lineno)}
+                // A row that jumps to its line is a button; the label keeps
+                // the warning and arrow glyphs out of its name (w21/141).
+                accessibilityRole={err.lineno != null ? "button" : "text"}
+                accessibilityLabel={
+                  err.lineno != null
+                    ? `${err.message}, ${t("ledgerEditorErrorLine", { line: err.lineno })}`
+                    : err.message
+                }
               >
                 <Ionicons
                   name="warning-outline"
@@ -696,6 +704,7 @@ function LedgerFileEditorSession({
     : () => (
         <TouchableOpacity
           style={styles.saveBtn}
+          accessibilityRole="button"
           disabled={!hasUnsavedChanges}
           onPress={() => editorRef.current?.requestSave()}
         >
@@ -779,6 +788,7 @@ function LedgerFileEditorSession({
             </Text>
             <View style={styles.unavailableActions}>
               <TouchableOpacity
+                accessibilityRole="button"
                 onPress={() => {
                   void invalidateLedgerData(client, "errors");
                   void refetch();
@@ -789,6 +799,7 @@ function LedgerFileEditorSession({
                 </Text>
               </TouchableOpacity>
               <TouchableOpacity
+                accessibilityRole="button"
                 onPress={() => {
                   // Always land on Files for this labeled recovery action —
                   // history existence does not mean the prior screen is Files.

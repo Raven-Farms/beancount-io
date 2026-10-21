@@ -469,6 +469,11 @@ export function OpenAccountScreenComponent(): JSX.Element {
             activeOpacity={0.7}
             onPress={() => setPicker("currency")}
             accessibilityRole="button"
+            // The chevron glyph read as "U+F…" in the name (w21/141).
+            accessibilityLabel={t("currency")}
+            accessibilityValue={{
+              text: currency || t("openAccountNoCurrency"),
+            }}
           >
             <Text style={styles.label}>{t("currency")}</Text>
             <Text style={styles.value}>
@@ -487,6 +492,8 @@ export function OpenAccountScreenComponent(): JSX.Element {
             activeOpacity={0.7}
             onPress={() => setDatePickerVisible(true)}
             accessibilityRole="button"
+            accessibilityLabel={t("openDate")}
+            accessibilityValue={{ text: getFormatDate(date) }}
           >
             <Text style={styles.label}>{t("openDate")}</Text>
             <Text style={styles.value}>{getFormatDate(date)}</Text>

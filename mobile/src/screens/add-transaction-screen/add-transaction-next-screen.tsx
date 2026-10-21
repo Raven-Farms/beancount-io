@@ -244,7 +244,11 @@ const AddTransactionNextScreenComponent = () => {
         options={{
           headerTitle: t("addTransaction"),
           headerRight: () => (
-            <Pressable onPress={addEntries} hitSlop={10}>
+            <Pressable
+              onPress={addEntries}
+              hitSlop={10}
+              accessibilityRole="button"
+            >
               <Text
                 style={styles.doneButton}
                 maxFontSizeMultiplier={headerActionMaxFontSizeMultiplier}

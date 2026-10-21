@@ -183,6 +183,7 @@ export function AddTransactionScreen(): JSX.Element {
           return (
             <View key={key.value} style={styles.keyCell}>
               <Pressable
+                accessibilityRole="keyboardkey"
                 style={({ pressed }) => [
                   styles.key,
                   isNext && styles.nextKey,

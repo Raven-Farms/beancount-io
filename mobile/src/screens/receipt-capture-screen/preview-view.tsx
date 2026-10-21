@@ -106,6 +106,7 @@ export const PreviewView = ({
         <View style={[styles.actions, { bottom: insets.bottom + 28 }]}>
           <Pressable
             testID="receipt-retake"
+            accessibilityRole="button"
             style={({ pressed }) => [
               styles.pill,
               pressed && styles.pillPressed,
@@ -116,6 +117,7 @@ export const PreviewView = ({
           </Pressable>
           <Pressable
             testID="receipt-upload"
+            accessibilityRole="button"
             style={({ pressed }) => [
               styles.pill,
               pressed && styles.pillPressed,
@@ -142,6 +144,7 @@ export const PreviewView = ({
           <View style={styles.errorActions}>
             <Pressable
               testID="receipt-error-cancel"
+              accessibilityRole="button"
               style={({ pressed }) => [
                 styles.pill,
                 pressed && styles.pillPressed,
@@ -152,6 +155,7 @@ export const PreviewView = ({
             </Pressable>
             <Pressable
               testID="receipt-error-retake"
+              accessibilityRole="button"
               style={({ pressed }) => [
                 styles.pill,
                 pressed && styles.pillPressed,

@@ -254,6 +254,19 @@ export const EntryContext: React.FC<EntryContextProps> = ({
         onPress={() => setIsContextOpen((open) => !open)}
         activeOpacity={0.7}
         accessibilityRole="button"
+        // Its text alone: the code and chevron glyphs read as "U+F…"
+        // (w21/141).
+        accessibilityLabel={t("journalEntryContext")}
+        accessibilityValue={{
+          text: [
+            entryFilename && entryLineNumber
+              ? `${entryFilename}:${entryLineNumber}`
+              : null,
+            entryError ? t("staleDataNotice") : null,
+          ]
+            .filter(Boolean)
+            .join(", "),
+        }}
         accessibilityState={{ expanded: isContextOpen }}
       >
         <Ionicons name="code-slash-outline" size={20} color={theme.black80} />

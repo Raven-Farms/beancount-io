@@ -14,7 +14,6 @@
 
 - [064](./blocked/064.md) — A token refresh whose response is lost signs the user out on the next refresh (rotated token replayed → grant revoked) — **blocked:** needs an owner decision (ADR) on a refresh-token reuse grace window
 - [065](./blocked/065.md) — One early-year entry (e.g. 0050) makes the balance sheet 23,718 monthly points (3 MB) and the app stalls — **blocked:** needs an approach decision (per-pill fetch vs server downsample) and a simulator profile of the stall
-- [141](./141.md) — Controls read with icon-font glyphs ("…U+F23B"), missing button roles; guardrail can't catch them
 - [142](./142.md) — VoiceOver labels drop distinguishing text (file vs folder, template descriptions, which budget Update/Delete acts on)
 - [143](./143.md) — No headings in journals, lists or cards; the Headings rotor can't navigate
 - [144](./144.md) — File editor can't dismiss the keyboard for writable non-.bean files
