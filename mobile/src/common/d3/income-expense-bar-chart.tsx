@@ -6,6 +6,7 @@ import { formatShortMoneyWithCurrency } from "@/common/number-utils";
 import { useTheme } from "@/common/theme";
 import { useTranslations } from "@/common/hooks/use-translations";
 import { AnimatedBar } from "./animated-bar";
+import { barChartValueDomain } from "./bar-chart-domain";
 import { useEntranceProgress } from "./use-entrance-progress";
 import { restingBarRect } from "./bar-geometry";
 import { ScrollableAxisChart } from "./scrollable-axis-chart";
@@ -82,11 +83,11 @@ function IncomeExpenseBarChart({
     return <ChartPlaceholder height={chartHeight} />;
   }
 
-  const maxBar = Math.max(0, ...income, ...expense);
-  const yMax = Math.max(maxBar, ...net, 1);
-  const yMin = Math.min(0, ...net); // net can dip below zero (a loss month)
+  // Every series sets the bounds, bars included: a refund month's negative
+  // expense bar ran off the plot floor through the month label when only the
+  // net line could lower it (w21/022).
   const yScale = scaleLinear()
-    .domain([yMin, yMax])
+    .domain(barChartValueDomain([...income, ...expense, ...net]))
     .range([chartHeight - BOTTOM_PADDING, TOP_PADDING])
     .nice();
   const zeroY = yScale(0);
