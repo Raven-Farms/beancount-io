@@ -12,7 +12,7 @@
 
 ## Milestones
 
-- [ ] **m43** — [Keep active contrast-theme labels readable](./m43/README.md) (5 tasks) ← dashboard QA, 2026-10-21; minor, promoted 273 with independently reproduced pressed-filter and default-tab label backplates.
+- [ ] **m43** — [Keep contrast selections visible and readable](./m43/README.md) (6 tasks) ← dashboard QA, 2026-10-21; minor, promoted 273 with filter/tab label backplates and an independently reproduced missing Calendar selected-day cue.
 
 - [ ] **m42** — [Keep keyboard focus owned during and after modal submissions](./m42/README.md) (5 tasks) ← dashboard QA, 2026-10-20; minor, pending reverse-Tab escapes New Entry and failed submits lose the retry position.
 
