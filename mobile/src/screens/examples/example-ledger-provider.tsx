@@ -28,6 +28,7 @@ import {
   type ScopedTransactionFilters,
 } from "@/screens/transactions-screen/filters/types";
 import type { StashedTransaction } from "@/screens/transaction-detail-screen/open-transaction-detail";
+import { createForegroundRefresher } from "@/common/apollo/foreground-refresh";
 import { exampleRoutes } from "./example-routes";
 
 const GuestReadContext = createContext<{
@@ -53,6 +54,25 @@ function GuestLedgerSession({
     () => createGuestClient(visit.serverUrl, ledgerId, setFailure),
     [visit.serverUrl, ledgerId],
   );
+  // A return to the app refreshes the example in place, keeping its stack,
+  // filters and open transaction. Remounting on every return threw them away
+  // (w21/084); only a failed visit starts over.
+  const failed = Boolean(visit.resumeFailure ?? failure);
+  useEffect(() => {
+    const onChange = createForegroundRefresher({
+      refresh: () => {
+        if (failed) {
+          retry();
+          return;
+        }
+        void client
+          .refetchQueries({ include: "active" })
+          .catch(() => undefined);
+      },
+    });
+    const subscription = AppState.addEventListener("change", onChange);
+    return () => subscription.remove();
+  }, [client, failed, retry]);
   const selectedTransaction = useMemo(
     () => makeVar<StashedTransaction | null>(null),
     [],
@@ -115,12 +135,6 @@ export function ExampleLedgerProvider({
   const retry = useCallback(() => {
     updateGuestVisit({ resumeFailure: undefined });
     setAttempt((value) => value + 1);
-  }, []);
-  useEffect(() => {
-    const subscription = AppState.addEventListener("change", (state) => {
-      if (state === "active") setAttempt((value) => value + 1);
-    });
-    return () => subscription.remove();
   }, []);
   if (!visit.ledgerId) return children;
   return (

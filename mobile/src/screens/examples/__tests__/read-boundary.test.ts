@@ -13,6 +13,7 @@ let failure: string | undefined;
 let retries = 0;
 const replacements: string[] = [];
 const cleanups: (() => void)[] = [];
+const appStateListeners: ((state: string) => void)[] = [];
 const react = {
   createElement: (type: any, props: any, ...children: any[]): Node => ({
     type,
@@ -58,7 +59,15 @@ vm.runInNewContext(
           StyleSheet: { create: (value: unknown) => value },
           View: "View",
           Text: "Text",
-          AppState: { addEventListener: () => ({ remove() {} }) },
+          AppState: {
+            addEventListener: (
+              _: string,
+              listener: (state: string) => void,
+            ) => {
+              appStateListeners.push(listener);
+              return { remove() {} };
+            },
+          },
         };
       if (id === "@apollo/client")
         return { ApolloProvider: "ApolloProvider", makeVar };
@@ -89,6 +98,8 @@ vm.runInNewContext(
       if (id === "@/screens/transactions-screen/filters/types")
         return { NO_SCOPED_FILTERS };
       if (id === "./example-routes") return { exampleRoutes: {} };
+      if (id === "@/common/apollo/foreground-refresh")
+        return require("../../../common/apollo/foreground-refresh");
       throw new Error(`Unexpected dependency: ${id}`);
     },
   },
@@ -170,5 +181,44 @@ describe("preview detail access boundary", () => {
     buttons[1].props.onPress();
     expect(guestState.guestVisitVar()?.ledgerId).toBe(null);
     expect(replacements).toEqual(["/examples"]);
+  });
+});
+
+// w21/084: every return to the app remounted the example session, throwing
+// away its navigation stack, filters and open transaction.
+describe("returning to the app during an example", () => {
+  const visit = {
+    serverUrl: "https://books.example/",
+    ledgerId: "open_ledger/example",
+    view: "transactions",
+  };
+  const resume = (resumeFailure?: string) => {
+    appStateListeners.length = 0;
+    const node = ExampleLedgerProvider({
+      visit: { ...visit, resumeFailure },
+      requestSignIn() {},
+      children: "whole navigation stack",
+    });
+    // Nothing above the session listens: a return cannot change its key.
+    expect(appStateListeners.length).toBe(0);
+    let remounts = 0;
+    node.type({ ...node.props, retry: () => remounts++ });
+    for (const listener of appStateListeners) {
+      listener("background");
+      listener("active");
+    }
+    return remounts;
+  };
+
+  afterEach(() => {
+    cleanups.splice(0).forEach((cleanup) => cleanup());
+  });
+
+  it("keeps a healthy session and refreshes it in place", () => {
+    expect(resume()).toBe(0);
+  });
+
+  it("still starts a failed visit over", () => {
+    expect(resume("connection")).toBe(1);
   });
 });
