@@ -173,3 +173,6 @@
 - [361](./361.md) — Merchant exact-payee filter can exceed 256-char limit (181)
 - [362](./362.md) — Splash late ledger check clears a ledger picked after launch (183)
 - [363](./363.md) — Pending account reveal keeps re-expanding collapsed rows (175)
+- [364](./364.md) — Home budget panel shows weekly/daily budgets as $0 (reads future interval; 184 regression)
+- [365](./365.md) — Create Ledger "Books begin" refuses Persian/Arabic/full-width digits and years 1-99
+- [366](./366.md) — Budget history rows/Delete label/alert show raw ISO dates
