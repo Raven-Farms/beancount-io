@@ -21,3 +21,4 @@
 - [071](./071.md) — Auth-error sign-out leaves the previous account's Create Ledger draft, Recent accounts and overrides
 - [072](./072.md) — Account detail paging dedupes an overlap but never refetches, so a new entry stays missing
 - [073](./073.md) — Renamed roots (`name_assets` …): Open Account can only write `Assets:…`; Reports' Recent transactions always empty
+- [074](./074.md) — After the selected ledger is deleted, the drawer still pins it at the top as the current ledger (054 follow-up)
