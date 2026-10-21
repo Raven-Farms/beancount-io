@@ -4,7 +4,7 @@
 
 ## Blocker triage — updated 2026-10-21 UTC
 
-The 23 previously published pending items remain blocked: twenty engine items, m6, and Hermes notes 039/040. Official npm and GitHub release checks at 05:08 UTC still report WASM 0.24.0, last published September 6. On inspected upstream main `51cf2326`, ten engine items have merged source candidates awaiting release; nine notes plus m2 still need contract or semantic changes. No published artifact clears an engine adoption prerequisite. Marketplace preparation and submissions continue independently under m10 below; m8 and m9 are parked on their explicit platform, QA and operator gates.
+The 23 previously published pending items remain blocked: twenty engine items, m6, and Hermes notes 039/040. Official npm and GitHub release checks at 05:08 UTC still report WASM 0.24.0, last published September 6. On inspected upstream main `51cf2326`, ten engine items have merged source candidates awaiting release; nine notes plus m2 still need contract or semantic changes. No published artifact clears an engine adoption prerequisite. Marketplace run below completed every independent preparation and available free submission; m8–m10 are parked on explicit platform, QA, agreement and moderation gates. All 28 pending top-level items are blocked or dependent on those written conditions.
 
 m6/t001–t012 are complete, including authenticated first queries and default Hermes discovery. All eleven accepted suite 0.3.3 updates are public, all 105 authored files match, and individual installs have been verified in OpenClaw and supported Hermes (init exception retained). The current source suite is 0.3.5 with thirteen skills; its corrected cases, discovery/routing and w3/m55–m57 adoption gates still need Claude capacity. The last native Claude probe at 04:23 UTC returned a first-party weekly-limit error before inference; no changed capacity evidence warrants repeating it. Hermes's unchanged stable scanner still blocks init; a fresh native search recheck still finds all eleven through default/all search and none through the explicit ClawHub filter.
 
@@ -53,7 +53,7 @@ Prioritize the major correctness findings (PRINT/FROM/JOURNAL, authored location
 ## Milestones
 
 - [ ] **m9** — [Reach developer marketplaces and galleries](./blocked/m9/README.md) (10 tasks; A3/A1) ← approved local roadmap, synchronized under `$loopx w6` on 2026-10-21 UTC; **blocked:** all payloads prepared; native dedicated-QA journeys, final publisher agreement/operator request and external reviews remain
-- [ ] **m10** — [List the connector in independent web directories](./m10/README.md) (8 tasks; A3/A1) ← approved local roadmap, synchronized under `$loopx w6` on 2026-10-21 UTC; free routes independent of other marketplace approvals
+- [ ] **m10** — [List the connector in independent web directories](./blocked/m10/README.md) (8 tasks; A3/A1) ← approved local roadmap, synchronized under `$loopx w6` on 2026-10-21 UTC; **blocked:** MCPServers.org and MCPMarket free submissions accepted into queues; LobeHub sign-in agreement approval pending
 
 - [ ] **m8** — [Claim and publish the hosted connector on Smithery and Glama](./blocked/m8/README.md) (8 tasks; A3/A1) ← existing local marketplace roadmap, continued under `$loopx w6` on 2026-10-21 UTC; t001 packet shipped; **blocked:** Smithery publisher returns removed-update 403, Glama awaits w2/088 claim and full-day health
 
@@ -127,3 +127,24 @@ Prioritize the major correctness findings (PRINT/FROM/JOURNAL, authored location
 The owner approved applying MIT-0 through `skills/LICENSE` and instructed continued work with routine choices delegated. Verified the already authenticated ClawHub publisher `puncsky`; retained current skill names based on the no-benefit rename evidence; preserved init's intentional ledger-instruction scaffolding. m6/t001 is complete and archived. First publication still needs a ClawHub token and the licensing/package change on main. The current suite has eleven skills including property; packaging and publication preflights use that inventory.
 
 The refreshed eleven-bundle preflight passes ClawHub 0.23.3 dry runs and carries MIT-0 in every output; ten pass Hermes's actual community-source scanner. GitHub environment variables are configured and read back. ClawHub and GitHub both confirm that the publishing token is absent.
+
+## Marketplace execution — 2026-10-21 UTC
+
+| Item | Shipped outcome / evidence | Remaining owner and unblock condition |
+| --- | --- | --- |
+| m8/t001 | Shared packet implemented in d9c3490f0; metadata/relative links pass; live conformance 10 pass, 0 fail, 6 credential skips. | Done and archived within blocked m8. |
+| m8/t002–t008 | Actual signed-in Smithery wizard returns removed-update 403 (6e42b85af); milestone parked in 5d1507e67. No Smithery listing or QA grant. | Smithery/Arcade supported direct intake; publisher plus existing w2/088 Glama claim/private test profile/full-day health. Dependents remain open. |
+| m9/t001 | Closed by triage in 0014020d2, already satisfied by packet d9c3490f0. | Done and archived within blocked m9. |
+| m9/t002 | Actual Docker registry validator and catalog generator pass; standalone gateway discovery/DCR reaches consent; valid preparation shipped fbe47be0e. Consent canceled from non-QA account; temporary catalog/DCR cleaned, no token. | Dedicated QA browser session/consent, actual gateway query/preview/callback and documented upstream review. |
+| m9/t003 | Official Cursor template validator passes; official/community packages and separate publisher records shipped 7ed1cfe05. Both publisher identity logins work; no submission. | Existing w1/m34/t003 native QA run, supported nested-repository intake and final official Publisher Terms action-time approval, then actual acceptance/verification. |
+| m9/t004 | Cline instructions, exact template fields and 400×400 icon shipped 6e5a556b8; required tested-install confirmations stay unchecked. | Actual Cline QA setup/OAuth/query/preview and catalog dedup, then Cline review. |
+| m9/t005 | Concrete unsent GitHub nomination plus separate VS Code record/config shipped bb3f23e4a; curated GitHub search has no match, native gallery is unverified. | Authorized operator sends request; GitHub curation; actual VS Code QA discovery/install/connection under w1/m34/t003. |
+| m9/t006–t010 | Milestone parked 836938677; verification and closing tasks are blocked transitively. | Complete actual eligible publication and native QA prerequisites before closing tasks. |
+| m10/t001 | Actual MCPServers.org Free $0 remote submission succeeded; receipt and exact fields shipped 405b2b891. | MCPServers.org review, advertised within two weeks, then public metadata/connection verification. Do not resubmit pending entry. |
+| m10/t002 | Actual MCPMarket Free Queue source-repository submission succeeded; receipt/route correction shipped 32fe8a5cb. Remote MCP form costs $69 and was not submitted; no payment. | MCPMarket review, advertised ~4–6 weeks; verify/correct actual hosted endpoint and OAuth metadata after publication. |
+| m10/t003 | LobeHub remote manifest and actual CLI auth preflight shipped ffefb6826; supported eligibility established. | Operator action-time Terms/Privacy agreement approval is pending; then user/GitHub connection, repository permission, publication and QA proof. |
+| m10/t004–t008 | Deferred transitively; receipts are not public publication or completed closing checks. | Directory moderator publication, LobeHub publisher gate and actual hosted QA verification. |
+| 041 | Current MCP.so remote fee remains $39; shared packet ready; no payment/submission. | Owner explicitly approves fee or platform documents a free route. |
+| 042 | PulseMCP still pauses new submissions and edits; shared packet ready; no submission. | Platform reopens supported intake/correction route. |
+
+The approved local m8–m10/041/042 drafts were copied into an isolated checkout and shipped; the original dirty drafts remain untouched. All marketplace artifacts/evidence are under `backend-cluster/backend-v2/docs/marketplace-submissions/` and the inventory links from the MCP guide. No repository PR, upstream PR/issue, email, paid placement, new project dependency or ledger modification was made. Temporary third-party validation/runtime dependencies and private login URL logs were removed after use; only public-safe provenance/results remain in package tmp.

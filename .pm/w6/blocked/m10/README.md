@@ -1,6 +1,6 @@
 # w6 · m10 — List the connector in independent web directories
 
-**Worker:** worker1 **Goal:** People comparing accounting MCP servers find accurate, usable remote listings on the eligible independent directories. **Status:** todo (t001 submitted/free, blocked on moderation; t002 submitted/free repository queue, blocked on review; t003 manifest ready, blocked on publisher agreement)
+**Worker:** worker1 **Goal:** People comparing accounting MCP servers find accurate, usable remote listings on the eligible independent directories. **Status:** blocked (two successful free submissions await moderation; LobeHub awaits explicit publisher agreement; dependent verification and closing tasks remain open)
 
 **Implementation estimate:** ~2h, excluding external review queues and the standing closing tasks.
 
@@ -54,3 +54,5 @@
 - **t002:** actual Free Queue repository submission succeeded; ~4–6 weeks stated. Live Remote MCP form costs $69 and was not submitted. **Unblock:** reviewers publish the source listing and the worker verifies/corrects actual hosted endpoint/OAuth metadata and setup. **Owner:** MCPMarket reviewers, then repository worker/publisher. No payment or duplicate submission.
 
 - **t003:** supported remote manifest and CLI preflight are prepared; interactive login requires explicit Terms/Privacy agreement, with approval pending. **Unblock:** approve that actual agreement, complete user/GitHub access and repository permission checks, then actual publication and QA verification. **Owner:** publisher/operator, LobeHub and repository worker in that order. No grant or submission occurred.
+
+- **Milestone / t004–t008:** every implementation task has an external prerequisite; public discovery and standing closing tasks are deferred transitively. **Unblock:** verify the actual published MCPServers.org/MCPMarket listings and resolve LobeHub account/agreement/publication, then complete the actual connection and closing checks. **Owners:** directory moderators, publisher/account holder and repository worker. Receipts/preparation: MCPServers.org 405b2b891; MCPMarket 32fe8a5cb; LobeHub ffefb6826. No paid placement or public-live listing is claimed.
