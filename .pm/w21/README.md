@@ -67,3 +67,7 @@
 - [117](./117.md) — Saves/deletes show raw transport text ("Network request failed", "OAuth refresh failed"); no mobile raw-error guard
 - [118](./118.md) — Merchants, merchant detail and Entry Context load errors append the raw Apollo message; two lack Retry
 - [119](./119.md) — Session ending mid-action jumps to Welcome unexplained, under a raw "OAuth grant is no longer valid" alert
+- [120](./120.md) — Saving an emptied Edit Transaction deletes the entry without confirmation and says "Transaction saved"
+- [121](./121.md) — Update Budget keeps Currency editable; a non-operating currency silently becomes the first option
+- [122](./122.md) — Account picker offers "Create" for a closed account; Open Account then says "already open"
+- [123](./123.md) — Profile Save silently does nothing for a first/last name over 100 characters
