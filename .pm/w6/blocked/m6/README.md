@@ -1,6 +1,6 @@
 # w6 · m6 — Publish the ledger skills to ClawHub for OpenClaw and Hermes Agent
 
-**Worker:** worker1 **Goal:** An OpenClaw or Hermes Agent user installs any `beancount-*` skill by name from ClawHub, and it works on its own without a Git checkout or this repository's link installer. **Status:** blocked (t001–t012 done; nine 0.3.3 updates public, close/options await promotion; current thirteen-skill release needs Claude reruns and w3/m55–m57 adoption gates)
+**Worker:** worker1 **Goal:** An OpenClaw or Hermes Agent user installs any `beancount-*` skill by name from ClawHub, and it works on its own without a Git checkout or this repository's link installer. **Status:** blocked (t001–t012 done; all eleven 0.3.3 updates public; current thirteen-skill release needs Claude reruns and w3/m55–m57 adoption gates)
 
 **Research date:** 2026-10-16. Sources: ClawHub's quickstart, how-it-works, and skill-format pages at `docs.openclaw.ai/clawhub/`; Hermes Agent's skills page at `hermes-agent.nousresearch.com/docs/user-guide/features/skills`. Re-check the CLI flags against `clawhub --help` and `hermes skills --help` before relying on them.
 
@@ -20,7 +20,7 @@
 | [t010](done/t010.md) | Adoption surface — **DONE** | 30m | t009 |
 | [t011](done/t011.md) | Simplify — **DONE** | 30m | t010 |
 | [t012](done/t012.md) | Test coverage — **DONE** | 45m | t010, t011 |
-| [t013](t013.md) | Closeout after the listings are live — **BLOCKED** (close/options await promotion; current-suite client/adoption checks remain) | 15m | t008, t012, w3/m55/t002, w3/m55/t003, w3/m56/t002, w3/m56/t003, w3/m57/t003, w3/m57/t004 |
+| [t013](t013.md) | Closeout after the listings are live — **BLOCKED** (current-suite Claude/client adoption checks remain) | 15m | t008, t012, w3/m55/t002, w3/m55/t003, w3/m56/t002, w3/m56/t003, w3/m57/t003, w3/m57/t004 |
 
 ## Decisions — 2026-10-19
 
@@ -167,3 +167,13 @@ Main adds `beancount-roll-forward` through active w3/m55 after the eleven-skill 
 ## Resume evidence — 2026-10-20
 
 The source inventory is now thirteen, including accruals and the later ask/close variance recipe. Suite 0.3.5 fixes catalog/version drift and the release checks' discovered valuation/recognition/identity gaps. Sixteen focused native Codex cases pass on `gpt-6.1-sol` with published bea 0.3.1; the former model's usage-limit failure is no longer a general Codex blocker. Claude Code now reports a weekly limit, so the changed instructions' Claude reruns and current routing/discovery remain pending. All thirteen final bundles dry-run successfully; Hermes allows twelve and retains init's documented policy conflict. Current owner reports show clean static analysis but absent remaining scanners for the two inspected pending versions, consistent with queued upstream prepublication work. See [t013](t013.md) and the [rehearsal](../../../../docs/skills/clawhub-rehearsal.md#thirteen-skill-release-preparation--2026-10-20) for exact evidence, limits and unblock conditions. No duplicate publication or new login was attempted.
+
+
+## Synchronization review cleared — 2026-10-21 UTC
+
+The 04:23 UTC anonymous API/download check verifies all eleven accepted suite 0.3.3 versions and all 105 authored files, including the newly promoted close/options 1.0.1. The earlier registry wait is cleared. Current source remains at thirteen skills/suite 0.3.5; no skill, script or client-gate source changed since the last validation ship.
+
+A minimal native Claude Code 2.1.304 Sonnet request still returns first-party HTTP 429 `usage_limit_reached`, zero input/output tokens and the same weekly-limit message before inference. Thus t013 remains blocked on the current-source Claude and w3/m55–m57 adoption checks, followed by protected publication and current-content host verification. This is not an outstanding login or owner decision. The existing Codex evidence and recorded PDF first-open limitation remain unchanged. See [t013](t013.md) for current results and the exact unblock condition.
+
+
+Close/options 1.0.1 subsequently pass fresh native installs in both supported hosts with all 29 authored files matching per host. This completes individual install verification of the accepted eleven-skill release alongside the prior results; Hermes init retains its recorded exception. See the [registry rehearsal](../../../../docs/skills/clawhub-rehearsal.md#eleven-synchronization-updates-public--2026-10-21-utc) for audit labels and retained scanner findings. No current thirteen-skill release or new authenticated agent-query journey is claimed.

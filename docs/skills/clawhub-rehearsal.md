@@ -206,3 +206,24 @@ A final targeted public check at 22:26 UTC still finds close/options at 1.0.0. T
 Fresh Hermes v0.22.2 (`d923a5eb487a`, `skills-guard-v10`) installs of the eight supported promoted skills also succeed without force: add, ask, import, importer-author, migrate, property, reconcile and trade. Their 69 authored files all match the exact submitted bundles, and each community-policy scan reports SAFE. Hermes has no version-selection flag; its owner-qualified ClawHub adapter resolves public latest, and byte comparison verifies the accepted versions. New anonymous homes/configs are used for both hosts. These are install/scanner checks, not new authenticated agent-query journeys.
 
 The fresh Hermes init negative control exits 1 with DANGEROUS and the same 18 policy findings; no init folder is installed and no force is attempted. Raw host results, per-file hashes, pins and the summary are retained under `scripts/skills/tmp/w6-m6-resume/promotion-install/`. Restored vendor runtimes and anonymous profiles/caches are removed after collection; the actual installed bundle trees remain as evidence.
+
+
+## Eleven synchronization updates public — 2026-10-21 UTC
+
+At 04:23 UTC an anonymous API/download check verifies all eleven accepted 0.3.3 updates from `ac95106709fbcbdc9214048c75af258e2a9b71f2`, including close/options 1.0.1. All 105 authored files match their exact submitted bundles. Five listings (add/import/init/migrate/reconcile) are at 1.0.2; the other six are at 1.0.1. The previous registry-promotion wait is cleared. Scratch evidence is `scripts/skills/tmp/w6-m6-20261021/public-state.json`.
+
+The thirteen-skill source inventory, instructions and validation scripts are unchanged since the last ship. A minimal native Claude Code 2.1.304 probe using the documented Sonnet alias still returns first-party HTTP 429 `usage_limit_reached`, zero input/output tokens and the same weekly-limit message before inference. The probe disables tools, skills/customizations and session persistence; it neither creates a login nor changes account/payment settings. Current-source Claude validation and the w3/m55–m57 adoption gates remain prerequisites for later new/changed content. Preserve the recorded PDF first-open loss and full-workflow composition evidence; the earlier Codex passes do not stand in for the missing Claude run.
+
+Hosted checks for `ec6457e75` also pass: [complete skills CI](https://github.com/bex-co/beancount-io/actions/runs/39509100265), [ClawHub validation](https://github.com/bex-co/beancount-io/actions/runs/39509100319) and [secret scanning](https://github.com/bex-co/beancount-io/actions/runs/39509100197). The validation workflow did not publish another version.
+
+
+Fresh anonymous native installs verify the two newly promoted versions on the same pinned host releases used above:
+
+| Skill/version | OpenClaw 2026.10.5 | Hermes v0.22.2 (`d923a5eb487a`) | Authored files matching the exact accepted release, per host |
+| --- | --- | --- | --- |
+| close 1.0.1 | Installed; Safe audit | Installed; SAFE/ALLOWED | 9/9 |
+| options 1.0.1 | Installed; Review audit | Installed; SAFE/ALLOWED | 20/20 |
+
+Both hosts' metadata confirms version 1.0.1. Each fresh Hermes `skills-guard-v10` scan retains one MEDIUM `unpinned_pip_install` finding in `compatibility.md` while allowing installation. Neither host uses force or warning-acknowledgment flags. These two-version checks complete the individual supported-host verification of all accepted 0.3.3 content, alongside the earlier nine OpenClaw/eight Hermes results. Init retains the previously recorded Hermes restriction. This is installation/scanner evidence, not a new authenticated query journey or publication of the thirteen-skill source release.
+
+Raw native results, exact pins, all installed file hashes and the installed bundles are retained under `scripts/skills/tmp/w6-m6-20261021/host-install/`. The task-only restored Hermes source/runtime and anonymous profiles/caches are removed after collection.
