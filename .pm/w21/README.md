@@ -158,3 +158,9 @@
 - [208](./208.md) — Equal direct/inverse price quotes: holding labelled "at cost (no price)" though valued at market
 - [209](./209.md) — Home hides stale prices once the ledger is quiet this month; Accounts flags them
 - [210](./210.md) — Holdings sheet labels a user-typed price "Live price" and applies the feed's staleness rule
+- [211](./211.md) — Row category icon compares legs across currencies: a $500 flight earning miles shows the Income tile
+- [212](./212.md) — Account detail rows drop the narration; same-payee entries look identical there
+- [213](./213.md) — The production self-host stack (deploy/docker) can't be used from the mobile app with any URL
+- [214](./214.md) — Every discovery mismatch reads "does not expose the required Beancount.io API"; no hint of the right URL
+- [215](./215.md) — Sign-in discovery has no timeout (~60 s spinner); changing the server doesn't release it
+- [216](./216.md) — Server URLs with Unicode host, trailing ?/#, or trailing dot pass validation but never match the issuer
