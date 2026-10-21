@@ -74,7 +74,7 @@ export function BudgetCard({
   refreshSignal = 0,
 }: BudgetCardProps): JSX.Element {
   const styles = useThemeStyle(getStyles);
-  const { t } = useTranslations();
+  const { t, locale } = useTranslations();
   // Keyed on the text size: iOS keeps a Text's old measurement when it
   // changes with the app open (mobile/AGENTS.md; w21/015).
   const { fontScale } = useWindowDimensions();
@@ -129,7 +129,9 @@ export function BudgetCard({
       // The label collapses this subtree, so the amounts and the meter would
       // otherwise reach assistive tech not at all. `accessibilityValue.text` is
       // spoken after the label and repeats nothing from it.
-      accessibilityValue={{ text: budgetPanelRowAccessibilityValue(row, t) }}
+      accessibilityValue={{
+        text: budgetPanelRowAccessibilityValue(row, t, locale),
+      }}
     >
       <View style={styles.rowHeader}>
         <Text

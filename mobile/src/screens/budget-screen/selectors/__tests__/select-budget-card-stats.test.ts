@@ -156,3 +156,93 @@ describe("selectPointFavorability before the budget existed", () => {
     expect(chart.includes("favorables[i] === null")).toBe(true);
   });
 });
+
+// w21/101: a budget dated 1 November, viewed in October, read "Above target"
+// with a red +$50.00 variance over an all-grey chart.
+describe("a budget not yet in effect", () => {
+  const future = {
+    account: "Expenses:Transport",
+    interval: "monthly",
+    currency: "USD",
+    amount: "300.00 USD",
+    value: 300,
+    entry_hash: "f",
+    budgetHistory: [
+      {
+        date: "2026-11-01",
+        interval: "monthly",
+        amount: "300.00 USD",
+        entry_hash: "f",
+      },
+    ],
+  };
+
+  it("judges nothing and says when it starts", () => {
+    const stats = selectBudgetCardStats(future, [
+      { date: "2026-10-31", actual: 50, budget: 0 },
+    ]);
+    expect(stats.status).toBe(null);
+    expect(stats.variance).toBe(null);
+    expect(stats.favorable).toBe(true);
+    expect(stats.progressPercent).toBe(null);
+    expect(stats.startsOn).toBe("2026-11-01");
+    expect(stats.actual).toBe(50);
+  });
+
+  it("judges a budget in effect as before", () => {
+    const stats = selectBudgetCardStats(future, [
+      { date: "2026-11-30", actual: 350, budget: 300 },
+    ]);
+    expect(stats.status).toBe("above");
+    expect(stats.startsOn).toBe(null);
+  });
+
+  it("is shown on the card as a neutral start date", () => {
+    const card = require("fs").readFileSync(
+      require("path").join(
+        __dirname,
+        "..",
+        "..",
+        "components",
+        "budget-group-card.tsx",
+      ),
+      "utf8",
+    ) as string;
+    expect(card.includes("{stats.startsOn !== null && (")).toBe(true);
+  });
+
+  it("reads neutrally and ranks last on Home", () => {
+    const {
+      selectBudgetPanelRows,
+      budgetPanelRowAccessibilityValue,
+    } = require("../../../home-screen/selectors/select-budget-panel");
+    const rows = selectBudgetPanelRows(
+      [
+        { group: future, actual: 50, periodEnd: "2026-10-31" },
+        {
+          group: {
+            ...future,
+            account: "Expenses:Food",
+            entry_hash: "g",
+            budgetHistory: [{ ...future.budgetHistory[0], date: "2026-01-01" }],
+          },
+          actual: 10,
+          periodEnd: "2026-10-31",
+        },
+      ],
+      3,
+      "2026-10-21",
+    );
+    expect(rows.map((row: { account: string }) => row.account)).toEqual([
+      "Expenses:Food",
+      "Expenses:Transport",
+    ]);
+    const spoken = budgetPanelRowAccessibilityValue(
+      rows[1],
+      (key: string, options?: Record<string, unknown>) =>
+        `${key}${options ? JSON.stringify(options) : ""}`,
+    );
+    expect(spoken.includes("budgetAboveTarget")).toBe(false);
+    expect(spoken.includes("budgetStartsOn")).toBe(true);
+  });
+});

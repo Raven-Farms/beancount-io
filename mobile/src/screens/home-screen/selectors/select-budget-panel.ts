@@ -4,6 +4,7 @@
  * alphabetically — the ones worth knowing about before you spend again.
  */
 import { dropRoot } from "../../../common/account-util";
+import { formatLedgerDate } from "../../../common/date-format";
 import { formatMoneyWithCurrency } from "../../../common/number-utils";
 import {
   budgetDirection,
@@ -35,6 +36,8 @@ export type BudgetPanelRow = {
   progressPercent: number;
   /** A budget of 0 or less, so `progressPercent` is no percentage to read out. */
   noBudget: boolean;
+  /** Set when the budget is not yet in effect: nothing to judge (w21/101). */
+  startsOn?: string;
   /** True when this budget is on the good side of its target. */
   favorable: boolean;
 };
@@ -68,6 +71,19 @@ export function selectBudgetPanelRows(
     ]);
     const spent = stats.actual ?? 0;
     const noBudget = stats.budget <= 0;
+    if (stats.startsOn !== null) {
+      return {
+        account: group.account,
+        shortAccount: dropRoot(group.account),
+        currency: group.currency,
+        budget: stats.budget,
+        actual: spent,
+        progressPercent: 0,
+        noBudget,
+        favorable: true,
+        startsOn: stats.startsOn,
+      };
+    }
 
     return {
       account: group.account,
@@ -90,7 +106,11 @@ export function selectBudgetPanelRows(
   // account so the order is stable between renders rather than depending on
   // query completion order.
   const rank = (row: BudgetPanelRow) =>
-    row.noBudget && row.actual > 0 ? Infinity : row.progressPercent;
+    row.startsOn !== undefined
+      ? -1
+      : row.noBudget && row.actual > 0
+        ? Infinity
+        : row.progressPercent;
   return rows
     .sort((a, b) => rank(b) - rank(a) || a.account.localeCompare(b.account))
     .slice(0, limit);
@@ -134,9 +154,13 @@ export function settleBudgetPanel(
 export function budgetPanelRowAccessibilityValue(
   row: BudgetPanelRow,
   t: (key: string, options?: Record<string, string | number>) => string,
+  locale = "en",
 ): string {
-  const status = t(row.favorable ? "budgetBelowTarget" : "budgetAboveTarget");
-  if (row.noBudget) {
+  const status =
+    row.startsOn !== undefined
+      ? t("budgetStartsOn", { date: formatLedgerDate(row.startsOn, locale) })
+      : t(row.favorable ? "budgetBelowTarget" : "budgetAboveTarget");
+  if (row.noBudget || row.startsOn !== undefined) {
     return t("budgetPanelRowValueNoBudget", {
       actual: formatMoneyWithCurrency(row.actual, row.currency),
       budget: formatMoneyWithCurrency(row.budget, row.currency),

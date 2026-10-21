@@ -550,6 +550,7 @@ export const sk: Translations = {
   budgetPanelRowValue:
     "{{actual}} z {{budget}}, využité {{percent}}%, {{status}}",
   budgetPanelRowValueNoBudget: "{{actual}} z {{budget}}, {{status}}",
+  budgetStartsOn: "Začína {{date}}",
   budgetLoadFailed: "Načítanie rozpočtov zlyhalo",
   budgetIntervalDaily: "Denne",
   budgetIntervalWeekly: "Týždenne",

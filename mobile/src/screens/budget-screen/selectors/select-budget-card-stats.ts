@@ -31,7 +31,33 @@ export type BudgetCardStats = {
   favorable: boolean;
   /** Spend as a percentage of budget, or null when there is nothing to divide by. */
   progressPercent: number | null;
+  /**
+   * The first directive's date when the latest period ended before it: no
+   * target existed yet, so nothing is judged (w21/101).
+   */
+  startsOn: string | null;
 };
+
+/** The earliest directive's date, or null with no history. */
+function firstBudgetDate(
+  budgetHistory: readonly { date: string }[],
+): string | null {
+  return budgetHistory.reduce<string | null>(
+    (first, entry) =>
+      first === null || entry.date < first ? entry.date : first,
+    null,
+  );
+}
+
+/** A period that ended before the first directive had no target to miss. */
+function beforeFirstBudget(
+  point: BudgetSeriesPoint,
+  firstBudget: string | null,
+): boolean {
+  // A zero budget only: a period the first directive starts partway through
+  // carries a prorated target and is judged against it.
+  return point.budget === 0 && firstBudget !== null && point.date < firstBudget;
+}
 
 /**
  * Whether each charted period landed on the good side of its own budget. Same
@@ -48,15 +74,9 @@ export function selectPointFavorability(
   direction: 1 | -1,
   budgetHistory: readonly { date: string }[] = [],
 ): (boolean | null)[] {
-  const firstBudget = budgetHistory.reduce<string | null>(
-    (first, entry) =>
-      first === null || entry.date < first ? entry.date : first,
-    null,
-  );
+  const firstBudget = firstBudgetDate(budgetHistory);
   return series.map((point) =>
-    // A zero budget too: a period the first directive starts partway through
-    // carries a prorated target and is judged against it.
-    point.budget === 0 && firstBudget !== null && point.date < firstBudget
+    beforeFirstBudget(point, firstBudget)
       ? null
       : isFavorableVariance(
           varianceStatus(point.actual - Math.abs(point.budget)),
@@ -79,6 +99,23 @@ export function selectBudgetCardStats(
 
   const actual =
     latest && Number.isFinite(latest.actual) ? latest.actual : null;
+
+  // Before the budget existed there is no target, so no status and no
+  // variance: its zero budget read every dollar as "Above target" in red over
+  // an all-grey chart (w21/101).
+  const firstBudget = firstBudgetDate(group.budgetHistory);
+  if (latest && beforeFirstBudget(latest, firstBudget)) {
+    return {
+      budget,
+      actual,
+      variance: null,
+      status: null,
+      favorable: true,
+      progressPercent: null,
+      startsOn: firstBudget,
+    };
+  }
+
   const variance = actual === null ? null : actual - budget;
   const status = variance === null ? null : varianceStatus(variance);
   const favorable =
@@ -88,5 +125,13 @@ export function selectBudgetCardStats(
       ? null
       : Math.max(0, (actual / budget) * 100);
 
-  return { budget, actual, variance, status, favorable, progressPercent };
+  return {
+    budget,
+    actual,
+    variance,
+    status,
+    favorable,
+    progressPercent,
+    startsOn: null,
+  };
 }

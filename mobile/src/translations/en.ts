@@ -540,6 +540,7 @@ export const en = {
   budgetPanelRowValue:
     "{{actual}} of {{budget}}, {{percent}}% used, {{status}}",
   budgetPanelRowValueNoBudget: "{{actual}} of {{budget}}, {{status}}",
+  budgetStartsOn: "Starts {{date}}",
   budgetLoadFailed: "Failed to load budgets",
   budgetIntervalDaily: "Daily",
   budgetIntervalWeekly: "Weekly",

@@ -543,6 +543,7 @@ export const es: Translations = {
   budgetPanelRowValue:
     "{{actual}} de {{budget}}, {{percent}}% utilizado, {{status}}",
   budgetPanelRowValueNoBudget: "{{actual}} de {{budget}}, {{status}}",
+  budgetStartsOn: "Empieza el {{date}}",
   budgetLoadFailed: "Error al cargar los presupuestos",
   budgetIntervalDaily: "Diario",
   budgetIntervalWeekly: "Semanal",

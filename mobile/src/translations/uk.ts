@@ -544,6 +544,7 @@ export const uk: Translations = {
   budgetPanelRowValue:
     "{{actual}} з {{budget}}, використано {{percent}}%, {{status}}",
   budgetPanelRowValueNoBudget: "{{actual}} з {{budget}}, {{status}}",
+  budgetStartsOn: "Починається {{date}}",
   budgetLoadFailed: "Не вдалося завантажити бюджети",
   budgetIntervalDaily: "Щодня",
   budgetIntervalWeekly: "Щотижня",

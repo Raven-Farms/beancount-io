@@ -14,7 +14,6 @@
 
 - [064](./blocked/064.md) — A token refresh whose response is lost signs the user out on the next refresh (rotated token replayed → grant revoked) — **blocked:** needs an owner decision (ADR) on a refresh-token reuse grace window
 - [065](./blocked/065.md) — One early-year entry (e.g. 0050) makes the balance sheet 23,718 monthly points (3 MB) and the app stalls — **blocked:** needs an approach decision (per-pill fetch vs server downsample) and a simulator profile of the stall
-- [101](./101.md) — Budget header says "Above target" in red for a period before the budget existed, over an all-grey chart
 - [102](./102.md) — First bar of a 1Y / weekly-YTD budget chart is held to a whole period's budget for a partial period
 - [103](./103.md) — New Transaction pre-fills a closed account as FROM when it was the most recently used asset
 - [104](./104.md) — Create Ledger stores a liability opening balance with the wrong sign; the iOS keypad has no minus

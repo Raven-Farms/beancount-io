@@ -1,3 +1,4 @@
+import { formatLedgerDate } from "@/common/date-format";
 import {
   StyleSheet,
   Text,
@@ -255,6 +256,21 @@ export function BudgetGroupCard({
           <View style={styles.badge}>
             <Text style={styles.badgeText}>{currency}</Text>
           </View>
+          {stats.startsOn !== null && (
+            // Not yet in effect: neutral, never "Above target" (w21/101).
+            <View
+              style={[
+                styles.statusBadge,
+                { backgroundColor: theme.black20, borderColor: theme.black60 },
+              ]}
+            >
+              <Text style={[styles.statusText, { color: theme.black80 }]}>
+                {t("budgetStartsOn", {
+                  date: formatLedgerDate(stats.startsOn, locale),
+                })}
+              </Text>
+            </View>
+          )}
           {stats.status !== null && (
             <View
               style={[
