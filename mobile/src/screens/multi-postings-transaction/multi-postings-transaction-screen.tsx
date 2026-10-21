@@ -1,4 +1,5 @@
 import { memo, useEffect, useRef, useState } from "react";
+import { createSingleFlight, type SingleFlight } from "@/common/single-flight";
 import {
   Alert,
   AccessibilityInfo,
@@ -490,6 +491,11 @@ const MultiPostingsTransactionScreenComponent = () => {
   // A committed save disables Done: a cold-link form that fails to leave must
   // never invite a duplicate resubmit (w1/032).
   const [saved, setSaved] = useState(false);
+  // Closed from the first Done until the write settles, so a second tap
+  // during "Saving…" cannot post the entry again (w21/044).
+  const [saving, setSaving] = useState(false);
+  const saveFlightRef = useRef<SingleFlight | null>(null);
+  saveFlightRef.current ??= createSingleFlight(setSaving);
   // Why the last save failed, until the draft changes (w21/001): the toast
   // alone was gone before a refusal could be read.
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -583,9 +589,10 @@ const MultiPostingsTransactionScreenComponent = () => {
   }, [navigation, hasUnsavedChanges, t]);
 
   const handleSave = async () => {
-    // The write already committed; stay silent instead of toasting a
-    // validation message for a form that is no longer submittable.
-    if (savedOutRef.current) {
+    // The write already committed, or is running; stay silent instead of
+    // toasting a validation message or writing a second time.
+    const flight = saveFlightRef.current!;
+    if (savedOutRef.current || flight.busy()) {
       return;
     }
     if (!canSave) {
@@ -608,18 +615,23 @@ const MultiPostingsTransactionScreenComponent = () => {
       currency,
     });
 
-    const outcome = await confirmWrite({
-      perform: () => mutate({ variables: { entriesInput: [entry], ledgerId } }),
-      // The mutation reports rejection in its payload. The hook's `error` field
-      // is a render behind at this point, so a server-rejected split used to
-      // toast success — branch on what the server actually returned.
-      didSucceed: (result) => Boolean(result.data?.addEntries?.success),
-      loadingMessage: t("saving"),
-      successMessage: t("saveSuccess"),
-      failureMessage: t("saveFailed"),
-      afterSuccess: runAddTransactionCallback,
-      goBackOnSuccess: false,
-    });
+    const outcome = await flight.run(() =>
+      confirmWrite({
+        perform: () =>
+          mutate({ variables: { entriesInput: [entry], ledgerId } }),
+        // The mutation reports rejection in its payload. The hook's `error` field
+        // is a render behind at this point, so a server-rejected split used to
+        // toast success — branch on what the server actually returned.
+        didSucceed: (result) => Boolean(result.data?.addEntries?.success),
+        loadingMessage: t("saving"),
+        successMessage: t("saveSuccess"),
+        failureMessage: t("saveFailed"),
+        afterSuccess: runAddTransactionCallback,
+        goBackOnSuccess: false,
+      }),
+    );
+    // Another press already owns the write.
+    if (outcome === undefined) return;
     setSaveError(inlineSaveError(outcome));
     if (outcome.ok) {
       // Mark the draft saved before leaving, so the discard guard stays quiet.
@@ -661,15 +673,21 @@ const MultiPostingsTransactionScreenComponent = () => {
           headerRight: () => (
             <Pressable
               onPress={handleSave}
+              // Still pressable on an invalid draft, which is how the form
+              // says what is wrong; never while a save runs or after it.
+              disabled={saving || saved}
               hitSlop={10}
               accessibilityRole="button"
               accessibilityLabel={t("done")}
-              accessibilityState={{ disabled: !canSave }}
+              accessibilityState={{
+                disabled: !canSave || saving,
+                busy: saving,
+              }}
             >
               <Text
                 style={[
                   styles.doneButton,
-                  !canSave && styles.doneButtonDisabled,
+                  (!canSave || saving) && styles.doneButtonDisabled,
                 ]}
                 numberOfLines={1}
                 maxFontSizeMultiplier={headerActionMaxFontSizeMultiplier}

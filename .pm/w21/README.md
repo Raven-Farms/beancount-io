@@ -12,7 +12,6 @@
 
 ## Inbox
 
-- [044](./044.md) — New Transaction's Done stays live while the save is in flight, so a second tap posts the entry twice
 - [045](./045.md) — New Transaction's account picker offers closed accounts, and the save is then refused
 - [046](./046.md) — Merchants merges payee case variants in the list, but the drill-down shows only one variant
 - [047](./047.md) — Home's price-age warning reads a stale persisted price list after relaunch (`useLedgerPrices` still cache-first; residual of 006)
