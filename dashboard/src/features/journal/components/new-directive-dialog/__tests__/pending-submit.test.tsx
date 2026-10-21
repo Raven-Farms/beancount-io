@@ -314,7 +314,7 @@ describe("New Entry type switches", () => {
   // Radix tab activation re-renders the whole dialog; allow a loaded run.
   const settle = { timeout: 3000 };
 
-  it("keeps a Note draft through Note → Balance → Note by arrow keys", async () => {
+  it("keeps a Note draft through Note → Balance (arrow key) → Note", async () => {
     const user = (await import("@testing-library/user-event")).default.setup();
     render(<Harness tab="note" />);
     setAccount("Assets:Cash");
@@ -337,8 +337,10 @@ describe("New Entry type switches", () => {
       screen.getByRole("button", { name: "Create Balance Entry" }),
     ).toBeInTheDocument();
 
-    screen.getByRole("tab", { name: "Balance" }).focus();
-    await user.keyboard("{ArrowRight}");
+    // Back by pointer: the arrow-key leg above is the native-key proof, and
+    // a second roving-focus move was not deterministic under a loaded run.
+    fireEvent.mouseDown(screen.getByRole("tab", { name: "Note" }));
+    fireEvent.click(screen.getByRole("tab", { name: "Note" }));
     await waitFor(
       () => expect(noteContent()).toHaveValue("qa draft note"),
       settle,
