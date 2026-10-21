@@ -9,6 +9,7 @@ import {
   TextInput,
   TouchableOpacity,
   View,
+  useWindowDimensions,
 } from "react-native";
 import {
   Stack,
@@ -27,6 +28,7 @@ import {
   fontWeights,
   headerActionMaxFontSizeMultiplier,
   headerActionStyle,
+  prefersStackedLayout,
   useTheme,
 } from "@/common/theme";
 import { AmountText } from "@/components/amount-text";
@@ -110,6 +112,15 @@ const getStyles = (theme: ColorTheme) =>
       flexDirection: "row",
       alignItems: "center",
       gap: 12,
+    },
+    // Accessibility text sizes: the account takes its own lines and the amount
+    // controls sit under it at the trailing edge.
+    postingRowStacked: {
+      flexDirection: "column",
+      alignItems: "stretch",
+    },
+    postingAmountWrapStacked: {
+      alignSelf: "flex-end",
     },
     postingRowDivider: {
       borderTopWidth: StyleSheet.hairlineWidth,
@@ -263,6 +274,10 @@ const PostingRow = ({
 }) => {
   const theme = useTheme().colorTheme;
   const styles = useThemeStyle(getStyles);
+  // At AX2 the account shared its row with the amount controls and read
+  // "Asse…cking" / "Ex…ries" (w21/029).
+  const { fontScale } = useWindowDimensions();
+  const stacked = prefersStackedLayout(fontScale);
   const { t } = useTranslations();
 
   const isNegative = posting.amountInput.startsWith("-");
@@ -318,27 +333,41 @@ const PostingRow = ({
       renderRightActions={canRemove ? renderDeleteAction : undefined}
       overshootRight={false}
     >
-      <View style={[styles.postingRow, index > 0 && styles.postingRowDivider]}>
+      <View
+        style={[
+          styles.postingRow,
+          stacked && styles.postingRowStacked,
+          index > 0 && styles.postingRowDivider,
+        ]}
+      >
         <TouchableOpacity
-          style={styles.postingAccountWrap}
+          style={stacked ? undefined : styles.postingAccountWrap}
           activeOpacity={0.6}
           onPress={onPickAccount}
           accessibilityRole="button"
           accessibilityLabel={posting.account || t("postingAccount")}
         >
           <Text
+            // Remeasured on a live size change (mobile/AGENTS.md).
+            key={`posting-account-${fontScale}`}
             style={[
               styles.postingAccount,
               !posting.account && styles.postingAccountPlaceholder,
             ]}
-            numberOfLines={1}
-            ellipsizeMode="middle"
+            numberOfLines={stacked ? 2 : 1}
+            // Stacked, the leaf is what tells two accounts apart.
+            ellipsizeMode={stacked ? "head" : "middle"}
           >
             {posting.account || t("postingAccount")}
           </Text>
         </TouchableOpacity>
 
-        <View style={styles.postingAmountWrap}>
+        <View
+          style={[
+            styles.postingAmountWrap,
+            stacked && styles.postingAmountWrapStacked,
+          ]}
+        >
           {hasAmount ? (
             <TouchableOpacity
               style={[styles.signToggle, { backgroundColor: toggleBg }]}
