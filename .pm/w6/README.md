@@ -52,7 +52,7 @@ Prioritize the major correctness findings (PRINT/FROM/JOURNAL, authored location
 
 ## Milestones
 
-- [ ] **m9** — [Reach developer marketplaces and galleries](./blocked/m9/README.md) (10 tasks; A3/A1) ← approved local roadmap, synchronized under `$loopx w6` on 2026-10-21 UTC; **blocked:** payloads prepared; cursor.directory submission accepted/pending security scan; native dedicated-QA journeys, final publisher agreement/operator request and external reviews remain
+- [ ] **m9** — [Reach developer marketplaces and galleries](./blocked/m9/README.md) (10 tasks; A3/A1) ← approved local roadmap, synchronized under `$loopx w6` on 2026-10-21 UTC; **blocked:** payloads prepared; cursor.directory entry in New/native URL-only install complete; native dedicated-QA journeys, final publisher agreement/operator request and external reviews remain
 - [ ] **m10** — [List the connector in independent web directories](./blocked/m10/README.md) (8 tasks; A3/A1) ← approved local roadmap, synchronized under `$loopx w6` on 2026-10-21 UTC; **blocked:** MCPServers.org and MCPMarket free submissions accepted into queues; LobeHub sign-in agreement approval pending
 
 - [ ] **m8** — [Claim and publish the hosted connector on Smithery and Glama](./blocked/m8/README.md) (8 tasks; A3/A1) ← existing local marketplace roadmap, continued under `$loopx w6` on 2026-10-21 UTC; t001 packet shipped; **blocked:** Smithery publisher returns removed-update 403, Glama awaits w2/088 claim and full-day health

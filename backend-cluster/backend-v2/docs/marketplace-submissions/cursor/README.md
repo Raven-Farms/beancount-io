@@ -19,11 +19,11 @@ customer skill trees. Format validation does not establish marketplace acceptanc
 | Destination | State / next action |
 | --- | --- |
 | [Official Cursor](https://cursor.com/marketplace/publish) | Publisher identity sign-in succeeded. Application is prepared but unsent; final Submit Application explicitly agrees to [Publisher Terms](https://cursor.com/marketplace-publisher-terms) and requires the operator’s action-time approval. The root index now supplies the supported nested-package layout; actual intake and review remain unverified. |
-| [cursor.directory](https://cursor.directory/plugins/new?type=mcp_server) | Manual MCP-only submission accepted; [Beancount.io receipt](https://cursor.directory/plugins/beancountio) observed 2026-10-21 21:51 UTC says scanning, unpublished and hidden. Await the security agent, then verify public discovery and the marketplace installation. No duplicate submission or data PR is needed. |
+| [cursor.directory](https://cursor.directory/plugins/new?type=mcp_server) | The [Beancount.io listing](https://cursor.directory/plugins/beancountio) clears its scan/hidden banners by 21:54 UTC and appears first under the directory’s New sort. Add to Cursor opens the correct native review and installs the URL-only User entry; new native OAuth is awaiting approval. [Dated receipt and limits](./directory/README.md#scan-and-native-install-follow-through--2026-10-21-utc). No duplicate submission or data PR is needed. |
 
 Cursor IDE 3.24.18 is now installed from the official vendor download after disk
 image, code-signature and Gatekeeper checks. Its separate, fresh QA profile opens
-the workbench; an IDE agent conversation has not been verified. Existing
+the workbench and accepts the actual community install link; an IDE agent conversation has not been verified. Existing
 w1/m34/t003 retains ownership of that unfinished IDE journey.
 
 The native Cursor Agent companion loaded the actual local plugin, completed
