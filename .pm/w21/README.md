@@ -172,3 +172,4 @@
 - [340](./340.md) — File editor: error-row jump lands behind the keyboard
 - [341](./341.md) — File editor text ignores Dynamic Type (fixed 14px), including AX2
 - [342](./342.md) — Web view process kill silently resets the editor draft and re-inserts the last shortcut
+- [343](./343.md) — Files over 10 MiB still return content: null on REST/GraphQL/MCP (185 server half)
