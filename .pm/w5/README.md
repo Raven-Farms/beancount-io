@@ -69,7 +69,7 @@
 - [902 — Make import price-conflict advice respect `unique_prices`](./902.md) — trivial CLI recovery-advice follow-up to 397; reproduced 2026-10-20.
 - [903 — Explain quotes that lose to generated prices](./903.md) — minor CLI price-feedback follow-up to 741; import and included-file add cases reproduced 2026-10-20.
 - [904 — Make MCP dry runs refuse what the plan's directive limit will refuse](./904.md) — minor backend-v2 finding from w5/m5/t004; observed 2026-10-21.
-- [905 — Scope missing-price route explanations to selected accounts](./905.md) — trivial CLI report-message follow-up to 557 and 748; reproduced 2026-10-20.
+- [905 — Keep missing-price route explanations specific to unvalued holdings](./905.md) — trivial CLI message follow-up to 557 and 748; cross-account and same-account mixed-cost/costless cases reproduced 2026-10-20/21.
 - [906 — Infer grouped three-decimal CSV amounts consistently](./906.md) — minor CLI import follow-up to w1/130 and w5/753; space and apostrophe groupings reproduced 2026-10-20.
 - [907 — Correct XCD's minor-unit import advice](./907.md) — trivial CLI advisory follow-up to 753; checked against SIX and reproduced 2026-10-21.
 - [908 — Keep known zero holding values visible in account trees](./908.md) — trivial CLI report-display follow-up to w3/357 and w1/072; zero-cost and zero-price cases reproduced 2026-10-21.
