@@ -1,6 +1,6 @@
 # w3 · m55 — `beancount-roll-forward`: explain how a balance-sheet account moved
 
-**Worker:** worker3 **Goal:** a new read-only customer skill explains an account's movement from opening to closing with every component tied to an executed query and no balancing plug. **Status:** todo (remaining t003, t004, t005, t006)
+**Worker:** worker3 **Goal:** a new read-only customer skill explains an account's movement from opening to closing with every component tied to an executed query and no balancing plug. **Status:** todo (remaining t004, t005, t006)
 
 ## Tasks (in order)
 
@@ -8,7 +8,7 @@
 | --- | --- | --- | --- |
 | [t001](done/t001.md) | Write the roll-forward skill and its calculation reference — **DONE** | 90m | — |
 | [t002](done/t002.md) | Write evals and fixtures for the roll-forward cases — **DONE** | 60m | t001 |
-| t003 | Adoption surface | 30m | t002 |
+| [t003](done/t003.md) | Adoption surface — **DONE** | 30m | t002 |
 | t004 | Simplify | 15m | t003 |
 | t005 | Test coverage | 45m | t003 |
 | t006 | Closeout | 10m | t004, t005 |
