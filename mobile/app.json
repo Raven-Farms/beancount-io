@@ -116,16 +116,18 @@
       [
         "expo-camera",
         {
-          "cameraPermission": "Allow $(PRODUCT_NAME) to access your camera",
-          "microphonePermission": "Allow $(PRODUCT_NAME) to access your microphone",
-          "recordAudioAndroid": true,
+          "cameraPermission": "Beancount uses the camera to scan receipts.",
+          "microphonePermission": false,
+          "recordAudioAndroid": false,
           "barcodeScannerEnabled": true
         }
       ],
       [
         "expo-image-picker",
         {
-          "photosPermission": "Allow $(PRODUCT_NAME) to access your photo library to attach receipts"
+          "photosPermission": "Beancount accesses your photos to scan receipts.",
+          "cameraPermission": "Beancount uses the camera to scan receipts.",
+          "microphonePermission": false
         }
       ],
       "expo-localization",
@@ -134,7 +136,12 @@
       "@react-native-community/datetimepicker",
       "@sentry/react-native",
       "expo-status-bar",
-      "expo-secure-store"
+      [
+        "expo-secure-store",
+        {
+          "faceIDPermission": false
+        }
+      ]
     ],
     "extra": {
       "eas": {
