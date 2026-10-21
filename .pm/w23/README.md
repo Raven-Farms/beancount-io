@@ -6,6 +6,7 @@
 
 ## Inbox
 
+- [042](./042.md) — entry-source write tools hard-code `wrote: []` (documented as files touched); `deleteEntrySources` echoes duplicate hashes
 - [041](./041.md) — `appendLedgerText` moves entries away from their `pushtag`/`poptag` (date insertion): the tag is silently dropped, or a dangling push breaks the file
 - [040](./040.md) — DCR accepts a `web` client with a plain `http://` non-loopback redirect URI (MCP auth spec requires https or loopback)
 - [039](./039.md) — MCP whole-file `content` replace and delete take no base `sha` (REST requires one): a read-modify-write silently drops commits made in between
