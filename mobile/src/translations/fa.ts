@@ -148,6 +148,7 @@ export const fa: Translations = {
   accountSettings: "حساب",
   supportSettings: "پشتیبانی",
   signIn: "ورود",
+  sessionEndedNotice: "نشست شما پایان یافت. برای ادامه دوباره وارد شوید.",
   signUp: "ثبت نام",
   serverSettings: "سرور",
   serverSettingsDescription:

@@ -148,6 +148,7 @@ export const bg: Translations = {
   accountSettings: "Акаунт",
   supportSettings: "Поддръжка",
   signIn: "Вход",
+  sessionEndedNotice: "Сесията ви приключи. Влезте отново, за да продължите.",
   signUp: "Регистрация",
   serverSettings: "Сървър",
   serverSettingsDescription:

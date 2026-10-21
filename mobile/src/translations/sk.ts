@@ -153,6 +153,7 @@ export const sk: Translations = {
   accountSettings: "Účet",
   supportSettings: "Podpora",
   signIn: "Prihlásiť",
+  sessionEndedNotice: "Vaša relácia skončila. Prihláste sa znova a pokračujte.",
   signUp: "Registrovať",
   serverSettings: "Nastavenia servera",
   serverSettingsDescription:

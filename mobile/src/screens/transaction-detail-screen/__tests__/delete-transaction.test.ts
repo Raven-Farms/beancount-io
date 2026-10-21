@@ -116,3 +116,38 @@ describe("deleteTransaction", () => {
     expect(record.refreshed).toBe(1);
   });
 });
+
+// w21/119: the session ended under the delete; Welcome says why, and an alert
+// on top read as a raw "OAuth grant is no longer valid".
+describe("deleteTransaction when the session ends", () => {
+  it("shows no dialog or error toast for UNAUTHENTICATED", async () => {
+    const { run, record } = harness(async () => {
+      throw Object.assign(new Error("Authentication required"), {
+        graphQLErrors: [
+          {
+            message: "Authentication required",
+            extensions: { code: "UNAUTHENTICATED" },
+          },
+        ],
+      });
+    });
+    expect(await run).toBe(false);
+    expect(record.dialogs).toEqual([]);
+    expect(record.toasts.length).toBe(0);
+  });
+
+  it("shows no dialog for a refresh the server refused for good", async () => {
+    const { run, record } = harness(async () => {
+      throw Object.assign(new Error("Response not successful"), {
+        networkError: Object.assign(
+          new Error("OAuth grant is no longer valid"),
+          {
+            terminal: true,
+          },
+        ),
+      });
+    });
+    expect(await run).toBe(false);
+    expect(record.dialogs).toEqual([]);
+  });
+});

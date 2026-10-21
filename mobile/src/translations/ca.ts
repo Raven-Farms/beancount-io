@@ -152,6 +152,8 @@ export const ca: Translations = {
   accountSettings: "Compte",
   supportSettings: "Suport",
   signIn: "Iniciar sessió",
+  sessionEndedNotice:
+    "La sessió ha finalitzat. Torna a iniciar la sessió per continuar.",
   signUp: "Registrar-se",
   serverSettings: "Servidor",
   serverSettingsDescription:

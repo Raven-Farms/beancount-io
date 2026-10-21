@@ -153,6 +153,7 @@ export const ru: Translations = {
   accountSettings: "Аккаунт",
   supportSettings: "Поддержка",
   signIn: "Войти",
+  sessionEndedNotice: "Сеанс завершён. Войдите снова, чтобы продолжить.",
   signUp: "Регистрация",
   serverSettings: "Сервер",
   serverSettingsDescription:

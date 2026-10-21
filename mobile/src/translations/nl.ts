@@ -149,6 +149,8 @@ export const nl: Translations = {
   accountSettings: "Account",
   supportSettings: "Ondersteuning",
   signIn: "Inloggen",
+  sessionEndedNotice:
+    "Je sessie is beëindigd. Meld je opnieuw aan om verder te gaan.",
   signUp: "Registreren",
   serverSettings: "Serverinstellingen",
   serverSettingsDescription:

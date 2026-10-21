@@ -150,6 +150,8 @@ export const es: Translations = {
   accountSettings: "Cuenta",
   supportSettings: "Soporte",
   signIn: "Iniciar sesión",
+  sessionEndedNotice:
+    "Tu sesión ha terminado. Vuelve a iniciar sesión para continuar.",
   signUp: "Registrarse",
   serverSettings: "Servidor",
   serverSettingsDescription:

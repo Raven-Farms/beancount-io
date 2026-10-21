@@ -33,7 +33,7 @@ export async function deleteTransaction(
       deps.describeFailure(error) ?? deps.messages.failure,
     afterSuccess: deps.afterSuccess,
   });
-  if (!outcome.ok) {
+  if (!outcome.ok && !outcome.signedOut) {
     deps.showRefusal(deps.messages.failure, outcome.message);
   }
   return outcome.ok;

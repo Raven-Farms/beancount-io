@@ -1,4 +1,7 @@
-import { ledgerWriteFailureMessage } from "@/common/ledger-refusal";
+import {
+  isAuthTeardownError,
+  ledgerWriteFailureMessage,
+} from "@/common/ledger-refusal";
 import { useGuest } from "@/common/guest/guest-context";
 import { useLedgerAccess } from "@/common/hooks/use-ledger-access";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -538,6 +541,8 @@ function LedgerFileEditorSession({
         void reportNewErrors(before);
         return true;
       } catch (err: unknown) {
+        // Signed out mid-save: Welcome says why (w21/119).
+        if (isAuthTeardownError(err)) return false;
         haptics.error();
         if (isConflictError(err instanceof Error ? err.message : "")) {
           Alert.alert(

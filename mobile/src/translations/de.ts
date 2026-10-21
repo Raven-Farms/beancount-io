@@ -150,6 +150,8 @@ export const de: Translations = {
   accountSettings: "Konto",
   supportSettings: "Support",
   signIn: "Anmelden",
+  sessionEndedNotice:
+    "Ihre Sitzung ist abgelaufen. Melden Sie sich erneut an, um fortzufahren.",
   signUp: "Registrieren",
   serverSettings: "Servereinstellungen",
   serverSettingsDescription:

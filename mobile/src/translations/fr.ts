@@ -151,6 +151,8 @@ export const fr: Translations = {
   accountSettings: "Compte",
   supportSettings: "Support",
   signIn: "Se connecter",
+  sessionEndedNotice:
+    "Votre session a expiré. Reconnectez-vous pour continuer.",
   signUp: "S'inscrire",
   serverSettings: "Serveur",
   serverSettingsDescription:

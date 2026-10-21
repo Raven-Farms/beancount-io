@@ -134,6 +134,7 @@ export const zh: Translations = {
   accountSettings: "账户",
   supportSettings: "支持",
   signIn: "登录",
+  sessionEndedNotice: "你的会话已结束，请重新登录以继续。",
   signUp: "注册",
   serverSettings: "服务器",
   serverSettingsDescription:

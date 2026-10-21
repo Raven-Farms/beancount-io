@@ -42,3 +42,20 @@ describe("the auth-error sign-out", () => {
     }
   });
 });
+
+// w21/119: an involuntary sign-out left Welcome silent about why.
+describe("the session-ended reason", () => {
+  it("is set by both auth teardowns, not by Log out", () => {
+    expect(
+      read("error-handling.ts").includes('signOutReasonVar("sessionEnded");'),
+    ).toBe(true);
+    expect(
+      read("..", "oauth", "oauth-token-manager.ts").includes(
+        'signOutReasonVar("sessionEnded");',
+      ),
+    ).toBe(true);
+    expect(
+      read("..", "server-url-actions.ts").includes("signOutReasonVar"),
+    ).toBe(false);
+  });
+});

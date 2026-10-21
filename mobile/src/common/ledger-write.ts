@@ -22,6 +22,8 @@
  * makes the branching testable in the jest-lite runner.
  */
 
+import { isAuthTeardownError } from "./ledger-refusal";
+
 type LedgerWriteToast = "loading" | "success" | "error";
 
 export type LedgerWriteDeps = {
@@ -68,7 +70,14 @@ export type LedgerWriteSpec<T> = {
 };
 
 export type LedgerWriteOutcome =
-  { ok: true } | { ok: false; message: string; error?: unknown };
+  | { ok: true }
+  | {
+      ok: false;
+      message: string;
+      error?: unknown;
+      /** The session ended under the write; Welcome explains (w21/119). */
+      signedOut?: true;
+    };
 
 /**
  * Run a ledger write and confirm it: success haptic, success toast, refetch,
@@ -120,6 +129,11 @@ function fail(
   message: string,
   error?: unknown,
 ): LedgerWriteOutcome {
+  // Signed out mid-write: the app is already leaving for Welcome, which says
+  // why; a toast or dialog about the write on top only confuses (w21/119).
+  if (isAuthTeardownError(error)) {
+    return { ok: false, message, error, signedOut: true };
+  }
   deps.haptics.error();
   deps.showToast(message, "error");
   return { ok: false, message, error };

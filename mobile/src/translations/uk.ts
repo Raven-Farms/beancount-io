@@ -152,6 +152,7 @@ export const uk: Translations = {
   accountSettings: "Обліковий запис",
   supportSettings: "Підтримка",
   signIn: "Увійти",
+  sessionEndedNotice: "Сеанс завершено. Увійдіть знову, щоб продовжити.",
   signUp: "Реєстрація",
   serverSettings: "Сервер",
   serverSettingsDescription:

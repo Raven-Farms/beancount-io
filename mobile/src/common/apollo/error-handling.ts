@@ -1,5 +1,6 @@
 import { router } from "expo-router";
 import { sessionVar } from "@/common/vars";
+import { signOutReasonVar } from "@/common/vars/sign-out-reason";
 import { oauthTokenManager } from "@/common/oauth/oauth-token-manager";
 import { createAuthErrorLink } from "@/common/apollo/auth-error-link";
 import { clearGuestVisit } from "@/common/guest/guest-state";
@@ -8,6 +9,8 @@ import { invalidateAuthorization } from "@/common/oauth/authorization-context";
 let teardownInFlight: Promise<void> | null = null;
 
 function teardownAndRoute(): Promise<void> {
+  // Not the user's own Log out: Welcome says the session ended (w21/119).
+  signOutReasonVar("sessionEnded");
   clearGuestVisit();
   invalidateAuthorization();
   if (!teardownInFlight) {

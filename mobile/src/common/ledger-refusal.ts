@@ -85,3 +85,21 @@ export function ledgerWriteFailureMessage(
   if (isTransportFailure(error)) return i18n.t("ledgerWriteOffline");
   return null;
 }
+
+/**
+ * Whether a write failed because the session ended under it: the server's
+ * UNAUTHENTICATED, or a token refresh the server refused for good. The app
+ * signs out and Welcome explains; an alert about the write on top read as a
+ * raw "OAuth grant is no longer valid" (w21/119).
+ */
+export function isAuthTeardownError(error: unknown): boolean {
+  if (graphQLErrorCodes(error).includes("UNAUTHENTICATED")) return true;
+  const terminal = (candidate: unknown) =>
+    typeof candidate === "object" &&
+    candidate !== null &&
+    (candidate as { terminal?: unknown }).terminal === true;
+  return (
+    terminal(error) ||
+    terminal((error as { networkError?: unknown } | null)?.networkError)
+  );
+}

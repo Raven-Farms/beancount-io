@@ -18,6 +18,7 @@ import { PressableScale } from "@/components/pressable-scale";
 import { startGuestVisit } from "@/common/guest/guest-state";
 import { getServerUrl, serverUrlOverrideVar } from "@/common/vars/server-url";
 import { useReactiveVar } from "@apollo/client";
+import { signOutReasonVar } from "@/common/vars/sign-out-reason";
 import { isOfficialServerUrl } from "@/common/server-url-validation";
 import {
   useNativeSignIn,
@@ -104,7 +105,13 @@ export function WelcomeScreen(): JSX.Element {
   const styles = useThemeStyle(getStyles);
   const { t } = useTranslations();
   const theme = useTheme().colorTheme;
-  const { pendingFlow, failure, start } = useNativeSignIn();
+  const { pendingFlow, failure, start: startSignIn } = useNativeSignIn();
+  // Why the app signed the user out, said once; a new sign-in clears it.
+  const signOutReason = useReactiveVar(signOutReasonVar);
+  const start = (flow: Parameters<typeof startSignIn>[0]) => {
+    signOutReasonVar(null);
+    startSignIn(flow);
+  };
   const busy = pendingFlow !== null;
   const { fontScale } = useWindowDimensions();
   const stacked = prefersStackedLayout(fontScale);
@@ -179,6 +186,11 @@ export function WelcomeScreen(): JSX.Element {
           {failure && (
             <Text style={styles.error}>{t(failureMessageKey(failure))}</Text>
           )}
+          {signOutReason === "sessionEnded" && !failure ? (
+            <Text style={styles.error} accessibilityRole="alert">
+              {t("sessionEndedNotice")}
+            </Text>
+          ) : null}
         </View>
       </ScrollView>
     </SafeAreaView>

@@ -143,6 +143,7 @@ export const en = {
   accountSettings: "Account",
   supportSettings: "Support",
   signIn: "Sign In",
+  sessionEndedNotice: "Your session ended. Sign in again to continue.",
   signUp: "Sign Up",
   serverSettings: "Server",
   serverSettingsDescription:
