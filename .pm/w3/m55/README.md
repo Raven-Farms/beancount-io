@@ -1,13 +1,13 @@
 # w3 · m55 — `beancount-roll-forward`: explain how a balance-sheet account moved
 
-**Worker:** worker3 **Goal:** a new read-only customer skill explains an account's movement from opening to closing with every component tied to an executed query and no balancing plug. **Status:** blocked (t002 waits on Codex quota)
+**Worker:** worker3 **Goal:** a new read-only customer skill explains an account's movement from opening to closing with every component tied to an executed query and no balancing plug. **Status:** todo (remaining t003, t004, t005, t006)
 
 ## Tasks (in order)
 
 | id | title | est | depends_on |
 | --- | --- | --- | --- |
-| t001 | Write the roll-forward skill and its calculation reference | 90m | — |
-| t002 | Write evals and fixtures for the roll-forward cases | 60m | t001 |
+| [t001](done/t001.md) | Write the roll-forward skill and its calculation reference — **DONE** | 90m | — |
+| [t002](done/t002.md) | Write evals and fixtures for the roll-forward cases — **DONE** | 60m | t001 |
 | t003 | Adoption surface | 30m | t002 |
 | t004 | Simplify | 15m | t003 |
 | t005 | Test coverage | 45m | t003 |
@@ -27,6 +27,8 @@
 - **Expected outcome:** users closing a month get a movement explanation they can re-run instead of model arithmetic in chat. Signals: skill invocations, eval pass rate on both clients.
 - **Why now:** it depends only on shipped `bea` query primitives, not on any blocked workstream, and it supplies the movement evidence m57's accruals reuse. Adoption surface is included (t003) because a new customer skill ships.
 
-## Blocked
+## Prior blocker — cleared 2026-10-21
 
 - **t002** — evals pass 6/6 on Claude Code; the Codex runs are quota-blocked at the account level. Unblock condition is written in t002.
+
+The stale Codex quota condition is cleared by successful native runs recorded in `t002` and source `703fe36ca`; current client/source limits remain in the dated evidence. Continue the remaining tasks above.
