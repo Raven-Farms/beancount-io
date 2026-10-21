@@ -20,7 +20,7 @@ import { useTranslations } from "@/common/hooks/use-translations";
 import { track } from "@/common/analytics";
 import { useErrorMessage } from "@/common/lib/errors/error-message";
 import { useOpenAccountSchema } from "@/common/hooks/use-open-account-schema";
-import { usePendingSubmit } from "./use-pending-submit";
+import { usePendingSubmit } from "@/common/hooks/use-pending-submit";
 
 interface OpenAccountFormProps {
   ledgerId: string;

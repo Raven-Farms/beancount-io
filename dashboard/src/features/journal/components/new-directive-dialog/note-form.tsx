@@ -30,7 +30,7 @@ import { AccountCombobox } from "@/common/components/ledger-comboboxes";
 import { track } from "@/common/analytics";
 import { AccountAvailabilityNotice } from "./account-availability-notice";
 import { useAccountAvailability } from "./use-account-availability";
-import { usePendingSubmit } from "./use-pending-submit";
+import { usePendingSubmit } from "@/common/hooks/use-pending-submit";
 
 interface NoteFormProps {
   ledgerId: string;

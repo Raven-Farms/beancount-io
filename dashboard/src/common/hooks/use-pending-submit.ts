@@ -2,7 +2,8 @@ import { useEffect, useRef, useState, type BaseSyntheticEvent } from "react";
 import type { FieldValues, UseFormReturn } from "react-hook-form";
 
 /**
- * One in-flight submission per New Entry form (w4/m33).
+ * One in-flight submission per entry form: New Entry's (w4/m33) and Accounts'
+ * Open Account (w4/284).
  *
  * react-hook-form runs every `handleSubmit` call it is given, so a disabled
  * button alone does not stop Cmd/Ctrl+Enter or a second Enter from sending

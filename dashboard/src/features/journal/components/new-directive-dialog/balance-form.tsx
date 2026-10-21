@@ -35,7 +35,7 @@ import { useLedger } from "@/common/hooks/use-ledger";
 import { track } from "@/common/analytics";
 import { AccountAvailabilityNotice } from "./account-availability-notice";
 import { useAccountAvailability } from "./use-account-availability";
-import { usePendingSubmit } from "./use-pending-submit";
+import { usePendingSubmit } from "@/common/hooks/use-pending-submit";
 
 interface BalanceFormProps {
   ledgerId: string;

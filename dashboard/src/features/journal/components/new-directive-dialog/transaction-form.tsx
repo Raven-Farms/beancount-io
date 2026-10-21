@@ -57,7 +57,7 @@ import {
 import { parseDecimalNumber } from "@/common/lib/beancount/decimal-number";
 import { AccountAvailabilityNotice } from "./account-availability-notice";
 import { useAccountAvailability } from "./use-account-availability";
-import { usePendingSubmit } from "./use-pending-submit";
+import { usePendingSubmit } from "@/common/hooks/use-pending-submit";
 
 interface TransactionFormProps {
   ledgerId: string;
