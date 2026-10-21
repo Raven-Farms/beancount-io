@@ -38,6 +38,17 @@ type FlattenedRow =
   | { type: "file-header"; data: FileData }
   | { type: "hunk-line"; data: ChangeType };
 
+/**
+ * Git ends a `---`/`+++` header with a TAB after a name containing
+ * whitespace, and gitdiff-parser keeps that separator in the path, so the
+ * file's section and its link disagreed (w4/263). A tab inside a real name
+ * is always quoted and escaped, so a raw tab starts the separator.
+ */
+function withoutHeaderSeparator(path: string): string {
+  const tab = path.indexOf("\t");
+  return tab < 0 ? path : path.slice(0, tab);
+}
+
 function getDiffFilePath(file?: FileData): string {
   // Git uses /dev/null for the absent side of an added or deleted file.
   if (file?.newPath && file.newPath !== "/dev/null") return file.newPath;
@@ -63,7 +74,11 @@ export function DiffViewer({ diff, focusRequest = null }: DiffViewerProps) {
     }
 
     try {
-      return parseDiff(diff, { nearbySequences: "zip" });
+      return parseDiff(diff, { nearbySequences: "zip" }).map((file) => ({
+        ...file,
+        oldPath: withoutHeaderSeparator(file.oldPath),
+        newPath: withoutHeaderSeparator(file.newPath),
+      }));
     } catch (error) {
       console.error("Failed to parse diff:", error);
       return [];
