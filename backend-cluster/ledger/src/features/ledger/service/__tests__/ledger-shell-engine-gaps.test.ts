@@ -84,6 +84,14 @@ describe("refusals for BQL forms this engine does not accept", () => {
     expect(message).toContain("filter_currency(sum(position), 'USD')");
   });
 
+  it("names the windowed sum after a FROM window's lot error (w23/020)", async () => {
+    const message = await refusal(
+      "Query execution error: evaluation error: No matching lot for VHT in Assets:Broker",
+    );
+    expect(message).toContain("No matching lot for VHT in Assets:Broker");
+    expect(message).toContain("SELECT account, sum(position) FROM");
+  });
+
   it("leaves any other refusal as the engine wrote it", async () => {
     expect(await refusal("syntax error at SELEKT")).toBe(
       "Invalid BQL query: syntax error at SELEKT",

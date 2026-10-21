@@ -35,6 +35,7 @@ import {
   reportUndecodableSources,
 } from "./undecodable-sources";
 import { collapsedCostOfSumError } from "./cost-of-sum-guard";
+import { atValueError } from "./at-value-guard";
 import { OPTION_LINE_RE } from "./beancount-options";
 import { directiveToText } from "./journal-serialize";
 import {
@@ -743,6 +744,8 @@ export async function queryLedgerFilesResultInProcess(
         }
       }
       try {
+        const refused = atValueError(query);
+        if (refused !== undefined) return refused;
         const result = ledger.query(query);
         return (
           collapsedCostOfSumError(query, result, (probe) =>

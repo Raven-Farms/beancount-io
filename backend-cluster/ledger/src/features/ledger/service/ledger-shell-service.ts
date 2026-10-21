@@ -149,6 +149,13 @@ const ENGINE_GAPS: ReadonlyArray<{ match: RegExp; supported: string }> = [
       "This engine negates numbers and amounts, not inventories: negate each posting with sum(neg(units(position))), or a number with neg(sum(number)) grouped by currency.",
   },
   {
+    // `BALANCES FROM <window>` books the window's reductions against lots
+    // opened before it and fails (w23/020).
+    match: /No matching lot for /,
+    supported:
+      "BALANCES with a FROM window fails on this engine when the window sells a lot bought before it: sum the window's postings with SELECT account, sum(position) FROM <the same filter> GROUP BY account.",
+  },
+  {
     match: /FILTER_CURRENCY expects \(inventory, string\)/,
     supported:
       "This engine filters an inventory, not a position: use filter_currency(sum(position), 'USD').",

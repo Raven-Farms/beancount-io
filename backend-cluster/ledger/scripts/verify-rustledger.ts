@@ -1752,6 +1752,74 @@ async function main(): Promise<void> {
     "filter_currency(sum(position), 'USD') runs, as the refusal says",
   );
 
+  // w23/020: BALANCES/JOURNAL … AT value come back in units, and a BALANCES
+  // FROM window that sells an earlier lot fails. The first check of each
+  // pair fails once an engine bump fixes it, and its guard or hint can go.
+  const lotFiles: FileMap = {
+    "main.bean": [
+      "2020-01-01 open Assets:Broker",
+      "2020-01-01 open Assets:Cash USD",
+      "2020-01-01 open Income:Gains USD",
+      '2020-01-02 * "buy lot1"',
+      "  Assets:Broker  9 VHT {113.91 USD, 2020-01-02}",
+      "  Assets:Cash",
+      '2021-03-10 * "sell lot1"',
+      "  Assets:Broker  -9 VHT {113.91 USD, 2020-01-02} @ 120.00 USD",
+      "  Assets:Cash   1080.00 USD",
+      "  Income:Gains",
+      '2021-03-11 * "buy lot2"',
+      "  Assets:Broker  4 VHT {118.03 USD}",
+      "  Assets:Cash",
+      "2021-03-12 price VHT 120.00 USD",
+      "",
+    ].join("\n"),
+  };
+  const rawAtValue = await withLedger(lotFiles, "main.bean", (ledger) =>
+    ledger.query("BALANCES AT value WHERE account ~ 'Broker'"),
+  );
+  assert(
+    JSON.stringify(rawAtValue.rows).includes('"currency":"VHT"'),
+    "raw engine still answers BALANCES AT value in units (w23/020)",
+  );
+  const guardedAtValue = await queryLedgerFilesResult(
+    lotFiles,
+    "main.bean",
+    "BALANCES AT value WHERE account ~ 'Broker'",
+  );
+  assert(
+    guardedAtValue.rows.length === 0 &&
+      guardedAtValue.errors[0]?.message.includes("value(sum(position))") ===
+        true,
+    "the query path refuses BALANCES AT value and names value(sum(position))",
+  );
+  const valued = await queryLedgerFilesResult(
+    lotFiles,
+    "main.bean",
+    "SELECT account, value(sum(position)) WHERE account ~ 'Broker' GROUP BY account",
+  );
+  assert(
+    JSON.stringify(valued.rows).includes('"number":"480.00","currency":"USD"'),
+    "value(sum(position)) values the holding at market, as the refusal says",
+  );
+  const windowed = await queryLedgerFilesResult(
+    lotFiles,
+    "main.bean",
+    "BALANCES FROM year = 2021",
+  );
+  assert(
+    windowed.errors[0]?.message.includes("No matching lot for VHT") === true,
+    "engine still fails BALANCES FROM a window that sells an earlier lot (w23/020)",
+  );
+  const windowSum = await queryLedgerFilesResult(
+    lotFiles,
+    "main.bean",
+    "SELECT account, sum(position) FROM year = 2021 GROUP BY account",
+  );
+  assert(
+    windowSum.errors.length === 0 && windowSum.rows.length > 0,
+    "the windowed sum the lot-error hint names runs",
+  );
+
   console.log("\nAll rustledger engine checks passed.");
 }
 
