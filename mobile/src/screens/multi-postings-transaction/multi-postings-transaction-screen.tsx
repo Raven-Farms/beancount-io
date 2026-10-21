@@ -1,6 +1,6 @@
 import { memo, useEffect, useRef, useState } from "react";
 import { createSingleFlight, type SingleFlight } from "@/common/single-flight";
-import { useAccountCloseDates } from "@/common/hooks/use-account-close-dates";
+import { useAccountCloseDatesState } from "@/common/hooks/use-account-close-dates";
 import { isOpenOn } from "@/common/account-close-dates";
 import {
   Alert,
@@ -60,6 +60,7 @@ import {
   buildEntryInput,
   createInitialPostings,
   createPrefilledPostings,
+  defaultPostingAccounts,
   formatRemainderAmount,
   hasNonZeroAmount,
   hasUnparsedAmount,
@@ -507,7 +508,8 @@ const MultiPostingsTransactionScreenComponent = () => {
   // A picked payee brings its usual accounts while the postings are still as
   // the form opened (w21/023). A receipt's parsed accounts are kept.
   const [seedPayee, setSeedPayee] = useState("");
-  const closeDates = useAccountCloseDates(ledgerId);
+  const { closeDates, settled: closeDatesSettled } =
+    useAccountCloseDatesState(ledgerId);
   const payeeHistory = useTwoPostingSuggestions({
     ledgerId: ledgerId ?? "",
     payee: seedPayee,
@@ -532,22 +534,28 @@ const MultiPostingsTransactionScreenComponent = () => {
   ]);
 
   useEffect(() => {
-    if (!seeded && !metaLoading && assets.length > 0) {
-      const secondAccount =
-        expenses.length > 0
-          ? expenses[0]
-          : assets.length > 1
-            ? assets[1]
-            : assets[0];
-      // The parser may return no account at all; fall back to the same defaults
-      // a blank transaction would get rather than showing empty account rows.
+    // Waits for the close dates too, so a cold start cannot seed a closed
+    // account (w21/103).
+    if (!seeded && !metaLoading && closeDatesSettled && assets.length > 0) {
+      const isOpen = (account: string) => isOpenOn(account, date, closeDates);
+      const { source, target } = defaultPostingAccounts(
+        assets,
+        expenses,
+        isOpen,
+      );
+      // The parser may return no account at all, or a closed one; fall back
+      // to the same defaults a blank transaction would get.
       const seededPostings = prefillAmount
         ? createPrefilledPostings(
-            prefillSourceAccount || assets[0],
-            prefillTargetAccount || secondAccount,
+            prefillSourceAccount && isOpen(prefillSourceAccount)
+              ? prefillSourceAccount
+              : source,
+            prefillTargetAccount && isOpen(prefillTargetAccount)
+              ? prefillTargetAccount
+              : target,
             prefillAmount,
           )
-        : createInitialPostings(assets[0], secondAccount);
+        : createInitialPostings(source, target);
       setPostings(seededPostings);
       setInitialDraft((draft) => ({ ...draft, postings: seededPostings }));
       setSeeded(true);
@@ -555,6 +563,9 @@ const MultiPostingsTransactionScreenComponent = () => {
   }, [
     seeded,
     metaLoading,
+    closeDatesSettled,
+    closeDates,
+    date,
     assets,
     expenses,
     prefillAmount,

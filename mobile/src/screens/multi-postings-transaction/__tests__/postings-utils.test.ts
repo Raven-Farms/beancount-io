@@ -2,6 +2,7 @@ import {
   addPosting,
   buildEntryInput,
   createPrefilledPostings,
+  defaultPostingAccounts,
   formatExactAmount,
   formatRemainderAmount,
   hasUnparsedAmount,
@@ -576,5 +577,52 @@ describe("leading decimal points and sub-cent remainders", () => {
     expect(isRemainderBalanced(rem)).toBe(false);
     expect(formatRemainderAmount(rem, "USD")).toBe("+$0.004");
     expect(formatRemainderAmount("-12.5", "USD")).toBe("-$12.50");
+  });
+});
+
+// w21/103: the recent-use ranking listed a just-closed account first, and New
+// Transaction opened on it as FROM.
+describe("the accounts a new entry opens with", () => {
+  const closed = new Set(["Assets:Bank:Qa20261020Old"]);
+  const isOpen = (account: string) => !closed.has(account);
+
+  it("skips a closed asset at the top of the ranking", () => {
+    expect(
+      defaultPostingAccounts(
+        ["Assets:Bank:Qa20261020Old", "Assets:Bank:Checking", "Assets:Cash"],
+        ["Expenses:Transport", "Expenses:Food"],
+        isOpen,
+      ),
+    ).toEqual({ source: "Assets:Bank:Checking", target: "Expenses:Transport" });
+  });
+
+  it("falls back to another open asset with no open expense", () => {
+    expect(
+      defaultPostingAccounts(
+        ["Assets:Bank:Checking", "Assets:Cash"],
+        [],
+        isOpen,
+      ),
+    ).toEqual({ source: "Assets:Bank:Checking", target: "Assets:Cash" });
+  });
+
+  it("is what the form seeds, the receipt path included", () => {
+    const source = require("fs").readFileSync(
+      require("path").join(
+        __dirname,
+        "..",
+        "multi-postings-transaction-screen.tsx",
+      ),
+      "utf8",
+    ) as string;
+    expect(
+      source.includes("const { source, target } = defaultPostingAccounts("),
+    ).toBe(true);
+    expect(
+      source.includes("prefillSourceAccount && isOpen(prefillSourceAccount)"),
+    ).toBe(true);
+    expect(source.includes("closeDatesSettled && assets.length > 0")).toBe(
+      true,
+    );
   });
 });

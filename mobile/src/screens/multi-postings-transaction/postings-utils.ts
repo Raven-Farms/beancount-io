@@ -393,3 +393,24 @@ export function formatRemainderAmount(rem: string, currency: string): string {
     amountScale(exact),
   );
 }
+
+/**
+ * The accounts a new entry opens with: the first open asset as the source,
+ * and the first open expense (else another open asset) as the target, by the
+ * ledger's recent-use ranking. That ranking still lists a heavily used account
+ * just closed first, and the form opened on it only for Done to be refused
+ * (w21/103). With nothing open the ranking's own first entries stand.
+ */
+export function defaultPostingAccounts(
+  assets: readonly string[],
+  expenses: readonly string[],
+  isOpen: (account: string) => boolean,
+): { source: string; target: string } {
+  const source = assets.find(isOpen) ?? assets[0] ?? "";
+  const target =
+    expenses.find(isOpen) ??
+    assets.find((account) => account !== source && isOpen(account)) ??
+    expenses[0] ??
+    (assets.length > 1 ? assets[1] : source);
+  return { source, target };
+}
