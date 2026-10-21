@@ -146,3 +146,6 @@
 - [232](./232.md) — Pasted " -12.50" saves negative but shows positive; the sign toggle then breaks it
 - [233](./233.md) — Home's budget panel and Merchants' Overdue still freeze "today" at mount (w21/078 follow-up)
 - [234](./234.md) — Open Account can't pick a commodity that has no postings yet (opened/declared EUR, GBP never offered)
+- [235](./235.md) — Renamed-roots ledger: Reports' Cash flow says "No cash flow" under a full chart (Sankey missed by 073)
+- [236](./236.md) — Bar charts never scale below 1 unit: BTC spending draws as slivers on a 0–1 axis
+- [237](./237.md) — Balance cards can read "+$0.00 (−0.00%)": percentage sign/colour from the unrounded change
