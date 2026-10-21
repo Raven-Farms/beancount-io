@@ -14,7 +14,6 @@
 
 - [064](./blocked/064.md) — A token refresh whose response is lost signs the user out on the next refresh (rotated token replayed → grant revoked) — **blocked:** needs an owner decision (ADR) on a refresh-token reuse grace window
 - [065](./blocked/065.md) — One early-year entry (e.g. 0050) makes the balance sheet 23,718 monthly points (3 MB) and the app stalls — **blocked:** needs an approach decision (per-pill fetch vs server downsample) and a simulator profile of the stall
-- [134](./134.md) — Same-day entries are ordered by type, not file order, so account-journal running balances around a pad/note are wrong
 - [135](./135.md) — Pad fires within balance tolerance: wrong balances and no "Unused Pad entry" error
 - [136](./136.md) — Home's Latest Updates always requests the English feed
 - [137](./137.md) — Ledger rows in Home's Latest Updates do nothing when tapped

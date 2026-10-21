@@ -7,6 +7,7 @@ import type {
   LedgerOptions,
   QueryResult,
 } from "@rustledger/wasm";
+import { restoreEntrySortOrder } from "./entry-sort-order";
 import { loadRustledger } from "./loader";
 import { queryResultToRecords, type QueryRecordsResult } from "./mappers";
 import { buildSnapshotCacheKey, CoalescingLruCache } from "./snapshot-cache";
@@ -537,7 +538,12 @@ async function parseLedgerFilesUncached(
     snapshotOf,
   );
 
-  let directives = raw.directives;
+  // Beancount's same-day order, before plugins and pad expansion walk it: the
+  // engine groups a day by directive kind (w21/134).
+  let directives = restoreEntrySortOrder(
+    raw.directives,
+    stripResult?.strippedFiles ?? scoped,
+  );
   let errors = raw.errors;
   let paddingTransactions = raw.paddingTransactions;
 

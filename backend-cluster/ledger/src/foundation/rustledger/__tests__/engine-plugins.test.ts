@@ -156,8 +156,7 @@ const paddingCash: DirectiveJson = {
   type: "transaction",
   date: "2017-01-02",
   flag: "P",
-  narration:
-    "(Padding inserted for Balance of 100 USD for difference 100 USD)",
+  narration: "(Padding inserted for Balance of 100 USD for difference 100 USD)",
   tags: [],
   links: [],
   postings: [
@@ -206,6 +205,33 @@ describe("parseLedgerFiles — plugin orchestration (stubbed WASM)", () => {
       balanceCash,
     ]);
     expect(snapshot.directiveCount).toBe(5);
+  });
+
+  it("walks a same-day transaction written before a pad first (w21/134)", async () => {
+    const deposit: DirectiveJson = {
+      type: "transaction",
+      date: padCash.date,
+      flag: "*",
+      narration: "Deposit",
+      tags: [],
+      links: [],
+      postings: [
+        { account: "Assets:Cash", units: { number: "1.00", currency: "USD" } },
+        { account: "Equity:Opening" },
+      ],
+    } as DirectiveJson;
+    // The engine groups the day by kind: pad before the transaction.
+    parsedDirectives = [padCash, deposit];
+    rawPaddingTransactions = [paddingCash];
+
+    const snapshot = await parseLedgerFiles(
+      {
+        "main.bean": `${padCash.date} * "Deposit"\n  Assets:Cash  1.00 USD\n  Equity:Opening\n${padCash.date} pad Assets:Cash Equity:Opening\n`,
+      },
+      "main.bean",
+    );
+
+    expect(snapshot.directives).toEqual([deposit, padCash, paddingCash]);
   });
 
   it("strips the fava plugin before parse and applies the amortize transform", async () => {
@@ -418,9 +444,7 @@ describe("parseLedgerFiles — plugin orchestration (stubbed WASM)", () => {
     );
     const materializedSource = String(result.rows[0][0]);
     expect(materializedSource).toContain("Padding inserted for Balance");
-    expect(materializedSource).not.toContain(
-      "pad Assets:Cash Equity:Opening",
-    );
+    expect(materializedSource).not.toContain("pad Assets:Cash Equity:Opening");
   });
 
   it("does not execute BQL over a materialized stream with parse errors", async () => {
