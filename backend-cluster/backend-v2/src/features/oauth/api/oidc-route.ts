@@ -25,6 +25,32 @@ import {
   shouldRotateRefreshToken,
 } from "@/features/oauth/data/config";
 
+/** Every scope this server grants; `scopes_supported` advertises the same. */
+const SUPPORTED_SCOPES: readonly string[] = [
+  "openid",
+  "offline_access",
+  "profile",
+  "email",
+  ...API_SCOPES,
+];
+
+/**
+ * The requested scopes this server supports, in request order (w23/021).
+ *
+ * oidc-provider leaves a value it does not know in `params.scope`, and the
+ * grant below was built from that string, so `scope=ledger.read
+ * ledger.superuser` was shown to the person approving and signed into the
+ * token. Unknown values are dropped (RFC 6749 §3.3 lets the server grant less
+ * than was asked) everywhere the request's scope is shown or granted.
+ */
+function supportedScope(scope: unknown): string {
+  const kept =
+    typeof scope === "string"
+      ? scope.split(" ").filter((value) => SUPPORTED_SCOPES.includes(value))
+      : [];
+  return kept.length > 0 ? kept.join(" ") : "openid";
+}
+
 const oidcLogger = logger.child({ module: "oidc-provider" });
 
 /** The one `screen_hint` value this server forwards to the interaction page. */
@@ -250,7 +276,7 @@ export function setOidcRoutes(
         if (!isIdentityOAuthClient(interaction.params.client_id)) {
           consentUrl.searchParams.set(
             "scope",
-            (interaction.params.scope as string | undefined) ?? "openid",
+            supportedScope(interaction.params.scope),
           );
         }
         if (isMobileOAuthClient(interaction.params.client_id)) {
@@ -324,7 +350,7 @@ export function setOidcRoutes(
     },
 
     cookies: { keys: [config.jwt.secret] },
-    scopes: ["openid", "offline_access", "profile", "email", ...API_SCOPES],
+    scopes: [...SUPPORTED_SCOPES],
     claims: {
       openid: ["sub"],
       email: ["email", "email_verified"],
@@ -474,7 +500,7 @@ export function setOidcRoutes(
       ctx.body = {
         uid: interaction.uid,
         client: interaction.params.client_id,
-        scope: interaction.params.scope,
+        scope: supportedScope(interaction.params.scope),
         resource: interaction.params.resource,
         // ADR 019 D4: what the consent page shows so a person can tell who is
         // asking. The redirect host is the one thing a requester cannot choose
@@ -546,7 +572,7 @@ export function setOidcRoutes(
       // Use params.scope for OIDC scopes: prompt.details.missingOIDCScope is only
       // populated when prompt.name === "consent", but the initial interaction is
       // prompt.name === "login". params.scope is always present.
-      const requestedScope = (params.scope as string | undefined) ?? "openid";
+      const requestedScope = supportedScope(params.scope);
 
       let accountId: string;
       let grantId: string;
@@ -571,7 +597,7 @@ export function setOidcRoutes(
         }
         if (
           isMobileOAuthClient(params.client_id) &&
-          interactionBody.scope !== params.scope
+          interactionBody.scope !== requestedScope
         ) {
           throw new errors.InvalidRequest(
             "the displayed native-client scopes do not match the interaction",
@@ -590,7 +616,7 @@ export function setOidcRoutes(
               "select either one ledger or explicit account-wide access",
             );
           }
-          if (accountWide && interactionBody.scope !== params.scope) {
+          if (accountWide && interactionBody.scope !== requestedScope) {
             throw new errors.InvalidRequest(
               "the displayed account-wide scopes do not match the interaction",
             );
@@ -646,7 +672,7 @@ export function setOidcRoutes(
           // oidc-provider separates the OIDC and resource portions when the
           // grant is evaluated. Passing the original request here is required
           // for it to retain `offline_access` and avoid a second consent loop;
-          // unsupported values were already rejected against `scopes` above.
+          // unsupported values were already dropped by `supportedScope`.
           for (const resource of selectedResources) {
             grant.addResourceScope(resource, requestedScope);
           }

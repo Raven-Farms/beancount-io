@@ -477,6 +477,8 @@ describe("oidc-route: unified MCP + identity provider", () => {
     loginBody?: Record<string, string>;
     prompt?: string;
     resource?: string;
+    /** What the consent page is told to show, when it differs from `scope`. */
+    displayedScope?: string;
   }): Promise<{ code: string; verifier: string }> {
     const jar = new CookieJar();
     const { codeVerifier, codeChallenge } = pkce();
@@ -503,12 +505,14 @@ describe("oidc-route: unified MCP + identity provider", () => {
     expect(uid).toBeTruthy();
     if (opts.clientId !== DISCOURSE_CLIENT_ID) {
       expect(consentUrl.searchParams.get("scope")).toBe(
-        opts.prompt === "consent" || opts.clientId !== MOBILE_CLIENT_ID
-          ? opts.scope
-          : opts.scope
-              .split(" ")
-              .filter((scope) => scope !== "offline_access")
-              .join(" "),
+        opts.displayedScope !== undefined
+          ? opts.displayedScope
+          : opts.prompt === "consent" || opts.clientId !== MOBILE_CLIENT_ID
+            ? opts.scope
+            : opts.scope
+                .split(" ")
+                .filter((scope) => scope !== "offline_access")
+                .join(" "),
       );
     }
 
@@ -2006,6 +2010,42 @@ describe("oidc-route: unified MCP + identity provider", () => {
     expect(claims.email).toBeUndefined();
     expect(claims.preferred_username).toBeUndefined();
   });
+
+  // w23/021: a scope the server does not support was granted verbatim and
+  // signed into the token, and shown to the person approving.
+  it.each<[string, Record<string, string>]>([
+    ["a ledger-pinned", { ledgerId: "ada/personal" }],
+    ["an account-wide", { accountWide: "true", scope: "openid ledger.read" }],
+  ])(
+    "drops an unsupported scope from %s grant and its token",
+    async (_kind, loginBody) => {
+      const { clientId, redirectUri } = await registerMcpClient();
+      const { code, verifier } = await driveAuthorizationCode({
+        clientId,
+        clientAuth: "",
+        scope: "openid ledger.read ledger.superuser",
+        displayedScope: "openid ledger.read",
+        redirectUri,
+        loginBody,
+      });
+      // The resource makes the access token the signed JWT an MCP client uses.
+      const tokenBody = await exchangeToken({
+        code,
+        verifier,
+        clientId,
+        redirectUri,
+        resource: `${ISSUER}/api-gateway/mcp`,
+      });
+      expect(tokenBody.access_token).toBeTruthy();
+      expect(String(tokenBody.scope).split(" ").sort()).toEqual([
+        "ledger.read",
+        "openid",
+      ]);
+      expect(
+        String(decodeJwt(tokenBody.access_token as string).scope).split(" "),
+      ).not.toContain("ledger.superuser");
+    },
+  );
 
   it("mints an unpinned grant only with explicit account-wide consent", async () => {
     const { clientId, redirectUri } = await registerMcpClient();
