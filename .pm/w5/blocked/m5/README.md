@@ -1,25 +1,22 @@
 # w5 · m5 — Verify and complete shipped MCP accounting prompts
 
-**Worker:** worker1 **Goal:** hosted-ledger users can select four evidence-backed accounting playbooks through MCP and complete them using existing authorized operations **Status:** blocked — see [Blocked](#blocked) (t001, t003, t005–t008 done)
+**Worker:** worker1 **Goal:** hosted-ledger users can select four evidence-backed accounting playbooks through MCP and complete them using existing authorized operations **Status:** blocked — see [Blocked](#blocked) (t001–t008 done; only the closeout remains)
 
 **Estimate:** 4h30m (approximately 5h) implementation; 6h30m including standing closing tasks (9 tasks).
 
 ## Blocked
 
-**Blocked 2026-09-15 after implementation and live verification; narrowed 2026-10-20.** The deploy condition is cleared: on 2026-10-20 the drift check reported no difference between the deployed prompts and the working tree. Claude Code then passed all nine prompt journeys, including the two new `close-month` journeys ([2026-10-20 run](../../../../backend-cluster/backend-v2/evals/mcp-agent/baseline/2026-10-20-prompts.md)). What remains:
+**Blocked 2026-09-15; narrowed 2026-10-20 and 2026-10-21.** Every implementation task is done. Two items are cleared: the deploy, verified on 2026-10-20 by the drift check, and the bank-linked confirmed import, measured on 2026-10-21 after the owner upgraded the plan. The closeout (t009) still cannot run, because the definition of done is not yet met. That needs two things this repository cannot do on its own:
 
-1. **Codex measurement — moved to [w4/232](../../../w4/232.md) by the user on 2026-10-20.** Every Codex attempt on 2026-10-20 was incomplete: the Codex CLI's ChatGPT plan had hit its usage limit, which lifts 2026-11-17. m5's closeout still needs that result, because its definition of done names both clients. t002 waits on it too.
-2. **A confirmed bank import, and its repeat (t004).** On 2026-10-21 the account owner pointed this work at their bank-linked QA ledger: a real bank linked through production Plaid, with four transactions staged. A ledger-pinned OAuth grant (`ledger.read ledger.write`, no `ledger.admin`) was approved in the browser, and two Claude Code sessions (five turns) ran the deployed `categorize-imports` prompt. The results are under [Validation evidence](#validation-evidence-2026-10-21).
-   - Suggestion, review, the unconfirmed path, and the dry-run preview are now measured.
-   - The confirmed write could not complete. That ledger is on the free tier and already over its 1,000-directive allowance, so the real import was refused with `RESOURCE_LIMIT_REACHED`, although the dry run had promised one entry. That gap is filed as [w5/904](../../904.md).
-   - Repeat-import deduplication therefore remains unmeasured. Discard was not run, because it permanently removes real staged rows.
-   **Unblock:** a bank-linked ledger that can accept writes. Either the account owner upgrades that ledger's plan or reduces it under its allowance, or a bank is linked to a paid QA account's dedicated `mcp-agent-eval-bank` ledger. Then run the confirmed import, repeat it, and record both. Who: the account owner. The id and wording fixes from 2026-10-21 also need a deploy.
+1. **Codex results on the deployed playbooks.** This was moved by the user to [w4/232](../../../w4/232.md) on 2026-10-20. Every Codex attempt so far was incomplete: the Codex CLI's ChatGPT plan has hit its usage limit, which lifts 2026-11-17.
+2. **The 2026-10-21 repairs, deployed and seen live.** Two repairs are merged but not deployed: `2da3e6f9a` (the discard tool's name in `categorize-imports`) and `d812112f6` (which staged-transaction id to pass).
+   **Unblock:** whoever deploys ships backend-v2. Then a run of `prompt-categorize-no-bank` shows no prompt drift, and a categorize session on the bank-linked ledger passes the `transactionId` on its first try.
 
-When work can resume, move this directory back to `.pm/w5/m5/`.
+When both hold, unblock m5 and run t009.
 
 ## Validation evidence (2026-10-21)
 
-- **t004 on real staged data:** this was the owner's QA ledger with one linked bank (production Plaid) and four staged transactions. The client was Claude Code, using the deployed `categorize-imports` prompt. The credential was an OAuth grant pinned to that ledger, with read and write but not `ledger.admin`. Two sessions ran: one declined, and one confirmed a single row. The ledger and staging were checked over REST after each. Transcripts are kept locally only, because they hold real bank data.
+- **t004 on real staged data:** this was the owner's QA ledger with one linked bank (production Plaid) and four staged transactions. The client was Claude Code, using the deployed `categorize-imports` prompt. Two credentials were used, each pinned to that ledger with read and write but not `ledger.admin`. First an OAuth grant, before the plan upgrade; then, once the owner had upgraded, a one-day API key, revoked afterwards. Four sessions ran: one declined, one confirmation refused by the directive limit, one confirmation that completed after the upgrade, and a repeat run. The ledger and staging were checked over REST after each. Transcripts are kept locally only, because they hold real bank data.
   - **Discovery:** listing banks was refused for lack of `ledger.admin`. The agent said so and worked from what was staged, as the prompt directs.
   - **Suggestions:**
     - It reused the ledger's own prior booking for one payee and cited that entry as the reason.
@@ -28,17 +25,28 @@ When work can resume, move this directory back to `.pm/w5/m5/`.
     - The ledger has no `Expenses:Uncategorized`, and the agent did not use one.
   - **Dedup:** it checked the ledger for matching amounts near each date, found none, and said so.
   - **Declined:** "No" left the ledger's latest commit and all four staged rows unchanged.
-  - **Confirmed one row:**
-    - It previewed with `dry_run: true` (one entry, no new errors), then waited for an explicit "Yes".
-    - The real call was refused with `RESOURCE_LIMIT_REACHED`, because the free-tier ledger is over its allowance.
+  - **Confirmed one row, before the upgrade:**
+    - The agent previewed with `dry_run: true` (one entry, no new errors), then waited for an explicit "Yes".
+    - The real call was refused with `RESOURCE_LIMIT_REACHED`: the free-tier ledger was over its allowance.
     - The agent verified that nothing was written and nothing staged was marked synced, and it reported the refusal honestly.
-- **Two gaps found and handled:**
+  - **Confirmed one row, after the upgrade:**
+    - The agent ran a dry run, then the real import.
+    - Exactly one entry was added, with the expected postings and one commit, and the ledger stayed at 0 errors.
+    - That row left staging, and the other three stayed.
+  - **Repeat run:**
+    - The imported row was not proposed again, and the ledger kept exactly one such entry.
+    - A "No" afterwards changed nothing.
+    - The service also refuses an already-synced row outright, which a unit test covers.
+  - **Discard:** run as `dry_run: true` only. It reported one row and removed nothing, and staging still held three.
+  - **Variance:** in one session the agent reused a payee's questionable prior booking and flagged it for review; in another it left that row unassigned.
+- **Gaps found:**
   - **Wrong id:** the agent first passed a staged row's `id` to `importStagedBankTransactions`, which wants its `transactionId`, and got only "Some transactions not found in database".
     - The listing and both tool schemas now say which field to pass.
     - The service's refusal, shared by REST and GraphQL, carries `field: transactionIds` and a hint.
     - `plaid-sync-service.test.ts` pins the hint, and fails without the fix.
   - **Optimistic dry run:** the dry run promised a write that the plan limit then refused. Filed as [w5/904](../../904.md); it also affects `appendLedgerText`.
-- **Not measured:** a successful confirmed import, the repeat import, discard, and Codex ([w4/232](../../../w4/232.md)).
+  - **No `import-id` on hosted imports:** filed as [w5/941](../../941.md). A successful import also reports no file and no entry hashes, filed as [w5/942](../../942.md).
+- **Not measured:** a real discard (it is destructive on real staged rows), and Codex ([w4/232](../../../w4/232.md)).
 
 ## Validation evidence (2026-10-20)
 
@@ -115,9 +123,9 @@ When work can resume, move this directory back to `.pm/w5/m5/`.
 | id | title | est | depends_on |
 | --- | --- | --- | --- |
 | t001 | Audit shipped prompt capabilities and argument handling — **DONE** | 45m | w5/m4/t009 |
-| t002 | Verify and repair spending-report and month-close behavior | 60m | w5/m5/t001 |
+| t002 | Verify and repair spending-report and month-close behavior — **DONE** | 60m | w5/m5/t001 |
 | t003 | Verify and repair account reconciliation behavior — **DONE** | 60m | w5/m5/t001 |
-| t004 | Verify and repair import categorization behavior | 60m | w5/m5/t001 |
+| t004 | Verify and repair import categorization behavior — **DONE** | 60m | w5/m5/t001 |
 | t005 | Document native and manual client invocation paths — **DONE** | 45m | w5/m5/t002, w5/m5/t003, w5/m5/t004 |
 | t006 | Adoption surface — **DONE** | 30m | w5/m5/t005 |
 | t007 | Simplify — **DONE** | 30m | w5/m5/t006 |
