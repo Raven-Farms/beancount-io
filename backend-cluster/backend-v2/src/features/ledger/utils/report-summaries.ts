@@ -1,3 +1,4 @@
+import BigNumber from "bignumber.js";
 import type {
   BalanceSheetDataPublic,
   DateAndBalanceWithAccountBalancePublic,
@@ -213,14 +214,29 @@ export function flattenHierarchy(
   return into;
 }
 
+/**
+ * The exact decimal sum of amounts, as a JSON number.
+ *
+ * Each amount is the ledger's decimal string read as a number, and
+ * `String(n)` gives that decimal back exactly, so summing those strings
+ * loses nothing: `3609.87 + -2703.29` is `906.58`, where float addition
+ * printed `906.5799999999999` (w23/013).
+ */
+function sum(...values: number[]): number {
+  return values
+    .reduce((acc, value) => acc.plus(String(value)), new BigNumber(0))
+    .toNumber();
+}
+
 /** A hierarchy root's total, which is what its children sum to. */
 function total(
   node: SerializableTreeNodePublic | null | undefined,
   currency: string,
 ): number {
   if (!node) return 0;
-  return (
-    amount(node.balance_children, currency) + amount(node.balance, currency)
+  return sum(
+    amount(node.balance_children, currency),
+    amount(node.balance, currency),
   );
 }
 
@@ -265,7 +281,7 @@ export function summarizeBalanceSheet(
     // series point at its interval end but the trees at the latest price, so
     // under a historical filter the series point belongs to a different
     // snapshot than the accounts this summary reports (w6/009).
-    netWorth: assets + liabilities,
+    netWorth: sum(assets, liabilities),
     byAccount: [
       ...flattenHierarchy(data.assets_hierarchy_data, currency),
       ...flattenHierarchy(data.liabilities_hierarchy_data, currency),
@@ -299,7 +315,7 @@ export function summarizeIncomeStatement(
     expenses,
     // Beancount signs income negative and expenses positive, so the profit is
     // their sum — not their difference, which would double the loss.
-    net: -(income + expenses),
+    net: -sum(income, expenses),
     byAccount: [
       ...flattenHierarchy(data.income_hierarchy_data, currency),
       ...flattenHierarchy(data.expenses_hierarchy_data, currency),

@@ -726,3 +726,44 @@ describe("summarizeIntervalTotals", () => {
     });
   });
 });
+
+/**
+ * w23/013. Totals were float sums of the ledger's decimal strings, so
+ * `open_ledger/example` reported `netWorth: 906.5799999999999` and
+ * `net: 103335.53000000003`.
+ */
+describe("summary totals are exact decimal sums", () => {
+  it("adds assets and liabilities without float noise", () => {
+    const summary = summarizeBalanceSheet({
+      net_worth_data: [{ date: "2026-02-28", balance: { USD: "906.58" } }],
+      assets_data: [],
+      liabilities_data: [],
+      equity_data: [],
+      assets_hierarchy_data: node("Assets", { USD: "0.1" }, [], {
+        USD: "3609.77",
+      }),
+      liabilities_hierarchy_data: node("Liabilities", {}, [], {
+        USD: "-2703.29",
+      }),
+      equity_hierarchy_data: node("Equity", {}),
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } as any);
+    // 3609.77 + 0.1 is 3609.8700000000003 as floats.
+    expect(summary.assets).toBe(3609.87);
+    expect(summary.netWorth).toBe(906.58);
+  });
+
+  it("nets income and expenses without float noise", () => {
+    const date = "2026-02-28";
+    const summary = summarizeIncomeStatement({
+      net_profit_data: [{ date, balance: { USD: "-499.9" } }],
+      income_data: [],
+      expenses_data: [],
+      income_hierarchy_data: node("Income", {}, [], { USD: "-1000.10" }),
+      expenses_hierarchy_data: node("Expenses", {}, [], { USD: "500.20" }),
+    });
+    // -(-1000.10 + 500.20) is 499.90000000000003 as floats.
+    expect(-(-1000.1 + 500.2)).not.toBe(499.9);
+    expect(summary.net).toBe(499.9);
+  });
+});
