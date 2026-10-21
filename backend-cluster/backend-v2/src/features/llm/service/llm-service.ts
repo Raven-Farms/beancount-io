@@ -29,6 +29,15 @@ import {
 import type { RecentTransactionExample } from "../types";
 import { logger } from "@/shared/logger";
 
+/** Receipt formats the parsing models accept. */
+const RECEIPT_CONTENT_TYPES = new Set([
+  "image/jpeg",
+  "image/png",
+  "image/gif",
+  "image/webp",
+  "application/pdf",
+]);
+
 const llmServiceLogger = logger.child({ module: "llm-service" });
 
 // Domain types (transport-agnostic, no TypeGraphQL decorators)
@@ -221,10 +230,10 @@ export class LLMService implements ILLMService {
     const { contentType } =
       await this.assetStorage.getObjectMetadata(s3ObjectKey);
 
-    if (
-      !contentType?.startsWith("image/") &&
-      contentType !== "application/pdf"
-    ) {
+    // Exactly the formats the models read. Any `image/*` used to pass, so an
+    // iPhone's HEIC reached the model, failed there, and read only as "Could
+    // not read receipt" (w21/108).
+    if (!RECEIPT_CONTENT_TYPES.has(contentType ?? "")) {
       throw new BadUserInputError(
         "s3ObjectKey must be an image (JPEG, PNG, GIF, WEBP) or PDF file",
       );

@@ -62,6 +62,12 @@ const ReceiptCaptureScreenImpl = () => {
         await ImagePicker.launchImageLibraryAsync({
           mediaTypes: ["images"],
           quality: 0.85,
+          // iOS hands back the original otherwise: an iPhone photo is HEIC,
+          // which the parsing models cannot read (w21/108). Compatible
+          // transcodes it to JPEG.
+          preferredAssetRepresentationMode:
+            ImagePicker.UIImagePickerPreferredAssetRepresentationMode
+              .Compatible,
         }),
       );
       if (picked) {

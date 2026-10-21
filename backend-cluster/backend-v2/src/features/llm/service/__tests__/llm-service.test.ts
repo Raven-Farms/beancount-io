@@ -93,3 +93,35 @@ describe("LLMService temp-asset ownership", () => {
     expect(getObjectMetadata).not.toHaveBeenCalled();
   });
 });
+
+// w21/108: any image/* passed, so an iPhone HEIC reached the model and failed
+// there as an unreadable receipt.
+describe("LLMService receipt formats", () => {
+  const user: Identity = { userId: "usr_1", method: "session", scopes: new Set() };
+  const getObjectMetadata = jest.fn();
+  const generateDownloadUrl = jest.fn();
+
+  function makeService() {
+    return new LLMService(
+      { getApiContext: jest.fn() } as never,
+      { getObjectMetadata, generateDownloadUrl } as never,
+      {
+        check: jest.fn().mockResolvedValue({ allowed: true }),
+        addTokenUsage: jest.fn(),
+      } as never,
+      { blockeden: { accessKey: "test-key" } } as never,
+      new AuthorizationService({ check: async () => true }),
+    );
+  }
+
+  it("refuses a HEIC with a clear message before the model sees it", async () => {
+    getObjectMetadata.mockResolvedValue({ contentType: "image/heic" });
+    await expect(
+      makeService().parseReceipt(user, "tmp/usr_1/receipt.heic", "alice/a"),
+    ).rejects.toMatchObject({
+      category: "BAD_USER_INPUT",
+      message: expect.stringContaining("JPEG, PNG, GIF, WEBP"),
+    });
+    expect(generateDownloadUrl).not.toHaveBeenCalled();
+  });
+});
