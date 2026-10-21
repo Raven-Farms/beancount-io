@@ -23,3 +23,4 @@
 - [027](./027.md) — At AX2, Budget card titles shrink to "Ex…ing" and "Ex…ries", so budgets can't be told apart
 - [028](./028.md) — Saving over an entry changed elsewhere shows "Ledger resource not found" instead of w4/045's Reload choice
 - [029](./029.md) — At AX2, New Transaction's posting accounts shrink to "Asse…cking" and "Ex…ries"
+- [030](./030.md) — A transaction the ledger reports as broken opens with no sign of its error
