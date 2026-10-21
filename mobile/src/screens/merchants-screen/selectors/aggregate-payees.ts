@@ -121,6 +121,12 @@ export function aggregatePayees(
     if (!payee || transactionCount === null) {
       continue;
     }
+    // The spelling as the ledger has it. Trimmed, a padded "Starbucks " was
+    // lost, and the detail's exact `payee =` statements never counted its
+    // rows while its list showed them (w21/093). Grouping and display stay
+    // trimmed.
+    const raw = row[columns.payee];
+    const spelling = typeof raw === "string" ? raw : payee;
     const firstDate = asString(row[columns.firstDate]) ?? "";
     const lastDate = asString(row[columns.lastDate]) ?? "";
 
@@ -133,11 +139,11 @@ export function aggregatePayees(
         lastDate,
         variantCount: transactionCount,
         variantLastDate: lastDate,
-        spellings: new Set([payee]),
+        spellings: new Set([spelling]),
       });
       continue;
     }
-    existing.spellings.add(payee);
+    existing.spellings.add(spelling);
     existing.transactionCount += transactionCount;
     if (firstDate && (!existing.firstDate || firstDate < existing.firstDate)) {
       existing.firstDate = firstDate;

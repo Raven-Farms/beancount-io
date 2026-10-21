@@ -82,3 +82,40 @@ describe("a merchant spelled more than one way", () => {
     expect(parseSpellings('["ok", 3]')).toEqual(["ok"]);
   });
 });
+
+// w21/093: a padded "QA STARBUX " was trimmed into "QA STARBUX", so the
+// detail's exact statements counted 2 of the 3 rows it listed.
+describe("a merchant spelled with trailing whitespace", () => {
+  const [merged] = aggregatePayees(
+    table([
+      ["QA STARBUX", 2, "2026-08-24", "2026-08-25"],
+      ["QA STARBUX ", 1, "2026-08-26", "2026-08-26"],
+    ]),
+  );
+
+  it("keeps both spellings, showing the trimmed one", () => {
+    expect(merged!.payee).toBe("QA STARBUX");
+    expect(merged!.transactionCount).toBe(3);
+    expect(merged!.otherSpellings).toEqual(["QA STARBUX "]);
+  });
+
+  it("counts the padded rows in the detail's statements", () => {
+    const spellings = [merged!.payee, ...merged!.otherSpellings!];
+    expect(
+      buildMerchantMetaBql(spellings).includes(
+        '(payee = "QA STARBUX" OR payee = "QA STARBUX ")',
+      ),
+    ).toBe(true);
+    expect(
+      buildMerchantCurrencyTotalsBql(spellings).includes(
+        'payee = "QA STARBUX "',
+      ),
+    ).toBe(true);
+  });
+
+  it("survives the route param", () => {
+    expect(parseSpellings(JSON.stringify(merged!.otherSpellings))).toEqual([
+      "QA STARBUX ",
+    ]);
+  });
+});

@@ -14,7 +14,6 @@
 
 - [064](./blocked/064.md) — A token refresh whose response is lost signs the user out on the next refresh (rotated token replayed → grant revoked) — **blocked:** needs an owner decision (ADR) on a refresh-token reuse grace window
 - [065](./blocked/065.md) — One early-year entry (e.g. 0050) makes the balance sheet 23,718 monthly points (3 MB) and the app stalls — **blocked:** needs an approach decision (per-pill fetch vs server downsample) and a simulator profile of the stall
-- [093](./093.md) — A trailing-space payee splits a merchant: header "2 transactions · $3.00" over three listed rows totalling $7
 - [094](./094.md) — A detail screen lower in the stack keeps showing a deleted or rewritten entry; its Edit then fails
 - [095](./095.md) — Persian: signed amounts inside labelled lines render reversed (`1,234.50$- :مانده`)
 - [096](./096.md) — Weekly/daily budget chart labels are US month/day in every language
