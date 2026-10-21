@@ -113,6 +113,11 @@ function NotificationsBellButton(): JSX.Element {
     <TouchableOpacity
       accessibilityRole="button"
       accessibilityLabel={t("notificationsBell")}
+      // The label replaces the badge for VoiceOver, so its count is spoken
+      // as the value: "Notifications, 1 error" (w21/109).
+      accessibilityValue={
+        count > 0 ? { text: t("ledgerEditorErrorCount", { count }) } : undefined
+      }
       onPress={handlePress}
       style={styles.action}
       activeOpacity={0.7}
