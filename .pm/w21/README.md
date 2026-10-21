@@ -33,3 +33,4 @@
 - [057](./057.md) — Mixed-currency entries get the wrong headline amount: a card purchase earning miles shows "+1,500.00 MILES"; an exchange flips sign by which leg has the `@`
 - [058](./058.md) — In a non-USD ledger every USD balance is relabelled in the ledger's currency ("Bank €17,202.01"); Home shows a fake −98% crash
 - [059](./059.md) — Transaction detail's Money flow drops lot cost and price (mobile counterpart of w4/220)
+- [060](./060.md) — Account search misses accounts containing "İ" (Turkish dotted capital I)
