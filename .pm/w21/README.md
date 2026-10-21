@@ -30,3 +30,4 @@
 - [061](./061.md) — Create Ledger suggests USD for Bulgaria (euro since 2026), Ukraine, Romania, Czechia…: hand-rolled list diverges from the setup catalog
 - [062](./062.md) — The file editor converts CRLF files to LF on save: one added line rewrites every line ending
 - [063](./063.md) — Budget "1Y" builds the invalid window `2023-02-29 - 2024-02-29` on leap days, so the view fails every 29 February
+- [064](./064.md) — A token refresh whose response is lost signs the user out on the next refresh (rotated token replayed → grant revoked)
