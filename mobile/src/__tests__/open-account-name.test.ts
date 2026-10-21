@@ -435,3 +435,39 @@ describe("Open Account sub-path field", () => {
     expect(source.includes("peelTypedRoot(value, rootPrefix)")).toBe(true);
   });
 });
+
+// w21/041: names the ledger opens, refused by the validator (the mobile
+// counterpart of the dashboard's w4/279).
+describe("validateAccountName: combining marks and titlecase initials", () => {
+  const decomposed = "E\u0301pargne";
+
+  it("accepts the names the ledger opens", () => {
+    for (const name of [
+      "Assets:Qa-20261020:हिंदी", // Devanagari with vowel signs
+      `Assets:Qa-20261020:${decomposed}`, // a decomposed accent
+      "Assets:Qa-20261020:Épargne", // a composed accent
+      "Assets:Qa-20261020:ǅep", // a titlecase initial
+      "Assets:Qa-20261020:Snacks",
+    ])
+      expect(validateAccountName(name)).toEqual({ ok: true });
+  });
+
+  it("still refuses what the ledger does not", () => {
+    const cases: [string, AccountNameValidationReason][] = [
+      ["bank:checking", "invalidRoot"],
+      ["Assets:Bank:", "emptyComponent"],
+      ["Assets:Bank:Chécking Acct", "invalidCharacters"],
+      ["Assets:bank", "componentMustStartUppercase"],
+      // A combining mark cannot start a component.
+      ["Assets:\u0301Bank", "componentMustStartUppercase"],
+    ];
+    for (const [name, reason] of cases)
+      expect(validateAccountName(name)).toEqual({ ok: false, reason });
+  });
+
+  it("writes a decomposed name composed", () => {
+    const name = composeAccountName("Assets", `Qa:${decomposed}`);
+    expect(name).toBe("Assets:Qa:Épargne");
+    expect(name).toBe(name.normalize("NFC"));
+  });
+});

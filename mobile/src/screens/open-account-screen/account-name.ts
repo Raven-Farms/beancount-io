@@ -24,7 +24,10 @@ export function composeAccountName(
   rootPrefix: AccountRootPrefix,
   subPath: string,
 ): string {
+  // NFC, so a keyboard's decomposed "É" (E + U+0301) is written composed and
+  // the already-open check compares like with like (w21/041).
   const components = subPath
+    .normalize("NFC")
     .split(":")
     .map((component) => component.trim())
     .filter(Boolean);
@@ -82,8 +85,10 @@ export function peelTypedRoot(
 /**
  * Whether a subcomponent's initial character is one Beancount accepts.
  *
- * Allowed: a Unicode uppercase letter ("Épargne"), a digit ("401k"), and a
- * letter from a caseless script ("日本", "العربية"). That last case is why this
+ * Allowed: a Unicode uppercase or titlecase letter ("Épargne", "ǅep"), a
+ * digit ("401k"), and a letter from a caseless script ("日本", "العربية",
+ * "हिंदी"). Titlecase `ǅ` is neither `\p{Lu}` nor caseless — its uppercase is
+ * `Ǆ` — and the ledger accepts it (w21/041). The caseless case is why this
  * is not a single `\p{Lu}` test: Han and Kana are `\p{Lo}`, so an uppercase-only
  * rule rejects names the ledger grammar allows. A letter is treated as caseless
  * when it has no distinct uppercase form, which still rejects a lowercase-led
@@ -93,7 +98,7 @@ const startsSubcomponent = (component: string): boolean => {
   const initial = [...component][0];
   if (initial === undefined) return false;
   if (/\p{N}/u.test(initial)) return true;
-  if (/\p{Lu}/u.test(initial)) return true;
+  if (/[\p{Lu}\p{Lt}]/u.test(initial)) return true;
   return /\p{L}/u.test(initial) && initial.toUpperCase() === initial;
 };
 
@@ -126,11 +131,15 @@ export function validateAccountName(
     return { ok: false, reason: "invalidCharacters" };
   }
 
-  for (const component of components.slice(1)) {
+  // Combining marks (`\p{M}`) may follow the initial: Devanagari vowel signs
+  // in "हिंदी", or the U+0301 of a decomposed "É" that NFC cannot always fold.
+  // The ledger accepts both, and refusing them disabled Done for a name it
+  // would open (w21/041).
+  for (const component of components.slice(1).map((c) => c.normalize("NFC"))) {
     if (!startsSubcomponent(component)) {
       return { ok: false, reason: "componentMustStartUppercase" };
     }
-    if (!/^[\p{L}\p{N}-]+$/u.test(component)) {
+    if (!/^[\p{L}\p{N}][\p{L}\p{M}\p{N}-]*$/u.test(component)) {
       return { ok: false, reason: "invalidCharacters" };
     }
   }
