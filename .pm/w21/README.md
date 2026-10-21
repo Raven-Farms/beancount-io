@@ -166,3 +166,4 @@
 - [334](./334.md) — A fee leg makes a transfer payee lose its recurring series (173 follow-up)
 - [335](./335.md) — Future events still count as history: manual mark reads "Irregular" (167 follow-up)
 - [336](./336.md) — Float-exact "~" on steady prices (171) and uncancelled budget batches (165)
+- [337](./337.md) — After 184, Home's budget panel/Spending count this month's pre-entered entries (panel "Above target" vs Budget $0)
