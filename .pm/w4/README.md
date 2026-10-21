@@ -24,9 +24,10 @@
 - [290 — Commit the print generation timestamp before native capture](./290.md) — minor; dashboard QA, 2026-10-20.
 - [291 — Leave file-editor Escape to the active text composition](./291.md) — minor; dashboard QA, 2026-10-20.
 - [292 — Keep composing Escape from dismissing input dialogs](./292.md) — minor; dashboard QA, 2026-10-20.
-- [294 — Preserve an acknowledged star action when its metadata refresh fails](./294.md) — minor; dashboard QA, 2026-10-20.
 
 ## Milestones
+
+- [ ] **m41** — [Preserve acknowledged actions through refresh failures](./m41/README.md) (6 tasks) ← dashboard QA, 2026-10-20; minor, promoted 294 with independent Budget submission scope.
 
 - [ ] **m40** — [Keep picker popups sized and scrollable inside modals](./m40/README.md) (6 tasks) ← dashboard QA, 2026-10-20; minor, promoted 293 with independently reproduced Combobox wheel scope.
 
@@ -97,6 +98,8 @@
 - [x] **m13** — [Preserve ledger pages through loading and hydration](./done/m13/README.md) (6 tasks) ← repeated dashboard QA, promoted w4/073, 2026-09-17
 
 ## Dropped
+
+- ~~**294**~~ — Preserve an acknowledged star action when its metadata refresh fails — dropped 2026-10-20: promoted to [m41](./m41/README.md), preserving Star evidence and adding the independent Budget acknowledgement/read failure; two controllers and regressions exceed one hour.
 
 - ~~**293**~~ — Keep the DatePicker calendar reachable in short viewports — dropped 2026-10-20: promoted to [m40](./m40/README.md), preserving all evidence and adding the independent modal Combobox wheel failure; the shared repair and regression scope exceed one hour.
 
