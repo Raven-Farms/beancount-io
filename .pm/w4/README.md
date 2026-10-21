@@ -4,6 +4,8 @@
 
 ## Inbox
 
+- [306 — Restore usable keyboard focus when a confirmed file deletion fails](./306.md) — minor; dashboard QA, 2026-10-21; settled desktop/narrow confirmations close before acknowledgement and leave BODY focus on failure, with the next Tab at Skip.
+
 - [305 — Keep late Upload completion from redirecting after the user leaves](./305.md) — minor; dashboard QA, 2026-10-21; pending Upload permits Journal departure, then its successful completion takes both widths back to Files.
 
 - [304 — Keep late Create File success from redirecting after the user leaves](./304.md) — minor; dashboard QA, 2026-10-21; explicit pending-save departure reaches Journal, then the old successful completion takes both widths back to Files.
