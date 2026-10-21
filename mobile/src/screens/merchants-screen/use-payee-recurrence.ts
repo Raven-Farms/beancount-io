@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import { useQueryShellQuery } from "@/generated-graphql/graphql";
 import { getFormatDate } from "@/common/format-util";
 import { useLedgerRootNames } from "@/common/hooks/use-ledger-root-names";
+import { seriesByMerchant } from "@/common/merchant-key";
 import {
   detectRecurrence,
   hasEnoughHistory,
@@ -13,8 +14,8 @@ import {
 } from "./selectors/payee-series";
 
 /**
- * Shared windowed series fetch + per-payee detection for the merchants
- * directory and merchant detail. One `queryShell` round trip; `today` is
+ * Shared windowed series fetch + per-merchant detection for the merchants
+ * directory and merchant detail, keyed by `merchantKey`. One `queryShell` round trip; `today` is
  * captured once per mount so overdue doesn't flicker mid-session.
  */
 export function usePayeeRecurrence(ledgerId: string | null | undefined) {
@@ -38,7 +39,10 @@ export function usePayeeRecurrence(ledgerId: string | null | undefined) {
   });
 
   const { detections, enoughHistory } = useMemo(() => {
-    const seriesByPayee = mapPayeeSeries(query.data?.queryShell?.table ?? null);
+    // Keyed by merchant, every spelling's events together (w21/169).
+    const seriesByPayee = seriesByMerchant(
+      mapPayeeSeries(query.data?.queryShell?.table ?? null),
+    );
     const map = new Map<string, ReturnType<typeof detectRecurrence>>();
     // Payees with enough dates to analyse: a manual mark on any other reads
     // "Not enough history", not "Irregular" (w0/039).

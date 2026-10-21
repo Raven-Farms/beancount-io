@@ -14,7 +14,6 @@
 
 - [064](./blocked/064.md) — A token refresh whose response is lost signs the user out on the next refresh (rotated token replayed → grant revoked) — **blocked:** needs an owner decision (ADR) on a refresh-token reuse grace window
 - [065](./blocked/065.md) — One early-year entry (e.g. 0050) makes the balance sheet 23,718 monthly points (3 MB) and the app stalls — **blocked:** needs an approach decision (per-pill fetch vs server downsample) and a simulator profile of the stall
-- [169](./169.md) — Merchant spelled two ways: recurrence uses one spelling (false "Overdue" / no detection / lost override)
 - [170](./170.md) — 1st-and-15th bills labelled "Every 2 weeks"; Next comes 2–3 days early
 - [171](./171.md) — After a price rise, Recurring "typical amount" keeps the old price with no "~"
 - [172](./172.md) — Brand matcher treats accented letters as word boundaries ("Café Amazonía" → Amazon logo)

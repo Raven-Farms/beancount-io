@@ -18,6 +18,7 @@ import {
   type ResolvedCadence,
   type ResolvedRecurring,
 } from "./resolve-recurring";
+import { merchantKey } from "../../../common/merchant-key";
 
 type MerchantSectionKey = "recurring" | "all";
 
@@ -54,11 +55,12 @@ export function buildMerchantSections(
   const filtered = filterMerchants([...merchants], searchQuery);
 
   const items: MerchantListItem[] = filtered.map((merchant) => {
-    const detection = detections.get(merchant.payee) ?? null;
+    const key = merchantKey(merchant.payee);
+    const detection = detections.get(key) ?? null;
     const resolved = resolveRecurringVerdict(
       detection,
       overrideForPayee(merchant.payee),
-      enoughHistory.has(merchant.payee),
+      enoughHistory.has(key),
     );
     return {
       merchant,

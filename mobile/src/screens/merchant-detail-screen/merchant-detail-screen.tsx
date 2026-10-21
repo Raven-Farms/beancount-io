@@ -72,6 +72,7 @@ import {
 } from "./selectors/merchant-stats";
 import { formatMerchantTotal } from "./selectors/format-merchant-total";
 import { MerchantDetailSkeleton } from "./merchant-detail-skeleton";
+import { merchantKey } from "@/common/merchant-key";
 
 const PAGE_SIZE = 20;
 /** Free-text filter inflates pages; stop after this many raw fetches. */
@@ -345,13 +346,13 @@ function MerchantDetailBody({
     [transactions, locale],
   );
 
-  const detection = detections.get(payee) ?? null;
+  const detection = detections.get(merchantKey(payee)) ?? null;
   const resolved = useMemo(
     () =>
       resolveRecurringVerdict(
         detection,
         overrideFor(overrides, ledgerId!, payee),
-        enoughHistory.has(payee),
+        enoughHistory.has(merchantKey(payee)),
       ),
     [detection, overrides, ledgerId, payee, enoughHistory],
   );

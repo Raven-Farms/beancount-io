@@ -38,15 +38,16 @@ const OVERDUE: RecurrenceVerdict = {
   isOverdue: true,
 };
 
-// Payees whose series had enough dates for detection to analyse.
-const ANALYSED: ReadonlySet<string> = new Set(["Netflix", "Uber", "Landlord"]);
+// Merchants whose series had enough dates for detection to analyse, keyed by
+// `merchantKey` as detection is (w21/169).
+const ANALYSED: ReadonlySet<string> = new Set(["netflix", "uber", "landlord"]);
 
 describe("buildMerchantSections", () => {
   it("pins detected recurring merchants above the general list", () => {
     const detections = new Map<string, RecurrenceVerdict | null>([
-      ["Netflix", MONTHLY],
-      ["Uber", null],
-      ["Landlord", OVERDUE],
+      ["netflix", MONTHLY],
+      ["uber", null],
+      ["landlord", OVERDUE],
     ]);
     const sections = buildMerchantSections(
       [UBER, NETFLIX, RENT],
@@ -74,7 +75,7 @@ describe("buildMerchantSections", () => {
   });
 
   it("lets a notRecurring override hide a detection from the pin", () => {
-    const detections = new Map([["Netflix", MONTHLY]]);
+    const detections = new Map([["netflix", MONTHLY]]);
     const sections = buildMerchantSections(
       [NETFLIX, UBER],
       detections,
@@ -92,7 +93,7 @@ describe("buildMerchantSections", () => {
   it("lets a recurring override pin an undetected payee", () => {
     const sections = buildMerchantSections(
       [UBER],
-      new Map([["Uber", null]]),
+      new Map([["uber", null]]),
       ANALYSED,
       (payee) => (payee === "Uber" ? "recurring" : null),
       "",
@@ -106,7 +107,7 @@ describe("buildMerchantSections", () => {
     // Two identical monthly rent payments read "Irregular" (w0/039).
     const sections = buildMerchantSections(
       [RENT],
-      new Map([["Landlord", null]]),
+      new Map([["landlord", null]]),
       new Set<string>(),
       (payee) => (payee === "Landlord" ? "recurring" : null),
       "",
@@ -117,7 +118,7 @@ describe("buildMerchantSections", () => {
   });
 
   it("filters both sections by search", () => {
-    const detections = new Map([["Netflix", MONTHLY]]);
+    const detections = new Map([["netflix", MONTHLY]]);
     const sections = buildMerchantSections(
       [NETFLIX, UBER],
       detections,
