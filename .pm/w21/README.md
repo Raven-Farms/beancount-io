@@ -19,3 +19,4 @@
 - [023](./023.md) — Picking a known payee in New Transaction doesn't bring its usual accounts, a capability lost when multi-posting became the default
 - [024](./024.md) — Returning to the app never refreshes a mounted screen, so Home can contradict Transactions after an outside change
 - [025](./025.md) — Searching `#tag` or `^link` in Transactions finds nothing, even for the tags the detail screen shows
+- [026](./026.md) — Transaction Filters raises a duplicate-key error when a reversed custom range shows its message
