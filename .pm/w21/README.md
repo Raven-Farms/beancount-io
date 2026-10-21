@@ -123,3 +123,6 @@
 - [173](./173.md) — Transfer-only payees never detected; marking Recurring says "Not enough history"
 - [174](./174.md) — A parent's own postings never appear in the Accounts tree; children don't add up to it
 - [175](./175.md) — An account opened under a collapsed parent is invisible after Done
+- [176](./176.md) — iOS camera permission prompt body is English in every language (no InfoPlist.strings)
+- [177](./177.md) — Chart axes and VoiceOver use English K/M/B/T abbreviations in every language
+- [178](./178.md) — Mobile has no untranslated-string guard; a dashboard port would miss its leak shapes
