@@ -90,6 +90,7 @@
 - [923 — Normalize repeated CSV page headers](./923.md) — minor CLI framing gap; byte-identical headers with supported normalized spellings are refused as data rows, reproduced 2026-10-21.
 - [924 — Refuse mismatched currency symbols missing from the CSV guard](./924.md) — major CLI wrong-commodity write; lari/tenge/tugrik/manat/guarani amounts silently become USD, reproduced 2026-10-21.
 - [925 — Preserve a short-cover lot's exact label](./925.md) — major CLI wrong-lot write; positive covers select a different lot and report 30 USD gain instead of 10, reproduced 2026-10-21.
+- [926 — Accept parsed balancing postings with native missing units](./926.md) — minor CLI importer gap; valid parser output crashes currency inspection while equivalent `None` units work, reproduced 2026-10-21.
 
 The 27 findings from the MCP QA auth sweep against the hosted endpoint (023–054, less the five under [Dropped](#dropped)) were fixed in `backend-cluster/backend-v2` and closed on 2026-10-02 and 2026-10-03; each note under [`done/`](./done/) records what shipped and in which commit. None has been re-observed against the hosted endpoint yet — the fixes reach it with the next backend deploy.
 
