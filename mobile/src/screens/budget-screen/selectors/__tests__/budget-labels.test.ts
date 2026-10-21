@@ -30,8 +30,15 @@ describe("timeSpanToFilter", () => {
     );
   });
 
-  it("uses fava's relative-year variable for last year", () => {
-    expect(timeSpanToFilter("last-year", "2026-08-09")).toBe("year-1");
+  // w21/148: fava's `year-1` resolved on the server's calendar, so on New
+  // Year's Day in Tokyo "Last year" charted the year before last.
+  it("builds last year from the device's date, whatever the server's zone", () => {
+    expect(timeSpanToFilter("last-year", "2027-01-01")).toBe(
+      "2026-01-01 - 2026-12-31",
+    );
+    expect(timeSpanToFilter("last-year", "2026-12-31")).toBe(
+      "2025-01-01 - 2025-12-31",
+    );
   });
 
   it("expresses the rolling window as an explicit range", () => {

@@ -114,8 +114,9 @@ export const TIME_SPAN_LABEL_KEYS: Record<BudgetTimeSpan, string> = {
 
 /**
  * Map a pill to fava's `time` filter syntax. `undefined` means no filter (all
- * time); `year-1` is fava's relative-year variable. Year to date and the
- * rolling window are explicit inclusive ranges ending today: fava's `year`
+ * time). Every other span is an explicit inclusive range built from the
+ * device's date, never a relative variable the server resolves on its own
+ * calendar. Year to date and the rolling window end today: fava's `year`
  * is the whole calendar year, which charted unstarted months and made the
  * card report a budget for a month that had not begun.
  */
@@ -129,8 +130,16 @@ export function timeSpanToFilter(
         start: `${today.slice(0, 4)}-01-01`,
         end: today,
       });
-    case "last-year":
-      return "year-1";
+    case "last-year": {
+      // From the device's date, as "This year" is: fava's `year-1` resolves
+      // on the server's calendar, so around New Year the two chips charted
+      // different "years" for hours (w21/148).
+      const year = String(Number(today.slice(0, 4)) - 1).padStart(4, "0");
+      return formatTimeFilter({
+        start: `${year}-01-01`,
+        end: `${year}-12-31`,
+      });
+    }
     case "last-12m": {
       // Same calendar date one year back through today, matching the
       // dashboard's `subYears(now, 1) → now` window. A leap day clamps to
