@@ -276,6 +276,36 @@ describe("commodityPairsWithPrices", () => {
     expect(usdEur?.prices[0].value.startsWith("0.909090909")).toBe(true);
   });
 
+  it("keeps one pair for a commodity quoted equally often in each direction (w21/208)", () => {
+    const tied = [
+      {
+        type: "price",
+        date: "2026-09-01",
+        currency: "QACOIN",
+        amount: { number: "62000.00", currency: "USD" },
+      },
+      {
+        type: "price",
+        date: "2026-10-01",
+        currency: "USD",
+        amount: { number: "0.0000140", currency: "QACOIN" },
+      },
+    ] as unknown as Parameters<typeof commodityPairsWithPrices>[0];
+    const pairs = commodityPairsWithPrices(tied, ["USD"]);
+    expect(pairs.map((p) => `${p.base}/${p.quote}`)).toEqual(["QACOIN/USD"]);
+    // Both directions' quotes sit in the one pair's history.
+    expect(pairs[0].prices.map((point) => point.date)).toEqual([
+      "2026-09-01",
+      "2026-10-01",
+    ]);
+    // Operating currencies on both sides still list both directions, once.
+    const both = commodityPairsWithPrices(tied, ["USD", "QACOIN"]);
+    expect(both.map((p) => `${p.base}/${p.quote}`)).toEqual([
+      "QACOIN/USD",
+      "USD/QACOIN",
+    ]);
+  });
+
   it("uses 28 significant digits for inverse rates", () => {
     const pairs = commodityPairsWithPrices(
       [

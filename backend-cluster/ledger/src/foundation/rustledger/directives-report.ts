@@ -276,12 +276,16 @@ export function commodityPairsWithPrices(
     priceMap.set(key, perDay);
   });
 
-  // Forward pairs: the direction seen at least as often as its inverse.
+  // Forward pairs: the direction quoted more often than its inverse. Fava
+  // drops both directions of a tie, which left a commodity quoted equally
+  // each way without a pair while the ledger still valued it at market
+  // (w21/208); a tie keeps the one whose base sorts first.
   const forward: Array<[string, string]> = [];
   pairs.forEach(([base, quote], key) => {
     const count = counts.get(key) ?? 0;
     if (count === 0) return; // inverse-only synthetic direction
-    if ((counts.get(pairKey(quote, base)) ?? 0) < count) {
+    const inverse = counts.get(pairKey(quote, base)) ?? 0;
+    if (inverse < count || (inverse === count && base < quote)) {
       forward.push([base, quote]);
     }
   });
