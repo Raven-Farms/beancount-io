@@ -76,3 +76,6 @@
 - [126](./126.md) — Fresh install ignores device language (English; Persian gets English in RTL that Settings can't undo)
 - [127](./127.md) — Pending "P" badge is white on amber (~1.9:1 dark, 2.7:1 light)
 - [128](./128.md) — Placeholders/labels use the hairline-border color as text (~1.34:1 light): Create Ledger, posting "Account", "Auto" tag
+- [129](./129.md) — Browse ledgers → Starred stops after 30; local search can't find the rest
+- [130](./130.md) — A starred private ledger never appears in Starred (admin client hides private stars; all surfaces)
+- [131](./131.md) — App link with a differently-cased owner opens your own ledger read-only, without "Current"
