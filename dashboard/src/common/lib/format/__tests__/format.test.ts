@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { afterEach, beforeEach, describe, it, expect } from "vitest";
 import { formatDateISO, formatDateTime, formatAmount } from "../";
 
 describe("Format Utility", () => {
@@ -48,6 +48,38 @@ describe("Format Utility", () => {
       expect(formatDateISO("2024-01-01")).toBe("2024-01-01");
       expect(formatDateISO("2024-12-31")).toBe("2024-12-31");
     });
+
+    /** A zone's skipped local midnight must not move the day (w4/285). */
+    describe.each(["UTC", "America/Los_Angeles", "Pacific/Apia"])(
+      "in %s",
+      (timeZone) => {
+        const originalTz = process.env.TZ;
+        beforeEach(() => {
+          process.env.TZ = timeZone;
+        });
+        afterEach(() => {
+          process.env.TZ = originalTz;
+        });
+
+        it("keeps every calendar day, including one the zone skipped", () => {
+          expect(formatDateISO("2011-12-29")).toBe("2011-12-29");
+          expect(formatDateISO("2011-12-30")).toBe("2011-12-30");
+          expect(formatDateISO("2011-12-31")).toBe("2011-12-31");
+          expect(formatDateISO("2011-12-30T12:00:00Z")).toBe("2011-12-30");
+          expect(formatDateISO("0001-01-01")).toBe("0001-01-01");
+          expect(formatDateISO("0099-12-31")).toBe("0099-12-31");
+        });
+
+        it("still refuses impossible and empty dates", () => {
+          expect(formatDateISO("2026-02-30")).toBeNull();
+          expect(formatDateISO("2023-02-29")).toBeNull();
+          expect(formatDateISO("2026-13-01")).toBeNull();
+          expect(formatDateISO("")).toBeNull();
+          expect(formatDateISO(null)).toBeNull();
+          expect(formatDateISO("invalid-date")).toBeNull();
+        });
+      },
+    );
 
     it("should produce consistent output for the same date", () => {
       const result1 = formatDateISO("2024-06-15");

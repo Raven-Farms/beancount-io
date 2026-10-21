@@ -411,3 +411,47 @@ describe("Events type filter with colliding and empty types", () => {
     await waitFor(() => expect(rowsShown()).toHaveLength(3));
   });
 });
+
+describe("Events dates in a zone that skipped a day (w4/285)", () => {
+  const originalTz = process.env.TZ;
+  afterEach(() => {
+    process.env.TZ = originalTz;
+  });
+
+  it.each(["UTC", "America/Los_Angeles", "Pacific/Apia"])(
+    "shows each source date exactly in %s",
+    async (timeZone) => {
+      process.env.TZ = timeZone;
+      const skipped = [29, 30, 31].map((day) => ({
+        __typename: "Event" as const,
+        date: `2011-12-${day}`,
+        type: "qa-20261020-calendar-display",
+        description: `day${day}`,
+      }));
+      const { requests } = await setup("en", "2011");
+      await resolve(requests[0], skipped);
+
+      const table = await screen.findByRole("table", {
+        name: en["page.events.events"].message,
+      });
+      await waitFor(() =>
+        expect(
+          within(table)
+            .getAllByRole("row")
+            .slice(1)
+            .map((row) =>
+              within(row)
+                .getAllByRole("cell")
+                .map((cell) => cell.textContent?.trim()),
+            )
+            .map(([date, , description]) => [date, description])
+            .sort(),
+        ).toEqual([
+          ["2011-12-29", "day29"],
+          ["2011-12-30", "day30"],
+          ["2011-12-31", "day31"],
+        ]),
+      );
+    },
+  );
+});
