@@ -50,6 +50,12 @@ export default {
     message: "Tento typ súboru nie je podporovaný na ukážku",
     description: "Unsupported preview message without a file type",
   },
+  "ledgerEditor.notUtf8Text": {
+    message:
+      "Tento súbor nie je text v UTF-8, preto ho tu nemožno zobraziť ani upraviť bez zmeny jeho bajtov. Stiahnite si ho a otvorte v inom programe.",
+    description:
+      "Shown instead of the editor for a text file whose bytes are not valid UTF-8",
+  },
   "ledgerEditor.createFileCommit": {
     message: "Vytvoriť súbor {path}",
     description: "Generated commit message for creating a file",

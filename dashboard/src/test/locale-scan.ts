@@ -136,6 +136,8 @@ const ALLOWED_LATIN = [
   // Formats, protocols and units
   "CSV",
   "PDF",
+  // The text encoding's name, as in "UTF-8" (w4/276).
+  "UTF",
   "OFX",
   "PNG",
   "JPG",

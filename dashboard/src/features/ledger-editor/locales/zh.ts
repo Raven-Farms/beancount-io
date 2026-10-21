@@ -49,6 +49,12 @@ export default {
     message: "该文件类型不支持预览",
     description: "Unsupported preview message without a file type",
   },
+  "ledgerEditor.notUtf8Text": {
+    message:
+      "此文件不是 UTF-8 文本，无法在不改变其字节的情况下在这里显示或编辑。请下载后用其他程序打开。",
+    description:
+      "Shown instead of the editor for a text file whose bytes are not valid UTF-8",
+  },
   "ledgerEditor.createFileCommit": {
     message: "创建文件 {path}",
     description: "Generated commit message for creating a file",

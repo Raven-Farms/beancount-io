@@ -50,6 +50,12 @@ export default {
     message: "このファイル タイプはプレビューではサポートされていません",
     description: "Unsupported preview message without a file type",
   },
+  "ledgerEditor.notUtf8Text": {
+    message:
+      "このファイルは UTF-8 テキストではないため、バイトを変更せずにここで表示・編集することはできません。ダウンロードして別のアプリで開いてください。",
+    description:
+      "Shown instead of the editor for a text file whose bytes are not valid UTF-8",
+  },
   "ledgerEditor.createFileCommit": {
     message: "ファイル {path} を作成します",
     description: "Generated commit message for creating a file",

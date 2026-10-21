@@ -79,6 +79,22 @@ export function base64Decode(base64: string): string {
 }
 
 /**
+ * Whether base64 file content is valid UTF-8. `base64Decode` replaces bad
+ * bytes with U+FFFD, so editing and saving such a file would rewrite bytes
+ * the reader never touched (w4/276). Empty content is valid.
+ */
+export function isStrictUtf8(base64: string | null | undefined): boolean {
+  if (!base64) return true;
+  try {
+    const bytes = Uint8Array.from(atob(base64), (char) => char.charCodeAt(0));
+    new TextDecoder("utf-8", { fatal: true }).decode(bytes);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Whether base64 file content starts with the UTF-8 byte-order mark
  * (EF BB BF). `base64Decode` drops it, as TextDecoder does, so a saver that
  * must keep the file's marker has to ask the original bytes (w4/268).

@@ -390,7 +390,11 @@ export const UnknownFileView = ({
   filePath,
   fileContent,
   onDelete,
-}: NonTextFileViewProps) => {
+  reason,
+}: NonTextFileViewProps & {
+  /** A known text type whose bytes are not UTF-8 (w4/276). */
+  reason?: "notUtf8";
+}) => {
   const filename = getFilename(filePath);
   const { t } = useTranslations();
 
@@ -410,9 +414,11 @@ export const UnknownFileView = ({
             {t("ledgerEditor.unsupportedFileFormat")}
           </p>
           <p className="text-sm text-muted-foreground">
-            {ext
-              ? t("ledgerEditor.unsupportedPreviewWithType", { type: ext })
-              : t("ledgerEditor.unsupportedPreview")}
+            {reason === "notUtf8"
+              ? t("ledgerEditor.notUtf8Text")
+              : ext
+                ? t("ledgerEditor.unsupportedPreviewWithType", { type: ext })
+                : t("ledgerEditor.unsupportedPreview")}
           </p>
         </div>
       </div>

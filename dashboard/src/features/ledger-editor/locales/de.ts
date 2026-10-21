@@ -49,6 +49,12 @@ export default {
     message: "Dieser Dateityp wird für die Vorschau nicht unterstützt",
     description: "Unsupported preview message without a file type",
   },
+  "ledgerEditor.notUtf8Text": {
+    message:
+      "Diese Datei ist kein UTF-8-Text und kann hier nicht angezeigt oder bearbeitet werden, ohne ihre Bytes zu ändern. Laden Sie sie herunter, um sie anderswo zu öffnen.",
+    description:
+      "Shown instead of the editor for a text file whose bytes are not valid UTF-8",
+  },
   "ledgerEditor.createFileCommit": {
     message: "Datei erstellen {path}",
     description: "Generated commit message for creating a file",

@@ -11,6 +11,7 @@ import {
   isPreviewableTextContent,
 } from "../../../shared/lib/utils";
 import { TextFileView } from "./text-file-view";
+import { isStrictUtf8 } from "@/common/lib/utils/encode";
 
 export interface FileContentViewProps {
   filePath: string;
@@ -56,6 +57,13 @@ export function FileContentView({
     [fileType, fileContent.content, fileContent.size],
   );
 
+  // A known text type is only editable when its bytes really are UTF-8;
+  // otherwise saving would replace them with U+FFFD (w4/276).
+  const decodableText = useMemo(
+    () => fileType !== "text" || isStrictUtf8(fileContent.content),
+    [fileType, fileContent.content],
+  );
+
   // Delegate to appropriate view component based on file type
   if (fileType === "image") {
     return (
@@ -73,6 +81,17 @@ export function FileContentView({
         filePath={filePath}
         fileContent={fileContent}
         onDelete={onDelete}
+      />
+    );
+  }
+
+  if (!decodableText) {
+    return (
+      <UnknownFileView
+        filePath={filePath}
+        fileContent={fileContent}
+        onDelete={onDelete}
+        reason="notUtf8"
       />
     );
   }

@@ -51,6 +51,12 @@ export default {
       "Aquest tipus de fitxer no és compatible per a la previsualització",
     description: "Unsupported preview message without a file type",
   },
+  "ledgerEditor.notUtf8Text": {
+    message:
+      "Aquest fitxer no és text UTF-8, així que no es pot mostrar ni editar aquí sense canviar-ne els bytes. Baixeu-lo per obrir-lo en un altre programa.",
+    description:
+      "Shown instead of the editor for a text file whose bytes are not valid UTF-8",
+  },
   "ledgerEditor.createFileCommit": {
     message: "Crea un fitxer {path}",
     description: "Generated commit message for creating a file",
