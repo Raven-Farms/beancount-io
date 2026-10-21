@@ -81,6 +81,8 @@ function load(file: string): any {
         if (id === "@expo/vector-icons") return {};
         if (id === "@/components/stack-back-button")
           return { StackBackButton: "Back" };
+        if (id === "@/common/hooks/use-foreground-refresh")
+          return { useForegroundRefresh: () => undefined };
         if (id === "@/common/ledger-directory/ledger-directory-provider")
           return {
             LedgerDirectoryProvider: () => {
