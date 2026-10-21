@@ -158,3 +158,6 @@
 - [275](./275.md) — New File refuses names with a dot ("2024.q1") despite "extension added" copy
 - [276](./276.md) — File editor Save, error rows and Reload/Back aren't announced as buttons
 - [277](./277.md) — Deep Files breadcrumb truncates the current folder's name
+- [278](./278.md) — A commodity with cost and cost-less lots hides its market value on Accounts; root loses "At market value"
+- [279](./279.md) — Single-commodity Accounts root reads in units and drops the stale-price warning Home shows
+- [280](./280.md) — An open $0 account vanishes when its only sub-account is closed and emptied
