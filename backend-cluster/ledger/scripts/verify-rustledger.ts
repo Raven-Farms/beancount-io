@@ -10,7 +10,7 @@
  * covers the end-to-end engine.
  */
 import { deepStrictEqual } from "node:assert";
-import type { BeancountError, FileMap } from "@rustledger/wasm";
+import type { BeancountError, CellValue, FileMap } from "@rustledger/wasm";
 import {
   buildEntryIdMap,
   collectAttributes,
@@ -38,6 +38,7 @@ import {
 } from "@/features/ledger/service/ledger-shell-mappers";
 import { stripBqlBlockComments } from "@/features/ledger/service/bql-comments";
 import { UNDECODABLE_SOURCE } from "@/foundation/rustledger/file-map-loader";
+import { formatCellValue } from "@/foundation/rustledger/mappers";
 import { LedgerDataService } from "@/features/ledger/service/ledger-data-service";
 import { LedgerFinanceService } from "@/features/ledger/service/ledger-finance-service";
 import { LedgerJournalService } from "@/features/ledger/service/ledger-journal-service";
@@ -1673,6 +1674,27 @@ async function main(): Promise<void> {
     JSON.stringify(singleCost.rows) ===
       JSON.stringify([[{ number: "4559.74", currency: "USD" }]]),
     "a single-currency cost(sum(position)) is still answered",
+  );
+
+  // w23/015: a position cell names its lot the way Beancount writes it.
+  const lotQuery = await queryLedgerFilesResult(
+    {
+      "main.bean": [
+        "2015-01-01 open Assets:Broker",
+        "2015-01-01 open Assets:Cash",
+        '2015-09-15 * "buy"',
+        '  Assets:Broker  5 GLD {197.06 USD, "lot-a"}',
+        "  Assets:Cash",
+        "",
+      ].join("\n"),
+    },
+    "main.bean",
+    "SELECT position WHERE account ~ 'Broker'",
+  );
+  assert(
+    formatCellValue(lotQuery.rows[0]?.[0] as CellValue) ===
+      '5 GLD {197.06 USD, 2015-09-15, "lot-a"}',
+    "a position cell keeps its lot date and label (w23/015)",
   );
 
   console.log("\nAll rustledger engine checks passed.");
