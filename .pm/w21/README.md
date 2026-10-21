@@ -14,7 +14,6 @@
 
 - [064](./blocked/064.md) — A token refresh whose response is lost signs the user out on the next refresh (rotated token replayed → grant revoked) — **blocked:** needs an owner decision (ADR) on a refresh-token reuse grace window
 - [065](./blocked/065.md) — One early-year entry (e.g. 0050) makes the balance sheet 23,718 monthly points (3 MB) and the app stalls — **blocked:** needs an approach decision (per-pill fetch vs server downsample) and a simulator profile of the stall
-- [171](./171.md) — After a price rise, Recurring "typical amount" keeps the old price with no "~"
 - [172](./172.md) — Brand matcher treats accented letters as word boundaries ("Café Amazonía" → Amazon logo)
 - [173](./173.md) — Transfer-only payees never detected; marking Recurring says "Not enough history"
 - [174](./174.md) — A parent's own postings never appear in the Accounts tree; children don't add up to it

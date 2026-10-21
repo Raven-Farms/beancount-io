@@ -48,6 +48,9 @@ const MAX_GAP_DISPERSION = 0.25;
 /** Flag typical amount as approximate when (max−min)/|median| exceeds this. */
 const APPROXIMATE_AMOUNT_SPREAD = 0.1;
 
+/** How many of the latest charges say what a bill costs now. */
+const RECENT_CHARGES = 3;
+
 /** Overdue grace as a fraction of the median gap. */
 const OVERDUE_GRACE_FRACTION = 0.25;
 
@@ -358,9 +361,10 @@ export function detectRecurrence(
     return null;
   }
 
+  // In date order, so the latest charges can be told from the old ones.
   const amountsByCurrency = new Map<string, number[]>();
-  for (const points of byDay.values()) {
-    for (const point of points) {
+  for (const day of eventDays) {
+    for (const point of byDay.get(day)!) {
       const currency = point.currency.trim();
       if (!currency) {
         continue;
@@ -381,12 +385,22 @@ export function detectRecurrence(
   const typicalAmountByCurrency: Record<string, number> = {};
   let isApproximate = false;
   for (const [currency, amounts] of amountsByCurrency) {
-    const med = median(amounts);
-    if (med === null) {
+    // Steady latest charges are what it costs now: over the whole window the
+    // old price held until half the history was at the new one, so a rise
+    // read as last year's price, without the "~" (w21/171). A bill that
+    // varies keeps its long-run median.
+    const overall = median(amounts);
+    if (overall === null) {
       continue;
     }
-    typicalAmountByCurrency[currency] = med;
-    if (amountSpreadIsApproximate(amounts)) {
+    const recent = amounts.slice(-RECENT_CHARGES);
+    const latest = median(recent);
+    const changed =
+      latest !== null &&
+      latest !== overall &&
+      !amountSpreadIsApproximate(recent);
+    typicalAmountByCurrency[currency] = changed ? latest : overall;
+    if (changed || amountSpreadIsApproximate(amounts)) {
       isApproximate = true;
     }
   }

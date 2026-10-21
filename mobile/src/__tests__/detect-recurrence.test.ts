@@ -452,3 +452,33 @@ describe("detectRecurrence twice a month", () => {
     expect(detectRecurrence(series, "2026-10-21")?.cadence).toBe("biweekly");
   });
 });
+
+// w21/171: after a price rise the typical amount kept the old price.
+describe("detectRecurrence after a price change", () => {
+  const charge = (date: string, amount: number): SeriesPoint => ({
+    date,
+    currency: "USD",
+    amount,
+  });
+
+  it("shows the new price, marked approximate", () => {
+    const series = [
+      ...["01", "02", "03", "04", "05", "06"].map((m) =>
+        charge(`2026-${m}-05`, 10.99),
+      ),
+      ...["07", "08", "09", "10"].map((m) => charge(`2026-${m}-05`, 11.99)),
+    ];
+    const verdict = detectRecurrence(series, "2026-10-21");
+    expect(verdict?.typicalAmountByCurrency.USD).toBe(11.99);
+    expect(verdict?.isApproximate).toBe(true);
+  });
+
+  it("leaves a steady price as it was", () => {
+    const series = ["05", "06", "07", "08", "09", "10"].map((m) =>
+      charge(`2026-${m}-05`, 10.99),
+    );
+    const verdict = detectRecurrence(series, "2026-10-21");
+    expect(verdict?.typicalAmountByCurrency.USD).toBe(10.99);
+    expect(verdict?.isApproximate).toBe(false);
+  });
+});
