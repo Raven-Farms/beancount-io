@@ -145,3 +145,5 @@
 - [195](./195.md) — Leaving the file editor mid-save skips its refresh; other tabs stale, next delete refused
 - [196](./196.md) — Create file then switch ledger: the editor opens that path in the other ledger
 - [197](./197.md) — Delete Transaction can fire twice in flight; the repeat reports failure after success
+- [198](./198.md) — A repeated query param crashes three link-reachable screens ("path.split is not a function")
+- [199](./199.md) — A Files link to an unreadable ledger opens your current ledger's same-named file, editable
