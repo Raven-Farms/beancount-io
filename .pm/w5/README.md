@@ -65,6 +65,7 @@
 - [898 — Preserve wide arithmetic totals in `@@` annotations](./898.md) — minor CLI precision follow-up to 059, 802 and 263; reproduced 2026-10-20.
 - [899 — Include partial lot constraints in generated import IDs](./899.md) — major CLI skipped-sale follow-up to 349 and 467; label-only and number-only cases reproduced 2026-10-20.
 - [900 — Keep payee and narration boundaries in generated import IDs](./900.md) — major CLI skipped-payment follow-up to w1/149 and 140; reproduced 2026-10-20.
+- [901 — Preserve exact equity offsets for wide preset opening balances](./901.md) — trivial CLI precision follow-up to 310; reproduced 2026-10-20.
 
 The 27 findings from the MCP QA auth sweep against the hosted endpoint (023–054, less the five under [Dropped](#dropped)) were fixed in `backend-cluster/backend-v2` and closed on 2026-10-02 and 2026-10-03; each note under [`done/`](./done/) records what shipped and in which commit. None has been re-observed against the hosted endpoint yet — the fixes reach it with the next backend deploy.
 
