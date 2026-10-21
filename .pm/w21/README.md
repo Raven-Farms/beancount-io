@@ -42,3 +42,7 @@
 - [092](./092.md) — Entry Context balances: blank for zero, multi-currency run together as "100.00 USD,50.00 EUR"
 - [093](./093.md) — A trailing-space payee splits a merchant: header "2 transactions · $3.00" over three listed rows totalling $7
 - [094](./094.md) — A detail screen lower in the stack keeps showing a deleted or rewritten entry; its Edit then fails
+- [095](./095.md) — Persian: signed amounts inside labelled lines render reversed (`1,234.50$- :مانده`)
+- [096](./096.md) — Weekly/daily budget chart labels are US month/day in every language
+- [097](./097.md) — Delete Budget alert is ungrammatical in de/nl/ru/uk/sk/bg (adverb used as adjective)
+- [098](./098.md) — Reports/Budget chart VoiceOver summaries ignore plural forms ("over 1 months")
