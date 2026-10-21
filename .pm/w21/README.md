@@ -173,3 +173,7 @@
 - [347](./347.md) — File link on non-main branch opens main's file, editable
 - [348](./348.md) — beancount.io link opens same-named ledger on self-hosted server
 - [349](./349.md) — Accounts/Files-tree/new-entry links open Home or Transactions
+- [350](./350.md) — Failed post-write refresh erases the persisted offline cache
+- [351](./351.md) — Mid-save connection drop says "Nothing was saved"; retry duplicates
+- [352](./352.md) — Log out hangs ~60 s on a captive network, no busy state
+- [353](./353.md) — Load more fails silently on Transactions and Account detail
