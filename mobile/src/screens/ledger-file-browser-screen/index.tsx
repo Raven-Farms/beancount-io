@@ -1,6 +1,6 @@
 import { useGuest } from "@/common/guest/guest-context";
 import { useLedgerAccess } from "@/common/hooks/use-ledger-access";
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useApolloClient } from "@apollo/client";
 import {
   Alert,
@@ -43,6 +43,8 @@ import {
   buildLedgerFilePath,
   canDeleteLedgerFile,
   checkLedgerFileName,
+  deleteEmptiesFolder,
+  isFolderGone,
   popPathStack,
   pushPathStack,
   sortEntries,
@@ -345,6 +347,14 @@ export function LedgerFileBrowserScreen(): JSX.Element {
 
   const sorted = useMemo(() => sortEntries(entries), [entries]);
 
+  // A folder removed by another client, or by our own delete, steps up to the
+  // nearest folder that still lists (w21/088).
+  const folderGone = isFolderGone(error, pathStack);
+  useEffect(() => {
+    if (folderGone) updatePathStack(popPathStack);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- updatePathStack is rebuilt each render
+  }, [folderGone, currentPath]);
+
   const isFirstLoad = loading && !data;
 
   const [createLedgerFile, { loading: creating }] =
@@ -474,6 +484,10 @@ export function LedgerFileBrowserScreen(): JSX.Element {
           message: t("ledgerDeleteFileSuccess", { name: entry.name }),
           type: "success",
         });
+        // The folder's last file takes the folder with it: list its parent.
+        if (deleteEmptiesFolder(pathStack, sorted.length)) {
+          updatePathStack(popPathStack);
+        }
         // Awaited: the delete buttons stay disabled until the row is actually
         // gone, so a second tap can't resend the sha we just spent.
         await invalidateLedgerData(client, "file");
@@ -489,7 +503,18 @@ export function LedgerFileBrowserScreen(): JSX.Element {
         setDeletingPath(null);
       }
     },
-    [canWrite, client, deleteLedgerFile, ledgerId, refetch, t, toast],
+    [
+      canWrite,
+      client,
+      deleteLedgerFile,
+      ledgerId,
+      pathStack,
+      refetch,
+      sorted.length,
+      t,
+      toast,
+      updatePathStack,
+    ],
   );
 
   const handleDelete = useCallback(

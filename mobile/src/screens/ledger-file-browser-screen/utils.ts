@@ -1,4 +1,5 @@
 import { isBeancountFile } from "../../common/ledger-file-types";
+import { isLedgerGone } from "../../common/graphql-error-codes";
 
 /** Why a typed name can't be created, or the name it creates. */
 export type LedgerFileNameCheck =
@@ -100,4 +101,26 @@ export function pushPathStack(stack: string[], path: string): string[] {
 export function popPathStack(stack: string[]): string[] {
   if (stack.length <= 1) return stack;
   return stack.slice(0, -1);
+}
+
+/**
+ * Whether a listing failed because its folder no longer exists. Git keeps no
+ * empty folders, so deleting a folder's last file removes the folder, and the
+ * listing then answers NOT_FOUND; the browser read that as "Failed to load"
+ * and pull to refresh could not clear it (w21/088). The root is never "gone":
+ * a NOT_FOUND there is the ledger's, which the ledger guard reports.
+ */
+export function isFolderGone(error: unknown, stack: string[]): boolean {
+  return stack.length > 1 && isLedgerGone(error);
+}
+
+/**
+ * Whether deleting one row leaves its folder empty, and so removes it. The
+ * browser steps up before refreshing rather than list a folder that is gone.
+ */
+export function deleteEmptiesFolder(
+  stack: string[],
+  rowsInFolder: number,
+): boolean {
+  return stack.length > 1 && rowsInFolder === 1;
 }
