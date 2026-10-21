@@ -308,3 +308,63 @@ describe.each([
     await waitFor(() => expect(held).toHaveLength(2));
   });
 });
+
+/** Switching entry type keeps each unsaved draft while the dialog is open (w4/256). */
+describe("New Entry type switches", () => {
+  // Radix tab activation re-renders the whole dialog; allow a loaded run.
+  const settle = { timeout: 3000 };
+
+  it("keeps a Note draft through Note → Balance → Note by arrow keys", async () => {
+    const user = (await import("@testing-library/user-event")).default.setup();
+    render(<Harness tab="note" />);
+    setAccount("Assets:Cash");
+    fireEvent.change(noteContent(), { target: { value: "qa draft note" } });
+
+    screen.getByRole("tab", { name: "Note" }).focus();
+    await user.keyboard("{ArrowLeft}");
+    await waitFor(
+      () =>
+        expect(screen.getByRole("tab", { name: "Balance" })).toHaveAttribute(
+          "aria-selected",
+          "true",
+        ),
+      settle,
+    );
+    expect(
+      screen.queryByRole("textbox", { name: "Note content" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Create Balance Entry" }),
+    ).toBeInTheDocument();
+
+    screen.getByRole("tab", { name: "Balance" }).focus();
+    await user.keyboard("{ArrowRight}");
+    await waitFor(
+      () => expect(noteContent()).toHaveValue("qa draft note"),
+      settle,
+    );
+    expect(screen.getAllByRole("textbox", { name: "Account" })[0]).toHaveValue(
+      "Assets:Cash",
+    );
+    expect(
+      screen.queryByRole("button", { name: "Create Balance Entry" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("keeps a Balance draft through a pointer switch", async () => {
+    render(<Harness tab="balance" />);
+    setAccount("Assets:Cash");
+    fireEvent.change(screen.getByRole("spinbutton"), {
+      target: { value: "49.70" },
+    });
+    fireEvent.mouseDown(screen.getByRole("tab", { name: "Note" }));
+    fireEvent.click(screen.getByRole("tab", { name: "Note" }));
+    await waitFor(() => expect(noteContent()).toBeInTheDocument(), settle);
+    fireEvent.mouseDown(screen.getByRole("tab", { name: "Balance" }));
+    fireEvent.click(screen.getByRole("tab", { name: "Balance" }));
+    await waitFor(
+      () => expect(screen.getByRole("spinbutton")).toHaveValue(49.7),
+      settle,
+    );
+  });
+});

@@ -115,6 +115,10 @@ export function NewDirectiveDialog({
           }
           className="w-full flex flex-col flex-1 min-h-0"
         >
+          {/* Every form stays mounted while the dialog is open and the
+              inactive ones are hidden, so switching type — by pointer or the
+              tablist's arrow keys — keeps each unsaved draft (w4/256).
+              Closing the dialog still discards them all. */}
           <div className="mb-4 flex shrink-0 flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
             <DialogTitle className="min-w-0 shrink-0 text-left sm:shrink">
               {t("journal.newEntry")}
@@ -130,6 +134,8 @@ export function NewDirectiveDialog({
 
           <TabsContent
             value="transaction"
+            forceMount
+            hidden={activeTab !== "transaction"}
             className="flex-1 overflow-y-auto min-h-0"
           >
             <TransactionForm
@@ -141,6 +147,8 @@ export function NewDirectiveDialog({
 
           <TabsContent
             value="balance"
+            forceMount
+            hidden={activeTab !== "balance"}
             className="flex-1 overflow-y-auto min-h-0"
           >
             <BalanceForm
@@ -150,7 +158,12 @@ export function NewDirectiveDialog({
             />
           </TabsContent>
 
-          <TabsContent value="note" className="flex-1 overflow-y-auto min-h-0">
+          <TabsContent
+            value="note"
+            forceMount
+            hidden={activeTab !== "note"}
+            className="flex-1 overflow-y-auto min-h-0"
+          >
             <NoteForm
               ledgerId={ledgerId}
               onSuccess={handleSuccess}
@@ -160,6 +173,8 @@ export function NewDirectiveDialog({
 
           <TabsContent
             value="account"
+            forceMount
+            hidden={activeTab !== "account"}
             className="flex-1 overflow-y-auto min-h-0"
           >
             <OpenAccountForm
