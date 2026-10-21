@@ -51,3 +51,9 @@
 - [101](./101.md) — Budget header says "Above target" in red for a period before the budget existed, over an all-grey chart
 - [102](./102.md) — First bar of a 1Y / weekly-YTD budget chart is held to a whole period's budget for a partial period
 - [103](./103.md) — New Transaction pre-fills a closed account as FROM when it was the most recently used asset
+- [104](./104.md) — Create Ledger stores a liability opening balance with the wrong sign; the iOS keypad has no minus
+- [105](./105.md) — Create Ledger's Review step: Create silently does nothing on a name conflict or bad amount
+- [106](./106.md) — Create Ledger's opening balance dropped under "Decide later" or carried over from a previous preset
+- [107](./107.md) — Create Ledger: free-text currency/date, raw server errors, and impossible dates (2026-04-31) accepted
+- [108](./108.md) — "Choose from photos" fails for HEIC iPhone photos with "Could not read receipt"
+- [109](./109.md) — Notifications bell never tells VoiceOver its error count
