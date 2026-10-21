@@ -458,6 +458,7 @@ export const de: Translations = {
   receiptFlashOff: "Aus",
   receiptFlashOn: "Ein",
   receiptRetake: "Neu",
+  receiptTryAgain: "Erneut versuchen",
   receiptUpload: "Hochladen",
   receiptOpenSettings: "Einstellungen öffnen",
   receiptCancel: "Abbrechen",

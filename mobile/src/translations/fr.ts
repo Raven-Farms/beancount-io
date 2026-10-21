@@ -456,6 +456,7 @@ export const fr: Translations = {
   receiptFlashOff: "Désactivé",
   receiptFlashOn: "Activé",
   receiptRetake: "Reprendre",
+  receiptTryAgain: "Réessayer",
   receiptUpload: "Envoyer",
   receiptOpenSettings: "Ouvrir Réglages",
   receiptCancel: "Annuler",

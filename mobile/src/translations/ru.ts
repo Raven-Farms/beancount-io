@@ -451,6 +451,7 @@ export const ru: Translations = {
   receiptFlashOff: "Выключена",
   receiptFlashOn: "Включена",
   receiptRetake: "Переснять",
+  receiptTryAgain: "Повторить",
   receiptUpload: "Загрузить",
   receiptOpenSettings: "Открыть настройки",
   receiptCancel: "Отмена",

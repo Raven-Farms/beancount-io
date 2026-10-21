@@ -63,7 +63,13 @@ const styles = StyleSheet.create({
     textAlign: "center",
     lineHeight: 22,
   },
-  errorActions: { flexDirection: "row", gap: 12, marginTop: 6 },
+  errorActions: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "center",
+    gap: 12,
+    marginTop: 6,
+  },
 });
 
 export const PreviewView = ({
@@ -73,6 +79,7 @@ export const PreviewView = ({
   reveal,
   onRetake,
   onUpload,
+  onRetry,
   onCancel,
 }: {
   shot: CapturedShot;
@@ -82,6 +89,8 @@ export const PreviewView = ({
   reveal?: ReceiptReveal;
   onRetake: () => void;
   onUpload: () => void;
+  /** Run the upload again with the same photo; omitted when retrying is futile. */
+  onRetry?: () => void;
   onCancel: () => void;
 }) => {
   const insets = useSafeAreaInsets();
@@ -153,6 +162,19 @@ export const PreviewView = ({
             >
               <Text style={styles.pillText}>{t("receiptCancel")}</Text>
             </Pressable>
+            {onRetry ? (
+              <Pressable
+                testID="receipt-error-retry"
+                accessibilityRole="button"
+                style={({ pressed }) => [
+                  styles.pill,
+                  pressed && styles.pillPressed,
+                ]}
+                onPress={onRetry}
+              >
+                <Text style={styles.pillText}>{t("receiptTryAgain")}</Text>
+              </Pressable>
+            ) : null}
             <Pressable
               testID="receipt-error-retake"
               accessibilityRole="button"

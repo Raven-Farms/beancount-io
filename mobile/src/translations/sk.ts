@@ -454,6 +454,7 @@ export const sk: Translations = {
   receiptFlashOff: "Vypnutý",
   receiptFlashOn: "Zapnutý",
   receiptRetake: "Znova",
+  receiptTryAgain: "Skúsiť znova",
   receiptUpload: "Nahrať",
   receiptOpenSettings: "Otvoriť nastavenia",
   receiptCancel: "Zrušiť",

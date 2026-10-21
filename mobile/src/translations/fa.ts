@@ -439,6 +439,7 @@ export const fa: Translations = {
   receiptFlashOff: "خاموش",
   receiptFlashOn: "روشن",
   receiptRetake: "عکس دوباره",
+  receiptTryAgain: "تلاش دوباره",
   receiptUpload: "بارگذاری",
   receiptOpenSettings: "باز کردن تنظیمات",
   receiptCancel: "لغو",

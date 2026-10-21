@@ -453,6 +453,7 @@ export const en = {
   receiptFlashOff: "Off",
   receiptFlashOn: "On",
   receiptRetake: "Retake",
+  receiptTryAgain: "Try again",
   receiptUpload: "Upload",
   receiptOpenSettings: "Open Settings",
   receiptCancel: "Cancel",

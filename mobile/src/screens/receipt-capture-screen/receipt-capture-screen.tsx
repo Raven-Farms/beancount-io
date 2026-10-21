@@ -10,6 +10,7 @@ import { LedgerGuard, useLedgerGuard } from "@/components/ledger-guard";
 import { useReceiptWorkflow } from "./use-receipt-workflow";
 import {
   receiptAmountText,
+  receiptCanRetry,
   receiptErrorKey,
   shotFromLibraryResult,
 } from "./receipt-utils";
@@ -94,6 +95,14 @@ const ReceiptCaptureScreenImpl = () => {
   const handleUpload = () => {
     if (!shot) return;
     workflow.startCapture(shot.uri, shot.mimeType, shot.filename, ledgerId);
+  };
+
+  // The same photo again, without going back through the camera or library:
+  // after a dropped connection the paper receipt may be gone (w21/204). Re-arm
+  // the failure haptic so a second failure is felt too.
+  const handleRetry = () => {
+    failed.current = false;
+    handleUpload();
   };
 
   useEffect(() => {
@@ -214,6 +223,11 @@ const ReceiptCaptureScreenImpl = () => {
         }
         onRetake={handleRetake}
         onUpload={handleUpload}
+        onRetry={
+          phase.kind === "error" && receiptCanRetry(phase.message)
+            ? handleRetry
+            : undefined
+        }
         onCancel={() => router.back()}
       />
     );

@@ -450,6 +450,7 @@ export const uk: Translations = {
   receiptFlashOff: "Вимкнено",
   receiptFlashOn: "Увімкнено",
   receiptRetake: "Перезняти",
+  receiptTryAgain: "Спробувати ще раз",
   receiptUpload: "Завантажити",
   receiptOpenSettings: "Відкрити налаштування",
   receiptCancel: "Скасувати",

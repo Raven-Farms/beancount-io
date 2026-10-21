@@ -38,6 +38,13 @@ export const receiptErrorKey = (
 };
 
 /**
+ * Whether trying the same photo again can help. A spent AI quota stays spent;
+ * a dropped connection or an unreadable parse does not (w21/204).
+ */
+export const receiptCanRetry = (code: string): boolean =>
+  code !== "quota_exhausted";
+
+/**
  * Classify a failure thrown by the parse-leg mutation into an internal code.
  *
  * Under Apollo's default errorPolicy a GraphQL error rejects the promise

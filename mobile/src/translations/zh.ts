@@ -405,6 +405,7 @@ export const zh: Translations = {
   receiptFlashOff: "关闭",
   receiptFlashOn: "开启",
   receiptRetake: "重拍",
+  receiptTryAgain: "重试",
   receiptUpload: "上传",
   receiptOpenSettings: "打开设置",
   receiptCancel: "取消",

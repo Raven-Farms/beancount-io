@@ -456,6 +456,7 @@ export const ca: Translations = {
   receiptFlashOff: "Desactivat",
   receiptFlashOn: "Activat",
   receiptRetake: "Repeteix",
+  receiptTryAgain: "Torna-ho a provar",
   receiptUpload: "Puja",
   receiptOpenSettings: "Obre la Configuració",
   receiptCancel: "Cancel·la",

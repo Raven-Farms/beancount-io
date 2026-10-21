@@ -447,6 +447,7 @@ export const nl: Translations = {
   receiptFlashOff: "Uit",
   receiptFlashOn: "Aan",
   receiptRetake: "Opnieuw",
+  receiptTryAgain: "Opnieuw proberen",
   receiptUpload: "Uploaden",
   receiptOpenSettings: "Instellingen openen",
   receiptCancel: "Annuleren",

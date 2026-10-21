@@ -445,6 +445,7 @@ export const bg: Translations = {
   receiptFlashOff: "Изключена",
   receiptFlashOn: "Включена",
   receiptRetake: "Отново",
+  receiptTryAgain: "Опитай отново",
   receiptUpload: "Качи",
   receiptOpenSettings: "Отвори настройките",
   receiptCancel: "Отказ",
