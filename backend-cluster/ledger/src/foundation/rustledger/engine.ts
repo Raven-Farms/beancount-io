@@ -7,6 +7,7 @@ import type {
   LedgerOptions,
   QueryResult,
 } from "@rustledger/wasm";
+import { locateParseErrors } from "./parse-errors";
 import { restoreEntrySortOrder } from "./entry-sort-order";
 import { dropPaddingWithinTolerance } from "./pad-tolerance";
 import { loadRustledger } from "./loader";
@@ -541,11 +542,19 @@ async function parseLedgerFilesUncached(
 
   // Beancount's same-day order, before plugins and pad expansion walk it: the
   // engine groups a day by directive kind (w21/134).
+  // A syntax error is reported once per file with no location; find it
+  // (w21/187).
+  const located = locateParseErrors(
+    raw.errors,
+    parseableFiles(stripResult?.strippedFiles ?? scoped),
+    entryPoint,
+    await loadRustledger(),
+  );
   let directives = restoreEntrySortOrder(
     raw.directives,
     stripResult?.strippedFiles ?? scoped,
   );
-  let errors = raw.errors;
+  let errors = located;
   let paddingTransactions = raw.paddingTransactions;
 
   // rustledger 0.21's Document JSON omits inline tags/links. Recover them from

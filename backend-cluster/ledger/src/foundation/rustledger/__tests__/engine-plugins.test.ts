@@ -24,9 +24,11 @@ let transformedErrors: BeancountError[] = [];
 let rawPaddingTransactions: DirectiveJson[] = [];
 let transformedPaddingTransactions: DirectiveJson[] = [];
 let queryCalls = 0;
+let locatedParseErrors: BeancountError[] = [];
 
 jest.mock("@/foundation/rustledger/loader", () => ({
   loadRustledger: async () => ({
+    parseMultiFile: () => locatedParseErrors,
     Ledger: {
       fromFiles: (files: Record<string, string>) => {
         filesSeenByWasm = files;
@@ -180,6 +182,7 @@ beforeEach(() => {
   rawPaddingTransactions = [];
   transformedPaddingTransactions = [];
   queryCalls = 0;
+  locatedParseErrors = [];
   // Tests reuse identical file content with DIFFERENT stubbed parse results —
   // the content-addressed snapshot cache would otherwise serve test A's
   // snapshot to test B.
@@ -257,6 +260,46 @@ describe("parseLedgerFiles — plugin orchestration (stubbed WASM)", () => {
       ["E2003", 1],
     ]);
     expect(snapshot.valid).toBe(false);
+  });
+
+  it("locates the syntax errors the engine summarizes per file (w21/187)", async () => {
+    rawErrors = [
+      {
+        message: "parse errors in main.bean",
+        code: "LOAD",
+        phase: "load",
+        hint: null,
+        file: null,
+        line: null,
+        column: null,
+        end_line: null,
+        end_column: null,
+        severity: "error",
+      },
+    ];
+    locatedParseErrors = [
+      {
+        message: "main.bean: parse error: unexpected input",
+        code: "P0012",
+        phase: "parse",
+        hint: null,
+        file: "main.bean",
+        line: 5,
+        column: 16,
+        end_line: 5,
+        end_column: 19,
+        severity: "error",
+      },
+    ];
+
+    const snapshot = await parseLedgerFiles(
+      { "main.bean": "2026-01-01 open Assets:Cash\nbroken" },
+      "main.bean",
+    );
+
+    expect(
+      snapshot.errors.map((error) => [error.message, error.file, error.line]),
+    ).toEqual([["parse error: unexpected input", "main.bean", 5]]);
   });
 
   it("strips the fava plugin before parse and applies the amortize transform", async () => {
