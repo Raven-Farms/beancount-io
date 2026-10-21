@@ -1,10 +1,17 @@
-import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import {
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+  useWindowDimensions,
+} from "react-native";
 import { FadeInView } from "@/components/crossfade";
 import { ColorTheme } from "@/types/theme-props";
 import {
   fontSizes,
   fontWeights,
   gutter,
+  prefersStackedLayout,
   space,
   useTheme,
 } from "@/common/theme";
@@ -50,6 +57,21 @@ const getStyles = (theme: ColorTheme) =>
     titleRow: {
       flexDirection: "row",
       alignItems: "center",
+    },
+    // Accessibility text sizes: the account gets the full width and Update
+    // Budget moves under it, as DashboardCard stacks its title and action.
+    titleStacked: {
+      flexDirection: "column",
+      alignItems: "flex-start",
+    },
+    // `flex: 1` sizes the row's title; in a column it would collapse it.
+    accountStacked: {
+      flex: 0,
+      alignSelf: "stretch",
+    },
+    updateButtonStacked: {
+      marginStart: 0,
+      marginTop: space.xxs,
     },
     account: {
       flex: 1,
@@ -154,6 +176,10 @@ export function BudgetGroupCard({
   const styles = useThemeStyle(getStyles);
   const theme = useTheme().colorTheme;
   const { t } = useTranslations();
+  // At AX2 the row left the account a few letters — "Ex…ing", "Ex…ries" —
+  // so budgets could not be told apart (w21/027).
+  const { fontScale } = useWindowDimensions();
+  const stacked = prefersStackedLayout(fontScale);
 
   const direction = budgetDirection(group.value);
   const { currency } = group;
@@ -191,13 +217,23 @@ export function BudgetGroupCard({
     // history rows can run edge to edge.
     <DashboardCard bleed>
       <View style={styles.header}>
-        <View style={styles.titleRow}>
-          <Text style={styles.account} numberOfLines={1} ellipsizeMode="middle">
+        <View style={[styles.titleRow, stacked && styles.titleStacked]}>
+          <Text
+            // Remeasured on a live size change (mobile/AGENTS.md).
+            key={`account-${fontScale}`}
+            style={[styles.account, stacked && styles.accountStacked]}
+            numberOfLines={stacked ? 2 : 1}
+            // Stacked, the leaf is what tells two budgets apart.
+            ellipsizeMode={stacked ? "head" : "middle"}
+          >
             {group.account}
           </Text>
           {onUpdate && (
             <TouchableOpacity
-              style={styles.updateButton}
+              style={[
+                styles.updateButton,
+                stacked && styles.updateButtonStacked,
+              ]}
               onPress={() => onUpdate(group)}
               accessibilityRole="button"
               accessibilityLabel={t("budgetUpdate")}
