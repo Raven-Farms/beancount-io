@@ -662,6 +662,93 @@ describe("useCSVParser", () => {
     });
   });
 
+  /**
+   * Text after a closed quoted field, or a quote after unquoted text, used to
+   * be joined or deleted: `"vendor"tail` became `vendortail` and `"1"2.50` a
+   * valid 12.50 (w4/308). Malformed boundaries now refuse the whole file.
+   */
+  describe("parseCSV – malformed quote boundaries", () => {
+    const parse = (csv: string) =>
+      renderHook(() => useCSVParser()).result.current.parseCSV(csv);
+    const refused = (csv: string, message: RegExp) => {
+      const parsed = parse(csv);
+      expect(parsed.validCount).toBe(0);
+      expect(parsed.rows).toHaveLength(1);
+      expect(parsed.rows[0].errors![0]).toMatch(message);
+    };
+
+    it.each([
+      [
+        "text after a closed quoted payee",
+        'Date,Payee,Description,Amount\n2026-10-21,"qa vendor"tail,coffee,-12.50',
+        /Unexpected text after a quoted field in CSV record 2/,
+      ],
+      [
+        "a quoted amount fragment",
+        'Date,Payee,Description,Amount\n2026-10-22,qa plain,tea,"1"2.50',
+        /Unexpected text after a quoted field in CSV record 2/,
+      ],
+      [
+        "a quote opened inside unquoted data",
+        'Date,Payee,Description,Amount\n2026-10-22,qa pl"ain,tea,2.50',
+        /Unexpected quote inside an unquoted field in CSV record 2/,
+      ],
+      [
+        "a malformed later record",
+        'Date,Payee,Description,Amount\n2026-10-21,ok,coffee,1.00\n2026-10-22,"bad"x,tea,2.00',
+        /in CSV record 3/,
+      ],
+      [
+        "a malformed header",
+        'Date,"Payee"x,Description,Amount\n2026-10-21,ok,coffee,1.00',
+        /in CSV record 1/,
+      ],
+      [
+        "a semicolon file",
+        'Date;Payee;Description;Amount\n2026-10-21;"qa"tail;coffee;1,00',
+        /Unexpected text after a quoted field/,
+      ],
+    ])("refuses %s", (_, csv, message) => refused(csv, message));
+
+    it("keeps escaped quotes, quoted delimiters, padding and multiline fields", () => {
+      const parsed = parse(
+        [
+          "Date,Payee,Description,Amount",
+          '2026-10-21,"qa vendor ""tail""","a, b",-12.50',
+          '2026-10-22, "qa padded" ,"line one\r\nline two",12.50',
+          "2026-10-23,qa plain,qa notes,3.00",
+        ].join("\r\n"),
+      );
+      expect(parsed.validCount).toBe(3);
+      expect(parsed.rows.map((row) => row.payee)).toEqual([
+        'qa vendor "tail"',
+        "qa padded",
+        "qa plain",
+      ]);
+      expect(parsed.rows[0].description).toBe("a, b");
+      expect(parsed.rows[1].description).toBe("line one\nline two");
+      expect(parsed.rows.map((row) => row.amount)).toEqual([-12.5, 12.5, 3]);
+    });
+
+    it("leaves an empty field to ordinary row validation", () => {
+      const parsed = parse(
+        "Date,Payee,Description,Amount\n2026-10-23,qa plain,,3.00",
+      );
+      expect(parsed.rows).toHaveLength(1);
+      expect(parsed.rows[0].payee).toBe("qa plain");
+      expect(parsed.rows[0].errors).toEqual(["Description cannot be empty"]);
+    });
+
+    it("keeps quoted semicolon fields in a semicolon file", () => {
+      const parsed = parse(
+        'Date;Payee;Description;Amount\n2026-10-21;"qa; vendor";"tea";"1,50"',
+      );
+      expect(parsed.validCount).toBe(1);
+      expect(parsed.rows[0].payee).toBe("qa; vendor");
+      expect(parsed.rows[0].amount).toBe(1.5);
+    });
+  });
+
   describe("parseCSV – amount precision boundaries", () => {
     const FIXTURE = [
       "Date,Payee,Description,Amount",

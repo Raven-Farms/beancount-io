@@ -70,7 +70,16 @@ function parseRecords(text: string, delimiter: string): ParseRecordsResult {
   let columns: string[] = [];
   let currentField = "";
   let inQuotes = false;
+  // A quoted field has closed: only padding, the delimiter or the record's
+  // end may follow. Joining `"vendor"tail` or reading `"1"2.50` as 12.50
+  // invented values the file never held (w4/308).
+  let afterQuote = false;
   let i = 0;
+
+  const malformed = (what: string): ParseRecordsResult => ({
+    ok: false,
+    error: `${what} in CSV record ${records.length + 1}`,
+  });
 
   const pushRecord = () => {
     columns.push(currentField.trim());
@@ -94,6 +103,7 @@ function parseRecords(text: string, delimiter: string): ParseRecordsResult {
           continue;
         }
         inQuotes = false;
+        afterQuote = true;
         i += 1;
         continue;
       }
@@ -107,20 +117,34 @@ function parseRecords(text: string, delimiter: string): ParseRecordsResult {
       continue;
     }
 
-    if (char === '"') {
-      inQuotes = true;
-      i += 1;
-      continue;
-    }
     if (char === delimiter) {
       columns.push(currentField.trim());
       currentField = "";
+      afterQuote = false;
       i += 1;
       continue;
     }
     if (char === "\r" || char === "\n") {
       i += char === "\r" && text[i + 1] === "\n" ? 2 : 1;
       pushRecord();
+      afterQuote = false;
+      continue;
+    }
+    if (afterQuote) {
+      // Fields are trimmed, so padding before the delimiter is harmless.
+      if (char === " " || char === "\t") {
+        i += 1;
+        continue;
+      }
+      return malformed("Unexpected text after a quoted field");
+    }
+    if (char === '"') {
+      if (currentField.trim() !== "") {
+        return malformed("Unexpected quote inside an unquoted field");
+      }
+      currentField = "";
+      inQuotes = true;
+      i += 1;
       continue;
     }
 
