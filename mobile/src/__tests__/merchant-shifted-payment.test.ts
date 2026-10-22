@@ -139,3 +139,49 @@ describe("a twice-a-month bill paid on the 15th and the last day", () => {
     expect(later.nextExpected).toBe("2026-07-31");
   });
 });
+
+// w21/530: February's 28 days put two of a short biweekly series' payments on
+// the same day of the month, and the series read "Twice a month".
+describe("an every-two-weeks payment whose history spans February", () => {
+  const addDays = (start: string, days: number): string => {
+    const date = new Date(`${start}T00:00:00Z`);
+    date.setUTCDate(date.getUTCDate() + days);
+    return date.toISOString().slice(0, 10);
+  };
+
+  it("reads Every 2 weeks with Next Mar 27 for the daycare", () => {
+    const dates = [
+      "2026-01-02",
+      "2026-01-16",
+      "2026-01-30",
+      "2026-02-13",
+      "2026-02-27",
+      "2026-03-13",
+    ];
+    const verdict = detectRecurrence(on(dates), "2026-03-20")!;
+    expect(verdict.cadence).toBe("biweekly");
+    expect(verdict.nextExpected).toBe("2026-03-27");
+  });
+
+  it("has no misfire for any start day of 2024 and 2025, with 4 to 6 payments", () => {
+    const misfires: string[] = [];
+    for (let offset = 0; offset < 730; offset += 1) {
+      const start = addDays("2024-01-01", offset);
+      for (const count of [4, 5, 6]) {
+        const dates = Array.from({ length: count }, (_, i) =>
+          addDays(start, i * 14),
+        );
+        const last = dates[count - 1]!;
+        const verdict = detectRecurrence(on(dates), last);
+        if (
+          !verdict ||
+          verdict.cadence !== "biweekly" ||
+          verdict.nextExpected !== addDays(last, 14)
+        ) {
+          misfires.push(`${start}x${count}`);
+        }
+      }
+    }
+    expect(misfires).toEqual([]);
+  });
+});

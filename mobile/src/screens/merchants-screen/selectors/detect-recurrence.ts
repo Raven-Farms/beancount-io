@@ -548,8 +548,12 @@ export function detectRecurrence(
     return null;
   }
 
-  // Two stable days a month is its own cadence, not a biweekly one.
-  const semiMonthly = semiMonthlyDays(eventDays);
+  // Two stable days a month is its own cadence, not a biweekly one. Gaps of
+  // exactly 14 days throughout are biweekly: February is 28 days, so a short
+  // biweekly series spanning it shares a day of the month between two payments
+  // and fit two monthly anchors by chance (w21/530).
+  const steadyBiweekly = gaps.length >= 3 && gaps.every((gap) => gap === 14);
+  const semiMonthly = steadyBiweekly ? null : semiMonthlyDays(eventDays);
   if (!semiMonthly) {
     const dispersion = mad(gaps, medianGap) / medianGap;
     if (dispersion >= MAX_GAP_DISPERSION) {
