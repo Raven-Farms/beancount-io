@@ -33,3 +33,24 @@ export function formatChangePercent(pct: number): {
     flat: rounded === 0,
   };
 }
+
+/**
+ * The change row's amount and whether it reads in the neutral colour. A change
+ * that rounds to nothing is flat whatever the percentage: from a zero baseline
+ * there is no percentage, and "+$0.00" was drawn in the gain colour on an empty
+ * ledger (w21/416). Flat when the formatted amount holds no non-zero digit; a
+ * flat amount is shown unsigned. `pct` is the formatted percentage, if any,
+ * and decides flatness when there is one.
+ */
+export function describeChange(
+  change: number,
+  pct: { flat: boolean } | null,
+  format: (value: number, includePlus?: boolean) => string,
+): { amount: string; flat: boolean } {
+  const amount = format(change, true);
+  const roundsToNothing = !/[1-9]/.test(amount);
+  if (pct !== null) return { amount, flat: pct.flat };
+  return roundsToNothing
+    ? { amount: format(0), flat: true }
+    : { amount, flat: false };
+}

@@ -48,7 +48,11 @@ import {
 import { LEADING_TEXT_ALIGN, LTR_PLOT } from "@/common/rtl";
 import { ChartErrorBoundary } from "./chart-chrome";
 import { HERO_AMOUNT_FIT } from "@/components/amount-text/hero-amount-fit";
-import { changePercent, formatChangePercent } from "./change-percent";
+import {
+  changePercent,
+  describeChange,
+  formatChangePercent,
+} from "./change-percent";
 import {
   CHART_STEP_REST_MS,
   chartPointText,
@@ -446,8 +450,12 @@ function ScrubHeader({
   const change = shownValue - baseline;
   // The amount always reads; the percentage only when it means something.
   const changePct = changePercent(baseline, shownValue);
-  const changeAmount = format(change, true);
   const shownPct = changePct === null ? null : formatChangePercent(changePct);
+  const { amount: changeAmount, flat: changeFlat } = describeChange(
+    change,
+    shownPct,
+    format,
+  );
   const changeText =
     shownPct === null ? changeAmount : `${changeAmount} (${shownPct.text})`;
 
@@ -474,10 +482,7 @@ function ScrubHeader({
       />
       <View style={styles.changeRow}>
         <AmountText
-          style={[
-            styles.change,
-            { color: shownPct?.flat ? neutralColor : color },
-          ]}
+          style={[styles.change, { color: changeFlat ? neutralColor : color }]}
         >
           {changeText}
         </AmountText>

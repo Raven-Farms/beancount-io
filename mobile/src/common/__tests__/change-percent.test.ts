@@ -85,8 +85,63 @@ describe("the change row", () => {
       )
       .replace(/\s+/g, "");
     expect(chart.includes("formatChangePercent(changePct)")).toBe(true);
-    expect(chart.includes("shownPct?.flat?neutralColor:color")).toBe(true);
+    // The colour follows `describeChange`, which defers to the percentage when
+    // there is one (w21/416).
+    expect(chart.includes("changeFlat?neutralColor:color")).toBe(true);
     // No percentage is built from the raw change any more.
     expect(chart.includes('change>=0?"+":""')).toBe(false);
+  });
+});
+
+// w21/416: a change of exactly zero from a zero baseline has no percentage, and
+// "+$0.00" was drawn in the gain colour.
+describe("describeChange", () => {
+  const { describeChange } = require("../d3/change-percent");
+  const { formatSignedMoneyWithCurrency } = require("../number-utils");
+  const money = (value: number, includePlus?: boolean) =>
+    formatSignedMoneyWithCurrency(value, "USD", includePlus);
+
+  it("reads a zero change from a zero baseline as flat and unsigned", () => {
+    expect(describeChange(0, null, money)).toEqual({
+      amount: "$0.00",
+      flat: true,
+    });
+  });
+
+  it("reads a change that rounds to nothing as flat, with or without a percentage", () => {
+    expect(describeChange(0.001, null, money)).toEqual({
+      amount: "$0.00",
+      flat: true,
+    });
+    expect(describeChange(-0.002, null, money).flat).toBe(true);
+    // The percentage's own verdict stands when there is one.
+    expect(describeChange(5, { flat: true }, money).flat).toBe(true);
+    expect(describeChange(0, { flat: false }, money).flat).toBe(false);
+  });
+
+  it("keeps a real change signed and in colour", () => {
+    expect(describeChange(1904.4, null, money)).toEqual({
+      amount: "+$1,904.40",
+      flat: false,
+    });
+    expect(describeChange(-12, null, money)).toEqual({
+      amount: "-$12.00",
+      flat: false,
+    });
+  });
+
+  it("is what the change row uses for its colour and text", () => {
+    const src = require("fs")
+      .readFileSync(
+        require("path").join(__dirname, "../d3/interactive-line-chart.tsx"),
+        "utf8",
+      )
+      .replace(/\s+/g, "");
+    expect(
+      src.includes(
+        "const{amount:changeAmount,flat:changeFlat}=describeChange(change,shownPct,format,);",
+      ),
+    ).toBe(true);
+    expect(src.includes("{color:changeFlat?neutralColor:color}")).toBe(true);
   });
 });
