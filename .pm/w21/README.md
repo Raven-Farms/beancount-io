@@ -75,4 +75,9 @@
 - [495](./495.md) — 427 getLedgerFile guard never fires; AGENTS.md dangling ref (413)
 - [496](./496.md) — Reports chart draws all-zero range as 2pt bars on $0–$1 axis
 - [497](./497.md) — Bar-chart month labels lack year: Budget 1Y has two OCT
+- [498](./498.md) — Show older never hides at a multiple of 30 commits (431 regression)
+- [499](./499.md) — Home charts show duplicate title under the tab (441 regression)
+- [500](./500.md) — 435 incomplete: resumed draft still creates without balance
+- [501](./501.md) — Stored draft fingerprint reveals opening amount (434 vs 053)
+- [502](./502.md) — Create retry across midnight mints new requestId (436+434)
 - [315](./blocked/315.md) — In-app commits signed with Gitea username and real email (no full_name, no noreply) — **blocked:** needs the owner's noreply-address and published-history decisions, and a production backfill of existing Gitea users that can't be verified here
