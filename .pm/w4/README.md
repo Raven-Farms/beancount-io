@@ -88,7 +88,6 @@
 
 - [312 — Show unavailable AI usage when Billing's read fails](./312.md) — minor; dashboard QA, 2026-10-21; failed usage reads render invented0/0 counts and a full red gauge at both widths; loading and reload controls pass.
 
-- [311 — Detect a CSV delimiter after leading blank records](./311.md) — minor; dashboard QA, 2026-10-21; an empty sampling record defaults to comma, sending otherwise supported semicolon/tab files to the AI offer; ordinary and comma controls pass.
 
 - [265 — Keep financial text and private paths out of GA4 automatic events](./blocked/265.md) — major; dashboard QA, 2026-10-20; stream-editor completion dependency. — **blocked:** checklist shipped in `181e7a996`; needs a GA4 Editor to turn off Site search / history page views
 - [289 — Preserve long amount digits in portrait statement print output](./blocked/289.md) — minor; dashboard QA, 2026-10-20. — **blocked:** fix shipped in `68e973700`; awaiting portrait PDF check
