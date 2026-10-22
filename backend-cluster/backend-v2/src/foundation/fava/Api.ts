@@ -1147,6 +1147,11 @@ export interface EntryAddBulkEntriesRequest {
   filename?: string | null;
   /** Record entries deliberately even when they are unbalanced (UNBALANCED) or would add bean-check errors (NEW_LEDGER_ERRORS), instead of refusing them. */
   allowInvalid?: boolean;
+  /**
+   * Dryrun
+   * Run every check — balance, tokens, bean-check, the directive limit — and commit nothing.
+   */
+  dryRun?: boolean | null;
 }
 
 /**

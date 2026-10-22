@@ -337,3 +337,79 @@ describe("bulk entries refuse tokens that would not lex as written", () => {
     expect(written).toContain("资产:现金");
   });
 });
+
+// w23/058: a receipt insert stored its file before the entry was checked, so
+// a refused entry left an orphan. A dry run answers first, committing nothing.
+describe("bulk entries dry run", () => {
+  let server: http.Server;
+  let url: string;
+
+  beforeAll(async () => {
+    const app = new Koa();
+    const router = new Router();
+    setEntriesHandler(router);
+    app.use(restErrorMiddleware());
+    app.use(bodyParser());
+    app.use(router.routes());
+    server = http.createServer(app.callback());
+    url = await listen(server);
+  });
+
+  afterAll(() => new Promise<void>((resolve) => server.close(() => resolve())));
+
+  beforeEach(() => {
+    baselineErrors = [];
+    committed.length = 0;
+  });
+
+  const post = (body: Record<string, unknown>) =>
+    fetch(`${url}/entries/alice/books/bulk`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(body),
+    });
+  const txn = (second: string) => ({
+    type: "transaction",
+    item: {
+      date: "2026-08-30",
+      flag: "*",
+      narration: "receipt",
+      postings: [
+        { account: "Assets:Cash", units: { number: "-2.00", currency: "USD" } },
+        {
+          account: "Equity:Opening",
+          units: { number: second, currency: "USD" },
+        },
+      ],
+    },
+  });
+
+  it("accepts a valid entry and commits nothing", async () => {
+    const response = await post({ entries: [txn("2.00")], dryRun: true });
+    expect(response.status).toBe(200);
+    expect(committed).toEqual([]);
+  });
+
+  it("refuses an unbalanced entry exactly as the write would", async () => {
+    const response = await post({ entries: [txn("1.00")], dryRun: true });
+    expect(response.status).toBe(400);
+    expect(((await response.json()) as { code: string }).code).toBe(
+      "UNBALANCED",
+    );
+    expect(committed).toEqual([]);
+  });
+
+  it("checks against an empty file when the routed target does not exist yet", async () => {
+    const response = await post({
+      entries: [{ ...txn("2.00"), filename: "txns/2026.bean" }],
+      dryRun: true,
+    });
+    expect(response.status).toBe(200);
+    expect(committed).toEqual([]);
+  });
+
+  it("still commits without dryRun", async () => {
+    expect((await post({ entries: [txn("2.00")] })).status).toBe(200);
+    expect(committed).toHaveLength(1);
+  });
+});

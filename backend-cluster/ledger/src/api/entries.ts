@@ -114,9 +114,12 @@ export function setEntriesHandler(router: Router): void {
         entries?: BulkEntryWire[];
         filename?: string | null;
         allowInvalid?: boolean | null;
+        /** Run every check, commit nothing (w23/058). */
+        dryRun?: boolean | null;
       };
       const defaultFilename = body.filename || "main.bean";
       const allowInvalid = body.allowInvalid === true;
+      const dryRun = body.dryRun === true;
       const rows = body.entries ?? [];
       assertDecimalAmounts(rows);
       assertEntryTokens(rows);
@@ -147,6 +150,11 @@ export function setEntriesHandler(router: Router): void {
           if ((err as { status?: number }).status !== 404) throw err;
         }
         if (file === null) {
+          // A routed file the write would create first: check against empty.
+          if (dryRun) {
+            currentContents.set(target, { current: "", sha: "" });
+            continue;
+          }
           throw new NotFoundDetailError(`File ${target} not found`);
         }
         currentContents.set(target, {
@@ -254,6 +262,13 @@ export function setEntriesHandler(router: Router): void {
           Object.fromEntries(updates.map((u) => [u.path, u.content])),
           { exempt: directiveLimitExempt(ctx) },
         );
+        // A caller that has to do something irreversible first — store a
+        // receipt — asks whether the entries would be accepted, so a refusal
+        // leaves nothing behind (w23/058).
+        if (dryRun) {
+          ctx.body = successResponse(null);
+          return;
+        }
         await client.repos.repoChangeFiles(owner, repoName, {
           files: updates.map((u) => ({
             operation: "update" as const,

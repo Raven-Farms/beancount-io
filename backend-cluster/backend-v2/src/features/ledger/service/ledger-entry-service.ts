@@ -206,6 +206,8 @@ export interface ILedgerEntryWriter {
     inputs: LedgerEntryInput[],
     platform: "web" | "mobile",
     allowInvalid?: boolean,
+    /** Run every check the write would and commit nothing (w23/058). */
+    dryRun?: boolean,
   ): Promise<AddBulkEntriesResult>;
 }
 
@@ -285,6 +287,7 @@ class FavaLedgerEntryWriter implements ILedgerEntryWriter {
     inputs: LedgerEntryInput[],
     platform: "web" | "mobile",
     allowInvalid = false,
+    dryRun = false,
   ): Promise<AddBulkEntriesResult> {
     const ledgerId = `${ledgerOwner}/${ledgerName}`;
     // At most one posting per transaction may omit its amount; the ledger
@@ -337,7 +340,8 @@ class FavaLedgerEntryWriter implements ILedgerEntryWriter {
       return this.buildEntry(input, filename);
     });
 
-    // Ensure each distinct target file exists before committing.
+    // Ensure each distinct target file exists before committing; a dry run
+    // creates nothing, and the ledger checks a missing one as empty.
     const distinctFiles = [
       ...new Set(
         entries
@@ -345,7 +349,7 @@ class FavaLedgerEntryWriter implements ILedgerEntryWriter {
           .filter((filename): filename is string => Boolean(filename)),
       ),
     ];
-    for (const filename of distinctFiles) {
+    for (const filename of dryRun ? [] : distinctFiles) {
       await this.ensureFileExists(
         favaApiClient,
         ledgerOwner,
@@ -361,6 +365,7 @@ class FavaLedgerEntryWriter implements ILedgerEntryWriter {
       entries,
       platform,
       allowInvalid,
+      dryRun,
     );
 
     const noun = inputs.length === 1 ? "entry" : "entries";
@@ -560,12 +565,13 @@ class FavaLedgerEntryWriter implements ILedgerEntryWriter {
     entries: BulkEntries,
     platform: "web" | "mobile" = "web",
     allowInvalid = false,
+    dryRun = false,
   ): Promise<void> {
     await unwrapFavaResponse(
       favaApiClient.entries.addBulkEntries(
         ledgerOwner,
         ledgerName,
-        { entries, allowInvalid },
+        { entries, allowInvalid, ...(dryRun && { dryRun }) },
         directiveLimitExemptParams(platform),
       ),
       "add entries",

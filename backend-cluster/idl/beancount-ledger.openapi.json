@@ -9645,6 +9645,18 @@
           "allowInvalid": {
             "type": "boolean",
             "description": "Record entries deliberately even when they are unbalanced (UNBALANCED) or would add bean-check errors (NEW_LEDGER_ERRORS), instead of refusing them."
+          },
+          "dryRun": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dryrun",
+            "description": "Run every check — balance, tokens, bean-check, the directive limit — and commit nothing."
           }
         },
         "type": "object",
