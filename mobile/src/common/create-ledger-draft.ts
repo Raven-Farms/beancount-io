@@ -33,7 +33,8 @@ export interface CreateLedgerDraft<Values> {
    * A fingerprint of the request last sent under `requestId`. A resumed draft
    * has no amount to rebuild that request from, so it carries this instead:
    * the next create is the same request, or it gets an id of its own
-   * (w21/434).
+   * (w21/434). Not stored when the request carried an opening amount
+   * (w21/501).
    */
   sentFingerprint?: string;
   values: Values;
@@ -48,6 +49,15 @@ type DraftValues = {
 /** The step holding the form's fields, the opening amount among them. */
 const FORM_STEP = 1;
 
+/**
+ * Stored in place of a fingerprint that covered an opening amount. The
+ * fingerprint is a 32-bit hash, so a stored one gave the amount away to anyone
+ * reading storage; this matches no request, so the resumed draft's next create
+ * gets an id of its own, as it did when the lost amount changed the request
+ * (w21/501).
+ */
+const AMOUNT_FINGERPRINT_REDACTED = "amount-not-kept";
+
 /** The draft as stored: without the opening amount, with when it was saved. */
 export function serializeCreateLedgerDraft<Values extends DraftValues>(
   draft: CreateLedgerDraft<Values>,
@@ -55,6 +65,10 @@ export function serializeCreateLedgerDraft<Values extends DraftValues>(
 ): string {
   return JSON.stringify({
     ...draft,
+    ...(draft.sentFingerprint !== undefined &&
+      draft.values.openingAccount && {
+        sentFingerprint: AMOUNT_FINGERPRINT_REDACTED,
+      }),
     requestedAt: draft.requestedAt ?? now.getTime(),
     values: { ...draft.values, openingAmount: "" },
     savedAt: now.getTime(),

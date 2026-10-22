@@ -18,6 +18,9 @@ const {
   restoreCreateLedgerDraft,
   serializeCreateLedgerDraft,
 } = draftModule;
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const { isNewCreateRequest } =
+  require("../../screens/create-ledger-screen/ledger-name") as typeof import("../../screens/create-ledger-screen/ledger-name");
 
 type Values = {
   name: string;
@@ -53,10 +56,39 @@ describe("the Create Ledger draft", () => {
     expect(JSON.parse(raw).requestId).toBe("req-1");
   });
 
+  // w21/501: a 32-bit hash of the request, amount included, let anyone reading
+  // storage recover the opening balance by brute force.
+  it("does not store a fingerprint that covered an opening amount", () => {
+    const raw = serializeCreateLedgerDraft(
+      { ...draft, sentFingerprint: "1in7xp8" },
+      saved,
+    );
+    expect(raw.includes("1in7xp8")).toBe(false);
+    expect(JSON.parse(raw).sentFingerprint).toBe("amount-not-kept");
+    // It matches no request, so the resumed draft's next create is new.
+    expect(isNewCreateRequest("amount-not-kept", "1in7xp8")).toBe(true);
+  });
+
+  it("keeps the fingerprint of a request that had no opening account", () => {
+    const raw = serializeCreateLedgerDraft(
+      {
+        ...draft,
+        sentFingerprint: "abc12",
+        values: { ...draft.values, openingAccount: "" },
+      },
+      saved,
+    );
+    expect(JSON.parse(raw).sentFingerprint).toBe("abc12");
+  });
+
   // w21/434: the id's request travels with it, without the amount.
   it("keeps the fingerprint of the request last sent", () => {
     const raw = serializeCreateLedgerDraft(
-      { ...draft, sentFingerprint: "abc12" },
+      {
+        ...draft,
+        sentFingerprint: "abc12",
+        values: { ...draft.values, openingAccount: "" },
+      },
       saved,
     );
     expect(JSON.parse(raw).sentFingerprint).toBe("abc12");
