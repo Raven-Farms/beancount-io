@@ -286,6 +286,66 @@ describe("selectTransactionAmount", () => {
     });
   });
 
+  // w21/570: a fee or rounding line made the whole USD side read as spent.
+  describe("a currency exchange with a fee or rounding line", () => {
+    const exchange = (...extra: ReturnType<typeof makePosting>[]) =>
+      makeTransaction({
+        postings: [
+          makePosting("Assets:Cash", "-110.00"),
+          {
+            ...makePosting("Assets:QaEurBank", "100.00", "EUR"),
+            price: { number: "1.09", currency: "USD" },
+          },
+          ...extra,
+        ],
+      });
+
+    it("reads only the fee that left, not the cash that moved", () => {
+      expect(
+        selectTransactionAmount(
+          exchange(makePosting("Expenses:QaFees", "1.00")),
+          "USD",
+        ),
+      ).toEqual({ text: "$1.00", value: -1, currency: "USD" });
+    });
+
+    it("reads a rounding income line as the small amount that came in", () => {
+      expect(
+        selectTransactionAmount(
+          exchange(makePosting("Income:Rounding", "-0.01")),
+          "USD",
+        ),
+      ).toEqual({ text: "$0.01", value: 0.01, currency: "USD" });
+    });
+
+    it("stays a neutral exchange when the lines cancel out or are in two currencies", () => {
+      const cancels = selectTransactionAmount(
+        exchange(
+          makePosting("Expenses:QaFees", "1.00"),
+          makePosting("Income:Rounding", "-1.00"),
+        ),
+        "USD",
+      );
+      expect(cancels).toEqual({ text: "$110.00", value: 0, currency: "USD" });
+      const mixed = selectTransactionAmount(
+        exchange(
+          makePosting("Expenses:QaFees", "1.00"),
+          makePosting("Expenses:Other", "2.00", "EUR"),
+        ),
+        "USD",
+      );
+      expect(mixed && "value" in mixed ? mixed.value : null).toBe(0);
+    });
+
+    it("still reads the exchange with no fee as neutral", () => {
+      expect(selectTransactionAmount(exchange(), "USD")).toEqual({
+        text: "$110.00",
+        value: 0,
+        currency: "USD",
+      });
+    });
+  });
+
   it("falls back to the largest single posting when no cash accounts exist", () => {
     const tx = makeTransaction({
       postings: [

@@ -80,6 +80,34 @@ const isBalanceSheet = (account: string, roots: RootNames): boolean => {
   return root === "assets" || root === "liabilities";
 };
 
+/** An Expenses or Income posting: the fee or rounding line of an exchange. */
+const isFeeLine = (account: string, roots: RootNames): boolean => {
+  const root = getAccountRoot(account, roots);
+  return root === "expenses" || root === "income";
+};
+
+/**
+ * The amount an exchange's fee and rounding lines leave, signed from the cash
+ * side (spent is negative), or null when they are in several currencies or
+ * cancel out, where the exchange stays neutral.
+ */
+const feeAmount = (lines: JournalPosting[]): TransactionAmount | null => {
+  const currencies = new Set(lines.map((p) => p.units.currency));
+  if (currencies.size !== 1) return null;
+  const currency = lines[0]!.units.currency;
+  let total = 0;
+  let scale = 0;
+  for (const p of lines) {
+    const value = parseFloat(p.units.number);
+    if (!Number.isFinite(value)) return null;
+    total += value;
+    scale = Math.max(scale, amountScale(p.units.number));
+  }
+  const value = -total;
+  if (Math.abs(value) < 0.5 * 10 ** -scale) return null;
+  return { text: formatAmount(value, currency, scale), value, currency };
+};
+
 /**
  * The one number to show for a transaction, in a single currency.
  *
@@ -169,9 +197,30 @@ export const selectTransactionAmount = (
       if (buckets.length > 1) {
         const isTrade = postings.some((p) => p.cost?.currency);
         const operating = buckets.find(([c]) => c === operatingCurrency);
+        // An exchange between your own accounts may carry a fee or a rounding
+        // line (Expenses or Income). Only that line left, so it is the amount;
+        // the cash that moved from one account to the other is neutral
+        // (w21/570).
+        const feeLines = postings.filter((p) => isFeeLine(p.account, roots));
+        // The exchange is priced (`@ 1.09 USD`), which is how an entry like it
+        // balances; a card purchase that also earns miles balances without one
+        // and keeps reading as the money spent.
+        const exchangeWithFee =
+          !isTrade &&
+          feeLines.length > 0 &&
+          postings.some((p) => p.price) &&
+          postings.every(
+            (p) =>
+              isBalanceSheet(p.account, roots) || isFeeLine(p.account, roots),
+          );
+        if (exchangeWithFee) {
+          const fee = feeAmount(feeLines);
+          if (fee) return fee;
+        }
         if (
           !isTrade &&
-          postings.every((p) => isBalanceSheet(p.account, roots))
+          (exchangeWithFee ||
+            postings.every((p) => isBalanceSheet(p.account, roots)))
         ) {
           const [currency, bucket] =
             operating ??
