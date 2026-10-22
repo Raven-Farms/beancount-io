@@ -223,7 +223,7 @@ export const EntryRow: React.FC<EntryRowProps> = ({
         </View>
         {isPending && (
           <View style={styles.badge}>
-            <Text style={styles.badgeText}>P</Text>
+            <Text style={styles.badgeText}>!</Text>
           </View>
         )}
       </View>

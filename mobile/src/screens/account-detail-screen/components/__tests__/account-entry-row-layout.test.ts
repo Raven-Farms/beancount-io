@@ -163,7 +163,7 @@ describe("AccountEntryRow at enlarged text", () => {
     expect(flat(row.props.style).flexDirection).toBe("column");
     expect(title.props.numberOfLines).toBe(undefined);
     expect(textOf(title)).toBe(transfer.title);
-    expect(findAll(main, (node) => textOf(node) === "P").length > 0).toBe(true);
+    expect(findAll(main, (node) => textOf(node) === "!").length > 0).toBe(true);
     expect(flat(trailing.props.style).alignItems).toBe("flex-start");
     expect(
       findAll(trailing, (node) => node.type === "AmountText").map(textOf),

@@ -186,7 +186,7 @@ export function PostingRow({
           </Text>
           {posting.pending ? (
             <View style={styles.badge}>
-              <Text style={styles.badgeText}>P</Text>
+              <Text style={styles.badgeText}>!</Text>
             </View>
           ) : null}
         </View>
