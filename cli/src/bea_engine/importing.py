@@ -487,7 +487,7 @@ def answer(
         if isinstance(entry, Transaction) and _source_legs(entry, account):
             elsewhere = _issued_elsewhere(entry, account, roots[:2])
             if elsewhere and id(loaded) in declared:
-                counterparts.setdefault(_amounts_key(_fingerprint(entry, account)), []).append(entry)
+                counterparts.setdefault(_blind_key(_fingerprint(entry, account)[3]), []).append(entry)
             # A transfer's `import-id-2` is its second balance-sheet leg's own
             # id, so importing that account matches it exactly; scoped to the
             # first leg's account, a migrated transfer's savings row was held
@@ -1871,7 +1871,7 @@ def _transfer_side(
         if (
             found is not None
             and abs((found.date - entry.date).days) <= _TRANSFER_DAYS
-            and _legs_agree(fingerprint[3], _fingerprint(found, account)[3])
+            and _transfer_legs_agree(fingerprint[3], _fingerprint(found, account)[3])
         ):
             return key, found
     return None
@@ -1895,6 +1895,32 @@ def _amounts_key(fingerprint: tuple[Any, ...]) -> tuple[str, ...]:
     )
 
 
+def _blind_key(legs: Sequence[_Leg]) -> tuple[str, ...]:
+    """The source amounts summed by currency alone, the price and lot a leg states left out (w5/931)."""
+    totals: dict[str, Decimal] = {}
+    for text, _, _ in legs:
+        number, currency, _price = _units_of(text)
+        totals[currency] = totals.get(currency, Decimal(0)) + number
+    return tuple(sorted(_exact_amount(number, currency) for currency, number in totals.items()))
+
+
+def _transfer_legs_agree(ours: Sequence[_Leg], theirs: Sequence[_Leg]) -> bool:
+    """Whether a statement row is the other side of a booked transfer's cash movement.
+
+    A bank states the units it moved, not the exchange price or lot the other
+    side's booking attached to them, so a row that states neither agrees with
+    any price or cost on the booked posting: the booked `100 EUR @ 1.10 USD`
+    is the 100 EUR the receiving statement lists, and booking it again doubled
+    the cash. A row that does state a price or lot is compared as written.
+    Source-fact comparison under a native ID stays strict (w5/931).
+    """
+    if _blind_key(ours) != _blind_key(theirs):
+        return False
+    if all(" @" not in text and (lot is None or all(field is None for field in lot)) for text, lot, _ in ours):
+        return True
+    return _legs_agree(ours, theirs)
+
+
 def _transfer_counterpart(
     counterparts: dict[tuple[str, ...], list[Any]],
     entry: Any,
@@ -1915,9 +1941,9 @@ def _transfer_counterpart(
     """
     near = [
         found
-        for found in reversed(counterparts.get(_amounts_key(fingerprint), []))
+        for found in reversed(counterparts.get(_blind_key(fingerprint[3]), []))
         if abs((found.date - entry.date).days) <= _COUNTERPART_DAYS
-        and _legs_agree(fingerprint[3], _fingerprint(found, account)[3])
+        and _transfer_legs_agree(fingerprint[3], _fingerprint(found, account)[3])
     ]
     near.sort(key=lambda found: abs((found.date - entry.date).days))
     return next((found for found in near if paired(found) == index), None)
@@ -1964,9 +1990,9 @@ def _assign_counterparts(
         legs = _fingerprint(found, account)
         for index, printed in prints.items():
             days = abs((found.date - rows[index].date).days)
-            if index in taken or days > _COUNTERPART_DAYS or _amounts_key(printed) != _amounts_key(legs):
+            if index in taken or days > _COUNTERPART_DAYS:
                 continue
-            if _legs_agree(printed[3], legs[3]):
+            if _transfer_legs_agree(printed[3], legs[3]):
                 candidates.append((days, index, order, found))
     for _days, index, _order, found in sorted(candidates, key=lambda item: item[:3]):
         if index not in taken and id(found) not in assigned:

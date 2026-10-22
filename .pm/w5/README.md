@@ -77,7 +77,6 @@
 - [959 — Treat repeated allowed currencies as one during transaction inference](./959.md) — minor CLI existing-ledger/native-import inference finding; USD/EUR and split-file controls reproduced 2026-10-21.
 - [958 — Keep unused unopened accounts out of remembered CSV settings](./958.md) — minor CLI memory-guard follow-up to 452/714; empty, skipped and fully categorized exports reproduced 2026-10-21.
 - [957 — Allow instrument units in the portfolio preset's holdings account](./957.md) — minor CLI first-purchase setup finding; reproduced twice in USD/EUR on 2026-10-21.
-- [931 — Match FX transfer counterparts with plain bank amounts](./931.md) — major CLI double-booking gap; a price or cost on a cash leg hides the other bank's plain statement row, changing balances and net worth at exit 0, reproduced 2026-10-21.
 - [932 — Avoid intermediate year zero in representable fiscal periods](./932.md) — minor CLI date-boundary gap; FY0001 and valid first-year quarters refuse while equivalent calendar periods work, reproduced 2026-10-21.
 - [933 — Do not count a forecast overlay as a second independent root](./933.md) — minor CLI split-ledger regression; a forecast ancestor creates false ambiguity for leaf adds/imports and is suggested as the root, reproduced 2026-10-21.
 - [934 — Recognize native directive text when locating a leaf's root](./934.md) — major CLI root-fact gap; native date/BOM opens permit invalidating writes, while a BOM on a root-only option loses currency inference, reproduced 2026-10-21.
