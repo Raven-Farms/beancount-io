@@ -401,6 +401,7 @@ export type ZeroBalanceOptions = {
 function graftZeroAccounts(
   children: readonly RawChild[],
   options: ZeroBalanceOptions,
+  currency: string,
 ): { children: RawChild[]; keep: Set<string> } {
   const keep = new Set<string>();
   const wanted = options.accounts ?? [];
@@ -409,7 +410,15 @@ function graftZeroAccounts(
     return { children: children as RawChild[], keep };
   }
 
-  const existing = new Set(rawNodes(children).map((node) => node.account));
+  // A descendant the filters will not drop: listed, or holding something.
+  // The raw tree also carries closed accounts, emptied, which they do drop
+  // (w21/280).
+  const survives = (node: RawChild): boolean =>
+    wanted.includes(node.account) ||
+    resolveCurrencyBalance(node.balance_children, currency) !== 0 ||
+    (options.wholeBalance === true &&
+      notInTotalOf(node.balance_children, currency).length > 0);
+  const rendered = rawNodes(children).filter(survives);
   // Copied, never mutated in place: the raw nodes belong to the Apollo cache.
   const clone = (node: RawChild): RawChild => ({
     account: node.account,
@@ -422,13 +431,9 @@ function graftZeroAccounts(
     if (!account.startsWith(`${root}:`)) {
       continue;
     }
-    // An ancestor of accounts the hierarchy already renders: those rows stand
+    // An ancestor of accounts the hierarchy still renders: those rows stand
     // in for it, so it needs neither a graft nor a reprieve from the filter.
-    if (
-      Array.from(existing).some((rendered) =>
-        rendered.startsWith(`${account}:`),
-      )
-    ) {
+    if (rendered.some((node) => node.account.startsWith(`${account}:`))) {
       continue;
     }
     let siblings = grafted;
@@ -484,6 +489,7 @@ export function selectAccountTreeFromRoot(
   const { children: raw, keep } = graftZeroAccounts(
     (children ?? []).map(fromSerializable),
     zeroBalance,
+    currency,
   );
   return buildTopLevel(
     raw,

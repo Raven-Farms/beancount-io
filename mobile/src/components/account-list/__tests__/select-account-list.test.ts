@@ -301,6 +301,53 @@ describe("selectAccountTreeFromRoot", () => {
     ]);
   });
 
+  it("lists an open zero account whose only sub-account is closed and empty (w21/280)", () => {
+    const root = createIncomeRoot("Assets", [
+      {
+        account: "Assets:Savings",
+        balanceChildren: { USD: 0 },
+        children: [
+          { account: "Assets:Savings:CD", balanceChildren: { USD: 0 } },
+        ],
+      },
+      { account: "Assets:Checking", balanceChildren: { USD: 100 } },
+    ]);
+    // The ledger lists Savings (open) but not CD (closed), so CD is dropped
+    // as an empty row and Savings must not vanish with it.
+    const rows = selectAccountTreeFromRoot("USD", root, 1, {
+      accounts: ["Assets:Savings", "Assets:Checking"],
+      rootAccount: "Assets",
+    });
+    expect(rows.map((row) => row.account).sort()).toEqual([
+      "Assets:Checking",
+      "Assets:Savings",
+    ]);
+    const savings = rows.find((row) => row.account === "Assets:Savings");
+    expect(savings?.value).toBe(0);
+    expect(savings?.children).toEqual([]);
+  });
+
+  it("still lets a rendered child stand in for its listed parent", () => {
+    const root = createIncomeRoot("Assets", [
+      {
+        account: "Assets:Cash",
+        balanceChildren: { USD: 40 },
+        children: [
+          { account: "Assets:Cash:Wallet", balanceChildren: { USD: 40 } },
+        ],
+      },
+      { account: "Assets:Checking", balanceChildren: { USD: 100 } },
+    ]);
+    const rows = selectAccountTreeFromRoot("USD", root, 1, {
+      accounts: ["Assets:Cash", "Assets:Cash:Wallet", "Assets:Checking"],
+      rootAccount: "Assets",
+    });
+    expect(rows.map((row) => row.account).sort()).toEqual([
+      "Assets:Cash:Wallet",
+      "Assets:Checking",
+    ]);
+  });
+
   it("parses string balances and reads 0 when the currency is missing", () => {
     const root = createIncomeRoot("Income", [
       { account: "Income:Salary", balanceChildren: { USD: "5000.50" } },

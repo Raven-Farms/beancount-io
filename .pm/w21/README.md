@@ -19,7 +19,6 @@
 - [206](./blocked/206.md) — Refund/return receipts are always prefilled as a purchase — **blocked:** needs an owner-approved AI-quota evaluation and a parse-contract decision (`isRefund` vs signed amount)
 - [210](./blocked/210.md) — Holdings sheet labels a user-typed price "Live price" and applies the feed's staleness rule — **blocked:** needs an owner decision on exposing the feed's effective price dates (cross-package contract) and a deploy before mobile can read it
 - [228](./blocked/228.md) — New Transaction stamps the first operating currency on every posting; no currency or price control — **blocked:** needs account-constraint currencies on the client, a price path (legacy field or typed mutation, deploy first) and an owner-approved form design
-- [280](./280.md) — An open $0 account vanishes when its only sub-account is closed and emptied
 - [281](./281.md) — Receipt capture can prefill and save an account the ledger never opened
 - [282](./282.md) — Android: library HEIC re-encoded to JPEG but uploaded as image/heic, always "Could not read receipt"
 - [283](./283.md) — Android: granting camera in Settings leaves "Camera access is needed" until reopen
