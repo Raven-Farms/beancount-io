@@ -5,6 +5,7 @@ type FileError = {
   message: string;
   lineno?: number | null;
   filename?: string | null;
+  hint?: string | null;
 };
 
 /**
@@ -35,10 +36,10 @@ function messageNamesFile(message: string, filePath: string): boolean {
   return false;
 }
 
-export function filterFileErrors(
-  allErrors: FileError[],
+export function filterFileErrors<T extends FileError>(
+  allErrors: T[],
   filePath: string,
-): FileError[] {
+): T[] {
   return allErrors.filter((e) => {
     if (e.filename != null && e.filename !== "") {
       return sameLedgerFile(e.filename, filePath);

@@ -77,7 +77,11 @@ import {
   resetRevisionTracker,
 } from "@/components/code-editor/revision-tracker";
 import { isConflictFailure } from "@/common/ledger-conflict";
-import { firstNewLedgerError } from "@/common/new-ledger-error";
+import {
+  errorHint,
+  errorMessageWithHint,
+  firstNewLedgerError,
+} from "@/common/new-ledger-error";
 import { filterFileErrors, readOnlyNoticeColors } from "./utils";
 import { selectLedgerFileEditorState } from "./select-editor-state";
 import { LEADING_TEXT_ALIGN, directionalIcon } from "@/common/rtl";
@@ -159,6 +163,12 @@ const getStyles = (theme: ColorTheme) =>
       lineHeight: 16,
       textAlign: LEADING_TEXT_ALIGN,
     },
+    errorHint: {
+      fontSize: 12,
+      lineHeight: 17,
+      color: theme.black80,
+      marginTop: 2,
+    },
     errorLocation: {
       fontSize: 11,
       fontFamily: fonts.mono,
@@ -211,7 +221,11 @@ const getStyles = (theme: ColorTheme) =>
 
 // ─── Error panel ─────────────────────────────────────────────────────────────
 
-type FileError = { message: string; lineno: number | null | undefined };
+type FileError = {
+  message: string;
+  lineno: number | null | undefined;
+  hint?: string | null;
+};
 
 function ErrorBanner({
   errors,
@@ -266,6 +280,10 @@ function ErrorBanner({
                 />
                 <View style={{ flex: 1 }}>
                   <Text style={styles.errorText}>{err.message}</Text>
+                  {errorHint(err) && (
+                    // The engine's fix, when it has one (w21/424).
+                    <Text style={styles.errorHint}>{errorHint(err)}</Text>
+                  )}
                   {err.lineno != null && (
                     // Translated, as the banner's count is (w21/091).
                     <Text style={styles.errorLocation}>
@@ -295,7 +313,7 @@ function ErrorBanner({
                     accessibilityHint={t("ledgerEditorJumpToLine", {
                       line: err.lineno,
                     })}
-                    accessibilityLabel={`${err.message}, ${t("ledgerEditorErrorLine", { line: err.lineno })}`}
+                    accessibilityLabel={`${errorMessageWithHint(err)}, ${t("ledgerEditorErrorLine", { line: err.lineno })}`}
                   >
                     {body}
                   </TouchableOpacity>
@@ -306,7 +324,7 @@ function ErrorBanner({
                     style={styles.errorRow}
                     accessible
                     accessibilityRole="text"
-                    accessibilityLabel={err.message}
+                    accessibilityLabel={errorMessageWithHint(err)}
                   >
                     {body}
                   </View>

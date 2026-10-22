@@ -16,6 +16,7 @@ import { useThemeStyle, useToast } from "@/common/hooks";
 import * as Clipboard from "expo-clipboard";
 import { useTranslations } from "@/common/hooks/use-translations";
 import { useLedgerErrors } from "@/common/hooks/use-ledger-errors";
+import { errorHint } from "@/common/new-ledger-error";
 import { selectSectionsPending } from "./section-state";
 import {
   appendCommitPage,
@@ -33,6 +34,7 @@ import { FadeInView } from "@/components/crossfade";
 import { ThemedRefreshControl } from "@/components/dashboard-scroll-view";
 import {
   errorCopyText,
+  errorSpokenText,
   formatErrorLocation,
   formatCommitAuthorLine,
   commitRowAccessibilityLabel,
@@ -90,6 +92,13 @@ const getStyles = (theme: ColorTheme) =>
       fontSize: 14,
       color: theme.error,
       lineHeight: 20,
+      textAlign: LEADING_TEXT_ALIGN,
+    },
+    errorHint: {
+      fontSize: 13,
+      color: theme.black80,
+      lineHeight: 18,
+      marginTop: 4,
       textAlign: LEADING_TEXT_ALIGN,
     },
     errorLocation: {
@@ -205,6 +214,9 @@ function ErrorRow({
         <Text style={styles.errorMessage} selectable={!canFix}>
           {err.message}
         </Text>
+        {errorHint(err) && (
+          <Text style={styles.errorHint}>{errorHint(err)}</Text>
+        )}
         {err.filename && (
           <Text style={styles.errorLocation}>{formatErrorLocation(err)}</Text>
         )}
@@ -222,11 +234,7 @@ function ErrorRow({
         onPress={handlePress}
         onLongPress={() => void copyError()}
         accessibilityRole="button"
-        accessibilityLabel={
-          err.filename
-            ? `${err.message}. ${formatErrorLocation(err)}`
-            : err.message
-        }
+        accessibilityLabel={errorSpokenText(err)}
         accessibilityActions={[{ name: "copy", label: t("copy") }]}
         onAccessibilityAction={(event) => {
           if (event.nativeEvent.actionName === "copy") void copyError();

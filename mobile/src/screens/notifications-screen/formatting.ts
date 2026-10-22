@@ -1,8 +1,10 @@
 import { formatMoment } from "../../common/date-format";
+import { errorHint, errorMessageWithHint } from "../../common/new-ledger-error";
 export type LedgerError = {
   filename?: string | null;
   lineno?: number | null;
   message: string;
+  hint?: string | null;
 };
 
 export function formatErrorLocation(error: LedgerError): string {
@@ -12,14 +14,20 @@ export function formatErrorLocation(error: LedgerError): string {
 }
 
 /**
- * What copying an error row puts on the clipboard: the message, then where it
- * is ("main.bean:12") on its own line, to search for or send to someone
- * (w21/432).
+ * What copying an error row puts on the clipboard: the message, the engine's
+ * hint when it has one, then where it is ("main.bean:12") on its own line, to
+ * search for or send to someone (w21/432, w21/424).
  */
 export function errorCopyText(error: LedgerError): string {
-  return error.filename
-    ? `${error.message}\n${formatErrorLocation(error)}`
-    : error.message;
+  const hint = errorHint(error);
+  const text = hint ? `${error.message}\n${hint}` : error.message;
+  return error.filename ? `${text}\n${formatErrorLocation(error)}` : text;
+}
+
+/** What a screen reader says for an error row: message, hint, then place. */
+export function errorSpokenText(error: LedgerError): string {
+  const head = errorMessageWithHint(error);
+  return error.filename ? `${head}. ${formatErrorLocation(error)}` : head;
 }
 
 export function formatShortSha(sha: string, shortSha?: string | null): string {

@@ -25,7 +25,7 @@ describe("the file editor's error rows", () => {
     expect(source.includes("{err.lineno!=null?(<TouchableOpacity")).toBe(true);
     expect(
       source.includes(
-        'accessibilityRole="text"accessibilityLabel={err.message}',
+        'accessibilityRole="text"accessibilityLabel={errorMessageWithHint(err)}',
       ),
     ).toBe(true);
   });

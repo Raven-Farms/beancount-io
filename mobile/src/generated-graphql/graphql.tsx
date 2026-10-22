@@ -202,7 +202,7 @@ export type GetLedgerErrorsQueryVariables = Exact<{
 }>;
 
 
-export type GetLedgerErrorsQuery = { getLedgerErrors: Array<{ filename: string | null, lineno: number | null, message: string }> };
+export type GetLedgerErrorsQuery = { getLedgerErrors: Array<{ filename: string | null, lineno: number | null, message: string, code: string | null, hint: string | null }> };
 
 export type GetLedgerFileQueryVariables = Exact<{
   ledgerId: string;
@@ -1505,6 +1505,8 @@ export const GetLedgerErrorsDocument = gql`
     filename
     lineno
     message
+    code
+    hint
   }
 }
     `;

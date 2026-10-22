@@ -3,7 +3,24 @@ export type LedgerError = {
   filename: string | null | undefined;
   lineno: number | null | undefined;
   message: string;
+  /** The engine's own remediation hint, when it has one (w21/424). */
+  hint?: string | null;
 };
+
+/** The engine's fix hint for an error, or null when it gave none (w21/424). */
+export function errorHint(error: { hint?: string | null }): string | null {
+  const hint = error.hint?.trim();
+  return hint ? hint : null;
+}
+
+/** An error's message followed by its hint, as a screen reader says it. */
+export function errorMessageWithHint(error: {
+  message: string;
+  hint?: string | null;
+}): string {
+  const hint = errorHint(error);
+  return hint ? `${error.message}. ${hint}` : error.message;
+}
 
 /**
  * The first error a write left that the ledger did not have before, or null.
