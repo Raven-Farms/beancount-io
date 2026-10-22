@@ -174,27 +174,65 @@ function addMonthsClamped(
   );
 }
 
+/** How far a payment may sit from its due day and still be that month's. */
+const ANCHOR_TOLERANCE_DAYS = 3;
+
 /**
- * The day of the month a series is kept on, or null when it is not: every
- * event falls on that day (clamped at a short month's end, so a 31st bill
- * paid on 30 Jun still counts) and each is `months` after the one before.
- * Every-four-weeks payments share the monthly gap band but drift through the
- * month, so they keep the day-count step (w21/007).
+ * The day of the month a series is kept on, or null when it is not: the day
+ * most events fall on (at least two, and half of them), with every event within
+ * `ANCHOR_TOLERANCE_DAYS` of that day in its own month (clamped at a short
+ * month's end, so a 31st bill paid on 30 Jun still counts) and each is
+ * `months` after the one before. A payment shifted to the weekend, or to the
+ * month's last day for a bill due on the 1st, is still that month's, so one of
+ * them no longer drops the anchor (w21/271). Every-four-weeks payments share
+ * the monthly gap band but drift through the month, so they keep the day-count
+ * step (w21/007). `lastDue` is the last event's due date, which is where the
+ * next period counts from.
  */
 function monthDayAnchor(
   eventDays: readonly number[],
   months: number,
-): number | null {
+): { anchor: number; lastDue: number } | null {
   const days = eventDays.map(calendarDay);
-  const anchor = Math.max(...days.map((d) => d.day));
-  const kept = days.every(
-    (d, i) =>
-      d.day === Math.min(anchor, daysInMonth(d.year, d.month)) &&
-      (i === 0 ||
-        (d.year - days[i - 1]!.year) * 12 + d.month - days[i - 1]!.month ===
-          months),
-  );
-  return kept ? anchor : null;
+  const counts = new Map<number, number>();
+  for (const d of days) counts.set(d.day, (counts.get(d.day) ?? 0) + 1);
+  let anchor = 0;
+  let best = 0;
+  for (const [day, count] of counts) {
+    if (count > best || (count === best && day > anchor)) {
+      anchor = day;
+      best = count;
+    }
+  }
+  if (best < 2 || best * 2 < days.length) return null;
+
+  const dueOn = (monthIndex: number): number => {
+    const year = Math.floor(monthIndex / 12);
+    const month = monthIndex - year * 12;
+    const first = Math.floor(utcDate(year, month, 1).getTime() / MS_PER_DAY);
+    return first + Math.min(anchor, daysInMonth(year, month)) - 1;
+  };
+  let previous: number | null = null;
+  let lastDue = 0;
+  for (let i = 0; i < days.length; i++) {
+    const d = days[i]!;
+    const own = d.year * 12 + d.month;
+    // Its own month's due day, or a neighbour's when paid across the boundary.
+    let nominal = own;
+    let distance = Infinity;
+    for (const candidate of [own, own - 1, own + 1]) {
+      const gap = Math.abs(eventDays[i]! - dueOn(candidate));
+      if (gap < distance) {
+        distance = gap;
+        nominal = candidate;
+      }
+    }
+    if (distance > ANCHOR_TOLERANCE_DAYS) return null;
+    if (previous !== null && nominal - previous !== months) return null;
+    previous = nominal;
+    lastDue = dueOn(nominal);
+  }
+  return { anchor, lastDue };
 }
 
 /** The least distance between a semi-monthly bill's two days. */
@@ -474,12 +512,11 @@ export function detectRecurrence(
   // A bill kept on one day of the month is due that day: the median of
   // 28–31-day gaps rounds to 31 and used to land one to three days late.
   const months = CADENCE_MONTHS[cadence];
-  const anchor =
-    months === undefined ? null : monthDayAnchor(eventDays, months);
+  const kept = months === undefined ? null : monthDayAnchor(eventDays, months);
   const nextExpectedDay = semiMonthly
     ? nextSemiMonthlyDay(lastDay, semiMonthly)
-    : months !== undefined && anchor !== null
-      ? addMonthsClamped(lastDay, months, anchor)
+    : months !== undefined && kept !== null
+      ? addMonthsClamped(kept.lastDue, months, kept.anchor)
       : lastDay + gapDays;
   const graceDays = Math.max(1, Math.round(gapDays * OVERDUE_GRACE_FRACTION));
   const isLate = todayDay > nextExpectedDay + graceDays;
