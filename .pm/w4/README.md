@@ -92,8 +92,6 @@
 
 - [310 — Leave CSV cell commit and cancel keys to active input-method composition](./310.md) — minor; dashboard QA, 2026-10-21; trusted composing Enter commits/closes Payee and Description editors, while composing Escape cancels/closes; ordinary controls pass.
 
-- [309 — Keep excluded CSV rows excluded through validation repair](./309.md) — minor; dashboard QA, 2026-10-21; editing configuration while a row is temporarily invalid drops its saved exclusion, so repairing it selects the row again.
-
 - [265 — Keep financial text and private paths out of GA4 automatic events](./blocked/265.md) — major; dashboard QA, 2026-10-20; stream-editor completion dependency. — **blocked:** checklist shipped in `181e7a996`; needs a GA4 Editor to turn off Site search / history page views
 - [289 — Preserve long amount digits in portrait statement print output](./blocked/289.md) — minor; dashboard QA, 2026-10-20. — **blocked:** fix shipped in `68e973700`; awaiting portrait PDF check
 
