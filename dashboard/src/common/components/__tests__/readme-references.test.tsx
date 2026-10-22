@@ -23,7 +23,27 @@ describe("resolveReadmeReference", () => {
     ["a%20b.txt#L3", "docs/README.md", "docs/a b.txt", "#L3"],
     ["notes.md?plain=1", "docs/README.md", "docs/notes.md", "?plain=1"],
   ])("resolves %s from %s", (reference, readme, path, suffix) => {
-    expect(resolveReadmeReference(reference, readme)).toEqual({ path, suffix });
+    expect(resolveReadmeReference(reference, readme)).toEqual({
+      path,
+      suffix,
+      directory: false,
+    });
+  });
+
+  // A trailing slash names a folder, resolved from the README's (w4/327).
+  it.each([
+    ["receipts/", "docs/README.md", "docs/receipts", ""],
+    ["./", "docs/README.md", "docs", ""],
+    ["../", "docs/README.md", "", ""],
+    ["../accounts/", "docs/README.md", "accounts", ""],
+    ["./", "README.md", "", ""],
+    ["receipts/?view=list", "docs/README.md", "docs/receipts", "?view=list"],
+  ])("resolves folder %s from %s", (reference, readme, path, suffix) => {
+    expect(resolveReadmeReference(reference, readme)).toEqual({
+      path,
+      suffix,
+      directory: true,
+    });
   });
 
   it.each([
@@ -32,7 +52,7 @@ describe("resolveReadmeReference", () => {
     "/ledger/qa/books/files/blob/main/main.bean",
     "#section",
     "../../outside.txt",
-    "accounts/",
+    "../../outside/",
     "",
   ])("leaves %s as authored", (reference) => {
     expect(resolveReadmeReference(reference, "docs/README.md")).toBeNull();
@@ -43,6 +63,7 @@ const ledgerId = "qa/books";
 const source = { ledgerId, path: "docs/README.md" };
 const markdown = [
   "[target](target.txt) [main](../main.bean) [spaced](a%20b.txt#L3)",
+  "[folder](receipts/) [here](./) [up](../)",
   "[site](https://example.com/x) [root](/ledger/qa/books/journal) [top](#top)",
   "",
   "![Flow chart](img/chart.png)",
@@ -91,6 +112,11 @@ describe("MarkdownRenderer with a README source", () => {
     expect(href("spaced")).toBe(
       "/ledger/qa/books/files/blob/main/docs/a%20b.txt#L3",
     );
+    expect(href("folder")).toBe(
+      "/ledger/qa/books/files/tree/main/docs/receipts",
+    );
+    expect(href("here")).toBe("/ledger/qa/books/files/tree/main/docs");
+    expect(href("up")).toBe("/ledger/qa/books/files/tree/main");
     expect(href("site")).toBe("https://example.com/x");
     expect(href("root")).toBe("/ledger/qa/books/journal");
     expect(href("top")).toBe("#top");
@@ -100,14 +126,20 @@ describe("MarkdownRenderer with a README source", () => {
       getParentRoute: () => root,
       path: "/ledger/$ledgerOwner/$ledgerName/files/blob/$branch/$",
     });
+    const tree = createRoute({
+      getParentRoute: () => root,
+      path: "/ledger/$ledgerOwner/$ledgerName/files/tree/$branch/$",
+    });
     const router = createRouter({
-      routeTree: root.addChildren([blob]),
+      routeTree: root.addChildren([blob, tree]),
       history: createMemoryHistory(),
     });
     for (const [name, path] of [
       ["target", "docs/target.txt"],
       ["main", "main.bean"],
       ["spaced", "docs/a b.txt"],
+      ["folder", "docs/receipts"],
+      ["here", "docs"],
     ] as const) {
       const match = router.matchRoutes(
         new URL(href(name)!, "http://x").pathname,

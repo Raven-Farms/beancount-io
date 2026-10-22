@@ -8,7 +8,10 @@ import { ExternalLink } from "lucide-react";
 import type { Components } from "react-markdown";
 import { useMemo, type ComponentProps, type ReactNode } from "react";
 import { LedgerImage } from "@/common/components/ledger-image";
-import { getLedgerFileBlobPath } from "@/common/hooks/use-file-navigate";
+import {
+  getLedgerDirectoryTreePath,
+  getLedgerFileBlobPath,
+} from "@/common/hooks/use-file-navigate";
 import { resolveReadmeReference } from "@/common/lib/readme-reference";
 
 interface MarkdownRendererProps {
@@ -257,9 +260,15 @@ function sourceComponents({
         <Anchor
           {...props}
           href={
-            target
-              ? getLedgerFileBlobPath(ledgerId, target.path, target.suffix)
-              : href
+            !target
+              ? href
+              : target.directory
+                ? getLedgerDirectoryTreePath(
+                    ledgerId,
+                    target.path,
+                    target.suffix,
+                  )
+                : getLedgerFileBlobPath(ledgerId, target.path, target.suffix)
           }
         />
       );
@@ -268,7 +277,10 @@ function sourceComponents({
       delete props.node;
       const target =
         typeof src === "string" ? resolveReadmeReference(src, path) : null;
-      if (!target) return <img src={src} alt={alt} title={title} {...props} />;
+      // A folder is no image to fetch; it keeps its authored behavior.
+      if (!target || target.directory) {
+        return <img src={src} alt={alt} title={title} {...props} />;
+      }
       return (
         <LedgerImage
           ledgerId={ledgerId}
