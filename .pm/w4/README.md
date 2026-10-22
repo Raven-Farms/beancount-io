@@ -4,6 +4,8 @@
 
 ## Inbox
 
+- [329 — Explain a failed BQL CSV download and keep retry usable](./329.md) — minor; dashboard QA with a simulated browser API failure, 2026-10-21; Download CSV throws without feedback at both widths, while restoration/retry and exact Unicode output pass.
+
 - [328 — Offer a retry after a statement read fails](./328.md) — minor; dashboard QA with injected read failures, 2026-10-21; Trial Balance removes its conversion control and supplies no retry; reload/same-period recovery passes, with three equivalent statement callers source-traced.
 
 - [327 — Resolve README folder links from the README's directory](./327.md) — minor; dashboard QA, 2026-10-21; child-folder and ./ links lose source context, while folder-row and relative-file controls work; two owned fixtures created/deleted with no residue or ledger errors.
