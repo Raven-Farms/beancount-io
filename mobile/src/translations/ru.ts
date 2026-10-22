@@ -566,7 +566,14 @@ export const ru: Translations = {
   ledgerEditorDiscardChanges: "Отменить",
   ledgerEditorConflictTitle: "Файл изменён",
   ledgerEditorConflictMessage:
-    "Этот файл был изменён на сервере. Отменить локальные изменения и перезагрузить?",
+    "Этот файл был изменён удалённо. Сохранить ваш текст поверх него или скопировать его и загрузить новую версию?",
+  ledgerEditorOverwrite: "Перезаписать",
+  ledgerEditorCopyReload: "Копировать и перезагрузить",
+  ledgerEditorOverwriteTitle: "Перезаписать удалённые изменения?",
+  ledgerEditorOverwriteMessage:
+    "Ваш текст заменит версию, сохранённую в другом месте. Её изменения будут потеряны.",
+  ledgerEditorCopyFailed:
+    "Не удалось скопировать ваш текст, поэтому файл не перезагружен.",
   ledgerEditorReload: "Перезагрузить",
   ledgerEditorKeepEditing: "Продолжить правку",
   keyboardAccessoryInsert: "Вставить {{symbol}}",

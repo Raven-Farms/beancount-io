@@ -572,7 +572,14 @@ export const sk: Translations = {
   ledgerEditorDiscardChanges: "Zahodiť",
   ledgerEditorConflictTitle: "Súbor sa zmenil",
   ledgerEditorConflictMessage:
-    "Tento súbor bol zmenený na serveri. Zahodiť miestne zmeny a načítať znova?",
+    "Tento súbor bol zmenený vzdialene. Uložiť váš text cez neho, alebo ho skopírovať a načítať novú verziu?",
+  ledgerEditorOverwrite: "Prepísať",
+  ledgerEditorCopyReload: "Kopírovať a znova načítať",
+  ledgerEditorOverwriteTitle: "Prepísať vzdialené zmeny?",
+  ledgerEditorOverwriteMessage:
+    "Váš text nahradí verziu uloženú inde. Jej zmeny sa stratia.",
+  ledgerEditorCopyFailed:
+    "Váš text sa nepodarilo skopírovať, preto sa súbor znova nenačítal.",
   ledgerEditorReload: "Načítať znova",
   ledgerEditorKeepEditing: "Pokračovať v úpravách",
   keyboardAccessoryInsert: "Vložiť {{symbol}}",

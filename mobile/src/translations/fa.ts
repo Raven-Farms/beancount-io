@@ -550,7 +550,13 @@ export const fa: Translations = {
   ledgerEditorDiscardChanges: "کنار گذاشتن",
   ledgerEditorConflictTitle: "فایل تغییر کرد",
   ledgerEditorConflictMessage:
-    "این فایل روی سرور تغییر کرده است. تغییرات محلی کنار گذاشته و فایل دوباره بارگذاری شود؟",
+    "این فایل از راه دور تغییر کرده است. متن شما روی آن ذخیره شود، یا متن را کپی کنید و نسخهٔ جدید بارگیری شود؟",
+  ledgerEditorOverwrite: "بازنویسی",
+  ledgerEditorCopyReload: "کپی و بارگیری مجدد",
+  ledgerEditorOverwriteTitle: "تغییرات راه دور بازنویسی شود؟",
+  ledgerEditorOverwriteMessage:
+    "متن شما جایگزین نسخهٔ ذخیره‌شده در جای دیگر می‌شود. تغییرات آن از بین می‌رود.",
+  ledgerEditorCopyFailed: "متن شما کپی نشد، بنابراین فایل دوباره بارگیری نشد.",
   ledgerEditorReload: "بارگذاری دوباره",
   ledgerEditorKeepEditing: "ادامهٔ ویرایش",
   keyboardAccessoryInsert: "درج {{symbol}}",

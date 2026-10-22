@@ -556,7 +556,14 @@ export const bg: Translations = {
   ledgerEditorDiscardChanges: "Отхвърли",
   ledgerEditorConflictTitle: "Файлът е променен",
   ledgerEditorConflictMessage:
-    "Този файл е променен отдалечено. Да се отхвърлят ли местните промени и файлът да се презареди?",
+    "Този файл е променен отдалечено. Да запазите текста си върху него или да го копирате и да заредите новата версия?",
+  ledgerEditorOverwrite: "Презапис",
+  ledgerEditorCopyReload: "Копирай и презареди",
+  ledgerEditorOverwriteTitle: "Да се презапишат ли отдалечените промени?",
+  ledgerEditorOverwriteMessage:
+    "Вашият текст замества версията, запазена другаде. Техните промени се губят.",
+  ledgerEditorCopyFailed:
+    "Текстът не можа да се копира, затова файлът не беше презареден.",
   ledgerEditorReload: "Презареди",
   ledgerEditorKeepEditing: "Продължи редактирането",
   keyboardAccessoryInsert: "Вмъкване на {{symbol}}",

@@ -569,7 +569,14 @@ export const pt: Translations = {
   ledgerEditorDiscardChanges: "Descartar",
   ledgerEditorConflictTitle: "Arquivo alterado",
   ledgerEditorConflictMessage:
-    "Este arquivo foi alterado remotamente. Descartar as alterações locais e recarregar?",
+    "Este arquivo foi alterado remotamente. Salvar seu texto por cima ou copiá-lo e carregar a nova versão?",
+  ledgerEditorOverwrite: "Substituir",
+  ledgerEditorCopyReload: "Copiar e recarregar",
+  ledgerEditorOverwriteTitle: "Substituir as alterações remotas?",
+  ledgerEditorOverwriteMessage:
+    "Seu texto substitui a versão salva em outro lugar. As alterações dela serão perdidas.",
+  ledgerEditorCopyFailed:
+    "Não foi possível copiar seu texto, então o arquivo não foi recarregado.",
   ledgerEditorReload: "Recarregar",
   ledgerEditorKeepEditing: "Continuar editando",
   keyboardAccessoryInsert: "Inserir {{symbol}}",

@@ -14,6 +14,7 @@ import {
   View,
   useWindowDimensions,
 } from "react-native";
+import * as Clipboard from "expo-clipboard";
 import { Redirect, Stack, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import {
@@ -537,6 +538,47 @@ function LedgerFileEditorSession({
     [],
   );
 
+  // The conflict alert's way out for the user's text (w21/273): copy it and
+  // load the remote version, or save it over that version.
+  const copyThenReload = useCallback(
+    async (content: string) => {
+      try {
+        await Clipboard.setStringAsync(
+          withLineEnding(content, lineEndingRef.current),
+        );
+      } catch {
+        // Reloading now would drop text that was not kept.
+        Alert.alert(t("ledgerEditorCopyFailed"));
+        return;
+      }
+      haptics.success();
+      await handleReload();
+    },
+    [handleReload, t],
+  );
+
+  const handleSaveRef = useRef<
+    | ((content: string, epoch: number, revision: number) => Promise<boolean>)
+    | null
+  >(null);
+
+  // Take the sha of the version on the server, not its text, and save over it.
+  const overwriteRemote = useCallback(
+    async (content: string, epoch: number, revision: number) => {
+      try {
+        const result = await refetch();
+        const current = result.data?.getLedgerFile?.sha;
+        if (!current) throw new Error("no sha");
+        shaRef.current = current;
+      } catch {
+        Alert.alert(t("ledgerEditorSaveFailed"));
+        return;
+      }
+      await handleSaveRef.current?.(content, epoch, revision);
+    },
+    [refetch, t],
+  );
+
   const handleSave = useCallback(
     async (content: string, epoch: number, revision: number) => {
       if (
@@ -601,9 +643,26 @@ function LedgerFileEditorSession({
             [
               { text: t("ledgerEditorKeepEditing"), style: "cancel" },
               {
-                text: t("ledgerEditorReload"),
+                text: t("ledgerEditorCopyReload"),
+                onPress: () => void copyThenReload(content),
+              },
+              {
+                text: t("ledgerEditorOverwrite"),
                 style: "destructive",
-                onPress: handleReload,
+                onPress: () =>
+                  Alert.alert(
+                    t("ledgerEditorOverwriteTitle"),
+                    t("ledgerEditorOverwriteMessage"),
+                    [
+                      { text: t("cancel"), style: "cancel" },
+                      {
+                        text: t("ledgerEditorOverwrite"),
+                        style: "destructive",
+                        onPress: () =>
+                          void overwriteRemote(content, epoch, revision),
+                      },
+                    ],
+                  ),
               },
             ],
           );
@@ -623,15 +682,19 @@ function LedgerFileEditorSession({
     [
       allErrors,
       canWrite,
+      copyThenReload,
       errorsLoaded,
-      handleReload,
       ledgerId,
+      overwriteRemote,
       path,
       reportNewErrors,
       t,
       updateLedgerFile,
     ],
   );
+  useEffect(() => {
+    handleSaveRef.current = handleSave;
+  }, [handleSave]);
 
   // ── Unsaved changes guard ────────────────────────────────────────────────
 

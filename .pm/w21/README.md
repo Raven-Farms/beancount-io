@@ -19,7 +19,6 @@
 - [206](./blocked/206.md) — Refund/return receipts are always prefilled as a purchase — **blocked:** needs an owner-approved AI-quota evaluation and a parse-contract decision (`isRefund` vs signed amount)
 - [210](./blocked/210.md) — Holdings sheet labels a user-typed price "Live price" and applies the feed's staleness rule — **blocked:** needs an owner decision on exposing the feed's effective price dates (cross-package contract) and a deploy before mobile can read it
 - [228](./blocked/228.md) — New Transaction stamps the first operating currency on every posting; no currency or price control — **blocked:** needs account-constraint currencies on the client, a price path (legacy field or typed mutation, deploy first) and an owner-approved form design
-- [273](./273.md) — File-editor save conflict is a dead end: Keep Editing never saves, Reload discards the text
 - [274](./274.md) — Android Back from a Files sub-folder leaves the tab instead of going up
 - [275](./275.md) — New File refuses names with a dot ("2024.q1") despite "extension added" copy
 - [276](./276.md) — File editor Save, error rows and Reload/Back aren't announced as buttons

@@ -565,7 +565,14 @@ export const uk: Translations = {
   ledgerEditorDiscardChanges: "Скасувати",
   ledgerEditorConflictTitle: "Файл змінено",
   ledgerEditorConflictMessage:
-    "Цей файл змінено на сервері. Скасувати локальні зміни та перезавантажити?",
+    "Цей файл було змінено віддалено. Зберегти ваш текст поверх нього чи скопіювати його та завантажити нову версію?",
+  ledgerEditorOverwrite: "Перезаписати",
+  ledgerEditorCopyReload: "Копіювати й перезавантажити",
+  ledgerEditorOverwriteTitle: "Перезаписати віддалені зміни?",
+  ledgerEditorOverwriteMessage:
+    "Ваш текст замінить версію, збережену в іншому місці. Її зміни буде втрачено.",
+  ledgerEditorCopyFailed:
+    "Не вдалося скопіювати ваш текст, тому файл не перезавантажено.",
   ledgerEditorReload: "Перезавантажити",
   ledgerEditorKeepEditing: "Продовжити редагування",
   keyboardAccessoryInsert: "Вставити {{symbol}}",

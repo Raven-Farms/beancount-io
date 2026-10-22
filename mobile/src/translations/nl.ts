@@ -560,7 +560,14 @@ export const nl: Translations = {
   ledgerEditorDiscardChanges: "Verwerpen",
   ledgerEditorConflictTitle: "Bestand gewijzigd",
   ledgerEditorConflictMessage:
-    "Dit bestand is op afstand gewijzigd. Lokale wijzigingen verwerpen en herladen?",
+    "Dit bestand is extern gewijzigd. Je tekst eroverheen opslaan, of je tekst kopiëren en de nieuwe versie laden?",
+  ledgerEditorOverwrite: "Overschrijven",
+  ledgerEditorCopyReload: "Kopiëren en herladen",
+  ledgerEditorOverwriteTitle: "Externe wijzigingen overschrijven?",
+  ledgerEditorOverwriteMessage:
+    "Je tekst vervangt de elders opgeslagen versie. Die wijzigingen gaan verloren.",
+  ledgerEditorCopyFailed:
+    "Je tekst kon niet worden gekopieerd, dus het bestand is niet herladen.",
   ledgerEditorReload: "Herladen",
   ledgerEditorKeepEditing: "Doorgaan met bewerken",
   keyboardAccessoryInsert: "{{symbol}} invoegen",

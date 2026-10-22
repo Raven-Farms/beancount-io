@@ -570,7 +570,14 @@ export const ca: Translations = {
   ledgerEditorDiscardChanges: "Descarta",
   ledgerEditorConflictTitle: "El fitxer ha canviat",
   ledgerEditorConflictMessage:
-    "Aquest fitxer ha canviat al servidor. Vols descartar els canvis locals i tornar a carregar?",
+    "Aquest fitxer s'ha canviat en remot. Voleu desar el vostre text a sobre o copiar-lo i carregar la versió nova?",
+  ledgerEditorOverwrite: "Sobreescriu",
+  ledgerEditorCopyReload: "Copia i recarrega",
+  ledgerEditorOverwriteTitle: "Sobreescriure els canvis remots?",
+  ledgerEditorOverwriteMessage:
+    "El vostre text substitueix la versió desada en un altre lloc. Es perdran els seus canvis.",
+  ledgerEditorCopyFailed:
+    "No s'ha pogut copiar el text, per això el fitxer no s'ha recarregat.",
   ledgerEditorReload: "Torna a carregar",
   ledgerEditorKeepEditing: "Continua editant",
   keyboardAccessoryInsert: "Insereix {{symbol}}",

@@ -573,7 +573,14 @@ export const de: Translations = {
   ledgerEditorDiscardChanges: "Verwerfen",
   ledgerEditorConflictTitle: "Datei geändert",
   ledgerEditorConflictMessage:
-    "Diese Datei wurde entfernt geändert. Lokale Änderungen verwerfen und neu laden?",
+    "Diese Datei wurde extern geändert. Ihren Text darüber speichern oder ihn kopieren und die neue Version laden?",
+  ledgerEditorOverwrite: "Überschreiben",
+  ledgerEditorCopyReload: "Kopieren & neu laden",
+  ledgerEditorOverwriteTitle: "Externe Änderungen überschreiben?",
+  ledgerEditorOverwriteMessage:
+    "Ihr Text ersetzt die anderswo gespeicherte Version. Deren Änderungen gehen verloren.",
+  ledgerEditorCopyFailed:
+    "Ihr Text konnte nicht kopiert werden, daher wurde die Datei nicht neu geladen.",
   ledgerEditorReload: "Neu laden",
   ledgerEditorKeepEditing: "Weiter bearbeiten",
   keyboardAccessoryInsert: "{{symbol}} einfügen",

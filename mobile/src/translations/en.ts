@@ -564,7 +564,14 @@ export const en = {
   ledgerEditorDiscardChanges: "Discard",
   ledgerEditorConflictTitle: "File Changed",
   ledgerEditorConflictMessage:
-    "This file was changed remotely. Discard local changes and reload?",
+    "This file was changed remotely. Save your text over it, or copy your text and load the new version?",
+  ledgerEditorOverwrite: "Overwrite",
+  ledgerEditorCopyReload: "Copy & Reload",
+  ledgerEditorOverwriteTitle: "Overwrite remote changes?",
+  ledgerEditorOverwriteMessage:
+    "Your text replaces the version saved elsewhere. Their changes are lost.",
+  ledgerEditorCopyFailed:
+    "Couldn't copy your text, so the file was not reloaded.",
   ledgerEditorReload: "Reload",
   ledgerEditorKeepEditing: "Keep Editing",
   keyboardAccessoryInsert: "Insert {{symbol}}",

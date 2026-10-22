@@ -571,7 +571,14 @@ export const fr: Translations = {
   ledgerEditorDiscardChanges: "Abandonner",
   ledgerEditorConflictTitle: "Fichier modifié",
   ledgerEditorConflictMessage:
-    "Ce fichier a été modifié à distance. Abandonner les modifications locales et recharger ?",
+    "Ce fichier a été modifié à distance. Enregistrer votre texte par-dessus, ou le copier et charger la nouvelle version ?",
+  ledgerEditorOverwrite: "Écraser",
+  ledgerEditorCopyReload: "Copier et recharger",
+  ledgerEditorOverwriteTitle: "Écraser les modifications distantes ?",
+  ledgerEditorOverwriteMessage:
+    "Votre texte remplace la version enregistrée ailleurs. Ses modifications seront perdues.",
+  ledgerEditorCopyFailed:
+    "Impossible de copier votre texte ; le fichier n'a donc pas été rechargé.",
   ledgerEditorReload: "Recharger",
   ledgerEditorKeepEditing: "Continuer",
   keyboardAccessoryInsert: "Insérer {{symbol}}",

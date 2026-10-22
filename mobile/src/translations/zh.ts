@@ -508,7 +508,13 @@ export const zh: Translations = {
   ledgerEditorDiscardChanges: "放弃",
   ledgerEditorConflictTitle: "文件已变更",
   ledgerEditorConflictMessage:
-    "该文件在远端已被修改。是否放弃本地修改并重新加载？",
+    "该文件在远端已被修改。是否将你的文本保存覆盖它，或复制你的文本并加载新版本？",
+  ledgerEditorOverwrite: "覆盖",
+  ledgerEditorCopyReload: "复制并重新加载",
+  ledgerEditorOverwriteTitle: "覆盖远端更改？",
+  ledgerEditorOverwriteMessage:
+    "你的文本将替换在别处保存的版本，对方的更改会丢失。",
+  ledgerEditorCopyFailed: "无法复制你的文本，因此未重新加载文件。",
   ledgerEditorReload: "重新加载",
   ledgerEditorKeepEditing: "继续编辑",
   keyboardAccessoryInsert: "插入 {{symbol}}",
