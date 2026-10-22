@@ -56,5 +56,7 @@
 - [541](./541.md) — Cash flow drops flows under 0.005 units whatever the currency, so BTC ledgers lose nodes and Savings is wrong
 - [542](./542.md) — The balance chart's dashed start line and VoiceOver's "From" use the first point, while the change row uses the opening balance
 - [543](./543.md) — VoiceOver says "+$0.00 since start" where the header shows a neutral "$0.00" (w21/416 half)
+- [544](./544.md) — The editor's "View errors" pushes another Notifications; fixing from there leaves an outdated copy of the file open beneath
+- [545](./545.md) — Incoming links to `/errors`, `/commits`, `/cash-flow`, `/trial-balance` and `/holdings` open Home instead of the matching screen
 - [508](./blocked/508.md) — Mobile guesses that an entry is a plugin copy from its first line; read the ledger's `generated_from` instead (split from 443) — **blocked:** production's GraphQL schema lacks `generated_from` until the ledger service and backend-v2 deploy; mobile's client is generated from it
 - [315](./blocked/315.md) — In-app commits signed with Gitea username and real email (no full_name, no noreply) — **blocked:** needs the owner's noreply-address and published-history decisions, and a production backfill of existing Gitea users that can't be verified here
