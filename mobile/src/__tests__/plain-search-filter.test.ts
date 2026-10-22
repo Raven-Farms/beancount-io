@@ -143,3 +143,38 @@ describe("toPlainSearchFilter and typographic quotes", () => {
     }
   });
 });
+
+// w21/402: the ledger service refuses a filter pattern over 256 characters, and
+// escaping makes a text several times longer, so a long memo failed the list.
+describe("toPlainSearchFilter and long text", () => {
+  const body = (raw: string) => {
+    const filter = toPlainSearchFilter(raw) ?? "";
+    return filter.slice(1, -1);
+  };
+
+  it("keeps the pattern within 256 characters however it escapes", () => {
+    for (const text of [
+      "x".repeat(300),
+      ".".repeat(300),
+      "'".repeat(100),
+      `a"b'c.`.repeat(60),
+      "(*)".repeat(100),
+    ]) {
+      expect(body(text).length <= 256).toBe(true);
+    }
+  });
+
+  it("cuts to a prefix that matches the text, never in the middle of an escape", () => {
+    const text = "Check number 1042.".repeat(30);
+    const regex = new RegExp(body(text), "i");
+    expect(regex.test(text)).toBe(true);
+    // An escape cut in half would not compile, or would match something else.
+    expect(() => new RegExp(body(".".repeat(300)))).not.toThrow();
+    expect(body(".".repeat(300))).toBe("\\.".repeat(128));
+  });
+
+  it("leaves a text that fits exactly as before", () => {
+    expect(body("x".repeat(256))).toBe("x".repeat(256));
+    expect(toPlainSearchFilter("Check 1042")).toBe('"Check 1042"');
+  });
+});

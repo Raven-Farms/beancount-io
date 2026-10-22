@@ -8,6 +8,9 @@
  * Free of `@/` imports so the jest-lite runner can require it.
  */
 
+/** The longest filter pattern the ledger service accepts. */
+const MAX_PATTERN_LENGTH = 256;
+
 /** One tag or link token, in Beancount's tag/link character set. */
 const TAG_OR_LINK = /^[#^][A-Za-z0-9_\-./]+$/;
 
@@ -48,8 +51,19 @@ export function toPlainSearchFilter(raw: string): string | undefined {
  * becoming a quote.
  */
 function quoted(trimmed: string): string {
-  const body = escapeRegExp(trimmed)
-    .replace(/['\u2018\u2019]/g, "['\u2018\u2019]")
-    .replace(/["\u201c\u201d]/g, "[\\x22\u201c\u201d]");
+  // The ledger service refuses a pattern longer than this, and escaping makes a
+  // text several times longer (a dot is two characters, an apostrophe five), so
+  // a long memo failed the whole list. A needle that would not fit is cut to the
+  // longest prefix that does, which finds the entries that contain it rather
+  // than an error (w21/402). Each character is encoded whole, so no escape is
+  // ever cut in half.
+  let body = "";
+  for (const char of trimmed) {
+    const encoded = escapeRegExp(char)
+      .replace(/['\u2018\u2019]/g, "['\u2018\u2019]")
+      .replace(/["\u201c\u201d]/g, "[\\x22\u201c\u201d]");
+    if (body.length + encoded.length > MAX_PATTERN_LENGTH) break;
+    body += encoded;
+  }
   return `"${body}"`;
 }
