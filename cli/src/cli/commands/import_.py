@@ -685,7 +685,9 @@ def _legacy_encoding_notice(source: Path, encoding: str) -> str | None:
     return None
 
 
-def _remember_csv(file: Path, spec: dict[str, Any], notes: list[str]) -> bool:
+def _remember_csv(
+    file: Path, spec: dict[str, Any], notes: list[str], *, sign_change: tuple[Path, bool] | None = None
+) -> bool:
     """Persist captured settings without re-reading a source already imported.
 
     A failed save is named in `notes` as well as on stderr, so the JSON
@@ -707,14 +709,20 @@ def _remember_csv(file: Path, spec: dict[str, Any], notes: list[str]) -> bool:
         # writer has saved the memory under the stored spelling. The lock file
         # sits beside the directory, which holds nothing but records.
         with exclusive_lock(record.parent.with_name(f"{record.parent.name}.lock")):
-            sources = [
-                entry
-                for entry in _stored_sources(_csv_record(file, reading=True))
-                if not (
-                    header_signature(entry.get("headers")) == wanted
-                    and _same_account(entry.get("account"), spec["account"])
+            stored = _stored_sources(_csv_record(file, reading=True))
+
+            def same_entry(entry: dict[str, Any]) -> bool:
+                return header_signature(entry.get("headers")) == wanted and _same_account(
+                    entry.get("account"), spec["account"]
                 )
-            ]
+
+            sources = [entry for entry in stored if not same_entry(entry)]
+            if sign_change is not None:
+                # Only this file's sign changes, on the entry as it stands now:
+                # a concurrent preview's file would otherwise fall off the map
+                # this run read before it (w5/886).
+                latest = next((entry for entry in stored if same_entry(entry)), None)
+                spec = {**spec, **_signed(_sign_ledger_files(latest), sign_change[0], ledger=sign_change[1])}
             atomic_write(record, json.dumps({"sources": [*sources, spec]}))
         return True
     except OSError as exc:
@@ -885,6 +893,9 @@ def import_entries(
     csv_request: str | None = csv_mapping
     config_to_remember: Path | None = None
     csv_to_remember: dict[str, Any] | None = None
+    # The sign this run chose for its own file, applied to the stored entry
+    # under the record lock: the map in `csv_to_remember` predates it (w5/886).
+    sign_change: tuple[Path, bool] | None = None
     discarded_note: str | None = None
     csv_origin = "--csv"
     csv_run_account: str | None = csv_account
@@ -1180,6 +1191,7 @@ def import_entries(
                         csv_request = f"{csv_request},sign=ledger"
                     signed = _signed(sign_files, source, ledger=recalled_sign_ledger)
                     sign_files = signed["sign_ledger_files"]
+                    sign_change = (source, recalled_sign_ledger)
                     csv_to_remember = {**(csv_to_remember or remembered), "source": source.name, **signed}
                 if "encoding" in typed_key_names:
                     csv_to_remember = {
@@ -1442,6 +1454,7 @@ def import_entries(
                 # Another file's run leaves their entries alone (w5/594).
                 **_signed(_sign_ledger_files(prior), source, ledger=mapping.sign == "ledger"),
             }
+            sign_change = (source, mapping.sign == "ledger")
     else:
         config_path, config_source = _config_path(
             file,
@@ -1567,7 +1580,7 @@ def import_entries(
         output.note(not_remembered)
     if (
         csv_to_remember is not None
-        and _remember_csv(file, csv_to_remember, frontend_notes)
+        and _remember_csv(file, csv_to_remember, frontend_notes, sign_change=sign_change)
         and discarded_note is not None
     ):
         frontend_notes.append(discarded_note)
