@@ -39,12 +39,13 @@ interface NoteFormProps {
   onPendingChange?: (pending: boolean) => void;
 }
 
-// Zod validation schema factory
+// Zod validation schema factory. Required text is trimmed before its
+// required check, so whitespace alone is refused rather than sent as "" (w4/334).
 const createNoteSchema = (t: (key: string) => string) =>
   z.object({
     date: z.iso.date(),
-    account: z.string().min(1, t("journal.accountRequired")).trim(),
-    content: z.string().min(1, t("journal.noteContentRequired")).trim(),
+    account: z.string().trim().min(1, t("journal.accountRequired")),
+    content: z.string().trim().min(1, t("journal.noteContentRequired")),
   });
 
 /**

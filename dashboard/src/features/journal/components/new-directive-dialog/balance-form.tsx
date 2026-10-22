@@ -44,11 +44,12 @@ interface BalanceFormProps {
   onPendingChange?: (pending: boolean) => void;
 }
 
-// Zod validation schema factory
+// Zod validation schema factory. Required text is trimmed before its
+// required check, so whitespace alone is refused rather than sent as "" (w4/334).
 const createBalanceSchema = (t: (key: string) => string) =>
   z.object({
     date: z.iso.date(),
-    account: z.string().min(1, t("journal.accountRequired")).trim(),
+    account: z.string().trim().min(1, t("journal.accountRequired")),
     amount: z
       .string()
       .min(1, t("journal.amountRequired"))
@@ -56,7 +57,7 @@ const createBalanceSchema = (t: (key: string) => string) =>
         (val) => parseDecimalNumber(val) !== null,
         t("journal.amountMustBeNumber"),
       ),
-    currency: z.string().min(1, t("journal.currencyRequired")).trim(),
+    currency: z.string().trim().min(1, t("journal.currencyRequired")),
   });
 
 /**
