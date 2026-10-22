@@ -361,6 +361,16 @@ const PostingRow = ({
           onPress={onPickAccount}
           accessibilityRole="button"
           accessibilityLabel={posting.account || t("postingAccount")}
+          // The swipe-to-remove has no VoiceOver equivalent: a swipe moves
+          // focus there. The row offers it as an action instead (w21/557).
+          accessibilityActions={
+            canRemove
+              ? [{ name: "delete", label: t("removePosting") }]
+              : undefined
+          }
+          onAccessibilityAction={(event) => {
+            if (event.nativeEvent.actionName === "delete") onRemove();
+          }}
         >
           <Text
             // Remeasured on a live size change (mobile/AGENTS.md).
