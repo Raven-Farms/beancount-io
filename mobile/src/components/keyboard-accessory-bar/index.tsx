@@ -110,9 +110,11 @@ export function KeyboardAccessoryBar({
             onPress={() => onInsert(btn.insert, btn.cursorOffset)}
             activeOpacity={0.6}
             accessibilityRole="button"
-            accessibilityLabel={t("keyboardAccessoryInsert", {
-              symbol: btn.label,
-            })}
+            accessibilityLabel={
+              btn.spokenKey
+                ? t(btn.spokenKey)
+                : t("keyboardAccessoryInsert", { symbol: btn.label })
+            }
           >
             <Text style={btn.isDate ? styles.dateText : styles.btnText}>
               {btn.label}
