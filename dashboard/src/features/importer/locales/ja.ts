@@ -322,6 +322,18 @@ const jaImporter: Record<string, TranslationEntry> = {
     message: "すべてのトランザクションの通貨",
     description: "Hint text for currency field",
   },
+  "importer.configure.currencyConflict_other": {
+    message:
+      "{count} 行（{rows}）は {symbol}（{currencies}）で記載されていますが、このインポートでは {currency} として記帳されます。",
+    description:
+      "Import refusal for several selected rows whose amounts carry a currency symbol other than the chosen import currency. {rows} lists their row numbers, possibly ending in …",
+  },
+  "importer.configure.currencyConflictRemedy": {
+    message:
+      "1 回のインポートで記帳できる通貨は 1 つです。これらの行の通貨を選択するか、選択を解除して別にインポートしてください。まだ何もインポートされていません。",
+    description:
+      "How to resolve a currency conflict before importing: no conversion happens, so the user picks the matching currency or splits the file",
+  },
   "importer.configure.assignTargetAccounts": {
     message: "ターゲット口座を割り当て",
     description: "Heading for account mapping section",

@@ -327,6 +327,24 @@ const enImporter: Record<string, TranslationEntry> = {
     message: "Currency for all transactions",
     description: "Hint text for currency field",
   },
+  "importer.configure.currencyConflict_one": {
+    message:
+      "{count} row ({rows}) is written in {symbol} ({currencies}), but this import would post it as {currency}.",
+    description:
+      "Import refusal: a selected row's amount carries a currency symbol that is not the chosen import currency. {count} is 1, {rows} the row number, {symbol} the symbol from the bank file (€, £…), {currencies} the currencies it can mean, {currency} the selected currency code",
+  },
+  "importer.configure.currencyConflict_other": {
+    message:
+      "{count} rows ({rows}) are written in {symbol} ({currencies}), but this import would post them as {currency}.",
+    description:
+      "Import refusal for several selected rows whose amounts carry a currency symbol other than the chosen import currency. {rows} lists their row numbers, possibly ending in …",
+  },
+  "importer.configure.currencyConflictRemedy": {
+    message:
+      "One import posts a single currency. Choose the currency those rows are written in, or deselect them and import them separately. Nothing has been imported.",
+    description:
+      "How to resolve a currency conflict before importing: no conversion happens, so the user picks the matching currency or splits the file",
+  },
   "importer.configure.assignTargetAccounts": {
     message: "Assign Target Accounts",
     description: "Heading for account mapping section",

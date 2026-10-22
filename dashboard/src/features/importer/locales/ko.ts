@@ -320,6 +320,18 @@ const koImporter: Record<string, TranslationEntry> = {
     message: "모든 거래의 통화",
     description: "Hint text for currency field",
   },
+  "importer.configure.currencyConflict_other": {
+    message:
+      "{count}개 행({rows})은 {symbol}({currencies})로 기재되어 있지만, 이 가져오기는 {currency}(으)로 기록합니다.",
+    description:
+      "Import refusal for several selected rows whose amounts carry a currency symbol other than the chosen import currency. {rows} lists their row numbers, possibly ending in …",
+  },
+  "importer.configure.currencyConflictRemedy": {
+    message:
+      "한 번의 가져오기에는 하나의 통화만 기록됩니다. 해당 행의 통화를 선택하거나 선택을 해제한 뒤 따로 가져오세요. 아직 아무것도 가져오지 않았습니다.",
+    description:
+      "How to resolve a currency conflict before importing: no conversion happens, so the user picks the matching currency or splits the file",
+  },
   "importer.configure.assignTargetAccounts": {
     message: "대상 계정 할당",
     description: "Heading for account mapping section",

@@ -325,6 +325,24 @@ const faImporter: Record<string, TranslationEntry> = {
     message: "ارز برای همه تراکنش‌ها",
     description: "Hint text for currency field",
   },
+  "importer.configure.currencyConflict_one": {
+    message:
+      "{count} ردیف ({rows}) به {symbol} ({currencies}) نوشته شده است، اما این واردسازی آن را به {currency} ثبت می‌کند.",
+    description:
+      "Import refusal: a selected row's amount carries a currency symbol that is not the chosen import currency. {count} is 1, {rows} the row number, {symbol} the symbol from the bank file (€, £…), {currencies} the currencies it can mean, {currency} the selected currency code",
+  },
+  "importer.configure.currencyConflict_other": {
+    message:
+      "{count} ردیف ({rows}) به {symbol} ({currencies}) نوشته شده‌اند، اما این واردسازی آن‌ها را به {currency} ثبت می‌کند.",
+    description:
+      "Import refusal for several selected rows whose amounts carry a currency symbol other than the chosen import currency. {rows} lists their row numbers, possibly ending in …",
+  },
+  "importer.configure.currencyConflictRemedy": {
+    message:
+      "هر واردسازی فقط یک ارز را ثبت می‌کند. ارزی را که این ردیف‌ها به آن نوشته شده‌اند انتخاب کنید، یا انتخاب آن‌ها را بردارید و جداگانه واردشان کنید. چیزی وارد نشده است.",
+    description:
+      "How to resolve a currency conflict before importing: no conversion happens, so the user picks the matching currency or splits the file",
+  },
   "importer.configure.assignTargetAccounts": {
     message: "اختصاص حساب‌های مقصد",
     description: "Heading for account mapping section",

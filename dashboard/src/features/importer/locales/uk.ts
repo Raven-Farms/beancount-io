@@ -323,6 +323,36 @@ const ukImporter: Record<string, TranslationEntry> = {
     message: "Валюта для всіх транзакцій",
     description: "Hint text for currency field",
   },
+  "importer.configure.currencyConflict_one": {
+    message:
+      "{count} рядок ({rows}) вказано в {symbol} ({currencies}), але цей імпорт провів би його як {currency}.",
+    description:
+      "Import refusal: a selected row's amount carries a currency symbol that is not the chosen import currency. {count} is 1, {rows} the row number, {symbol} the symbol from the bank file (€, £…), {currencies} the currencies it can mean, {currency} the selected currency code",
+  },
+  "importer.configure.currencyConflict_few": {
+    message:
+      "{count} рядки ({rows}) вказано в {symbol} ({currencies}), але цей імпорт провів би їх як {currency}.",
+    description:
+      "Import refusal for several selected rows whose amounts carry a currency symbol other than the chosen import currency. {rows} lists their row numbers, possibly ending in …",
+  },
+  "importer.configure.currencyConflict_many": {
+    message:
+      "{count} рядків ({rows}) вказано в {symbol} ({currencies}), але цей імпорт провів би їх як {currency}.",
+    description:
+      "Import refusal for several selected rows whose amounts carry a currency symbol other than the chosen import currency. {rows} lists their row numbers, possibly ending in …",
+  },
+  "importer.configure.currencyConflict_other": {
+    message:
+      "{count} рядка ({rows}) вказано в {symbol} ({currencies}), але цей імпорт провів би їх як {currency}.",
+    description:
+      "Import refusal for several selected rows whose amounts carry a currency symbol other than the chosen import currency. {rows} lists their row numbers, possibly ending in …",
+  },
+  "importer.configure.currencyConflictRemedy": {
+    message:
+      "Один імпорт проводить лише одну валюту. Виберіть валюту цих рядків або зніміть із них вибір та імпортуйте їх окремо. Нічого не імпортовано.",
+    description:
+      "How to resolve a currency conflict before importing: no conversion happens, so the user picks the matching currency or splits the file",
+  },
   "importer.configure.assignTargetAccounts": {
     message: "Призначити цільові рахунки",
     description: "Heading for account mapping section",

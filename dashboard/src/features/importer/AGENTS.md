@@ -76,6 +76,13 @@ Preview. It clears on a new upload or reset/finish — never via localStorage.
   (`createEditableRowSchema`), and configuration. A grouping comma is never
   deleted when it could be a decimal mark. A mixed column's rows stay refused
   until their own amount is edited; editing another field keeps the refusal.
+- A currency symbol is stripped to read the number but still names the row's
+  unit. `amountCurrencySymbol` reads it with the CLI's table (`€` is EUR, `£`
+  GBP/GIP/FKP/SHP/EGP, …; `$` and `¥` name nothing), and Configure refuses
+  selected rows whose symbol rules out the chosen Currency: an alert names the
+  rows, and nothing is sent until the reader picks the matching currency,
+  deselects them, or edits the amount. One import posts one currency; there is
+  no conversion. AI-parsed rows arrive as bare numbers, without symbol evidence.
 - Submit writes `parseAmount(...).decimal` — the exact normalized decimal, with
   the cell's digits (`(12.50)` → `-12.50`, comma-decimal `-1.000` → `-1000`) —
   never the raw token, which the ledger refuses or reads as another number.

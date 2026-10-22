@@ -327,6 +327,30 @@ const frImporter: Record<string, TranslationEntry> = {
     message: "Devise pour toutes les transactions",
     description: "Hint text for currency field",
   },
+  "importer.configure.currencyConflict_one": {
+    message:
+      "{count} ligne ({rows}) est libellée en {symbol} ({currencies}), mais cette importation la comptabiliserait en {currency}.",
+    description:
+      "Import refusal: a selected row's amount carries a currency symbol that is not the chosen import currency. {count} is 1, {rows} the row number, {symbol} the symbol from the bank file (€, £…), {currencies} the currencies it can mean, {currency} the selected currency code",
+  },
+  "importer.configure.currencyConflict_many": {
+    message:
+      "{count} lignes ({rows}) sont libellées en {symbol} ({currencies}), mais cette importation les comptabiliserait en {currency}.",
+    description:
+      "Import refusal for several selected rows whose amounts carry a currency symbol other than the chosen import currency. {rows} lists their row numbers, possibly ending in …",
+  },
+  "importer.configure.currencyConflict_other": {
+    message:
+      "{count} lignes ({rows}) sont libellées en {symbol} ({currencies}), mais cette importation les comptabiliserait en {currency}.",
+    description:
+      "Import refusal for several selected rows whose amounts carry a currency symbol other than the chosen import currency. {rows} lists their row numbers, possibly ending in …",
+  },
+  "importer.configure.currencyConflictRemedy": {
+    message:
+      "Une importation ne comptabilise qu’une seule devise. Choisissez la devise de ces lignes, ou désélectionnez-les et importez-les séparément. Rien n’a été importé.",
+    description:
+      "How to resolve a currency conflict before importing: no conversion happens, so the user picks the matching currency or splits the file",
+  },
   "importer.configure.assignTargetAccounts": {
     message: "Attribuer des comptes cibles",
     description: "Heading for account mapping section",

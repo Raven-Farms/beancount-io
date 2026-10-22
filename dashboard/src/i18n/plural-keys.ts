@@ -18,6 +18,7 @@ export const PLURAL_BASE_KEYS = [
   "common.whatsNewUnread",
   "importer.accountMapping.aiSuccessDescription",
   "importer.accountMapping.missingAccountAlert",
+  "importer.configure.currencyConflict",
   "importer.configure.importButton",
   "importer.finish.partialFailure",
   "importer.finish.successMessage",

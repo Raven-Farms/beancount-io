@@ -327,6 +327,30 @@ const caImporter: Record<string, TranslationEntry> = {
     message: "Moneda per a totes les transaccions",
     description: "Hint text for currency field",
   },
+  "importer.configure.currencyConflict_one": {
+    message:
+      "{count} fila ({rows}) és en {symbol} ({currencies}), però aquesta importació la registraria en {currency}.",
+    description:
+      "Import refusal: a selected row's amount carries a currency symbol that is not the chosen import currency. {count} is 1, {rows} the row number, {symbol} the symbol from the bank file (€, £…), {currencies} the currencies it can mean, {currency} the selected currency code",
+  },
+  "importer.configure.currencyConflict_many": {
+    message:
+      "{count} files ({rows}) són en {symbol} ({currencies}), però aquesta importació les registraria en {currency}.",
+    description:
+      "Import refusal for several selected rows whose amounts carry a currency symbol other than the chosen import currency. {rows} lists their row numbers, possibly ending in …",
+  },
+  "importer.configure.currencyConflict_other": {
+    message:
+      "{count} files ({rows}) són en {symbol} ({currencies}), però aquesta importació les registraria en {currency}.",
+    description:
+      "Import refusal for several selected rows whose amounts carry a currency symbol other than the chosen import currency. {rows} lists their row numbers, possibly ending in …",
+  },
+  "importer.configure.currencyConflictRemedy": {
+    message:
+      "Una importació registra una sola moneda. Tria la moneda d’aquestes files, o desmarca-les i importa-les per separat. No s’ha importat res.",
+    description:
+      "How to resolve a currency conflict before importing: no conversion happens, so the user picks the matching currency or splits the file",
+  },
   "importer.configure.assignTargetAccounts": {
     message: "Assignar comptes de destí",
     description: "Heading for account mapping section",

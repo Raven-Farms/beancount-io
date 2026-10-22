@@ -327,6 +327,24 @@ const deImporter: Record<string, TranslationEntry> = {
     message: "Währung für alle Transaktionen",
     description: "Hint text for currency field",
   },
+  "importer.configure.currencyConflict_one": {
+    message:
+      "{count} Zeile ({rows}) ist in {symbol} ({currencies}) angegeben, dieser Import würde sie aber als {currency} buchen.",
+    description:
+      "Import refusal: a selected row's amount carries a currency symbol that is not the chosen import currency. {count} is 1, {rows} the row number, {symbol} the symbol from the bank file (€, £…), {currencies} the currencies it can mean, {currency} the selected currency code",
+  },
+  "importer.configure.currencyConflict_other": {
+    message:
+      "{count} Zeilen ({rows}) sind in {symbol} ({currencies}) angegeben, dieser Import würde sie aber als {currency} buchen.",
+    description:
+      "Import refusal for several selected rows whose amounts carry a currency symbol other than the chosen import currency. {rows} lists their row numbers, possibly ending in …",
+  },
+  "importer.configure.currencyConflictRemedy": {
+    message:
+      "Ein Import bucht nur eine Währung. Wählen Sie die Währung dieser Zeilen oder heben Sie ihre Auswahl auf und importieren Sie sie separat. Es wurde nichts importiert.",
+    description:
+      "How to resolve a currency conflict before importing: no conversion happens, so the user picks the matching currency or splits the file",
+  },
   "importer.configure.assignTargetAccounts": {
     message: "Zielkonten zuweisen",
     description: "Heading for account mapping section",

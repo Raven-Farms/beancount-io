@@ -101,7 +101,7 @@
 
 - [ ] **m45** — [Keep commodity quantities precise in Budget and statements](./m45/README.md) (6 tasks) ← promoted331 and actual public statement QA,2026-10-21; minor,4.00995ETH becomes4.01 in shared hierarchy; modeled Budget loses fine BTC digits.
 
-- [ ] **m44** — [Refuse CSV currency-symbol conflicts before importing](./m44/README.md) (6 tasks) ← dashboard QA, 2026-10-21; major, accepted euro/pound tokens prepare as USD/EUR without conflict guidance; five real-UI requests preblocked, no hosted import.
+- [x] **m44** — [Refuse CSV currency-symbol conflicts before importing](./done/m44/README.md) (6 tasks) ← dashboard QA, 2026-10-21; major, accepted euro/pound tokens prepare as USD/EUR without conflict guidance; five real-UI requests preblocked, no hosted import.
 
 - [x] **m43** — [Keep contrast selections visible and readable](./done/m43/README.md) (11 tasks) ← dashboard QA, 2026-10-21; minor, promoted 273 with filter/tab label backplates and independently reproduced Calendar/Billing/Net Worth/Budget/Accounts/creation-radio selected-state cues.
 

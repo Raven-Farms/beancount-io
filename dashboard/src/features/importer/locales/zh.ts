@@ -314,6 +314,18 @@ const zhImporter: Record<string, TranslationEntry> = {
     message: "所有交易的货币",
     description: "Hint text for currency field",
   },
+  "importer.configure.currencyConflict_other": {
+    message:
+      "{count} 行（{rows}）以 {symbol}（{currencies}）计价，但本次导入会将其记为 {currency}。",
+    description:
+      "Import refusal for several selected rows whose amounts carry a currency symbol other than the chosen import currency. {rows} lists their row numbers, possibly ending in …",
+  },
+  "importer.configure.currencyConflictRemedy": {
+    message:
+      "一次导入只能记一种货币。请选择这些行所用的货币，或取消选择它们并单独导入。尚未导入任何内容。",
+    description:
+      "How to resolve a currency conflict before importing: no conversion happens, so the user picks the matching currency or splits the file",
+  },
   "importer.configure.assignTargetAccounts": {
     message: "分配目标账户",
     description: "Heading for account mapping section",

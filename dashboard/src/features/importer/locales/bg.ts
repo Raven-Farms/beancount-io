@@ -326,6 +326,24 @@ const bgImporter: Record<string, TranslationEntry> = {
     message: "Валута за всички транзакции",
     description: "Hint text for currency field",
   },
+  "importer.configure.currencyConflict_one": {
+    message:
+      "{count} ред ({rows}) е в {symbol} ({currencies}), но този импорт би го осчетоводил като {currency}.",
+    description:
+      "Import refusal: a selected row's amount carries a currency symbol that is not the chosen import currency. {count} is 1, {rows} the row number, {symbol} the symbol from the bank file (€, £…), {currencies} the currencies it can mean, {currency} the selected currency code",
+  },
+  "importer.configure.currencyConflict_other": {
+    message:
+      "{count} реда ({rows}) са в {symbol} ({currencies}), но този импорт би ги осчетоводил като {currency}.",
+    description:
+      "Import refusal for several selected rows whose amounts carry a currency symbol other than the chosen import currency. {rows} lists their row numbers, possibly ending in …",
+  },
+  "importer.configure.currencyConflictRemedy": {
+    message:
+      "Един импорт осчетоводява само една валута. Изберете валутата на тези редове или премахнете избора им и ги импортирайте отделно. Нищо не е импортирано.",
+    description:
+      "How to resolve a currency conflict before importing: no conversion happens, so the user picks the matching currency or splits the file",
+  },
   "importer.configure.assignTargetAccounts": {
     message: "Назначаване на целеви сметки",
     description: "Heading for account mapping section",
