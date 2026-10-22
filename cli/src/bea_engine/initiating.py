@@ -229,6 +229,13 @@ def answer_preset(
 
     # A confirmed zero asserts the boundary without posting anything (w5/876).
     funded = sorted(account for account, amount in balances.items() if amount)
+    if funded and day == datetime.date.min:
+        raise UsageError(
+            f"--date {day.isoformat()} cannot start a ledger with a known opening balance: an opening is recorded on "
+            f"the day before the history starts, and {day.isoformat()} has no day before it. Use "
+            f"{(day + datetime.timedelta(days=1)).isoformat()} or later, or leave the opening balance out. "
+            "Nothing was created."
+        )
     open_day = day - datetime.timedelta(days=1) if funded else day
     # Beancount string content: a quote or backslash left bare ended the string
     # early or began an escape, so the saved title was not the one supplied.
