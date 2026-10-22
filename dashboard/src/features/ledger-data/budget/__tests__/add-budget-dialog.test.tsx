@@ -209,6 +209,44 @@ describe("AddBudgetDialog", () => {
     });
   });
 
+  it("returns focus to Add Budget after a refused keyboard submission (w4/m42)", async () => {
+    const user = userEvent.setup();
+    let refuse: () => void = () => {};
+    mockUseMutation.mockReturnValue([
+      vi.fn(
+        () =>
+          new Promise((resolve) => {
+            refuse = () =>
+              resolve({
+                data: {
+                  bulkEntries: { success: false, message: "Invalid account" },
+                },
+              });
+          }),
+      ),
+      { loading: false },
+    ] as unknown as ReturnType<typeof useMutation>);
+
+    render(<AddBudgetDialog {...defaultProps} />);
+    await user.type(
+      screen.getByTestId("account-combobox"),
+      "Expenses:Groceries",
+    );
+    await user.type(screen.getByRole("spinbutton", { name: /amount/i }), "500");
+    const add = screen.getByRole("button", { name: /add budget/i });
+    await waitFor(() => expect(add).not.toBeDisabled());
+
+    add.focus();
+    await user.keyboard("{Enter}");
+    // The locked button cannot hold focus; the dialog keeps it meanwhile.
+    await waitFor(() => expect(add).toBeDisabled());
+    expect(screen.getByRole("dialog")).toHaveFocus();
+
+    refuse();
+    expect(await screen.findByText("Invalid account")).toBeInTheDocument();
+    expect(add).toHaveFocus();
+  });
+
   it("calls onSuccess and closes when mutation succeeds", async () => {
     const user = userEvent.setup();
     const onSuccess = vi.fn();

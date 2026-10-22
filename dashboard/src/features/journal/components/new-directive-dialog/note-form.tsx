@@ -111,6 +111,7 @@ export function NoteForm({
         accounts.reset();
         track("directive_added", { directive_type: "note" });
         onSuccess?.();
+        return true;
       } else {
         // Payload message is intentional server feedback — safe to show.
         setError(

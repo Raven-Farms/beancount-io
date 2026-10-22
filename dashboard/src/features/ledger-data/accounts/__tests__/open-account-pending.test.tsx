@@ -5,6 +5,7 @@ import {
   screen,
   waitFor,
 } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { OpenAccountDialog } from "../open-account-dialog";
@@ -95,6 +96,17 @@ async function submitA() {
   await waitFor(() => expect(mutate).toHaveBeenCalledTimes(1));
 }
 
+/** Enter on a focused Open Account, the way a keyboard reader submits. */
+async function submitByKeyboard(user: ReturnType<typeof userEvent.setup>) {
+  fireEvent.change(account(), {
+    target: { value: "Assets:Qa-20261021:Focus" },
+  });
+  await waitFor(() => expect(openButton()).toBeEnabled());
+  openButton().focus();
+  await user.keyboard("{Enter}");
+  await waitFor(() => expect(mutate).toHaveBeenCalledTimes(1));
+}
+
 describe("Accounts Open Account while its write is pending", () => {
   beforeEach(() => {
     mutate.mockClear();
@@ -128,6 +140,31 @@ describe("Accounts Open Account while its write is pending", () => {
         }),
       }),
     ]);
+  });
+
+  it("returns focus to Open Account after a failed keyboard submission (w4/m42)", async () => {
+    const user = userEvent.setup();
+    render(<Harness />);
+    await submitByKeyboard(user);
+    // The locked button cannot hold focus; the dialog keeps it meanwhile.
+    expect(openButton()).toBeDisabled();
+    expect(screen.getByRole("dialog")).toHaveFocus();
+
+    await settle("failure");
+    expect(await screen.findByText("Network error")).toBeInTheDocument();
+    expect(openButton()).toHaveFocus();
+  });
+
+  it("does not hand focus to Open Account after a success, even before the dialog closes", async () => {
+    const user = userEvent.setup();
+    // Accounts closes the dialog through a route change, which lands after
+    // the write settles; until then the dialog and its valid draft remain.
+    render(<OpenAccountDialog open onOpenChange={() => {}} ledgerId="o/l" />);
+    await submitByKeyboard(user);
+    await settle("success");
+    await waitFor(() => expect(openButton()).toBeEnabled());
+    expect(openButton()).not.toHaveFocus();
+    expect(screen.getByRole("dialog")).toHaveFocus();
   });
 
   it("keeps the draft editable for a retry after a failure", async () => {

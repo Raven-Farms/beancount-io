@@ -103,7 +103,7 @@
 
 - [ ] **m43** — [Keep contrast selections visible and readable](./m43/README.md) (11 tasks) ← dashboard QA, 2026-10-21; minor, promoted 273 with filter/tab label backplates and independently reproduced Calendar/Billing/Net Worth/Budget/Accounts/creation-radio selected-state cues.
 
-- [ ] **m42** — [Keep keyboard focus owned during and after modal submissions](./m42/README.md) (5 tasks) ← dashboard QA, 2026-10-20; minor, pending reverse-Tab escapes New Entry and failed submits lose the retry position.
+- [x] **m42** — [Keep keyboard focus owned during and after modal submissions](./done/m42/README.md) (5 tasks) ← dashboard QA, 2026-10-20; minor, pending reverse-Tab escapes New Entry and failed submits lose the retry position.
 
 - [ ] **m41** — [Preserve acknowledged actions through refresh failures](./blocked/m41/README.md) (6 tasks) ← dashboard QA, 2026-10-20; minor, promoted 294 with independent Budget submission scope. — **blocked:** fixes shipped in `9a268c473` and `292a4321b`; awaiting controlled browser checks
 

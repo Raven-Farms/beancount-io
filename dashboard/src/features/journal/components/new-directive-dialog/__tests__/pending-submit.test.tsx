@@ -5,6 +5,7 @@ import {
   screen,
   waitFor,
 } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useMutation } from "@apollo/client/react";
@@ -145,6 +146,8 @@ function Harness({ tab }: { tab: JournalDirectiveAction }) {
 }
 
 const noteContent = () => screen.getByRole("textbox", { name: "Note content" });
+const createNote = () =>
+  screen.getByRole("button", { name: "Create Note Entry" });
 const setAccount = (value: string, index = 0) =>
   fireEvent.change(
     screen.getAllByRole("textbox", { name: "Account" })[index]!,
@@ -156,16 +159,34 @@ const setAccount = (value: string, index = 0) =>
 async function fillNote(text: string) {
   setAccount("Assets:Cash");
   fireEvent.change(noteContent(), { target: { value: text } });
+  await waitFor(() => expect(createNote()).toBeEnabled());
+}
+
+async function submitNote() {
+  fireEvent.click(createNote());
+  await waitFor(() => expect(held).toHaveLength(1));
+}
+
+/** A balanced two-posting Transaction, ready to submit. */
+async function fillTransaction() {
+  setAccount("Expenses:Food", 0);
+  fireEvent.change(screen.getAllByRole("spinbutton")[0]!, {
+    target: { value: "1.23" },
+  });
+  setAccount("Assets:Cash", 1);
+  fireEvent.change(screen.getAllByRole("spinbutton")[1]!, {
+    target: { value: "-1.23" },
+  });
   await waitFor(() =>
     expect(
-      screen.getByRole("button", { name: "Create Note Entry" }),
+      screen.getByRole("button", { name: "Create Transaction Entry" }),
     ).toBeEnabled(),
   );
 }
 
-async function submitNote() {
-  fireEvent.click(screen.getByRole("button", { name: "Create Note Entry" }));
-  await waitFor(() => expect(held).toHaveLength(1));
+async function failWrite(index = 0) {
+  await act(async () => held[index]!.reject());
+  expect(await screen.findByText("Connection problem")).toBeInTheDocument();
 }
 
 const noteText = (call: Held) =>
@@ -204,7 +225,7 @@ describe("New Entry while a write is in flight", () => {
     expect(noteContent()).toHaveValue("qa A");
 
     fireEvent.change(noteContent(), { target: { value: "qa B" } });
-    fireEvent.click(screen.getByRole("button", { name: "Create Note Entry" }));
+    fireEvent.click(createNote());
     await waitFor(() => expect(held).toHaveLength(2));
     expect(noteText(held[1]!)).toBe("qa B");
   });
@@ -231,19 +252,11 @@ describe("New Entry while a write is in flight", () => {
 
   it("sends a Transaction once despite repeated Cmd+Enter and clicks", async () => {
     render(<Harness tab="transaction" />);
-    setAccount("Expenses:Food", 0);
-    fireEvent.change(screen.getAllByRole("spinbutton")[0]!, {
-      target: { value: "1.23" },
-    });
-    setAccount("Assets:Cash", 1);
-    fireEvent.change(screen.getAllByRole("spinbutton")[1]!, {
-      target: { value: "-1.23" },
-    });
+    await fillTransaction();
     const amount = screen.getAllByRole("spinbutton")[0]!;
     const submit = screen.getByRole("button", {
       name: "Create Transaction Entry",
     });
-    await waitFor(() => expect(submit).toBeEnabled());
 
     fireEvent.keyDown(amount, { key: "Enter", metaKey: true });
     fireEvent.keyDown(amount, { key: "Enter", metaKey: true });
@@ -261,6 +274,121 @@ describe("New Entry while a write is in flight", () => {
     await act(async () => {});
     expect(held).toHaveLength(2);
     expect(amount).toHaveValue(1.23);
+  });
+});
+
+/**
+ * Keyboard focus while New Entry's write is in flight (w4/m42). jsdom keeps
+ * focus on a control its fieldset just disabled; a browser drops it, Radix
+ * falls back to the dialog itself, and Shift+Tab from there reached the page
+ * behind the modal. So these tests assert where focus is parked, and model
+ * the browser's fallback explicitly where the handback depends on it.
+ */
+describe("New Entry focus while a write is in flight", () => {
+  const notePanel = () => screen.getByRole("tabpanel", { name: "Note" });
+  const focusIsInDialog = () =>
+    expect(screen.getByRole("dialog")).toContainElement(
+      document.activeElement as HTMLElement,
+    );
+
+  async function submitNoteByKeyboard(
+    user: ReturnType<typeof userEvent.setup>,
+  ) {
+    await fillNote("qa A");
+    createNote().focus();
+    await user.keyboard("{Enter}");
+    // Validation runs before the write; allow a loaded run.
+    await waitFor(() => expect(held).toHaveLength(1), { timeout: 3000 });
+    expect(createNote()).toBeDisabled();
+  }
+
+  it("parks focus on the Note panel and keeps Tab and Shift+Tab inside the dialog", async () => {
+    const user = userEvent.setup();
+    render(<Harness tab="note" />);
+    await submitNoteByKeyboard(user);
+
+    expect(notePanel()).toHaveFocus();
+    await user.tab({ shift: true });
+    expect(screen.getByRole("button", { name: "Close" })).toHaveFocus();
+    await user.tab({ shift: true });
+    focusIsInDialog();
+    await user.tab();
+    focusIsInDialog();
+    await user.tab();
+    focusIsInDialog();
+    expect(held).toHaveLength(1);
+  });
+
+  it("returns focus to Create Note Entry after a failure, with the draft kept", async () => {
+    const user = userEvent.setup();
+    render(<Harness tab="note" />);
+    await submitNoteByKeyboard(user);
+
+    // Where a browser leaves focus once the button is disabled.
+    act(() => screen.getByRole("dialog").focus());
+    await failWrite();
+    expect(createNote()).toHaveFocus();
+    expect(noteContent()).toHaveValue("qa A");
+
+    await user.keyboard("{Enter}");
+    await waitFor(() => expect(held).toHaveLength(2));
+    expect(noteText(held[1]!)).toBe("qa A");
+  });
+
+  it("leaves a deliberate move to Close where it is", async () => {
+    const user = userEvent.setup();
+    render(<Harness tab="note" />);
+    await submitNoteByKeyboard(user);
+
+    const close = screen.getByRole("button", { name: "Close" });
+    await user.click(close);
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+    expect(close).toHaveFocus();
+
+    await failWrite();
+    expect(close).toHaveFocus();
+  });
+
+  it("does not hand focus back after a success, even before the dialog closes", async () => {
+    const user = userEvent.setup();
+    // The journal closes New Entry through a route change, which lands after
+    // the write settles; until then the dialog is still on screen.
+    render(
+      <NewDirectiveDialog
+        open
+        onOpenChange={() => {}}
+        ledgerId="owner/ledger"
+        activeTab="note"
+        onActiveTabChange={() => {}}
+      />,
+    );
+    await submitNoteByKeyboard(user);
+
+    await act(async () => held[0]!.resolve());
+    await waitFor(() => expect(noteContent()).toBeEnabled());
+    expect(noteContent()).toHaveValue("");
+    expect(createNote()).not.toHaveFocus();
+    expect(notePanel()).toHaveFocus();
+  });
+
+  it("returns focus to the Transaction amount that sent Cmd+Enter after a failure", async () => {
+    const user = userEvent.setup();
+    render(<Harness tab="transaction" />);
+    // The form moves focus to Payee on a mount timer; let it land first.
+    await waitFor(() =>
+      expect(screen.getByRole("textbox", { name: "Payee" })).toHaveFocus(),
+    );
+    await fillTransaction();
+    const amount = screen.getAllByRole("spinbutton")[1]!;
+    amount.focus();
+    await user.keyboard("{Meta>}{Enter}{/Meta}");
+    await waitFor(() => expect(held).toHaveLength(1));
+    expect(amount).toBeDisabled();
+    expect(screen.getByRole("tabpanel", { name: "Transaction" })).toHaveFocus();
+
+    await failWrite();
+    expect(amount).toHaveFocus();
+    expect(amount).toHaveValue(-1.23);
   });
 });
 
@@ -315,7 +443,7 @@ describe("New Entry type switches", () => {
   const settle = { timeout: 3000 };
 
   it("keeps a Note draft through Note → Balance (arrow key) → Note", async () => {
-    const user = (await import("@testing-library/user-event")).default.setup();
+    const user = userEvent.setup();
     render(<Harness tab="note" />);
     setAccount("Assets:Cash");
     fireEvent.change(noteContent(), { target: { value: "qa draft note" } });

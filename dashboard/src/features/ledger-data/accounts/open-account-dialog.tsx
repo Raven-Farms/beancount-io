@@ -107,6 +107,7 @@ export function OpenAccountDialog({
         onSuccess?.();
         if (opening.current === submittedFrom) onOpenChange(false);
         void writeOutcome.report(before);
+        return true;
       } else {
         setError(result.data?.bulkEntries.message ?? formatError(undefined));
       }

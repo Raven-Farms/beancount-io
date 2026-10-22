@@ -310,6 +310,7 @@ export function TransactionForm({
         accounts.reset();
         track("directive_added", { directive_type: "transaction" });
         onSuccess?.();
+        return true;
       } else {
         // Payload message is intentional server feedback — safe to show.
         setError(

@@ -181,6 +181,7 @@ export function AddBudgetDialog({
         void client
           .refetchQueries({ include: [GetLedgerJournalDocument] })
           .catch(() => undefined);
+        return true;
       } else {
         setError(
           result.data?.bulkEntries.message ??

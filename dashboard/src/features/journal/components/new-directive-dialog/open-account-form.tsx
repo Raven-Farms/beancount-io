@@ -74,6 +74,7 @@ export function OpenAccountForm({
         form.reset({ date: todayIsoDate(), account: "" });
         track("directive_added", { directive_type: "open" });
         onSuccess?.();
+        return true;
       } else {
         // Payload message is intentional server feedback — safe to show.
         setError(

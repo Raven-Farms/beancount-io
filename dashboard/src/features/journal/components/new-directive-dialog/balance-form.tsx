@@ -134,6 +134,7 @@ export function BalanceForm({
         accounts.reset();
         track("directive_added", { directive_type: "balance" });
         onSuccess?.();
+        return true;
       } else {
         // Payload message is intentional server feedback (e.g. beancount
         // validation details) — safe to show as-is.
