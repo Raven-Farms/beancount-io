@@ -52,7 +52,10 @@ function screen(refreshFails: boolean) {
         if (id === "expo-router")
           return {
             Stack: { Screen: "Screen" },
-            router: { replace: () => events.push("navigate") },
+            router: {
+              replace: () => events.push("navigate"),
+              dismissTo: () => events.push("navigate"),
+            },
           };
         if (id === "zod") return require("zod");
         if (id === "@hookform/resolvers/zod")

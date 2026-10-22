@@ -183,7 +183,10 @@ export function LedgerSelectionScreen() {
       )
         return;
       ledgerVar(id);
-      router.replace("/(app)/(tabs)");
+      // Back to the tab bar that is already mounted below this screen; a
+      // replace made a second copy of the whole tab bar on every switch
+      // (w21/242).
+      router.dismissTo("/(app)/(tabs)");
     } catch {
       if (mounted.current) showError();
     } finally {

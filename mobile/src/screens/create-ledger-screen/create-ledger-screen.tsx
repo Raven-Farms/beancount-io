@@ -423,7 +423,9 @@ export function CreateLedgerScreen(): JSX.Element {
         // another submission; the directory retains the confirmed new ledger.
         await refresh(result.data!.createLedger).catch(() => {});
         ledgerVar(id);
-        router.replace("/(app)/(tabs)");
+        // Pop to the tab bar already below this screen instead of stacking
+        // another copy of it (w21/242).
+        router.dismissTo("/(app)/(tabs)");
       } catch (error) {
         const kind = classifyCreateLedgerError(error);
         if (kind === "conflict") {
