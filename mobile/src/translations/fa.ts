@@ -220,6 +220,8 @@ export const fa: Translations = {
   deleting: "در حال حذف...",
   saveSuccess: "تراکنش ذخیره شد!",
   saveFailed: "ذخیره ناموفق",
+  profilePartialSave:
+    "نام کاربری ذخیره شد، اما نام شما ذخیره نشد. دوباره تلاش کنید.",
   amountEmptyError: "لطفاً مبلغ را وارد کنید",
   accountEmptyError: "حساب مبدأ و مقصد را انتخاب کنید",
   accounts: "حساب‌ها",

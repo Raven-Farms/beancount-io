@@ -224,6 +224,8 @@ export const uk: Translations = {
   deleting: "Видалення...",
   saveSuccess: "Транзакцію збережено!",
   saveFailed: "Помилка збереження",
+  profilePartialSave:
+    "Ім'я користувача збережено, але ваше ім'я зберегти не вдалося. Спробуйте ще раз.",
   amountEmptyError: "Будь ласка, введіть суму",
   accountEmptyError: "Оберіть рахунок списання та рахунок зарахування",
   accounts: "Рахунки",

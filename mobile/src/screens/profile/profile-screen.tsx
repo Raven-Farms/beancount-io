@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useApolloClient } from "@apollo/client";
 import { invalidateLedgerData } from "@/common/apollo/invalidate-ledger";
 import { renameLedgerOwner } from "@/common/vars/rename-ledger-owner";
@@ -46,6 +46,7 @@ import { UserAvatar } from "@/components/user-avatar";
 import {
   usernameAllowed,
   usernameErrorKey,
+  nameFailureKey,
   profileChanges,
   type ProfileValues,
 } from "./profile-changes";
@@ -266,17 +267,25 @@ export function ProfileScreen(): JSX.Element {
     resetOptions: { keepDirtyValues: true },
   });
 
+  // The username this form has already saved. A retry after the name failed
+  // must not send it, or rename the ledgers a second time (w21/288).
+  const savedUsernameRef = useRef<string | null>(null);
+
   const onSubmit = handleSubmit(async (values) => {
     const pending = profileChanges(savedValues, values);
     // Username first: it is the write most likely to be refused, and a
     // refusal should leave the names untouched too.
-    if (pending.username !== undefined) {
+    if (
+      pending.username !== undefined &&
+      pending.username !== savedUsernameRef.current
+    ) {
       try {
         await updateUsername({ variables: { username: pending.username } });
         // Renaming the account renames every ledger it owns: follow them with
         // everything remembered per ledger, drop what was read under the old
         // ids, and re-list the directory, which would otherwise keep listing
         // them under the old owner (w21/226).
+        savedUsernameRef.current = pending.username;
         renameLedgerOwner(savedValues.username, pending.username);
         void invalidateLedgerData(client, "file");
         void refreshLedgers().catch(() => {});
@@ -292,7 +301,9 @@ export function ProfileScreen(): JSX.Element {
       try {
         await updateProfile({ variables: pending.name });
       } catch {
-        setError("root", { message: t("saveFailed") });
+        setError("root", {
+          message: t(nameFailureKey(savedUsernameRef.current !== null)),
+        });
         return;
       }
     }

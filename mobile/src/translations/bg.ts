@@ -222,6 +222,8 @@ export const bg: Translations = {
   deleting: "Изтриване...",
   saveSuccess: "Транзакцията е запазена!",
   saveFailed: "Неуспешно запазване",
+  profilePartialSave:
+    "Потребителското име е запазено, но името ви не можа да се запази. Опитайте отново.",
   amountEmptyError: "Моля въведете сумата",
   accountEmptyError: "Изберете сметка източник и сметка получател",
   accounts: "Сметки",

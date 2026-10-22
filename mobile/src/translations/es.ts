@@ -226,6 +226,8 @@ export const es: Translations = {
   deleting: "Eliminando...",
   saveSuccess: "¡Transacción guardada!",
   saveFailed: "Error al guardar",
+  profilePartialSave:
+    "El nombre de usuario se guardó, pero no se pudo guardar tu nombre. Inténtalo de nuevo.",
   amountEmptyError: "Introduce el monto",
   accountEmptyError: "Elige la cuenta de origen y la de destino",
   accounts: "Cuentas",

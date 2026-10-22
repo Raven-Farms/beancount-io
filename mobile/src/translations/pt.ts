@@ -227,6 +227,8 @@ export const pt: Translations = {
   deleting: "Excluindo...",
   saveSuccess: "Transação salva!",
   saveFailed: "Falha ao salvar",
+  profilePartialSave:
+    "O nome de usuário foi salvo, mas seu nome não pôde ser salvo. Tente novamente.",
   amountEmptyError: "Por favor, insira o valor",
   accountEmptyError: "Escolha a conta de origem e a de destino",
   accounts: "Contas",

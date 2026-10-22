@@ -226,6 +226,8 @@ export const fr: Translations = {
   deleting: "Suppression...",
   saveSuccess: "Transaction enregistrée !",
   saveFailed: "Échec de l'enregistrement",
+  profilePartialSave:
+    "Le nom d'utilisateur est enregistré, mais votre nom n'a pas pu l'être. Réessayez.",
   amountEmptyError: "Veuillez saisir le montant",
   accountEmptyError: "Choisissez le compte de départ et le compte d'arrivée",
   accounts: "Comptes",

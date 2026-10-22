@@ -226,6 +226,8 @@ export const sk: Translations = {
   deleting: "Odstraňuje sa...",
   saveSuccess: "Transakcia uložená!",
   saveFailed: "Ukladanie zlyhalo",
+  profilePartialSave:
+    "Používateľské meno bolo uložené, ale vaše meno sa nepodarilo uložiť. Skúste to znova.",
   amountEmptyError: "Prosím zadajte sumu",
   accountEmptyError: "Vyberte zdrojový a cieľový účet",
   accounts: "Účty",

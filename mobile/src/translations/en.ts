@@ -215,6 +215,8 @@ export const en = {
   deleting: "Deleting...",
   saveSuccess: "Transaction saved!",
   saveFailed: "Failed to save",
+  profilePartialSave:
+    "Username saved, but your name couldn't be saved. Try again.",
   amountEmptyError: "Please input the amount",
   accountEmptyError: "Please select the from and to accounts",
   accounts: "Accounts",

@@ -225,6 +225,8 @@ export const ru: Translations = {
   deleting: "Удаление...",
   saveSuccess: "Транзакция сохранена!",
   saveFailed: "Ошибка сохранения",
+  profilePartialSave:
+    "Имя пользователя сохранено, но имя сохранить не удалось. Повторите попытку.",
   amountEmptyError: "Пожалуйста, введите сумму",
   accountEmptyError: "Выберите счёт списания и счёт зачисления",
   accounts: "Счета",

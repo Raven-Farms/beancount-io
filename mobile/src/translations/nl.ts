@@ -223,6 +223,8 @@ export const nl: Translations = {
   deleting: "Verwijderen...",
   saveSuccess: "Transactie opgeslagen!",
   saveFailed: "Opslaan mislukt",
+  profilePartialSave:
+    "De gebruikersnaam is opgeslagen, maar je naam kon niet worden opgeslagen. Probeer het opnieuw.",
   amountEmptyError: "Voer het bedrag in",
   accountEmptyError: "Kies het account waarvan en waarnaar",
   accounts: "Accounts",

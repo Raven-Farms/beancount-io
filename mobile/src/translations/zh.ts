@@ -201,6 +201,7 @@ export const zh: Translations = {
   deleting: "正在删除...",
   saveSuccess: "保存成功!",
   saveFailed: "保存失败",
+  profilePartialSave: "用户名已保存，但姓名未能保存。请重试。",
   amountEmptyError: "请输入金额",
   accountEmptyError: "请选择转出和转入账户",
   accounts: "账户",

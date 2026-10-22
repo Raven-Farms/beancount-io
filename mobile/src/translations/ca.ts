@@ -228,6 +228,8 @@ export const ca: Translations = {
   deleting: "Suprimint...",
   saveSuccess: "Transacció guardada!",
   saveFailed: "Error al guardar",
+  profilePartialSave:
+    "El nom d'usuari s'ha desat, però no s'ha pogut desar el vostre nom. Torneu-ho a provar.",
   amountEmptyError: "Si us plau, introdueix l'import",
   accountEmptyError: "Tria el compte d'origen i el de destí",
   accounts: "Comptes",

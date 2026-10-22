@@ -229,6 +229,8 @@ export const de: Translations = {
   deleting: "Löschen...",
   saveSuccess: "Transaktion gespeichert!",
   saveFailed: "Speichern fehlgeschlagen",
+  profilePartialSave:
+    "Der Benutzername wurde gespeichert, Ihr Name jedoch nicht. Bitte versuchen Sie es erneut.",
   amountEmptyError: "Bitte geben Sie den Betrag ein",
   accountEmptyError: "Bitte wählen Sie das Quell- und das Zielkonto",
   accounts: "Konten",

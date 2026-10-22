@@ -20,6 +20,17 @@ function trimProfile(values: ProfileValues): ProfileValues {
   };
 }
 
+/**
+ * What a failed name write says. When the username was already saved the
+ * account and its ledgers are renamed, so "Failed to save" would be false and
+ * would hide it; the retry then sends only the name (w21/288).
+ */
+export function nameFailureKey(
+  usernameSaved: boolean,
+): "profilePartialSave" | "saveFailed" {
+  return usernameSaved ? "profilePartialSave" : "saveFailed";
+}
+
 /** The writes a save needs: nothing for untouched fields, so renaming
  * yourself never also renames your ledgers' owner. */
 export function profileChanges(
