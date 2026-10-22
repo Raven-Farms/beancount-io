@@ -142,4 +142,26 @@ describe("TextInputScreen suggestions", () => {
     });
     expect(offered(tree)).toEqual(["Trader Joes"]);
   });
+
+  // w21/257: the screen compared with a plain lower-case substring.
+  it("finds Turkish İ and decomposed text, once", () => {
+    typed = "iş";
+    expect(
+      offered(
+        TextInputScreen({
+          headerTitle: "Payee",
+          suggestions: ["\u0130\u015fBank ATM", "Trader Joes"],
+        }),
+      ),
+    ).toEqual(["\u0130\u015fBank ATM"]);
+    typed = "caf\u00e9";
+    expect(
+      offered(
+        TextInputScreen({
+          headerTitle: "Payee",
+          suggestions: ["Cafe\u0301 Central", "Caf\u00e9 Central"],
+        }),
+      ),
+    ).toEqual(["Cafe\u0301 Central"]);
+  });
 });
