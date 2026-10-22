@@ -37,6 +37,12 @@ export interface CreateLedgerDraft<Values> {
    * (w21/501).
    */
   sentFingerprint?: string;
+  /**
+   * Whether an opening amount had been typed when the draft was saved — a
+   * flag, never the amount. A blank optional amount is nothing lost on resume
+   * (w21/510); a draft saved before this field existed counts as typed.
+   */
+  amountTyped?: boolean;
   values: Values;
 }
 
@@ -63,10 +69,13 @@ export function serializeCreateLedgerDraft<Values extends DraftValues>(
   draft: CreateLedgerDraft<Values>,
   now: Date = new Date(),
 ): string {
+  const amountTyped = draft.values.openingAmount.trim() !== "";
   return JSON.stringify({
     ...draft,
+    amountTyped,
     ...(draft.sentFingerprint !== undefined &&
-      draft.values.openingAccount && {
+      draft.values.openingAccount &&
+      amountTyped && {
         sentFingerprint: AMOUNT_FINGERPRINT_REDACTED,
       }),
     requestedAt: draft.requestedAt ?? now.getTime(),
@@ -79,13 +88,14 @@ export function serializeCreateLedgerDraft<Values extends DraftValues>(
  * The stored draft to resume, or null when there is none, it is malformed,
  * or it has outlived its `requestId`. A draft saved before today reopens with
  * today's Books begin rather than the day it was started. One left past the
- * form with an opening account reopens on the form: its amount is not kept,
- * and Review would build the ledger without the balance (w21/435).
+ * form with an opening account and a typed amount reopens on the form: the
+ * amount is not kept, and Review would build the ledger without the balance
+ * (w21/435). A blank optional amount loses nothing (w21/510).
  */
 export function restoreCreateLedgerDraft<Values extends DraftValues>(
   raw: string | null,
   now: Date = new Date(),
-): CreateLedgerDraft<Values> | null {
+): (CreateLedgerDraft<Values> & { amountLost: boolean }) | null {
   if (!raw) return null;
   let parsed: (CreateLedgerDraft<Values> & { savedAt?: unknown }) | null;
   try {
@@ -109,9 +119,11 @@ export function restoreCreateLedgerDraft<Values extends DraftValues>(
   const { savedAt, ...draft } = parsed;
   const today = getFormatDate(now);
   const stale = getFormatDate(new Date(savedAt)) < today;
-  const amountLost = Boolean(draft.values.openingAccount);
+  const amountLost =
+    Boolean(draft.values.openingAccount) && draft.amountTyped !== false;
   return {
     ...draft,
+    amountLost,
     step: amountLost ? Math.min(draft.step, FORM_STEP) : draft.step,
     values: {
       ...draft.values,

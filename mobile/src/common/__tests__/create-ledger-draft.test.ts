@@ -110,6 +110,38 @@ describe("the Create Ledger draft", () => {
     expect(restored?.values.openingAmount).toBe("");
   });
 
+  // w21/510: the amount is optional; a blank one was never lost.
+  it("keeps Review for an opening account whose amount was left blank", () => {
+    const blank = {
+      ...draft,
+      step: 2,
+      values: { ...draft.values, openingAmount: "  " },
+    };
+    const raw = serializeCreateLedgerDraft(blank, saved);
+    expect(JSON.parse(raw).amountTyped).toBe(false);
+    const restored = restoreCreateLedgerDraft<Values>(
+      raw,
+      new Date(2026, 9, 20, 21, 0),
+    );
+    expect(restored?.step).toBe(2);
+    expect(restored?.amountLost).toBe(false);
+  });
+
+  it("flags the lost amount of a typed draft, and of one saved before the flag", () => {
+    const now = new Date(2026, 9, 20, 21, 0);
+    const typed = restoreCreateLedgerDraft<Values>(
+      serializeCreateLedgerDraft({ ...draft, step: 2 }, saved),
+      now,
+    );
+    expect(typed?.amountLost).toBe(true);
+    const { amountTyped: _flag, ...old } = JSON.parse(
+      serializeCreateLedgerDraft({ ...draft, step: 2 }, saved),
+    );
+    const legacy = restoreCreateLedgerDraft<Values>(JSON.stringify(old), now);
+    expect(legacy?.amountLost).toBe(true);
+    expect(legacy?.step).toBe(1);
+  });
+
   it("keeps Review for a draft with no opening account", () => {
     const onReview = {
       ...draft,

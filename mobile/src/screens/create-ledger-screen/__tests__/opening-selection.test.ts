@@ -101,8 +101,6 @@ describe("an opening amount a resumed draft still owes", () => {
         'path:["openingAmount"],message:t("createLedgerAmountReenter")',
       ),
     ).toBe(true);
-    expect(
-      source.includes("setAmountLost(Boolean(draft.values.openingAccount));"),
-    ).toBe(true);
+    expect(source.includes("setAmountLost(draft.amountLost);")).toBe(true);
   });
 });

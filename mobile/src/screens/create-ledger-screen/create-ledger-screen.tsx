@@ -303,9 +303,8 @@ export function CreateLedgerScreen(): JSX.Element {
     restoredRef.current = true;
     void AsyncStorage.getItem(CREATE_LEDGER_DRAFT_KEY).then((raw) => {
       // A missing, corrupt or expired draft starts the flow fresh.
-      const draft = restoreCreateLedgerDraft<FormValues>(
-        raw,
-      ) as CreateDraft | null;
+      const draft = restoreCreateLedgerDraft<FormValues>(raw) as
+        (CreateDraft & { amountLost: boolean }) | null;
       if (!draft) return;
       setStep(draft.step);
       setStartKind(draft.startKind);
@@ -315,7 +314,7 @@ export function CreateLedgerScreen(): JSX.Element {
       if (draft.requestedAt !== undefined) {
         requestedAtRef.current = draft.requestedAt;
       }
-      setAmountLost(Boolean(draft.values.openingAccount));
+      setAmountLost(draft.amountLost);
       reset(draft.values);
     });
   }, [reset]);
