@@ -4,6 +4,8 @@
 
 ## Inbox
 
+- [984 — Keep cached Activity cards after a failed refresh](./984.md) — minor; real cached dashboard reads with injected offset0 failure,2026-10-22; ten cards become zero at both widths despite retained query data; initial-error/retry controls pass, no writes.
+
 - [983 — Offer Try Again on the remaining QueryView read failures](./983.md) — minor; w4/m50 simplify reviews, 2026-10-22; Settings, Accounts, Errors, Documents and Events show a read error without Try Again, and three hand-rolled retries could adopt the shared hook; code-read, not yet reproduced.
 
 - [982 — Let Receipt Record accept exact decimals](./982.md) — minor residual of W1/028; both-width native12.345KWD corrections are blocked by fixed-cent step before transport; exact12.34 controls pass, no hosted writes.
