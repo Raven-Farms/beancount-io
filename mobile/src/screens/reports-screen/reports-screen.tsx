@@ -3,7 +3,8 @@ import {
   selectReadContextState,
 } from "@/common/apollo/card-load-state";
 import { CardLoadFailure } from "@/components/card-load-failure";
-import { useCallback, useMemo, useState } from "react";
+import { useReactiveVar } from "@apollo/client";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { StyleSheet, View } from "react-native";
 import { ColorTheme } from "@/types/theme-props";
 import { useThemeStyle } from "@/common/hooks";
@@ -56,6 +57,7 @@ import {
 } from "./components/cash-flow-sankey";
 import { AccountTransactionsCard } from "./components/account-transactions-card";
 import { reportScrollStyles } from "./components/report-scroll-style";
+import { requestedReportsRange } from "./reports-range-request";
 
 /** How many top categories to show before folding the tail into "Other". */
 const BREAKDOWN_TOP_N = 7;
@@ -74,6 +76,12 @@ const ReportsScreenImpl = (): JSX.Element => {
   const styles = useThemeStyle(getStyles);
 
   const [timeRange, setTimeRange] = useState<TimeRange>("6M");
+  const requestedRange = useReactiveVar(requestedReportsRange);
+  useEffect(() => {
+    if (requestedRange === null) return;
+    setTimeRange(requestedRange);
+    requestedReportsRange(null);
+  }, [requestedRange]);
   const [refreshing, setRefreshing] = useState(false);
 
   const {

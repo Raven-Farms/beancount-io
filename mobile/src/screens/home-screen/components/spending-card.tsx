@@ -29,6 +29,7 @@ import {
 import { useGuest } from "@/common/guest/guest-context";
 import { BALANCE_CONVERSION } from "@/common/balance-util";
 import { getFormatDate } from "@/common/format-util";
+import { requestedReportsRange } from "@/screens/reports-screen/reports-range-request";
 import { useScheduledThisMonth } from "@/screens/home-screen/hooks/use-scheduled-this-month";
 import {
   monthToDateWindow,
@@ -98,6 +99,7 @@ export function SpendingCard({
   // `navigate` rather than `push`: Reports is a tab, so this switches to it and
   // leaves Home on its own stack with its scroll position intact.
   const openReports = () => {
+    requestedReportsRange("1M");
     if (guest) {
       guest.navigate("reports");
       return;
