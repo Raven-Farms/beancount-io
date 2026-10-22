@@ -190,7 +190,9 @@ export function WelcomeScreen(): JSX.Element {
             </Button>
           </View>
           {failure && (
-            <Text style={styles.error}>{t(failureMessageKey(failure))}</Text>
+            <Text style={styles.error} accessibilityRole="alert">
+              {t(failureMessageKey(failure))}
+            </Text>
           )}
           {signOutReason === "sessionEnded" && !failure ? (
             <Text style={styles.error} accessibilityRole="alert">

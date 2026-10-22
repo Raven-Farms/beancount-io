@@ -41,6 +41,9 @@ export function useNativeSignIn({
   useEffect(() => {
     if (lastServer.current === server) return;
     lastServer.current = server;
+    // A failure already settled was about the old server: it must not stand
+    // under the new one (w21/454).
+    setFailure(null);
     if (!running.current) return;
     attempt.current += 1;
     abortNativeAuthorizationDiscovery();
