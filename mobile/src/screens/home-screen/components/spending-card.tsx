@@ -20,7 +20,10 @@ import {
   spendingWindow,
 } from "@/screens/home-screen/selectors/select-spending-compare";
 import { CardLoadFailure } from "@/components/card-load-failure";
-import { selectCardLoadState } from "@/common/apollo/card-load-state";
+import {
+  selectCardLoadState,
+  selectReadContextState,
+} from "@/common/apollo/card-load-state";
 import { useGuest } from "@/common/guest/guest-context";
 import { notInTotalNotes } from "@/common/balance-display";
 
@@ -85,7 +88,11 @@ export function SpendingCard({
     variables: { ledgerId: ledgerId! },
     skip: !ledgerId,
   });
-  const contextSettled = context.data !== undefined || Boolean(context.error);
+  // The currency and roots come from the context: holding until it lands (and
+  // failing the card when it cannot) keeps a EUR ledger from rendering in the
+  // "USD" fallback (w21/262).
+  const contextState = selectReadContextState(context.data, context.error);
+  const contextSettled = contextState === "ready";
   const expensesRoot =
     context.data?.getLedger.options.nameExpenses || "Expenses";
 
@@ -126,13 +133,19 @@ export function SpendingCard({
       <Text key={`subtitle-${fontScale}`} style={styles.subtitle}>
         {t("spendingSubtitle")}
       </Text>
-      {selectCardLoadState({
+      {contextState === "failed" ||
+      selectCardLoadState({
         loading: loading || !contextSettled,
         hasData: data !== undefined,
         error: error,
       }) === "failed" ? (
         <CardLoadFailure
-          onRetry={() => void refetch().catch(() => undefined)}
+          onRetry={() =>
+            void Promise.all([
+              context.refetch(),
+              contextSettled ? refetch() : Promise.resolve(),
+            ]).catch(() => undefined)
+          }
         />
       ) : (loading || !contextSettled) && data === undefined ? (
         <LoadingTile height={BAR_CHART_HEIGHT} mx={16} />

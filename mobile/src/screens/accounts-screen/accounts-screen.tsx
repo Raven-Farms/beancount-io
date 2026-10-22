@@ -1,4 +1,7 @@
-import { selectCardLoadState } from "@/common/apollo/card-load-state";
+import {
+  selectCardLoadState,
+  selectReadContextState,
+} from "@/common/apollo/card-load-state";
 import { CardLoadFailure } from "@/components/card-load-failure";
 import { useLedgerAccess } from "@/common/hooks/use-ledger-access";
 import { useCallback, useMemo, useState } from "react";
@@ -22,7 +25,7 @@ import { useLedgerReadContext } from "@/common/hooks/use-ledger-read-context";
 import { useTrialBalance } from "@/screens/accounts-screen/hooks/use-trial-balance";
 import { useLedgerPrices } from "@/common/hooks/use-ledger-prices";
 import { useToday } from "@/common/hooks/use-today";
-import { useAccountCloseDates } from "@/common/hooks/use-account-close-dates";
+import { useAccountCloseDatesState } from "@/common/hooks/use-account-close-dates";
 import { listedAccountsAsOf } from "@/common/account-close-dates";
 import { isShowingStaleDataFromQueries } from "@/common/apollo/stale-data";
 
@@ -107,7 +110,8 @@ const AccountsScreenImpl = (): JSX.Element => {
 
   // Closed accounts the ledger emptied stay out of the tree (w21/099).
   const today = useToday();
-  const closeDates = useAccountCloseDates(ledgerId);
+  const { closeDates, settled: closeDatesSettled } =
+    useAccountCloseDatesState(ledgerId);
   const listed = useMemo(
     () => listedAccountsAsOf(accounts ?? [], today, closeDates),
     [accounts, today, closeDates],
@@ -163,13 +167,17 @@ const AccountsScreenImpl = (): JSX.Element => {
   // Held until the units and price reads land too, so a commodity row does not
   // first render as money, or without its basis, and then switch. A failed read
   // still shows the table.
+  const contextState = selectReadContextState(ledgerMeta, ledgerMetaError);
   const accountsPending =
+    contextState === "loading" ||
+    !closeDatesSettled ||
     (accountsLoading && !accountData) ||
     (unitsLoading && !unitsData && !unitsError) ||
     (pricesLoading && !pricesData && !pricesError);
   // A failed first load has no accounts to list; the table read that as "No
   // accounts" (w21/080).
   const accountsFailed =
+    contextState === "failed" ||
     selectCardLoadState({
       loading: accountsLoading,
       hasData: accountData !== undefined,

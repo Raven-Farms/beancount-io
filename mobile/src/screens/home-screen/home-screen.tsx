@@ -46,6 +46,7 @@ import {
 import { LedgerGuard, useLedgerGuard } from "@/components/ledger-guard";
 import { useLedgerErrors } from "@/common/hooks/use-ledger-errors";
 import { isShowingStaleDataFromQueries } from "@/common/apollo/stale-data";
+import { selectReadContextState } from "@/common/apollo/card-load-state";
 
 const getStyles = (theme: ColorTheme) =>
   StyleSheet.create({
@@ -163,13 +164,21 @@ const HomeScreenImpl = (): JSX.Element => {
   // The basis and price reads hold the skeleton too, so a caption never lands
   // after its figure and pushes it down. A failed one releases it: the figure
   // then says only what it can still tell.
+  const contextState = selectReadContextState(ledgerMeta, ledgerMetaError);
   const isLoading =
+    contextState === "loading" ||
     (balanceSheetLoading && !balanceSheet) ||
     (basisLoading && !balanceSheetBasis && !basisError) ||
     (pricesLoading && !pricesData && !pricesError);
   // First-load failure (error, no cache) keeps the chart skeleton; cached
   // data with a failed refetch shows the numbers + stale banner instead.
-  const chartError = Boolean(balanceSheetError) && !balanceSheet;
+  const chartError =
+    (Boolean(balanceSheetError) && !balanceSheet) || contextState === "failed";
+  const retryChart = () => {
+    void Promise.all([ledgerMetaRefetch(), balanceSheetRefetch()]).catch(
+      () => undefined,
+    );
+  };
   const showStale = isShowingStaleDataFromQueries([
     { data: balanceSheet, error: balanceSheetError },
     { data: balanceSheetBasis, error: basisError },
@@ -253,6 +262,7 @@ const HomeScreenImpl = (): JSX.Element => {
           onCaptionPress={setDetailPage}
           loading={isLoading}
           error={chartError}
+          onRetry={retryChart}
           ledgerId={ledgerId}
         />
         <ValuationSheet
