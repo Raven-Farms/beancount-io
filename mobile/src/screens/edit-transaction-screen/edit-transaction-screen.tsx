@@ -427,7 +427,17 @@ export const EditTransactionScreen = (): JSX.Element => {
     (Boolean(contextError) ||
       (!contextLoading && !data?.getLedgerEntryContext));
 
-  if (entryGone) {
+  // The entry changed or vanished elsewhere before the editor ever loaded it:
+  // the context read answers NOT_FOUND (its content hash moved). That is the
+  // removed state, not a bare load failure that fails the same on every tap,
+  // and the ledger is invalidated so the detail behind shows it on return
+  // (w21/253).
+  const contextGone = !initialized && isEntryGone(contextError);
+  useEffect(() => {
+    if (contextGone) void invalidateLedgerData(client, "entries");
+  }, [contextGone, client]);
+
+  if (entryGone || contextGone) {
     return (
       <RouteLedgerUnavailable
         title={t("editTransaction")}

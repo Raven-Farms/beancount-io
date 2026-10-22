@@ -68,3 +68,35 @@ describe("the edit screen's exits", () => {
     ).toBe(true);
   });
 });
+
+// w21/253: Edit on an entry changed elsewhere opened a blank "Failed to load
+// transaction" sheet with no way on, every time.
+describe("the editor's first load of a changed entry", () => {
+  const source = require("fs")
+    .readFileSync(
+      require("path").join(__dirname, "..", "edit-transaction-screen.tsx"),
+      "utf8",
+    )
+    .replace(/\s+/g, "");
+
+  it("treats a NOT_FOUND context as the removed state", () => {
+    expect(
+      source.includes(
+        "constcontextGone=!initialized&&isEntryGone(contextError);",
+      ),
+    ).toBe(true);
+    expect(
+      source.includes(
+        "if(entryGone||contextGone){return(<RouteLedgerUnavailable",
+      ),
+    ).toBe(true);
+  });
+
+  it("invalidates the ledger so the detail behind shows it on return", () => {
+    expect(
+      source.includes(
+        'useEffect(()=>{if(contextGone)voidinvalidateLedgerData(client,"entries");},[contextGone,client]);',
+      ),
+    ).toBe(true);
+  });
+});
