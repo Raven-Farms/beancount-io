@@ -68,7 +68,7 @@
 - [900 — Keep payee and narration boundaries in generated import IDs](./900.md) — major CLI skipped-payment follow-up to w1/149 and 140; reproduced 2026-10-20.
 - [901 — Preserve exact equity offsets for wide preset opening balances](./901.md) — trivial CLI precision follow-up to 310; reproduced 2026-10-20.
 - [902 — Make import price-conflict advice respect `unique_prices`](./902.md) — trivial CLI recovery-advice follow-up to 397; reproduced 2026-10-20.
-- [903 — Explain quotes that lose to generated prices](./903.md) — minor CLI price-feedback follow-up to 741; import and included-file add cases reproduced 2026-10-20.
+- [903 — Explain recorded quotes that lose to another price](./903.md) — minor CLI price-feedback follow-up to 741; generated winners and forced written corrections in included files reproduced 2026-10-20/21.
 - [904 — Make MCP dry runs refuse what the plan's directive limit will refuse](./904.md) — minor backend-v2 finding from w5/m5/t004; observed 2026-10-21.
 - [905 — Keep missing-price route explanations specific to unvalued holdings](./905.md) — trivial CLI message follow-up to 557 and 748; cross-account and same-account mixed-cost/costless cases reproduced 2026-10-20/21.
 - [906 — Infer grouped three-decimal CSV amounts consistently](./906.md) — minor CLI import follow-up to w1/130 and w5/753; space and apostrophe groupings reproduced 2026-10-20.
