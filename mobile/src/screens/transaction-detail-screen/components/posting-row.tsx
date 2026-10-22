@@ -191,7 +191,9 @@ export function PostingRow({
           ) : null}
         </View>
         {posting.meta?.map((line) => (
-          <Text style={styles.metaLine} key={line} numberOfLines={2}>
+          // Whole and selectable: a posting's `receipt: "https://…"` of 120
+          // characters ended in "…" and could not be copied (w21/604).
+          <Text style={styles.metaLine} key={line} selectable>
             {line}
           </Text>
         ))}
