@@ -1,7 +1,9 @@
 import type { BeancountError } from "@rustledger/wasm";
 import {
+  isRawPluginProcessing,
   locateOptionErrors,
   reconcileOptionErrors,
+  withoutPadAndBalanceChecks,
 } from "../option-validation";
 
 // w21/308: Beancount's own default `account_previous_balances` and
@@ -135,5 +137,52 @@ describe("locateOptionErrors", () => {
       locateOptionErrors([unknown, placed, root], files, "main.bean"),
     ).toEqual([unknown, placed, root]);
     expect(locateOptionErrors([unknown], {}, "main.bean")).toEqual([unknown]);
+  });
+});
+
+// w21/656: the engine ignores `option "plugin_processing_mode" "raw"`.
+describe("raw plugin processing", () => {
+  const main = (text: string) => ({ "main.bean": text, "x.bean": "" });
+
+  it("is read from the entry point's last declaration", () => {
+    expect(
+      isRawPluginProcessing(
+        main('option "plugin_processing_mode" "raw"\n'),
+        "main.bean",
+      ),
+    ).toBe(true);
+    expect(
+      isRawPluginProcessing(
+        main(
+          'option "plugin_processing_mode" "raw"\noption "plugin_processing_mode" "default"\n',
+        ),
+        "main.bean",
+      ),
+    ).toBe(false);
+    expect(
+      isRawPluginProcessing(
+        main('; option "plugin_processing_mode" "raw"\n'),
+        "main.bean",
+      ),
+    ).toBe(false);
+    // Beancount reads options only from the entry point.
+    expect(
+      isRawPluginProcessing(
+        {
+          "main.bean": "",
+          "x.bean": 'option "plugin_processing_mode" "raw"\n',
+        },
+        "main.bean",
+      ),
+    ).toBe(false);
+  });
+
+  it("drops only the pad and balance-check errors", () => {
+    const coded = (code: string) => ({ ...error(code), code });
+    expect(
+      withoutPadAndBalanceChecks(
+        ["E2001", "E2002", "E2003", "E2004", "E1001", "E7002"].map(coded),
+      ).map((kept) => kept.code),
+    ).toEqual(["E1001", "E7002"]);
   });
 });

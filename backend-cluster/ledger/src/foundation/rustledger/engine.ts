@@ -37,7 +37,12 @@ import {
 } from "./plugins";
 import { reconcileDocumentErrors } from "./document-validation";
 import { locateBookErrors } from "./book-errors";
-import { locateOptionErrors, reconcileOptionErrors } from "./option-validation";
+import {
+  isRawPluginProcessing,
+  locateOptionErrors,
+  reconcileOptionErrors,
+  withoutPadAndBalanceChecks,
+} from "./option-validation";
 import { isDocumentValidationError } from "./document-validation";
 import { reportUrlIncludes } from "./url-include-errors";
 import {
@@ -686,6 +691,10 @@ async function parseLedgerFilesUncached(
   errors = reportUrlIncludes(errors, files);
   errors = reportUndecodableSources(errors, files, entryPoint);
 
+  if (isRawPluginProcessing(files, entryPoint)) {
+    paddingTransactions = [];
+    errors = withoutPadAndBalanceChecks(errors);
+  }
   const padding = dropPaddingWithinTolerance(
     directives,
     paddingTransactions,

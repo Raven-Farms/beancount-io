@@ -1863,6 +1863,33 @@ async function main(): Promise<void> {
     "the windowed sum the lot-error hint names runs",
   );
 
+  // w21/656: the engine still ignores raw mode, so the parse undoes its pad
+  // and balance steps, and BQL (over the materialized stream) follows.
+  const rawFiles = {
+    "main.bean": `option "plugin_processing_mode" "raw"
+2020-01-01 open Assets:Bank
+2020-01-01 open Equity:Open
+2020-01-01 pad Assets:Bank Equity:Open
+2020-01-02 balance Assets:Bank 100 USD
+2020-01-03 balance Assets:Bank 5 USD
+`,
+  };
+  const rawSnapshot = await parseLedgerFiles(rawFiles, "main.bean");
+  assert(
+    rawSnapshot.errors.length === 0 &&
+      !rawSnapshot.directives.some((directive) => directive.type === "transaction"),
+    "raw plugin processing inserts no padding and checks no balance",
+  );
+  const rawBalances = await queryLedgerFilesResult(
+    rawFiles,
+    "main.bean",
+    "SELECT account, sum(position) GROUP BY account",
+  );
+  assert(
+    rawBalances.rows.length === 0,
+    "BQL over a raw-mode ledger sums no padding",
+  );
+
   console.log("\nAll rustledger engine checks passed.");
 }
 

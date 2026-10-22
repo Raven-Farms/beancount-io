@@ -118,3 +118,45 @@ export function locateOptionErrors(
     };
   });
 }
+
+/**
+ * Whether the entry point sets `option "plugin_processing_mode" "raw"` (the
+ * last declaration wins, as in Beancount). Raw mode runs only the declared
+ * plugins: not `beancount.ops.pad` or `beancount.ops.balance`, so no padding is
+ * inserted and no balance assertion is checked. The engine accepts the option
+ * and ignores it (w21/656), so the parse undoes those two steps itself.
+ */
+export function isRawPluginProcessing(
+  files: Readonly<Record<string, string>>,
+  entryPoint: string,
+): boolean {
+  const content = files[entryPoint];
+  if (content === undefined || !content.includes("plugin_processing_mode")) {
+    return false;
+  }
+  const mode = optionDeclarations(content)
+    .filter((option) => option.name === "plugin_processing_mode")
+    .at(-1);
+  return mode?.value === "raw";
+}
+
+/**
+ * The engine's errors from the pad and balance steps raw mode skips: a failed
+ * assertion (E2001), one past its explicit tolerance (E2002), an unused pad
+ * (E2003) and two pads before one assertion (E2004). Unknown accounts and
+ * duplicate assertions are validation, which raw mode still runs.
+ */
+const PAD_AND_BALANCE_CHECK_CODES = new Set([
+  "E2001",
+  "E2002",
+  "E2003",
+  "E2004",
+]);
+
+export function withoutPadAndBalanceChecks(
+  errors: readonly BeancountError[],
+): BeancountError[] {
+  return errors.filter(
+    (error) => !PAD_AND_BALANCE_CHECK_CODES.has(error.code ?? ""),
+  );
+}

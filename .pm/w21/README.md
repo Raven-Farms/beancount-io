@@ -113,6 +113,5 @@
 - [653](./653.md) — The entry validators accept non-ASCII tags and quoted flags that the engines can't read (ledger)
 - [654](./654.md) — A `"` in an org heading or `#` comment line silently drops every following entry in the hosted engine (ledger/rustledger)
 - [655](./655.md) — The hosted engine drops tags and links on notes, and pushtag on notes and documents, so filters miss them (ledger/rustledger)
-- [656](./656.md) — `plugin_processing_mode "raw"` is ignored by the hosted engine: pads applied, assertions enforced (ledger/rustledger)
 - [508](./blocked/508.md) — Mobile guesses that an entry is a plugin copy from its first line; read the ledger's `generated_from` instead (split from 443) — **blocked:** production's GraphQL schema lacks `generated_from` until the ledger service and backend-v2 deploy; mobile's client is generated from it
 - [315](./blocked/315.md) — In-app commits signed with Gitea username and real email (no full_name, no noreply) — **blocked:** needs the owner's noreply-address and published-history decisions, and a production backfill of existing Gitea users that can't be verified here
