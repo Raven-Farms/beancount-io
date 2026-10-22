@@ -146,3 +146,6 @@
 - [408](./408.md) — Four-weekly series spanning Feb gets day anchor; Next ~5 days late (271 regression)
 - [409](./409.md) — Cancelled semiannual bill stays Overdue ~17 months (267/269 follow-up)
 - [410](./410.md) — Merchants splits NFC/NFD spellings of one payee
+- [411](./411.md) — New Transaction: changing payee keeps first payee's accounts
+- [412](./412.md) — Payee fill ranks FROM/TO independently; can fill same account twice
+- [413](./413.md) — Parked keypad flow: overwrite, JPY ×100, double submit, closed accounts
