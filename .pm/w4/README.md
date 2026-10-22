@@ -4,6 +4,8 @@
 
 ## Inbox
 
+- [1002 — Check every recognized currency symbol in a dashboard import amount](./1002.md) — minor residual of M44; current local native UI checks only first symbol at both widths; reversed/matching controls pass, six preparations blocked before transport; production pre-M44 lag excluded.
+
 - [1001 — Keep exact report quantities in LineChart text values](./1001.md) — minor residual of W3/494; modeled valid ledger quantities at both widths become a rounded integer in statement table/tooltip; actual producer, raw Account table and ordinary controls pass, zero hosted writes.
 
 - [1000 — Keep Account Journal selections when Time changes](./1000.md) — minor follow-up to142; live QA, 2026-10-22; Balance-only becomes Transaction after Time edit, flags reset at both widths; expected November balance1 versus actual transactions10, backend/Journal controls pass.
