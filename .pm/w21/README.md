@@ -63,4 +63,5 @@
 - [504](./504.md) — First series copy with escaped quote still offers Delete (443 gap)
 - [505](./505.md) — Multi-line/pipe-header entries lose Edit and Delete (443 false positive)
 - [506](./506.md) — Money flow pads BND/AMD/NOK share counts as money (445 regression)
+- [507](./507.md) — Refused edit shows banner and toast with different citations (369 follow-up)
 - [315](./blocked/315.md) — In-app commits signed with Gitea username and real email (no full_name, no noreply) — **blocked:** needs the owner's noreply-address and published-history decisions, and a production backfill of existing Gitea users that can't be verified here
