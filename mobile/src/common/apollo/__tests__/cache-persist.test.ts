@@ -33,6 +33,21 @@ describe("apollo cache persist wiring", () => {
     ).toBe(true);
   });
 
+  // w21/350: a write's invalidation must not save the evicted cache.
+  it("holds saving while a ledger invalidation refetches", () => {
+    const src = fs.readFileSync(
+      path.join(__dirname, "../cache-persist.ts"),
+      "utf8",
+    );
+    expect(
+      src
+        .replace(/\s+/g, "")
+        .includes(
+          "setInvalidationPersistence(createInvalidationGuard(cachePersistor))",
+        ),
+    ).toBe(true);
+  });
+
   it("gates splash ready on restoreApolloCache", () => {
     const src = fs.readFileSync(
       path.join(

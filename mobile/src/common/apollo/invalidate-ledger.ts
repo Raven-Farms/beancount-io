@@ -114,6 +114,49 @@ export const LEDGER_SCOPE_FIELDS: Record<
  */
 export const ledgerRevisionVar = makeVar(0);
 
+/** What `invalidateLedgerData` asks of the cache persistor around a refetch. */
+export type InvalidationPersistence = {
+  begin(): void;
+  end(succeeded: boolean): void;
+};
+
+let persistence: InvalidationPersistence | null = null;
+
+export function setInvalidationPersistence(
+  next: InvalidationPersistence | null,
+): void {
+  persistence = next;
+}
+
+/**
+ * Pauses `persistor` while invalidations are in flight and, once the last one
+ * has settled, saves the cache only if every refetch succeeded. After a failed
+ * one the disk keeps its last complete snapshot: the pre-write ledger beats an
+ * evicted, empty one. Overlapping invalidations share one pause.
+ */
+export function createInvalidationGuard(persistor: {
+  pause(): void;
+  resume(): void;
+  persist(): Promise<void>;
+}): InvalidationPersistence {
+  let inFlight = 0;
+  let failed = false;
+  return {
+    begin() {
+      if (inFlight === 0) failed = false;
+      inFlight += 1;
+      persistor.pause();
+    },
+    end(succeeded) {
+      if (!succeeded) failed = true;
+      inFlight -= 1;
+      if (inFlight > 0) return;
+      persistor.resume();
+      if (!failed) persistor.persist().catch(() => undefined);
+    },
+  };
+}
+
 /**
  * Drop every cached read of the ledger in `scope` and re-run the ones on screen.
  *
@@ -128,6 +171,12 @@ export async function invalidateLedgerData(
 ): Promise<void> {
   const fields = LEDGER_SCOPE_FIELDS[scope];
 
+  // The persistor saves on every cache write, evictions included. Saved while
+  // the cache is empty and the refetch then fails, the disk copy is the empty
+  // one and the next offline launch shows "Failed to load" everywhere
+  // (w21/350). Hold saving until the refetch has settled.
+  persistence?.begin();
+  let succeeded = false;
   try {
     await client.refetchQueries({
       updateCache(cache) {
@@ -137,9 +186,11 @@ export async function invalidateLedgerData(
         cache.gc();
       },
     });
+    succeeded = true;
   } catch (error: unknown) {
     console.warn(`ledger invalidation (${scope}) failed`, error);
   } finally {
+    persistence?.end(succeeded);
     // After the eviction, so a consumer woken by this re-reads on a cold cache
     // rather than racing the refetch. Bumped even when the refetch failed —
     // the cache was still cleared, and a stale reader must not stay stale.

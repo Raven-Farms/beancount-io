@@ -4,6 +4,10 @@ import { CachePersistor, AsyncStorageWrapper } from "apollo3-cache-persist";
 import { cache } from "@/common/apollo/cache";
 import { fitCacheSnapshot } from "./cache-snapshot";
 import { getServerUrl } from "@/common/vars/server-url";
+import {
+  createInvalidationGuard,
+  setInvalidationPersistence,
+} from "./invalidate-ledger";
 
 /** Storage key — exported so purge tests can assert the key is gone. */
 const APOLLO_CACHE_PERSIST_KEY = "apollo-cache-persist";
@@ -64,6 +68,9 @@ const cachePersistor = new CachePersistor({
     fitCacheSnapshot(snapshot, APOLLO_CACHE_MAX_SIZE),
   trigger: "write",
 });
+
+// A write's cache invalidation must not save the evicted cache (w21/350).
+setInvalidationPersistence(createInvalidationGuard(cachePersistor));
 
 let restorePromise: Promise<void> | null = null;
 
