@@ -7,6 +7,8 @@ const DETECTION: RecurrenceVerdict = {
   isApproximate: false,
   nextExpected: "2024-07-01",
   isOverdue: false,
+  isLapsed: false,
+  lastPaid: "2026-01-01",
 };
 
 describe("resolveRecurringVerdict", () => {

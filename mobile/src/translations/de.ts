@@ -102,6 +102,7 @@ export const de: Translations = {
   merchantsCadenceUnknown: "Zu wenig Verlauf",
   merchantsNextExpected: "Nächste {{date}}",
   merchantsOverdue: "Überfällig",
+  merchantsLastPaid: "Zuletzt bezahlt {{date}}",
   merchantsScheduled: "Geplant für {{date}}",
   merchantsRecurringToggle: "Wiederkehrend",
   merchantsRecurringToggleHelper:

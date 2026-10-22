@@ -30,12 +30,16 @@ const MONTHLY: RecurrenceVerdict = {
   isApproximate: false,
   nextExpected: "2025-07-01",
   isOverdue: false,
+  isLapsed: false,
+  lastPaid: "2026-01-01",
 };
 
 const OVERDUE: RecurrenceVerdict = {
   ...MONTHLY,
   nextExpected: "2025-05-01",
   isOverdue: true,
+  isLapsed: false,
+  lastPaid: "2026-01-01",
 };
 
 // Merchants whose series had enough dates for detection to analyse, keyed by

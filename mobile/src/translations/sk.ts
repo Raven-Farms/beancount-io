@@ -105,6 +105,7 @@ export const sk: Translations = {
   merchantsCadenceUnknown: "Málo histórie",
   merchantsNextExpected: "Ďalšie {{date}}",
   merchantsOverdue: "Po splatnosti",
+  merchantsLastPaid: "Naposledy zaplatené {{date}}",
   merchantsScheduled: "Naplánované na {{date}}",
   merchantsRecurringToggle: "Opakujúce sa",
   merchantsRecurringToggleHelper:

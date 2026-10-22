@@ -101,6 +101,7 @@ export const bg: Translations = {
   merchantsCadenceUnknown: "Недостатъчна история",
   merchantsNextExpected: "Следващо {{date}}",
   merchantsOverdue: "Просрочено",
+  merchantsLastPaid: "Последно платено {{date}}",
   merchantsScheduled: "Планирано за {{date}}",
   merchantsRecurringToggle: "Повтарящ се",
   merchantsRecurringToggleHelper:

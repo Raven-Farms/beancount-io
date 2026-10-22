@@ -29,8 +29,20 @@ export interface RecurrenceVerdict {
    * that day in the next period's month; otherwise last event + median gap.
    */
   nextExpected: string;
-  /** True when `today` is past `nextExpected` by more than the grace window. */
+  /**
+   * True when `today` is past `nextExpected` by more than the grace window, but
+   * not yet by `LAPSE_PERIODS` periods: a missed bill, not a stopped one.
+   */
   isOverdue: boolean;
+  /**
+   * True once `today` is `LAPSE_PERIODS` periods past `nextExpected` with
+   * nothing pre-entered: the series has stopped (a cancelled subscription, or
+   * a monthly bill that became one annual payment), so it is no longer
+   * "Overdue" (w21/267).
+   */
+  isLapsed: boolean;
+  /** The latest payment made, `YYYY-MM-DD`. */
+  lastPaid: string;
   /**
    * The earliest pre-entered event after today, `YYYY-MM-DD`. It is the
    * upcoming occurrence, not a payment made: counted as paid, a pre-entered
@@ -53,6 +65,9 @@ const RECENT_CHARGES = 3;
 
 /** Overdue grace as a fraction of the median gap. */
 const OVERDUE_GRACE_FRACTION = 0.25;
+
+/** Periods past the expected date after which a series counts as stopped. */
+const LAPSE_PERIODS = 3;
 
 const MS_PER_DAY = 86_400_000;
 
@@ -422,7 +437,13 @@ export function detectRecurrence(
       ? addMonthsClamped(lastDay, months, anchor)
       : lastDay + gapDays;
   const graceDays = Math.max(1, Math.round(gapDays * OVERDUE_GRACE_FRACTION));
-  const isOverdue = todayDay > nextExpectedDay + graceDays;
+  const isLate = todayDay > nextExpectedDay + graceDays;
+  // A pre-entered payment means the bill is still live.
+  const isLapsed =
+    isLate &&
+    scheduledDay === null &&
+    todayDay > nextExpectedDay + LAPSE_PERIODS * gapDays;
+  const isOverdue = isLate && !isLapsed;
 
   return {
     cadence,
@@ -430,6 +451,8 @@ export function detectRecurrence(
     isApproximate,
     nextExpected: formatLedgerDay(nextExpectedDay),
     isOverdue,
+    isLapsed,
+    lastPaid: formatLedgerDay(lastDay),
     ...(scheduledDay === null
       ? {}
       : { scheduled: formatLedgerDay(scheduledDay) }),

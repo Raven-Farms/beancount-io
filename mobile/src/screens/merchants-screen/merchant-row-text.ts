@@ -68,7 +68,12 @@ export function merchantRowText(
     subtitle = cadenceLabel;
     if (detection?.nextExpected) {
       const next = formatLedgerDateShort(detection.nextExpected, locale);
-      if (detection.isOverdue) {
+      if (detection.isLapsed) {
+        // Stopped, not late: say when it last happened (w21/267).
+        trailingMeta = t("merchantsLastPaid", {
+          date: formatLedgerDateShort(detection.lastPaid, locale),
+        });
+      } else if (detection.isOverdue) {
         // A missed bill stays Overdue with the next one pre-entered; the
         // pre-entered one is named as scheduled (w21/167).
         trailingMeta = detection.scheduled

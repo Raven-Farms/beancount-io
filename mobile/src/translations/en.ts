@@ -94,6 +94,7 @@ export const en = {
   merchantsCadenceUnknown: "Not enough history",
   merchantsNextExpected: "Next {{date}}",
   merchantsOverdue: "Overdue",
+  merchantsLastPaid: "Last paid {{date}}",
   merchantsScheduled: "Scheduled {{date}}",
   // Setting name for the Switch (not an action label) so VoiceOver hears
   // "Recurring, on/off" instead of the contradictory "Mark as not recurring, on".

@@ -101,6 +101,7 @@ export const nl: Translations = {
   merchantsCadenceUnknown: "Te weinig geschiedenis",
   merchantsNextExpected: "Volgende {{date}}",
   merchantsOverdue: "Achterstallig",
+  merchantsLastPaid: "Laatst betaald {{date}}",
   merchantsScheduled: "Gepland op {{date}}",
   merchantsRecurringToggle: "Terugkerend",
   merchantsRecurringToggleHelper:

@@ -103,6 +103,7 @@ export const es: Translations = {
   merchantsCadenceUnknown: "Historial insuficiente",
   merchantsNextExpected: "Próximo {{date}}",
   merchantsOverdue: "Vencido",
+  merchantsLastPaid: "Último pago {{date}}",
   merchantsScheduled: "Programado para el {{date}}",
   merchantsRecurringToggle: "Recurrente",
   merchantsRecurringToggleHelper:

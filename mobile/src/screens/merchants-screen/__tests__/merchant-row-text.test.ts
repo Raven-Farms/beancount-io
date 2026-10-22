@@ -26,6 +26,8 @@ const netflix = (inRecurringSection: boolean, isOverdue: boolean) =>
         isApproximate: true,
         nextExpected: "2026-09-01",
         isOverdue,
+        isLapsed: false,
+        lastPaid: "2026-09-15",
       },
     },
     inRecurringSection,

@@ -41,7 +41,7 @@ export type OverrideLookup = (payee: string) => RecurringOverride | null;
 /**
  * Build directory sections. Search filters both; sort applies only inside the
  * general section — the Recurring pin keeps detection/override order
- * (next-expected ascending, overdue first).
+ * (next-expected ascending, overdue first, lapsed series last).
  */
 export function buildMerchantSections(
   merchants: readonly MerchantAggregate[],
@@ -107,6 +107,12 @@ export function buildMerchantSections(
 }
 
 function compareRecurring(a: MerchantListItem, b: MerchantListItem): number {
+  // A stopped series sorts below every live one, whatever its stale date.
+  const aLapsed = a.resolved.detection?.isLapsed ? 1 : 0;
+  const bLapsed = b.resolved.detection?.isLapsed ? 1 : 0;
+  if (aLapsed !== bLapsed) {
+    return aLapsed - bLapsed;
+  }
   const aOver = a.resolved.detection?.isOverdue ? 0 : 1;
   const bOver = b.resolved.detection?.isOverdue ? 0 : 1;
   if (aOver !== bOver) {
