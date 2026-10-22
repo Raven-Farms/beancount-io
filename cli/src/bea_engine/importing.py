@@ -818,10 +818,29 @@ def answer(
     proposed = ledger_write.decoded_append(target, original, shown)
     validation_errors: list[str] = []
     validation_warnings: list[str] = []
+    # Quotes this import writes that no read of the result would use: a
+    # generated reciprocal, a later-sorting quote or a written one wins the day
+    # (w5/903). Judged on the candidate ledger the validation already loads.
+    from bea_engine.ledger.prices import unused_quote_advisories
+
+    advisories: list[str] = []
+    wanted = [
+        (item.date, item.currency, item.amount.currency, item.amount.number)
+        for item in included
+        if isinstance(item, Price) and item.amount.number is not None
+    ]
     try:
         validation_warnings = ledger_write.validate_append(
-            file, texts, allow_errors=allow_errors, into=into, snapshot=snapshot
+            file,
+            texts,
+            allow_errors=allow_errors,
+            into=into,
+            snapshot=snapshot,
+            inspect=(lambda candidate: advisories.extend(unused_quote_advisories(candidate, existing, wanted)))
+            if wanted
+            else None,
         )
+        validation_warnings = [*validation_warnings, *advisories]
     except LedgerError as exc:
         # Only a validation failure belongs in the preview as text. Catching
         # every EngineError here flattened the class away, so a concurrent edit

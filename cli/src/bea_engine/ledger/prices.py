@@ -148,3 +148,51 @@ def settled_bql_price_map(entries: Iterable[Any]) -> Any:
     # Upstream sets this the same way, past its own stubs.
     settled_map.forward_pairs = forward_pairs  # type: ignore[attr-defined]
     return settled_map
+
+
+def unused_quote_advisories(
+    candidate: Iterable[Any], existing: Iterable[Any], wanted: Iterable[tuple[date, str, str, Decimal]]
+) -> list[str]:
+    """A sentence for each new quote that no read of the written ledger will use (w5/903).
+
+    `candidate` is the ledger as it would load with the quotes written, in the
+    order every read sees it: it decides the day with the rule above, so a
+    generated reciprocal, a same-direction quote that sorts later (an included
+    file's line number beats the root's) and a quote the ledger already wrote
+    all count. `existing` names the winner at its real location. A quote that
+    loses to another row of the same import has no location yet and is left
+    to that import.
+    """
+    from beancount.core.data import Price
+
+    from bea_engine.ledger.reader import entry_generated
+
+    quotes = [
+        (item.date, item.currency, item.amount.currency, item.amount.number)
+        for item in candidate
+        if isinstance(item, Price) and item.amount.number is not None
+    ]
+    settled = settle_price_days(quotes)
+    prior = [item for item in existing if isinstance(item, Price) and item.amount.number is not None]
+    advisories: list[str] = []
+    for day, base, quote, number in wanted:
+        canonical = (base, quote) if base < quote else (quote, base)
+        point = next(((fwd, rev) for d, fwd, rev in settled.get(canonical, []) if d == day), (None, None))
+        mine = point[0] if (base, quote) == canonical else point[1]
+        if mine is None or mine == number:
+            continue
+        same_day = [item for item in prior if item.date == day]
+        same = [item for item in same_day if (item.currency, item.amount.currency) == (base, quote)]
+        reverse = [item for item in same_day if (item.currency, item.amount.currency) == (quote, base)]
+        winner = next((item for item in reversed(same) if item.amount.number == mine), None)
+        if winner is None and reverse:
+            winner = reverse[-1]
+        if winner is None:
+            continue
+        implied = "implied " if entry_generated(winner, "price") else ""
+        advisories.append(
+            f"{winner.currency} already has a {day.isoformat()} price of {format(winner.amount.number, 'f')} "
+            f"{winner.amount.currency} {implied}at {winner.meta.get('filename')}:{winner.meta.get('lineno')}; "
+            "every read keeps valuing the pair by it, so the new quote is never used."
+        )
+    return advisories

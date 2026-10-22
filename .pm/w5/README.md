@@ -65,7 +65,6 @@
 - [959 — Treat repeated allowed currencies as one during transaction inference](./959.md) — minor CLI existing-ledger/native-import inference finding; USD/EUR and split-file controls reproduced 2026-10-21.
 - [958 — Keep unused unopened accounts out of remembered CSV settings](./958.md) — minor CLI memory-guard follow-up to 452/714; empty, skipped and fully categorized exports reproduced 2026-10-21.
 - [957 — Allow instrument units in the portfolio preset's holdings account](./957.md) — minor CLI first-purchase setup finding; reproduced twice in USD/EUR on 2026-10-21.
-- [903 — Explain recorded quotes that lose to another price](./903.md) — minor CLI price-feedback follow-up to 741; generated winners and forced written corrections in included files reproduced 2026-10-20/21.
 - [904 — Make MCP dry runs refuse what the plan's directive limit will refuse](./904.md) — minor backend-v2 finding from w5/m5/t004; observed 2026-10-21.
 - [905 — Keep missing-price route explanations specific to unvalued holdings](./905.md) — trivial CLI message follow-up to 557 and 748; cross-account and same-account mixed-cost/costless cases reproduced 2026-10-20/21.
 - [906 — Infer grouped three-decimal CSV amounts consistently](./906.md) — minor CLI import follow-up to w1/130 and w5/753; space and apostrophe groupings reproduced 2026-10-20.

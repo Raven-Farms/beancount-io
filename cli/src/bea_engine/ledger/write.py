@@ -2295,8 +2295,13 @@ def validate_candidate(
     pad_from: bool = False,
     pad_date_explicit: bool = False,
     operating_defaults: dict[int, list[str] | None] | None = None,
+    inspect: Callable[[list[Any]], None] | None = None,
 ) -> list[str]:
     """Refuse a candidate that fails validation, naming what it would break.
+
+    `inspect` is handed the candidate's loaded entries, in the order every
+    read sees them, so a caller can judge the write against the ledger as it
+    would stand (which price wins a day) without loading it a second time.
 
     `--allow-errors` tolerates errors the ledger already had — a failing
     balance assertion stays failing — but nothing the write itself introduces:
@@ -2361,6 +2366,8 @@ def validate_candidate(
             "to infer beside a number that wide. Give every posting an explicit amount, or use a number of at "
             "most 28 significant digits. Nothing was written."
         ) from exc
+    if inspect is not None:
+        inspect(entries)
     type_errors = managed_load.data_type_errors(entries, options)
     errors = [*errors, *type_errors]
     original_line_counts = {path: len(lines) for path, lines in original_lines.items()}
@@ -4169,6 +4176,7 @@ def validate_append(
     snapshot: LedgerSnapshot | None = None,
     one_entry_each: bool = True,
     stages_pad: bool = False,
+    inspect: Callable[[list[Any]], None] | None = None,
 ) -> list[str]:
     """Validate the append without writing; returns the errors `allow_errors` tolerated.
 
@@ -4192,6 +4200,7 @@ def validate_append(
             snapshot=snapshot,
             stages_pad=stages_pad,
             stages_open=_only_opens(texts),
+            inspect=inspect,
         )
     snapshot.verify()
     return warnings + respelled_account_notes(texts, snapshot)
