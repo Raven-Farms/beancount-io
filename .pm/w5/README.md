@@ -36,6 +36,8 @@
 
 ## Inbox
 
+- [977 — Recognize unchanged multi-fill imports above twelve booked lots](./977.md) — minor CLI follow-up to 896; two open-cost fills over 13 lots falsely conflict on reimport, reproduced 2026-10-22.
+
 - [976 — Honor shared-ID transfer reservations before skipping rows](./976.md) — major CLI follow-up to 882; one transfer is offered twice under a reused shared reference and skip drops a real gift, reproduced 2026-10-22.
 
 - [975 — Retain transfer history under a reused native reference](./975.md) — major CLI follow-up to 598/882; monthly reuse or collisions between individually unique sender references hide the older transfer, reproduced 2026-10-22.
