@@ -66,5 +66,8 @@
 - [551](./551.md) — Deleting an already-gone file: `SERVICE_UNAVAILABLE` on REST vs `NOT_FOUND` on GraphQL/MCP
 - [552](./552.md) — `previewLedgerSetup`/`createLedger` with `title: null` is a 500 on GraphQL; null amount/currency are wrongly refused
 - [553](./553.md) — File create: REST commits "Update <path>" and refuses `""`, GraphQL commits "Create <path>" and accepts it
+- [554](./554.md) — A holding that is also another lot's cost currency drops out of the holdings sheet, so BTC's stale price is never flagged
+- [555](./555.md) — A commodity bought in two currencies shows bare "1.0 BTC" on its Accounts row, with no value or note
+- [556](./556.md) — A holding priced only in an unrelated currency the account holds is labelled priced, though the ledger values it at cost
 - [508](./blocked/508.md) — Mobile guesses that an entry is a plugin copy from its first line; read the ledger's `generated_from` instead (split from 443) — **blocked:** production's GraphQL schema lacks `generated_from` until the ledger service and backend-v2 deploy; mobile's client is generated from it
 - [315](./blocked/315.md) — In-app commits signed with Gitea username and real email (no full_name, no noreply) — **blocked:** needs the owner's noreply-address and published-history decisions, and a production backfill of existing Gitea users that can't be verified here
