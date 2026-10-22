@@ -11,6 +11,7 @@ import {
   space,
   useTheme,
 } from "@/common/theme";
+import { formatLedgerDate, formatLedgerDateShort } from "@/common/date-format";
 import { useThemeStyle } from "@/common/hooks/use-theme-style";
 import { useTranslations } from "@/common/hooks/use-translations";
 import { AmountText } from "@/components";
@@ -101,7 +102,7 @@ export function BudgetHistoryRows({
 }: BudgetHistoryRowsProps): JSX.Element {
   const styles = useThemeStyle(getStyles);
   const theme = useTheme().colorTheme;
-  const { t } = useTranslations();
+  const { t, locale } = useTranslations();
   const [expanded, setExpanded] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { deleteBudgetEntry, deleting } = useDeleteBudgetEntry(ledgerId);
@@ -125,7 +126,8 @@ export function BudgetHistoryRows({
         interval: t(intervalAdjectiveKey(interval)),
         amount,
         account: group.account,
-        date,
+        // In the reader's language, not ISO (w21/366).
+        date: formatLedgerDate(date, locale),
       }),
       [
         { text: t("cancel"), style: "cancel" },
@@ -171,7 +173,9 @@ export function BudgetHistoryRows({
             key={row.entry_hash}
             style={[styles.row, row.isCurrent && styles.rowCurrent]}
           >
-            <Text style={styles.date}>{row.date}</Text>
+            <Text style={styles.date}>
+              {formatLedgerDateShort(row.date, locale)}
+            </Text>
             <Text style={styles.interval}>
               {t(intervalLabelKey(row.interval))}
             </Text>
@@ -184,7 +188,7 @@ export function BudgetHistoryRows({
                 accessibilityRole="button"
                 // Which entry: every row's button read "Delete" (w21/142).
                 accessibilityLabel={t("budgetDeleteNamed", {
-                  date: row.date,
+                  date: formatLedgerDate(row.date, locale),
                   amount: row.amount,
                 })}
               >
