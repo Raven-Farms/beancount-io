@@ -160,3 +160,7 @@
 - [371](./371.md) — Reports "Other" nets refunds against spending, hiding real amounts
 - [372](./372.md) — Reports empty period says "No accounts" beside foreign-currency spending
 - [373](./373.md) — Reports rounded percentages don't sum to 100%
+- [374](./374.md) — Account picker offers Create for a not-yet-open account → "already open" dead end
+- [375](./375.md) — No-ledger users still can't reach Settings (drawer header inside guard; 217 follow-up)
+- [376](./376.md) — Cancel during New File folder lookup still creates and opens the file (222 follow-up)
+- [377](./377.md) — Budget panel ranks unpaid monthly salary first mid-month (218 follow-up)
