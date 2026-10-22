@@ -4,6 +4,8 @@
 
 ## Inbox
 
+- [332 — Separate an acknowledged managed-price refresh from a failed chart read](./332.md) — minor; controlled dashboard QA,2026-10-21; Up to date acknowledgement is followed by a generic action-failure message when only the chart read fails; success/pre-ack controls retained, no hosted mutation.
+
 
 - [330 — Open Help Center in the dashboard's selected language](./330.md) — minor; dashboard QA, 2026-10-21; German/Persian menu actions open English despite translated pages returning200; English/navigation/focus controls pass.
 
