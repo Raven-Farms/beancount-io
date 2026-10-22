@@ -57,6 +57,12 @@ export type LedgerWriteSpec<T> = {
   /** Overrides the failure toast copy when `perform` threw. */
   failureMessageFor?: (error: unknown) => string;
   /**
+   * A failure the caller explains better than a toast: the entry was removed
+   * elsewhere, and its own screen says so. The error haptic still fires, the
+   * toast does not, and the outcome still reports the failure (w21/385).
+   */
+  quietFailure?: (error: unknown) => boolean;
+  /**
    * Refetch or cache invalidation. Started before navigating and deliberately
    * not awaited: the write has already committed, so making the user wait on a
    * refresh would just reintroduce the stall in a new form.
@@ -106,6 +112,7 @@ export async function runLedgerWrite<T>(
         deps.describeRefusal?.(caught) ??
         spec.failureMessage,
       caught,
+      spec.quietFailure?.(caught) === true,
     );
   }
 
@@ -128,6 +135,7 @@ function fail(
   deps: LedgerWriteDeps,
   message: string,
   error?: unknown,
+  quiet = false,
 ): LedgerWriteOutcome {
   // Signed out mid-write: the app is already leaving for Welcome, which says
   // why; a toast or dialog about the write on top only confuses (w21/119).
@@ -135,7 +143,7 @@ function fail(
     return { ok: false, message, error, signedOut: true };
   }
   deps.haptics.error();
-  deps.showToast(message, "error");
+  if (!quiet) deps.showToast(message, "error");
   return { ok: false, message, error };
 }
 

@@ -212,6 +212,10 @@ describe("deleting an entry that changed elsewhere", () => {
     expect(record.stale).toEqual(["gone"]);
     expect(record.dialogs).toEqual([]);
     expect(record.backs).toBe(0);
+    // w21/385: no red toast over the screen that already explains it.
+    expect(record.toasts.filter((toast) => toast !== "Deleting...")).toEqual(
+      [],
+    );
   });
 
   it("reloads on a checksum conflict and says to delete it again", async () => {
@@ -222,6 +226,9 @@ describe("deleting an entry that changed elsewhere", () => {
       { withStale: true },
     );
     expect(await run).toBe(false);
+    expect(record.toasts.filter((toast) => toast !== "Deleting...")).toEqual(
+      [],
+    );
     expect(record.stale).toEqual(["conflict"]);
     expect(record.dialogs).toEqual([
       {
@@ -241,6 +248,8 @@ describe("deleting an entry that changed elsewhere", () => {
     );
     expect(await run).toBe(false);
     expect(record.stale).toEqual([]);
+    // A genuine failure still toasts (w21/385).
+    expect(record.toasts.includes("ledgerWriteUnconfirmed")).toBe(true);
     expect(record.dialogs[0]?.message).toBe("ledgerWriteUnconfirmed");
   });
 

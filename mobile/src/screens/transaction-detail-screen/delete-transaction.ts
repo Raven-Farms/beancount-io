@@ -66,6 +66,11 @@ export async function deleteTransaction(
     failureMessageFor: (error) =>
       deps.describeFailure(error) ?? deps.messages.failure,
     afterSuccess: deps.afterSuccess,
+    // An entry changed or removed elsewhere is explained by the screen's own
+    // state or the dialog below; the generic toast over it read as the app
+    // breaking (w21/385).
+    quietFailure: (error) =>
+      deps.onStale !== undefined && classifyStaleDelete(error) !== null,
   });
   if (!outcome.ok && !outcome.signedOut) {
     const stale = classifyStaleDelete(outcome.error);
