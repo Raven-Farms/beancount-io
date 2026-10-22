@@ -597,6 +597,11 @@ export const en = {
   ledgerEditorOverwriteTitle: "Overwrite remote changes?",
   ledgerEditorOverwriteMessage:
     "Your text replaces the version saved elsewhere. Their changes are lost.",
+  ledgerEditorFileGoneTitle: "File Deleted",
+  ledgerEditorFileGoneMessage:
+    "This file was deleted or moved elsewhere, so it can't be saved. Your text is still here: copy it, or save it as a new file at the same path.",
+  ledgerEditorRecreate: "Save as New File",
+  ledgerEditorSaveFailedHint: "Your text is still here. Try again in a moment.",
   ledgerEditorCopyFailed:
     "Couldn't copy your text, so the file was not reloaded.",
   ledgerEditorReload: "Reload",

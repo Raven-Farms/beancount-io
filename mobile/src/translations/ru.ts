@@ -600,6 +600,12 @@ export const ru: Translations = {
   ledgerEditorOverwriteTitle: "Перезаписать удалённые изменения?",
   ledgerEditorOverwriteMessage:
     "Ваш текст заменит версию, сохранённую в другом месте. Её изменения будут потеряны.",
+  ledgerEditorFileGoneTitle: "Файл удалён",
+  ledgerEditorFileGoneMessage:
+    "Этот файл удалён или перемещён в другом месте и не может быть сохранён. Ваш текст всё ещё здесь: скопируйте его или сохраните как новый файл по тому же пути.",
+  ledgerEditorRecreate: "Сохранить как новый файл",
+  ledgerEditorSaveFailedHint:
+    "Ваш текст всё ещё здесь. Попробуйте ещё раз чуть позже.",
   ledgerEditorCopyFailed:
     "Не удалось скопировать ваш текст, поэтому файл не перезагружен.",
   ledgerEditorReload: "Перезагрузить",

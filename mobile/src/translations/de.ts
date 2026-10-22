@@ -607,6 +607,12 @@ export const de: Translations = {
   ledgerEditorOverwriteTitle: "Externe Änderungen überschreiben?",
   ledgerEditorOverwriteMessage:
     "Ihr Text ersetzt die anderswo gespeicherte Version. Deren Änderungen gehen verloren.",
+  ledgerEditorFileGoneTitle: "Datei gelöscht",
+  ledgerEditorFileGoneMessage:
+    "Diese Datei wurde anderswo gelöscht oder verschoben und kann nicht gespeichert werden. Ihr Text ist noch da: Kopieren Sie ihn oder speichern Sie ihn als neue Datei unter demselben Pfad.",
+  ledgerEditorRecreate: "Als neue Datei speichern",
+  ledgerEditorSaveFailedHint:
+    "Ihr Text ist noch da. Versuchen Sie es gleich noch einmal.",
   ledgerEditorCopyFailed:
     "Ihr Text konnte nicht kopiert werden, daher wurde die Datei nicht neu geladen.",
   ledgerEditorReload: "Neu laden",

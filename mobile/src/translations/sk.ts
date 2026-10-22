@@ -605,6 +605,11 @@ export const sk: Translations = {
   ledgerEditorOverwriteTitle: "Prepísať vzdialené zmeny?",
   ledgerEditorOverwriteMessage:
     "Váš text nahradí verziu uloženú inde. Jej zmeny sa stratia.",
+  ledgerEditorFileGoneTitle: "Súbor bol odstránený",
+  ledgerEditorFileGoneMessage:
+    "Tento súbor bol inde odstránený alebo presunutý a nedá sa uložiť. Váš text je stále tu: skopírujte ho alebo ho uložte ako nový súbor na rovnakej ceste.",
+  ledgerEditorRecreate: "Uložiť ako nový súbor",
+  ledgerEditorSaveFailedHint: "Váš text je stále tu. Skúste to o chvíľu znova.",
   ledgerEditorCopyFailed:
     "Váš text sa nepodarilo skopírovať, preto sa súbor znova nenačítal.",
   ledgerEditorReload: "Načítať znova",

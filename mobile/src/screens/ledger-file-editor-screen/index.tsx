@@ -3,6 +3,7 @@ import {
   ledgerWriteFailureMessage,
 } from "@/common/ledger-refusal";
 import { useGuest } from "@/common/guest/guest-context";
+import { isLedgerGone } from "@/common/graphql-error-codes";
 import { disclosureAccessibility } from "@/common/accessibility";
 import { useLedgerAccess } from "@/common/hooks/use-ledger-access";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -60,6 +61,7 @@ import { createEditorRecovery } from "@/components/code-editor/editor-recovery";
 import { isBeancountFile } from "@/common/ledger-file-types";
 import {
   GetLedgerErrorsDocument,
+  useCreateLedgerFileMutation,
   useGetLedgerFileQuery,
   useUpdateLedgerFileMutation,
 } from "@/generated-graphql/graphql";
@@ -454,6 +456,7 @@ function LedgerFileEditorSession({
   // ── Save / conflict ───────────────────────────────────────────────────────
 
   const [updateLedgerFile, { loading: saving }] = useUpdateLedgerFileMutation();
+  const [createLedgerFile] = useCreateLedgerFileMutation();
   const saveInFlightRef = useRef(false);
   const client = useApolloClient();
   // A `.bean` save can rewrite every balance in the ledger, but users save
@@ -623,6 +626,59 @@ function LedgerFileEditorSession({
     [refetch, t],
   );
 
+  // The file was deleted or moved elsewhere (w21/378): the text goes back as a
+  // new file at the same path, or to the clipboard, and is never dropped.
+  const copyDraft = useCallback(
+    async (content: string) => {
+      try {
+        await Clipboard.setStringAsync(
+          withLineEnding(content, lineEndingRef.current),
+        );
+        haptics.success();
+      } catch {
+        Alert.alert(t("ledgerEditorCopyFailed"));
+      }
+    },
+    [t],
+  );
+
+  const recreateFile = useCallback(
+    async (content: string, epoch: number, revision: number) => {
+      try {
+        const result = await createLedgerFile({
+          variables: {
+            ledgerId,
+            path,
+            content: encodeLedgerFileContent(
+              withLineEnding(content, lineEndingRef.current),
+            ),
+            message: `restore ${path}`,
+          },
+        });
+        const newSha = result.data?.createLedgerFile?.sha;
+        if (!newSha) throw new Error(t("ledgerEditorSaveFailed"));
+        shaRef.current = newSha;
+        recoveryRef.current.saved(content);
+        if (epoch === documentEpochRef.current) {
+          setHasUnsavedChanges(
+            markRevisionsSaved(revisionTrackerRef.current, revision),
+          );
+        }
+        haptics.success();
+        savedThisSessionRef.current = true;
+        void invalidateLedgerData(client, "file");
+      } catch (err: unknown) {
+        if (isAuthTeardownError(err)) return;
+        haptics.error();
+        Alert.alert(
+          t("ledgerEditorSaveFailed"),
+          ledgerWriteFailureMessage(err, { t }) ?? undefined,
+        );
+      }
+    },
+    [client, createLedgerFile, ledgerId, path, t],
+  );
+
   const handleSave = useCallback(
     async (content: string, epoch: number, revision: number) => {
       if (
@@ -711,12 +767,29 @@ function LedgerFileEditorSession({
               },
             ],
           );
+        } else if (isLedgerGone(err)) {
+          // Deleted elsewhere: the update can never succeed, and the draft is
+          // the only copy (w21/378).
+          Alert.alert(
+            t("ledgerEditorFileGoneTitle"),
+            t("ledgerEditorFileGoneMessage"),
+            [
+              { text: t("ledgerEditorKeepEditing"), style: "cancel" },
+              { text: t("copy"), onPress: () => void copyDraft(content) },
+              {
+                text: t("ledgerEditorRecreate"),
+                onPress: () => void recreateFile(content, epoch, revision),
+              },
+            ],
+          );
         } else {
           // The ledger's own text for a refusal, translated copy otherwise;
-          // never "Network request failed" (w21/117).
+          // never "Network request failed" (w21/117). A failure with no text
+          // of its own still says the draft is safe, instead of an empty alert.
           Alert.alert(
             t("ledgerEditorSaveFailed"),
-            ledgerWriteFailureMessage(err, { t }) ?? undefined,
+            ledgerWriteFailureMessage(err, { t }) ??
+              t("ledgerEditorSaveFailedHint"),
           );
         }
         return false;
@@ -727,11 +800,13 @@ function LedgerFileEditorSession({
     [
       allErrors,
       canWrite,
+      copyDraft,
       copyThenReload,
       errorsLoaded,
       ledgerId,
       overwriteRemote,
       path,
+      recreateFile,
       reportNewErrors,
       t,
       updateLedgerFile,

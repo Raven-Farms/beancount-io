@@ -589,6 +589,12 @@ export const bg: Translations = {
   ledgerEditorOverwriteTitle: "Да се презапишат ли отдалечените промени?",
   ledgerEditorOverwriteMessage:
     "Вашият текст замества версията, запазена другаде. Техните промени се губят.",
+  ledgerEditorFileGoneTitle: "Файлът е изтрит",
+  ledgerEditorFileGoneMessage:
+    "Този файл е изтрит или преместен другаде и не може да бъде записан. Текстът ви все още е тук: копирайте го или го запишете като нов файл на същия път.",
+  ledgerEditorRecreate: "Запиши като нов файл",
+  ledgerEditorSaveFailedHint:
+    "Текстът ви все още е тук. Опитайте отново след малко.",
   ledgerEditorCopyFailed:
     "Текстът не можа да се копира, затова файлът не беше презареден.",
   ledgerEditorReload: "Презареди",

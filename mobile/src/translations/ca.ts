@@ -604,6 +604,12 @@ export const ca: Translations = {
   ledgerEditorOverwriteTitle: "Sobreescriure els canvis remots?",
   ledgerEditorOverwriteMessage:
     "El vostre text substitueix la versió desada en un altre lloc. Es perdran els seus canvis.",
+  ledgerEditorFileGoneTitle: "Fitxer suprimit",
+  ledgerEditorFileGoneMessage:
+    "Aquest fitxer s'ha suprimit o mogut en un altre lloc i no es pot desar. El vostre text encara és aquí: copieu-lo o deseu-lo com a fitxer nou a la mateixa ruta.",
+  ledgerEditorRecreate: "Desa com a fitxer nou",
+  ledgerEditorSaveFailedHint:
+    "El vostre text encara és aquí. Torneu-ho a provar d'aquí a un moment.",
   ledgerEditorCopyFailed:
     "No s'ha pogut copiar el text, per això el fitxer no s'ha recarregat.",
   ledgerEditorReload: "Torna a carregar",

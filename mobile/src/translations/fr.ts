@@ -605,6 +605,12 @@ export const fr: Translations = {
   ledgerEditorOverwriteTitle: "Écraser les modifications distantes ?",
   ledgerEditorOverwriteMessage:
     "Votre texte remplace la version enregistrée ailleurs. Ses modifications seront perdues.",
+  ledgerEditorFileGoneTitle: "Fichier supprimé",
+  ledgerEditorFileGoneMessage:
+    "Ce fichier a été supprimé ou déplacé ailleurs et ne peut pas être enregistré. Votre texte est toujours là : copiez-le ou enregistrez-le comme nouveau fichier au même chemin.",
+  ledgerEditorRecreate: "Enregistrer comme nouveau fichier",
+  ledgerEditorSaveFailedHint:
+    "Votre texte est toujours là. Réessayez dans un instant.",
   ledgerEditorCopyFailed:
     "Impossible de copier votre texte ; le fichier n'a donc pas été rechargé.",
   ledgerEditorReload: "Recharger",

@@ -537,6 +537,11 @@ export const zh: Translations = {
   ledgerEditorOverwriteTitle: "覆盖远端更改？",
   ledgerEditorOverwriteMessage:
     "你的文本将替换在别处保存的版本，对方的更改会丢失。",
+  ledgerEditorFileGoneTitle: "文件已删除",
+  ledgerEditorFileGoneMessage:
+    "此文件已在别处被删除或移动，无法保存。您的文本仍在这里：可以复制它，或将其保存为同一路径下的新文件。",
+  ledgerEditorRecreate: "另存为新文件",
+  ledgerEditorSaveFailedHint: "您的文本仍在这里。请稍后再试。",
   ledgerEditorCopyFailed: "无法复制你的文本，因此未重新加载文件。",
   ledgerEditorReload: "重新加载",
   ledgerEditorKeepEditing: "继续编辑",

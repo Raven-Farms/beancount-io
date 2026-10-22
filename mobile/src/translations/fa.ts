@@ -583,6 +583,11 @@ export const fa: Translations = {
   ledgerEditorOverwriteTitle: "تغییرات راه دور بازنویسی شود؟",
   ledgerEditorOverwriteMessage:
     "متن شما جایگزین نسخهٔ ذخیره‌شده در جای دیگر می‌شود. تغییرات آن از بین می‌رود.",
+  ledgerEditorFileGoneTitle: "فایل حذف شد",
+  ledgerEditorFileGoneMessage:
+    "این فایل جای دیگری حذف یا جابه‌جا شده و ذخیره نمی‌شود. متن شما هنوز اینجاست: آن را کپی کنید یا به‌صورت فایل جدید در همان مسیر ذخیره کنید.",
+  ledgerEditorRecreate: "ذخیره به‌عنوان فایل جدید",
+  ledgerEditorSaveFailedHint: "متن شما هنوز اینجاست. کمی بعد دوباره تلاش کنید.",
   ledgerEditorCopyFailed: "متن شما کپی نشد، بنابراین فایل دوباره بارگیری نشد.",
   ledgerEditorReload: "بارگذاری دوباره",
   ledgerEditorKeepEditing: "ادامهٔ ویرایش",

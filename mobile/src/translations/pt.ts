@@ -602,6 +602,12 @@ export const pt: Translations = {
   ledgerEditorOverwriteTitle: "Substituir as alterações remotas?",
   ledgerEditorOverwriteMessage:
     "Seu texto substitui a versão salva em outro lugar. As alterações dela serão perdidas.",
+  ledgerEditorFileGoneTitle: "Arquivo excluído",
+  ledgerEditorFileGoneMessage:
+    "Este arquivo foi excluído ou movido em outro lugar e não pode ser salvo. Seu texto continua aqui: copie-o ou salve-o como um novo arquivo no mesmo caminho.",
+  ledgerEditorRecreate: "Salvar como novo arquivo",
+  ledgerEditorSaveFailedHint:
+    "Seu texto continua aqui. Tente de novo em instantes.",
   ledgerEditorCopyFailed:
     "Não foi possível copiar seu texto, então o arquivo não foi recarregado.",
   ledgerEditorReload: "Recarregar",

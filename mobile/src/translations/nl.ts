@@ -593,6 +593,12 @@ export const nl: Translations = {
   ledgerEditorOverwriteTitle: "Externe wijzigingen overschrijven?",
   ledgerEditorOverwriteMessage:
     "Je tekst vervangt de elders opgeslagen versie. Die wijzigingen gaan verloren.",
+  ledgerEditorFileGoneTitle: "Bestand verwijderd",
+  ledgerEditorFileGoneMessage:
+    "Dit bestand is elders verwijderd of verplaatst en kan niet worden opgeslagen. Je tekst staat er nog: kopieer hem of sla hem op als nieuw bestand op hetzelfde pad.",
+  ledgerEditorRecreate: "Opslaan als nieuw bestand",
+  ledgerEditorSaveFailedHint:
+    "Je tekst staat er nog. Probeer het zo meteen opnieuw.",
   ledgerEditorCopyFailed:
     "Je tekst kon niet worden gekopieerd, dus het bestand is niet herladen.",
   ledgerEditorReload: "Herladen",

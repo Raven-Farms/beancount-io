@@ -599,6 +599,11 @@ export const uk: Translations = {
   ledgerEditorOverwriteTitle: "Перезаписати віддалені зміни?",
   ledgerEditorOverwriteMessage:
     "Ваш текст замінить версію, збережену в іншому місці. Її зміни буде втрачено.",
+  ledgerEditorFileGoneTitle: "Файл видалено",
+  ledgerEditorFileGoneMessage:
+    "Цей файл видалено або переміщено деінде, тому його не можна зберегти. Ваш текст усе ще тут: скопіюйте його або збережіть як новий файл за тим самим шляхом.",
+  ledgerEditorRecreate: "Зберегти як новий файл",
+  ledgerEditorSaveFailedHint: "Ваш текст усе ще тут. Спробуйте ще раз за мить.",
   ledgerEditorCopyFailed:
     "Не вдалося скопіювати ваш текст, тому файл не перезавантажено.",
   ledgerEditorReload: "Перезавантажити",
