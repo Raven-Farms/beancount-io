@@ -34,6 +34,8 @@ import { bindRouteLedger } from "@/common/route-ledger";
 import { ThemedRefreshControl } from "@/components/dashboard-scroll-view";
 import { AccountTypeIcon } from "@/components/account-type-icon";
 import { AmountText } from "@/components/amount-text";
+import { StaleDataBanner } from "@/components/stale-data-banner";
+import { isShowingStaleDataFromQueries } from "@/common/apollo/stale-data";
 import { HERO_AMOUNT_FIT } from "@/components/amount-text/hero-amount-fit";
 import {
   merchantRecurringOverridesVar,
@@ -492,7 +494,9 @@ function MerchantDetailBody({
   const isInitialLoading = statsLoading || journalInitialLoading;
   // Stats and journal are independent; a journal failure must not hide stats.
   const fatalError = !stats && (metaError || totalsError);
-  const listError = journalError;
+  // A refresh that failed over rows already loaded keeps them, under the stale
+  // banner; only a failed first load has nothing to list (w21/081, w21/575).
+  const listError = journalData ? undefined : journalError;
 
   const cadenceKey = cadenceLabelKey(resolved.cadence);
   // Label the setting, not the flip action — Switch already announces on/off.
@@ -631,6 +635,11 @@ function MerchantDetailBody({
 
   return (
     <View style={styles.container} testID="merchant-detail">
+      {isShowingStaleDataFromQueries([
+        { data: journalData, error: journalError },
+      ]) ? (
+        <StaleDataBanner />
+      ) : null}
       <SectionList
         style={styles.list}
         contentContainerStyle={styles.listContent}
