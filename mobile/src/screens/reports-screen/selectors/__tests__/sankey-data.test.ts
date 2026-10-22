@@ -15,6 +15,7 @@ import {
   sankeySavings,
   sankeyShortfall,
   transformToSankeyData,
+  sankeyLabelLines,
   truncateSankeyLabel,
 } from "../sankey-data";
 import { en } from "../../../../translations/en";
@@ -425,5 +426,37 @@ describe("cashFlowChartSummary", () => {
         .replace(/\s+/gu, "")
         .includes("expenses={expense.tree}currency={currency}"),
     ).toBe(true);
+  });
+});
+
+// w21/540: a label cut to one line lost its "(income)" / "(expenses)" suffix, so
+// two groups of the same name read alike.
+describe("sankeyLabelLines", () => {
+  it("gives the name and its suffix a line each", () => {
+    expect(sankeyLabelLines("QaInterest (income)")).toEqual([
+      "QaInterest",
+      "(income)",
+    ]);
+    expect(sankeyLabelLines("Investments (expenses)")).toEqual([
+      "Investmen…",
+      "(expenses)",
+    ]);
+  });
+
+  it("tells the two sides of one name apart", () => {
+    expect(sankeyLabelLines("Insurance (income)")).not.toEqual(
+      sankeyLabelLines("Insurance (expenses)"),
+    );
+  });
+
+  it("keeps a plain label on one line, cut as before", () => {
+    expect(sankeyLabelLines("Salary")).toEqual(["Salary"]);
+    expect(sankeyLabelLines("Transportation")).toEqual(["Transport…"]);
+  });
+
+  it("cuts a long localized suffix too", () => {
+    expect(sankeyLabelLines("Zinsen (Einnahmen und mehr)")[1]).toBe(
+      "(Einnahme…",
+    );
   });
 });

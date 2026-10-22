@@ -26,6 +26,7 @@ import { useEntranceProgress } from "@/common/d3/use-entrance-progress";
 import {
   type SankeyNodeDatum,
   transformToSankeyData,
+  sankeyLabelLines,
   truncateSankeyLabel,
   sankeyColorForRole,
   cashFlowChartSummary,
@@ -39,6 +40,9 @@ const NODE_PADDING = 10;
 const LABEL_COL = 72;
 const PLOT_PAD = 8;
 const LABEL_GAP = 4;
+/** Two lines of beside-node label (w21/540). */
+const LABEL_LINE_HEIGHT = fontSizes.xs * 1.2;
+const LABEL_TWO_LINE_HEIGHT = LABEL_LINE_HEIGHT * 2;
 /** Resting ribbon opacity — named so the draw-in worklet does not inline a literal. */
 const RIBBON_OPACITY = 0.35;
 const RIBBON_DIM_OPACITY = 0.1;
@@ -362,19 +366,26 @@ function CashFlowSankeyPlot({
           const isSource = (node.targetLinks?.length ?? 0) === 0;
           const x = isSource ? box.x0 - LABEL_GAP : box.x1 + LABEL_GAP;
           const y = (box.y0 + box.y1) / 2;
-          return (
+          // The name and its "(income)" / "(expenses)" suffix on a line each
+          // when the node is tall enough, so two groups of one name differ
+          // (w21/540); a short node keeps one cut line.
+          const lines = sankeyLabelLines(node.label);
+          const twoLines =
+            lines.length === 2 && box.y1 - box.y0 >= LABEL_TWO_LINE_HEIGHT;
+          const shown = twoLines ? lines : [truncateSankeyLabel(node.label)];
+          return shown.map((text, index) => (
             <SvgText
-              key={`label-${node.id}`}
+              key={`label-${node.id}-${index}`}
               x={x}
-              y={y}
+              y={y + (index - (shown.length - 1) / 2) * LABEL_LINE_HEIGHT}
               fontSize={fontSizes.xs}
               fill={theme.text01}
               textAnchor={isSource ? "end" : "start"}
               alignmentBaseline="middle"
             >
-              {truncateSankeyLabel(node.label)}
+              {text}
             </SvgText>
-          );
+          ));
         })}
       </Svg>
       <ChartLegend>

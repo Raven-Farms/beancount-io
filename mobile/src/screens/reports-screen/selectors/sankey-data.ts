@@ -176,6 +176,25 @@ export function truncateSankeyLabel(
   return `${label.slice(0, maxChars - 1)}…`;
 }
 
+/**
+ * The lines a beside-node label is drawn on. A group that shares its name with
+ * one on the other side reads "Interest (income)" / "Interest (expenses)": cut
+ * to one line the suffix went first and both read "Interest …" (w21/540). The
+ * name and the parenthesized suffix get a line each, each cut to fit; a label
+ * without a suffix is one line.
+ */
+export function sankeyLabelLines(
+  label: string,
+  maxChars: number = SANKEY_LABEL_MAX_CHARS,
+): string[] {
+  const split = /^(.*\S)\s+(\([^()]*\))$/u.exec(label);
+  if (!split) return [truncateSankeyLabel(label, maxChars)];
+  return [
+    truncateSankeyLabel(split[1], maxChars),
+    truncateSankeyLabel(split[2], maxChars),
+  ];
+}
+
 export function sankeyRoleForId(id: string, roots: RootNames = {}): SankeyRole {
   if (id === CASH_FLOW_ID) {
     return "hub";
