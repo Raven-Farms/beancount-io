@@ -741,11 +741,44 @@ export function deleteSliceFromFile(
 }
 
 /**
+ * The line ending a block of kept-end lines uses: CRLF when its first line
+ * ends that way, else LF. A CRLF file's lines end `\r\n`, and the split on
+ * `\n` that serves a slice leaves the `\r` on each line (w21/252).
+ */
+function blockLineEnding(blockLines: readonly string[]): "\r\n" | "\n" {
+  const ended = blockLines.find((line) => line.endsWith("\n"));
+  return ended?.endsWith("\r\n") ? "\r\n" : "\n";
+}
+
+/**
+ * A replacement entry as it is stored: trailing newlines trimmed (the entry
+ * gets exactly one line ending after it) and every line ending the replaced
+ * block's own, so an edit in a CRLF file stays CRLF and a trailing newline in
+ * the new text cannot leave a blank line (w21/252).
+ */
+export function normalizeSliceReplacement(
+  newContent: string,
+  eol: "\r\n" | "\n",
+): string {
+  return newContent.replace(/[\r\n]+$/u, "").replace(/\r?\n/gu, eol);
+}
+
+/**
+ * The slice a fresh read serves for a block stored as `stored`: the split on
+ * `\n` leaves the `\r` of a CRLF line on its last line. Its checksum is the
+ * `sha256sum` the next edit of the entry must present.
+ */
+export function servedSliceText(stored: string): string {
+  return stored.includes("\r\n") ? `${stored}\r` : stored;
+}
+
+/**
  * Produce the new file content with the block `[startLine, endLine)` replaced by
  * `newContent`, matching fava's `update_source_slice`:
- * `[*lines[:entry_start], new_content + "\n", *lines[entry_end:]]`. Note fava
- * always appends exactly one `"\n"` to `newContent` regardless of the original
- * block's trailing newline.
+ * `[*lines[:entry_start], new_content + "\n", *lines[entry_end:]]`, except that
+ * the block's own line ending is kept (CRLF stays CRLF) and trailing newlines
+ * in `newContent` are trimmed first, where fava appended one `"\n"` after
+ * whatever it was given and left a CRLF entry mixed and a blank line behind.
  */
 export function replaceSliceInFile(
   fileText: string,
@@ -754,12 +787,22 @@ export function replaceSliceInFile(
   newContent: string,
 ): string {
   const lines = splitKeepEnds(fileText);
+  const eol = blockLineEnding(lines.slice(startLine, endLine));
   const kept = [
     ...lines.slice(0, startLine),
-    `${newContent}\n`,
+    `${normalizeSliceReplacement(newContent, eol)}${eol}`,
     ...lines.slice(endLine),
   ];
   return kept.join("");
+}
+
+/** The line ending {@link replaceSliceInFile} gives a replacement at `startLine`. */
+export function replacementLineEnding(
+  fileText: string,
+  startLine: number,
+  endLine: number,
+): "\r\n" | "\n" {
+  return blockLineEnding(splitKeepEnds(fileText).slice(startLine, endLine));
 }
 
 /**

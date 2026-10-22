@@ -36,7 +36,10 @@ import {
   parseEntryId,
   parseFavaOptions,
   parseLedgerFiles,
+  normalizeSliceReplacement,
   replaceSliceInFile,
+  replacementLineEnding,
+  servedSliceText,
   resolveEntryIdAtSource,
   failedBalanceDiffs,
   serializeDirective,
@@ -190,6 +193,8 @@ interface AppliedReplace {
   content: string;
   /** 0-based start line of the replaced block in `content`. */
   startLine: number;
+  /** The block as stored, line endings and trimmed newlines included. */
+  stored: string;
 }
 
 /**
@@ -213,7 +218,14 @@ function makeReplaceTransform(
       slice.endLine,
       newContent,
     );
-    onApplied?.({ content, startLine: slice.startLine });
+    onApplied?.({
+      content,
+      startLine: slice.startLine,
+      stored: normalizeSliceReplacement(
+        newContent,
+        replacementLineEnding(current, slice.startLine, slice.endLine),
+      ),
+    });
     return content;
   };
 }
@@ -1026,13 +1038,19 @@ export class LedgerJournalService implements ILedgerJournalService {
             {
               file: found.file,
               startLine: applied.current.startLine,
-              lineCount: newContent.split("\n").length,
+              lineCount: applied.current.stored.split("\n").length,
             },
           )) ?? entryHash);
     return {
       message: "Entry updated successfully",
       entryHash: newEntryHash,
-      newSha256sum: sliceSha256(newContent),
+      // The block as stored, served as a fresh read serves it: the checksum
+      // the entry's next edit presents (w21/252).
+      newSha256sum: sliceSha256(
+        applied.current === undefined
+          ? newContent
+          : servedSliceText(applied.current.stored),
+      ),
       newEntryHash,
     };
   }

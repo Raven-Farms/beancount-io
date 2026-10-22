@@ -7,7 +7,10 @@ import {
   entryBalances,
   findEntrySlice,
   findEntrySliceBySourceSha,
+  normalizeSliceReplacement,
   replaceSliceInFile,
+  replacementLineEnding,
+  servedSliceText,
   sliceSha256,
   sourceDetailsFromProbe,
   splitIntoBlocks,
@@ -766,5 +769,122 @@ describe("entryBalances — Fava parity", () => {
       "deadbeefdeadbeefdeadbeefdeadbeef",
     );
     expect(balances).toBeNull();
+  });
+});
+
+// w21/252: an edit in a CRLF file rewrote the entry with LF and left a blank
+// line, and the checksum returned for it matched nothing a re-read served.
+describe("replacing a slice keeps the file's line endings", () => {
+  const crlf = [
+    '2026-08-30 * "Veg" "Produce"',
+    "  Expenses:Food  12.00 USD",
+    "  Assets:Cash",
+    "",
+    '2026-08-31 * "Next"',
+    "  Expenses:Food  1.00 USD",
+    "  Assets:Cash",
+    "",
+  ].join("\r\n");
+
+  const edited = [
+    '2026-08-30 * "Veg" "Fresh produce"',
+    "  Expenses:Food  12.00 USD",
+    "  Assets:Cash",
+  ];
+
+  it("writes CRLF with no extra blank line when the editor sent LF and a trailing newline", () => {
+    const [block] = splitIntoBlocks(crlf);
+    const next = replaceSliceInFile(
+      crlf,
+      block.startLine,
+      block.endLine,
+      `${edited.join("\n")}\n`,
+    );
+    expect(next).toBe(
+      [
+        ...edited,
+        "",
+        '2026-08-31 * "Next"',
+        "  Expenses:Food  1.00 USD",
+        "  Assets:Cash",
+        "",
+      ].join("\r\n"),
+    );
+    // Every line ending is CRLF.
+    expect(/(^|[^\r])\n/u.test(next)).toBe(false);
+  });
+
+  it("serves a checksum the next edit can present", () => {
+    const [block] = splitIntoBlocks(crlf);
+    const incoming = edited.join("\n");
+    const next = replaceSliceInFile(
+      crlf,
+      block.startLine,
+      block.endLine,
+      incoming,
+    );
+    const [reread] = splitIntoBlocks(next);
+    const stored = normalizeSliceReplacement(
+      incoming,
+      replacementLineEnding(crlf, block.startLine, block.endLine),
+    );
+    expect(sliceSha256(servedSliceText(stored))).toBe(sliceSha256(reread.text));
+  });
+
+  it("does the same for an LF file: a trailing newline adds no blank line", () => {
+    const lf = [
+      '2026-08-30 * "A"',
+      "  Assets:Cash",
+      "",
+      '2026-08-31 * "B"',
+      "  Assets:Cash",
+      "",
+    ].join("\n");
+    const [block] = splitIntoBlocks(lf);
+    const next = replaceSliceInFile(
+      lf,
+      block.startLine,
+      block.endLine,
+      '2026-08-30 * "A2"\n  Assets:Cash\n\n',
+    );
+    expect(next).toBe(
+      [
+        '2026-08-30 * "A2"',
+        "  Assets:Cash",
+        "",
+        '2026-08-31 * "B"',
+        "  Assets:Cash",
+        "",
+      ].join("\n"),
+    );
+    const [reread] = splitIntoBlocks(next);
+    expect(
+      sliceSha256(
+        servedSliceText(
+          normalizeSliceReplacement(
+            '2026-08-30 * "A2"\n  Assets:Cash\n\n',
+            "\n",
+          ),
+        ),
+      ),
+    ).toBe(sliceSha256(reread.text));
+  });
+
+  it("uses the replaced block's own ending in a mixed file", () => {
+    const mixed = [
+      '2026-08-30 * "A"\r',
+      "  Assets:Cash\r",
+      "",
+      '2026-08-31 * "B"',
+      "  Assets:Cash",
+      "",
+    ].join("\n");
+    const blocks = splitIntoBlocks(mixed);
+    expect(
+      replacementLineEnding(mixed, blocks[0].startLine, blocks[0].endLine),
+    ).toBe("\r\n");
+    expect(
+      replacementLineEnding(mixed, blocks[1].startLine, blocks[1].endLine),
+    ).toBe("\n");
   });
 });
