@@ -35,6 +35,7 @@ import {
   useTheme,
 } from "@/common/theme";
 import { pushAccountPicker } from "@/screens/account-picker-screen/push-account-picker";
+import { updateBudgetDates } from "./update-date";
 import { DatePickerModal } from "@/components/date-picker-modal";
 import { LedgerGuard, useLedgerGuard } from "@/components/ledger-guard";
 import { Picker } from "@/components/picker";
@@ -205,6 +206,7 @@ function AddBudgetScreenImpl(): JSX.Element {
     interval?: string;
     currency?: string;
     currentAmount?: string;
+    currentDate?: string;
   }>();
   // Reached from a card, the account is fixed: a budget's history belongs to
   // one account+currency pair, so changing it here would silently start a
@@ -218,7 +220,9 @@ function AddBudgetScreenImpl(): JSX.Element {
   );
   const [amount, setAmount] = useState("");
   const [pickedCurrency, setPickedCurrency] = useState(params.currency ?? "");
-  const [date, setDate] = useState(() => new Date());
+  // An Update starts no earlier than the entry it replaces (w21/623).
+  const dates = updateBudgetDates(params.currentDate, new Date());
+  const [date, setDate] = useState(() => dates.initial);
   const [picker, setPicker] = useState<PickerKind>(null);
   const [typedCurrencies, setTypedCurrencies] = useState<string[]>([]);
   const [otherCurrencyVisible, setOtherCurrencyVisible] = useState(false);
@@ -427,6 +431,7 @@ function AddBudgetScreenImpl(): JSX.Element {
         isVisible={datePickerVisible}
         mode="date"
         date={date}
+        minimumDate={dates.minimum}
         onConfirm={(picked: Date) => {
           setDatePickerVisible(false);
           setDate(picked);

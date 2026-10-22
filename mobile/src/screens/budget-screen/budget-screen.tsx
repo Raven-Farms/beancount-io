@@ -37,7 +37,10 @@ import {
   timeSpanToFilter,
   type BudgetTimeSpan,
 } from "@/screens/budget-screen/selectors/budget-labels";
-import type { BudgetGroup } from "@/screens/budget-screen/selectors/budget-selectors";
+import {
+  latestBudgetDate,
+  type BudgetGroup,
+} from "@/screens/budget-screen/selectors/budget-selectors";
 
 const getStyles = (theme: ColorTheme) =>
   StyleSheet.create({
@@ -137,6 +140,8 @@ function BudgetScreenImpl(): JSX.Element {
               currency: group.currency,
               // Shown as the Amount placeholder, never prefilled (w21/034).
               currentAmount: group.amount,
+              // An Update cannot be dated before it (w21/623).
+              currentDate: latestBudgetDate(group.budgetHistory),
             }
           : {},
       });

@@ -701,3 +701,14 @@ export function selectHistoryRows(group: BudgetGroup): BudgetHistoryRow[] {
     isCurrent: entry.entry_hash === group.entry_hash,
   }));
 }
+
+/** The latest date in a budget's history (ISO strings sort by date). */
+export function latestBudgetDate(
+  history: readonly { date: string }[],
+): string | undefined {
+  let latest: string | undefined;
+  for (const { date } of history) {
+    if (latest === undefined || date > latest) latest = date;
+  }
+  return latest;
+}
