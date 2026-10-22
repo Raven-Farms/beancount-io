@@ -42,7 +42,6 @@
 - [636](./636.md) — Leaving the app for 30+ s during a receipt upload makes it fail on return, even when the photo reached S3
 - [637](./637.md) — On first use, Scan Receipt renders its "Camera access is needed" screen behind the system camera prompt
 - [638](./638.md) — Android: hardware Back during receipt Uploading or Reading leaves the upload and parse running (quota spent)
-- [639](./639.md) — Scan Receipt's decorative icons are their own VoiceOver stops (same class as w21/141 and w21/605)
 - [646](./blocked/646.md) — The same "1M"/"3M" pills mean a rolling window on Transactions but calendar months on Reports (Food $60 vs $100) — **blocked:** needs an owner product decision on what a 1M/3M/1Y pill means (calendar months everywhere vs relabelled rolling windows on Transactions and Budget)
 - [508](./blocked/508.md) — Mobile guesses that an entry is a plugin copy from its first line; read the ledger's `generated_from` instead (split from 443) — **blocked:** production's GraphQL schema lacks `generated_from` until the ledger service and backend-v2 deploy; mobile's client is generated from it
 - [315](./blocked/315.md) — In-app commits signed with Gitea username and real email (no full_name, no noreply) — **blocked:** needs the owner's noreply-address and published-history decisions, and a production backfill of existing Gitea users that can't be verified here

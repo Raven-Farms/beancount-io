@@ -153,7 +153,14 @@ export const CameraView = ({
     return (
       <View style={styles.container}>
         <View style={styles.denied}>
-          <Ionicons name="camera-outline" size={48} color={CHROME.icon} />
+          {/* Decorative: VoiceOver goes straight to the explanation (w21/639). */}
+          <Ionicons
+            name="camera-outline"
+            accessibilityElementsHidden
+            importantForAccessibility="no"
+            size={48}
+            color={CHROME.icon}
+          />
           <Text style={styles.deniedText}>{t("receiptCameraPermission")}</Text>
           {/* A receipt already in the library — a screenshot, an emailed
               image — needs no camera (w21/017). */}
