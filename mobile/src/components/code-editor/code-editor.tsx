@@ -38,6 +38,7 @@ import { tags } from "@lezer/highlight";
 import type { EditorTheme } from "@/types/theme-props";
 import { isSameEditorTheme } from "./editor-theme";
 import { detectIndentUnit, INSERT_INDENT, wrapSelection } from "./indent-unit";
+import { jumpScrollTop } from "./jump-scroll";
 import {
   beancountIndent,
   copyBeancountState,
@@ -219,7 +220,11 @@ function buildExtensions(
   ];
 }
 
-function jumpToEditorLine(view: EditorView, target: number): () => void {
+function jumpToEditorLine(
+  view: EditorView,
+  target: number,
+  getKeyboardInset: () => number,
+): () => void {
   const lineNum = Math.max(1, Math.min(target, view.state.doc.lines));
   const line = view.state.doc.line(lineNum);
 
@@ -239,12 +244,21 @@ function jumpToEditorLine(view: EditorView, target: number): () => void {
       },
       write(data, v) {
         if (data.top > 0) {
-          v.scrollDOM.scrollTop = Math.max(0, data.top - data.clientH / 2);
+          // The middle of what the keyboard leaves visible, read when it runs:
+          // the keyboard may rise after the jump begins (w21/340).
+          v.scrollDOM.scrollTop = jumpScrollTop(
+            data.top,
+            data.clientH,
+            getKeyboardInset(),
+          );
         }
       },
     });
   };
 
+  // At once (the first centring ignored the keyboard), then again as the
+  // layout settles.
+  doMeasuredScroll();
   const timers = [100, 500, 1000].map((delay) =>
     setTimeout(doMeasuredScroll, delay),
   );
@@ -267,6 +281,9 @@ export default function CodeEditor({
 }: CodeEditorProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const viewRef = useRef<EditorView | null>(null);
+  // Read when a jump scrolls, not when it starts: the keyboard may rise after.
+  const keyboardInsetRef = useRef(keyboardInset);
+  keyboardInsetRef.current = keyboardInset;
   const onEditRef = useRef(onEdit);
   const onSaveRef = useRef(onSave);
   const documentEpochRef = useRef(documentSpec.epoch);
@@ -404,7 +421,7 @@ export default function CodeEditor({
 
     const target = pendingJumpRef.current;
     if (target && view.state.doc.lines > 1) {
-      return jumpToEditorLine(view, target);
+      return jumpToEditorLine(view, target, () => keyboardInsetRef.current);
     }
     return undefined;
   }, [documentSpec.epoch, documentSpec.value]);
@@ -499,7 +516,7 @@ export default function CodeEditor({
     pendingJumpRef.current = jumpToLine;
     const view = viewRef.current;
     if (!view || !jumpToLine || view.state.doc.lines <= 1) return;
-    return jumpToEditorLine(view, jumpToLine);
+    return jumpToEditorLine(view, jumpToLine, () => keyboardInsetRef.current);
   }, [jumpToLine]);
 
   // Keep the cursor above the native keyboard accessory and keyboard.

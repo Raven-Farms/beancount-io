@@ -43,7 +43,6 @@
 - [444](./444.md) — Padding entry detail turns "removed" after another entry opens
 - [445](./445.md) — Money flow pads decimals only for USD
 - [315](./blocked/315.md) — In-app commits signed with Gitea username and real email (no full_name, no noreply) — **blocked:** needs the owner's noreply-address and published-history decisions, and a production backfill of existing Gitea users that can't be verified here
-- [340](./340.md) — File editor: error-row jump lands behind the keyboard
 - [341](./341.md) — File editor text ignores Dynamic Type (fixed 14px), including AX2
 - [342](./342.md) — Web view process kill silently resets the editor draft and re-inserts the last shortcut
 - [343](./343.md) — Files over 10 MiB still return content: null on REST/GraphQL/MCP (185 server half)
