@@ -39,7 +39,7 @@
 
 - [329 — Explain failed BQL and Holdings CSV downloads and keep retry usable](./329.md) — minor; dashboard QA with a simulated browser API failure,2026-10-21; both actions throw without feedback at both widths, while restored retries preserve exact CSV output.
 
-- [328 — Offer a retry after a statement read fails](./328.md) — minor; dashboard QA with injected read failures, 2026-10-21; Trial Balance removes its conversion control and supplies no retry; reload/same-period recovery passes, with three equivalent statement callers source-traced.
+- [328 — Offer a retry after a statement or Account Journal read fails](./328.md) — minor; dashboard QA with injected read failures, 2026-10-21/22; Trial Balance and Account Journal supply no retry at both widths; reload/filter recovery passes, with three equivalent statement callers source-traced.
 
 - [327 — Resolve README folder links from the README's directory](./327.md) — minor; dashboard QA, 2026-10-21; child-folder and ./ links lose source context, while folder-row and relative-file controls work; two owned fixtures created/deleted with no residue or ledger errors.
 
