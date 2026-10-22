@@ -4,6 +4,8 @@
 
 ## Inbox
 
+- [1004 — Execute the current BQL model from the toolbar](./1004.md) — minor residual of W3/m12; fresh both-width native Enter runs previous text despite current model and settled prior URL; six shortcut/six pointer controls pass, source exact, no writes.
+
 - [1003 — Keep tiny commodity price labels accurate](./1003.md) — minor residual of former W3/012; valid tiny quotes render zero ticks and exponent tooltips multiply two prices by1e9 at both widths; exact history/ordinary/zero controls pass, no writes.
 
 - [1002 — Check every recognized currency symbol in a dashboard import amount](./1002.md) — minor residual of M44; current local native UI checks only first symbol at both widths; reversed/matching controls pass, six preparations blocked before transport; production pre-M44 lag excluded.
