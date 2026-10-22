@@ -1,5 +1,8 @@
 import { BadUserInputError } from "@/shared/errors";
-import { assertSafeRepoPath } from "@/features/ledger/utils/safe-repo-path";
+import {
+  assertPortableRepoPath,
+  assertSafeRepoPath,
+} from "@/features/ledger/utils/safe-repo-path";
 import {
   archiveRef,
   assertSafeArchiveName,
@@ -78,4 +81,45 @@ describe("archive name validation", () => {
       expect(() => assertSafeArchiveName(archive)).toThrow(BadUserInputError);
     },
   );
+});
+
+// w23/054: names a new file must not take — they broke Windows clones,
+// spoofed file lists, or could not be written in an include.
+describe("portable paths for new files", () => {
+  it.each([
+    ["qa\nx.bean", "control character"],
+    ["qa\tx.bean", "control character"],
+    ["qa\u001bx.bean", "control character"],
+    ["qa\u2028x.bean", "control character"],
+    ["qa\u202ex.bean", "bidirectional"],
+    ["a:b.bean", "Windows cannot store"],
+    ["q?.bean", "Windows cannot store"],
+    ['say"hi".bean', "Windows cannot store"],
+    ["CON", "device name"],
+    ["aux.bean", "device name"],
+    ["dir/NUL.bean", "device name"],
+    ["Lpt9.txt", "device name"],
+    ["qa-x./y.bean", "ending in a dot or a space"],
+    ["qa-x /y.bean", "ending in a dot or a space"],
+    [`${"x".repeat(252)}.bean`, "longer than 255 bytes"],
+  ])("refuses %j: %s", (path, rule) => {
+    expect(() => assertPortableRepoPath(path, "path")).toThrow(rule);
+  });
+
+  it.each([
+    "main.bean",
+    "2026/imports.bean",
+    ".gitignore",
+    "Café.bean",
+    "Cafe\u0301.bean",
+    "资产.bean",
+    "auxiliary.bean",
+    "my file.bean",
+  ])("accepts %j, NFC and NFD alike", (path) => {
+    expect(() => assertPortableRepoPath(path)).not.toThrow();
+  });
+
+  it("leaves reads of an existing odd name to the safe-path rule", () => {
+    expect(() => assertSafeRepoPath("aux.bean")).not.toThrow();
+  });
 });

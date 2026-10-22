@@ -48,6 +48,41 @@ export function assertSafeRepoPath(
   }
 }
 
+/** Windows device names, with or without an extension. */
+const DEVICE_NAME = /^(?:con|prn|aux|nul|com[1-9]|lpt[1-9])(?:\..*)?$/i;
+
+/**
+ * A path for a file being created: safe ({@link assertSafeRepoPath}) and
+ * portable. A committed name with a control character, a bidi override, a
+ * Windows-reserved character or device name, a segment ending in `.` or a
+ * space, or a segment over 255 bytes made the ledger fail to clone on Windows,
+ * display under another name, or resist an `include` (w23/054). Only new paths
+ * are held to it, so a file already named that way stays readable and
+ * deletable.
+ */
+export function assertPortableRepoPath(path: unknown, field = "path"): void {
+  assertSafeRepoPath(path, field);
+  const refuse = (rule: string) => {
+    throw new BadUserInputError(
+      `File path ${JSON.stringify(path)} ${rule}`,
+      field,
+    );
+  };
+  if (/[\p{Cc}\u2028\u2029]/u.test(path))
+    refuse("contains a control character");
+  if (/\p{Bidi_Control}/u.test(path))
+    refuse("contains a bidirectional text control");
+  if (/[<>:"|?*]/.test(path))
+    refuse('contains one of <>:"|?*, which Windows cannot store');
+  for (const segment of path.split("/")) {
+    if (/[. ]$/.test(segment)) refuse("has a part ending in a dot or a space");
+    if (DEVICE_NAME.test(segment))
+      refuse(`uses the Windows device name "${segment}"`);
+    if (Buffer.byteLength(segment, "utf8") > 255)
+      refuse("has a part longer than 255 bytes");
+  }
+}
+
 /**
  * Validate ({@link assertSafeRepoPath}) then URL-encode each segment, so
  * `?`/`#`/`%`/unicode in legitimate filenames reach Gitea as literals instead

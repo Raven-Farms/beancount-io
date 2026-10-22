@@ -95,7 +95,10 @@ import {
   type IAuthorizationService,
   userResource,
 } from "@/server/api/authorization";
-import { assertSafeRepoPath } from "@/features/ledger/utils/safe-repo-path";
+import {
+  assertPortableRepoPath,
+  assertSafeRepoPath,
+} from "@/features/ledger/utils/safe-repo-path";
 import { toBeanCheckErrors } from "@/features/ledger/utils/bean-check-errors";
 import { assertKeepsEntryPoint } from "@/features/ledger/utils/ledger-entry-point";
 import { assertExplicitFileContentSize } from "@/features/ledger/utils/explicit-file-size";
@@ -894,7 +897,8 @@ export class LedgerWorkflow implements ILedgerWorkflow {
       resource: ledgerResource(ledgerId),
     });
     const userId = identity.userId;
-    assertSafeRepoPath(input.path);
+    // A new file: its name has to work on every checkout (w23/054).
+    assertPortableRepoPath(input.path);
     assertExplicitFileContentSize(input.content, "base64");
     const fileOptions: LedgerCreateFileOptions = {
       path: input.path,
@@ -1021,7 +1025,7 @@ export class LedgerWorkflow implements ILedgerWorkflow {
     });
     const userId = identity.userId;
     assertSafeRepoPath(input.oldPath, "oldPath");
-    assertSafeRepoPath(input.newPath, "newPath");
+    assertPortableRepoPath(input.newPath, "newPath");
     assertKeepsEntryPoint(input.oldPath, "renamed", "oldPath");
     if (input.oldPath === input.newPath) {
       throw new BadUserInputError("oldPath and newPath are the same file");

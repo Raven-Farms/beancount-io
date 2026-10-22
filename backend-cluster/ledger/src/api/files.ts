@@ -13,7 +13,11 @@ import {
   giteaErrorStatus,
   isGiteaWriteConflict,
 } from "@/features/gitea/utils/gitea-error";
-import { assertSafeRepoPath, toSafeRepoUrlPath } from "@/shared/safe-repo-path";
+import {
+  assertPortableRepoPath,
+  assertSafeRepoPath,
+  toSafeRepoUrlPath,
+} from "@/shared/safe-repo-path";
 
 /** Python `LedgerFileContentPublic` — fixed projection, nulls included. */
 interface LedgerFileContentPublic {
@@ -287,6 +291,8 @@ export function setFilesHandler(router: Router): void {
     async (ctx) => {
       const { owner, repo_name: repoName } = ctx.params;
       const body = (ctx.request.body ?? {}) as CreateFileBody;
+      // A new file's name has to work on every checkout (w23/054).
+      assertPortableRepoPath(body.path);
       const safeUrlPath = toSafeRepoUrlPath(body.path);
       const client = giteaClientForRequest(ctx);
       await checkDirectiveLimitForFileChanges(
@@ -376,6 +382,8 @@ export function setFilesHandler(router: Router): void {
       const fileChanges: Record<string, string | null> = {};
       operations.forEach((op, index) => {
         assertSafeRepoPath(op.path, `files[${index}].path`);
+        if (op.operation === "create")
+          assertPortableRepoPath(op.path, `files[${index}].path`);
         if (op.from_path !== null && op.from_path !== undefined) {
           assertSafeRepoPath(op.from_path, `files[${index}].from_path`);
         }

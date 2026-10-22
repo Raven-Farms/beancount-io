@@ -1,4 +1,4 @@
-import { assertSafeRepoPath } from "@/features/ledger/utils/safe-repo-path";
+import { assertPortableRepoPath } from "@/features/ledger/utils/safe-repo-path";
 import { logger } from "@/shared/logger";
 import {
   BadUserInputError,
@@ -267,7 +267,8 @@ export class PullRequestService implements IPullRequestService {
         "changes",
       );
     }
-    for (const change of input.changes) assertSafeRepoPath(change.path);
+    // A change may create its file, so its name has to be portable (w23/054).
+    for (const change of input.changes) assertPortableRepoPath(change.path);
     const userId = identity.userId;
     const client = await this.giteaClientFactory.getUserApiClient(userId);
 

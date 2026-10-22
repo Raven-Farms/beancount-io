@@ -36,6 +36,8 @@ async function fixture() {
     "accounts.bean",
     "extra.bean",
     "qa-latin1.txt",
+    // A legacy name a new file could no longer take (w23/054).
+    "aux.bean",
   ]);
   const getLedgerFilesContent = jest.fn(
     async (_owner: string, _name: string, { files }: { files: string[] }) => ({
@@ -686,6 +688,57 @@ describe("updateLedgerFiles edge cases", () => {
         error: { code: "BAD_USER_INPUT", message },
       });
       expect(f.getLedgerFilesContent).not.toHaveBeenCalled();
+    } finally {
+      await f.close();
+    }
+  });
+});
+
+/** w23/054: a new file's name has to work on every checkout. */
+describe("creating a file whose name a checkout cannot hold", () => {
+  it.each(["qa\nx.bean", "aux.bean", "a:b.bean", "qa\u202ex.bean"])(
+    "refuses %j in the preview and the commit",
+    async (path) => {
+      const f = await fixture();
+      try {
+        for (const dryRun of [true, false]) {
+          const result = await f.client.callTool({
+            name: "createLedgerFiles",
+            arguments: {
+              ledger: "alice/main",
+              description: "add",
+              dry_run: dryRun,
+              files: [{ path, content: "; x\n" }],
+            },
+          });
+          expect(result.isError).toBe(true);
+          expect(result.structuredContent).toMatchObject({
+            error: { code: "BAD_USER_INPUT" },
+          });
+        }
+        expect(f.changeLedgerFiles).not.toHaveBeenCalled();
+      } finally {
+        await f.close();
+      }
+    },
+  );
+
+  it("still deletes an existing file with such a name", async () => {
+    const f = await fixture();
+    f.changeLedgerFiles.mockResolvedValue({
+      data: { success: true, data: {} },
+    });
+    try {
+      const result = await f.client.callTool({
+        name: "deleteLedgerFiles",
+        arguments: {
+          ledger: "alice/main",
+          description: "tidy",
+          files: [{ path: "aux.bean" }],
+        },
+      });
+      expect(result.isError).toBeFalsy();
+      expect(f.changeLedgerFiles).toHaveBeenCalledTimes(1);
     } finally {
       await f.close();
     }

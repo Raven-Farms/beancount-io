@@ -602,7 +602,8 @@ describe.each(["rest", "gql", "mcp"])(
       }
     });
 
-    it.each(["my file.bean", 'c"x.bean'])(
+    // A quote is no longer a name a new file can take (w23/054); a space is.
+    it.each(["my file.bean"])(
       "writes a new name %p that reads back as the same path",
       async (newPath) => {
         const f = await fixture(identity, {
@@ -625,6 +626,24 @@ describe.each(["rest", "gql", "mcp"])(
         }
       },
     );
+
+    it("refuses a new name a Windows checkout or an include cannot hold", async () => {
+      const f = await fixture(identity, {
+        "main.bean": 'include "b.bean"\n',
+        "b.bean": "; b\n",
+      });
+      try {
+        for (const newPath of ['c"x.bean', "aux.bean", "qa\nx.bean", "notes.\u202ebean"]) {
+          const outcome = await f.call(surface, "b.bean", newPath, {
+            updateIncludes: true,
+          });
+          expect(outcome.success).toBe(false);
+        }
+        expect(f.change).not.toHaveBeenCalled();
+      } finally {
+        await f.close();
+      }
+    });
 
     it("keeps a glob that still matches and refuses one the file would leave", async () => {
       const f = await fixture(identity, {

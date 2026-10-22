@@ -16,7 +16,10 @@ import {
   AuthorizedLedgerService,
 } from "@/features/ledger/utils/authorize-ledger";
 import { AUTHORIZATION_ACTIONS } from "@/server/api/authorization/authorization-contract";
-import { assertSafeRepoPath } from "@/features/ledger/utils/safe-repo-path";
+import {
+  assertPortableRepoPath,
+  assertSafeRepoPath,
+} from "@/features/ledger/utils/safe-repo-path";
 import { assertKeepsEntryPoint } from "@/features/ledger/utils/ledger-entry-point";
 import { assertExplicitFileContentSize } from "@/features/ledger/utils/explicit-file-size";
 import {
@@ -313,6 +316,10 @@ export class LedgerRepoService
     );
     operations.forEach((operation, index) => {
       assertSafeRepoPath(operation.path, `operations[${index}].path`);
+      // A new file's name has to work on every checkout; an existing one
+      // keeps whatever name it has (w23/054).
+      if (operation.operation === "create")
+        assertPortableRepoPath(operation.path, `operations[${index}].path`);
       // A batch that creates the path again keeps the entry point.
       if (
         operation.operation === "delete" &&
