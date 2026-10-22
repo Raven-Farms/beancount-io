@@ -1,4 +1,8 @@
 import type { RootNames } from "../../../common/account-root";
+import {
+  currencyMinorUnits,
+  getCurrencySymbol,
+} from "../../../common/currency-util";
 import type { JournalTransaction } from "../../transactions-screen/types";
 import {
   isMixedPostingsAmount,
@@ -101,10 +105,13 @@ function formatPostingUnits(
   const unsigned = trimmed.replace(/^[+-]/, "");
   const isZero = /^0+(\.0+)?$/.test(unsigned);
   const [intPart, fracPart = ""] = unsigned.split(".");
+  // Padded to a known currency's own minor units, as the headline above is: 4.5
+  // EUR read "4.5 EUR" under "-4.50 EUR", and 1500 JPY stays whole (w21/445). A
+  // commodity that is not a currency (a share count) keeps its recorded digits.
+  const minorUnits =
+    getCurrencySymbol(currency) !== "" ? currencyMinorUnits(currency) : 0;
   const displayFrac =
-    currency === "USD" && fracPart.length < 2
-      ? fracPart.padEnd(2, "0")
-      : fracPart;
+    fracPart.length < minorUnits ? fracPart.padEnd(minorUnits, "0") : fracPart;
   const groupedInt = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
   const body =
     displayFrac.length > 0 ? `${groupedInt}.${displayFrac}` : groupedInt;

@@ -516,3 +516,27 @@ describe("user metadata", () => {
     expect(row.includes("{posting.meta?.map((line) => (")).toBe(true);
   });
 });
+
+// w21/445: only USD was padded, so "4.5 EUR" sat under a "-4.50 EUR" headline.
+describe("selectPostingRows amounts", () => {
+  const amounts = (number: string, currency: string) =>
+    selectPostingRows(txn([posting("Expenses:Food", number, currency)]))[0]!
+      .amount;
+
+  it("pads a currency to its own minor units, as the headline does", () => {
+    expect(amounts("4.5", "EUR")).toBe("+4.50 EUR");
+    expect(amounts("-5", "EUR")).toBe("-5.00 EUR");
+    expect(amounts("12.3", "KWD")).toBe("+12.300 KWD");
+    expect(amounts("4.5", "USD")).toBe("+$4.50");
+  });
+
+  it("keeps a yen amount whole and a longer recorded scale as written", () => {
+    expect(amounts("1500", "JPY")).toBe("+1,500 JPY");
+    expect(amounts("1.2345", "EUR")).toBe("+1.2345 EUR");
+  });
+
+  it("leaves a commodity that is not a currency at its recorded digits", () => {
+    expect(amounts("10", "QAX")).toBe("+10 QAX");
+    expect(amounts("0.5", "QAX")).toBe("+0.5 QAX");
+  });
+});
