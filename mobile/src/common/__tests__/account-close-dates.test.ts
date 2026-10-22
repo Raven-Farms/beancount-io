@@ -109,3 +109,64 @@ describe("closedAccountNamed", () => {
     expect(open.includes('? t("openAccountClosed", {')).toBe(true);
   });
 });
+
+// w21/229: the other half of w21/045. An account opened after a back-dated
+// entry was offered, filled in by the payee seed, and refused at Done with
+// "not opened until".
+describe("accounts opened after an entry's date", () => {
+  const dates = closeDatesOf([
+    { account: "Assets:NewBank", closedAt: null, openedAt: "2026-10-01" },
+    { account: "Assets:Checking", closedAt: null, openedAt: "2020-01-01" },
+    {
+      account: "Assets:Old",
+      closedAt: "2026-09-01",
+      openedAt: "2025-01-01T00:00:00Z",
+    },
+  ]);
+  const accounts = ["Assets:NewBank", "Assets:Checking", "Assets:Old"];
+
+  it("hides an account that is not open yet on the entry's date", () => {
+    // (Assets:Old closed on 2026-09-01, so it is out as well.)
+    expect(openOn(accounts, "2026-09-15", dates)).toEqual(["Assets:Checking"]);
+    expect(openOn(accounts, "2026-08-15", dates)).toEqual([
+      "Assets:Checking",
+      "Assets:Old",
+    ]);
+  });
+
+  it("shows it from its open date on, where Beancount books the open first", () => {
+    expect(isOpenOn("Assets:NewBank", "2026-09-30", dates)).toBe(false);
+    expect(isOpenOn("Assets:NewBank", "2026-10-01", dates)).toBe(true);
+    expect(openOn(accounts, "2026-10-01", dates)).toEqual([
+      "Assets:NewBank",
+      "Assets:Checking",
+    ]);
+  });
+
+  it("needs both ends for an account that has closed", () => {
+    expect(isOpenOn("Assets:Old", "2024-12-31", dates)).toBe(false);
+    expect(isOpenOn("Assets:Old", "2025-01-01", dates)).toBe(true);
+    expect(isOpenOn("Assets:Old", "2026-09-01", dates)).toBe(true);
+    expect(isOpenOn("Assets:Old", "2026-09-02", dates)).toBe(false);
+  });
+
+  it("falls back to the first open account for the payee seed's accounts", () => {
+    const isOpen = (account: string) => isOpenOn(account, "2026-09-15", dates);
+    expect(isOpen("Assets:NewBank")).toBe(false);
+    expect(isOpen("Assets:Checking")).toBe(true);
+  });
+
+  it("offers everything until open dates load, as before", () => {
+    expect(openOn(accounts, "2026-09-15", closeDatesOf(undefined))).toEqual(
+      accounts,
+    );
+    // A read that supplied only close dates still filters by them alone.
+    expect(
+      isOpenOn(
+        "Assets:NewBank",
+        "2026-09-15",
+        closeDatesOf([{ account: "Assets:NewBank", closedAt: null }]),
+      ),
+    ).toBe(true);
+  });
+});

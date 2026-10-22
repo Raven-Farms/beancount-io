@@ -11,26 +11,47 @@
  * Free of `@/` imports so the jest-lite runner can require it.
  */
 
-/** Close date per account, from `getLedgerAccountDirectives`. */
-export type CloseDates = ReadonlyMap<string, string>;
+/**
+ * Close date per account, from `getLedgerAccountDirectives`. It also carries
+ * each account's open date (`openedOn`) when the read supplied one, so every
+ * caller that asks whether an account takes an entry also hears that it was
+ * not opened until later (w21/229).
+ */
+export type CloseDates = ReadonlyMap<string, string> & {
+  readonly openedOn?: ReadonlyMap<string, string>;
+};
 
 export function closeDatesOf(
   directives:
-    readonly { account: string; closedAt?: string | null }[] | null | undefined,
+    | readonly {
+        account: string;
+        closedAt?: string | null;
+        openedAt?: string | null;
+      }[]
+    | null
+    | undefined,
 ): CloseDates {
   const dates = new Map<string, string>();
-  for (const { account, closedAt } of directives ?? []) {
+  const opened = new Map<string, string>();
+  for (const { account, closedAt, openedAt } of directives ?? []) {
     if (closedAt) dates.set(account, closedAt.slice(0, 10));
+    if (openedAt) opened.set(account, openedAt.slice(0, 10));
   }
-  return dates;
+  return Object.assign(dates, { openedOn: opened });
 }
 
-/** Whether `account` is still open on `entryDate` (YYYY-MM-DD). */
+/**
+ * Whether `account` takes an entry dated `entryDate` (YYYY-MM-DD): opened on
+ * or before it and not closed before it. An account opened later was offered
+ * for a back-dated entry, and Done was refused with "not opened until".
+ */
 export function isOpenOn(
   account: string,
   entryDate: string,
   closeDates: CloseDates,
 ): boolean {
+  const openedAt = closeDates.openedOn?.get(account);
+  if (openedAt !== undefined && entryDate < openedAt) return false;
   const closedAt = closeDates.get(account);
   return closedAt === undefined || entryDate <= closedAt;
 }

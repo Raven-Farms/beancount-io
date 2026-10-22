@@ -268,7 +268,7 @@ export type LedgerAccountCloseDatesQueryVariables = Exact<{
 }>;
 
 
-export type LedgerAccountCloseDatesQuery = { getLedgerAccountDirectives: Array<{ account: string, closedAt: string | null }> };
+export type LedgerAccountCloseDatesQuery = { getLedgerAccountDirectives: Array<{ account: string, closedAt: string | null, openedAt: string }> };
 
 export type LedgerDirectoryQueryVariables = Exact<{
   page: number;
@@ -1898,6 +1898,7 @@ export const LedgerAccountCloseDatesDocument = gql`
   getLedgerAccountDirectives(ledgerId: $ledgerId) {
     account
     closedAt
+    openedAt
   }
 }
     `;
