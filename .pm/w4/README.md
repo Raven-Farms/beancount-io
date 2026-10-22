@@ -76,7 +76,6 @@
 
 - [340 — Return search focus after Accounts and Budget no-match resets](./340.md) — minor; public dashboard QA,2026-10-21; both body resets restore results but leave BODY focused/typing ignored at both widths; their repaired input-clear icons pass, with distinct filter semantics retained.
 
-- [339 — Submit the currency that transaction auto-balance actually used](./339.md) — minor; dashboard QA,2026-10-21; blank currency infers USD but serializes empty; both-width prepared repeats and one real UNBALANCED refusal, unchanged ledger/head verified.
 
 
 
