@@ -29,7 +29,7 @@ Guard every submission entrypoint and make pending inputs, dismissal and complet
 
 ## Dedupe and deployed source
 
-All board states searched for UpdateProfile, UserProfileSection, name/profile pending saves, duplicate submission and obsolete completion. Completed [296](../done/296.md) repairs composing Enter only. [M33](../done/m33/README.md) and [M42](../done/m42/README.md) own different forms; [973](../m48/README.md) is receipt review. No matching settings lifecycle repair was found. GeneralSettingsPage is the sole production caller and /settings/general its route. Targeted history leaves these lifecycle callbacks unchanged after296.
+All board states searched for UpdateProfile, UserProfileSection, name/profile pending saves, duplicate submission and obsolete completion. Completed [296](../296.md) repairs composing Enter only. [M33](../m33/README.md) and [M42](../m42/README.md) own different forms; [973](../../m48/README.md) is receipt review. No matching settings lifecycle repair was found. GeneralSettingsPage is the sole production caller and /settings/general its route. Targeted history leaves these lifecycle callbacks unchanged after296.
 
 Observed settings.general-CbvDEEZU.js.map contains byte-exact current-main user-profile-section.tsx, SHA-256 **5f6b9df8fe45620f94de861a786d244a7eab7f5da9bc3740db0233efb9dbaab3**. Full deployed revision remains unverified.
 

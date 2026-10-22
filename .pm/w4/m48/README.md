@@ -33,4 +33,4 @@
 
 ## Scope and dedupe
 
-Own features/receipt only and existing supported common controls as needed. CSV Import [280](../done/280.md), New Entry [M33](../done/m33/README.md), shared pending focus [M42](../done/m42/README.md) and settings [M47](../m47/README.md) are separate callers. Backend receipt atomicity [W23/058](../../w23/done/058.md) remains unchanged. No API/dependency, persistent draft store, automatic resend or shared AI behavior change.
+Own features/receipt only and existing supported common controls as needed. CSV Import [280](../done/280.md), New Entry [M33](../done/m33/README.md), shared pending focus [M42](../done/m42/README.md) and settings [M47](../done/m47/README.md) are separate callers. Backend receipt atomicity [W23/058](../../w23/done/058.md) remains unchanged. No API/dependency, persistent draft store, automatic resend or shared AI behavior change.

@@ -98,7 +98,7 @@
 
 - [ ] **m48** — [Preserve receipt review through recording and failure](./m48/README.md) (6 tasks) ← dashboard QA,2026-10-22; minor, pending corrections disappear at success and failed Record drops the corrected review; promoted from973, local responses only.
 
-- [ ] **m47** — [Keep profile saves within their submitted dialog session](./m47/README.md) (6 tasks) ← dashboard QA,2026-10-22; minor, concurrent Enter requests and older completion closing a newer draft; promoted from975, all writes intercepted or locally modeled.
+- [x] **m47** — [Keep profile saves within their submitted dialog session](./done/m47/README.md) (6 tasks) ← dashboard QA,2026-10-22; minor, concurrent Enter requests and older completion closing a newer draft; promoted from975, all writes intercepted or locally modeled.
 
 - [x] **m46** — [Preserve editor drafts through ledger refresh](./done/m46/README.md) (6 tasks) ← continuous dashboard QA, 2026-10-21; major. Done 2026-10-22: Out of date → Refresh keeps an already shown ledger page, unsaved file draft (bound to its original SHA) and unexecuted BQL query; failed refreshes keep content and offer Try Again.
 
@@ -186,7 +186,7 @@
 
 - ~~**973**~~ — Freeze receipt review edits while recording — dropped 2026-10-22: promoted to [m48](./m48/README.md), preserving the original report and adding independently repeated failed-record review loss; separate pending/failure repairs and real regressions exceed one hour.
 
-- ~~**975**~~ — Guard pending Change Name submissions from Enter — dropped 2026-10-22: promoted to [m47](./m47/README.md), retaining the reproducer and adding independently repeated pending dialog/draft ownership; two implementation tasks plus real regressions exceed one hour.
+- ~~**975**~~ — Guard pending Change Name submissions from Enter — dropped 2026-10-22: promoted to [m47](./done/m47/README.md), retaining the reproducer and adding independently repeated pending dialog/draft ownership; two implementation tasks plus real regressions exceed one hour.
 
 - ~~**331**~~ — Preserve fractional commodity values in Budget readouts — dropped2026-10-21: promoted to [m45](./done/m45/README.md), preserving all modeled Budget evidence and adding actual Trial Balance/Balance Sheet precision loss; two renderers and computed precision regressions exceed one hour.
 
