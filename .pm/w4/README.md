@@ -93,6 +93,8 @@
 
 ## Milestones
 
+- [ ] **m46** — [Preserve an unsaved file through ledger refresh](./m46/README.md) (6 tasks) ← continuous dashboard QA,2026-10-21; both-width native Refresh silently replaces dirty text, Undo cannot recover; fixture cleaned and current/served source matches.
+
 - [ ] **m45** — [Keep commodity quantities precise in Budget and statements](./m45/README.md) (6 tasks) ← promoted331 and actual public statement QA,2026-10-21; minor,4.00995ETH becomes4.01 in shared hierarchy; modeled Budget loses fine BTC digits.
 
 - [ ] **m44** — [Refuse CSV currency-symbol conflicts before importing](./m44/README.md) (6 tasks) ← dashboard QA, 2026-10-21; major, accepted euro/pound tokens prepare as USD/EUR without conflict guidance; five real-UI requests preblocked, no hosted import.

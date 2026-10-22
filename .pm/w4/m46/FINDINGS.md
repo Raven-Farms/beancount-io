@@ -1,0 +1,30 @@
+# Dirty file buffer disappears on Out-of-date Refresh
+
+Production `https://beancount.io`,2026-10-21 local date, English/light, isolated headless Chromium155.0.8059.85. Fresh1440×1000 and390×844 contexts use a disposable-ledger owner and one uniquely prefixed synthetic text file. Local main `a63198906`; full deployed revision unverified. No response substitution, held transport or UI Save is involved in the retained reproduction.
+
+## Reproduction and actual outcome
+
+1. Create `qa-20261021-dirty-refresh-24c8.txt` with `qa-20261021 initial file state` and a newline. Open it normally, enter Edit and type a paced local revision containing `LOCAL_BUFFER_24c8`. Verify the exact marker is visible and the initial actual file read matches the created blob.
+2. A controlled second writer updates only this owned file after two exact content/SHA/commit guards. Its remote revision contains `qa-20261021 remote revision`. Wait for the application's normal latest-commit poll and its named **Out of date — click to refresh** button.
+3. With the unsaved marker still visible, activate Refresh with native Enter. The actual GetLedgerFile returns HTTP200, no GraphQL errors and the expected second-writer bytes/blob. The local marker disappears, replaced by the remote revision. Both original editor and input nodes disconnect; `performance.timeOrigin` stays unchanged and `editMode=true` remains. No discard dialog appears. Native editor Undo does not restore the marker.
+4. Repeat from a fresh390px context against that remote revision, with a distinct `NARROW_BUFFER_24c8` draft. The second writer appends `qa-20261021 remote narrow revision`, again after two exact guards. Normal polling and native Refresh repeat the same loss, editor replacement, unchanged document and edit-mode URL, no dialog and no Undo recovery. The actual refreshed bytes/blob match that second remote update.
+
+The latest-commit indicator may observe later commits by concurrent QA workers; this is not evidence that its sampled head equals our particular update. Fresh exact file guards immediately before both Refresh actions and the actual matching file responses establish the file revision under test.
+
+Expected: retaining a dirty editor or asking before discarding it. This is browser-local unsaved text loss; stored remote data remained correct and no attempted old-draft overwrite was sent.
+
+## Source and bounded repair
+
+`dashboard/src/common/components/ledger-layout/ledger-out-of-date-indicator.tsx` polls every30seconds and Refresh invokes `useApolloCacheClear`. `common/hooks/use-apollo-cache.ts` evicts ROOT_QUERY. `features/ledger-editor/file-editor/components/ledger-file-view/index.tsx` uses cache-and-network; while its data is undefined it returns FileLoadingView, replacing FileContentView/TextFileView. The error branch can also replace that subtree. `text-file-view.tsx` keeps the only edited buffer in component state. Its existing edit-mode external-content guard cannot preserve state after unmount. The disconnected original nodes are directly observed in both live runs; loading/error scope beyond the successful refresh is source-derived acceptance.
+
+Keep current-file editor state alive across refresh without displaying another identity's buffer or treating a failed read as fresh content. Preserve view-mode freshness and explicit discard. If the chosen repair retains the dirty buffer while fileContent updates, also retain the draft's original revision: the current parent Save uses `fileContent.sha`. Merely preserving text while adopting a newer SHA would change the concurrency contract. That is a required repair compatibility check, not a live overwrite finding. No global cache redesign or backend/API/dependency change is indicated.
+
+Actual served file module `ledger._ledgerOwner._ledgerName.files.blob._branch._-CCe-o-_I.js.map` exactly matches current source SHA-256s: TextFileView `bf8a25bc31ecd4fc5495dc95c3b1825cb98169f48f99af59c75395e3616dcc04`; LedgerFileView `753184feae94ecbedb8842d3528a7dc02390dc07e70fec112717f7bbcf65b4c8`. Recent `dce9fb92e` repairs pending-save behavior; later encoding and IME changes retain this no-save refresh lifecycle.
+
+## Dedupe, controls and cleanup
+
+All board states searched for dirty/unsaved file refresh, cache eviction, out-of-date and editor lifetime. Completed W4/241's pending-save contract is narrower and its current source fix is present. Its later live stale-Save and current-SHA success controls retain drafts on refusal and exit edit mode after success. W4/238 preserves the ledger layout, not this file query's own replacement branch. W3/m29 owns dirty navigation; Refresh does not navigate. W3/100 and W21/273 concern different native editors. Existing clean directory Refresh controls pass. No overlapping current dashboard dirty-refresh item found.
+
+Create commit `57e4c2e78c5f761b231d7db957162f39f3ade734`; remote updates `7056bf0ce792ee0cfa5bf6bd71c9162b950a9928` and `4b1bc4546c4d6149de4bdbfd73866a925b8a3a6a`. After two exact latest-file guards, delete acknowledged in commit `a2695979cb766704882ae84900d65ed47e10cd29`. Each of these four actual commit details names only the owned fixture. Independent file read and root listing confirm absence; only original main.bean remains,2817bytes/blob `f1a0b83c1aaf9608113c6bd3174bf7d2dab35407`, and ledger errors are empty. Other writers' changes were preserved. Both contexts closed, with zero blocked UI mutations, route errors or page errors.
+
+Ignored evidence under `dashboard/tmp/qa-20261020/dashboard-loop/`: `dirty-refresh-complete-controls.json`, `dirty-refresh-fixture-manifest.json`, `dirty-refresh-source-comparison.json`, and visually inspected `dirty-refresh-{before,after}-{1440,390}.png`. Initial zero-delay typing failed its exact-marker setup check and was replaced by paced verified input; no typing defect is inferred. The narrow first text wait did not normalize Monaco NBSPs; normalized DOM, actual response and screenshots establish the settled outcome. Other engines/locales, actual screen-reader speech and remote-overwrite behavior remain unverified. Report only; no product code or tests changed.
