@@ -27,6 +27,7 @@ import {
   selectReadContextState,
 } from "@/common/apollo/card-load-state";
 import { useGuest } from "@/common/guest/guest-context";
+import { BALANCE_CONVERSION } from "@/common/balance-util";
 import { getFormatDate } from "@/common/format-util";
 import { useScheduledThisMonth } from "@/screens/home-screen/hooks/use-scheduled-this-month";
 import {
@@ -126,7 +127,7 @@ export function SpendingCard({
       ledgerId: ledgerId!,
       accountName: expensesRoot,
       interval: "month",
-      conversion: "units",
+      conversion: BALANCE_CONVERSION,
       time: spendingWindow(),
     },
     skip: !ledgerId || !contextSettled,
@@ -147,7 +148,7 @@ export function SpendingCard({
       ledgerId: ledgerId!,
       accountName: expensesRoot,
       interval: "month",
-      conversion: "units",
+      conversion: BALANCE_CONVERSION,
       time: monthToDateWindow(today),
     },
     skip: !ledgerId || !contextSettled || !scheduled,
