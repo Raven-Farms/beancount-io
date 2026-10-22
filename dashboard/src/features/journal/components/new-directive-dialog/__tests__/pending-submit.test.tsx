@@ -295,6 +295,9 @@ describe("New Entry focus while a write is in flight", () => {
     user: ReturnType<typeof userEvent.setup>,
   ) {
     await fillNote("qa A");
+    // The hidden Transaction form focuses its Payee on a mount timer, which
+    // jsdom honours for a hidden field; let it land before choosing focus.
+    await waitFor(() => expect(screen.getByLabelText("Payee")).toHaveFocus());
     createNote().focus();
     await user.keyboard("{Enter}");
     // Validation runs before the write; allow a loaded run.
