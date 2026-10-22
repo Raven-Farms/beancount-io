@@ -55,15 +55,36 @@ function quoted(trimmed: string): string {
   // text several times longer (a dot is two characters, an apostrophe five), so
   // a long memo failed the whole list. A needle that would not fit is cut to the
   // longest prefix that does, which finds the entries that contain it rather
-  // than an error (w21/402). Each character is encoded whole, so no escape is
-  // ever cut in half.
+  // than an error (w21/402). Each unit is encoded whole, so no escape is ever
+  // cut in half.
+  //
+  // Tolerant of how the same text is written: a run of whitespace matches any
+  // run (a double space, a no-break space from a bank export), and a letter that
+  // can be composed or decomposed ("é" or "e" and a combining accent) matches
+  // either, since iOS types the first and an import may hold the second
+  // (w21/466).
   let body = "";
-  for (const char of trimmed) {
-    const encoded = escapeRegExp(char)
-      .replace(/['\u2018\u2019]/g, "['\u2018\u2019]")
-      .replace(/["\u201c\u201d]/g, "[\\x22\u201c\u201d]");
+  for (const unit of searchUnits(trimmed)) {
+    const encoded = encodeUnit(unit);
     if (body.length + encoded.length > MAX_PATTERN_LENGTH) break;
     body += encoded;
   }
   return `"${body}"`;
+}
+
+/** The text as composed characters, a whole run of whitespace being one. */
+function searchUnits(text: string): string[] {
+  return text.normalize("NFC").match(/\s+|[\s\S]/gu) ?? [];
+}
+
+function encodeUnit(unit: string): string {
+  if (/^\s+$/u.test(unit)) return "\\s+";
+  const literal = (char: string) =>
+    escapeRegExp(char)
+      .replace(/['\u2018\u2019]/g, "['\u2018\u2019]")
+      .replace(/["\u201c\u201d]/g, "[\\x22\u201c\u201d]");
+  const decomposed = unit.normalize("NFD");
+  return decomposed === unit
+    ? literal(unit)
+    : `(?:${literal(unit)}|${[...decomposed].map(literal).join("")})`;
 }

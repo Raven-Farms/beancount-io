@@ -84,7 +84,7 @@ describe("exactPayeeFilter", () => {
     const filter = exactPayeeFilter(spellings)!;
     // Six distinct spellings of 57-60 characters do not fit in 256, so the
     // primary one is matched as text instead.
-    expect(filter).toBe(`"${long}"`);
+    expect(filter).toBe(`"${long.replace(/ /g, "\\s+")}"`);
     // Case variants alone collapse to one alternative, which fits.
     expect(
       exactPayeeFilter([long, long.toLowerCase(), `${long} `])!.startsWith(

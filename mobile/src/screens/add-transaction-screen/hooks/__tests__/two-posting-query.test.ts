@@ -10,13 +10,13 @@ describe("twoPostingSuggestionsQuery", () => {
       limit: 50,
     });
     expect(twoPostingSuggestionsQuery("Mr. Marcel").filter).toBe(
-      '"Mr\\. Marcel"',
+      '"Mr\\.\\s+Marcel"',
     );
     expect(twoPostingSuggestionsQuery("Chase:Slate").filter).toBe(
       '"Chase:Slate"',
     );
     expect(twoPostingSuggestionsQuery("25 Degrees Burger Bar").filter).toBe(
-      '"25 Degrees Burger Bar"',
+      '"25\\s+Degrees\\s+Burger\\s+Bar"',
     );
   });
 

@@ -7,7 +7,7 @@ describe("toPlainSearchFilter", () => {
   });
 
   it("quotes and escapes punctuation so merchant periods stay literal", () => {
-    expect(toPlainSearchFilter("Mr. Marcel")).toBe('"Mr\\. Marcel"');
+    expect(toPlainSearchFilter("Mr. Marcel")).toBe('"Mr\\.\\s+Marcel"');
   });
 
   it("preserves apostrophes inside double quotes", () => {
@@ -17,7 +17,7 @@ describe("toPlainSearchFilter", () => {
   it("double-quotes a needle that contains double quotes", () => {
     // Always double-quoted, the double quote written as a regex escape.
     expect(toPlainSearchFilter('say "hi"')).toBe(
-      '"say [\\x22\u201c\u201d]hi[\\x22\u201c\u201d]"',
+      '"say\\s+[\\x22\u201c\u201d]hi[\\x22\u201c\u201d]"',
     );
   });
 
@@ -59,7 +59,7 @@ describe("toPlainSearchFilter", () => {
   // Merchant detail routes its journal needle through here too, so the payees
   // that used to break it are pinned as serializer cases.
   it("escapes a decimal point in a merchant name", () => {
-    expect(toPlainSearchFilter("Ethereum 2.0")).toBe('"Ethereum 2\\.0"');
+    expect(toPlainSearchFilter("Ethereum 2.0")).toBe('"Ethereum\\s+2\\.0"');
   });
 
   it("keeps an apostrophe payee inside double quotes", () => {
@@ -68,13 +68,13 @@ describe("toPlainSearchFilter", () => {
 
   it("escapes a trailing period in a company suffix", () => {
     expect(toPlainSearchFilter("MiniMax Group Inc.")).toBe(
-      '"MiniMax Group Inc\\."',
+      '"MiniMax\\s+Group\\s+Inc\\."',
     );
   });
 
   it("double-quotes a payee with an embedded double quote", () => {
     expect(toPlainSearchFilter('The "Best" Cafe')).toBe(
-      '"The [\\x22\u201c\u201d]Best[\\x22\u201c\u201d] Cafe"',
+      '"The\\s+[\\x22\u201c\u201d]Best[\\x22\u201c\u201d]\\s+Cafe"',
     );
   });
 });
@@ -102,10 +102,10 @@ describe("toPlainSearchFilter tags and links", () => {
   });
 
   it("keeps quoting anything that is not exactly one token", () => {
-    expect(toPlainSearchFilter("#a b")).toBe('"#a b"');
+    expect(toPlainSearchFilter("#a b")).toBe('"#a\\s+b"');
     expect(toPlainSearchFilter("#")).toBe('"#"');
-    expect(toPlainSearchFilter("coffee #work")).toBe('"coffee #work"');
-    expect(toPlainSearchFilter("#café")).toBe('"#café"');
+    expect(toPlainSearchFilter("coffee #work")).toBe('"coffee\\s+#work"');
+    expect(toPlainSearchFilter("#café")).toBe('"#caf(?:\u00e9|e\u0301)"');
   });
 });
 
@@ -175,6 +175,51 @@ describe("toPlainSearchFilter and long text", () => {
 
   it("leaves a text that fits exactly as before", () => {
     expect(body("x".repeat(256))).toBe("x".repeat(256));
-    expect(toPlainSearchFilter("Check 1042")).toBe('"Check 1042"');
+    expect(toPlainSearchFilter("Check 1042")).toBe('"Check\\s+1042"');
+  });
+});
+
+// w21/466: iOS types "é" composed and an import may hold it decomposed; a bank
+// export may double a space or use a no-break one. The search found neither.
+describe("toPlainSearchFilter and how text is written", () => {
+  const compile = (raw: string): RegExp => {
+    const filter = toPlainSearchFilter(raw);
+    if (filter === undefined) throw new Error("expected a filter");
+    const lexed = /^"[^"]*"$/.exec(filter);
+    if (!lexed) throw new Error(`not one STRING token: ${filter}`);
+    return new RegExp(filter.slice(1, -1), "i");
+  };
+  const NFC = "Caf\u00e9";
+  const NFD = "Cafe\u0301";
+
+  it("finds composed text from decomposed and the reverse", () => {
+    expect(NFC.length === NFD.length).toBe(false);
+    expect(compile(NFC).test(`${NFD} Rouge`)).toBe(true);
+    expect(compile(NFD).test(`${NFC} Rouge`)).toBe(true);
+    expect(compile(NFC).test(`${NFC} Rouge`)).toBe(true);
+    // Without the accent it is another word.
+    expect(compile(NFC).test("Cafe Rouge")).toBe(false);
+  });
+
+  it("finds a phrase across a double space and a no-break space", () => {
+    expect(compile("whole foods").test("Whole Foods")).toBe(true);
+    expect(compile("whole foods").test("Whole  Foods Market")).toBe(true);
+    expect(compile("whole foods").test("Whole\u00a0Foods")).toBe(true);
+    expect(compile("whole   foods").test("Whole Foods")).toBe(true);
+    // But not two words with nothing between.
+    expect(compile("whole foods").test("Wholefoods")).toBe(false);
+  });
+
+  it("stays one lexable literal within 256 characters", () => {
+    for (const text of [
+      `${NFD} `.repeat(80),
+      "\u00e9".repeat(200),
+      "a  b ".repeat(80),
+    ]) {
+      const filter = toPlainSearchFilter(text) ?? "";
+      expect(/^"[^"]*"$/.test(filter)).toBe(true);
+      expect(filter.length - 2 <= 256).toBe(true);
+      expect(() => new RegExp(filter.slice(1, -1), "i")).not.toThrow();
+    }
   });
 });
