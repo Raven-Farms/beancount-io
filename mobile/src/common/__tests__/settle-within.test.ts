@@ -51,4 +51,26 @@ describe("settleWithin", () => {
     ).toBe(true);
     expect(splash.includes("check.catch((late: unknown) => {")).toBe(true);
   });
+
+  // w21/362: a late NOT_FOUND for the launch ledger cleared whatever the user
+  // had picked since.
+  it("a late check clears only the ledger it validated", () => {
+    const splash = fs
+      .readFileSync(
+        path.join(
+          __dirname,
+          "..",
+          "providers",
+          "splash-provider",
+          "splash-provider.tsx",
+        ),
+        "utf8",
+      )
+      .replace(/\s+/g, "");
+    expect(
+      splash.includes(
+        "if(ledgerVar()===ledger&&shouldClearLedgerSelection(late)){ledgerVar(null);}",
+      ),
+    ).toBe(true);
+  });
 });

@@ -138,7 +138,15 @@ const SplashProviderComponent = ({
             if (outcome.status === "timeout") {
               console.warn("Ledger check is slow; opening on the cache");
               check.catch((late: unknown) => {
-                if (shouldClearLedgerSelection(late)) ledgerVar(null);
+                // Only the ledger it validated: the user may have picked
+                // another from the drawer or a link while it was pending
+                // (w21/362).
+                if (
+                  ledgerVar() === ledger &&
+                  shouldClearLedgerSelection(late)
+                ) {
+                  ledgerVar(null);
+                }
               });
             }
           } catch (e) {
