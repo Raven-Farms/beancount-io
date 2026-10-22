@@ -749,6 +749,7 @@ export const sk: Translations = {
   createLedgerNameConflict: "Kniha s týmto názvom už existuje.",
   createLedgerNameReserved:
     "Tento názov patril premenovanej knihe a stále na ňu presmerúva. Vyberte iný názov.",
+  createLedgerCreated: "{{name}} vytvorený",
   createLedgerSlugPreview: "Vytvorí sa ako {{slug}}",
   createLedgerDescription: "Popis",
   createLedgerDescriptionPlaceholder: "Voliteľné",

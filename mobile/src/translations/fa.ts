@@ -719,6 +719,7 @@ export const fa: Translations = {
   createLedgerNameConflict: "دفترکلی با این نام از قبل وجود دارد.",
   createLedgerNameReserved:
     "این نام متعلق به دفتری بود که تغییر نام داده و هنوز به آن هدایت می‌شود. نام دیگری انتخاب کنید.",
+  createLedgerCreated: "{{name}} ساخته شد",
   createLedgerSlugPreview: "با نام {{slug}} ایجاد می‌شود",
   createLedgerDescription: "توضیح",
   createLedgerDescriptionPlaceholder: "اختیاری",

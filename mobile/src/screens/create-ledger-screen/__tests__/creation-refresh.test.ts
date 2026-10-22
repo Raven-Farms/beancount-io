@@ -5,7 +5,7 @@ import ts from "typescript";
 import * as names from "../ledger-name";
 
 // Run the real submission handler, replacing only UI/form hosts and its IO.
-function screen(refreshFails: boolean) {
+function screen(refreshFails: boolean, here = true) {
   const events: string[] = [];
   let submit: () => Promise<void> = async () => {};
   const created = {
@@ -164,6 +164,12 @@ function screen(refreshFails: boolean) {
               },
             }),
           };
+        if (id === "@/common/hooks/use-toast")
+          return {
+            useToast: () => ({ showToast: () => events.push("toast") }),
+          };
+        if (id === "@/common/hooks/use-is-here")
+          return { useIsHere: () => () => here };
         if (id === "@/common/hooks/use-theme-style")
           return { useThemeStyle: () => ({}) };
         if (id === "@/common/hooks/use-translations")
@@ -200,4 +206,17 @@ describe("ledger creation directory refresh", () => {
       ]);
     });
   }
+
+  // w21/579: the user went Back while the create ran. The ledger exists, and
+  // that is all the toast says; nothing is switched and nothing is popped.
+  it("only toasts when the user left meanwhile", async () => {
+    const { submit, events } = screen(false, false);
+    await submit();
+    expect(events).toEqual([
+      "created",
+      "refresh-start",
+      "refresh-settled",
+      "toast",
+    ]);
+  });
 });

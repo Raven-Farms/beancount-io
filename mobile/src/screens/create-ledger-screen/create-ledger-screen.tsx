@@ -12,6 +12,8 @@ import {
   View,
 } from "react-native";
 import { Stack, router } from "expo-router";
+import { useToast } from "@/common/hooks/use-toast";
+import { useIsHere } from "@/common/hooks/use-is-here";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -213,6 +215,9 @@ export function CreateLedgerScreen(): JSX.Element {
   // A resumed draft that had an opening account has lost its amount; Next is
   // refused until it is entered again or the account cleared (w21/500).
   const [amountLost, setAmountLost] = useState(false);
+
+  const toast = useToast();
+  const isHere = useIsHere();
 
   const schema = useMemo(
     () =>
@@ -486,6 +491,17 @@ export function CreateLedgerScreen(): JSX.Element {
         // The creation already succeeded. A failed list refresh must not invite
         // another submission; the directory retains the confirmed new ledger.
         await refresh(result.data!.createLedger).catch(() => {});
+        // Left meanwhile (Back stays live while it runs): the ledger exists, and
+        // that is all the toast says. Switching it or popping to the tabs now
+        // would change the ledger under, and close, whatever screen the user is
+        // on (w21/579).
+        if (!isHere()) {
+          toast.showToast({
+            message: t("createLedgerCreated", { name: id }),
+            type: "success",
+          });
+          return;
+        }
         ledgerVar(id);
         // Pop to the tab bar already below this screen instead of stacking
         // another copy of it (w21/242).

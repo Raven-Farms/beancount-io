@@ -732,6 +732,7 @@ export const nl: Translations = {
   createLedgerNameConflict: "Er bestaat al een grootboek met deze naam.",
   createLedgerNameReserved:
     "Die naam hoorde bij een hernoemd grootboek en verwijst er nog naar door. Kies een andere naam.",
+  createLedgerCreated: "{{name}} aangemaakt",
   createLedgerSlugPreview: "Wordt aangemaakt als {{slug}}",
   createLedgerDescription: "Beschrijving",
   createLedgerDescriptionPlaceholder: "Optioneel",

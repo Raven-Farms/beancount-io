@@ -745,6 +745,7 @@ export const ru: Translations = {
   createLedgerNameConflict: "Книга с таким названием уже существует.",
   createLedgerNameReserved:
     "Это имя принадлежало переименованной книге и всё ещё перенаправляет на неё. Выберите другое имя.",
+  createLedgerCreated: "Создан {{name}}",
   createLedgerSlugPreview: "Будет создана как {{slug}}",
   createLedgerDescription: "Описание",
   createLedgerDescriptionPlaceholder: "Необязательно",

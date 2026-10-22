@@ -747,6 +747,7 @@ export const ca: Translations = {
   createLedgerNameConflict: "Ja existeix un llibre amb aquest nom.",
   createLedgerNameReserved:
     "Aquest nom era d'un llibre reanomenat i encara hi redirigeix. Tria un altre nom.",
+  createLedgerCreated: "S'ha creat {{name}}",
   createLedgerSlugPreview: "Es crearà com a {{slug}}",
   createLedgerDescription: "Descripció",
   createLedgerDescriptionPlaceholder: "Opcional",

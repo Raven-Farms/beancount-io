@@ -728,6 +728,7 @@ export const bg: Translations = {
   createLedgerNameConflict: "Вече съществува книга с това име.",
   createLedgerNameReserved:
     "Това име е принадлежало на преименувана книга и все още пренасочва към нея. Изберете друго име.",
+  createLedgerCreated: "{{name}} е създаден",
   createLedgerSlugPreview: "Ще бъде създадена като {{slug}}",
   createLedgerDescription: "Описание",
   createLedgerDescriptionPlaceholder: "По избор",

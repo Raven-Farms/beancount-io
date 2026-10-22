@@ -664,6 +664,7 @@ export const zh: Translations = {
   createLedgerNameConflict: "已存在同名账本。",
   createLedgerNameReserved:
     "该名称曾属于一个已改名的账本，目前仍会跳转到它。请换一个名称。",
+  createLedgerCreated: "已创建 {{name}}",
   createLedgerSlugPreview: "将创建为 {{slug}}",
   createLedgerDescription: "描述",
   createLedgerDescriptionPlaceholder: "可选",
