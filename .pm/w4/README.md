@@ -90,7 +90,6 @@
 
 - [326 — Keep calendar year choices inside supported ledger dates](./326.md) — minor; dashboard QA, 2026-10-21; duplicate0001 maps to year zero, offers February29 and crashes the Journal section; retry clears the draft, valid year1/year4 controls pass and no write is attempted.
 
-- [325 — Accept Persian digits in localized Gregorian date entry](./325.md) — minor; dashboard QA, 2026-10-21; Persian/Arabic-Indic digits for the same Gregorian day are refused, while ASCII enables the form and prepares the correct canonical date; no hosted write.
 
 
 
