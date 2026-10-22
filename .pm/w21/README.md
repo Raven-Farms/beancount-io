@@ -103,5 +103,8 @@
 - [588](./588.md) — New File creates a file nothing includes, so its entries never count, and Files doesn't show which files are read
 - [589](./589.md) — Files sorts names as text: "qa-10.bean" before "qa-2.bean"
 - [590](./590.md) — The file editor's title shows only the file name, so same-named files in different folders look alike
+- [591](./591.md) — On servers older than 2026-10-21, `getLedgerErrors` (now selecting `code`/`hint`) fails: Notifications breaks, the bell reads 0, the editor's checks go silent
+- [592](./592.md) — Creating a ledger fails on servers older than 2026-10-20, even Starter and Sample (ADR021's older-backend rule not followed)
+- [593](./593.md) — Test connection says "Connected" without checking that the server's schema is new enough
 - [508](./blocked/508.md) — Mobile guesses that an entry is a plugin copy from its first line; read the ledger's `generated_from` instead (split from 443) — **blocked:** production's GraphQL schema lacks `generated_from` until the ledger service and backend-v2 deploy; mobile's client is generated from it
 - [315](./blocked/315.md) — In-app commits signed with Gitea username and real email (no full_name, no noreply) — **blocked:** needs the owner's noreply-address and published-history decisions, and a production backfill of existing Gitea users that can't be verified here
