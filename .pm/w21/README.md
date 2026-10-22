@@ -23,7 +23,7 @@
 - [453](./blocked/453.md) — addEntries/bulkEntries have no idempotency key: a retry after a lost response can duplicate the entry (split from 351) — **blocked:** needs an owner-approved contract (field, bounds, retention) across REST/GraphQL/MCP and a backend-v2 deploy
 - [518](./blocked/518.md) — New Transaction books a plain first-row amount as money *into* the bank (Checking +4.50, Groceries −4.50) — **blocked:** needs an owner product decision on the default row signs (negative source row vs From/To labels)
 - [526](./blocked/526.md) — Transactions, Account and Merchant detail drop back to the newest 20 rows after a return to the app or any write; a stale "Couldn't load more" footer stays — **blocked:** needs an owner decision on how to keep loaded pages through a refresh (field policy vs refetch to depth vs accept page 1)
-- [542](./542.md) — The balance chart's dashed start line and VoiceOver's "From" use the first point, while the change row uses the opening balance
+- [542](./blocked/542.md) — The balance chart's dashed start line and VoiceOver's "From" use the first point, while the change row uses the opening balance — **blocked:** needs an owner design decision on where the balance chart measures its change from (opening balance with a widened y-domain vs first plotted point)
 - [543](./543.md) — VoiceOver says "+$0.00 since start" where the header shows a neutral "$0.00" (w21/416 half)
 - [544](./544.md) — The editor's "View errors" pushes another Notifications; fixing from there leaves an outdated copy of the file open beneath
 - [545](./545.md) — Incoming links to `/errors`, `/commits`, `/cash-flow`, `/trial-balance` and `/holdings` open Home instead of the matching screen
