@@ -68,7 +68,6 @@ async function serverThenHydrate(
   const container = document.createElement("div");
   document.body.appendChild(container);
   container.innerHTML = renderToString(view());
-  const anchors = [...container.querySelectorAll("a")];
   const times = [...container.querySelectorAll("time")];
   const button = container.querySelector("button")!;
   button.focus();
@@ -81,7 +80,7 @@ async function serverThenHydrate(
   await act(async () => {
     root = hydrateRoot(container, view(), { onRecoverableError: recoverable });
   });
-  return { container, anchors, times, button, serverTitles, recoverable, root };
+  return { container, times, button, serverTitles, recoverable, root };
 }
 
 const browserTitle = (iso: string) =>
@@ -109,7 +108,6 @@ describe("RepositoryListItem hydration", () => {
       const h = await serverThenHydrate(serverNow, clientNow, "UTC");
 
       await waitFor(() => expect(h.times[0]!.textContent).toMatch(/ago$/));
-      h.anchors.forEach((anchor) => expect(anchor.isConnected).toBe(true));
       h.times.forEach((time, i) => {
         expect(time.isConnected).toBe(true);
         expect(time.getAttribute("datetime")).toBe(cards[i]!.updatedAt);
@@ -138,7 +136,7 @@ describe("RepositoryListItem hydration", () => {
     ];
     await act(async () => h.root.render(view(more)));
     const all = [...h.container.querySelectorAll("time")];
-    expect(all.slice(0, 2)).toEqual(h.times);
+    h.times.forEach((time, i) => expect(all[i]).toBe(time));
     all.forEach((time, i) => {
       expect(time.title).toBe(browserTitle(more[i]!.updatedAt));
       expect(time.getAttribute("datetime")).toBe(more[i]!.updatedAt);

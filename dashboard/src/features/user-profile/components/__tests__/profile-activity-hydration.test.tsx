@@ -133,7 +133,7 @@ describe("ProfileActivity hydration", () => {
     fireEvent.click(h.showAll);
     const all = [...h.container.querySelectorAll("time")];
     expect(all).toHaveLength(6);
-    expect(all.slice(0, 5)).toEqual(h.times);
+    h.times.forEach((time, i) => expect(all[i]).toBe(time));
     all.forEach((time, i) => {
       expect(time.title).toBe(browserTitle(activities[i]!.createdAt));
       expect(time.getAttribute("datetime")).toBe(activities[i]!.createdAt);

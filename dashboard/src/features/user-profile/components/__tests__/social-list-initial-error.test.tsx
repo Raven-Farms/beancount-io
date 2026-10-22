@@ -92,7 +92,6 @@ vi.mock("@/common/hooks/use-translations", () => ({
         "userProfile.loadMoreError": "Could not load more results.",
         "common.tryAgain": "Try again",
       })[key] ?? key,
-    i18n: { language: "en" },
   }),
 }));
 

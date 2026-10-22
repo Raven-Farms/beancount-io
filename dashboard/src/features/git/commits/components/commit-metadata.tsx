@@ -6,8 +6,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/common/components/ui/tooltip";
-import { useFormatRelativeTime } from "@/common/hooks/use-date-locale";
-import { useHydrated } from "@tanstack/react-router";
+import { useHydratedTime } from "@/common/hooks/use-date-locale";
 import { useTranslations } from "@/common/hooks/use-translations";
 import { toast } from "sonner";
 
@@ -26,8 +25,8 @@ export function CommitMetadata({
   stats,
   fileCount,
 }: CommitMetadataProps) {
-  const { t, i18n } = useTranslations();
-  const formatRelativeTime = useFormatRelativeTime();
+  const { t } = useTranslations();
+  const hydratedTime = useHydratedTime();
   const [copied, setCopied] = useState(false);
   const copiedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const messageParts = message.split("\n");
@@ -35,16 +34,12 @@ export function CommitMetadata({
   const extendedMessage =
     messageParts.length > 1 ? messageParts.slice(1).join("\n").trim() : null;
   const commitDate = new Date(author.date);
-  // Until hydration the server's clock and zone are not the browser's: show
-  // the exact time in UTC on both sides, then the age and the browser-zone
-  // time in place, keeping this node and the reader's focus (w4/m36).
-  const hydrated = useHydrated();
-  const exactTime = new Intl.DateTimeFormat(i18n.language, {
+  const exactStyle: Intl.DateTimeFormatOptions = {
     dateStyle: "medium",
     timeStyle: "long",
-    timeZone: hydrated ? undefined : "UTC",
-  }).format(commitDate);
-  const relativeTime = hydrated ? formatRelativeTime(commitDate) : exactTime;
+  };
+  const exactTime = hydratedTime.exactTime(commitDate, exactStyle);
+  const relativeTime = hydratedTime.relativeTime(commitDate, exactStyle);
   const shortSha = sha.substring(0, 7);
 
   useEffect(

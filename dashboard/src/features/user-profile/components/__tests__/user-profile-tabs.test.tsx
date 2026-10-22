@@ -106,7 +106,6 @@ vi.mock("../../hooks/use-user-starred-repos", () => ({
 // Mock useTranslations hook
 vi.mock("@/common/hooks/use-translations", () => ({
   useTranslations: () => ({
-    i18n: { language: "en" },
     t: (key: string) => {
       const translations: Record<string, string> = {
         "userProfile.tabs.overview": "Ledgers",
