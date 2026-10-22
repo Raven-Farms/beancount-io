@@ -7,7 +7,7 @@ import {
   TableRow,
 } from "@/common/components/ui/table";
 import { Skeleton } from "@/common/components/ui/skeleton";
-import { Database, AlertCircle } from "lucide-react";
+import { Database } from "lucide-react";
 import {
   GetLedgerPostingsPerAccountDocument,
   type GetLedgerPostingsPerAccountQuery,
@@ -17,8 +17,9 @@ import { Link, useParams } from "@tanstack/react-router";
 import { useLedgerSearchParams } from "@/common/hooks/use-ledger-search-params";
 import { useTranslations } from "@/common/hooks/use-translations";
 import { useErrorMessage } from "@/common/lib/errors/error-message";
+import { useQueryRetry } from "@/common/hooks/use-query-retry";
 import { useFormatNumber } from "@/common/hooks/use-format-number";
-import { StatisticsSection } from "./statistics-section";
+import { StatisticsErrorState, StatisticsSection } from "./statistics-section";
 
 /**
  * Loading state component for postings per account query
@@ -56,33 +57,6 @@ function PostingsPerAccountLoadingState() {
         ))}
       </TableBody>
     </StatisticsSection>
-  );
-}
-
-/**
- * Error state component for postings per account
- */
-function PostingsPerAccountErrorState({ message }: { message: string }) {
-  const { t } = useTranslations();
-  return (
-    <div>
-      <h3 className="flex items-center gap-2 text-lg font-semibold mb-2">
-        <AlertCircle className="h-5 w-5" />
-        {t("page.statistics.error")}
-      </h3>
-      <p className="text-sm text-muted-foreground mb-4">
-        {t("page.statistics.failedToLoadPostingsData")}
-      </p>
-      <div className="flex items-center justify-center py-12 border rounded-md">
-        <div className="text-center">
-          <AlertCircle className="h-12 w-12 text-destructive mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-foreground mb-2">
-            {t("common.failedToLoadData")}
-          </h3>
-          <p className="text-muted-foreground">{message}</p>
-        </div>
-      </div>
-    </div>
   );
 }
 
@@ -175,10 +149,11 @@ function PostingsPerAccountTable({
  * for the active ledger search filters.
  */
 export function PostingsPerAccount({ ledgerId }: { ledgerId: string }) {
+  const { t } = useTranslations();
   const ledgerFilters = useLedgerSearchParams();
   const formatError = useErrorMessage();
 
-  const { data, loading, error } = useQuery<
+  const { data, loading, error, refetch } = useQuery<
     GetLedgerPostingsPerAccountQuery,
     GetLedgerPostingsPerAccountQueryVariables
   >(GetLedgerPostingsPerAccountDocument, {
@@ -191,12 +166,20 @@ export function PostingsPerAccount({ ledgerId }: { ledgerId: string }) {
     skip: !ledgerId,
   });
 
+  const { failure, retrying, retry } = useQueryRetry(error, refetch);
+
+  if (failure) {
+    return (
+      <StatisticsErrorState
+        description={t("page.statistics.failedToLoadPostingsData")}
+        message={formatError(failure)}
+        onRetry={retry}
+        retrying={retrying}
+      />
+    );
+  }
   if (loading) {
     return <PostingsPerAccountLoadingState />;
-  }
-
-  if (error) {
-    return <PostingsPerAccountErrorState message={formatError(error)} />;
   }
 
   if (!data) {
