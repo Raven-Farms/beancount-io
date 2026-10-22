@@ -246,3 +246,47 @@ describe("a budget not yet in effect", () => {
     expect(spoken.includes("budgetStartsOn")).toBe(true);
   });
 });
+
+// w21/596: a yen budget prorated to cents (967.74) was compared with ¥968 spent
+// at cents, so "Budget ¥968 · Actual ¥968 · Variance +¥0" read "Above target".
+describe("a budget in a currency without minor units", () => {
+  const yen = (): BudgetGroup => ({
+    ...group("1500 JPY"),
+    currency: "JPY",
+  });
+
+  it("is on target when the shown budget and actual agree", () => {
+    const stats = selectBudgetCardStats(yen(), [
+      { date: "2026-10-31", actual: 968, budget: 967.74 },
+    ]);
+    expect(stats.status).toBe("on");
+    expect(stats.favorable).toBe(true);
+  });
+
+  it("still calls a real overspend above target", () => {
+    const stats = selectBudgetCardStats(yen(), [
+      { date: "2026-10-31", actual: 1100, budget: 967.74 },
+    ]);
+    expect(stats.status).toBe("above");
+    expect(stats.favorable).toBe(false);
+  });
+
+  it("keeps judging a dollar budget to the cent", () => {
+    const stats = selectBudgetCardStats(group("500 USD"), [
+      { date: "2026-10-31", actual: 500.26, budget: 500 },
+    ]);
+    expect(stats.status).toBe("above");
+  });
+
+  it("judges the charted periods the same way", () => {
+    expect(
+      selectPointFavorability(
+        [{ date: "2026-10-31", actual: 968, budget: 967.74 }],
+        1,
+        yen().budgetHistory,
+        undefined,
+        "JPY",
+      ),
+    ).toEqual([true]);
+  });
+});

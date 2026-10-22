@@ -82,9 +82,10 @@ export function selectPointFavorability(
   direction: 1 | -1,
   budgetHistory: readonly { date: string; amount?: string }[] = [],
   today?: string,
+  currency?: string,
 ): (boolean | null)[] {
   const firstBudget = firstBudgetDate(budgetHistory);
-  const scale = budgetScale(budgetHistory);
+  const scale = budgetScale(budgetHistory, currency);
   return series.map((point) =>
     beforeFirstBudget(point, firstBudget, today)
       ? null
@@ -131,7 +132,10 @@ export function selectBudgetCardStats(
   const status =
     variance === null
       ? null
-      : varianceStatus(variance, budgetScale(group.budgetHistory));
+      : varianceStatus(
+          variance,
+          budgetScale(group.budgetHistory, group.currency),
+        );
   const favorable =
     status === null ? true : isFavorableVariance(status, direction);
   const progressPercent =

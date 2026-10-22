@@ -218,6 +218,7 @@ export function BudgetGroupCard({
     direction,
     group.budgetHistory,
     today,
+    group.currency,
   );
 
   // One object so the chart and its spoken summary can never describe different

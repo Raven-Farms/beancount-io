@@ -15,6 +15,7 @@
  * Imports stay relative and React-Native-free so the jest-lite runner can
  * exercise this module directly.
  */
+import { currencyMinorUnits } from "../../../common/currency-util";
 import { getFormatDate } from "../../../common/format-util";
 import type {
   JournalAmount,
@@ -404,11 +405,18 @@ export function budgetDisplayScale(
  * The same, never below cents: money is judged — prorated and compared for a
  * variance — at least to the cent, and a fractional commodity at the precision
  * its budget was written in (w21/290).
+ *
+ * The floor is the currency's own minor unit when it is given for a status
+ * (w21/596): a yen budget prorated to cents (967.74) was compared with ¥968
+ * spent at cents, so "Budget ¥968 · Actual ¥968 · Variance +¥0" read "Above
+ * target" in red. Judged at the scale the card shows, it is on target.
  */
 export function budgetScale(
   history: readonly { amount?: string }[] | null | undefined,
+  currency?: string,
 ): number {
-  return Math.max(2, budgetDisplayScale(history));
+  const floor = currency === undefined ? 2 : currencyMinorUnits(currency);
+  return Math.max(floor, budgetDisplayScale(history));
 }
 
 /**
@@ -615,7 +623,9 @@ export type VarianceStatus = "above" | "below" | "on";
  * (w21/290).
  */
 export function varianceStatus(variance: number, scale = 2): VarianceStatus {
-  const epsilon = 5 * 10 ** -(Math.max(2, scale) + 1);
+  // `budgetScale` is already never below the cent for money in cents, and is
+  // the currency's own minor unit for one without (w21/596).
+  const epsilon = 5 * 10 ** -(scale + 1);
   if (variance > epsilon) {
     return "above";
   }
