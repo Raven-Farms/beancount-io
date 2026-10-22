@@ -104,7 +104,7 @@ describe("the today watcher", () => {
       ),
       "utf8",
     );
-    expect(source.includes("[data, today],")).toBe(true);
+    expect(source.includes("restForPage, today]")).toBe(true);
   });
 
   // w21/233: two readers still froze today at mount.
