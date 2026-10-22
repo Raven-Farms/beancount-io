@@ -1,4 +1,5 @@
 import { useLedgerAccess } from "@/common/hooks/use-ledger-access";
+import { carryBalanceToToday } from "@/common/series-util";
 import { StyleSheet, View } from "react-native";
 import { useMemo, useState } from "react";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
@@ -81,17 +82,28 @@ const HomeScreenImpl = (): JSX.Element => {
     refetch: balanceSheetRefetch,
     error: balanceSheetError,
   } = useBalanceSheet(ledgerId);
+  // Each curve is carried to today: a balance series ends at the month of the
+  // ledger's last entry or price, and 1M/3M/6M count back from its last point,
+  // so a month with nothing yet showed the last month's change as this one's
+  // (w21/414; account detail does the same since w21/240).
+  const today = useToday();
   const netWorthSeries = useMemo(
-    () => selectNetWorthSeries(currency, balanceSheet),
-    [currency, balanceSheet],
+    () =>
+      carryBalanceToToday(selectNetWorthSeries(currency, balanceSheet), today),
+    [currency, balanceSheet, today],
   );
   const assetsSeries = useMemo(
-    () => selectAssetsSeries(currency, balanceSheet),
-    [currency, balanceSheet],
+    () =>
+      carryBalanceToToday(selectAssetsSeries(currency, balanceSheet), today),
+    [currency, balanceSheet, today],
   );
   const liabilitiesSeries = useMemo(
-    () => selectLiabilitiesSeries(currency, balanceSheet),
-    [currency, balanceSheet],
+    () =>
+      carryBalanceToToday(
+        selectLiabilitiesSeries(currency, balanceSheet),
+        today,
+      ),
+    [currency, balanceSheet, today],
   );
   // Every figure on the card is at market. The same curves at cost and in
   // units, and the ledger's price dates, are what let each caption say so:
@@ -110,7 +122,6 @@ const HomeScreenImpl = (): JSX.Element => {
     refetch: pricesRefetch,
     error: pricesError,
   } = useLedgerPrices(ledgerId);
-  const today = useToday();
   const { valuations, chartCaptions, chartFootnotes } = useMemo(() => {
     const valuationOf = (series: SheetSeries) =>
       selectSeriesValuation(
