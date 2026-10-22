@@ -21,28 +21,51 @@ export function useAppLinkHandler(): void {
   const client = useApolloClient();
   const session = useReactiveVar(sessionVar);
   const handlingRef = useRef(false);
+  // The newest link that arrived while another was opening. Last link wins:
+  // the earlier one stops at its next checkpoint and this one runs after it,
+  // where the second used to be dropped and the user landed on the first
+  // link's ledger (w21/298).
+  const queuedRef = useRef<{ target: AppLinkTarget; sourceUrl: string } | null>(
+    null,
+  );
+  const generationRef = useRef(0);
   const sessionRef = useRef(session);
   sessionRef.current = session;
 
   const open = async (target: AppLinkTarget, sourceUrl: string) => {
-    const currentSession = sessionRef.current;
-    if (!currentSession || handlingRef.current) return;
+    if (!sessionRef.current) return;
+    if (handlingRef.current) {
+      queuedRef.current = { target, sourceUrl };
+      generationRef.current += 1;
+      return;
+    }
     handlingRef.current = true;
-    const account = currentSession;
+    let next: { target: AppLinkTarget; sourceUrl: string } | null = {
+      target,
+      sourceUrl,
+    };
     try {
-      await openAppLinkTarget({
-        client,
-        target,
-        sourceUrl,
-        isCurrentSession: () => {
-          const latest = sessionRef.current;
-          return (
-            !!latest &&
-            latest.userId === account.userId &&
-            latest.serverUrl === account.serverUrl
-          );
-        },
-      });
+      while (next) {
+        queuedRef.current = null;
+        const account = sessionRef.current;
+        if (!account) break;
+        const generation = generationRef.current;
+        await openAppLinkTarget({
+          client,
+          target: next.target,
+          sourceUrl: next.sourceUrl,
+          isCurrentSession: () => {
+            const latest = sessionRef.current;
+            return (
+              !!latest &&
+              latest.userId === account.userId &&
+              latest.serverUrl === account.serverUrl &&
+              generationRef.current === generation
+            );
+          },
+        });
+        next = queuedRef.current;
+      }
     } finally {
       handlingRef.current = false;
     }
