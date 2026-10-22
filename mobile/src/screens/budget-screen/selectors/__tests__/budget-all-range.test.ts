@@ -4,7 +4,7 @@ import {
   budgetForInterval,
   periodsThrough,
   prepareBudgetHistory,
-  throughCurrentPeriod,
+  allTimeThroughToday,
   type BudgetGroup,
 } from "../budget-selectors";
 import { selectBudgetCardStats } from "../select-budget-card-stats";
@@ -96,30 +96,79 @@ describe("Budget card on ALL", () => {
 });
 
 // w21/168: a pre-entered November rent cheque made every card on ALL
-// describe November at a budget of 0.
+// describe November at a budget of 0. w21/332: cut at the end of the period,
+// a pre-entered entry inside the current period still counted, so ALL read
+// $300 where YTD read $0.
 describe("ALL with a future-dated entry", () => {
-  it("ends at the period containing today", () => {
-    const items = [
-      { date: "2026-09-30", balance: {} },
-      { date: "2026-10-31", balance: {} },
-      { date: "2026-11-30", balance: {} },
+  const item = (date: string, usd?: string) => ({
+    date,
+    balance: usd ? { USD: usd } : {},
+  });
+
+  it("takes the current period from the query that ends today", () => {
+    // Quarterly insurance: 300 on 04-15 and 07-15, a pre-entered 11-15, and the
+    // all-time query's last bucket (2026-12-31) holds the future 300.
+    const fetched = [
+      item("2026-03-31"),
+      item("2026-06-30", "300"),
+      item("2026-09-30", "300"),
+      item("2026-12-31", "300"),
     ];
+    const current = [item("2026-10-21")];
     expect(
-      throughCurrentPeriod(items, "monthly", "2026-10-21").map((i) => i.date),
-    ).toEqual(["2026-09-30", "2026-10-31"]);
-    // Nothing after today: unchanged.
+      allTimeThroughToday(fetched, current, "quarterly", "2026-10-21"),
+    ).toEqual([
+      item("2026-03-31"),
+      item("2026-06-30", "300"),
+      item("2026-09-30", "300"),
+      item("2026-10-21"),
+    ]);
+  });
+
+  it("does the same for a monthly entry pre-entered later this month", () => {
+    const fetched = [item("2026-09-30", "50"), item("2026-10-31", "80")];
     expect(
-      throughCurrentPeriod(items.slice(0, 2), "monthly", "2026-10-21"),
-    ).toEqual(items.slice(0, 2));
+      allTimeThroughToday(
+        fetched,
+        [item("2026-10-21")],
+        "monthly",
+        "2026-10-21",
+      ).map((i) => i.date),
+    ).toEqual(["2026-09-30", "2026-10-21"]);
+  });
+
+  it("keeps the all-time totals of the periods that ended", () => {
+    const fetched = [item("2026-08-31", "10"), item("2026-09-30", "20")];
+    expect(allTimeThroughToday(fetched, [], "monthly", "2026-10-21")).toEqual(
+      fetched,
+    );
+  });
+
+  it("stops short of the current period until its query has landed", () => {
+    const fetched = [item("2026-09-30", "20"), item("2026-10-31", "80")];
+    expect(
+      allTimeThroughToday(fetched, undefined, "monthly", "2026-10-21").map(
+        (i) => i.date,
+      ),
+    ).toEqual(["2026-09-30"]);
   });
 
   it("is applied to the unwindowed range only", () => {
-    const source = fs.readFileSync(
-      path.join(__dirname, "..", "..", "hooks", "use-budget-actuals.ts"),
-      "utf8",
-    );
+    const source = fs
+      .readFileSync(
+        path.join(__dirname, "..", "..", "hooks", "use-budget-actuals.ts"),
+        "utf8",
+      )
+      .replace(/\s+/gu, "");
     expect(
-      source.includes("? throughCurrentPeriod(fetched, group.interval, today)"),
+      source.includes("time===undefined?allTimeThroughToday(fetched,"),
+    ).toBe(true);
+    // The second query is skipped for a windowed range.
+    expect(source.includes("skip:time!==undefined,")).toBe(true);
+    expect(
+      source.includes(
+        "`${currentPeriodRange(group.interval,today).start}-${today}`",
+      ),
     ).toBe(true);
   });
 });

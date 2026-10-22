@@ -4,8 +4,9 @@ import { resolveCurrencyBalance } from "@/common/balance-util";
 import { getFormatDate } from "@/common/format-util";
 import {
   budgetForInterval,
+  allTimeThroughToday,
+  currentPeriodRange,
   periodsThrough,
-  throughCurrentPeriod,
   prepareBudgetHistory,
   type BudgetGroup,
 } from "@/screens/budget-screen/selectors/budget-selectors";
@@ -62,18 +63,38 @@ export function useBudgetActuals({
   time?: string;
   direction: 1 | -1;
 }) {
-  const { data, loading, error } = useGetLedgerIntervalTotalsQuery({
+  // Actuals stop at today, so the budget they are measured against does too.
+  const today = getFormatDate(new Date());
+  const all = useGetLedgerIntervalTotalsQuery({
     variables: budgetTotalsVariables({ ledgerId, group, time }),
   });
+  // All time runs to the last posting, even a future one, so its current period
+  // is read again from its start to today, as a windowed range is (w21/168,
+  // w21/332).
+  const currentWindow = useGetLedgerIntervalTotalsQuery({
+    variables: budgetTotalsVariables({
+      ledgerId,
+      group,
+      time: `${currentPeriodRange(group.interval, today).start} - ${today}`,
+    }),
+    skip: time !== undefined,
+  });
+  const { data } = all;
+  const loading = all.loading || (time === undefined && currentWindow.loading);
+  const error =
+    all.error ?? (time === undefined ? currentWindow.error : undefined);
+  const currentData = currentWindow.data;
 
   const series: BudgetSeriesPoint[] = useMemo(() => {
-    // Actuals stop at today, so the budget they are measured against does too.
-    const today = getFormatDate(new Date());
     const fetched = data?.getLedgerIntervalTotals ?? [];
-    // All time runs to the last posting, even a future one (w21/168).
     const items =
       time === undefined
-        ? throughCurrentPeriod(fetched, group.interval, today)
+        ? allTimeThroughToday(
+            fetched,
+            currentData?.getLedgerIntervalTotals,
+            group.interval,
+            today,
+          )
         : fetched;
     // Prepared once per group: `budgetForInterval` runs per charted period, and
     // the `all` span can return a hundred of them.
@@ -100,7 +121,16 @@ export function useBudgetActuals({
       }
     }
     return points;
-  }, [data, currency, direction, group.interval, group.budgetHistory, time]);
+  }, [
+    data,
+    currentData,
+    currency,
+    direction,
+    group.interval,
+    group.budgetHistory,
+    time,
+    today,
+  ]);
 
   return { series, loading, error };
 }

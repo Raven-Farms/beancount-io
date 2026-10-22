@@ -291,18 +291,25 @@ export function groupBudgetEntries(
 }
 
 /**
- * An all-time series cut at the period containing `today`. The totals query
- * runs to the last posting, even a pre-entered one, so one rent cheque for
- * next month made every card on ALL describe November, at a budget of 0
- * (w21/168). Windowed ranges already end today on the server.
+ * An all-time series with its current period read up to today. The all-time
+ * totals query runs to the last posting, even a pre-entered one: one rent
+ * cheque for next month made every card on ALL describe November, at a budget
+ * of 0 (w21/168). Cutting the series at the end of the current period fixed
+ * that but kept a future entry inside the current month, quarter or year, so
+ * ALL read $300 spent where YTD, which the server ends at today, read $0
+ * (w21/332). The periods that ended before today's keep the all-time totals;
+ * the current one comes from `current`, the same query run from the period's
+ * start to today, as a windowed range is. While `current` has not arrived the
+ * series stops short of the current period rather than show the wrong one.
  */
-export function throughCurrentPeriod<T extends { date: string }>(
-  items: readonly T[],
+export function allTimeThroughToday<T extends { date: string }>(
+  fetched: readonly T[],
+  current: readonly T[] | undefined,
   interval: string,
   today: string,
 ): T[] {
-  const { end } = currentPeriodRange(interval, today);
-  return items.filter((item) => item.date <= end);
+  const { start } = currentPeriodRange(interval, today);
+  return [...fetched.filter((item) => item.date < start), ...(current ?? [])];
 }
 
 /**
