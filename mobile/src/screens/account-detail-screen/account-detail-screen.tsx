@@ -1,3 +1,4 @@
+import { contentPadding } from "@/common/screen-util";
 import { useGuest } from "@/common/guest/guest-context";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
@@ -106,7 +107,9 @@ const getStyles = (theme: ColorTheme) =>
       color: theme.black60,
     },
     chartContainer: {
-      paddingHorizontal: 10,
+      // The chart is `ScreenWidth - contentPadding * 2` wide: padded by 10 it
+      // sat flush left with 12 pt spare on the right (w21/220).
+      paddingHorizontal: contentPadding,
     },
   });
 
