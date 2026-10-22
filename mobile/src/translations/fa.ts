@@ -739,10 +739,12 @@ export const fa: Translations = {
   collapseAccount: "بستن {{account}}",
   breakdownRowShare: "{{amount}}، {{percent}}٪ از کل",
   budgetChartSummary: {
-    one: "بودجه در برابر واقعی برای {{span}}. واقعی {{actual}} از بودجه {{budget}} در {{count}} دوره، {{over}} دوره بیش از هدف.",
+    one: "بودجه در برابر واقعی برای {{span}}. واقعی {{actual}} از بودجه {{budget}} در {{count}} دوره، {{missed}}.",
     other:
-      "بودجه در برابر واقعی برای {{span}}. واقعی {{actual}} از بودجه {{budget}} در {{count}} دوره، {{over}} دوره بیش از هدف.",
+      "بودجه در برابر واقعی برای {{span}}. واقعی {{actual}} از بودجه {{budget}} در {{count}} دوره، {{missed}}.",
   },
+  budgetSummaryOverTarget: "{{count}} دوره بیش از هدف",
+  budgetSummaryBelowTarget: "{{count}} دوره کمتر از هدف",
   feedSourceLedger: "دفتر",
   feedSourceBlog: "وبلاگ",
   feedSourceRelease: "انتشار",

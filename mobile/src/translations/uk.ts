@@ -765,12 +765,14 @@ export const uk: Translations = {
   collapseAccount: "Згорнути {{account}}",
   breakdownRowShare: "{{amount}}, {{percent}}% від підсумку",
   budgetChartSummary: {
-    one: "Бюджет і факт за {{span}}. Факт {{actual}} із {{budget}} за {{count}} період, {{over}} понад ціль.",
-    few: "Бюджет і факт за {{span}}. Факт {{actual}} із {{budget}} за {{count}} періоди, {{over}} понад ціль.",
-    many: "Бюджет і факт за {{span}}. Факт {{actual}} із {{budget}} за {{count}} періодів, {{over}} понад ціль.",
+    one: "Бюджет і факт за {{span}}. Факт {{actual}} із {{budget}} за {{count}} період, {{missed}}.",
+    few: "Бюджет і факт за {{span}}. Факт {{actual}} із {{budget}} за {{count}} періоди, {{missed}}.",
+    many: "Бюджет і факт за {{span}}. Факт {{actual}} із {{budget}} за {{count}} періодів, {{missed}}.",
     other:
-      "Бюджет і факт за {{span}}. Факт {{actual}} із {{budget}} за {{count}} періоду, {{over}} понад ціль.",
+      "Бюджет і факт за {{span}}. Факт {{actual}} із {{budget}} за {{count}} періоду, {{missed}}.",
   },
+  budgetSummaryOverTarget: "{{count}} понад ціль",
+  budgetSummaryBelowTarget: "{{count}} нижче цілі",
   feedSourceLedger: "Книга",
   feedSourceBlog: "Блог",
   feedSourceRelease: "Реліз",

@@ -5,6 +5,7 @@ import {
   budgetPanelWindow,
 } from "../budget-labels";
 import { en } from "../../../../translations/en";
+import { translationLocales } from "../../../../translations/__tests__/locale-parity";
 
 describe("intervalLabelKey", () => {
   it("maps each cadence to its label key, case-insensitively", () => {
@@ -79,6 +80,61 @@ describe("budgetChartSummary", () => {
     ).toBe(
       "Budget versus actual for JAN–MAR. Actual $2.2K of $1.5K budgeted across 3 periods, 2 over target.",
     );
+  });
+
+  // w21/457: a missed income target is "below", and a span names its years.
+  it("words a missed income target as below, an expense as over", () => {
+    const income = {
+      labels: ["NOV", "DEC", "SEP"],
+      actuals: [3000, 3000, 3000],
+      budgets: [4000, 4000, 4000],
+      favorables: [false, false, false],
+      currency: "USD",
+      dates: ["2024-11-30", "2025-12-31", "2026-09-30"],
+    };
+    expect(budgetChartSummary({ ...income, direction: -1 }, t)).toBe(
+      "Budget versus actual for NOV 2024–SEP 2026. Actual $9K of $12K budgeted across 3 periods, 3 below target.",
+    );
+    expect(budgetChartSummary({ ...income, direction: 1 }, t)).toBe(
+      "Budget versus actual for NOV 2024–SEP 2026. Actual $9K of $12K budgeted across 3 periods, 3 over target.",
+    );
+  });
+
+  it("names years only when the span crosses one", () => {
+    const within = {
+      labels: ["JAN", "FEB", "MAR"],
+      actuals: [400, 600, 1200],
+      budgets: [500, 500, 500],
+      favorables: [true, false, false],
+      currency: "USD",
+      dates: ["2026-01-31", "2026-02-28", "2026-03-31"],
+    };
+    expect(budgetChartSummary(within, t)).toBe(
+      "Budget versus actual for JAN–MAR. Actual $2.2K of $1.5K budgeted across 3 periods, 2 over target.",
+    );
+    // A yearly axis label is its own year.
+    expect(
+      budgetChartSummary(
+        {
+          ...within,
+          labels: ["2024", "2025"],
+          dates: ["2024-12-31", "2025-12-31"],
+        },
+        t,
+      )?.includes("for 2024–2025."),
+    ).toBe(true);
+  });
+
+  it("is worded in every language", () => {
+    for (const locale of translationLocales()) {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const catalog = require(`../../../../translations/${locale}`)[locale];
+      for (const key of ["budgetSummaryOverTarget", "budgetSummaryBelowTarget"])
+        expect(String(catalog[key]).includes("{{count}}")).toBe(true);
+      const forms = Object.values(catalog.budgetChartSummary) as string[];
+      expect(forms.every((form) => form.includes("{{missed}}"))).toBe(true);
+      expect(forms.some((form) => form.includes("{{over}}"))).toBe(false);
+    }
   });
 
   it("names a single period without a range dash", () => {

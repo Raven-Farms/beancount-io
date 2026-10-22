@@ -766,12 +766,14 @@ export const ru: Translations = {
   collapseAccount: "Свернуть {{account}}",
   breakdownRowShare: "{{amount}}, {{percent}}% от итога",
   budgetChartSummary: {
-    one: "Бюджет и факт за {{span}}. Факт {{actual}} из {{budget}} за {{count}} период, {{over}} сверх цели.",
-    few: "Бюджет и факт за {{span}}. Факт {{actual}} из {{budget}} за {{count}} периода, {{over}} сверх цели.",
-    many: "Бюджет и факт за {{span}}. Факт {{actual}} из {{budget}} за {{count}} периодов, {{over}} сверх цели.",
+    one: "Бюджет и факт за {{span}}. Факт {{actual}} из {{budget}} за {{count}} период, {{missed}}.",
+    few: "Бюджет и факт за {{span}}. Факт {{actual}} из {{budget}} за {{count}} периода, {{missed}}.",
+    many: "Бюджет и факт за {{span}}. Факт {{actual}} из {{budget}} за {{count}} периодов, {{missed}}.",
     other:
-      "Бюджет и факт за {{span}}. Факт {{actual}} из {{budget}} за {{count}} периода, {{over}} сверх цели.",
+      "Бюджет и факт за {{span}}. Факт {{actual}} из {{budget}} за {{count}} периода, {{missed}}.",
   },
+  budgetSummaryOverTarget: "{{count}} сверх цели",
+  budgetSummaryBelowTarget: "{{count}} ниже цели",
   feedSourceLedger: "Книга",
   feedSourceBlog: "Блог",
   feedSourceRelease: "Релиз",

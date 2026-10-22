@@ -770,10 +770,12 @@ export const de: Translations = {
   collapseAccount: "{{account}} einklappen",
   breakdownRowShare: "{{amount}}, {{percent}} % des Gesamtbetrags",
   budgetChartSummary: {
-    one: "Budget gegen Ist für {{span}}. Ist {{actual}} von geplanten {{budget}} über {{count}} Periode, {{over}} über dem Ziel.",
+    one: "Budget gegen Ist für {{span}}. Ist {{actual}} von geplanten {{budget}} über {{count}} Periode, {{missed}}.",
     other:
-      "Budget gegen Ist für {{span}}. Ist {{actual}} von geplanten {{budget}} über {{count}} Perioden, {{over}} über dem Ziel.",
+      "Budget gegen Ist für {{span}}. Ist {{actual}} von geplanten {{budget}} über {{count}} Perioden, {{missed}}.",
   },
+  budgetSummaryOverTarget: "{{count}} über dem Ziel",
+  budgetSummaryBelowTarget: "{{count}} unter dem Ziel",
   feedSourceLedger: "Hauptbuch",
   feedSourceBlog: "Blog",
   feedSourceRelease: "Veröffentlichung",

@@ -768,11 +768,13 @@ export const es: Translations = {
   collapseAccount: "Contraer {{account}}",
   breakdownRowShare: "{{amount}}, {{percent}}% del total",
   budgetChartSummary: {
-    one: "Presupuesto frente a real de {{span}}. Real {{actual}} de {{budget}} presupuestado en {{count}} periodo, {{over}} por encima del objetivo.",
-    many: "Presupuesto frente a real de {{span}}. Real {{actual}} de {{budget}} presupuestado en {{count}} periodos, {{over}} por encima del objetivo.",
+    one: "Presupuesto frente a real de {{span}}. Real {{actual}} de {{budget}} presupuestado en {{count}} periodo, {{missed}}.",
+    many: "Presupuesto frente a real de {{span}}. Real {{actual}} de {{budget}} presupuestado en {{count}} periodos, {{missed}}.",
     other:
-      "Presupuesto frente a real de {{span}}. Real {{actual}} de {{budget}} presupuestado en {{count}} periodos, {{over}} por encima del objetivo.",
+      "Presupuesto frente a real de {{span}}. Real {{actual}} de {{budget}} presupuestado en {{count}} periodos, {{missed}}.",
   },
+  budgetSummaryOverTarget: "{{count}} por encima del objetivo",
+  budgetSummaryBelowTarget: "{{count}} por debajo del objetivo",
   feedSourceLedger: "Libro",
   feedSourceBlog: "Blog",
   feedSourceRelease: "Versión",

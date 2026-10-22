@@ -755,10 +755,12 @@ export const nl: Translations = {
   collapseAccount: "{{account}} inklappen",
   breakdownRowShare: "{{amount}}, {{percent}}% van het totaal",
   budgetChartSummary: {
-    one: "Budget versus werkelijk voor {{span}}. Werkelijk {{actual}} van {{budget}} begroot over {{count}} periode, {{over}} boven het doel.",
+    one: "Budget versus werkelijk voor {{span}}. Werkelijk {{actual}} van {{budget}} begroot over {{count}} periode, {{missed}}.",
     other:
-      "Budget versus werkelijk voor {{span}}. Werkelijk {{actual}} van {{budget}} begroot over {{count}} periodes, {{over}} boven het doel.",
+      "Budget versus werkelijk voor {{span}}. Werkelijk {{actual}} van {{budget}} begroot over {{count}} periodes, {{missed}}.",
   },
+  budgetSummaryOverTarget: "{{count}} boven het doel",
+  budgetSummaryBelowTarget: "{{count}} onder het doel",
   feedSourceLedger: "Grootboek",
   feedSourceBlog: "Blog",
   feedSourceRelease: "Uitgave",

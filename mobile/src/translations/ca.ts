@@ -770,11 +770,13 @@ export const ca: Translations = {
   collapseAccount: "Plega {{account}}",
   breakdownRowShare: "{{amount}}, {{percent}}% del total",
   budgetChartSummary: {
-    one: "Pressupost i real de {{span}}. Real {{actual}} d'un pressupost de {{budget}} en {{count}} període, {{over}} per sobre de l'objectiu.",
-    many: "Pressupost i real de {{span}}. Real {{actual}} d'un pressupost de {{budget}} en {{count}} períodes, {{over}} per sobre de l'objectiu.",
+    one: "Pressupost i real de {{span}}. Real {{actual}} d'un pressupost de {{budget}} en {{count}} període, {{missed}}.",
+    many: "Pressupost i real de {{span}}. Real {{actual}} d'un pressupost de {{budget}} en {{count}} períodes, {{missed}}.",
     other:
-      "Pressupost i real de {{span}}. Real {{actual}} d'un pressupost de {{budget}} en {{count}} períodes, {{over}} per sobre de l'objectiu.",
+      "Pressupost i real de {{span}}. Real {{actual}} d'un pressupost de {{budget}} en {{count}} períodes, {{missed}}.",
   },
+  budgetSummaryOverTarget: "{{count}} per sobre de l'objectiu",
+  budgetSummaryBelowTarget: "{{count}} per sota de l'objectiu",
   feedSourceLedger: "Llibre",
   feedSourceBlog: "Blog",
   feedSourceRelease: "Versió",

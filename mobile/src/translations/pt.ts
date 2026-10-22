@@ -766,11 +766,13 @@ export const pt: Translations = {
   collapseAccount: "Recolher {{account}}",
   breakdownRowShare: "{{amount}}, {{percent}}% do total",
   budgetChartSummary: {
-    one: "Orçado versus realizado em {{span}}. Realizado {{actual}} de {{budget}} orçado em {{count}} período, {{over}} acima da meta.",
-    many: "Orçado versus realizado em {{span}}. Realizado {{actual}} de {{budget}} orçado em {{count}} períodos, {{over}} acima da meta.",
+    one: "Orçado versus realizado em {{span}}. Realizado {{actual}} de {{budget}} orçado em {{count}} período, {{missed}}.",
+    many: "Orçado versus realizado em {{span}}. Realizado {{actual}} de {{budget}} orçado em {{count}} períodos, {{missed}}.",
     other:
-      "Orçado versus realizado em {{span}}. Realizado {{actual}} de {{budget}} orçado em {{count}} períodos, {{over}} acima da meta.",
+      "Orçado versus realizado em {{span}}. Realizado {{actual}} de {{budget}} orçado em {{count}} períodos, {{missed}}.",
   },
+  budgetSummaryOverTarget: "{{count}} acima da meta",
+  budgetSummaryBelowTarget: "{{count}} abaixo da meta",
   feedSourceLedger: "Livro",
   feedSourceBlog: "Blog",
   feedSourceRelease: "Versão",

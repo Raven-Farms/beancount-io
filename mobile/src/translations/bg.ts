@@ -750,10 +750,12 @@ export const bg: Translations = {
   collapseAccount: "Сгъни {{account}}",
   breakdownRowShare: "{{amount}}, {{percent}}% от общото",
   budgetChartSummary: {
-    one: "Бюджет спрямо действителни за {{span}}. Действителни {{actual}} от бюджет {{budget}} за {{count}} период, {{over}} над целта.",
+    one: "Бюджет спрямо действителни за {{span}}. Действителни {{actual}} от бюджет {{budget}} за {{count}} период, {{missed}}.",
     other:
-      "Бюджет спрямо действителни за {{span}}. Действителни {{actual}} от бюджет {{budget}} за {{count}} периода, {{over}} над целта.",
+      "Бюджет спрямо действителни за {{span}}. Действителни {{actual}} от бюджет {{budget}} за {{count}} периода, {{missed}}.",
   },
+  budgetSummaryOverTarget: "{{count}} над целта",
+  budgetSummaryBelowTarget: "{{count}} под целта",
   feedSourceLedger: "Счетоводна книга",
   feedSourceBlog: "Блог",
   feedSourceRelease: "Издание",

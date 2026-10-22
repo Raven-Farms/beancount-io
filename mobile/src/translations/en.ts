@@ -784,10 +784,12 @@ export const en = {
   collapseAccount: "Collapse {{account}}",
   breakdownRowShare: "{{amount}}, {{percent}}% of total",
   budgetChartSummary: {
-    one: "Budget versus actual for {{span}}. Actual {{actual}} of {{budget}} budgeted across {{count}} period, {{over}} over target.",
+    one: "Budget versus actual for {{span}}. Actual {{actual}} of {{budget}} budgeted across {{count}} period, {{missed}}.",
     other:
-      "Budget versus actual for {{span}}. Actual {{actual}} of {{budget}} budgeted across {{count}} periods, {{over}} over target.",
+      "Budget versus actual for {{span}}. Actual {{actual}} of {{budget}} budgeted across {{count}} periods, {{missed}}.",
   },
+  budgetSummaryOverTarget: "{{count}} over target",
+  budgetSummaryBelowTarget: "{{count}} below target",
   profile: "Profile",
   signedInAs: "Signed in as {{name}}, {{email}}",
   openSettings: "Opens Settings",

@@ -772,12 +772,14 @@ export const sk: Translations = {
   collapseAccount: "Zbaliť {{account}}",
   breakdownRowShare: "{{amount}}, {{percent}} % z celku",
   budgetChartSummary: {
-    one: "Rozpočet verzus skutočnosť za {{span}}. Skutočnosť {{actual}} z rozpočtu {{budget}} za {{count}} obdobie, {{over}} nad cieľom.",
-    few: "Rozpočet verzus skutočnosť za {{span}}. Skutočnosť {{actual}} z rozpočtu {{budget}} za {{count}} obdobia, {{over}} nad cieľom.",
-    many: "Rozpočet verzus skutočnosť za {{span}}. Skutočnosť {{actual}} z rozpočtu {{budget}} za {{count}} obdobia, {{over}} nad cieľom.",
+    one: "Rozpočet verzus skutočnosť za {{span}}. Skutočnosť {{actual}} z rozpočtu {{budget}} za {{count}} obdobie, {{missed}}.",
+    few: "Rozpočet verzus skutočnosť za {{span}}. Skutočnosť {{actual}} z rozpočtu {{budget}} za {{count}} obdobia, {{missed}}.",
+    many: "Rozpočet verzus skutočnosť za {{span}}. Skutočnosť {{actual}} z rozpočtu {{budget}} za {{count}} obdobia, {{missed}}.",
     other:
-      "Rozpočet verzus skutočnosť za {{span}}. Skutočnosť {{actual}} z rozpočtu {{budget}} za {{count}} období, {{over}} nad cieľom.",
+      "Rozpočet verzus skutočnosť za {{span}}. Skutočnosť {{actual}} z rozpočtu {{budget}} za {{count}} období, {{missed}}.",
   },
+  budgetSummaryOverTarget: "{{count}} nad cieľom",
+  budgetSummaryBelowTarget: "{{count}} pod cieľom",
   feedSourceLedger: "Kniha",
   feedSourceBlog: "Blog",
   feedSourceRelease: "Vydanie",

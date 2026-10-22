@@ -225,11 +225,20 @@ export function budgetChartSummary(
     budgets: number[];
     favorables: (boolean | null)[];
     currency: string;
+    /**
+     * Each period's end day, aligned with `labels`. With them a span that
+     * crosses a year names the years of its first and last label ("NOV
+     * 2024–SEP 2026"); without, the labels stand alone.
+     */
+    dates?: string[];
+    /** `-1` for an income target, where missing it means falling short. */
+    direction?: 1 | -1;
   },
   t: (key: string, params?: Record<string, unknown>) => string,
   locale = "en",
 ): string | undefined {
-  const { labels, actuals, budgets, favorables, currency } = series;
+  const { labels, actuals, budgets, favorables, currency, dates, direction } =
+    series;
   if (labels.length === 0) return undefined;
 
   const money = (values: number[]) =>
@@ -238,18 +247,38 @@ export function budgetChartSummary(
       currency,
       locale,
     );
+  const last = labels.length - 1;
+  // A year-long axis label is its own year; any other gets the year of its day.
+  const named = (index: number) => {
+    const label = labels[index]!;
+    const year = dates?.[index]?.slice(0, 4);
+    return year && !/^\d{4}$/.test(label) ? `${label} ${year}` : label;
+  };
+  const crossesYear =
+    dates !== undefined &&
+    dates[0] !== undefined &&
+    dates[last] !== undefined &&
+    dates[0].slice(0, 4) !== dates[last]!.slice(0, 4);
   const span =
     labels.length === 1
       ? labels[0]
-      : `${labels[0]}–${labels[labels.length - 1]}`;
+      : crossesYear
+        ? `${named(0)}–${named(last)}`
+        : `${labels[0]}–${labels[last]}`;
+
+  // Only an explicit `false` is unfavorable; a period the selectors could not
+  // judge (no budget yet) is not counted against the target. Worded by what
+  // missing the target means: spending over it, income below it (w21/457).
+  const missed = favorables.filter((favorable) => favorable === false).length;
 
   return t("budgetChartSummary", {
     span,
     count: labels.length,
     actual: money(actuals),
     budget: money(budgets),
-    // Only an explicit `false` is unfavorable; a period the selectors could not
-    // judge (no budget yet) is not counted against the target.
-    over: favorables.filter((favorable) => favorable === false).length,
+    missed: t(
+      direction === -1 ? "budgetSummaryBelowTarget" : "budgetSummaryOverTarget",
+      { count: missed },
+    ),
   });
 }

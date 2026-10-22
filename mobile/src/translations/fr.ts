@@ -770,11 +770,13 @@ export const fr: Translations = {
   collapseAccount: "Replier {{account}}",
   breakdownRowShare: "{{amount}}, {{percent}} % du total",
   budgetChartSummary: {
-    one: "Budget et réel pour {{span}}. Réel {{actual}} sur {{budget}} budgété sur {{count}} période, {{over}} au-dessus de l'objectif.",
-    many: "Budget et réel pour {{span}}. Réel {{actual}} sur {{budget}} budgété sur {{count}} périodes, {{over}} au-dessus de l'objectif.",
+    one: "Budget et réel pour {{span}}. Réel {{actual}} sur {{budget}} budgété sur {{count}} période, {{missed}}.",
+    many: "Budget et réel pour {{span}}. Réel {{actual}} sur {{budget}} budgété sur {{count}} périodes, {{missed}}.",
     other:
-      "Budget et réel pour {{span}}. Réel {{actual}} sur {{budget}} budgété sur {{count}} périodes, {{over}} au-dessus de l'objectif.",
+      "Budget et réel pour {{span}}. Réel {{actual}} sur {{budget}} budgété sur {{count}} périodes, {{missed}}.",
   },
+  budgetSummaryOverTarget: "{{count}} au-dessus de l'objectif",
+  budgetSummaryBelowTarget: "{{count}} en dessous de l'objectif",
   feedSourceLedger: "Livre",
   feedSourceBlog: "Blog",
   feedSourceRelease: "Version",

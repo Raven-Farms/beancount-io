@@ -684,8 +684,10 @@ export const zh: Translations = {
   breakdownRowShare: "{{amount}}，占总额 {{percent}}%",
   budgetChartSummary: {
     other:
-      "{{span}} 的预算与实际对比。{{count}} 个周期内实际 {{actual}}，预算 {{budget}}，其中 {{over}} 个周期超出目标。",
+      "{{span}} 的预算与实际对比。{{count}} 个周期内实际 {{actual}}，预算 {{budget}}，其中 {{missed}}。",
   },
+  budgetSummaryOverTarget: "{{count}} 个周期超出目标",
+  budgetSummaryBelowTarget: "{{count}} 个周期低于目标",
   feedSourceLedger: "账本",
   feedSourceBlog: "博客",
   feedSourceRelease: "发布",
