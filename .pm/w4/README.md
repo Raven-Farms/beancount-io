@@ -76,7 +76,6 @@
 
 - [963 — Keep the pre-startup keyboard target visible after hydration](./963.md) — minor; pure-native-Tab desktop/narrow controls retain focus/nodes but initial restoration resets scroll to0 and hides the target; matching router source traced, no writes.
 
-- [962 — Keep Budget's first Add action from being lost](./962.md) — minor; dashboard QA,2026-10-22; four natural-load Enter/pointer cases lose an enabled header activation before handler readiness; retry/dismissal focus pass, matching page source traced; no writes.
 
 
 
