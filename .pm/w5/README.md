@@ -36,6 +36,7 @@
 
 ## Inbox
 
+- [959 — Treat repeated allowed currencies as one during transaction inference](./959.md) — minor CLI existing-ledger inference finding; native USD/EUR and split-file controls reproduced 2026-10-21.
 - [958 — Keep unused unopened accounts out of remembered CSV settings](./958.md) — minor CLI memory-guard follow-up to 452/714; empty, skipped and fully categorized exports reproduced 2026-10-21.
 - [957 — Allow instrument units in the portfolio preset's holdings account](./957.md) — minor CLI first-purchase setup finding; reproduced twice in USD/EUR on 2026-10-21.
 - [872 — Preserve explicitly empty lot labels in transaction tables and query CSV](./872.md) — minor CLI output-fidelity follow-up to 805, 465 and 561; reproduced 2026-10-20.
