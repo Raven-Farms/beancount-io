@@ -409,14 +409,18 @@ def _directed_number(number: Decimal, cell: str, where: str, column: str) -> Dec
     )
 
 
-def _refuse_unmapped_direction(headers: list[str], rows: list[dict[str, str]], columns: dict[str, str]) -> None:
+def _refuse_unmapped_direction(
+    headers: list[str], rows: list[dict[str, str]], columns: dict[str, str], *, ledger_sign: bool = False
+) -> None:
     """Refuse an unmapped direction-shaped column when the amounts carry no sign.
 
     Unsigned magnitudes beside a DEBIT/CREDIT column would otherwise book
     every debit as money in, exit 0. Full DEBIT/CREDIT words indict a column
     whatever its header; abbreviations need a direction-shaped header too, so
     a Grade column of C/D stays silent. Signed amounts carry their own
-    direction, making the column redundant.
+    direction, making the column redundant. With `sign=ledger` already in the
+    mapping the repair is a replacement, since `direction=` refuses the pair
+    (w5/918).
     """
     for row in rows:
         sign, _core, negations = _split_amount_sign(row.get(columns["amount"], ""))
@@ -431,6 +435,13 @@ def _refuse_unmapped_direction(headers: list[str], rows: list[dict[str, str]], c
             continue
         named = "".join(char for char in header.casefold() if char.isalnum()) in _DIRECTION_HEADERS
         if named or any(word.casefold() in _FULL_DIRECTION_WORDS for word in words):
+            if ledger_sign:
+                raise UsageError(
+                    f"Column {header!r} looks like a direction column ({words[0]!r}, ...): its values are only "
+                    "DEBIT/CREDIT words, and the amounts carry no sign, so a column of words should decide each "
+                    f"row's direction. Replace sign=ledger with direction={header} in the --csv mapping "
+                    "(DEBIT/CREDIT, D/C, Dr/Cr, Af/Bij); the two cannot be combined."
+                )
             raise UsageError(
                 f"Column {header!r} looks like a direction column ({words[0]!r}, ...): its values are only "
                 "DEBIT/CREDIT words, and the amounts carry no sign, so every debit would book as money in. "
@@ -1693,7 +1704,9 @@ class CsvImporter:
             if "amount" not in columns:
                 self._check_pair_signs(numbered)
             elif "direction" not in columns:
-                _refuse_unmapped_direction(headers, [row for _, _, row in numbered], columns)
+                _refuse_unmapped_direction(
+                    headers, [row for _, _, row in numbered], columns, ledger_sign=self._mapping.sign == "ledger"
+                )
             for row_number, line, row in numbered:
                 where = _at(row_number, line)
                 date_column = columns["date"]

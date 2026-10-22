@@ -71,7 +71,6 @@
 - [959 — Treat repeated allowed currencies as one during transaction inference](./959.md) — minor CLI existing-ledger/native-import inference finding; USD/EUR and split-file controls reproduced 2026-10-21.
 - [958 — Keep unused unopened accounts out of remembered CSV settings](./958.md) — minor CLI memory-guard follow-up to 452/714; empty, skipped and fully categorized exports reproduced 2026-10-21.
 - [957 — Allow instrument units in the portfolio preset's holdings account](./957.md) — minor CLI first-purchase setup finding; reproduced twice in USD/EUR on 2026-10-21.
-- [918 — Give a complete CSV direction repair when `sign=ledger` is active](./918.md) — trivial CLI recovery-message follow-up to 755; the suggested added option conflicts with the existing sign setting, reproduced 2026-10-21.
 - [919 — Keep accented bank references stable on repeat import](./919.md) — major CLI native-ID lookup gap; unchanged NFD references lose exact matching and changed amounts double-book with exit 0, reproduced 2026-10-21.
 - [920 — Treat signed zero as equal in import amounts, costs and prices](./920.md) — major CLI identity issue; equal zero prices or costs can book another disposal, while unchanged native zero amounts/prices falsely conflict, reproduced 2026-10-22.
 - [921 — Classify report series by root components](./921.md) — major CLI accounting mismatch; prefix-sharing roots contaminate income and net-worth breakdowns while headlines remain correct, reproduced 2026-10-21.
