@@ -187,6 +187,9 @@ export function TransactionConfigForm({
     );
     const suggestions = await categorizeTransactions(validRows);
     const currentTransactions = form.getValues("transactions");
+    // The rows a suggestion actually filled, which is what the completion
+    // message reports (w4/324).
+    let applied = 0;
     const updatedTransactions = currentTransactions.map((txn) => {
       const suggestion = suggestions.get(txn.rowIndex);
       if (
@@ -194,6 +197,7 @@ export function TransactionConfigForm({
         suggestion.confidence >= 0.5 &&
         requested.get(txn.id) === txn.targetAccount
       ) {
+        applied += 1;
         return {
           ...txn,
           targetAccount: suggestion.targetAccount,
@@ -202,6 +206,7 @@ export function TransactionConfigForm({
       return txn;
     });
     form.setValue("transactions", updatedTransactions);
+    return applied;
   };
 
   const handleSubmit = (data: FormData) => {

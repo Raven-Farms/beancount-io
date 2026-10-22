@@ -504,6 +504,12 @@ const frImporter: Record<string, TranslationEntry> = {
     message: "{count} transactions catégorisées avec succès",
     description: "Toast description for multiple transactions categorization",
   },
+  "importer.accountMapping.aiNoneApplied": {
+    message:
+      "Aucune suggestion n'était assez fiable pour remplir un compte de destination.",
+    description:
+      "Toast description when AI Fill completed but no suggestion was confident enough to fill a target",
+  },
   "importer.accountMapping.aiFailed": {
     message: "Échec de la catégorisation IA",
     description: "Toast title for failed AI categorization",

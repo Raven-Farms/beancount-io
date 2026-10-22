@@ -459,6 +459,11 @@ const jaImporter: Record<string, TranslationEntry> = {
     message: "{count}件のトランザクションを正常にカテゴリ分類しました",
     description: "Toast description for multiple transactions categorization",
   },
+  "importer.accountMapping.aiNoneApplied": {
+    message: "対象勘定を入力できるほど確度の高い提案はありませんでした。",
+    description:
+      "Toast description when AI Fill completed but no suggestion was confident enough to fill a target",
+  },
   "importer.accountMapping.aiFailed": {
     message: "AIカテゴリ分類に失敗しました",
     description: "Toast title for failed AI categorization",

@@ -500,6 +500,12 @@ const ptImporter: Record<string, TranslationEntry> = {
     message: "{count} transações categorizadas com sucesso",
     description: "Toast description for multiple transactions categorization",
   },
+  "importer.accountMapping.aiNoneApplied": {
+    message:
+      "Nenhuma sugestão era confiável o suficiente para preencher uma conta de destino.",
+    description:
+      "Toast description when AI Fill completed but no suggestion was confident enough to fill a target",
+  },
   "importer.accountMapping.aiFailed": {
     message: "Falha na categorização por IA",
     description: "Toast title for failed AI categorization",

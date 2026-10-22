@@ -451,6 +451,11 @@ const zhImporter: Record<string, TranslationEntry> = {
     message: "成功分类了{count}笔交易",
     description: "Toast description for multiple transactions categorization",
   },
+  "importer.accountMapping.aiNoneApplied": {
+    message: "没有足够可信的建议可用于填写目标账户。",
+    description:
+      "Toast description when AI Fill completed but no suggestion was confident enough to fill a target",
+  },
   "importer.accountMapping.aiFailed": {
     message: "AI分类失败",
     description: "Toast title for failed AI categorization",

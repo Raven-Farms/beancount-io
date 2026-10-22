@@ -519,6 +519,12 @@ const ukImporter: Record<string, TranslationEntry> = {
     message: "{count} транзакції успішно категоризовані",
     description: "Toast description for fractional transactions categorization",
   },
+  "importer.accountMapping.aiNoneApplied": {
+    message:
+      "Жодна пропозиція не була достатньо впевненою, щоб заповнити цільовий рахунок.",
+    description:
+      "Toast description when AI Fill completed but no suggestion was confident enough to fill a target",
+  },
   "importer.accountMapping.aiFailed": {
     message: "Категоризація ШІ не вдалася",
     description: "Toast title for failed AI categorization",

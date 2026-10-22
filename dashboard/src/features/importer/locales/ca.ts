@@ -504,6 +504,12 @@ const caImporter: Record<string, TranslationEntry> = {
     message: "S'han categoritzat correctament {count} transaccions",
     description: "Toast description for multiple transactions categorization",
   },
+  "importer.accountMapping.aiNoneApplied": {
+    message:
+      "Cap suggeriment no era prou fiable per omplir un compte de destinació.",
+    description:
+      "Toast description when AI Fill completed but no suggestion was confident enough to fill a target",
+  },
   "importer.accountMapping.aiFailed": {
     message: "La categorització amb IA ha fallat",
     description: "Toast title for failed AI categorization",

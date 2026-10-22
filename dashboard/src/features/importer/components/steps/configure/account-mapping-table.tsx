@@ -62,7 +62,8 @@ interface TransactionFormData {
 interface AccountMappingTableProps {
   control: Control<TransactionFormData>;
   ledgerId: string;
-  onAICategorize?: () => Promise<void>;
+  /** Resolves with the number of target accounts its suggestions filled. */
+  onAICategorize?: () => Promise<number>;
   aiLoading?: boolean;
   transactionCount?: number;
   /** Fired after a local draft edit so the wizard can persist configure state. */
@@ -104,11 +105,16 @@ export function AccountMappingTable({
 
     setIsAILoading(true);
     try {
-      await onAICategorize();
+      const applied = await onAICategorize();
+      // Only suggestions confident enough to fill a target count; a
+      // completed request that filled nothing says so (w4/324).
       toast.success(t("importer.accountMapping.aiSuccess"), {
-        description: t("importer.accountMapping.aiSuccessDescription", {
-          count: transactionCount,
-        }),
+        description:
+          applied > 0
+            ? t("importer.accountMapping.aiSuccessDescription", {
+                count: applied,
+              })
+            : t("importer.accountMapping.aiNoneApplied"),
       });
     } catch (err) {
       toast.error(t("importer.accountMapping.aiFailed"), {

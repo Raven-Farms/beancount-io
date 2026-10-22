@@ -481,6 +481,12 @@ const nlImporter: Record<string, TranslationEntry> = {
     message: "{count} transacties succesvol gecategoriseerd",
     description: "Toast description for multiple transactions categorization",
   },
+  "importer.accountMapping.aiNoneApplied": {
+    message:
+      "Geen enkele suggestie was zeker genoeg om een doelrekening in te vullen.",
+    description:
+      "Toast description when AI Fill completed but no suggestion was confident enough to fill a target",
+  },
   "importer.accountMapping.aiFailed": {
     message: "AI-categorisering mislukt",
     description: "Toast title for failed AI categorization",

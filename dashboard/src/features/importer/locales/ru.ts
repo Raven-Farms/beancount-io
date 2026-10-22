@@ -520,6 +520,12 @@ const ruImporter: Record<string, TranslationEntry> = {
     message: "{count} транзакции успешно категоризированы",
     description: "Toast description for fractional transactions categorization",
   },
+  "importer.accountMapping.aiNoneApplied": {
+    message:
+      "Ни одно предложение не было достаточно уверенным, чтобы заполнить целевой счёт.",
+    description:
+      "Toast description when AI Fill completed but no suggestion was confident enough to fill a target",
+  },
   "importer.accountMapping.aiFailed": {
     message: "Категоризация ИИ не удалась",
     description: "Toast title for failed AI categorization",

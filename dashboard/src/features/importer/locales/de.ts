@@ -483,6 +483,11 @@ const deImporter: Record<string, TranslationEntry> = {
     message: "{count} Transaktionen erfolgreich kategorisiert",
     description: "Toast description for multiple transactions categorization",
   },
+  "importer.accountMapping.aiNoneApplied": {
+    message: "Kein Vorschlag war sicher genug, um ein Zielkonto auszufüllen.",
+    description:
+      "Toast description when AI Fill completed but no suggestion was confident enough to fill a target",
+  },
   "importer.accountMapping.aiFailed": {
     message: "KI-Kategorisierung fehlgeschlagen",
     description: "Toast title for failed AI categorization",

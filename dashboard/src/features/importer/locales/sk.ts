@@ -519,6 +519,11 @@ const skImporter: Record<string, TranslationEntry> = {
     message: "Úspešne kategorizovaných {count} transakcií",
     description: "Toast description for multiple transactions categorization",
   },
+  "importer.accountMapping.aiNoneApplied": {
+    message: "Žiadny návrh nebol dosť spoľahlivý na vyplnenie cieľového účtu.",
+    description:
+      "Toast description when AI Fill completed but no suggestion was confident enough to fill a target",
+  },
   "importer.accountMapping.aiFailed": {
     message: "AI kategorizácia zlyhala",
     description: "Toast title for failed AI categorization",

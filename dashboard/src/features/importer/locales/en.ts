@@ -483,6 +483,11 @@ const enImporter: Record<string, TranslationEntry> = {
     message: "Successfully categorized {count} transactions",
     description: "Toast description for multiple transactions categorization",
   },
+  "importer.accountMapping.aiNoneApplied": {
+    message: "No suggestion was confident enough to fill a target account.",
+    description:
+      "Toast description when AI Fill completed but no suggestion was confident enough to fill a target",
+  },
   "importer.accountMapping.aiFailed": {
     message: "AI categorization failed",
     description: "Toast title for failed AI categorization",

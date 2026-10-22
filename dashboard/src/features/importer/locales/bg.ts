@@ -482,6 +482,12 @@ const bgImporter: Record<string, TranslationEntry> = {
     message: "Успешно категоризирани {count} транзакции",
     description: "Toast description for multiple transactions categorization",
   },
+  "importer.accountMapping.aiNoneApplied": {
+    message:
+      "Нито едно предложение не беше достатъчно сигурно, за да попълни целева сметка.",
+    description:
+      "Toast description when AI Fill completed but no suggestion was confident enough to fill a target",
+  },
   "importer.accountMapping.aiFailed": {
     message: "AI категоризацията се провали",
     description: "Toast title for failed AI categorization",

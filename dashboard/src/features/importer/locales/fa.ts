@@ -481,6 +481,11 @@ const faImporter: Record<string, TranslationEntry> = {
     message: "{count} تراکنش با موفقیت دسته‌بندی شدند",
     description: "Toast description for multiple transactions categorization",
   },
+  "importer.accountMapping.aiNoneApplied": {
+    message: "هیچ پیشنهادی آن‌قدر مطمئن نبود که یک حساب مقصد را پر کند.",
+    description:
+      "Toast description when AI Fill completed but no suggestion was confident enough to fill a target",
+  },
   "importer.accountMapping.aiFailed": {
     message: "دسته‌بندی با هوش مصنوعی ناموفق بود",
     description: "Toast title for failed AI categorization",

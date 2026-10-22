@@ -1,5 +1,6 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { toast } from "sonner";
 import { TransactionConfigForm } from "../transaction-config-form";
 import type { ParsedRow } from "../../../../types";
 
@@ -109,6 +110,7 @@ function renderForm() {
 beforeEach(() => {
   pending.length = 0;
   categorizeTransactions.mockClear();
+  vi.mocked(toast.success).mockClear();
 });
 
 /** A target changed while AI Fill is pending stays the reader's (w4/323). */
@@ -161,5 +163,58 @@ describe("AI Fill with a pending request", () => {
     pending[1].resolve(new Map([food(0), food(1)] as [number, unknown][]));
     await waitFor(() => expect(targets()[0]).toHaveValue("Expenses:Food"));
     expect(targets()[1]).toHaveValue("Expenses:Food");
+  });
+});
+
+/** The completion message counts the targets AI Fill filled (w4/324). */
+describe("AI Fill completion count", () => {
+  const suggestion = (rowIndex: number, confidence: number) => [
+    rowIndex,
+    { rowIndex, targetAccount: "Expenses:Food", confidence },
+  ];
+  const described = () =>
+    vi.mocked(toast.success).mock.calls.at(-1)?.[1]?.description;
+
+  it.each([
+    ["none", [0.4, 0.4], "importer.accountMapping.aiNoneApplied", ["", ""]],
+    [
+      "one",
+      [0.9, 0.4],
+      "importer.accountMapping.aiSuccessDescription:1",
+      ["Expenses:Food", ""],
+    ],
+    [
+      "both, at the 0.5 boundary",
+      [0.9, 0.5],
+      "importer.accountMapping.aiSuccessDescription:2",
+      ["Expenses:Food", "Expenses:Food"],
+    ],
+  ])("reports %s filled", async (_label, [first, second], message, values) => {
+    renderForm();
+    fireEvent.click(aiFill());
+    await waitFor(() => expect(pending).toHaveLength(1));
+    pending[0].resolve(
+      new Map([suggestion(0, first), suggestion(1, second)] as [
+        number,
+        unknown,
+      ][]),
+    );
+    await waitFor(() => expect(described()).toBe(message));
+    expect(targets().map((t) => t.value)).toEqual(values);
+  });
+
+  it("leaves a target kept for the reader out of the count", async () => {
+    renderForm();
+    fireEvent.click(aiFill());
+    await waitFor(() => expect(pending).toHaveLength(1));
+    fireEvent.change(targets()[0], { target: { value: "Expenses:Manual" } });
+    pending[0].resolve(
+      new Map([suggestion(0, 0.9), suggestion(1, 0.9)] as [number, unknown][]),
+    );
+    await waitFor(() =>
+      expect(described()).toBe(
+        "importer.accountMapping.aiSuccessDescription:1",
+      ),
+    );
   });
 });

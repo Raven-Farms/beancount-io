@@ -457,6 +457,11 @@ const koImporter: Record<string, TranslationEntry> = {
     message: "{count}건의 거래를 성공적으로 분류했습니다",
     description: "Toast description for multiple transactions categorization",
   },
+  "importer.accountMapping.aiNoneApplied": {
+    message: "대상 계정을 채울 만큼 신뢰도가 높은 제안이 없었습니다.",
+    description:
+      "Toast description when AI Fill completed but no suggestion was confident enough to fill a target",
+  },
   "importer.accountMapping.aiFailed": {
     message: "AI 분류에 실패했습니다",
     description: "Toast title for failed AI categorization",
