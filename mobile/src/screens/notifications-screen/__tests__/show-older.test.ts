@@ -4,6 +4,7 @@ import { en } from "../../../translations/en";
 import {
   appendCommitPage,
   COMMITS_PAGE_SIZE,
+  commitPageOverlaps,
   endRowsFor,
   historyEnded,
   isLastCommitPage,
@@ -148,7 +149,7 @@ describe("the Notifications screen's Show older", () => {
     ).toBe(true);
     expect(
       source.includes(
-        "if(isLastCommitPage(result.data.listCommits))setHistoryEnd({rows:mergedRows,head:headSha});",
+        "awaitrefetchCommits();}elseif(isLastCommitPage(result.data.listCommits))setHistoryEnd({rows:mergedRows,head:headSha});",
       ),
     ).toBe(true);
   });
@@ -169,5 +170,22 @@ describe("the Notifications screen's Show older", () => {
         .slice(0, refresh.indexOf("finally"))
         .includes("setHistoryEnd(null);"),
     ).toBe(true);
+  });
+});
+
+// w21/626: with 30 or more commits landing while the screen was open, page 2 was
+// exactly the rows shown, so Show older asked for it again and again.
+describe("a list that moved under Show older", () => {
+  it("is told by a page that repeats a shown commit", () => {
+    const shown = page(1, 30);
+    // 40 new commits: the server's page 2 is the 30 rows already shown.
+    expect(commitPageOverlaps(shown, shown)).toBe(true);
+    // One new commit shifts page 2 by a row.
+    expect(commitPageOverlaps(shown, [commit(30), commit(31)])).toBe(true);
+  });
+
+  it("is not told by a page of older commits", () => {
+    expect(commitPageOverlaps(page(31, 30), page(1, 30))).toBe(false);
+    expect(commitPageOverlaps([], page(1, 3))).toBe(false);
   });
 });

@@ -14,6 +14,22 @@ export function appendCommitPage<T extends { sha: string }>(
   return [...shown, ...older.filter((commit) => !seen.has(commit.sha))];
 }
 
+/**
+ * Whether an older page repeats a commit already shown. Paging is by offset, so
+ * commits landing while the screen is open shift every page: page 2 then starts
+ * with rows already shown, and with 30 or more new commits it is exactly them,
+ * so Show older asked for it again and again, and the newest rows it did reach
+ * were appended below older ones. The list has moved; it is read again from its
+ * first page, where the new commits now sit (w21/626).
+ */
+export function commitPageOverlaps(
+  shown: readonly { sha: string }[],
+  older: readonly { sha: string }[],
+): boolean {
+  const seen = new Set(shown.map((commit) => commit.sha));
+  return older.some((commit) => seen.has(commit.sha));
+}
+
 /** A page shorter than the page size is the last: there is nothing older. */
 export function isLastCommitPage(page: readonly unknown[]): boolean {
   return page.length < COMMITS_PAGE_SIZE;

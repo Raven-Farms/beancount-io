@@ -20,6 +20,7 @@ import { errorHint } from "@/common/new-ledger-error";
 import { selectSectionsPending } from "./section-state";
 import {
   appendCommitPage,
+  commitPageOverlaps,
   COMMITS_PAGE_SIZE,
   endRowsFor,
   historyEnded,
@@ -302,10 +303,16 @@ function NotificationsScreenImpl(): JSX.Element {
     setLoadingOlder(true);
     const page = shownPages + 1;
     let mergedRows = 0;
+    let moved = false;
     try {
       const result = await fetchMoreCommits({
         variables: { page },
         updateQuery: (previous, { fetchMoreResult }) => {
+          moved = commitPageOverlaps(
+            previous.listCommits,
+            fetchMoreResult.listCommits,
+          );
+          if (moved) return previous;
           const listCommits = appendCommitPage(
             previous.listCommits,
             fetchMoreResult.listCommits,
@@ -314,7 +321,11 @@ function NotificationsScreenImpl(): JSX.Element {
           return { listCommits };
         },
       });
-      if (isLastCommitPage(result.data.listCommits))
+      if (moved) {
+        // Commits landed since the list was read: start again from the first
+        // page, where they now sit (w21/626).
+        await refetchCommits();
+      } else if (isLastCommitPage(result.data.listCommits))
         setHistoryEnd({ rows: mergedRows, head: headSha });
     } catch {
       // The rows already shown stay; the button is there to try again.
