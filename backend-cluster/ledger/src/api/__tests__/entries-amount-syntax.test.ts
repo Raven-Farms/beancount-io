@@ -193,6 +193,15 @@ describe("bulk entries refuse amounts that are not decimals (w3/641)", () => {
     expect(response.status).toBe(200);
     expect(committed).toHaveLength(1);
   });
+
+  // w23/043: accepted by the decimal check, unreadable to Beancount as typed.
+  it("writes a leading-dot amount with its zero", async () => {
+    const response = await post([transaction(".5", "-.5")]);
+    expect(response.status).toBe(200);
+    const written = fromB64(committed[0]!.files[0]!.content);
+    expect(written).toMatch(/Assets:Cash +0\.5 USD/);
+    expect(written).toMatch(/Equity:Opening +-0\.5 USD/);
+  });
 });
 
 // w23/033: tags, links, flags, accounts, currencies, meta keys and dates were

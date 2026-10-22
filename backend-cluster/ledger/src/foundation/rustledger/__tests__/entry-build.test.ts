@@ -420,6 +420,26 @@ describe("entryInputToText — Fava-exact serialization parity", () => {
     expect(budget).toContain("0.00000001 USD");
   });
 
+  // w23/043: the decimal check accepts `.5`, which Beancount cannot read.
+  it.each([
+    [".5", "0.5"],
+    ["-.5", "-0.5"],
+    ["+.50", "+0.50"],
+    [".5e1", "5"],
+    ["5.", "5."],
+    ["+5", "+5"],
+  ])("writes the amount %p as %p", (number, written) => {
+    const out = entryInputToText({
+      type: "balance",
+      entry: {
+        date: "2024-01-01",
+        account: "Assets:Cash",
+        amount: { number, currency: "USD" },
+      },
+    });
+    expect(out).toContain(` ${written} USD`);
+  });
+
   it("preserves ordinary decimal scale without rewriting through BigNumber", () => {
     const out = entryInputToText({
       type: "balance",
