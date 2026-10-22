@@ -109,7 +109,7 @@
 
 - [ ] **m41** — [Preserve acknowledged actions through refresh failures](./blocked/m41/README.md) (6 tasks) ← dashboard QA, 2026-10-20; minor, promoted 294 with independent Budget submission scope. — **blocked:** fixes shipped in `9a268c473` and `292a4321b`; awaiting controlled browser checks
 
-- [ ] **m40** — [Keep picker popups sized and scrollable inside modals](./blocked/m40/README.md) (6 tasks) ← dashboard QA, 2026-10-20; minor, promoted 293 with independently reproduced Combobox wheel scope. — **blocked:** fix shipped in `eeb14c2b2`; awaiting real-viewport scroll checks
+- [ ] **m40** — [Keep picker popups sized and scrollable inside modals](./m40/README.md) (6 tasks) ← dashboard QA, 2026-10-20; minor, promoted 293 with independently reproduced Combobox wheel scope. — deployed browser checks pass 2026-10-22; t001–t003 done, final review/gates open
 
 - [ ] **m39** — [Recover Journal and dashboard from malformed saved lists](./blocked/m39/README.md) (6 tasks) ← dashboard QA, 2026-10-20; minor, preference decoding and cross-tab recovery. — **blocked:** fix shipped in `48d13ad09`; awaiting fresh browser recovery checks
 
@@ -181,11 +181,11 @@
 
 - ~~**331**~~ — Preserve fractional commodity values in Budget readouts — dropped2026-10-21: promoted to [m45](./m45/README.md), preserving all modeled Budget evidence and adding actual Trial Balance/Balance Sheet precision loss; two renderers and computed precision regressions exceed one hour.
 
-- ~~**273**~~ — Keep active picker options identifiable in forced colors — dropped 2026-10-21: promoted to [m43](./m43/README.md), preserving all evidence and adding independently reproduced JournalFilters/default Tabs label backplates; four styling targets and rendered acceptance exceed one hour.
+- ~~**273**~~ — Keep active picker options identifiable in forced colors — dropped 2026-10-21: promoted to [m43](./done/m43/README.md), preserving all evidence and adding independently reproduced JournalFilters/default Tabs label backplates; four styling targets and rendered acceptance exceed one hour.
 
 - ~~**294**~~ — Preserve an acknowledged star action when its metadata refresh fails — dropped 2026-10-20: promoted to [m41](./blocked/m41/README.md), preserving Star evidence and adding the independent Budget acknowledgement/read failure; two controllers and regressions exceed one hour.
 
-- ~~**293**~~ — Keep the DatePicker calendar reachable in short viewports — dropped 2026-10-20: promoted to [m40](./blocked/m40/README.md), preserving all evidence and adding the independent modal Combobox wheel failure; the shared repair and regression scope exceed one hour.
+- ~~**293**~~ — Keep the DatePicker calendar reachable in short viewports — dropped 2026-10-20: promoted to [m40](./m40/README.md), preserving all evidence and adding the independent modal Combobox wheel failure; the shared repair and regression scope exceed one hour.
 
 - ~~**016**~~ — Commodity accounts are shown as an unlabelled USD cost basis — and a commodity with no cost renders as $0.00 — dropped 2026-09-26: promotion to [m11](./done/m11/README.md) completed; the milestone's verification record carries the outcome, and w4/m26 superseded its valuation basis.
 
