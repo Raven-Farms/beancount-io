@@ -213,6 +213,29 @@ describe("buildLedgerFiles (w3/m53/t002)", () => {
     expect(main).not.toContain("--30.50");
   });
 
+  // w21/548: `Date.UTC` read years 0001-0099 as 1900-1999, so a valid early
+  // Books begin was refused (the ledger itself accepts them, w4/m38).
+  it("accepts a history start in years 0001-0099 and still refuses impossible days", () => {
+    for (const historyStart of ["0050-03-01", "0099-12-31", "0001-01-01"]) {
+      expect(
+        previewLedgerSetup({ preset: "personal@1", historyStart }, "2026-01-01")
+          .files["main.bean"],
+      ).toContain(`${historyStart} open`);
+    }
+    for (const historyStart of ["0050-02-30", "0000-01-01", "0100-02-29"]) {
+      expect(() =>
+        previewLedgerSetup({ preset: "personal@1", historyStart }, "2026-01-01"),
+      ).toThrow(`Invalid history start "${historyStart}"`);
+    }
+    // 0004 is a leap year in the proleptic calendar Beancount uses.
+    expect(
+      previewLedgerSetup(
+        { preset: "personal@1", historyStart: "0004-02-29" },
+        "2026-01-01",
+      ).files["main.bean"],
+    ).toContain("0004-02-29 open");
+  });
+
   // w21/107: Date.parse rolled 2026-04-31 over to 1 May, so it was accepted.
   it("refuses a history start that is not a calendar day", () => {
     for (const historyStart of ["2026-02-30", "2026-04-31", "2025-02-29"]) {

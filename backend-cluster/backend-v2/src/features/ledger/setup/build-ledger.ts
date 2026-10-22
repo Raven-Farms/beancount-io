@@ -82,8 +82,13 @@ export function buildLedgerFiles(
 function isCalendarDate(value: string): boolean {
   if (!DATE_PATTERN.test(value)) return false;
   const [year, month, day] = value.split("-").map(Number);
-  const date = new Date(Date.UTC(year, month - 1, day));
+  // `Date.UTC` maps years 0-99 to 1900-1999, which refused every valid
+  // 0001-0099 date (w21/548); setUTCFullYear keeps the year. Year 0000 is not a
+  // Beancount date and stays refused.
+  const date = new Date(0);
+  date.setUTCFullYear(year, month - 1, day);
   return (
+    year >= 1 &&
     date.getUTCFullYear() === year &&
     date.getUTCMonth() === month - 1 &&
     date.getUTCDate() === day
