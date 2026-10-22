@@ -2,6 +2,8 @@ import fs from "fs";
 import path from "path";
 import { createTodayWatcher, msUntilNextLocalMidnight } from "../today-watcher";
 import { getFormatDate } from "../format-util";
+import { currentPeriodRange } from "../../screens/budget-screen/selectors/budget-selectors";
+import { detectRecurrence } from "../../screens/merchants-screen/selectors/detect-recurrence";
 import { toFilterQuery } from "../../screens/transactions-screen/filters/select-filter-query";
 import { NO_FILTERS } from "../../screens/transactions-screen/filters/types";
 
@@ -103,5 +105,66 @@ describe("the today watcher", () => {
       "utf8",
     );
     expect(source.includes("[data, today],")).toBe(true);
+  });
+
+  // w21/233: two readers still froze today at mount.
+  describe("Home's budget panel and Merchants' Overdue", () => {
+    it("moves the panel's period end to the new month at midnight", () => {
+      const { watcher, set } = harness(new Date(2026, 9, 31, 23, 50));
+      expect(currentPeriodRange("monthly", watcher.today()).end).toBe(
+        "2026-10-31",
+      );
+      set(new Date(2026, 10, 1, 8, 0));
+      watcher.onAppStateChange("background");
+      watcher.onAppStateChange("active");
+      expect(currentPeriodRange("monthly", watcher.today()).end).toBe(
+        "2026-11-30",
+      );
+    });
+
+    it("turns a bill Overdue on the day it passes its grace, without a remount", () => {
+      const bill = [
+        "2026-06-01",
+        "2026-07-01",
+        "2026-08-01",
+        "2026-09-01",
+        "2026-10-01",
+      ].map((date) => ({ date, currency: "USD", amount: -15 }));
+      const { watcher, set } = harness(new Date(2026, 10, 9, 20, 0));
+      expect(detectRecurrence(bill, watcher.today())!.isOverdue).toBe(false);
+      set(new Date(2026, 10, 10, 8, 0));
+      watcher.onMidnight();
+      expect(detectRecurrence(bill, watcher.today())!.isOverdue).toBe(true);
+    });
+
+    it("read the watched day, not one captured at mount", () => {
+      const read = (...parts: string[]) =>
+        fs
+          .readFileSync(path.join(__dirname, "..", "..", ...parts), "utf8")
+          .replace(/\s+/g, " ");
+      const panel = read(
+        "screens",
+        "home-screen",
+        "hooks",
+        "use-budget-panel.ts",
+      );
+      expect(panel.includes("const today = useToday();")).toBe(true);
+      expect(panel.includes("getFormatDate(new Date())")).toBe(false);
+      expect(panel.includes("currentPeriodRange(group.interval, today)")).toBe(
+        true,
+      );
+      expect(panel.includes("budgetPanelWindow(today)")).toBe(true);
+      expect(panel.includes("attempt, today, ]")).toBe(true);
+      // A change of interval re-runs the panel too.
+      expect(panel.includes("::${group.interval}")).toBe(true);
+
+      const merchants = read(
+        "screens",
+        "merchants-screen",
+        "use-payee-recurrence.ts",
+      );
+      expect(merchants.includes("const today = useToday();")).toBe(true);
+      expect(merchants.includes("getFormatDate(new Date())")).toBe(false);
+    });
   });
 });

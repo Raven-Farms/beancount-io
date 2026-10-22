@@ -6,7 +6,7 @@ import {
   type GetLedgerIntervalTotalsQueryVariables,
 } from "@/generated-graphql/graphql";
 import { resolveCurrencyBalance } from "@/common/balance-util";
-import { getFormatDate } from "@/common/format-util";
+import { useToday } from "@/common/hooks/use-today";
 import { mapInBatches } from "@/common/map-in-batches";
 import { ledgerRevisionVar } from "@/common/apollo/invalidate-ledger";
 import { budgetTotalsVariables } from "@/screens/budget-screen/hooks/use-budget-actuals";
@@ -62,6 +62,10 @@ export function useBudgetPanel({
   retry: () => void;
 } {
   const client = useApolloClient();
+  // The day the panel measures against, advanced at midnight: read once at
+  // mount, the row stayed on last month with the app left open overnight and
+  // its prorated budget lagged a day (w21/233).
+  const today = useToday();
   // These are one-off `client.query` reads, not observable queries, so a write
   // elsewhere in the app cannot reach them: `groupsKey` only changes when the
   // budget *directives* do, and a new transaction leaves those untouched.
@@ -77,7 +81,10 @@ export function useBudgetPanel({
   const groupsKey = useMemo(
     () =>
       groups
-        .map((group) => `${group.account}::${group.currency}::${group.amount}`)
+        .map(
+          (group) =>
+            `${group.account}::${group.currency}::${group.amount}::${group.interval}`,
+        )
         .join("|"),
     [groups],
   );
@@ -98,10 +105,10 @@ export function useBudgetPanel({
     // One window all month, so the next day offline still finds the cached
     // actuals; it no longer shares the page's year-to-date result, which
     // ends on today and changes daily (w21/184).
-    const time = budgetPanelWindow(getFormatDate(new Date()));
+    const time = budgetPanelWindow(today);
 
     mapInBatches(groups, BUDGET_PANEL_BATCH, async (group) => {
-      const { end } = currentPeriodRange(group.interval);
+      const { end } = currentPeriodRange(group.interval, today);
       const totals = (fetchPolicy: "network-only" | "cache-only") =>
         client
           .query<
@@ -138,7 +145,6 @@ export function useBudgetPanel({
       if (cancelled) {
         return;
       }
-      const today = getFormatDate(new Date());
       const settled = settleBudgetPanel(
         results,
         BUDGET_PANEL_ROWS,
@@ -156,7 +162,15 @@ export function useBudgetPanel({
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [client, ledgerId, groupsKey, refreshSignal, ledgerRevision, attempt]);
+  }, [
+    client,
+    ledgerId,
+    groupsKey,
+    refreshSignal,
+    ledgerRevision,
+    attempt,
+    today,
+  ]);
 
   const retry = useCallback(() => setAttempt((n) => n + 1), []);
   return { rows, loading, failed, retry };

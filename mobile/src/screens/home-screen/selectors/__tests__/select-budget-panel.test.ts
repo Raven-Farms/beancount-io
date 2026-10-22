@@ -298,9 +298,8 @@ describe("the Home panel against the Budget screen", () => {
       ),
       "utf8",
     ) as string;
-    expect(source.includes("const today = getFormatDate(new Date());")).toBe(
-      true,
-    );
+    // The watched day (w21/233), not a clock read when the reads settle.
+    expect(source.includes("const today = useToday();")).toBe(true);
     expect(source.includes("timeWindowStart(time, today),")).toBe(true);
   });
 });

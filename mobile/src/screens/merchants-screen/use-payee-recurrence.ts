@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { useQueryShellQuery } from "@/generated-graphql/graphql";
-import { getFormatDate } from "@/common/format-util";
+import { useToday } from "@/common/hooks/use-today";
 import { useLedgerRootNames } from "@/common/hooks/use-ledger-root-names";
 import { seriesByMerchant } from "@/common/merchant-key";
 import {
@@ -15,11 +15,12 @@ import {
 
 /**
  * Shared windowed series fetch + per-merchant detection for the merchants
- * directory and merchant detail, keyed by `merchantKey`. One `queryShell` round trip; `today` is
- * captured once per mount so overdue doesn't flicker mid-session.
+ * directory and merchant detail, keyed by `merchantKey`. One `queryShell` round
+ * trip. `today` is the watched day (`useToday`): it moves only at midnight, so
+ * Overdue turns on without a remount and cannot flicker within a day (w21/233).
  */
 export function usePayeeRecurrence(ledgerId: string | null | undefined) {
-  const today = useMemo(() => getFormatDate(new Date()), []);
+  const today = useToday();
   const seriesCutoff = useMemo(() => payeeSeriesCutoff(today), [today]);
   const { expenses, income } = useLedgerRootNames();
   const seriesBql = useMemo(

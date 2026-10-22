@@ -191,8 +191,7 @@ describe("budgetPanelWindow", () => {
       ),
       "utf8",
     );
-    expect(hook.includes("budgetPanelWindow(getFormatDate(new Date()))")).toBe(
-      true,
-    );
+    // The watched day, so the window follows midnight (w21/233).
+    expect(hook.includes("budgetPanelWindow(today)")).toBe(true);
   });
 });
