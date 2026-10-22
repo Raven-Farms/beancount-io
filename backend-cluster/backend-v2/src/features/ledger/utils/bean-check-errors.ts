@@ -64,19 +64,39 @@ export function toBeanCheckErrors(
     }));
 }
 
-/** Errors in `after` that were not already in `before`, by message+source. */
+/**
+ * The engine ends an interpolation or lot-match error with the entry's date
+ * and narration, `(2026-08-30, "Groceries")`, so editing either one rewrote
+ * an existing error's message.
+ */
+function withoutEntryTag(message: string): string {
+  return message.replace(/ \(\d{4}-\d{2}-\d{2}, ".*"\)$/s, "");
+}
+
+/**
+ * Errors in `after` that `before` did not have, matched by message and file
+ * but not line: a write that inserts or removes lines moves every error below
+ * it without introducing one, and keying on `file:line` refused a valid append
+ * over the moved error (w23/034). Each `before` error excuses one `after`
+ * error, so a second copy of a known message still counts as new. This is the
+ * ledger service's `newLedgerErrors` rule (w21/m1), restated because packages
+ * share no code.
+ */
 export function diffBeanCheckErrors(
   before: readonly BeanCheckError[],
   after: readonly BeanCheckError[],
 ): BeanCheckError[] {
-  return after.filter(
-    (candidate) =>
-      !before.some(
-        (existing) =>
-          existing.message === candidate.message &&
-          existing.source === candidate.source,
-      ),
-  );
+  const key = (error: BeanCheckError) =>
+    `${withoutEntryTag(error.message)}\u0000${error.source?.replace(/:\d+$/, "") ?? ""}`;
+  const left = new Map<string, number>();
+  for (const error of before) {
+    left.set(key(error), (left.get(key(error)) ?? 0) + 1);
+  }
+  return after.filter((error) => {
+    const count = left.get(key(error)) ?? 0;
+    if (count > 0) left.set(key(error), count - 1);
+    return count === 0;
+  });
 }
 
 export function toWriteValidation(

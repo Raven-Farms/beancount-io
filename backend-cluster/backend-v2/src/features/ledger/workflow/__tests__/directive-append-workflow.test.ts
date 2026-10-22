@@ -18,6 +18,11 @@ const IDENTITY: Identity = {
 };
 const LEDGER_ID = "alice/main";
 
+type BeanError = {
+  message: string;
+  source?: { filename: string; lineno: number };
+};
+
 const TXN = [
   '2026-02-05 * "Cafe" "Coffee"',
   "  Expenses:Food    4.50 USD",
@@ -31,7 +36,9 @@ function fixture(
     /** Files whose bytes are not valid UTF-8, as the repo service marks them. */
     lossy?: string[];
     transactionFile?: string | null;
-    projectedErrors?: { message: string }[];
+    projectedErrors?: BeanError[];
+    /** The ledger's errors before the write (the projection of no change). */
+    baselineErrors?: BeanError[];
   } = {},
 ) {
   const files = new Map(Object.entries(options.files ?? {}));
@@ -48,7 +55,9 @@ function fixture(
     ),
     checkProjectedFiles: jest.fn(
       async ({ overlays }: { overlays: unknown[] }) =>
-        overlays.length === 0 ? [] : (options.projectedErrors ?? []),
+        overlays.length === 0
+          ? (options.baselineErrors ?? [])
+          : (options.projectedErrors ?? []),
     ),
     changeGeneratedFiles: jest.fn(
       async (_params: { operations: { path: string; content?: string }[] }) =>
@@ -181,6 +190,60 @@ describe("DirectiveAppendWorkflow", () => {
       }),
     ).rejects.toMatchObject({ metadata: { residual: "1.00 USD" } });
     expect(ledgerRepo.changeGeneratedFiles).not.toHaveBeenCalled();
+  });
+
+  // w23/034: inserting above an existing error moved it down, and keying the
+  // diff on file:line read it as one the append introduced.
+  describe("with an error the ledger already has below the insertion", () => {
+    const missing = (filename: string, lineno: number) => ({
+      message: "Document file not found: receipts/2026.pdf",
+      source: { filename, lineno },
+    });
+
+    it.each([false, true])(
+      "does not count the moved error as new (dryRun %p)",
+      async (dryRun) => {
+        const { workflow, ledgerRepo } = fixture({
+          files: { "main.bean": "" },
+          baselineErrors: [missing("main.bean", 93)],
+          projectedErrors: [missing("main.bean", 97)],
+        });
+        const result = await workflow.appendDirectiveText({
+          identity: IDENTITY,
+          ledgerId: LEDGER_ID,
+          input: { text: TXN, dryRun },
+        });
+        expect(result.newErrors).toEqual([]);
+        expect(ledgerRepo.changeGeneratedFiles).toHaveBeenCalledTimes(
+          dryRun ? 0 : 1,
+        );
+      },
+    );
+
+    it.each([
+      [
+        "a second copy of it",
+        [missing("main.bean", 97), missing("main.bean", 4)],
+      ],
+      [
+        "the same message in another file",
+        [missing("main.bean", 97), missing("txns.bean", 2)],
+      ],
+    ])("still refuses %s", async (_case, projectedErrors) => {
+      const { workflow, ledgerRepo } = fixture({
+        files: { "main.bean": "" },
+        baselineErrors: [missing("main.bean", 93)],
+        projectedErrors,
+      });
+      await expect(
+        workflow.appendDirectiveText({
+          identity: IDENTITY,
+          ledgerId: LEDGER_ID,
+          input: { text: TXN },
+        }),
+      ).rejects.toMatchObject({ category: "VALIDATION_FAILED" });
+      expect(ledgerRepo.changeGeneratedFiles).not.toHaveBeenCalled();
+    });
   });
 
   it("commits anyway when the caller says allowInvalid and means it", async () => {

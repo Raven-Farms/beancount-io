@@ -55,6 +55,24 @@ describe("withPostWriteValidation", () => {
     });
   });
 
+  // w23/034: an edit that only shifts lines reported the moved error as new.
+  it("does not report an existing error that the write only moved", async () => {
+    const moved = (line: number) => ({
+      message: "Document file not found: a.pdf",
+      source: { filename: "main.bean", lineno: line },
+    });
+    const getErrors = jest
+      .fn()
+      .mockResolvedValueOnce([moved(93)])
+      .mockResolvedValueOnce([moved(97)]);
+    const { validation } = await run(getErrors);
+    expect(validation).toEqual({
+      errorsBefore: 1,
+      errorsAfter: 1,
+      newErrors: [],
+    });
+  });
+
   it("leaves a check that ran unmarked", async () => {
     const getErrors = jest
       .fn()
