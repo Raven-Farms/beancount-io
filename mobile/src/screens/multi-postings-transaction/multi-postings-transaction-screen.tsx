@@ -523,6 +523,9 @@ const MultiPostingsTransactionScreenComponent = () => {
     ledgerId: ledgerId ?? "",
     payee: seedPayee,
   });
+  // The accounts the last payee fill produced: picking another payee replaces
+  // them unless the user changed one (w21/411).
+  const lastPayeeSeedRef = useRef<string[] | null>(null);
   useEffect(() => {
     if (!seedPayee || payeeHistory.loading) return;
     const seededPostings = seedPostingsFromPayee(
@@ -530,8 +533,12 @@ const MultiPostingsTransactionScreenComponent = () => {
       initialDraft.postings,
       payeeHistory,
       (account) => isOpenOn(account, date, closeDates),
+      lastPayeeSeedRef.current,
     );
-    if (seededPostings) setPostings(seededPostings);
+    if (seededPostings) {
+      lastPayeeSeedRef.current = seededPostings.map((p) => p.account);
+      setPostings(seededPostings);
+    }
     setSeedPayee("");
   }, [
     seedPayee,

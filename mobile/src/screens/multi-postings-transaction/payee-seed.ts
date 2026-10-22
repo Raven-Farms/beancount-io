@@ -21,6 +21,20 @@ const untouched = (
   );
 
 /**
+ * Whether the accounts are still the ones the last payee fill put there. A
+ * second payee found the form "changed" by the first fill and left the first
+ * payee's card and category in place (w21/411); only a user edit to an account
+ * counts as touching it, so amounts typed since do not.
+ */
+const unchangedSinceSeed = (
+  current: readonly Posting[],
+  lastSeed: readonly string[] | null | undefined,
+) =>
+  lastSeed != null &&
+  current.length === lastSeed.length &&
+  current.every((posting, index) => posting.account === lastSeed[index]);
+
+/**
  * The postings to show once a known payee is picked: its usual source and
  * target accounts, so a repeat entry needs no account picks — what the keypad
  * flow did before multi-posting became the default (w21/023). Null leaves the
@@ -35,10 +49,15 @@ export function seedPostingsFromPayee(
   initial: readonly DraftPosting[],
   history: PayeeHistory,
   isOpen: (account: string) => boolean = () => true,
+  /** The accounts the previous payee fill produced, if there was one. */
+  lastSeed?: readonly string[] | null,
 ): Posting[] | null {
   const from = history.from.autoFill;
   const to = history.to.autoFill;
-  if (!from || !to || !untouched(current, initial)) return null;
+  if (!from || !to) return null;
+  if (!untouched(current, initial) && !unchangedSinceSeed(current, lastSeed)) {
+    return null;
+  }
   const fromOpen = isOpen(from);
   const toOpen = isOpen(to);
   if (!fromOpen && !toOpen) return null;

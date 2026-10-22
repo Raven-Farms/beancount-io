@@ -113,3 +113,82 @@ describe("seedPostingsFromPayee: closed usual accounts", () => {
     ).toBe(null);
   });
 });
+
+// w21/411: after the first payee filled the accounts they no longer equalled the
+// form's opening postings, so the next payee was treated as if the user had
+// edited them and kept the first payee's card and category.
+describe("picking a second payee", () => {
+  const first = () => {
+    const initial = opened();
+    const filled = seedPostingsFromPayee(
+      initial,
+      initial,
+      history("TRADER JOES"),
+    )!;
+    return {
+      initial,
+      filled,
+      seed: filled.map((p) => p.account),
+    };
+  };
+
+  it("replaces the first payee's accounts", () => {
+    const { initial, filled, seed } = first();
+    expect(
+      accounts(
+        seedPostingsFromPayee(
+          filled,
+          initial,
+          history("CITY BUS"),
+          () => true,
+          seed,
+        ),
+      ),
+    ).toEqual(["Assets:Cash", "Expenses:Transport"]);
+  });
+
+  it("does so after an amount was typed, which is not an account edit", () => {
+    const { initial, filled, seed } = first();
+    const typed = updatePostingAmount(filled, 0, "12.50");
+    expect(
+      accounts(
+        seedPostingsFromPayee(
+          typed,
+          initial,
+          history("CITY BUS"),
+          () => true,
+          seed,
+        ),
+      ),
+    ).toEqual(["Assets:Cash", "Expenses:Transport"]);
+  });
+
+  it("leaves an account the user changed after the fill alone", () => {
+    const { initial, filled, seed } = first();
+    const edited = updatePostingAccount(filled, 1, "Expenses:Gifts");
+    expect(
+      seedPostingsFromPayee(
+        edited,
+        initial,
+        history("CITY BUS"),
+        () => true,
+        seed,
+      ),
+    ).toBe(null);
+  });
+
+  it("is what the screen passes, and keeps the last fill", () => {
+    const src = fs
+      .readFileSync(
+        path.join(__dirname, "..", "multi-postings-transaction-screen.tsx"),
+        "utf8",
+      )
+      .replace(/\s+/g, "");
+    expect(src.includes("lastPayeeSeedRef.current,);")).toBe(true);
+    expect(
+      src.includes(
+        "lastPayeeSeedRef.current=seededPostings.map((p)=>p.account);",
+      ),
+    ).toBe(true);
+  });
+});

@@ -83,7 +83,6 @@
 - [484](./484.md) — Profile, server settings, budget delete errors not announced (354 sibling)
 - [485](./485.md) — Files Up and budget Delete targets under 44pt
 - [315](./blocked/315.md) — In-app commits signed with Gitea username and real email (no full_name, no noreply) — **blocked:** needs the owner's noreply-address and published-history decisions, and a production backfill of existing Gitea users that can't be verified here
-- [411](./411.md) — New Transaction: changing payee keeps first payee's accounts
 - [412](./412.md) — Payee fill ranks FROM/TO independently; can fill same account twice
 - [413](./413.md) — Parked keypad flow: overwrite, JPY ×100, double submit, closed accounts
 - [414](./414.md) — Home 1M/3M count back from last entry, not today (240 sibling)
