@@ -1,6 +1,6 @@
 # w6 · m6 — Publish the ledger skills to ClawHub for OpenClaw and Hermes Agent
 
-**Worker:** worker1 **Goal:** An OpenClaw or Hermes Agent user installs any `beancount-*` skill by name from ClawHub, and it works on its own without a Git checkout or this repository's link installer. **Status:** blocked (t001–t012 and six named prerequisites done;0.3.7 validated/submitted; nine accepted versions await public promotion, then independent current-byte/native-host checks)
+**Worker:** worker1 **Goal:** An OpenClaw or Hermes Agent user installs any `beancount-*` skill by name from ClawHub, and it works on its own without a Git checkout or this repository's link installer. **Status:** blocked (closeout awaits current-content public versions and host checks;0.3.8 source repair validated; protected changed-content1.0.4 publication proceeds independently)
 
 **Research date:** 2026-10-16. Sources: ClawHub's quickstart, how-it-works, and skill-format pages at `docs.openclaw.ai/clawhub/`; Hermes Agent's skills page at `hermes-agent.nousresearch.com/docs/user-guide/features/skills`. Re-check the CLI flags against `clawhub --help` and `hermes skills --help` before relying on them.
 
@@ -20,7 +20,7 @@
 | [t010](done/t010.md) | Adoption surface — **DONE** | 30m | t009 |
 | [t011](done/t011.md) | Simplify — **DONE** | 30m | t010 |
 | [t012](done/t012.md) | Test coverage — **DONE** | 45m | t010, t011 |
-| [t013](t013.md) | Closeout after the listings are live — **BLOCKED** (nine accepted versions await promotion) | 15m | t008, t012, w3/m55/t002, w3/m55/t003, w3/m56/t002, w3/m56/t003, w3/m57/t003, w3/m57/t004 |
+| [t013](t013.md) | Closeout after the listings are live — **BLOCKED** (current-source public/host DoD pending) | 15m | t008, t012, w3/m55/t002, w3/m55/t003, w3/m56/t002, w3/m56/t003, w3/m57/t003, w3/m57/t004 |
 
 ## Decisions — 2026-10-19
 
@@ -219,3 +219,38 @@ reports and limits are recorded in [t013](t013.md#publisher-scan-follow-through-
 and the [rehearsal](../../../../docs/skills/clawhub-rehearsal.md#publisher-side-scan-diagnosis--2026-10-22-utc).
 Continue existing jobs and every independently promoted version; do not submit
 duplicate jobs. Public-byte/native-host verification and closeout remain open.
+
+
+## Validated source remediation — 2026-10-22 UTC
+
+All nine saved manual scan jobs complete/write back by01:42UTC; primary verdicts
+are clean for ask/close/import/reconcile and suspicious for the other five.
+This changes what can proceed: concrete local/hosted and unchecked-write
+contradictions are repaired in suite0.3.8, with broker/category/dedup references,
+reconcile statement-net/staged-open rules, and the generated13-workflow init
+inventory aligned. Descriptions and115 routing requests remain unchanged.
+
+The repair passes142 checkout tests,38 published-minimum recipes,37 checker
+tests, structural/guidance validation, and actual native controls: six boundary
+cases, four fresh16/18 reconciliation cases with real confirmations, and two
+final init cases. Both reconciliation16 outcomes end green; both18 outcomes
+retain the diagnosed red assertion/residual-1.10. Original defects, CLI/cache
+failures and recovery limits are retained in the [dated evidence](../../../../docs/skills/scope-contract-controls-20261022.md).
+
+All13 fingerprints differ from accepted0.3.7 content and pass explicit1.0.4 dry
+runs (119 authored files, map SHA256
+`3c1e0c9c84e4d265f4f2014828f6aa6bbd83a448e604c8333a3455396451f5da`).
+The protected workflow can select this higher version without re-uploading
+identical pending content; unchanged previews still skip. Repository work and
+publication continue inside the blocked closeout. This is not a new user-input
+gate, a scan override or evidence of public promotion.
+
+**Unblock:** the repository worker performs the already-authorized protected
+changed-content release, verifies actual receipts/fingerprints/cleanup, then
+checks each independently eligible current version's public owner/bytes and
+supported native host install. ClawHub owns staged publication finalization;
+normal manual scan writeback alone does not finalize it. Close t013 only after
+all current-main bundles and every milestone DoD hold. Preserve Hermes039/040
+and original authenticated host-query limits. **Who can clear it:** repository
+worker for the release and eligible checks; ClawHub for promotion; host policy
+owners for their separately tracked compatibility gaps.

@@ -110,6 +110,12 @@ Shared contracts for the `beancount-*` suite (apply each one only to skills that
 
 For any skill that emits beancount, run `bea check` when `bea` is installed (managed engine). Without `bea`, a developer `bean-check` is acceptable; prefer telling the user to install `bea` over `pip install beancount`. The `beancount-options` skill bakes verification into its workflow.
 
+Existing-ledger writes wait for a working checker and follow the compatibility
+reference's preflight/proposed-copy/final checks. Only beancount-init's fresh
+scaffold has an explicitly unvalidated path; it does not authorize later
+financial writes. Hosted ledgers stop these local skills and require a
+separately requested workflow or clone, even when an MCP server is connected.
+
 Before opening a skills PR, run the structural suite locally:
 
 ```zsh
@@ -140,6 +146,12 @@ The suite also ships as one `beancount-io` plugin (`.claude-plugin/marketplace.j
 The root [`Publish (clawhub)` workflow](../.github/workflows/publish-clawhub.yml) builds the customer suite with `python3 beancount-skills.py bundle tmp/clawhub-bundles` from `scripts/skills/`. Each bundle contains the shared references it reads and a copy of `skills/LICENSE`, and leaves eval fixtures behind. Pull requests and pushes touching `skills/**`, `scripts/skills/**`, `docs/skills/**`, or the workflow dry-run every bundle with pinned ClawHub CLI 0.23.3 and no publisher credentials. A dispatch with `publish` unset also performs only these dry runs.
 
 For a real release, configure the `clawhub-publish` GitHub environment with a required reviewer and deployment branches restricted to `main`. Store `CLAWHUB_TOKEN` as an environment secret and `CLAWHUB_OWNER` as a configuration variable containing the chosen publisher handle. Set the configuration variable `CLAWHUB_MIT0_APPROVED` to the string `true` only after the repository owner records approval for publishing the customer skills under ClawHub's MIT-0 terms (the repository itself remains MIT). The workflow refuses publication without the license approval, handle, or token. Only a manual dispatch from `main` with `publish` selected reaches the publish job; it records repository, commit, ref, and canonical source path for each skill. Unchanged bundles are skipped, while new or changed bundles use ClawHub's automatic versions.
+
+For a verified content fix whose automatic version collides with an already
+accepted pending release, the dispatch's optional `version` selects an explicit
+version above those existing slots. The publisher still previews and skips
+unchanged content. Record the exact changed fingerprints and dry run first;
+this input is not a way to repeat identical pending content or override review.
 
 Before the first publish, verify w6/m6/t001's recorded MIT-0 approval and publisher, use the current skill names selected in m6, then rebuild and repeat the dry runs on the release commit. Reconcile the suite inventory with any newly shipped skills. The protected-environment reviewer checks these prerequisites before allowing the first dispatch. Registry moderation and clean OpenClaw/Hermes installation checks remain the operator's t007/t008 work; local dry-run success does not establish that a listing is live or installable. Keep the existing Git/link installation documented until that evidence exists.
 

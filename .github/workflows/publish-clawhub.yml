@@ -21,6 +21,10 @@ on:
         description: "Publish the bundles (unset: dry run only)"
         type: boolean
         default: false
+      version:
+        description: "Optional explicit version for changed bundles (for fixes beyond an existing pending version)"
+        type: string
+        default: ""
 
 permissions: {}
 
@@ -78,6 +82,7 @@ jobs:
       CLAWHUB_CONFIG_PATH: ${{ github.workspace }}/scripts/skills/tmp/clawhub-publish.json
       CLAWHUB_OWNER: ${{ vars.CLAWHUB_OWNER }}
       CLAWHUB_MIT0_APPROVED: ${{ vars.CLAWHUB_MIT0_APPROVED }}
+      CLAWHUB_RELEASE_VERSION: ${{ inputs.version }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -121,8 +126,25 @@ jobs:
           for bundle in tmp/clawhub-bundles/beancount-*; do
             test -f "$bundle/SKILL.md"
             slug="$(basename "$bundle")"
+            publish_args=(--slug "$slug" --owner "$CLAWHUB_OWNER")
+            if [[ -n "$CLAWHUB_RELEASE_VERSION" ]]; then
+              # Preserve the ordinary unchanged-content skip: an explicit
+              # --version otherwise asks the CLI to publish identical files.
+              plan="$(clawhub --no-input skill publish "$bundle" \
+                --slug "$slug" --owner "$CLAWHUB_OWNER" --dry-run --json)"
+              plan_status="$(python3 -c 'import json, sys; print(json.load(sys.stdin)["status"])' <<<"$plan")"
+              if [[ "$plan_status" == unchanged ]]; then
+                printf '%s\n' "$plan"
+                continue
+              fi
+              if [[ "$plan_status" != would-publish ]]; then
+                echo "::error::Unexpected publication plan status: $plan_status"
+                exit 1
+              fi
+              publish_args+=(--version "$CLAWHUB_RELEASE_VERSION")
+            fi
             clawhub --no-input skill publish "$bundle" \
-              --slug "$slug" --owner "$CLAWHUB_OWNER" \
+              "${publish_args[@]}" \
               --changelog "$changelog" \
               --source-repo "$GITHUB_REPOSITORY" --source-commit "$GITHUB_SHA" \
               --source-ref "$GITHUB_REF" --source-path "skills/$slug" \

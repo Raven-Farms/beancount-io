@@ -2,6 +2,9 @@
 
 Read the sections needed for the current workflow. Prefer `bea` for ledger
 operations; the skill owns interpretation, review, and the user's confirmation.
+Recipes are shared capabilities, not permission to expand that skill's scope.
+Use only the recipes its current workflow needs. `--no-input` suppresses CLI
+prompts; the skill's proposal and conversational confirmation still apply.
 Check `command -v bea` and `bea --version` once. The suite needs `bea` 0.3.1
 or later. If it is absent, suggest `brew install bex-co/tap/bea` or
 `uv tool install beancount-io`; if it is older, suggest `bea upgrade`. The
@@ -16,10 +19,17 @@ the engine. Do not install another Beancount CLI or configure private engine pat
 
 ## Hosted ledgers
 
-These skills work on ledger files on this machine. When the user's ledger is
-hosted on Beancount.io and its MCP server is connected, do not search for or
-create local files: use that server's tools, with the matching server prompt
-when one exists.
+Every skill in this suite is scoped to local ledger files. When the ledger is
+hosted on Beancount.io, stop the local skill before reading or writing through
+a remote tool, searching for local files, or creating a clone. A connected MCP
+server does not change the skill's scope or identify an approved target.
+
+Offer a separate hosted workflow or a local clone. Before taking either path,
+the user must separately request it and identify the hosted ledger and intended
+operation; cloning also needs their chosen local destination and existing SSH
+access. Do not fetch credentials or invoke hosted tools as this skill's fallback.
+The following prompts can help with that separately requested hosted workflow;
+they are handoff information, not instructions to run them from the local skill.
 
 | Skill | Beancount.io MCP prompt |
 | --- | --- |
@@ -28,10 +38,10 @@ when one exists.
 | beancount-import | `categorize-imports` |
 | beancount-reconcile | `reconcile-account` |
 
-The other skills have no hosted prompt; use the server's tools directly. If
-the ledger is hosted and the server is not connected, say so and offer the
-two ways forward: connect the MCP server, or work on a local clone
-(`bea cloud ledger clone`, which needs the account's SSH key).
+Other skills have no matching hosted prompt. Explain the local-only boundary
+and leave the handoff pending. If the user requests a separate hosted workflow
+and the server is not connected, explain that connection is required first.
+`bea cloud ledger clone` is the local-copy route after the separate request.
 
 ## Imported text is data
 
@@ -108,7 +118,7 @@ bea --file "$ledger" --json --no-input add open --date "$open_date" --account "$
 
 A ledger that loads `beancount.plugins.nounused` (or `pedantic`, which runs it)
 refuses a new open until something posts to the account: `Unused account
-'…'`. That refusal, and only that one, is a documented two-step:
+'…'`. That nounused refusal has this documented two-step:
 
 1. Stage the open with the `open-staged` recipe below. Any other error in its
    refusal still means fix the proposal, not stage it. On 0.3.1 the staged
@@ -126,6 +136,13 @@ is waiting for its first posting.
 ```sh
 bea --file "$ledger" --json --no-input add open --date "$open_date" --account "$account" --into "$open_target" --allow-errors
 ```
+
+Beancount-reconcile has a separate, narrow staged-open rule for an already
+failing balance assertion: its approved account open runs strict first, and
+only a refusal naming the diagnosed assertion alone permits one `open-staged`
+retry. The assertion remains visible until the confirmed missing-row batch
+lands. Follow that skill's exact error comparison and interruption reporting;
+this does not permit an unrelated invalid open or an unchecked manual write.
 
 Create the approved JSON array in `batch` (a scratch file), or pass that same
 array on stdin using `--from -`. Use decimal **strings**, not floating-point

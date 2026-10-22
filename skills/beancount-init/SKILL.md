@@ -47,7 +47,7 @@ Fava is a separate, optional browser runtime; run Step 4 only when requested.
 
 ## Step 1 — Preflight
 
-Local ledger files only. If the ledger is hosted on Beancount.io and its MCP server is connected, use that server's tools instead (`references/bea-cli.md`, Hosted ledgers).
+Local ledger files only. For a ledger hosted on Beancount.io, stop this skill and offer a separately requested hosted workflow or local clone (`references/bea-cli.md`, Hosted ledgers).
 
 Run `pwd && ls -A` to see the working directory.
 

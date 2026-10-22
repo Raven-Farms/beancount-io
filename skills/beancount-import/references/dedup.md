@@ -75,7 +75,13 @@ Sharing the hash input is deliberate: when a later CSV export's raw description 
 
 **Layer 2c — the same purchase from another source kind.** Layer 2 skips entries that carry an `import-id`, so a purchase first recorded from a PDF statement is invisible to it when the same month later arrives as CSV (and the reverse). For each surviving candidate, also look for existing entries that post the **same amount** to the **source account** within **±3 days** and whose `import-id` source kind **differs** from the candidate's — kinds are the prefix families: native (`ofx:`/`bank:`/…), `csv:`, `pdf:`, and each migration prefix. Description similarity is **not** required: two sources word one purchase differently, which is the whole problem. Each hit is a suspected duplicate, presented and decided like the layers above; a pair already shown under Layer 2b is not shown twice. Example: the ledger holds the 2026-06-03 Starbucks entry above (`pdf:sha256:273e1fe28b2668d9`, narration from the statement); a July CSV export offers `2026-06-04, -12.40, SQ *STARBUCKS #12345` for the same account. The hashes differ (different raw wording, posting date one day later), Layer 1 misses, Layer 2 skips the id-bearing entry — Layer 2c pairs them (same amount and account, one day apart, `csv:` candidate vs `pdf:` entry) and asks. *Skip* is the usual answer; *import* when they are genuinely two coffees.
 
-If the user chooses *skip*, offer to add the candidate's `import-id` onto the **existing** manual entry (one metadata line — the only edit-of-existing-entries this skill ever proposes, and only with explicit consent). This makes the next re-import exact-match it in layer 1 instead of re-asking. The same offer applies to a Layer 2c skip: adding the candidate's id as a second metadata line (`import-id-2`) makes both sources exact-match next time.
+If the user chooses *skip*, leave the existing entry byte-for-byte unchanged.
+These append-only workflows do not attach `import-id` or `import-id-2` to old
+entries. Explain that the same fuzzy review can recur on a later import.
+If useful, show the candidate ID for the user's separate manual edit, without
+making that edit or claiming it has already enabled exact-match deduplication.
+New approved entries still carry their required source identities, including
+both IDs on a newly merged transfer.
 
 ## Ordering
 

@@ -81,7 +81,7 @@ Seven stages, in order: **Discover → Normalize → Stage → Dedup → Suggest
 
 ### 1. Discover
 
-Local ledger files only. If the ledger is hosted on Beancount.io and its MCP server is connected, use that server's `categorize-imports` prompt and tools instead (beancount-init's `references/bea-cli.md`, Hosted ledgers).
+Local ledger files only. For a ledger hosted on Beancount.io, stop this skill and offer a separately requested hosted workflow or local clone (beancount-init's `references/bea-cli.md`, Hosted ledgers).
 
 Find beancount files in the working directory:
 

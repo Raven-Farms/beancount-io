@@ -50,7 +50,7 @@ Read beancount-init's `references/bea-cli.md` (from this skill's folder, `../bea
 
 ### 1. Discover
 
-Local ledger files only. If the ledger is hosted on Beancount.io and its MCP server is connected, use that server's tools instead (beancount-init's `references/bea-cli.md`, Hosted ledgers). Find the root ledger with the suite's discovery convention (`fd -e beancount -e bean .`; the root has `option`/`include` directives) and confirm it when ambiguous.
+Local ledger files only. For a ledger hosted on Beancount.io, stop this skill and offer a separately requested hosted workflow or local clone (beancount-init's `references/bea-cli.md`, Hosted ledgers). Find the root ledger with the suite's discovery convention (`fd -e beancount -e bean .`; the root has `option`/`include` directives) and confirm it when ambiguous.
 
 ### 2. Resolve the account, currency, and period
 

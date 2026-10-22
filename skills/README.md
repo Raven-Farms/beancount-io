@@ -2,7 +2,7 @@
 
 Skills for Beancount users working with a ledger through a coding agent. The thirteen workflows below support Claude Code and Codex; their source files live in [`skills/`](.).
 
-The skills work on ledger files on your machine. For a ledger hosted on Beancount.io, connect the Beancount.io MCP server instead; the skills hand hosted requests to its tools and prompts.
+The skills work on ledger files on your machine. A hosted ledger stops the local workflow. You can separately request a Beancount.io MCP workflow for a named ledger, or a local clone; the skills do not invoke remote tools or clone a ledger merely because a server is connected.
 
 Install **`bea`** 0.3.1 or later once ([Homebrew](https://github.com/bex-co/homebrew-tap) or `uv tool install beancount-io`). Skills use that single install for check, query, report, import, and writes — they do not ask you to `pip install beancount`. Optional Beangulp/Beanprice features: `bea engine enable beangulp|beanprice`. Fava's browser UI is optional and separate from `bea` ledger operations.
 

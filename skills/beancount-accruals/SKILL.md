@@ -50,7 +50,7 @@ Read beancount-init's `references/bea-cli.md` (from this skill's folder, `../bea
 
 ### 1. Establish the schedule
 
-Local ledger files only (hosted ledgers: beancount-init's `references/bea-cli.md`, Hosted ledgers). For each accrual the user wants, pin down the contract's fields: schedule id, expense and balance-sheet accounts (existing accounts only — categories are never invented), basis amount with its support, service interval, day-count convention, and target kind (cumulative or current-period). A policy may rest on an estimate the user approves, with method and source stated on the schedule. When any field is missing, ask; a draft built on an unstated assumption is an estimate wearing a schedule's clothes.
+Local ledger files only. For a ledger hosted on Beancount.io, stop this skill and offer a separately requested hosted workflow or local clone (beancount-init's `references/bea-cli.md`, Hosted ledgers). For each accrual the user wants, pin down the contract's fields: schedule id, expense and balance-sheet accounts (existing accounts only — categories are never invented), basis amount with its support, service interval, day-count convention, and target kind (cumulative or current-period). A policy may rest on an estimate the user approves, with method and source stated on the schedule. When any field is missing, ask; a draft built on an unstated assumption is an estimate wearing a schedule's clothes.
 
 ### 2. Compute and check identity
 

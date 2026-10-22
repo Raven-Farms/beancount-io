@@ -440,6 +440,77 @@ class TestBundle(Workspace):
 
 
 class TestClawHubWorkflow(Workspace):
+    def run_publish(self, version: str, malformed: bool = False):
+        workflow = (SCRIPTS_DIR.parents[1] / ".github/workflows/publish-clawhub.yml").read_text()
+        match = re.search(
+            r"^      - name: Publish the release commit's bundles\n        run: \|\n((?:          .*\n)*)",
+            workflow, re.MULTILINE,
+        )
+        self.assertIsNotNone(match)
+        command = "\n".join(line[10:] for line in match[1].splitlines())
+        package = self.root / "publisher"
+        for name in ("beancount-add", "beancount-ask"):
+            folder = package / "tmp/clawhub-bundles" / name
+            folder.mkdir(parents=True)
+            (folder / "SKILL.md").write_text(name)
+        executable = self.root / "bin/clawhub"
+        executable.parent.mkdir()
+        executable.write_text(
+            "#!/usr/bin/env python3\n"
+            "import json, os, sys\n"
+            "args = sys.argv[1:]\n"
+            "with open(os.environ['PUBLISH_CALLS'], 'a') as log:\n"
+            "    log.write(json.dumps(args) + '\\n')\n"
+            "if '--dry-run' in args and os.environ['MALFORMED_PLAN'] == '1':\n"
+            "    print('invalid JSON')\n"
+            "else:\n"
+            "    slug = args[args.index('--slug') + 1]\n"
+            "    print(json.dumps({'status': 'unchanged' if slug == 'beancount-ask' else 'would-publish'}))\n"
+        )
+        executable.chmod(0o755)
+        calls_file = self.root / "calls.jsonl"
+        env = {
+            **os.environ,
+            "PATH": os.pathsep.join((str(executable.parent), str(Path(sys.executable).parent), os.environ["PATH"])),
+            "CLAWHUB_OWNER": "fixture-owner",
+            "CLAWHUB_RELEASE_VERSION": version,
+            "GITHUB_SHA": "a" * 40,
+            "GITHUB_REF": "refs/heads/main",
+            "GITHUB_REPOSITORY": "example/fixture",
+            "PUBLISH_CALLS": str(calls_file),
+            "MALFORMED_PLAN": "1" if malformed else "0",
+        }
+        env.pop("CLAWHUB_TOKEN", None)
+        result = subprocess.run(["bash", "-euc", command], cwd=package, env=env, capture_output=True, text=True)
+        calls = [json.loads(line) for line in calls_file.read_text().splitlines()] if calls_file.exists() else []
+        return result, calls
+
+    def test_explicit_version_uploads_only_changed_bundles(self):
+        result, calls = self.run_publish("1.0.4")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        previews = [call for call in calls if "--dry-run" in call]
+        uploads = [call for call in calls if "--dry-run" not in call]
+        self.assertEqual(len(previews), 2)
+        self.assertEqual(len(uploads), 1)
+        upload = uploads[0]
+        self.assertEqual(upload[upload.index("--slug") + 1], "beancount-add")
+        self.assertIn("--version", upload)
+        self.assertEqual(upload[upload.index("--version") + 1], "1.0.4")
+        self.assertEqual(upload[upload.index("--source-repo") + 1], "example/fixture")
+        self.assertTrue(all("--version" not in call for call in previews))
+
+    def test_default_version_keeps_the_original_cli_skip_path(self):
+        result, calls = self.run_publish("")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(len(calls), 2)
+        self.assertTrue(all("--version" not in call and "--dry-run" not in call for call in calls))
+
+    def test_invalid_preview_stops_before_upload(self):
+        result, calls = self.run_publish("1.0.4", malformed=True)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertEqual(len(calls), 1)
+        self.assertIn("--dry-run", calls[0])
+
     def test_validate_publishes_dry_runs_of_the_real_self_contained_bundles(self):
         workflow = (SCRIPTS_DIR.parents[1] / ".github/workflows/publish-clawhub.yml").read_text()
         validate = workflow.split("\n  validate:\n", 1)[1].split("\n  publish:\n", 1)[0]
@@ -1226,15 +1297,63 @@ class TestBeaRecipes(unittest.TestCase):
         # Statement ties against itself: computed ending equals printed, gap zero.
         self.assertEqual(
             self.recipe("statement-arithmetic")["rows"],
-            [["933.80", "0.00", "933.80"]],
+            [["-66.20", "933.80", "0.00", "933.80"]],
         )
         # A printed ending the rows do not reach is an extraction gap, signed.
         self.values.update(printed_ending="930.00")
         self.assertEqual(
             self.recipe("statement-arithmetic")["rows"],
-            [["933.80", "-3.80", "933.80"]],
+            [["-66.20", "933.80", "-3.80", "933.80"]],
         )
+        # Credits belong in the source net, not just in the ending balance.
+        statement = SUITE / "beancount-reconcile/evals/files/eval2_statement.csv"
+        with statement.open(newline="") as handle:
+            amounts = [Decimal(row["Amount"]) for row in csv.DictReader(handle)]
+        self.values.update(
+            included_total="(" + " + ".join(map(str, amounts)) + ")",
+            printed_ending="2902.70",
+        )
+        answer = self.recipe("statement-arithmetic")["rows"][0]
+        self.assertEqual(Decimal(answer[0]), sum(amounts))
+        self.assertEqual(answer[1:], ["2902.70", "0.00", "933.80"])
         self.assertEqual(ledger.read_bytes(), before)
+
+    def test_reconcile_stages_an_approved_open_on_its_known_assertion_then_checks_green(self):
+        files = SUITE / "beancount-reconcile/evals/files"
+        ledger = self.books / "red.bean"
+        ledger.write_bytes((files / "eval16_ledger.beancount").read_bytes())
+        before = ledger.read_bytes()
+        self.values.update(
+            ledger=str(ledger), target=ledger.name, open_target=ledger.name,
+            open_date="2026-01-01", account="Expenses:Uncategorized",
+        )
+        refused = self.recipe("open", succeeds=False)
+        self.assertIn("expected 2902.70 USD != accumulated 2945.80 USD", refused.stderr)
+        self.assertEqual(ledger.read_bytes(), before)
+        opened = self.recipe("open-staged")
+        self.assertEqual(opened["written"], 1)
+        self.assertTrue(any("expected 2902.70 USD != accumulated 2945.80 USD" in warning for warning in opened["warnings"]))
+        rows = []
+        for date, payee, number, expense in (
+            ("2026-05-12", "TRADER JOES", "31.10", "Expenses:Food:Groceries"),
+            ("2026-05-22", "CITY PARKING", "12.00", "Expenses:Uncategorized"),
+        ):
+            rows.append({
+                "date": date, "payee": payee, "flag": "!", "narration": "Statement row",
+                "postings": [
+                    {"account": "Assets:Bank:Checking", "units": {"number": "-" + number, "currency": "USD"}},
+                    {"account": expense, "units": {"number": number, "currency": "USD"}},
+                ],
+            })
+        self.batch(rows)
+        self.assertEqual(self.recipe("batch")["written"], 2)
+        self.recipe("check")
+        self.assertTrue(ledger.read_bytes().startswith(before))
+        self.assertRegex(ledger.read_text(), r"2026-06-01 balance Assets:Bank:Checking\s+2902\.70 USD")
+        after = ledger.read_bytes()
+        duplicate = self.recipe("open-staged", account="Assets:Bank:Checking", succeeds=False)
+        self.assertIn("Duplicate open directive", duplicate.stderr)
+        self.assertEqual(ledger.read_bytes(), after)
 
     def test_liability_tie_out_negates_the_printed_ending_balance(self):
         # A card statement prints the amount owed as a positive running

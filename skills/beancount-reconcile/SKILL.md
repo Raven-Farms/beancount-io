@@ -60,7 +60,7 @@ Six phases, in order: **Discover → Normalize → Coverage → Match → Propos
 
 ### 1. Discover
 
-Local ledger files only. If the ledger is hosted on Beancount.io and its MCP server is connected, use that server's `reconcile-account` prompt and tools instead (beancount-init's `references/bea-cli.md`, Hosted ledgers).
+Local ledger files only. For a ledger hosted on Beancount.io, stop this skill and offer a separately requested hosted workflow or local clone (beancount-init's `references/bea-cli.md`, Hosted ledgers).
 
 Learn the ledger and the reconciliation target before reading the statement.
 
@@ -116,11 +116,17 @@ Before classifying anything, establish what the statement actually covers and th
 - **Excluded rows** — each with its reason. Included + excluded must equal the source rows; an unaccounted row means the extraction is wrong, not that the row was unimportant.
 - **Ambiguous mappings** — a counterparty column that could hold the description, or doubt about which column carries the amount. Ask before using either.
 
+Compute row counts and signed totals from the normalized records with local
+decimal arithmetic. Copy those outputs into Coverage; a debit-only subtotal
+is outflows, not the net of a statement that also has credits. With no excluded
+rows, the source total must equal `included_total` in the executed query below.
+Resolve any disagreement before asking for approval.
+
 **Statement arithmetic.** When the statement prints an opening balance, opening + included rows must equal the printed ending balance. Compute it with the engine's decimal arithmetic and quote the output — `$included_total` is the included rows as a parenthesized sum of decimal literals in ledger sign, `$opening`/`$printed_ending` the printed balances in ledger sign:
 
 <!-- recipe: statement-arithmetic -->
 ```sh
-bea --file "$ledger" --json --no-input query "SELECT $opening + $included_total AS computed_ending, $printed_ending - ($opening + $included_total) AS gap, sum(number) AS ledger_window WHERE account = '$account' AND currency = '$currency' AND date >= $start AND date < $end_plus_1"
+bea --file "$ledger" --json --no-input query "SELECT $included_total AS included_total, $opening + $included_total AS computed_ending, $printed_ending - ($opening + $included_total) AS gap, sum(number) AS ledger_window WHERE account = '$account' AND currency = '$currency' AND date >= $start AND date < $end_plus_1"
 ```
 
 A nonzero `gap` is an extraction problem — a misread amount, a missed row, a sign flip — not a ledger discrepancy. Report it with the figures and stop before Match; never improve the match rate by quietly re-reading or dropping rows until it ties.
@@ -181,6 +187,15 @@ bea --file "$ledger" --json --no-input query "SELECT sum(number) AS ledger, sum(
 - The residual's sign is part of the result: negative means the ledger would hold more than the statement says; positive means less.
 
 When the ledger is already red — most often the user's own balance assertion failing, the very thing this reconcile is diagnosing — every read refuses under `--json` with `Ledger has N error(s). Pass --allow-errors to report anyway.`, not with an engine failure. Re-run the **read-only** diagnosis (the postings query in `references/matching.md` and the tie-out) with `--allow-errors`, as in the recipe below; tell the user the errors its answer reports (`ledger_valid: false`, `ledger_errors`; on `bea` 0.3.1 the `check` recipe names them) instead of hiding them. Writes stay strict by default: always run the confirmed batch without `--allow-errors` first. When the residual is exactly zero, writing the missing rows clears the failing assertion, so the batch passes on its own. When the residual is nonzero, the batch is refused naming the still-failing assertion; if — and only if — that refusal names the assertion being diagnosed alone (same file, line, account, and expected amount, no row errors and no other ledger errors), re-run once with `--allow-errors`, report that the ledger stays red on it until the mismatch is resolved, and propose no assertion. The flag tolerates only errors the ledger already had, so this lands true rows without hiding anything new; any other refusal means fix the proposal, not flag it through.
+
+An approved new account may need to open before that batch. Try the strict
+`open` recipe first. Only when its refusal names that same diagnosed assertion
+alone, with no new or other ledger error, retry the approved open once using
+`open-staged`. Confirm its warning still names the original assertion. Then
+write the approved missing-row batch strict first, following the rule above.
+Until that batch lands, the account is open but reconciliation is unfinished;
+report that exact partial state if interrupted. This exception belongs to this
+`bea` workflow only; no checker or an unrelated error still blocks writes.
 
 <!-- recipe: tie-out-on-a-red-ledger -->
 ```sh
@@ -276,7 +291,11 @@ In the clean case, you wrote the missing entries plus a passing `balance` assert
 
 A partial reconcile (unresolved suspects, mismatches, or duplicates) wrote no assertion. On a ledger that was already red, the check still names the diagnosed assertion afterwards — report that it stays red until the mismatch is resolved, and do not report success. Otherwise its check stays green and the residual and its causes are reported for the user to fix.
 
-If validation cannot run, report the result as unvalidated and suggest installing `bea`; manual tie-out does not replace the engine check.
+If no working validator is available before a write, keep the ledger unchanged
+and show the unposted proposal; suggest installing `bea`. If validation stops
+working after an earlier successful write, stop further writes and report that
+actual partial state without a success claim. Manual tie-out never replaces
+the engine check.
 
 ## Balance-assertion date — the one subtlety to get right
 

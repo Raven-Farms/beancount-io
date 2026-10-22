@@ -70,7 +70,7 @@ Five phases: **Intake → Draft → Test → Wire → (or) Repair.**
 
 ### 1. Intake
 
-Local ledger files only. If the ledger is hosted on Beancount.io and its MCP server is connected, use that server's tools instead (beancount-init's `references/bea-cli.md`, Hosted ledgers).
+Local ledger files only. For a ledger hosted on Beancount.io, stop this skill and offer a separately requested hosted workflow or local clone (beancount-init's `references/bea-cli.md`, Hosted ledgers).
 
 Need three things:
 

@@ -13,7 +13,7 @@
 
 The dominant and least standardized format. First import of a new source: inspect the header + first 3 data rows, propose a mapping, **confirm with the user, persist to the config block**. Repeat imports apply the stored mapping with zero questions — but if the header no longer matches the stored mapping, stop and re-confirm (the bank changed the format; also mention `beancount-importer-author` can codify + test the new format).
 
-**Columns to establish:** date, description/payee, amount (or debit + credit pair), optional: pending/status, balance (ignore — reconcile's job), category (ignore — the ledger's history is the authority, bank categories are noise).
+**Columns to establish:** date, description/payee, amount (or debit + credit pair), optional: pending/status, balance (reconcile's job), category. For ordinary bank/card imports, the ledger's history is the categorization authority; bank categories do not override it. When beancount-migrate reads this reference for a finance-app export, retain the original category, subcategory and split labels for its user-approved mapping; never discard them under the bank-import rule.
 
 **Amount conventions** (ask when not provable from the data):
 

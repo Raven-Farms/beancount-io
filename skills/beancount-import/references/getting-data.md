@@ -8,7 +8,7 @@ Every US/CA bank and card portal exports CSV and most export OFX/QFX ("Quicken f
 
 - Prefer **OFX/QFX over CSV** when offered: it carries `FITID`, the strongest dedup ID (see dedup.md).
 - Export a **bounded, slightly overlapping window** (e.g. last 60 days, monthly). Overlap is safe — dedup makes re-imported rows no-ops; gaps are the real risk. `beancount-reconcile`'s balance assertions are the backstop that catches a gap.
-- Brokerage note: cash-account exports import fine here; **trade confirmations do not** — route trades to `beancount-options` (and decline to import buy/sell rows of securities: cost-basis booking is out of this skill's scope).
+- Brokerage files: supported activity CSV and holdings/cost-basis CSV exports follow `references/broker-activity.md`, including its required lot evidence; do not discard buy/sell rows merely because they are securities. A described stock/fund/crypto event belongs to beancount-trade, and a described options-contract event belongs to beancount-options. An unsupported brokerage file stays unimported; offer a supported CSV export or importer authoring rather than routing a statement file to a manual-entry skill.
 
 ## 2. SimpleFIN Bridge (for users who want a feed)
 

@@ -9,7 +9,7 @@ Diff the normalized statement lines (from `statement-formats.md`) against the le
 ```bash
   bea --file "$ledger" --json --no-input query "SELECT date, position, narration WHERE account = 'Assets:Bank:Checking' AND date >= 2026-05-01 AND date <= 2026-05-31 ORDER BY date"
 ```
-  On a ledger already failing its check (the user's failing assertion), this read refuses; pass it `--allow-errors` and report the errors it returns, as the skill's tie-out section says. Writes never take that flag.
+  On a ledger already failing its check (the user's failing assertion), this read refuses; pass it `--allow-errors` and report the errors it returns, as the skill's tie-out section says. Writes run strict first. Only beancount-reconcile's documented diagnosed-assertion retries permit a flagged approved account open or missing-row batch after that operation's strict refusal identifies the same assertion alone; other errors and manual developer-tool writes do not qualify.
 - **Anchor**: the prior `balance` assertion for the account (from Discover). Reconcile forward from it; you do not need to re-match anything before it.
 
 ## Matching algorithm — three passes, then classify

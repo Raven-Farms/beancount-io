@@ -319,3 +319,39 @@ is never persisted in that evidence. Continue from the saved scan IDs: inspect
 returned results, act on concrete author guidance if present, then verify any
 independently promoted target's public owner/version/bytes and supported host
 install. All nine pending versions and m6 closeout remain open.
+
+
+## Scan results and source repair — 2026-10-22 UTC
+
+By01:42UTC all nine normal scan IDs above succeed with writtenBack true and no
+lastError. A.I.G and static analysis are clean throughout; ClawScan is
+clean/benign for ask/close/import/reconcile and suspicious for
+accruals/add/migrate/roll-forward/trade. SkillSpector retains5–17 findings per
+version, including claims about shared command examples. Close's earlier judge
+failure and retry remain retained. These are results for the exact old
+submissions, not verdicts on later source.
+
+Following the concrete author guidance exposes two real contradictions:
+local-only discovery routes to hosted tools, and an existing-ledger fallback
+allows writes without validation. Suite0.3.8 corrects these plus stale broker,
+migration-category and existing-entry metadata rules. Native before/after
+controls and real CLI regression checks are recorded in the
+[dated repair evidence](scope-contract-controls-20261022.md). Descriptions and
+the115-request routing set are unchanged; the approved init scaffold remains.
+
+The upstream API boundary is now established from pinned source: its attempt
+GET serves packages only, so the skill404 does not diagnose a missing attempt.
+Normal scan writeback updates evidence and does not finalize the staged
+publication. The separate upstream pre-publication worker owns finalization;
+no supported publisher skill-resume endpoint was found. A suspicious finding
+alone is not proof of the observed hold. No maintainer operation or unsolicited
+contact is performed.
+
+All thirteen0.3.8 bundles have changed fingerprints and pass anonymous explicit
+1.0.4 dry runs (119 authored files). Automatic versioning would collide with
+nine existing pending slots. The protected workflow therefore supports an
+explicit higher version for verified changed content while preserving the
+ordinary unchanged skip. This preflight creates no submission or public release;
+check actual protected receipts, promotion, authored bytes and supported native
+installs independently before closeout. Do not re-upload byte-identical pending
+content or request duplicate scan jobs.

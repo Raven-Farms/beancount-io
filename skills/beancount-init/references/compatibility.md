@@ -8,16 +8,26 @@ When `bea` is missing, suggest installing it rather than `pip install beancount`
 
 An already available developer `bean-query "$ledger" "$query"` can supply
 reads, and `bean-check "$ledger"` can validate the **root** ledger.
-For a confirmed write, retain the skill's normalization, dedup, categorization,
-and review steps, then insert the approved directives into the approved
-destination in date order. Preserve line endings, blank separators, and
+Before changing an existing ledger, require a working checker. If neither
+`bea check` nor developer `bean-check` can run, leave the ledger unchanged,
+show the unposted proposal and explain the missing validation prerequisite.
+Approval and manual balancing do not replace a checker. The new-ledger scaffold
+below is a separate, explicitly unvalidated initialization path, not permission
+to continue into imports, reconciliation or other existing-ledger writes.
+
+For a confirmed developer-tool write, retain the skill's normalization, dedup,
+categorization and review steps. Check the root first; a red result blocks this
+manual fallback. Prepare the proposed files in a temporary copy that preserves
+the root's includes and relative paths, validate that copy with `bean-check`,
+then insert only those approved directives into the approved destination in
+date order and check the real root again. Preserve line endings, separators and
 trailing newlines. Put approved account opens with the existing account
 definitions. Apply the same `import-id` rules as the `bea` path.
 
-A nonzero check blocks a success claim. If neither checker is available,
-report the result as **unvalidated** and explain that `bea check` is needed;
-manual balancing is not proof that booking, includes, and assertions are valid.
-Read-only workflows stay read-only on this path too.
+A nonzero check blocks further writes and a success claim; report the actual
+state and error. The `bea`-specific diagnosed-assertion exception belongs to
+beancount-reconcile and is not a manual-check bypass. Read-only workflows stay
+read-only, and shared recipes never broaden the invoking skill's scope.
 
 ## New-ledger template without `bea`
 

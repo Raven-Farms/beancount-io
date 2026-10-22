@@ -164,6 +164,13 @@ The 0.3.2 wording fixes were verified as registry 1.0.1 for add, import, init, m
 
 The Git/plugin suite now also contains `beancount-roll-forward` and `beancount-accruals`, bringing its inventory to thirteen. Their first registry releases, plus later add/ask/close/import/migrate/reconcile/trade changes, pass the client/adoption release gates and are accepted by protected run39679035375 as pending-publication. At21:41UTC on2026-10-21, the public registry still covers the original eleven skills and exposes older versions for the seven updates. The four unchanged current versions are publicly exact; install new versions only after promotion. Native Codex 0.163.0 works with configured `gpt-6.1-sol`, and Claude Code 2.1.306 resumes usable default-model turns on 2026-10-21. On the frozen 0.3.6 source, Claude discovers all thirteen skills and scores 113/113, with no new miss in that cohort. The subsequent0.3.7 description repairs use115 requests: Codex passes115/115 twice, while Claude resolves115/115 from114 original valid observations plus one documented-default timeout recovery. All earlier failures, including the historical PDF first-open loss, remain recorded. Current behavioral validation covers dated valuation, accrual recognition/identity, and reproducible variance commentary; the [dated client release record](client-release-controls-20261021.md) distinguishes source versions, corrections, actual results and remaining publication gates.
 
+Suite 0.3.8 repairs local/hosted scope conflicts and requires a working validator
+before an existing-ledger write. Its [native before/after controls](scope-contract-controls-20261022.md)
+preserve the explicitly unvalidated init scaffold, approved developer-tool
+writes and supported broker/migration flows. Descriptions and routing requests
+are unchanged. All thirteen changed bundles pass anonymous 1.0.4 release plans;
+that preflight does not establish registry promotion or current host installs.
+
 Hermes's default search now finds all eleven published suite listings:
 
 ```sh

@@ -59,7 +59,7 @@ Prioritize the major correctness findings (PRINT/FROM/JOURNAL, authored location
 
 - [x] **m7** — [Connect OpenClaw and Hermes Agent to the hosted MCP endpoint](./done/m7/README.md) (9 tasks; A1; backend-v2 fixtures and docs) ← user request 2026-10-16 to list Beancount.io on OpenClaw and Hermes Agent; ADR 019 D8
 
-- [ ] **m6** — [Publish the ledger skills to ClawHub for OpenClaw and Hermes Agent](blocked/m6/README.md) (13 tasks; A3; skills and CI) ← user request 2026-10-16 to list Beancount.io on OpenClaw and Hermes Agent — **blocked:** t001–t012 and six named prerequisites done; nine0.3.7 versions accepted/pending promotion; verify each eligible current-content public/host result independently before t013 closeout
+- [ ] **m6** — [Publish the ledger skills to ClawHub for OpenClaw and Hermes Agent](blocked/m6/README.md) (13 tasks; A3; skills and CI) ← user request 2026-10-16 to list Beancount.io on OpenClaw and Hermes Agent — **blocked:** t001–t012 and six named prerequisites done; 0.3.8 source remediation validated; protected changed-content1.0.4 release and independent eligible public/host checks continue; t013 requires actual DoD
 
 - [x] **m5** — [Include current earnings in balance-sheet equity](./done/m5/README.md) (6 tasks; major; ledger with backend-v2 validation).
 
