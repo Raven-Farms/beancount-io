@@ -1,4 +1,9 @@
-import { budgetCurrencyOptions } from "./currency-options";
+import {
+  budgetCurrencyOptions,
+  defaultBudgetCurrency,
+} from "./currency-options";
+import { TextInputModal } from "@/components/text-input-modal";
+import { typedCurrencyCode } from "@/screens/open-account-screen/account-name";
 import { useState } from "react";
 import { InlineError } from "@/components/inline-error";
 import {
@@ -127,6 +132,9 @@ const getStyles = (theme: ColorTheme) =>
 
 type PickerKind = "interval" | "currency" | null;
 
+const OTHER_CURRENCY = "__other_currency__";
+const EXAMPLE_CURRENCY = "EUR";
+
 type FormRowProps = {
   label: string;
   value: string;
@@ -211,6 +219,8 @@ function AddBudgetScreenImpl(): JSX.Element {
   const [pickedCurrency, setPickedCurrency] = useState(params.currency ?? "");
   const [date, setDate] = useState(() => new Date());
   const [picker, setPicker] = useState<PickerKind>(null);
+  const [typedCurrencies, setTypedCurrencies] = useState<string[]>([]);
+  const [otherCurrencyVisible, setOtherCurrencyVisible] = useState(false);
   const [datePickerVisible, setDatePickerVisible] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   // A committed save disables submit: a cold-link form that fails to leave
@@ -220,7 +230,10 @@ function AddBudgetScreenImpl(): JSX.Element {
   // Empty means "not chosen yet" — the picker only ever sets a non-empty value,
   // so the ledger's default fills in until then without an effect to sync it.
   const currency =
-    pickedCurrency || (metaLoading ? "" : (currencies[0] ?? "USD"));
+    pickedCurrency ||
+    (metaLoading
+      ? ""
+      : defaultBudgetCurrency(currencies, ledgerMeta?.currencies ?? []));
 
   // Written verbatim into the directive, so only a number may pass (w0/038).
   const amountOk = isBudgetAmount(amount);
@@ -297,9 +310,16 @@ function AddBudgetScreenImpl(): JSX.Element {
 
   // The current value is always an option, so the wheel never falls back to
   // the first one and switches a non-operating currency silently (w21/121).
-  const currencyItems = budgetCurrencyOptions(currencies, currency).map(
-    (value) => ({ value, label: value }),
-  );
+  const currencyItems = [
+    ...budgetCurrencyOptions(
+      currencies,
+      currency,
+      ledgerMeta?.currencies ?? [],
+      typedCurrencies,
+    ).map((value) => ({ value, label: value })),
+    // A commodity the ledger has not posted yet is typed, not picked (w21/234).
+    { value: OTHER_CURRENCY, label: t("openAccountOtherCurrency") },
+  ];
 
   return (
     <SafeAreaView edges={["bottom"]} style={styles.container}>
@@ -425,6 +445,9 @@ function AddBudgetScreenImpl(): JSX.Element {
         onSelect={(item) => {
           if (picker === "interval") {
             setInterval(item.value);
+          } else if (item.value === OTHER_CURRENCY) {
+            setPicker(null);
+            setOtherCurrencyVisible(true);
           } else {
             setPickedCurrency(item.value);
           }
@@ -433,6 +456,31 @@ function AddBudgetScreenImpl(): JSX.Element {
         onCancel={() => setPicker(null)}
         confirmButtonText={t("done")}
         cancelButtonText={t("cancel")}
+      />
+      <TextInputModal
+        visible={otherCurrencyVisible}
+        title={t("openAccountOtherCurrencyTitle")}
+        message={t("openAccountOtherCurrencyMessage")}
+        placeholder={EXAMPLE_CURRENCY}
+        confirmButtonText={t("done")}
+        cancelButtonText={t("cancel")}
+        validateInput={(input) =>
+          input.trim() === ""
+            ? false
+            : typedCurrencyCode(input) !== null ||
+              t("openAccountCurrencyInvalid")
+        }
+        onConfirm={(input) => {
+          const code = typedCurrencyCode(input);
+          if (code === null) return;
+          setTypedCurrencies((known) =>
+            known.includes(code) ? known : [...known, code],
+          );
+          setPickedCurrency(code);
+          setSubmitError(null);
+          setOtherCurrencyVisible(false);
+        }}
+        onCancel={() => setOtherCurrencyVisible(false)}
       />
     </SafeAreaView>
   );
