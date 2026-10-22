@@ -30,3 +30,17 @@ export function isLastCommitPage(page: readonly unknown[]): boolean {
 export function shownCommitPages(count: number): number {
   return Math.max(1, Math.ceil(count / COMMITS_PAGE_SIZE));
 }
+
+/**
+ * Whether the rows shown reach the end the last short page left. The end is a
+ * row count, not a page number: with a whole number of pages (30, 60 commits)
+ * the empty page after them adds no rows, so a page number never caught up
+ * (w21/498). A refetch to the first page has fewer rows than the end, so the
+ * button returns.
+ */
+export function historyEnded(
+  shownRows: number,
+  endRows: number | null,
+): boolean {
+  return endRows !== null && shownRows >= endRows;
+}

@@ -4,6 +4,7 @@ import { en } from "../../../translations/en";
 import {
   appendCommitPage,
   COMMITS_PAGE_SIZE,
+  historyEnded,
   isLastCommitPage,
   shownCommitPages,
 } from "../commit-pages";
@@ -68,9 +69,41 @@ describe("the page the list is at", () => {
       )
       .replace(/\s+/g, "");
     expect(
-      source.includes("constnoOlder=lastPage!==null&&shownPages>=lastPage;"),
+      source.includes("constnoOlder=historyEnded(shownRows,endRows);"),
     ).toBe(true);
     expect(source.includes("pagesLoaded")).toBe(false);
+  });
+});
+
+// w21/498: with 30 or 60 commits the empty page set lastPage to the page asked
+// for, but the rows added up to fewer pages, so the button stayed.
+describe("the end of the history", () => {
+  const source = fs
+    .readFileSync(
+      path.join(__dirname, "..", "notifications-screen.tsx"),
+      "utf8",
+    )
+    .replace(/\s+/g, "");
+
+  it("an empty page after 30 or 60 commits ends the list", () => {
+    for (const count of [30, 60]) {
+      const shown = page(1, count);
+      const endRows = appendCommitPage(shown, []).length;
+      expect(isLastCommitPage([])).toBe(true);
+      expect(historyEnded(shown.length, endRows)).toBe(true);
+      // A refetch back to the first page brings the button back.
+      expect(historyEnded(COMMITS_PAGE_SIZE, endRows)).toBe(count === 30);
+    }
+    expect(historyEnded(10, null)).toBe(false);
+  });
+
+  it("remembers the merged row count, not the page number", () => {
+    expect(source.includes("mergedRows=listCommits.length;")).toBe(true);
+    expect(source.includes("lastPage")).toBe(false);
+    // A refetch back to one page has fewer rows than the end: button returns.
+    expect(source.includes("noOlder=historyEnded(shownRows,endRows);")).toBe(
+      true,
+    );
   });
 });
 
@@ -91,7 +124,7 @@ describe("the Notifications screen's Show older", () => {
     ).toBe(true);
     expect(
       source.includes(
-        "if(isLastCommitPage(result.data.listCommits))setLastPage(page);",
+        "if(isLastCommitPage(result.data.listCommits))setEndRows(mergedRows);",
       ),
     ).toBe(true);
   });
@@ -110,7 +143,7 @@ describe("the Notifications screen's Show older", () => {
     expect(
       refresh
         .slice(0, refresh.indexOf("finally"))
-        .includes("setLastPage(null);"),
+        .includes("setEndRows(null);"),
     ).toBe(true);
   });
 });

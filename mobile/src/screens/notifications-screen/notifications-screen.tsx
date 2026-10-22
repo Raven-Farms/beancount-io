@@ -20,6 +20,7 @@ import { selectSectionsPending } from "./section-state";
 import {
   appendCommitPage,
   COMMITS_PAGE_SIZE,
+  historyEnded,
   isLastCommitPage,
   shownCommitPages,
 } from "./commit-pages";
@@ -274,30 +275,35 @@ function NotificationsScreenImpl(): JSX.Element {
 
   // "Show older" pages back through the history (w21/313): the next page, until
   // one comes back short. The page to ask for follows from the rows shown, and
-  // the end is remembered as the page that came back short, so a refetch that
-  // drops the list to its first page brings the button back (w21/431).
-  const shownPages = shownCommitPages(commitsData?.listCommits.length ?? 0);
-  const [lastPage, setLastPage] = useState<number | null>(null);
-  const noOlder = lastPage !== null && shownPages >= lastPage;
+  // the end is remembered as the row count the short page left, so a refetch
+  // that drops the list to its first page brings the button back (w21/431), and
+  // an empty page after a whole number of pages ends the list (w21/498).
+  const shownRows = commitsData?.listCommits.length ?? 0;
+  const shownPages = shownCommitPages(shownRows);
+  const [endRows, setEndRows] = useState<number | null>(null);
+  const noOlder = historyEnded(shownRows, endRows);
   const [loadingOlder, setLoadingOlder] = useState(false);
   useEffect(() => {
-    setLastPage(null);
+    setEndRows(null);
   }, [ledgerId]);
   const showOlder = async () => {
     if (loadingOlder) return;
     setLoadingOlder(true);
     const page = shownPages + 1;
+    let mergedRows = 0;
     try {
       const result = await fetchMoreCommits({
         variables: { page },
-        updateQuery: (previous, { fetchMoreResult }) => ({
-          listCommits: appendCommitPage(
+        updateQuery: (previous, { fetchMoreResult }) => {
+          const listCommits = appendCommitPage(
             previous.listCommits,
             fetchMoreResult.listCommits,
-          ),
-        }),
+          );
+          mergedRows = listCommits.length;
+          return { listCommits };
+        },
       });
-      if (isLastCommitPage(result.data.listCommits)) setLastPage(page);
+      if (isLastCommitPage(result.data.listCommits)) setEndRows(mergedRows);
     } catch {
       // The rows already shown stay; the button is there to try again.
     } finally {
@@ -322,7 +328,7 @@ function NotificationsScreenImpl(): JSX.Element {
     setRefreshing(true);
     try {
       // Both halves: an error fixed outside the app clears on a pull too.
-      setLastPage(null);
+      setEndRows(null);
       await Promise.all([refetchCommits(), refetchErrors()]);
     } finally {
       setRefreshing(false);
