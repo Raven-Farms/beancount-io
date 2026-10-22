@@ -30,6 +30,11 @@
 - [431](./431.md) — Show older skips a page / vanishes after any write (313 regression)
 - [432](./432.md) — Error text and Entry Context source not copyable
 - [433](./433.md) — Entry Context location truncates the line number first
+- [434](./434.md) — Resumed Create Ledger draft reuses requestId with changed request: generic failure 24h
+- [435](./435.md) — Draft resumed on Review drops the opening balance silently
+- [436](./436.md) — Cleared Books begin → server UTC date (051 regression path)
+- [437](./437.md) — In-progress create reported as name conflict
+- [438](./438.md) — Setup ValidationError args swapped: garbled messages
 - [315](./blocked/315.md) — In-app commits signed with Gitea username and real email (no full_name, no noreply) — **blocked:** needs the owner's noreply-address and published-history decisions, and a production backfill of existing Gitea users that can't be verified here
 - [325](./325.md) — parseFile still sends HEIC to the model (108 covered receipts only)
 - [326](./326.md) — Create Ledger: hidden invalid amount under "Decide later" silently blocks Next
