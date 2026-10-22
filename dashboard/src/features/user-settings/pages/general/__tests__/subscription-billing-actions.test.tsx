@@ -89,6 +89,10 @@ vi.mock("@/features/user-settings/hooks/use-plan-change", () => ({
   useChangePlan: () => [mockChangePlan, { loading: false }],
   useCancelScheduledPlanChange: () => [vi.fn(), { loading: false }],
 }));
+// jsdom has no 2D canvas, so a real confetti frame throws after the test.
+vi.mock("@/features/user-settings/lib/celebrate", () => ({
+  celebrate: vi.fn(async () => {}),
+}));
 vi.mock("sonner", () => ({
   toast: {
     success: mockToastSuccess,
