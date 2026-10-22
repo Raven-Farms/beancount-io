@@ -3,6 +3,7 @@ import {
   selectAccountBalanceSeries,
   selectAccountUnitsSeries,
 } from "../select-account-balance-series";
+import { balanceNotes } from "../../../../common/valuation";
 import { AccountReportQuery } from "@/generated-graphql/graphql";
 import {
   balanceSeriesBaseline,
@@ -57,12 +58,22 @@ describe("selectAccountBalanceDisplay", () => {
     },
   ];
   const TODAY = "2026-09-26";
+  // The figure itself; what it discloses about its prices is checked below.
+  const figure = (display: ReturnType<typeof selectAccountBalanceDisplay>) => {
+    const { valuation, ...rest } = display as typeof display & {
+      valuation?: unknown;
+    };
+    void valuation;
+    return rest;
+  };
 
   it("values one commodity as its Accounts row does, at the latest price", () => {
     expect(
-      selectAccountBalanceDisplay("USD", market, units, prices, TODAY, {
-        USD: "48471.38532",
-      }),
+      figure(
+        selectAccountBalanceDisplay("USD", market, units, prices, TODAY, {
+          USD: "48471.38532",
+        }),
+      ),
     ).toEqual({
       kind: "units",
       units: { currency: "RGAGX", number: 597.748, scale: 3 },
@@ -73,7 +84,7 @@ describe("selectAccountBalanceDisplay", () => {
 
   it("falls back to the report's latest point until the row's read lands", () => {
     expect(
-      selectAccountBalanceDisplay("USD", market, units, prices, TODAY),
+      figure(selectAccountBalanceDisplay("USD", market, units, prices, TODAY)),
     ).toEqual({
       kind: "units",
       units: { currency: "RGAGX", number: 597.748, scale: 3 },
@@ -124,6 +135,38 @@ describe("selectAccountBalanceDisplay", () => {
     expect(display.kind === "money" && display.value).toBe(88000);
     expect(valuation?.priced[0]?.priceDate).toBe("2017-09-08");
     expect(valuation?.priced[0]?.stale).toBe(true);
+  });
+
+  // w21/426: a single commodity's detail said "10 VEUR" with no price note, and
+  // a stale price was only a money total's to warn of.
+  it("warns of a stale price on a single commodity, as a total does", () => {
+    const display = selectAccountBalanceDisplay(
+      "USD",
+      market,
+      units,
+      prices,
+      TODAY,
+      { USD: "48471.38532" },
+    );
+    expect(display.kind === "units" && display.valuation?.valuesHoldings).toBe(
+      true,
+    );
+    const notes = balanceNotes(display, "USD", (key) => key, "en");
+    expect(notes.includes("pricesNotUpdatedSince")).toBe(true);
+  });
+
+  it("notes a holding priced only in its cost currency", () => {
+    const veur = selectAccountBalanceDisplay(
+      "USD",
+      createReport([{ date: "2026-08-28", balance: { EUR: "550" } }]),
+      createReport([{ date: "2026-08-28", balance: { VEUR: "10" } }]),
+      [{ base: "VEUR", quote: "EUR", prices: [{ date: "2026-08-28" }] }],
+      TODAY,
+      { EUR: "550" },
+    );
+    expect(veur.kind === "units" && veur.value).toBe(null);
+    const notes = balanceNotes(veur, "USD", (key) => key, "en");
+    expect(notes.includes("pricesNotUpdatedSince")).toBe(true);
   });
 
   it("is an empty money figure before either report arrives", () => {

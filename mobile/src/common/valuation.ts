@@ -466,7 +466,16 @@ export function balanceNotes(
       : notInTotalNotes(display.notInTotal, t);
   }
   const { value } = display;
-  if (value === null || value.basis === null) return [];
+  const attention =
+    display.valuation && display.valuation.valuesHoldings
+      ? priceAttention(display.valuation, t, locale)
+      : [];
+  // A holding priced only in its cost currency has no value in this one, but
+  // its stale price and its lots left at cost are still worth saying (w21/426).
+  if (value === null) {
+    return [...notInTotalNotes(display.notInTotal, t), ...attention];
+  }
+  if (value.basis === null) return [];
   return [
     t(value.basis === "market" ? "atMarket" : "atCost", {
       // Isolated so a Persian sentence keeps the sign beside its number
@@ -474,8 +483,6 @@ export function balanceNotes(
       amount: isolateLtr(formatSignedMoneyWithCurrency(value.amount, currency)),
     }),
     ...notInTotalNotes(display.notInTotal, t),
-    ...(display.valuation && display.valuation.valuesHoldings
-      ? priceAttention(display.valuation, t, locale)
-      : []),
+    ...attention,
   ];
 }

@@ -104,7 +104,7 @@ describe("guest read isolation", () => {
       "account report",
       AccountReportDocument,
       { accountName: "Assets:Cash", conversion: "units" },
-      { getLedgerAccountReport: { linechartData: [] } },
+      { getLedgerAccountReport: { linechartData: [], accountBalanceData: [] } },
     ],
     [
       "account journal",

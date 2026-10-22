@@ -56,7 +56,9 @@ export function selectAccountBalanceDisplay(
     currency,
     valueBasisOf(prices, currency, hasCurrent ? undefined : latest?.date),
   );
-  if (display.kind === "units") return display;
+  // A commodity's figure discloses its prices as a total's does: a holding
+  // left on a stale price, or one priced only in its cost currency, says so
+  // (w21/426).
   return {
     ...display,
     valuation: selectValuation({
