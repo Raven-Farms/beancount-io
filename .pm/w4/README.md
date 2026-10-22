@@ -4,6 +4,8 @@
 
 ## Inbox
 
+- [973 — Freeze receipt review edits while recording](./973.md) — minor; modeled receipt responses against deployed client,2026-10-22; pending text/amount edits update the preview then disappear at success at both widths; pre-submit and single-request controls pass, no hosted writes/AI.
+
 - [972 — Preserve the remaining CSV row-shape guard after cell edits](./972.md) — minor; W3/m19 residual follow-up,2026-10-22; unrelated Payee/Description edits clear a five-field record's refusal and admit a truncated prepared import; date/source repair controls pass, one write preblocked, no new historical group.
 
 - [971 — Restore BQL syntax feedback for the current parser](./971.md) — minor; public dashboard QA,2026-10-22; current found-token diagnostics fall back to generic advice at both widths/reload; exact Unicode/ASCII offsets constrain repair, unknown-column/correction/history controls pass, no writes.
