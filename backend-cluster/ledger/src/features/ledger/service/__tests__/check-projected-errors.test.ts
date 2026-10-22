@@ -183,3 +183,38 @@ describe("checkProjectedErrors", () => {
     expect(parseMock).not.toHaveBeenCalled();
   });
 });
+
+// w23/048: a guided setup's files have no repository to project onto yet.
+describe("checkLedgerFiles", () => {
+  it("parses exactly the given files from main.bean", async () => {
+    parseMock.mockResolvedValue({
+      errors: [{ message: "Duplicate open", file: "main.bean", line: 4 }],
+    });
+    const errors = await service().checkLedgerFiles({
+      files: [{ path: "main.bean", content: b64(MAIN) }],
+    });
+    expect(parseMock.mock.calls[0]?.[0]).toEqual({ "main.bean": MAIN });
+    expect(parseMock.mock.calls[0]?.[1]).toBe("main.bean");
+    expect(loadMock).not.toHaveBeenCalled();
+    expect(errors).toEqual([
+      expect.objectContaining({
+        message: "Duplicate open",
+        source: { filename: "main.bean", lineno: 4 },
+      }),
+    ]);
+  });
+
+  it.each([
+    [[{ path: "other.bean", content: b64(MAIN) }], "entry point main.bean"],
+    [[{ path: "../x.bean", content: b64(MAIN) }], "Invalid file path"],
+    [[{ path: "main.bean", content: null }], "must carry text content"],
+  ])("refuses %j", async (files, message) => {
+    await expect(
+      service().checkLedgerFiles({ files: files as never }),
+    ).rejects.toMatchObject({
+      category: "BAD_USER_INPUT",
+      message: expect.stringContaining(message),
+    });
+    expect(parseMock).not.toHaveBeenCalled();
+  });
+});

@@ -28,6 +28,7 @@ import {
   buildPriceMap,
   clampDirectives,
   collectAttributes,
+  DEFAULT_ENTRY_POINT,
   collectDocuments,
   collectEvents,
   collectLedgerAccounts,
@@ -131,6 +132,15 @@ interface ILedgerDataService {
       enforceInputLimits?: boolean;
     },
   ): Promise<BeancountErrorPublic[]>;
+
+  /**
+   * bean-check over a complete set of files that is not a repository yet —
+   * the ledger a guided setup would create (ADR021, w23/048). Base64 text,
+   * entry point `main.bean`, the same input caps as `/check`.
+   */
+  checkLedgerFiles(params: {
+    files: { path: string; content: string }[];
+  }): Promise<BeancountErrorPublic[]>;
 
   getCurrencies(params: BaseParams): Promise<string[]>;
 
@@ -511,6 +521,46 @@ export class LedgerDataService implements ILedgerDataService {
     }
     const snapshot = await parseLedgerFiles(projected, entryPoint, {
       repoPaths,
+    });
+    return toBeancountErrorsPublic(snapshot.errors);
+  }
+
+  async checkLedgerFiles(params: {
+    files: { path: string; content: string }[];
+  }): Promise<BeancountErrorPublic[]> {
+    const { files } = params;
+    if (!Array.isArray(files) || files.length > MAX_PROJECTED_FILES) {
+      throw new BadUserInputError(
+        `at most ${MAX_PROJECTED_FILES} files may be checked at once`,
+      );
+    }
+    const fileMap: Record<string, string> = {};
+    let totalBytes = 0;
+    files.forEach((file, index) => {
+      if (
+        file === null ||
+        typeof file !== "object" ||
+        typeof file.content !== "string"
+      ) {
+        throw new BadUserInputError(`files[${index}] must carry text content`);
+      }
+      assertSafeRepoPath(file.path, `files[${index}].path`);
+      const text = Buffer.from(file.content, "base64").toString("utf8");
+      totalBytes += text.length;
+      if (totalBytes > MAX_PROJECTED_BYTES) {
+        throw new BadUserInputError(
+          `files exceed ${MAX_PROJECTED_BYTES} bytes`,
+        );
+      }
+      fileMap[file.path] = text;
+    });
+    if (!Object.hasOwn(fileMap, DEFAULT_ENTRY_POINT)) {
+      throw new BadUserInputError(
+        `files must include the entry point ${DEFAULT_ENTRY_POINT}`,
+      );
+    }
+    const snapshot = await parseLedgerFiles(fileMap, DEFAULT_ENTRY_POINT, {
+      repoPaths: Object.keys(fileMap),
     });
     return toBeancountErrorsPublic(snapshot.errors);
   }

@@ -5516,6 +5516,35 @@
                       "additionalProperties": {
                         "type": "string"
                       }
+                    },
+                    "validation": {
+                      "type": "object",
+                      "properties": {
+                        "ok": {
+                          "type": "boolean"
+                        },
+                        "errors": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "message": {
+                                "type": "string"
+                              },
+                              "source": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "message"
+                            ]
+                          }
+                        }
+                      },
+                      "required": [
+                        "ok",
+                        "errors"
+                      ]
                     }
                   },
                   "required": [
@@ -5523,7 +5552,8 @@
                     "operatingCurrency",
                     "historyStart",
                     "accounts",
-                    "files"
+                    "files",
+                    "validation"
                   ]
                 }
               }

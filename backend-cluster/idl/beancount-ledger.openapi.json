@@ -7218,6 +7218,48 @@
           }
         }
       }
+    },
+    "/reports/check-files": {
+      "post": {
+        "tags": [
+          "reports"
+        ],
+        "summary": "Check ledger files",
+        "description": "bean-check over a complete set of files that is not a repository yet (base64 text, entry point main.bean), parsed without creating anything. Powers guided-setup previews.",
+        "operationId": "checkLedgerFiles",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LedgerCheckFilesOptions"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SuccessResponse_list_BeancountErrorPublic__"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -14843,6 +14885,43 @@
           "data"
         ],
         "title": "SuccessResponse[list[ManagedPriceSourcePublic]]"
+      },
+      "LedgerCheckFilesOptions": {
+        "properties": {
+          "files": {
+            "items": {
+              "$ref": "#/components/schemas/LedgerCheckFile"
+            },
+            "type": "array",
+            "title": "Files",
+            "description": "Every file of the ledger; the entry point is main.bean"
+          }
+        },
+        "type": "object",
+        "required": [
+          "files"
+        ],
+        "title": "LedgerCheckFilesOptions",
+        "description": "A complete set of files that is not a repository yet, such as the ledger a guided setup would create."
+      },
+      "LedgerCheckFile": {
+        "properties": {
+          "path": {
+            "type": "string",
+            "title": "Path"
+          },
+          "content": {
+            "type": "string",
+            "title": "Content",
+            "description": "Base64 text"
+          }
+        },
+        "type": "object",
+        "required": [
+          "path",
+          "content"
+        ],
+        "title": "LedgerCheckFile"
       }
     },
     "securitySchemes": {

@@ -88,6 +88,24 @@ export class LedgerSetupInput {
 }
 
 @ObjectType()
+class LedgerSetupValidationError {
+  @Field(() => String)
+  message: string;
+
+  @Field(() => String, { nullable: true })
+  source?: string;
+}
+
+@ObjectType()
+class LedgerSetupValidation {
+  @Field(() => Boolean)
+  ok: boolean;
+
+  @Field(() => [LedgerSetupValidationError])
+  errors: LedgerSetupValidationError[];
+}
+
+@ObjectType()
 export class LedgerSetupPreview {
   @Field(() => String)
   preset: string;
@@ -103,6 +121,12 @@ export class LedgerSetupPreview {
 
   @Field(() => GraphQLJSONObject)
   files: Record<string, string>;
+
+  @Field(() => LedgerSetupValidation, {
+    description:
+      "bean-check's verdict on the files; creation refuses on errors.",
+  })
+  validation: LedgerSetupValidation;
 }
 
 @ObjectType()

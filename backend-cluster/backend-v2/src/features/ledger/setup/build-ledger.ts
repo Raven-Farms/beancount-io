@@ -52,6 +52,12 @@ export interface LedgerSetupPreview {
   files: Record<string, string>;
 }
 
+/** bean-check's verdict on the files a setup would create (ADR021, w23/048). */
+export interface LedgerSetupValidation {
+  ok: boolean;
+  errors: { message: string; source?: string }[];
+}
+
 export function buildLedgerFiles(
   setup: LedgerSetup,
   today: string = new Date().toISOString().slice(0, 10),
@@ -160,6 +166,13 @@ export function previewLedgerSetup(
       fail(`Invalid opening state "${openingState}" for "${selection.name}"`);
     }
     if (openingState === "known") {
+      // It is the other side of every known opening, so a known balance of
+      // its own had no transaction to post and failed its assertion (w23/048).
+      if (selection.name === OPENING_EQUITY) {
+        fail(
+          `"${OPENING_EQUITY}" balances the other opening balances and cannot have a known opening of its own`,
+        );
+      }
       if (!selection.amount || !AMOUNT_PATTERN.test(selection.amount)) {
         fail(
           `Account "${selection.name}" needs a decimal amount for a known opening balance`,
@@ -207,9 +220,20 @@ export function previewLedgerSetup(
     a.name.localeCompare(b.name),
   );
   const opened = new Set<string>();
+  // The counter account takes openings in every currency the accounts use, so
+  // it carries no currency constraint once any opening posts to it; opened
+  // with the first account's currency, a second currency's opening failed
+  // (w23/048).
+  const openLine = (name: string, currency: string) =>
+    name === OPENING_EQUITY && hasKnownOpening
+      ? `${openDate} open ${name}`
+      : `${openDate} open ${name} ${currency}`;
   for (const account of accounts) {
+    // Already opened as the counter of an earlier known opening: a second
+    // `open` made the new ledger fail bean-check (w23/048).
+    if (opened.has(account.name)) continue;
     const currency = account.currency ?? operatingCurrency;
-    lines.push(`${openDate} open ${account.name} ${currency}`);
+    lines.push(openLine(account.name, currency));
     opened.add(account.name);
     if (account.openingState === "unknown") {
       lines.push(`  ${openingStatusKey}: "unknown"`);
@@ -218,20 +242,17 @@ export function previewLedgerSetup(
     }
     if (account.openingState === "known" && account.amount) {
       const amount = ledgerOpeningAmount(account.name, account.amount);
-      const counter = account.name === OPENING_EQUITY ? null : OPENING_EQUITY;
-      if (counter && !opened.has(counter)) {
-        lines.push(`${openDate} open ${counter} ${currency}`);
-        opened.add(counter);
+      if (!opened.has(OPENING_EQUITY)) {
+        lines.push(openLine(OPENING_EQUITY, currency));
+        opened.add(OPENING_EQUITY);
       }
-      if (counter) {
-        const negated = amount.startsWith("-") ? amount.slice(1) : `-${amount}`;
-        openings.push(
-          `${dayBefore(historyStart)} * "Opening balance"`,
-          `  ${account.name} ${amount} ${currency}`,
-          `  ${counter} ${negated} ${currency}`,
-          "",
-        );
-      }
+      const negated = amount.startsWith("-") ? amount.slice(1) : `-${amount}`;
+      openings.push(
+        `${dayBefore(historyStart)} * "Opening balance"`,
+        `  ${account.name} ${amount} ${currency}`,
+        `  ${OPENING_EQUITY} ${negated} ${currency}`,
+        "",
+      );
       assertions.push(
         `${historyStart} balance ${account.name} ${amount} ${currency}`,
       );

@@ -3538,6 +3538,29 @@ export interface SuccessResponseListManagedPriceSourcePublic {
   data: ManagedPriceSourcePublic[];
 }
 
+/**
+ * LedgerCheckFilesOptions
+ * A complete set of files that is not a repository yet, such as the ledger a guided setup would create.
+ */
+export interface LedgerCheckFilesOptions {
+  /**
+   * Files
+   * Every file of the ledger; the entry point is main.bean
+   */
+  files: LedgerCheckFile[];
+}
+
+/** LedgerCheckFile */
+export interface LedgerCheckFile {
+  /** Path */
+  path: string;
+  /**
+   * Content
+   * Base64 text
+   */
+  content: string;
+}
+
 export type QueryParamsType = Record<string | number, any>;
 export type ResponseFormat = keyof Omit<Body, "body" | "bodyUsed">;
 
@@ -5427,6 +5450,27 @@ export class Api<
         path: `/reports/${encodeURIComponent(owner)}/${encodeURIComponent(repoName)}/managed-prices/refresh`,
         method: "POST",
         secure: true,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description bean-check over a complete set of files that is not a repository yet (base64 text, entry point main.bean), parsed without creating anything. Powers guided-setup previews.
+     *
+     * @tags reports
+     * @name CheckLedgerFiles
+     * @summary Check ledger files
+     * @request POST:/reports/check-files
+     */
+    checkLedgerFiles: (
+      data: LedgerCheckFilesOptions,
+      params: RequestParams = {},
+    ) =>
+      this.request<SuccessResponseListBeancountErrorPublic, ErrorResponse>({
+        path: `/reports/check-files`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
         format: "json",
         ...params,
       }),

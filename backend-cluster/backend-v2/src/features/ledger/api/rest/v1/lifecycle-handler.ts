@@ -100,6 +100,12 @@ export const ledgerPreviewResultSchema = z.object({
   historyStart: z.string(),
   accounts: z.array(z.string()),
   files: z.record(z.string(), z.string()),
+  validation: z.object({
+    ok: z.boolean(),
+    errors: z.array(
+      z.object({ message: z.string(), source: z.string().optional() }),
+    ),
+  }),
 });
 export const ledgerUpdateInput = z
   .object({

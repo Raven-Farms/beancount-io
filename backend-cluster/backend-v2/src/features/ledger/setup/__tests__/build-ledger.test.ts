@@ -5,6 +5,7 @@ import {
   type LedgerSetup,
 } from "../build-ledger";
 import fixturesJson from "../fixtures.json";
+import { setupCatalog } from "../index";
 
 describe("buildLedgerFiles (w3/m53/t002)", () => {
   it("builds the personal preset with a known opening balance", () => {
@@ -234,5 +235,82 @@ describe("buildLedgerFiles (w3/m53/t002)", () => {
     )["main.bean"];
     expect(main).not.toContain(" open ");
     expect(main).toContain('option "operating_currency" "JPY"');
+  });
+});
+
+// w23/048: a known opening opened Equity:OpeningBalances a second time in
+// every preset that lists it, opened it in one currency only, and wrote an
+// assertion for an equity "opening" no transaction posted. The engine run
+// over every combination is recorded in the w23/048 resolution; these pin
+// the shape that loads.
+describe("known openings and the opening-balances account", () => {
+  const opens = (text: string) =>
+    text.split("\n").filter((line) => / open /.test(line));
+
+  for (const preset of setupCatalog.presets) {
+    const questions = preset.optionalQuestions.map((question) => question.id);
+    for (let mask = 0; mask < 1 << questions.length; mask += 1) {
+      const capabilities = Object.fromEntries(
+        questions.map((id, i) => [id, mask & (1 << i) ? "enabled" : "declined"]),
+      ) as Record<string, "enabled" | "declined">;
+      const presetId = preset.id as LedgerSetup["preset"];
+      const target = previewLedgerSetup(
+        { preset: presetId, capabilities },
+        "2026-10-21",
+      ).accounts.find((account) => account !== "Equity:OpeningBalances");
+      // `blank@1` opens nothing by default; the next tests cover it.
+      if (!target) continue;
+      it(`${preset.id} ${JSON.stringify(capabilities)} opens each account once`, () => {
+        const { files } = previewLedgerSetup(
+          {
+            preset: presetId,
+            capabilities,
+            accounts: [{ name: target, openingState: "known", amount: "1250.00" }],
+          },
+          "2026-10-21",
+        );
+        const lines = opens(files["main.bean"]!);
+        const names = lines.map((line) => line.split(" ")[2]);
+        expect(new Set(names).size).toBe(names.length);
+        expect(lines).toContain("2026-10-20 open Equity:OpeningBalances");
+      });
+    }
+  }
+
+  it("takes openings in several currencies on one unconstrained equity account", () => {
+    const { files } = previewLedgerSetup(
+      {
+        preset: "blank@1",
+        accounts: [
+          {
+            name: "Assets:Bank",
+            currency: "EUR",
+            openingState: "known",
+            amount: "5",
+          },
+          { name: "Assets:Cash", openingState: "known", amount: "7" },
+        ],
+      },
+      "2026-10-21",
+    );
+    const text = files["main.bean"]!;
+    expect(opens(text)).toContain("2026-10-20 open Equity:OpeningBalances");
+    expect(text).toContain("  Equity:OpeningBalances -5 EUR");
+    expect(text).toContain("  Equity:OpeningBalances -7 USD");
+  });
+
+  it("refuses a known opening on the opening-balances account itself", () => {
+    expect(() =>
+      previewLedgerSetup({
+        preset: "blank@1",
+        accounts: [
+          {
+            name: "Equity:OpeningBalances",
+            openingState: "known",
+            amount: "5",
+          },
+        ],
+      }),
+    ).toThrow("cannot have a known opening of its own");
   });
 });

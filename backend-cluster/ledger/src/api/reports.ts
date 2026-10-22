@@ -87,6 +87,19 @@ export function setReportsHandler(router: Router): void {
     );
   });
 
+  // operationId: checkLedgerFiles — POST /reports/check-files
+  // bean-check over a complete set of files that is not a repository yet:
+  // the ledger a guided setup would create, before it is created (w23/048).
+  router.post("/reports/check-files", authMiddleware, async (ctx) => {
+    const { data } = servicesForRequest(ctx);
+    const body = (ctx.request.body ?? {}) as {
+      files?: { path: string; content: string }[];
+    };
+    ctx.body = successResponse(
+      await data.checkLedgerFiles({ files: body.files ?? [] }),
+    );
+  });
+
   router.get(`${base}/commodities`, authMiddleware, async (ctx) => {
     const { data } = servicesForRequest(ctx);
     ctx.body = successResponse(

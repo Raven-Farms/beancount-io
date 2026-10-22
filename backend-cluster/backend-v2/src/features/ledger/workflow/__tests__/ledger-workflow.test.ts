@@ -45,6 +45,7 @@ interface MockFavaApiClient {
     getLedgerOptions: jest.Mock;
     getLedgerFavaOptions: jest.Mock;
     getLedgerSourceFiles: jest.Mock;
+    checkLedgerFiles: jest.Mock;
   };
 }
 
@@ -154,6 +155,11 @@ describe("LedgerWorkflow", () => {
         getLedgerOptions: jest.fn(),
         getLedgerFavaOptions: jest.fn(),
         getLedgerSourceFiles: jest.fn(),
+        // The ledger service's repository-free bean-check (w23/048): clean
+        // unless a test says otherwise.
+        checkLedgerFiles: jest
+          .fn()
+          .mockResolvedValue({ data: { success: true, data: [] } }),
       },
     };
 
@@ -712,6 +718,55 @@ describe("LedgerWorkflow", () => {
         expect(preview.operatingCurrency).toBe("EUR");
         expect(preview.accounts).toContain("Assets:Cash");
         expect(preview.files["main.bean"]).toContain("Assets:Cash");
+        expect(preview.validation).toEqual({ ok: true, errors: [] });
+        expect(mockFavaApiClient.ledgers.createLedger).not.toHaveBeenCalled();
+      });
+
+      // w23/048: ADR021 has the files validated before the ledger service
+      // creates anything; the preview reports the same verdict.
+      it("checks the setup's files and refuses to create a ledger that would not load", async () => {
+        mockFavaApiClient.reports.checkLedgerFiles.mockResolvedValue({
+          data: {
+            success: true,
+            data: [
+              {
+                message: "Duplicate open directive for Equity:OpeningBalances",
+                source: { filename: "main.bean", lineno: 9 },
+                severity: "error",
+              },
+            ],
+          },
+        });
+        const setup = { preset: "personal@1" as const };
+        const preview = await workflow.previewLedgerSetup({
+          identity: IDENTITY,
+          setup,
+        });
+        expect(preview.validation).toEqual({
+          ok: false,
+          errors: [
+            {
+              message: "Duplicate open directive for Equity:OpeningBalances",
+              source: "main.bean:9",
+            },
+          ],
+        });
+        const [{ files }] =
+          mockFavaApiClient.reports.checkLedgerFiles.mock.calls[0];
+        expect(Buffer.from(files[0].content, "base64").toString("utf8")).toBe(
+          preview.files["main.bean"],
+        );
+        await expect(
+          workflow.createLedger({
+            identity: IDENTITY,
+            input: { name: "household", setup },
+          }),
+        ).rejects.toMatchObject({
+          category: "VALIDATION_FAILED",
+          message: expect.stringContaining(
+            "would not load: Duplicate open directive for Equity:OpeningBalances (main.bean:9)",
+          ),
+        });
         expect(mockFavaApiClient.ledgers.createLedger).not.toHaveBeenCalled();
       });
     });

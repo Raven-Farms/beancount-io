@@ -596,10 +596,14 @@ authority and apply changes immediately. Creation can be previewed first with
   `createLedger` accepts ([ADR 021](../../../docs/adrs/ADR021-backend-v2-ledger-creation-experience.md)). It creates nothing and
   returns the resolved `preset`, `operatingCurrency`, and `historyStart`, the
   `accounts` the ledger would open, and the `files` it would write, keyed by
-  path. A specification `createLedger` would refuse — an unknown preset or
-  capability, an unsupported currency, an invalid date — is refused here with
-  the same `setup` validation error. It needs the same account authority as
-  creation.
+  path, plus `validation: { ok, errors }` — bean-check's verdict on those
+  files, run by the ledger service before anything exists. `createLedger`
+  with a `setup` runs the same check and refuses with `VALIDATION_FAILED` on
+  `setup` when the new ledger would not load. A specification `createLedger`
+  would refuse — an unknown preset or capability, an unsupported currency, an
+  invalid date, a known opening on `Equity:OpeningBalances` itself — is
+  refused here with the same `setup` validation error. It needs the same
+  account authority as creation.
 - `createLedger` requires `name` and accepts `description`, `private`, and either
   `template` (`STARTER` or `SAMPLE`) or `setup`; passing both is a validation
   error, and omitting both selects starter files. `setup` takes a `preset` and

@@ -79,6 +79,7 @@ import {
   previewLedgerSetup,
   type LedgerSetup,
   type LedgerSetupPreview,
+  type LedgerSetupValidation,
 } from "@/features/ledger/setup/build-ledger";
 import { CACHE_KEYS, TTL, type CacheHelper } from "@/shared/cache";
 import { operationNotAllowedFromCause } from "@/features/ledger/utils/operation-not-allowed-from-cause";
@@ -95,6 +96,7 @@ import {
   userResource,
 } from "@/server/api/authorization";
 import { assertSafeRepoPath } from "@/features/ledger/utils/safe-repo-path";
+import { toBeanCheckErrors } from "@/features/ledger/utils/bean-check-errors";
 import { assertKeepsEntryPoint } from "@/features/ledger/utils/ledger-entry-point";
 import { assertExplicitFileContentSize } from "@/features/ledger/utils/explicit-file-size";
 import { assertWritableText, decodeFileContent } from "@/shared/file-content";
@@ -171,7 +173,7 @@ export interface ILedgerWorkflow {
   previewLedgerSetup(params: {
     identity: Identity;
     setup: LedgerSetup;
-  }): Promise<LedgerSetupPreview>;
+  }): Promise<LedgerSetupPreview & { validation: LedgerSetupValidation }>;
   updateLedger(params: {
     identity: Identity;
     ledgerId: string;
@@ -562,6 +564,25 @@ export class LedgerWorkflow implements ILedgerWorkflow {
         `requestId must be 1-${CREATE_REQUEST_ID_MAX} characters`,
       );
     }
+    const files = input.setup
+      ? buildLedgerFiles(input.setup)
+      : input.template === LedgerTemplate.SAMPLE
+        ? ledgerWithMultipleFilesTemplate
+        : defaultLedgerTemplate;
+    // ADR021: a setup's files are validated before the ledger service is
+    // called, so a new ledger never starts with a bean-check error (w23/048).
+    if (input.setup) {
+      const validation = await this.checkSetupFiles(userId, files);
+      if (!validation.ok) {
+        const [first] = validation.errors;
+        throw new ValidationError(
+          "setup",
+          `the ledger this setup creates would not load: ${first.message}${
+            first.source ? ` (${first.source})` : ""
+          }`,
+        );
+      }
+    }
     const ledgerCreate: LedgerCreate = {
       name: input.name,
       description: input.description,
@@ -569,11 +590,7 @@ export class LedgerWorkflow implements ILedgerWorkflow {
       // private. Left unset, the repository host would create it public
       // (w1/173). Publishing takes an explicit `private: false`.
       private: input.private ?? true,
-      files: input.setup
-        ? buildLedgerFiles(input.setup)
-        : input.template === LedgerTemplate.SAMPLE
-          ? ledgerWithMultipleFilesTemplate
-          : defaultLedgerTemplate,
+      files,
     };
 
     const lockKey = LOCK_KEYS.LEDGER.create(userId);
@@ -686,13 +703,48 @@ export class LedgerWorkflow implements ILedgerWorkflow {
   }: {
     identity: Identity;
     setup: LedgerSetup;
-  }): Promise<LedgerSetupPreview> {
+  }): Promise<LedgerSetupPreview & { validation: LedgerSetupValidation }> {
     await this.authorization.authorizeOrThrow({
       principal: identity,
       action: AUTHORIZATION_ACTIONS.LEDGER_CREATE,
       resource: userResource(identity.userId),
     });
-    return previewLedgerSetup(setup);
+    const preview = previewLedgerSetup(setup);
+    return {
+      ...preview,
+      validation: await this.checkSetupFiles(identity.userId, preview.files),
+    };
+  }
+
+  /**
+   * bean-check over the files a setup would create, through the ledger
+   * service's repository-free check: the preview reports it and creation
+   * refuses on it, as ADR021 requires (w23/048).
+   */
+  private async checkSetupFiles(
+    userId: string,
+    files: Record<string, string>,
+  ): Promise<LedgerSetupValidation> {
+    const { favaApiClient } =
+      await this.favaClientFactory.getApiContext(userId);
+    const errors = toBeanCheckErrors(
+      await unwrapFavaResponse(
+        favaApiClient.reports.checkLedgerFiles({
+          files: Object.entries(files).map(([path, text]) => ({
+            path,
+            content: Buffer.from(text, "utf8").toString("base64"),
+          })),
+        }),
+        "check setup files",
+      ),
+    );
+    return {
+      ok: errors.length === 0,
+      errors: errors.map(({ message, source }) => ({
+        message,
+        ...(source !== undefined && { source }),
+      })),
+    };
   }
 
   async updateLedger({
