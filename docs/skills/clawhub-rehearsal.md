@@ -281,3 +281,41 @@ no eligible current-content install yet. Verify and install each as it becomes
 public without waiting for the others. This record does not claim promotion,
 new authenticated host queries or m6 closeout. Hermes init/source-filtered
 search remain separately tracked compatibility gaps.
+
+## Publisher-side scan diagnosis — 2026-10-22 UTC
+
+The00:40UTC anonymous snapshot still has the same four exact current targets
+(40/40 authored files), seven prior public versions and two unavailable first
+releases. A signed-in publisher inspection then shows13 listings. The dashboard
+marks accruals/roll-forward hidden; accruals has current version None and an
+empty Versions table. Settings expose no pending-release retry control or
+current rejection explanation. Review labels on older published versions are
+not evidence that the nine newer submissions failed.
+
+At01:04–01:05UTC, owner-authorized
+[`GET /api/v1/skills/-/scan/download/{name}?version=<version>&kind=skill`](https://github.com/openclaw/clawhub/blob/main/docs/http-api.md)
+returns200 archives for all nine exact submitted versions listed above.
+Every archive has static analysis v2.4.26, status clean and empty findings/reason
+codes. ClawScan, SkillSpector, Endor and VirusTotal reports are all null. The
+archive manifest's succeeded/writtenBack fields describe its stored-report
+envelope; they do not establish a completed primary verdict or public release.
+The accruals publish-attempt GET returns404, so that route supplies no usable
+attempt diagnosis here. No rejection or specific scanner failure is observed.
+
+The documented normal scan endpoint offers an independent publisher action.
+One `POST /api/v1/skills/-/scan` per pending version requests its already-stored
+artifact with source kind published, ownerHandle puncsky, exact version and
+`update:true`. All nine requests return202 between01:05:54 and01:06:40UTC.
+This creates scan jobs, without uploading files, creating versions or overriding
+a verdict. At01:07:27–01:07:45UTC, all nine status GETs return200/queued,
+writtenBack false, no lastError, queue positions2–10 and observed running0.
+Queue acceptance is not scan success or promotion; the worker's availability
+and cause of the wait remain unproven. Do not create duplicate manual jobs.
+
+Receipts, exact-version report ZIPs, expanded JSON and publisher UI snapshots
+are retained in ignored `scripts/skills/tmp/w6-publisher-review-20261022/`.
+The existing publisher token is used only in HTTPS authorization headers and
+is never persisted in that evidence. Continue from the saved scan IDs: inspect
+returned results, act on concrete author guidance if present, then verify any
+independently promoted target's public owner/version/bytes and supported host
+install. All nine pending versions and m6 closeout remain open.

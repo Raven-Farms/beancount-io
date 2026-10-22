@@ -205,3 +205,17 @@ Protected run39679035375 from main5e1b38a2c succeeds after the owner-authorized 
 The anonymous21:41UTC snapshot confirms unchanged importer-author/init/options/property public bytes40/40. Seven changed listings still expose prior public versions; the two first-release listings are not publicly available. None of the nine new/changed targets is eligible for an exact-current install yet. The unchanged four OpenClaw installs40/40 and three supported Hermes installs33/33 are retained; Hermes init remains the separate039 policy exception. Receipts do not establish publication or a native install.
 
 **Unblock:** as soon as any accepted version becomes publicly available, the repository worker verifies that version's owner and authored bytes against the119-file candidate map and performs its supported native installs independently, without force. Do not wait for all nine to promote before working an eligible one. Close t013 only when all current-main bundles and every milestone DoD are verified; preserve the prior authenticated first-query provenance. **Who can clear it:** ClawHub's publication/moderation service, then the repository worker. No model-login, MIT-0, publisher/token, merge, native-routing or named-adoption answer remains. Do not resubmit byte-identical pending content.
+
+## Publisher scan follow-through — 2026-10-22 UTC
+
+Owner-authorized reports for all nine pending exact versions show clean static
+analysis and null primary/supporting scanner reports. No current rejection
+explanation appears in the inspected publisher UI. The worker requests one
+documented normal scan/writeback per already-uploaded version; all nine return
+202. At01:07UTC they remain queued, positions2–10, observed running0,
+writtenBack false and no lastError. This is actual follow-through inside a
+blocked milestone, not new versions or a verdict override. Saved scan IDs,
+reports and limits are recorded in [t013](t013.md#publisher-scan-follow-through--2026-10-22-utc)
+and the [rehearsal](../../../../docs/skills/clawhub-rehearsal.md#publisher-side-scan-diagnosis--2026-10-22-utc).
+Continue existing jobs and every independently promoted version; do not submit
+duplicate jobs. Public-byte/native-host verification and closeout remain open.
