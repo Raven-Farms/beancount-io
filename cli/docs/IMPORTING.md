@@ -578,9 +578,10 @@ skills deduplicate against each other: the ledger itself is the dedup database.
   when the importer states them) or price of a source posting held at cost or
   priced (`10 AAPL {100 USD}`), so two same-day buys of one share count at
   different prices, and two same-day sales selecting differently dated lots
-  (`{100 USD, 2024-01-02}` and `{100 USD, 2024-01-03}`), are two rows; ids
-  written before that (units only, or without the date) still match, but only
-  the same lot. A cost the importer leaves
+  (`{100 USD, 2024-01-02}` and `{100 USD, 2024-01-03}`) or by label or number
+  alone (`{"X"}` and `{"Y"}`, `{100}` and `{120}`), are two rows; ids written
+  before that (units only, or without the date or partial selector) still
+  match, but only the same lot. A cost the importer leaves
   open (`-4 HOOL {}`) compares only what it states, so it matches the lot
   booking chose for the entry already in the ledger, or the lots it chose
   when the sale spans several (`-20 HOOL {}` against `-10 HOOL {150 USD}` and

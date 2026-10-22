@@ -1391,23 +1391,43 @@ def _price_text(posting: Any) -> str:
     return ""
 
 
-def _lot_text(posting: Any, *, per_only: bool = False, dated: bool = True) -> str:
+def _lot_text(posting: Any, *, per_only: bool = False, historic: bool = False) -> str:
     """A source posting's cost or price, as it bears on which source row this is.
 
     Two same-day buys of `10 AAPL` at 100 and 120 USD are two rows; hashing
     units alone gave them one id, and the second was skipped as an exact
-    duplicate with exit 0 (w5/349). A cost is written only when it states
-    both its number and currency, so an open `{}` adds nothing.
+    duplicate with exit 0 (w5/349). Whatever a cost states belongs here: a
+    number, a currency, an acquisition date and a label each pick a lot, so
+    sales selecting `{"X"}` and `{"Y"}`, or `{100}` and `{120}`, are two rows
+    (w5/897, w5/899). A cost that states nothing (`{}`) adds nothing, and
+    stays open against the lot booking chose.
+
+    `historic` is the spelling before the date and partial constraints
+    counted: a cost only when it stated both number and currency, never a
+    date. Ids written then are still looked up by it.
     """
     lot = _lot_per_only(posting) if per_only else _lot(posting)
     cost = ""
-    if lot is not None and lot[0] is not None and lot[1] is not None:
-        # An acquisition date the importer states picks the lot: two sales of
-        # the same price from different dates are two rows (w5/897). `dated=False`
-        # is the spelling written before it counted.
-        acquired = f", {lot[3].isoformat()}" if dated and lot[3] is not None else ""
-        label = f', "{lot[2]}"' if lot[2] else ""
-        cost = f" {{{_exact_amount(lot[0], lot[1])}{acquired}{label}}}"
+    if lot is not None:
+        number, currency, label, acquired = lot
+        if historic:
+            if number is not None and currency is not None:
+                tag = f', "{label}"' if label else ""
+                cost = f" {{{_exact_amount(number, currency)}{tag}}}"
+        else:
+            parts = []
+            if number is not None and currency is not None:
+                parts.append(_exact_amount(number, currency))
+            elif number is not None:
+                parts.append(_exact_amount(number, "").strip())
+            elif currency is not None:
+                parts.append(currency)
+            if acquired is not None:
+                parts.append(acquired.isoformat())
+            if label:
+                parts.append(f'"{label}"')
+            if parts:
+                cost = f" {{{', '.join(parts)}}}"
     return cost + _price_text(posting)
 
 
@@ -2560,11 +2580,11 @@ def _hash_import_ids(
     """
     legs = sorted((p.units.number, p.units.currency, _lot_text(p)) for p in _source_postings(entry, account))
     per_legs = sorted(
-        (p.units.number, p.units.currency, _lot_text(p, per_only=True, dated=False))
+        (p.units.number, p.units.currency, _lot_text(p, per_only=True, historic=True))
         for p in _source_postings(entry, account)
     )
     undated_legs = sorted(
-        (p.units.number, p.units.currency, _lot_text(p, dated=False)) for p in _source_postings(entry, account)
+        (p.units.number, p.units.currency, _lot_text(p, historic=True)) for p in _source_postings(entry, account)
     )
     amounts = [(number, currency) for number, currency, _ in legs]
     # The digest hashes the description before `single_line` escapes it: a tab
