@@ -114,3 +114,25 @@ describe("the chart's strings", () => {
     }
   });
 });
+
+// w21/317: the end dot and the cursor read the new series' coordinates at once
+// while the line morphed, floating up to 48 px off the curve for ~450 ms.
+describe("the end dot and cursor during a range change", () => {
+  const source = fs
+    .readFileSync(
+      path.join(__dirname, "..", "interactive-line-chart.tsx"),
+      "utf8",
+    )
+    .replace(/\s+/g, "");
+
+  it("wait for the morph to land", () => {
+    expect(
+      source.includes("opacity:scrub.value===SCRUB_IDLE&&morph.value>=1?1:0"),
+    ).toBe(true);
+    // The cursor and its guide share the rule.
+    expect(
+      source.split("constactive=index!==SCRUB_IDLE&&morph.value>=1;").length -
+        1,
+    ).toBe(2);
+  });
+});

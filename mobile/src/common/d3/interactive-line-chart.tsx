@@ -780,9 +780,13 @@ function InteractiveLineChart({
   }, [numbers]);
   const plotLabel = hasSeries ? chartSummaryLabel(label, a11ySeries) : null;
 
+  // The dot and the cursor read the new series' coordinates at once, while the
+  // line and area morph through transition frames: on a range change they floated
+  // up to 48 px off the curve for the ~450 ms it takes. They wait for the morph
+  // to land instead (w21/317).
   const guideAnimatedProps = useAnimatedProps(() => {
     const index = activeScrubIndex(scrub.value, pointXs.length);
-    const active = index !== SCRUB_IDLE;
+    const active = index !== SCRUB_IDLE && morph.value >= 1;
     // Show/hide as opacity rather than as conditional JSX: mounting a node
     // mid-gesture is a React render, which is the thing this is avoiding.
     return {
@@ -794,7 +798,7 @@ function InteractiveLineChart({
 
   const cursorAnimatedProps = useAnimatedProps(() => {
     const index = activeScrubIndex(scrub.value, pointXs.length);
-    const active = index !== SCRUB_IDLE;
+    const active = index !== SCRUB_IDLE && morph.value >= 1;
     return {
       opacity: active ? 1 : 0,
       cx: active ? pointXs[index] : 0,
@@ -804,7 +808,7 @@ function InteractiveLineChart({
 
   // The resting end dot and the cursor are never on screen together.
   const endDotAnimatedProps = useAnimatedProps(() => ({
-    opacity: scrub.value === SCRUB_IDLE ? 1 : 0,
+    opacity: scrub.value === SCRUB_IDLE && morph.value >= 1 ? 1 : 0,
   }));
 
   return (
