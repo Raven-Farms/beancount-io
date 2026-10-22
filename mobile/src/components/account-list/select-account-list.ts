@@ -125,6 +125,15 @@ type TreeRules = {
   ) => boolean;
 };
 
+/**
+ * Whether the zero-value filter spares a node: it holds something, is listed,
+ * or has a row beneath it that does. Receivable's closed Alice +20 and Bob -20
+ * net to nothing, and went with it (w21/423).
+ */
+function spared(node: AccountNode, rules: TreeRules): boolean {
+  return node.value !== 0 || node.children.length > 0 || rules.keep(node);
+}
+
 function toNode(
   raw: RawChild,
   currency: string,
@@ -134,7 +143,7 @@ function toNode(
 ): AccountNode {
   const children = (raw.children ?? [])
     .map((child) => toNode(child, currency, sign, leafName, rules))
-    .filter((node) => node.value !== 0 || rules.keep(node));
+    .filter((node) => spared(node, rules));
   // A parent's own postings, beside its sub-accounts, so the rows beneath it
   // add up to it (w21/174). A leaf's own balance is its value already.
   const ownValue = raw.balance
@@ -257,7 +266,7 @@ function buildTopLevel(
 ): AccountNode[] {
   const rows = topLevel
     .map((child) => toNode(child, currency, sign, dropRoot, rules))
-    .filter((accountNode) => accountNode.value !== 0 || rules.keep(accountNode))
+    .filter((accountNode) => spared(accountNode, rules))
     .sort((a, b) => Math.abs(b.value) - Math.abs(a.value))
     .map((node) => compressChain(node, rules));
   return skipPassThroughLevels(rows, rules);

@@ -327,6 +327,47 @@ describe("selectAccountTreeFromRoot", () => {
     expect(savings?.children).toEqual([]);
   });
 
+  // w21/423: a parent whose children net to zero was dropped with them.
+  it("keeps closed accounts holding balances that net to zero under their parent", () => {
+    const root = createIncomeRoot("Assets", [
+      {
+        account: "Assets:Receivable",
+        balanceChildren: { USD: 0 },
+        children: [
+          { account: "Assets:Receivable:Alice", balanceChildren: { USD: 20 } },
+          { account: "Assets:Receivable:Bob", balanceChildren: { USD: -20 } },
+        ],
+      },
+      { account: "Assets:Checking", balanceChildren: { USD: 100 } },
+    ]);
+    // Neither child is in the listed (open) set.
+    const rows = selectAccountTreeFromRoot("USD", root, 1, {
+      accounts: ["Assets:Checking"],
+      rootAccount: "Assets",
+    });
+    const receivable = rows.find((row) => row.account === "Assets:Receivable");
+    expect(receivable?.children.map((child) => child.account).sort()).toEqual([
+      "Assets:Receivable:Alice",
+      "Assets:Receivable:Bob",
+    ]);
+  });
+
+  it("still drops a parent that holds nothing at all", () => {
+    const root = createIncomeRoot("Assets", [
+      {
+        account: "Assets:Old",
+        balanceChildren: { USD: 0 },
+        children: [{ account: "Assets:Old:A", balanceChildren: { USD: 0 } }],
+      },
+      { account: "Assets:Checking", balanceChildren: { USD: 100 } },
+    ]);
+    const rows = selectAccountTreeFromRoot("USD", root, 1, {
+      accounts: ["Assets:Checking"],
+      rootAccount: "Assets",
+    });
+    expect(rows.map((row) => row.account)).toEqual(["Assets:Checking"]);
+  });
+
   it("still lets a rendered child stand in for its listed parent", () => {
     const root = createIncomeRoot("Assets", [
       {
