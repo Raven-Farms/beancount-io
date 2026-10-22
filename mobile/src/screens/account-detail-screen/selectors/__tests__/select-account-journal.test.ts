@@ -804,6 +804,44 @@ describe("a movement only in another currency", () => {
   });
 });
 
+// w21/421: an FX conversion moves two currencies; only the shown one was drawn.
+describe("a movement in the shown currency and another", () => {
+  const rows = selectAccountJournalRows("USD", [
+    item(
+      { entry_hash: "fx", date: "2026-08-06", payee: "Wise" },
+      { USD: "-110.00", EUR: "100.00" },
+      { USD: "890.00", EUR: "100.00" },
+    ),
+  ]);
+
+  it("keeps the shown change and names the other leg", () => {
+    expect(rows[0].change).toBe(-110);
+    expect(formatOtherChanges(rows[0].otherChanges!)).toBe("+100.00 EUR");
+  });
+
+  it("names the other leg in the day's total", () => {
+    expect(groupAccountJournalRowsToSections(rows, "USD")[0].totalChange).toBe(
+      "-$110.00 · +100.00 EUR",
+    );
+  });
+
+  it("reads the units view the same way", () => {
+    const [swap] = selectAccountJournalRows(
+      "USD",
+      [
+        item(
+          { entry_hash: "sw", date: "2026-08-07", payee: "Swap" },
+          { VOO: "5", VTI: "-10" },
+          { VOO: "5" },
+        ),
+      ],
+      { currency: "VOO" } as never,
+    );
+    expect(swap.change).toBe(5);
+    expect(formatOtherChanges(swap.otherChanges!)).toBe("-10 VTI");
+  });
+});
+
 // w21/163: float residue signed a day that nets to zero.
 describe("a day that nets to zero", () => {
   it("reads an unsigned zero, not -$0.00 or +$0.00", () => {

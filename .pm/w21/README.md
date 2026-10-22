@@ -86,6 +86,5 @@
 - [487](./487.md) — Recent changes and commit detail show no time; same-day commits indistinguishable
 - [488](./488.md) — Invite Friends read twice by VoiceOver; summary never spoken
 - [315](./blocked/315.md) — In-app commits signed with Gitea username and real email (no full_name, no noreply) — **blocked:** needs the owner's noreply-address and published-history decisions, and a production backfill of existing Gitea users that can't be verified here
-- [421](./421.md) — FX conversion row shows only operating-currency leg
 - [422](./422.md) — Units view sums cost of every commodity (+5 VOO at cost $0)
 - [423](./423.md) — Closed accounts with balances vanish when siblings net to zero

@@ -137,16 +137,21 @@ export function AccountEntryRow({
   // A commodity account's rows read in its units, with what each change cost.
   const { units } = row;
   // Moved only other currencies: show them, not a zero, and say they are
-  // outside the running total (w21/100).
+  // outside the running total (w21/100). Moved both: the other leg goes on a
+  // line of its own under the shown change (w21/421).
   const otherChanges = row.otherChanges ?? [];
-  const changeText =
-    otherChanges.length > 0
-      ? formatOtherChanges(otherChanges)
-      : units
-        ? formatUnits(row.change, units.currency, units.scale, true)
-        : formatAccountJournalChange(row.change, currency, row.moneyScale ?? 2);
+  const onlyOthers = otherChanges.length > 0 && row.change === 0;
+  const changeText = onlyOthers
+    ? formatOtherChanges(otherChanges)
+    : units
+      ? formatUnits(row.change, units.currency, units.scale, true)
+      : formatAccountJournalChange(row.change, currency, row.moneyScale ?? 2);
   const notInTotalText =
-    otherChanges.length > 0 ? t("valuationNotInTotalTag") : null;
+    otherChanges.length === 0
+      ? null
+      : onlyOthers
+        ? t("valuationNotInTotalTag")
+        : `${formatOtherChanges(otherChanges)} · ${t("valuationNotInTotalTag")}`;
   const balanceText = units
     ? formatUnits(row.balance, units.currency, units.scale)
     : formatAccountJournalBalance(row.balance, currency, row.moneyScale ?? 2);

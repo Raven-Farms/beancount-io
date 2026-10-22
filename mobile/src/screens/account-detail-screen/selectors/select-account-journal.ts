@@ -350,15 +350,19 @@ export function groupAccountJournalRowsToSections(
     // that net to nothing (w21/163). `+ 0` turns a rounded -0 into 0.
     const net =
       Number(data.reduce((sum, r) => sum + r.change, 0).toFixed(scale)) + 0;
-    // A day that moved only other currencies says so, not "$0.00" (w21/100).
-    const others = net === 0 ? sumOtherChanges(data) : [];
+    // A day that moved only other currencies says so, not "$0.00" (w21/100);
+    // one that moved both names the others beside the shown total (w21/421).
+    const others = sumOtherChanges(data);
     // Sign is an explicit prefix; the amount carries the symbol (or code suffix).
+    const shown = units
+      ? formatUnits(net, units.currency, scale, net > 0)
+      : formatAccountJournalChange(net, currency, scale);
     const totalChange =
-      others.length > 0
-        ? formatOtherChanges(others)
-        : units
-          ? formatUnits(net, units.currency, scale, net > 0)
-          : formatAccountJournalChange(net, currency, scale);
+      others.length === 0
+        ? shown
+        : net === 0
+          ? formatOtherChanges(others)
+          : `${shown} · ${formatOtherChanges(others)}`;
     return {
       isoDate,
       displayDate: formatLedgerDate(isoDate, locale),
@@ -430,7 +434,9 @@ export function selectAccountJournalRows(
     };
     const shown = units?.currency ?? currency;
     const change = amountIn(item.change, shown);
-    const others = change.number === 0 ? notInTotalOf(item.change, shown) : [];
+    // Beside a shown change too: an FX conversion moves two currencies and
+    // the other leg was nowhere (w21/421).
+    const others = notInTotalOf(item.change, shown);
     const otherChanges = others.length > 0 ? { otherChanges: others } : {};
     if (!units) {
       const balance = amountIn(item.balance, currency);
