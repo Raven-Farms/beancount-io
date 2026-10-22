@@ -275,6 +275,10 @@ export const ca: Translations = {
   equity: "Patrimoni net",
   noDataCharts: "Afegir ràpid per mostrar gràfics",
   notEnoughChartData: "Encara no hi ha prou dades per al gràfic",
+  chartSummary:
+    "De {{start}}, {{startValue}}, a {{end}}, {{endValue}}. Mínim {{low}}, màxim {{high}}.",
+  chartPointValue: "{{period}}, {{value}}, {{change}} des de l'inici",
+  chartAdjustHint: "Llisqueu amunt o avall per recórrer els mesos",
   done: "Fet",
   payee: "Beneficiari",
   narration: "Descripció",

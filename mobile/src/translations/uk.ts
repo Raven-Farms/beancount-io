@@ -275,6 +275,10 @@ export const uk: Translations = {
   equity: "Власний капітал",
   noDataCharts: "Швидко додайте для показу графіків",
   notEnoughChartData: "Поки що замало даних для графіка",
+  chartSummary:
+    "Від {{start}}, {{startValue}}, до {{end}}, {{endValue}}. Мінімум {{low}}, максимум {{high}}.",
+  chartPointValue: "{{period}}, {{value}}, {{change}} від початку",
+  chartAdjustHint: "Проведіть угору або вниз, щоб перемикати місяці",
   done: "Готово",
   payee: "Отримувач",
   narration: "Опис",

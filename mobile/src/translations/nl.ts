@@ -267,6 +267,10 @@ export const nl: Translations = {
   equity: "Eigen vermogen",
   noDataCharts: "Snel toevoegen om grafieken te tonen",
   notEnoughChartData: "Nog niet genoeg gegevens voor een grafiek",
+  chartSummary:
+    "Van {{start}}, {{startValue}}, tot {{end}}, {{endValue}}. Laagste {{low}}, hoogste {{high}}.",
+  chartPointValue: "{{period}}, {{value}}, {{change}} sinds het begin",
+  chartAdjustHint: "Veeg omhoog of omlaag om door de maanden te gaan",
   done: "Klaar",
   payee: "Begunstigde",
   narration: "Beschrijving",

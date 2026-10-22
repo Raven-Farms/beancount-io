@@ -273,6 +273,10 @@ export const fr: Translations = {
   equity: "Capitaux propres",
   noDataCharts: "Ajoutez rapidement pour afficher les graphiques",
   notEnoughChartData: "Pas encore assez de données pour le graphique",
+  chartSummary:
+    "De {{start}}, {{startValue}}, à {{end}}, {{endValue}}. Minimum {{low}}, maximum {{high}}.",
+  chartPointValue: "{{period}}, {{value}}, {{change}} depuis le début",
+  chartAdjustHint: "Balayez vers le haut ou le bas pour parcourir les mois",
   done: "Terminé",
   payee: "Bénéficiaire",
   narration: "Libellé",

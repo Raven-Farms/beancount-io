@@ -277,6 +277,10 @@ export const sk: Translations = {
   equity: "Vlastné imanie",
   noDataCharts: "Rýchlo pridajte pre zobrazenie grafov",
   notEnoughChartData: "Zatiaľ nie je dosť údajov na graf",
+  chartSummary:
+    "Od {{start}}, {{startValue}}, do {{end}}, {{endValue}}. Minimum {{low}}, maximum {{high}}.",
+  chartPointValue: "{{period}}, {{value}}, {{change}} od začiatku",
+  chartAdjustHint: "Potiahnutím nahor alebo nadol prechádzate mesiace",
   done: "Hotovo",
   payee: "Príjemca",
   narration: "Popis",

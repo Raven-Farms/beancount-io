@@ -49,6 +49,12 @@ import { LEADING_TEXT_ALIGN, LTR_PLOT } from "@/common/rtl";
 import { ChartErrorBoundary } from "./chart-chrome";
 import { HERO_AMOUNT_FIT } from "@/components/amount-text/hero-amount-fit";
 import { changePercent, formatChangePercent } from "./change-percent";
+import {
+  CHART_STEP_REST_MS,
+  chartPointText,
+  chartSummaryLabel,
+  stepChartIndex,
+} from "./chart-accessibility";
 
 // Created once at module scope: building these inside the component would give
 // React a new component type on every render and remount the node each time.
@@ -719,6 +725,61 @@ function InteractiveLineChart({
     [hasSeries, chartWidth, count, scrub, swipeOwner],
   );
 
+  // Screen readers (w21/316): the plot is one adjustable element. Stepping
+  // writes the same `scrub` index the finger does, so the cursor and the header
+  // follow; the value text is state because VoiceOver reads it, and it rests
+  // back on the latest point a few seconds after the last step.
+  const [stepIndex, setStepIndex] = useState<number | null>(null);
+  const stepRest = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const a11yFormat = useCallback(
+    (value: number, includePlus?: boolean) =>
+      formatValue
+        ? formatValue(value, includePlus)
+        : formatSignedMoneyWithCurrency(value, currency, includePlus),
+    [currency, formatValue],
+  );
+  const a11ySeries = useMemo(
+    () => ({
+      labels,
+      periods,
+      numbers,
+      baseline,
+      format: a11yFormat,
+      translate: t,
+    }),
+    [labels, periods, numbers, baseline, a11yFormat, t],
+  );
+  const onAccessibilityAction = useCallback(
+    (event: { nativeEvent: { actionName: string } }) => {
+      const name = event.nativeEvent.actionName;
+      if (name !== "increment" && name !== "decrement") return;
+      const next = stepChartIndex(
+        stepIndex,
+        name === "increment" ? 1 : -1,
+        count,
+      );
+      setStepIndex(next);
+      scrub.value = next;
+      if (stepRest.current) clearTimeout(stepRest.current);
+      stepRest.current = setTimeout(() => {
+        setStepIndex(null);
+        scrub.value = SCRUB_IDLE;
+      }, CHART_STEP_REST_MS);
+    },
+    [stepIndex, count, scrub],
+  );
+  useEffect(
+    () => () => {
+      if (stepRest.current) clearTimeout(stepRest.current);
+    },
+    [],
+  );
+  // A new series (another range, another account) starts at rest.
+  useEffect(() => {
+    setStepIndex(null);
+  }, [numbers]);
+  const plotLabel = hasSeries ? chartSummaryLabel(label, a11ySeries) : null;
+
   const guideAnimatedProps = useAnimatedProps(() => {
     const index = activeScrubIndex(scrub.value, pointXs.length);
     const active = index !== SCRUB_IDLE;
@@ -774,7 +835,26 @@ function InteractiveLineChart({
         </View>
 
         <GestureDetector gesture={scrubGesture}>
-          <View style={[styles.chartContainer, { width: chartWidth, height }]}>
+          <View
+            style={[styles.chartContainer, { width: chartWidth, height }]}
+            accessible={hasSeries}
+            accessibilityRole={hasSeries ? "adjustable" : undefined}
+            accessibilityLabel={plotLabel ?? undefined}
+            accessibilityHint={hasSeries ? t("chartAdjustHint") : undefined}
+            accessibilityValue={
+              hasSeries
+                ? {
+                    text: chartPointText(a11ySeries, stepIndex ?? count - 1),
+                  }
+                : undefined
+            }
+            accessibilityActions={
+              hasSeries
+                ? [{ name: "increment" }, { name: "decrement" }]
+                : undefined
+            }
+            onAccessibilityAction={onAccessibilityAction}
+          >
             <Svg width={chartWidth} height={height}>
               <Defs>
                 <LinearGradient id="netWorthFill" x1="0" y1="0" x2="0" y2="1">

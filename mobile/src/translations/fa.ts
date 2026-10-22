@@ -263,6 +263,10 @@ export const fa: Translations = {
   equity: "حقوق صاحبان سهام",
   noDataCharts: "برای نمایش نمودارها سریع اضافه کنید",
   notEnoughChartData: "هنوز داده کافی برای نمودار نیست",
+  chartSummary:
+    "از {{start}}، {{startValue}}، تا {{end}}، {{endValue}}. کمترین {{low}}، بیشترین {{high}}.",
+  chartPointValue: "{{period}}، {{value}}، {{change}} از ابتدا",
+  chartAdjustHint: "برای حرکت میان ماه‌ها به بالا یا پایین بکشید",
   done: "تمام",
   payee: "دریافت‌کننده",
   narration: "شرح",

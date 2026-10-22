@@ -240,6 +240,10 @@ export const zh: Translations = {
   equity: "权益",
   noDataCharts: "添加数据以显示图例",
   notEnoughChartData: "数据不足,暂无法绘制图表",
+  chartSummary:
+    "从 {{start}}（{{startValue}}）到 {{end}}（{{endValue}}）。最低 {{low}}，最高 {{high}}。",
+  chartPointValue: "{{period}}，{{value}}，自开始以来 {{change}}",
+  chartAdjustHint: "向上或向下轻扫以逐月切换",
   done: "完成",
   payee: "收款方",
   narration: "备注",

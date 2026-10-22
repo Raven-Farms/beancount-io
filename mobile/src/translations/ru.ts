@@ -276,6 +276,10 @@ export const ru: Translations = {
   equity: "Собственный капитал",
   noDataCharts: "Быстро добавьте для отображения графиков",
   notEnoughChartData: "Пока недостаточно данных для графика",
+  chartSummary:
+    "С {{start}}, {{startValue}}, по {{end}}, {{endValue}}. Минимум {{low}}, максимум {{high}}.",
+  chartPointValue: "{{period}}, {{value}}, {{change}} с начала",
+  chartAdjustHint: "Проведите вверх или вниз, чтобы перебирать месяцы",
   done: "Готово",
   payee: "Получатель",
   narration: "Описание",

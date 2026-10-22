@@ -274,6 +274,10 @@ export const pt: Translations = {
   equity: "Patrimônio líquido",
   noDataCharts: "Adicionar rápido para mostrar gráficos",
   notEnoughChartData: "Ainda não há dados suficientes para o gráfico",
+  chartSummary:
+    "De {{start}}, {{startValue}}, a {{end}}, {{endValue}}. Mínimo {{low}}, máximo {{high}}.",
+  chartPointValue: "{{period}}, {{value}}, {{change}} desde o início",
+  chartAdjustHint: "Deslize para cima ou para baixo para percorrer os meses",
   done: "Pronto",
   payee: "Beneficiário",
   narration: "Descrição",

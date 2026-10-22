@@ -258,6 +258,10 @@ export const en = {
   equity: "Equity",
   noDataCharts: "Quick add to show charts",
   notEnoughChartData: "Not enough data to chart yet",
+  chartSummary:
+    "From {{start}}, {{startValue}}, to {{end}}, {{endValue}}. Low {{low}}, high {{high}}.",
+  chartPointValue: "{{period}}, {{value}}, {{change}} since start",
+  chartAdjustHint: "Swipe up or down to step through the months",
   done: "Done",
   payee: "Payee",
   narration: "Narration",
