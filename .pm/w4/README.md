@@ -4,6 +4,8 @@
 
 ## Inbox
 
+- [964 — Return focus to the file editor after choosing Stay](./964.md) — minor; desktop/narrow native Escape→Enter preserves the live draft/node but leaves BODY focused and typing ignored; bounded editor return-focus handoff, no writes.
+
 - [963 — Keep the pre-startup keyboard target visible after hydration](./963.md) — minor; pure-native-Tab desktop/narrow controls retain focus/nodes but initial restoration resets scroll to0 and hides the target; matching router source traced, no writes.
 
 - [962 — Keep Budget's first Add action from being lost](./962.md) — minor; dashboard QA,2026-10-22; four natural-load Enter/pointer cases lose an enabled header activation before handler readiness; retry/dismissal focus pass, matching page source traced; no writes.
@@ -185,7 +187,7 @@
 
 - ~~**273**~~ — Keep active picker options identifiable in forced colors — dropped 2026-10-21: promoted to [m43](./done/m43/README.md), preserving all evidence and adding independently reproduced JournalFilters/default Tabs label backplates; four styling targets and rendered acceptance exceed one hour.
 
-- ~~**294**~~ — Preserve an acknowledged star action when its metadata refresh fails — dropped 2026-10-20: promoted to [m41](./m41/README.md), preserving Star evidence and adding the independent Budget acknowledgement/read failure; two controllers and regressions exceed one hour.
+- ~~**294**~~ — Preserve an acknowledged star action when its metadata refresh fails — dropped 2026-10-20: promoted to [m41](./done/m41/README.md), preserving Star evidence and adding the independent Budget acknowledgement/read failure; two controllers and regressions exceed one hour.
 
 - ~~**293**~~ — Keep the DatePicker calendar reachable in short viewports — dropped 2026-10-20: promoted to [m40](./done/m40/README.md), preserving all evidence and adding the independent modal Combobox wheel failure; the shared repair and regression scope exceed one hour.
 
