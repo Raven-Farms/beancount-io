@@ -373,6 +373,13 @@ export const pt: Translations = {
     "O servidor não confirmou o salvamento. Verifique antes de tentar novamente.",
   ledgerWriteRateLimited:
     "Alterações demais de uma vez. Aguarde um momento e tente novamente.",
+  ledgerInvalidAccount: "{{value}} não é um nome de conta válido.",
+  ledgerInvalidCurrency: "{{value}} não é uma moeda válida.",
+  ledgerInvalidTag:
+    "#{{value}} não pode ser usado como etiqueta. Use apenas as letras A–Z, dígitos e - _ . /",
+  ledgerInvalidLink:
+    "^{{value}} não pode ser usado como link. Use apenas as letras A–Z, dígitos e - _ . /",
+  ledgerInvalidFlag: "{{value}} não pode ser usado como marca.",
   openAccountInvalidRoot: "Escolha um tipo de conta válido.",
   openAccountNameRequired: "Digite pelo menos uma parte do nome da conta.",
   openAccountEmptyComponent:

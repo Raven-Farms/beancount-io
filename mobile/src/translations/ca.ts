@@ -375,6 +375,13 @@ export const ca: Translations = {
     "El servidor no ha confirmat el desat. Comproveu-ho abans de tornar-ho a provar.",
   ledgerWriteRateLimited:
     "Massa canvis alhora. Espera un moment i torna-ho a provar.",
+  ledgerInvalidAccount: "{{value}} no és un nom de compte vàlid.",
+  ledgerInvalidCurrency: "{{value}} no és una moneda vàlida.",
+  ledgerInvalidTag:
+    "#{{value}} no es pot fer servir com a etiqueta. Fes servir només les lletres A–Z, xifres i - _ . /",
+  ledgerInvalidLink:
+    "^{{value}} no es pot fer servir com a enllaç. Fes servir només les lletres A–Z, xifres i - _ . /",
+  ledgerInvalidFlag: "{{value}} no es pot fer servir com a marca.",
   openAccountInvalidRoot: "Tria un tipus de compte vàlid.",
   openAccountNameRequired: "Escriu almenys un component del nom.",
   openAccountEmptyComponent: "Els components del nom no poden ser buits.",

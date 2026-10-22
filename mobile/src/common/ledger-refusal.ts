@@ -126,6 +126,59 @@ export function describeLedgerRefusal(
   return `${message}${stop} ${i18n.t("ledgerRefusalQuoteHint")}`;
 }
 
+/**
+ * The ledger's refusal of one token of a structured entry (w23/033):
+ * `entry 0: postings[0].account "Assets:Bank:x y" is not a valid account`.
+ * The value is JSON-quoted when it is a string; the kind ends the clause,
+ * and a reason may follow it.
+ */
+const TOKEN_REFUSAL =
+  /^entry \d+: \S+ ("(?:[^"\\]|\\.)*"|\S+) is not a valid ([a-z]+(?: [a-z]+)?)(?:$|:)/;
+
+const TOKEN_REFUSAL_KEYS: Record<string, string> = {
+  account: "ledgerInvalidAccount",
+  currency: "ledgerInvalidCurrency",
+  tag: "ledgerInvalidTag",
+  link: "ledgerInvalidLink",
+  flag: "ledgerInvalidFlag",
+  "transaction flag": "ledgerInvalidFlag",
+};
+
+/**
+ * A token refusal in the app's words, naming the value and not the wire field
+ * it came in (w21/659); null for one whose kind has no copy, so the screen
+ * shows its generic failure; undefined when the error is not one. It reached
+ * the screen as the server's English text in every language.
+ */
+function tokenRefusal(
+  error: unknown,
+  i18n: Translate,
+): string | null | undefined {
+  const gqlErrors = (error as { graphQLErrors?: unknown } | null)
+    ?.graphQLErrors;
+  const messages = [
+    ...(Array.isArray(gqlErrors) ? gqlErrors : []).map(
+      (gqlError) => (gqlError as { message?: unknown } | null)?.message,
+    ),
+    (error as { message?: unknown } | null)?.message,
+  ];
+  for (const message of messages) {
+    const match =
+      typeof message === "string" ? TOKEN_REFUSAL.exec(message) : null;
+    if (!match) continue;
+    let value = match[1];
+    try {
+      const parsed: unknown = JSON.parse(value);
+      if (typeof parsed === "string") value = parsed;
+    } catch {
+      // An unquoted value (a number) is shown as written.
+    }
+    const key = TOKEN_REFUSAL_KEYS[match[2]];
+    return key ? i18n.t(key, { value }) : null;
+  }
+  return undefined;
+}
+
 /** Codes whose message is the ledger's own text about the write. */
 const LEDGER_TEXT_CODES = new Set([
   "VALIDATION_FAILED",
@@ -206,6 +259,10 @@ export function ledgerWriteFailureMessage(
   const refusal = describeLedgerRefusal(error, i18n, context);
   if (refusal) return refusal;
   const codes = graphQLErrorCodes(error);
+  if (codes.includes("BAD_USER_INPUT")) {
+    const token = tokenRefusal(error, i18n);
+    if (token !== undefined) return token;
+  }
   if (codes.some((code) => LEDGER_TEXT_CODES.has(code))) {
     return error instanceof Error && error.message.trim()
       ? error.message

@@ -358,6 +358,13 @@ export const en = {
     "The server didn't confirm the save. Check before trying again.",
   ledgerWriteRateLimited:
     "Too many changes at once. Wait a moment and try again.",
+  ledgerInvalidAccount: "{{value}} isn't a valid account name.",
+  ledgerInvalidCurrency: "{{value}} isn't a valid currency.",
+  ledgerInvalidTag:
+    "#{{value}} can't be used as a tag. Use only the letters A–Z, digits and - _ . /",
+  ledgerInvalidLink:
+    "^{{value}} can't be used as a link. Use only the letters A–Z, digits and - _ . /",
+  ledgerInvalidFlag: "{{value}} can't be used as a flag.",
   openAccountInvalidRoot: "Choose a valid account type.",
   openAccountNameRequired: "Enter at least one account name component.",
   openAccountEmptyComponent: "Account components cannot be empty.",

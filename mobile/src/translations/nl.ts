@@ -365,6 +365,13 @@ export const nl: Translations = {
     "De server heeft het opslaan niet bevestigd. Controleer het voordat je het opnieuw probeert.",
   ledgerWriteRateLimited:
     "Te veel wijzigingen tegelijk. Wacht even en probeer het opnieuw.",
+  ledgerInvalidAccount: "{{value}} is geen geldige accountnaam.",
+  ledgerInvalidCurrency: "{{value}} is geen geldige valuta.",
+  ledgerInvalidTag:
+    "#{{value}} kan niet als tag worden gebruikt. Gebruik alleen de letters A–Z, cijfers en - _ . /",
+  ledgerInvalidLink:
+    "^{{value}} kan niet als link worden gebruikt. Gebruik alleen de letters A–Z, cijfers en - _ . /",
+  ledgerInvalidFlag: "{{value}} kan niet als vlag worden gebruikt.",
   openAccountInvalidRoot: "Kies een geldig accounttype.",
   openAccountNameRequired: "Voer minstens één naamdeel in.",
   openAccountEmptyComponent: "Naamdelen mogen niet leeg zijn.",

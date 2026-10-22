@@ -360,3 +360,67 @@ describe("a refusal read in the editor's terms", () => {
     ).toBe(true);
   });
 });
+
+// w21/659: the ledger's entry-token refusal reached the screen as English API
+// text naming wire fields ("entry 0: postings[0].account … is not a valid
+// account") in every language.
+describe("ledgerWriteFailureMessage with a token refusal", () => {
+  const named = {
+    t: (key: string, params?: Record<string, string>) =>
+      `${key}(${params?.value ?? ""})`,
+  };
+  const badInput = (message: string) =>
+    Object.assign(new Error(message), {
+      graphQLErrors: [{ message, extensions: { code: "BAD_USER_INPUT" } }],
+    });
+
+  it("names the value of each kind, not its field", () => {
+    const cases: [string, string][] = [
+      [
+        'entry 0: postings[0].account "Assets:Bank:x y" is not a valid account',
+        "ledgerInvalidAccount(Assets:Bank:x y)",
+      ],
+      [
+        'entry 0: postings[1].units.currency "usd" is not a valid currency',
+        "ledgerInvalidCurrency(usd)",
+      ],
+      ['entry 0: tags[0] "旅行" is not a valid tag', "ledgerInvalidTag(旅行)"],
+      ['entry 2: links[0] "a b" is not a valid link', "ledgerInvalidLink(a b)"],
+      [
+        'entry 0: postings[0].flag "%" is not a valid flag: the ledger engine cannot read a "%" flag yet, and would drop the posting; use another flag',
+        "ledgerInvalidFlag(%)",
+      ],
+      [
+        'entry 0: flag "\'X" is not a valid transaction flag',
+        "ledgerInvalidFlag('X)",
+      ],
+      [
+        'entry 0: account "Assets:\\"Q\\"" is not a valid account',
+        'ledgerInvalidAccount(Assets:"Q")',
+      ],
+    ];
+    for (const [message, expected] of cases) {
+      expect(ledgerWriteFailureMessage(badInput(message), named)).toBe(
+        expected,
+      );
+    }
+  });
+
+  it("shows the generic failure for a kind it has no words for", () => {
+    expect(
+      ledgerWriteFailureMessage(
+        badInput('entry 0: meta.Key "Key" is not a valid metadata key'),
+        named,
+      ),
+    ).toBe(null);
+  });
+
+  it("keeps the ledger's text for any other bad input", () => {
+    expect(
+      ledgerWriteFailureMessage(
+        badInput("entry 0: renders as more than one directive"),
+        named,
+      ),
+    ).toBe("entry 0: renders as more than one directive");
+  });
+});

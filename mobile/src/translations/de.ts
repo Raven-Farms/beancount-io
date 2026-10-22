@@ -377,6 +377,13 @@ export const de: Translations = {
     "Der Server hat das Speichern nicht bestätigt. Prüfen Sie nach, bevor Sie es erneut versuchen.",
   ledgerWriteRateLimited:
     "Zu viele Änderungen auf einmal. Warten Sie kurz und versuchen Sie es erneut.",
+  ledgerInvalidAccount: "{{value}} ist kein gültiger Kontoname.",
+  ledgerInvalidCurrency: "{{value}} ist keine gültige Währung.",
+  ledgerInvalidTag:
+    "#{{value}} kann nicht als Tag verwendet werden. Verwenden Sie nur die Buchstaben A–Z, Ziffern und - _ . /",
+  ledgerInvalidLink:
+    "^{{value}} kann nicht als Link verwendet werden. Verwenden Sie nur die Buchstaben A–Z, Ziffern und - _ . /",
+  ledgerInvalidFlag: "{{value}} kann nicht als Flag verwendet werden.",
   openAccountInvalidRoot: "Wählen Sie einen gültigen Kontotyp.",
   openAccountNameRequired: "Geben Sie mindestens einen Namensbestandteil ein.",
   openAccountEmptyComponent: "Namensbestandteile dürfen nicht leer sein.",

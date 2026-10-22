@@ -375,6 +375,13 @@ export const fr: Translations = {
     "Le serveur n'a pas confirmé l'enregistrement. Vérifiez avant de réessayer.",
   ledgerWriteRateLimited:
     "Trop de modifications à la fois. Patientez un instant et réessayez.",
+  ledgerInvalidAccount: "{{value}} n'est pas un nom de compte valide.",
+  ledgerInvalidCurrency: "{{value}} n'est pas une devise valide.",
+  ledgerInvalidTag:
+    "#{{value}} ne peut pas servir d'étiquette. Utilisez uniquement les lettres A–Z, des chiffres et - _ . /",
+  ledgerInvalidLink:
+    "^{{value}} ne peut pas servir de lien. Utilisez uniquement les lettres A–Z, des chiffres et - _ . /",
+  ledgerInvalidFlag: "{{value}} ne peut pas servir de drapeau.",
   openAccountInvalidRoot: "Choisissez un type de compte valide.",
   openAccountNameRequired: "Saisissez au moins un élément du nom.",
   openAccountEmptyComponent: "Les éléments du nom ne peuvent pas être vides.",

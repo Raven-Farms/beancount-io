@@ -366,6 +366,13 @@ export const bg: Translations = {
     "Сървърът не потвърди запазването. Проверете, преди да опитате отново.",
   ledgerWriteRateLimited:
     "Твърде много промени наведнъж. Изчакайте малко и опитайте отново.",
+  ledgerInvalidAccount: "{{value}} не е валидно име на сметка.",
+  ledgerInvalidCurrency: "{{value}} не е валидна валута.",
+  ledgerInvalidTag:
+    "#{{value}} не може да се използва като етикет. Използвайте само буквите A–Z, цифри и - _ . /",
+  ledgerInvalidLink:
+    "^{{value}} не може да се използва като връзка. Използвайте само буквите A–Z, цифри и - _ . /",
+  ledgerInvalidFlag: "{{value}} не може да се използва като флаг.",
   openAccountInvalidRoot: "Изберете валиден вид сметка.",
   openAccountNameRequired: "Въведете поне една част от името на сметката.",
   openAccountEmptyComponent:

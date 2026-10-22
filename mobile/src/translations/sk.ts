@@ -376,6 +376,13 @@ export const sk: Translations = {
     "Server nepotvrdil uloženie. Skontrolujte to skôr, než to skúsite znova.",
   ledgerWriteRateLimited:
     "Príliš veľa zmien naraz. Chvíľu počkajte a skúste to znova.",
+  ledgerInvalidAccount: "{{value}} nie je platný názov účtu.",
+  ledgerInvalidCurrency: "{{value}} nie je platná mena.",
+  ledgerInvalidTag:
+    "#{{value}} nemožno použiť ako značku. Použite iba písmená A–Z, číslice a - _ . /",
+  ledgerInvalidLink:
+    "^{{value}} nemožno použiť ako odkaz. Použite iba písmená A–Z, číslice a - _ . /",
+  ledgerInvalidFlag: "{{value}} nemožno použiť ako príznak.",
   openAccountInvalidRoot: "Vyberte platný typ účtu.",
   openAccountNameRequired: "Zadajte aspoň jednu časť názvu účtu.",
   openAccountEmptyComponent: "Časti názvu účtu nemôžu byť prázdne.",

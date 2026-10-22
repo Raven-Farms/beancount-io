@@ -329,6 +329,12 @@ export const zh: Translations = {
   ledgerWriteOffline: "你已离线，未保存任何内容。",
   ledgerWriteUnconfirmed: "服务器未确认保存。请先检查，再重试。",
   ledgerWriteRateLimited: "更改过于频繁，请稍后再试。",
+  ledgerInvalidAccount: "{{value}} 不是有效的账户名称。",
+  ledgerInvalidCurrency: "{{value}} 不是有效的货币。",
+  ledgerInvalidTag: "#{{value}} 不能用作标签。只能使用字母 A–Z、数字和 - _ . /",
+  ledgerInvalidLink:
+    "^{{value}} 不能用作关联。只能使用字母 A–Z、数字和 - _ . /",
+  ledgerInvalidFlag: "{{value}} 不能用作标记。",
   openAccountInvalidRoot: "请选择有效的账户类型。",
   openAccountNameRequired: "请至少输入一级账户名称。",
   openAccountEmptyComponent: "各级账户名称不能为空。",

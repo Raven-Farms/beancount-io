@@ -374,6 +374,13 @@ export const es: Translations = {
     "El servidor no confirmó el guardado. Comprueba antes de volver a intentarlo.",
   ledgerWriteRateLimited:
     "Demasiados cambios a la vez. Espera un momento e inténtalo de nuevo.",
+  ledgerInvalidAccount: "{{value}} no es un nombre de cuenta válido.",
+  ledgerInvalidCurrency: "{{value}} no es una moneda válida.",
+  ledgerInvalidTag:
+    "#{{value}} no se puede usar como etiqueta. Usa solo las letras A–Z, dígitos y - _ . /",
+  ledgerInvalidLink:
+    "^{{value}} no se puede usar como enlace. Usa solo las letras A–Z, dígitos y - _ . /",
+  ledgerInvalidFlag: "{{value}} no se puede usar como marca.",
   openAccountInvalidRoot: "Elige un tipo de cuenta válido.",
   openAccountNameRequired: "Escribe al menos un componente del nombre.",
   openAccountEmptyComponent:

@@ -374,6 +374,13 @@ export const uk: Translations = {
     "Сервер не підтвердив збереження. Перевірте, перш ніж повторювати спробу.",
   ledgerWriteRateLimited:
     "Забагато змін одночасно. Зачекайте трохи й спробуйте ще раз.",
+  ledgerInvalidAccount: "{{value}} — недійсна назва рахунку.",
+  ledgerInvalidCurrency: "{{value}} — недійсна валюта.",
+  ledgerInvalidTag:
+    "#{{value}} не можна використати як тег. Використовуйте лише літери A–Z, цифри та - _ . /",
+  ledgerInvalidLink:
+    "^{{value}} не можна використати як посилання. Використовуйте лише літери A–Z, цифри та - _ . /",
+  ledgerInvalidFlag: "{{value}} не можна використати як прапорець.",
   openAccountInvalidRoot: "Оберіть дійсний тип рахунку.",
   openAccountNameRequired: "Введіть хоча б одну частину назви рахунку.",
   openAccountEmptyComponent: "Частини назви рахунку не можуть бути порожніми.",

@@ -362,6 +362,13 @@ export const fa: Translations = {
     "سرور ذخیره‌سازی را تأیید نکرد. پیش از تلاش دوباره بررسی کنید.",
   ledgerWriteRateLimited:
     "تغییرات زیادی هم‌زمان انجام شد. کمی صبر کنید و دوباره امتحان کنید.",
+  ledgerInvalidAccount: "{{value}} نام حساب معتبری نیست.",
+  ledgerInvalidCurrency: "{{value}} واحد پول معتبری نیست.",
+  ledgerInvalidTag:
+    "#{{value}} را نمی‌توان به‌عنوان برچسب به کار برد. فقط از حروف A–Z، ارقام و - _ . / استفاده کنید.",
+  ledgerInvalidLink:
+    "^{{value}} را نمی‌توان به‌عنوان پیوند به کار برد. فقط از حروف A–Z، ارقام و - _ . / استفاده کنید.",
+  ledgerInvalidFlag: "{{value}} را نمی‌توان به‌عنوان پرچم به کار برد.",
   openAccountInvalidRoot: "یک نوع حساب معتبر انتخاب کنید.",
   openAccountNameRequired: "دست‌کم یک بخش از نام حساب را وارد کنید.",
   openAccountEmptyComponent: "بخش‌های نام حساب نمی‌توانند خالی باشند.",

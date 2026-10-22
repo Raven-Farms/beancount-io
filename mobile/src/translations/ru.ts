@@ -376,6 +376,13 @@ export const ru: Translations = {
     "Сервер не подтвердил сохранение. Проверьте, прежде чем повторять попытку.",
   ledgerWriteRateLimited:
     "Слишком много изменений сразу. Подождите немного и повторите попытку.",
+  ledgerInvalidAccount: "{{value}} — недопустимое имя счёта.",
+  ledgerInvalidCurrency: "{{value}} — недопустимая валюта.",
+  ledgerInvalidTag:
+    "#{{value}} нельзя использовать как тег. Используйте только буквы A–Z, цифры и - _ . /",
+  ledgerInvalidLink:
+    "^{{value}} нельзя использовать как ссылку. Используйте только буквы A–Z, цифры и - _ . /",
+  ledgerInvalidFlag: "{{value}} нельзя использовать как флаг.",
   openAccountInvalidRoot: "Выберите допустимый тип счёта.",
   openAccountNameRequired: "Введите хотя бы одну часть названия счёта.",
   openAccountEmptyComponent: "Части названия счёта не могут быть пустыми.",
