@@ -623,6 +623,11 @@ authority and apply changes immediately. Creation can be previewed first with
   value keeps it private; `false` publishes it, readable by anyone.
 - `updateLedger` accepts `ledger` and optional `name`, `description`, and `private`;
   an omitted field stays as it is.
+- A name another ledger holds is a `CONFLICT` on create or rename. So is a
+  renamed ledger's former name: the repository host keeps it as a redirect to
+  the renamed ledger, so the name stays taken though no ledger has it, and the
+  refusal (reason code `LEDGER_NAME_RESERVED`) names the ledger it redirects to
+  (w23/061). Renaming a ledger back to its own former name is allowed.
 - `deleteLedger` accepts only `ledger` and returns `{ "ledgerId": "owner/name" }`.
 
 For update/delete, unpinned credentials must supply `ledger`; pinned credentials

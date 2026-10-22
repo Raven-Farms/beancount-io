@@ -35,6 +35,7 @@ export {
   NotFoundError,
   BadUserInputError,
   UnbalancedTransactionError,
+  LedgerNameReservedError,
   ValidationError,
   ConflictError,
   RateLimitedError,

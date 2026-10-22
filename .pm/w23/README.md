@@ -14,7 +14,6 @@
 - [064](./064.md) — `createLedger`/`updateLedger` accept names the schema allows but the service rewrites (`x-` → `x`, `a--b` → `a-b`): the next call by the sent name is `NOT_FOUND`
 - [063](./063.md) — `leaveLedger` by the owner answers `NOT_FOUND` "Ledger not found" instead of the documented "owners cannot leave" (w23/025 fixed set/remove only)
 - [062](./062.md) — auto-routed writes (`transaction_file "txns/{year}.bean"`) create a new year file nothing includes: the entry is committed, invisible to every report, and the write says "No new bean-check errors"
-- [061](./061.md) — after a ledger rename, `createLedger` with the old name says "Name already exists" (a host redirect, not a ledger); a pinned token's own `listLedgers` shows the new name but refuses it as outside its restriction
 - [059](./blocked/059.md) — every product-created ledger ships `auto_accounts`, so a misspelt account is silently opened — **blocked:** owner picks drop-plugin (which also limits AI categorization to existing accounts) vs report-new-accounts
 - [022](./blocked/022.md) — report rustledger BQL gaps upstream (`cost(sum(position))`, `neg`/`filter_currency`, `meta('lineno')`, `AT value`, `BALANCES FROM`) — **blocked:** filing in an external tracker needs the user's approval
 - [026](./blocked/026.md) — streaming archive route for MCP OAuth clients over 8 MiB (option 1 from 023) — **blocked:** an ADR 0007 trust-boundary decision for the owner

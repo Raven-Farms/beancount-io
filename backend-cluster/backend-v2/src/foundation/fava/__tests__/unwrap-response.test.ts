@@ -182,6 +182,31 @@ describe("unwrapFavaResponse", () => {
     });
   });
 
+  it("maps a renamed ledger's former name to its own conflict (w23/061)", async () => {
+    const error =
+      "'books' is the former name of alice/books-2025: links to it redirect there, so the name stays reserved. Choose a different name.";
+    const response = Promise.reject(
+      new FavaApiError("reserved", 400, {
+        success: false,
+        error,
+        code: "LEDGER_NAME_RESERVED",
+        details: { name: "books", redirects_to: "alice/books-2025" },
+      }),
+    );
+
+    await expect(
+      unwrapFavaResponse(response, "create ledger"),
+    ).rejects.toMatchObject({
+      category: "CONFLICT",
+      message: `Ledger conflict: ${error}`,
+      metadata: {
+        reasonCode: "LEDGER_NAME_RESERVED",
+        field: "name",
+        hint: expect.not.stringContaining("existing ledgers"),
+      },
+    });
+  });
+
   it("calls makeError with the underlying cause when the request itself rejects", async () => {
     const cause = new Error("pre-receive hook rejected the push");
     const response = Promise.reject(cause);

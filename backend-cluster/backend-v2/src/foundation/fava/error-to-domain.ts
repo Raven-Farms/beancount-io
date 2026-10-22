@@ -16,6 +16,7 @@ import {
 import { FavaApiError } from "./api-client";
 
 const LEDGER_NAME_ALREADY_EXISTS = "LEDGER_NAME_ALREADY_EXISTS";
+const LEDGER_NAME_RESERVED = "LEDGER_NAME_RESERVED";
 const DIRECTIVE_LIMIT_EXCEEDED = "DIRECTIVE_LIMIT_EXCEEDED";
 const UNBALANCED = "UNBALANCED";
 /**
@@ -111,6 +112,16 @@ export function favaApiErrorToDomainError(
       // Without one, MCP falls back to the CONFLICT category's hint, which is
       // about re-reading an entry's hash — nothing to do with a name (w5/042).
       hint: "Choose a different ledger name. Your existing ledgers are listed by `listLedgers`.",
+    });
+  }
+
+  // A renamed ledger's former name: no ledger has it, so the existing-name
+  // conflict and its "listed by listLedgers" hint would be false (w23/061).
+  if (code === LEDGER_NAME_RESERVED) {
+    return new ConflictError("Ledger", message, {
+      reasonCode: LEDGER_NAME_RESERVED,
+      field: "name",
+      hint: "Choose a different ledger name. A renamed ledger's old name keeps redirecting to it, so the name stays taken; `listLedgers` lists that ledger under its new name.",
     });
   }
 

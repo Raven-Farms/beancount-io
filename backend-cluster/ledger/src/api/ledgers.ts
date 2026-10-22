@@ -20,6 +20,7 @@ import {
   BadUserInputError,
   ForbiddenError,
   InternalServerError,
+  LedgerNameReservedError,
   UnauthenticatedError,
 } from "@/shared/errors";
 
@@ -126,6 +127,28 @@ async function findExistingRepo(
   }
 }
 
+/**
+ * Why a name `findExistingRepo` resolved is not free. The host answers a
+ * renamed repository's former name with the repository it now names, so a
+ * different `full_name` means the name is reserved, not a ledger (w23/061).
+ */
+function nameTakenError(
+  owner: string,
+  name: string,
+  found: Repository,
+): BadUserInputError | LedgerNameReservedError {
+  const fullName = found.full_name;
+  if (
+    typeof fullName === "string" &&
+    fullName.toLowerCase() !== `${owner}/${name}`.toLowerCase()
+  ) {
+    return new LedgerNameReservedError(name, fullName);
+  }
+  return new BadUserInputError(
+    `A ledger with the name '${name}' already exists. Please choose a different name.`,
+  );
+}
+
 export function setLedgersHandler(router: Router): void {
   // operationId: listLedgers — GET /ledgers
   router.get("/ledgers", authMiddleware, async (ctx) => {
@@ -156,11 +179,13 @@ export function setLedgersHandler(router: Router): void {
     }
     const client = giteaClientForRequest(ctx);
 
-    if (await findExistingRepo(client, auth.username, repoName, "create")) {
-      throw new BadUserInputError(
-        `A ledger with the name '${repoName}' already exists. Please choose a different name.`,
-      );
-    }
+    const existing = await findExistingRepo(
+      client,
+      auth.username,
+      repoName,
+      "create",
+    );
+    if (existing) throw nameTakenError(auth.username, repoName, existing);
 
     const created = await client.user.createCurrentUserRepo({
       name: repoName,
@@ -384,9 +409,7 @@ export function setLedgersHandler(router: Router): void {
             ? await client.repos.repoGet(owner, repoName)
             : undefined;
           if (!validTargetId || source?.data?.id !== targetId) {
-            throw new BadUserInputError(
-              `A ledger with the name '${slugifiedName}' already exists. Please choose a different name.`,
-            );
+            throw nameTakenError(owner, slugifiedName, target);
           }
         }
       }

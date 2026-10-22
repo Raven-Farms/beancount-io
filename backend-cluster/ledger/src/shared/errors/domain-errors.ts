@@ -120,6 +120,26 @@ export class UnbalancedTransactionError extends DomainError {
   }
 }
 
+/**
+ * A ledger name that is a renamed ledger's former name. The host keeps the
+ * old name as a redirect, so a lookup by it answers the renamed ledger: the
+ * name is not a ledger, but it stays reserved while links to it redirect
+ * (w23/061). `LEDGER_NAME_RESERVED` with `details.redirects_to` lets a client
+ * word the refusal without claiming a ledger by that name exists.
+ */
+export class LedgerNameReservedError extends DomainError {
+  constructor(name: string, redirectsTo: string) {
+    super(
+      ErrorCategory.BAD_USER_INPUT,
+      `'${name}' is the former name of ${redirectsTo}: links to it redirect there, so the name stays reserved. Choose a different name.`,
+      {
+        code: "LEDGER_NAME_RESERVED",
+        details: { name, redirects_to: redirectsTo },
+      },
+    );
+  }
+}
+
 /** Which write a {@link NewLedgerErrorsError} refused. */
 export type LedgerWriteAction = "add" | "update" | "delete";
 
