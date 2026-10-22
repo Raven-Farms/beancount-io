@@ -1,4 +1,7 @@
 import { useMemo, useState } from "react";
+import { useApolloClient } from "@apollo/client";
+import { invalidateLedgerData } from "@/common/apollo/invalidate-ledger";
+import { renameLedgerOwner } from "@/common/vars/rename-ledger-owner";
 import {
   KeyboardAvoidingView,
   Platform,
@@ -217,6 +220,7 @@ export function ProfileScreen(): JSX.Element {
   const [updateProfile] = useUpdateProfileMutation();
   const [updateUsername] = useUpdateUsernameMutation();
   const { refresh: refreshLedgers } = useLedgerDirectory();
+  const client = useApolloClient();
   const [saved, setSaved] = useState(false);
   const keyboardVerticalOffset = useStackKeyboardOffset();
   const screenOptions = useMemo(() => ({ title: t("profile") }), [t]);
@@ -269,8 +273,12 @@ export function ProfileScreen(): JSX.Element {
     if (pending.username !== undefined) {
       try {
         await updateUsername({ variables: { username: pending.username } });
-        // Renaming the account renames every ledger it owns; the directory
-        // would otherwise keep listing them under the old owner.
+        // Renaming the account renames every ledger it owns: follow them with
+        // everything remembered per ledger, drop what was read under the old
+        // ids, and re-list the directory, which would otherwise keep listing
+        // them under the old owner (w21/226).
+        renameLedgerOwner(savedValues.username, pending.username);
+        void invalidateLedgerData(client, "file");
         void refreshLedgers().catch(() => {});
       } catch (error) {
         const fieldKey = usernameErrorKey(error);
