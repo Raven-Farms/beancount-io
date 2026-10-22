@@ -4,6 +4,8 @@
 
 ## Inbox
 
+- [339 — Submit the currency that transaction auto-balance actually used](./339.md) — minor; dashboard QA,2026-10-21; blank currency infers USD but serializes empty; both-width prepared repeats and one real UNBALANCED refusal, unchanged ledger/head verified.
+
 - [338 — Retry a failed Statistics section without reloading its healthy siblings](./338.md) — minor; public dashboard QA with injected reads,2026-10-21; all three section errors omit retry, healthy siblings stay usable, both-width Postings repeats and settled reload controls recorded.
 
 - [337 — Offer a retry after a Holdings read fails](./337.md) — minor; public dashboard QA with injected reads,2026-10-21; Currency view gives connection guidance without an action at both widths; reload/grouping recovery passes, matching source traced.
