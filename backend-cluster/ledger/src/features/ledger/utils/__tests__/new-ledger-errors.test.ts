@@ -202,3 +202,48 @@ describe("warnings and the write gate", () => {
     ).rejects.toThrow();
   });
 });
+
+// w21/618: a balance assertion that already fails quotes the figure it reached;
+// editing an amount above it changed that figure and read as a new error.
+describe("a balance assertion that was already failing", () => {
+  const failed = (
+    got: string,
+    expected = "40.00 USD",
+    account = "Assets:Cash",
+  ) =>
+    at(
+      `Balance failed for ${account}: expected ${expected}, got ${got}`,
+      "main.bean",
+      87,
+    );
+
+  it("is not new when only the reached figure changed", () => {
+    expect(
+      newLedgerErrors([failed("49.75 USD")], [failed("46.25 USD")]),
+    ).toEqual([]);
+  });
+
+  it("is new when it asserts another account or amount", () => {
+    expect(
+      newLedgerErrors(
+        [failed("49.75 USD")],
+        [failed("46.25 USD", "40.00 USD", "Assets:Bank")],
+      ),
+    ).toHaveLength(1);
+    expect(
+      newLedgerErrors(
+        [failed("49.75 USD")],
+        [failed("46.25 USD", "41.00 USD")],
+      ),
+    ).toHaveLength(1);
+  });
+
+  it("still counts a second failing copy as introduced", () => {
+    expect(
+      newLedgerErrors(
+        [failed("49.75 USD")],
+        [failed("46.25 USD"), failed("46.25 USD")],
+      ),
+    ).toHaveLength(1);
+  });
+});

@@ -8,9 +8,17 @@ import { NewLedgerErrorsError, type LedgerWriteAction } from "@/shared/errors";
  * entry could no longer be renamed or re-dated, which is when it most needs
  * editing (w21/367). Matching ignores that tag; the per-error count below
  * still makes a second broken entry count as introduced.
+ *
+ * A failed balance assertion quotes the figure the account actually reached
+ * ("expected 40.00 USD, got 49.75 USD"), which any edit to an amount above it
+ * changes, so correcting an entry while an assertion was off was refused as a
+ * new error unless the edit fixed it exactly. The assertion is the same one:
+ * matching keeps its account and expected amount and ignores "got" (w21/618).
  */
 function withoutEntryTag(message: string): string {
-  return message.replace(/ \(\d{4}-\d{2}-\d{2}, ".*"\)$/s, "");
+  return message
+    .replace(/ \(\d{4}-\d{2}-\d{2}, ".*"\)$/s, "")
+    .replace(/^(Balance failed for [^:]+:.*?expected [^,]*), got .*$/s, "$1");
 }
 
 /**
