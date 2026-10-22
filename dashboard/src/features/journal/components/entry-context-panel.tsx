@@ -599,10 +599,13 @@ export function EntryContextPanel({
                   type="button"
                   variant="outline"
                   size="sm"
+                  // A refused copy must say so before the reader chooses
+                  // Reload, which discards the draft (w4/307).
                   onClick={() =>
-                    void navigator.clipboard
-                      .writeText(staleDraft)
-                      .then(() => toast.success(t("common.copied")))
+                    void navigator.clipboard.writeText(staleDraft).then(
+                      () => toast.success(t("common.copied")),
+                      () => toast.error(t("common.copyFailed")),
+                    )
                   }
                 >
                   {t("journal.copyMyEdit")}
