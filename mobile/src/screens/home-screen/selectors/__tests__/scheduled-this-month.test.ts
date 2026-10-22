@@ -76,7 +76,9 @@ describe("Home's wiring", () => {
   it("reads this month to today in the Spending card only when entries are scheduled", () => {
     const card = read("components", "spending-card.tsx");
     expect(
-      card.includes("useScheduledThisMonth(ledgerId,today,Boolean(guest))"),
+      card.includes(
+        "const{scheduled,refetch:refetchScheduled}=useScheduledThisMonth(ledgerId,today,Boolean(guest),);",
+      ),
     ).toBe(true);
     expect(card.includes("skip:!ledgerId||!contextSettled||!scheduled,")).toBe(
       true,
@@ -85,6 +87,28 @@ describe("Home's wiring", () => {
       card.includes(
         "scheduled?toToday.data?.getLedgerIntervalTotals:undefined",
       ),
+    ).toBe(true);
+  });
+
+  // w21/470: a pull to refresh left the to-today read and the check on cache.
+  it("asks for the month, the check and the to-today read again on a pull to refresh", () => {
+    const card = read("components", "spending-card.tsx");
+    const effect = card.slice(card.indexOf("if(refreshSignal>0&&ledgerId){"));
+    const body = effect.slice(
+      0,
+      effect.indexOf("},[refreshSignal,ledgerId]);"),
+    );
+    expect(body.includes("voidrefetch().catch(()=>undefined);")).toBe(true);
+    expect(body.includes("voidrefetchScheduled().catch(()=>undefined);")).toBe(
+      true,
+    );
+    expect(
+      body.includes("if(scheduled)voidtoToday.refetch().catch(()=>undefined);"),
+    ).toBe(true);
+    // After the queries it refetches exist.
+    expect(
+      card.indexOf("if(refreshSignal>0&&ledgerId){") >
+        card.indexOf("consttoToday=useGetLedgerIntervalTotalsQuery("),
     ).toBe(true);
   });
 

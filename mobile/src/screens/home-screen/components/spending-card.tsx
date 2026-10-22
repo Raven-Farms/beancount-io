@@ -133,17 +133,15 @@ export function SpendingCard({
     fetchPolicy: "cache-and-network",
   });
 
-  useEffect(() => {
-    if (refreshSignal > 0 && ledgerId) {
-      void refetch().catch(() => undefined);
-    }
-  }, [refreshSignal, ledgerId, refetch]);
-
   // Entries pre-entered for later this month are not spent yet: when there are
   // any, this month is read to today (w21/337). Guests have no such entries,
   // and the statement is not one an example may run.
   const today = getFormatDate(new Date());
-  const scheduled = useScheduledThisMonth(ledgerId, today, Boolean(guest));
+  const { scheduled, refetch: refetchScheduled } = useScheduledThisMonth(
+    ledgerId,
+    today,
+    Boolean(guest),
+  );
   const toToday = useGetLedgerIntervalTotalsQuery({
     variables: {
       ledgerId: ledgerId!,
@@ -155,6 +153,18 @@ export function SpendingCard({
     skip: !ledgerId || !contextSettled || !scheduled,
     fetchPolicy: "cache-and-network",
   });
+  // A pull to refresh asks for all three again: the to-today read and the
+  // scheduled-entry check are cached and would show an outside change as it was
+  // (w21/470). A check that turns true starts the to-today read itself.
+  useEffect(() => {
+    if (refreshSignal > 0 && ledgerId) {
+      void refetch().catch(() => undefined);
+      void refetchScheduled().catch(() => undefined);
+      if (scheduled) void toToday.refetch().catch(() => undefined);
+    }
+    // `scheduled` and the queries are read at the pull, not re-run by it.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [refreshSignal, ledgerId]);
   const months = withMonthToDate(
     data?.getLedgerIntervalTotals ?? [],
     scheduled ? toToday.data?.getLedgerIntervalTotals : undefined,
