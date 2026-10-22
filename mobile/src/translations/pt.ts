@@ -364,6 +364,8 @@ export const pt: Translations = {
   openAccountFailed: "Não foi possível abrir a conta. Tente novamente.",
   ledgerWouldBreak: "Isso adicionaria um erro ao seu livro: {{detail}}",
   ledgerWriteOffline: "Você está offline. Nada foi salvo.",
+  ledgerWriteUnconfirmed:
+    "O servidor não confirmou o salvamento. Verifique antes de tentar novamente.",
   ledgerWriteRateLimited:
     "Alterações demais de uma vez. Aguarde um momento e tente novamente.",
   openAccountInvalidRoot: "Escolha um tipo de conta válido.",

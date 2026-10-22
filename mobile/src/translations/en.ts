@@ -346,6 +346,8 @@ export const en = {
   openAccountFailed: "Couldn't open the account. Please try again.",
   ledgerWouldBreak: "This would add an error to your ledger: {{detail}}",
   ledgerWriteOffline: "You're offline. Nothing was saved.",
+  ledgerWriteUnconfirmed:
+    "The server didn't confirm the save. Check before trying again.",
   ledgerWriteRateLimited:
     "Too many changes at once. Wait a moment and try again.",
   openAccountInvalidRoot: "Choose a valid account type.",

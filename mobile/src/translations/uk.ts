@@ -364,6 +364,8 @@ export const uk: Translations = {
   openAccountFailed: "Не вдалося відкрити рахунок. Спробуйте ще раз.",
   ledgerWouldBreak: "Це додасть помилку до вашої книги: {{detail}}",
   ledgerWriteOffline: "Немає підключення до мережі. Нічого не збережено.",
+  ledgerWriteUnconfirmed:
+    "Сервер не підтвердив збереження. Перевірте, перш ніж повторювати спробу.",
   ledgerWriteRateLimited:
     "Забагато змін одночасно. Зачекайте трохи й спробуйте ще раз.",
   openAccountInvalidRoot: "Оберіть дійсний тип рахунку.",

@@ -365,6 +365,8 @@ export const ca: Translations = {
   openAccountFailed: "No s'ha pogut obrir el compte. Torna-ho a provar.",
   ledgerWouldBreak: "Això afegiria un error al teu llibre: {{detail}}",
   ledgerWriteOffline: "No tens connexió. No s'ha desat res.",
+  ledgerWriteUnconfirmed:
+    "El servidor no ha confirmat el desat. Comproveu-ho abans de tornar-ho a provar.",
   ledgerWriteRateLimited:
     "Massa canvis alhora. Espera un moment i torna-ho a provar.",
   openAccountInvalidRoot: "Tria un tipus de compte vàlid.",

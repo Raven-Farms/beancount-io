@@ -53,6 +53,35 @@ const LEDGER_TEXT_CODES = new Set([
 const TRANSPORT_FAILURE =
   /Network request failed|Received status code|OAuth refresh failed|Failed to fetch/i;
 
+/**
+ * The HTTP status of a response that came back non-2xx, or null. Apollo's
+ * ServerError carries `statusCode`; a thrown "Received status code N" carries
+ * it in the text. A response means the server was reached, so the write may
+ * have committed: "You're offline. Nothing was saved." was wrong, and invited
+ * a retry that wrote a duplicate (w21/327).
+ */
+function responseStatus(error: unknown): number | null {
+  if (typeof error !== "object" || error === null) return null;
+  const candidates = [
+    (error as { networkError?: unknown }).networkError,
+    error,
+  ];
+  for (const candidate of candidates) {
+    if (typeof candidate !== "object" || candidate === null) continue;
+    const { statusCode, message } = candidate as {
+      statusCode?: unknown;
+      message?: unknown;
+    };
+    if (typeof statusCode === "number") return statusCode;
+    const match =
+      typeof message === "string"
+        ? /Received status code (\d{3})/i.exec(message)
+        : null;
+    if (match) return Number(match[1]);
+  }
+  return null;
+}
+
 function isTransportFailure(error: unknown): boolean {
   if (typeof error !== "object" || error === null) return false;
   if ((error as { networkError?: unknown }).networkError) return true;
@@ -64,7 +93,9 @@ function isTransportFailure(error: unknown): boolean {
  * The inline error for a failed write, in the user's language. A refusal says
  * what it would break; a ledger validation keeps the server's text, which
  * names the problem; a write that never reached the server says so ("You're
- * offline. Nothing was saved."); rate limiting gets its own copy. Anything
+ * offline. Nothing was saved."); a response that was not a success (a gateway
+ * 502 or 504) says the save is unconfirmed, because the write may have
+ * committed; rate limiting gets its own copy. Anything
  * else is null, so the screen shows its generic failure. Transport text such
  * as "Network request failed" used to reach the screen raw, in English, under
  * copy about ledger validation (w21/117).
@@ -82,6 +113,7 @@ export function ledgerWriteFailureMessage(
       : null;
   }
   if (codes.includes("RATE_LIMITED")) return i18n.t("ledgerWriteRateLimited");
+  if (responseStatus(error) !== null) return i18n.t("ledgerWriteUnconfirmed");
   if (isTransportFailure(error)) return i18n.t("ledgerWriteOffline");
   return null;
 }

@@ -366,6 +366,8 @@ export const de: Translations = {
   ledgerWouldBreak:
     "Das würde Ihrem Hauptbuch einen Fehler hinzufügen: {{detail}}",
   ledgerWriteOffline: "Sie sind offline. Es wurde nichts gespeichert.",
+  ledgerWriteUnconfirmed:
+    "Der Server hat das Speichern nicht bestätigt. Prüfen Sie nach, bevor Sie es erneut versuchen.",
   ledgerWriteRateLimited:
     "Zu viele Änderungen auf einmal. Warten Sie kurz und versuchen Sie es erneut.",
   openAccountInvalidRoot: "Wählen Sie einen gültigen Kontotyp.",

@@ -36,7 +36,6 @@
 - [437](./437.md) — In-progress create reported as name conflict
 - [438](./438.md) — Setup ValidationError args swapped: garbled messages
 - [315](./blocked/315.md) — In-app commits signed with Gitea username and real email (no full_name, no noreply) — **blocked:** needs the owner's noreply-address and published-history decisions, and a production backfill of existing Gitea users that can't be verified here
-- [327](./327.md) — A gateway 5xx says "You're offline. Nothing was saved." though the write may have committed
 - [328](./328.md) — Legacy journal endpoint's account filter still matches substrings (113 follow-up)
 - [329](./329.md) — Leftovers: amber text contrast, shell "5e-7" sums, logout "session ended" race
 - [330](./330.md) — Create Ledger currency/date with surrounding spaces refused late with raw English

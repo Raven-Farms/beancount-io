@@ -133,16 +133,47 @@ describe("ledgerWriteFailureMessage", () => {
       ledgerWriteFailureMessage(new Error("Network request failed"), i18n),
     ).toBe(i18n.t("ledgerWriteOffline"));
     expect(
+      ledgerWriteFailureMessage(new Error("OAuth refresh failed"), i18n),
+    ).toBe(i18n.t("ledgerWriteOffline"));
+    expect(
+      ledgerWriteFailureMessage(
+        Object.assign(new Error("Network request failed"), {
+          networkError: new Error("Network request failed"),
+        }),
+        i18n,
+      ),
+    ).toBe(i18n.t("ledgerWriteOffline"));
+  });
+
+  // w21/327: a response means the server was reached, so a gateway 5xx may have
+  // committed the write; "Nothing was saved" invited a duplicate.
+  it("says the save is unconfirmed for any non-2xx response, not offline", () => {
+    const respondedWith = (status: number) =>
+      Object.assign(new Error("Response not successful"), {
+        networkError: Object.assign(
+          new Error(`Received status code ${status}`),
+          {
+            statusCode: status,
+          },
+        ),
+      });
+    for (const status of [400, 413, 500, 502, 504]) {
+      expect(ledgerWriteFailureMessage(respondedWith(status), i18n)).toBe(
+        i18n.t("ledgerWriteUnconfirmed"),
+      );
+    }
+    // Carried only in the text, as a thrown error from the link has it.
+    expect(
       ledgerWriteFailureMessage(
         Object.assign(new Error("Response not successful"), {
           networkError: new Error("Received status code 502"),
         }),
         i18n,
       ),
-    ).toBe(i18n.t("ledgerWriteOffline"));
-    expect(
-      ledgerWriteFailureMessage(new Error("OAuth refresh failed"), i18n),
-    ).toBe(i18n.t("ledgerWriteOffline"));
+    ).toBe(i18n.t("ledgerWriteUnconfirmed"));
+    expect(i18n.t("ledgerWriteUnconfirmed")).not.toBe(
+      i18n.t("ledgerWriteOffline"),
+    );
   });
 
   it("keeps a ledger validation's own text", () => {

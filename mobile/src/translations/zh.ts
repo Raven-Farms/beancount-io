@@ -323,6 +323,7 @@ export const zh: Translations = {
   openAccountFailed: "开户失败，请重试。",
   ledgerWouldBreak: "这会给你的账本带来一个错误：{{detail}}",
   ledgerWriteOffline: "你已离线，未保存任何内容。",
+  ledgerWriteUnconfirmed: "服务器未确认保存。请先检查，再重试。",
   ledgerWriteRateLimited: "更改过于频繁，请稍后再试。",
   openAccountInvalidRoot: "请选择有效的账户类型。",
   openAccountNameRequired: "请至少输入一级账户名称。",

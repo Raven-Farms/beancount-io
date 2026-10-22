@@ -366,6 +366,8 @@ export const ru: Translations = {
   openAccountFailed: "Не удалось открыть счёт. Попробуйте ещё раз.",
   ledgerWouldBreak: "Это добавит ошибку в вашу книгу: {{detail}}",
   ledgerWriteOffline: "Нет подключения к сети. Ничего не сохранено.",
+  ledgerWriteUnconfirmed:
+    "Сервер не подтвердил сохранение. Проверьте, прежде чем повторять попытку.",
   ledgerWriteRateLimited:
     "Слишком много изменений сразу. Подождите немного и повторите попытку.",
   openAccountInvalidRoot: "Выберите допустимый тип счёта.",

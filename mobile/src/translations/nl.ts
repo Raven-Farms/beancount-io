@@ -356,6 +356,8 @@ export const nl: Translations = {
   openAccountFailed: "Account openen is mislukt. Probeer het opnieuw.",
   ledgerWouldBreak: "Dit zou een fout aan je grootboek toevoegen: {{detail}}",
   ledgerWriteOffline: "Je bent offline. Er is niets opgeslagen.",
+  ledgerWriteUnconfirmed:
+    "De server heeft het opslaan niet bevestigd. Controleer het voordat je het opnieuw probeert.",
   ledgerWriteRateLimited:
     "Te veel wijzigingen tegelijk. Wacht even en probeer het opnieuw.",
   openAccountInvalidRoot: "Kies een geldig accounttype.",

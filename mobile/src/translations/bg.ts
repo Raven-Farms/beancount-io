@@ -356,6 +356,8 @@ export const bg: Translations = {
   openAccountFailed: "Сметката не беше открита. Опитайте отново.",
   ledgerWouldBreak: "Това ще добави грешка в книгата ви: {{detail}}",
   ledgerWriteOffline: "Няма връзка с мрежата. Нищо не е запазено.",
+  ledgerWriteUnconfirmed:
+    "Сървърът не потвърди запазването. Проверете, преди да опитате отново.",
   ledgerWriteRateLimited:
     "Твърде много промени наведнъж. Изчакайте малко и опитайте отново.",
   openAccountInvalidRoot: "Изберете валиден вид сметка.",

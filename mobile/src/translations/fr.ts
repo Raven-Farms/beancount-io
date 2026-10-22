@@ -365,6 +365,8 @@ export const fr: Translations = {
   ledgerWouldBreak:
     "Cela ajouterait une erreur à votre grand livre : {{detail}}",
   ledgerWriteOffline: "Vous êtes hors ligne. Rien n'a été enregistré.",
+  ledgerWriteUnconfirmed:
+    "Le serveur n'a pas confirmé l'enregistrement. Vérifiez avant de réessayer.",
   ledgerWriteRateLimited:
     "Trop de modifications à la fois. Patientez un instant et réessayez.",
   openAccountInvalidRoot: "Choisissez un type de compte valide.",
