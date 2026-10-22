@@ -9,8 +9,10 @@ type FileError = {
 
 /**
  * Whether a message names this file. A path in the message must be this
- * file's whole path, so `2023/x.bean` is not `2024/x.bean` (w21/089); a bare
- * filename is all the message says, and still counts.
+ * file's whole path, so `2023/x.bean` is not `2024/x.bean` (w21/089). The
+ * engine always writes the full repository path, so a bare filename names a
+ * root-level file and nothing in a folder: `parse errors in main.bean` is not
+ * `sub/main.bean`'s (w21/310).
  */
 function messageNamesFile(message: string, filePath: string): boolean {
   const fileName = filePath.split("/").pop() ?? filePath;
@@ -18,7 +20,11 @@ function messageNamesFile(message: string, filePath: string): boolean {
   while (from >= 0) {
     const start = message.slice(0, from).search(/\S*$/);
     const named = message.slice(start, from + fileName.length);
-    if (named === fileName || sameLedgerFile(named, filePath)) return true;
+    if (
+      (named === fileName && fileName === filePath) ||
+      sameLedgerFile(named, filePath)
+    )
+      return true;
     from = message.indexOf(fileName, from + 1);
   }
   return false;

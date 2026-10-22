@@ -343,15 +343,29 @@ test("filterFileErrors: message fallback still scopes to the open file", () => {
     throw new Error(`expected 0 matches, got ${filtered.length}`);
 });
 
-test("filterFileErrors: message fallback matches a nested path by basename", () => {
+// w21/310: the engine writes the full repository path, so a bare filename in a
+// message can only be a root-level file.
+test("filterFileErrors: a bare filename in a message is the root file, not a nested one", () => {
   const errors = [
     { message: "parse errors in expenses.bean", filename: "", lineno: null },
   ];
-  const filtered = filterFileErrors(errors, "2024/expenses.bean");
-  if (filtered.length !== 1)
-    throw new Error(
-      `expected 1 match for empty filename, got ${filtered.length}`,
-    );
+  if (filterFileErrors(errors, "2024/expenses.bean").length !== 0)
+    throw new Error("a bare name matched a file in a folder");
+  if (filterFileErrors(errors, "expenses.bean").length !== 1)
+    throw new Error("the root file lost its own error");
+});
+
+test("filterFileErrors: sub/main.bean shows only its own error beside the root's", () => {
+  const errors = [
+    { message: "parse errors in main.bean", filename: null, lineno: null },
+    { message: "parse errors in sub/main.bean", filename: null, lineno: null },
+  ];
+  const nested = filterFileErrors(errors, "sub/main.bean");
+  if (nested.length !== 1 || !nested[0].message.endsWith("sub/main.bean"))
+    throw new Error(`sub/main.bean got ${nested.length} errors`);
+  const root = filterFileErrors(errors, "main.bean");
+  if (root.length !== 1 || root[0].message !== "parse errors in main.bean")
+    throw new Error(`main.bean got ${root.length} errors`);
 });
 
 test("filterFileErrors: a present filename never falls back to the message", () => {
