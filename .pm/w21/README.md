@@ -160,5 +160,9 @@
 - [651](./651.md) — Futures currencies like "/ESZ24" are refused as "not a valid currency", though both engines accept them (ledger)
 - [652](./652.md) — Capital-letter flags other than P/S/T/C/U/R/M are refused, though the engines and `bea` accept any capital (ledger)
 - [653](./653.md) — The entry validators accept non-ASCII tags and quoted flags that the engines can't read (ledger)
+- [654](./654.md) — A `"` in an org heading or `#` comment line silently drops every following entry in the hosted engine (ledger/rustledger)
+- [655](./655.md) — The hosted engine drops tags and links on notes, and pushtag on notes and documents, so filters miss them (ledger/rustledger)
+- [656](./656.md) — `plugin_processing_mode "raw"` is ignored by the hosted engine: pads applied, assertions enforced (ledger/rustledger)
+- [657](./657.md) — A glob include pulls dotfiles into hosted balances, which bean-check and `bea` skip (ledger)
 - [508](./blocked/508.md) — Mobile guesses that an entry is a plugin copy from its first line; read the ledger's `generated_from` instead (split from 443) — **blocked:** production's GraphQL schema lacks `generated_from` until the ledger service and backend-v2 deploy; mobile's client is generated from it
 - [315](./blocked/315.md) — In-app commits signed with Gitea username and real email (no full_name, no noreply) — **blocked:** needs the owner's noreply-address and published-history decisions, and a production backfill of existing Gitea users that can't be verified here
