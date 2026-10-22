@@ -153,3 +153,6 @@
 - [397](./397.md) — Mobile loads ≤500 budget directives; oldest budget card vanishes
 - [398](./398.md) — Budget on a closed account runs forever and outranks real overspends
 - [399](./399.md) — Income budget history/alert/placeholder show raw negative amount
+- [400](./400.md) — Search "#1042" finds nothing (lone #-token only a tag filter; 025 regression)
+- [401](./401.md) — iOS smart quotes break apostrophe searches (Trader Joe’s)
+- [402](./402.md) — Search over 256 chars escaped fails the whole Transactions list
