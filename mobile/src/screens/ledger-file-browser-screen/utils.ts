@@ -11,6 +11,22 @@ export type LedgerFileNameCheck =
     };
 
 /**
+ * The name with `.bean` added unless it already carries an extension. Only a
+ * short run of letters after the last dot reads as one ("notes.txt", which the
+ * check then refuses): a dot inside a name ("2024.q1", "Jan. expenses",
+ * "J.Smith accounts") is part of it, and the dialog promises `.bean` to a name
+ * with no extension (w21/275).
+ */
+function withBeanExtension(name: string): string {
+  const dot = name.lastIndexOf(".");
+  if (dot < 0) return `${name}.bean`;
+  if (isBeancountFile(name)) return name;
+  const suffix = name.slice(dot + 1);
+  if (suffix === "") return `${name}bean`;
+  return /^[A-Za-z]{1,5}$/.test(suffix) ? name : `${name}.bean`;
+}
+
+/**
  * Check a typed new-file name. A relative path into folders (`sub/notes`)
  * is allowed, as the server and the dashboard allow it (w3/196): each segment
  * must be non-empty and not `.` or `..`, and backslashes and control
@@ -34,7 +50,7 @@ export function checkLedgerFileName(
     return { ok: false, issue: "path" };
   }
   const last = segments[segments.length - 1]!;
-  const named = last.includes(".") ? last : `${last}.bean`;
+  const named = withBeanExtension(last);
   if (/^\.(bean|beancount)$/i.test(named) || !isBeancountFile(named)) {
     return { ok: false, issue: "extension" };
   }
