@@ -27,6 +27,9 @@
 - [428](./428.md) — Line-less editor error rows read as "dimmed" (276 regression)
 - [429](./429.md) — New File refuses Mr.Smith/2024.Q/budget.march (275 follow-up)
 - [430](./430.md) — Gravatar caption says "Add a photo" on any load failure (289 follow-up)
+- [431](./431.md) — Show older skips a page / vanishes after any write (313 regression)
+- [432](./432.md) — Error text and Entry Context source not copyable
+- [433](./433.md) — Entry Context location truncates the line number first
 - [315](./blocked/315.md) — In-app commits signed with Gitea username and real email (no full_name, no noreply) — **blocked:** needs the owner's noreply-address and published-history decisions, and a production backfill of existing Gitea users that can't be verified here
 - [320](./320.md) — More section titles still aren't VoiceOver headings (143 follow-up)
 - [321](./321.md) — Zero-total receipt prefill and the auto leg still seed a real "0.00" (159 follow-up)
