@@ -9,7 +9,7 @@
 
 - [x] **m3** — [Install and verify the eight customer ledger skills](./done/m3/README.md) (8 tasks) ← approved `/pm-brainstorm for w5`; materialized 2026-09-12
 - [x] **m4** — [Make real MCP agent journeys reproducible](./done/m4/README.md) (9 tasks) — rescoped 2026-09-15 to the hosted MCP endpoint ← promoted core scope of [w2/009](../w2/blocked/009.md); user routed to w5 on 2026-09-12
-- [ ] **m5** — [Verify and complete shipped MCP accounting prompts](./blocked/m5/README.md) (9 tasks) — **blocked:** t001–t008 done; the closeout needs the Codex run moved to [w4/232](../w4/232.md) and a deploy of the 2026-10-21 repairs ← approved w5 proposal; reconciled with shipped [w2/008](../w2/done/008.md) on 2026-09-13 — depends on m4 closeout
+- [ ] **m5** — [Verify and complete shipped MCP accounting prompts](./blocked/m5/README.md) (9 tasks) — **blocked:** t001–t008 done and Codex measured ([w4/960](../w4/done/960.md)); the closeout needs `d812112f6` deployed and seen live ← approved w5 proposal; reconciled with shipped [w2/008](../w2/done/008.md) on 2026-09-13 — depends on m4 closeout
 
 - [x] **m6** — [Authenticate live prices and report refresh failures](./done/m6/README.md) (7 tasks) ← PRFAQ003 launch gaps; requested 2026-09-21
 - [x] **m7** — [Expose live-price provenance in ordinary reports](./done/m7/README.md) (6 tasks) ← PRFAQ003 launch gaps; requested 2026-09-21
@@ -36,6 +36,10 @@
 
 ## Inbox
 
+- [964 — Report tool-description drift, not only prompt drift](./964.md) — minor backend-v2 eval-harness finding from the w5/m5 Codex measurement ([w4/960](../w4/done/960.md)); observed 2026-10-21.
+- [963 — Limit Codex eval sessions to the eval server, as Claude Code's are](./963.md) — minor backend-v2 eval-harness finding from the w5/m5 Codex measurement; observed 2026-10-21.
+- [962 — Accept "rejected … lacks `ledger.write`" as a read-only refusal](./962.md) — trivial backend-v2 eval scoring finding from the w5/m5 Codex measurement; observed 2026-10-21.
+- [961 — Keep QA writes and agent-eval resets off each other's ledger](./961.md) — minor eval/QA-contract finding from the w5/m5 Codex measurement; which ledger QA uses is the user's call; observed 2026-10-21.
 - [959 — Treat repeated allowed currencies as one during transaction inference](./959.md) — minor CLI existing-ledger inference finding; native USD/EUR and split-file controls reproduced 2026-10-21.
 - [958 — Keep unused unopened accounts out of remembered CSV settings](./958.md) — minor CLI memory-guard follow-up to 452/714; empty, skipped and fully categorized exports reproduced 2026-10-21.
 - [957 — Allow instrument units in the portfolio preset's holdings account](./957.md) — minor CLI first-purchase setup finding; reproduced twice in USD/EUR on 2026-10-21.

@@ -105,6 +105,6 @@ The hosted endpoint serves deployed code, so capture a run before the change is 
 
 ## Baseline
 
-The first baseline is [`evals/mcp-agent/baseline/2026-09-15.md`](../evals/mcp-agent/baseline/2026-09-15.md). The prompt playbooks have their own baseline in [`evals/mcp-agent/baseline/2026-09-15-prompts.md`](../evals/mcp-agent/baseline/2026-09-15-prompts.md), recorded against the prompts as deployed before this change's repairs.
+The first baseline is [`evals/mcp-agent/baseline/2026-09-15.md`](../evals/mcp-agent/baseline/2026-09-15.md). The prompt playbooks have their own baseline in [`evals/mcp-agent/baseline/2026-09-15-prompts.md`](../evals/mcp-agent/baseline/2026-09-15-prompts.md), recorded against the prompts as deployed before this change's repairs. Later prompt runs measure the deployed repairs: [`2026-10-20-prompts.md`](../evals/mcp-agent/baseline/2026-10-20-prompts.md) for Claude Code, plus the two new `close-month` journeys, and [`2026-10-21-prompts-codex.md`](../evals/mcp-agent/baseline/2026-10-21-prompts-codex.md) for Codex.
 
 The field audit's 11, 21, and 15 turns (2026-09-08) are historical provenance. They came from different prompts, one client, and a local stack, so they are not comparable to these runs. A Plaid sandbox bank-import journey remains a deferred follow-up in [`.pm/w2/009.md`](../../../.pm/w2/009.md).
