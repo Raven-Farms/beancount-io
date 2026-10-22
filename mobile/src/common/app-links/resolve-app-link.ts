@@ -209,7 +209,15 @@ export function resolveAppLink(
     }
     case "income-statement":
     case "balance-sheet":
+    // The dashboard's cash-flow and trial-balance pages are Reports' cards and
+    // statements here (w21/545).
+    case "cash-flow":
+    case "trial-balance":
       return { ledgerFullName, href: "/reports" };
+    // Ledger errors and recent changes are Notifications' two sections.
+    case "errors":
+    case "commits":
+      return { ledgerFullName, href: "/notifications" };
     case "budget":
       return { ledgerFullName, href: "/budget" };
     case "entry": {

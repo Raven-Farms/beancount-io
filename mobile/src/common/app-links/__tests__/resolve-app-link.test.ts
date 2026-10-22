@@ -97,7 +97,7 @@ describe("resolveAppLink", () => {
 
   it("falls unknown sub-paths back to ledger home", () => {
     expect(
-      resolveAppLink(`${ORIGIN}/ledger/${LEDGER}/cash-flow`, {
+      resolveAppLink(`${ORIGIN}/ledger/${LEDGER}/holdings`, {
         serverUrl: ORIGIN,
       }),
     ).toEqual({ ledgerFullName: LEDGER, href: "/" });
@@ -283,5 +283,40 @@ describe("buildLedgerUrl round trip", () => {
       }
       expect(params(file)).toEqual({ path: "main.bean", ledger: LEDGER });
     });
+  });
+});
+
+// w21/545: the dashboard's errors, commits, cash-flow and trial-balance pages
+// all opened Home.
+describe("dashboard pages with a matching screen", () => {
+  const open = (page: string) =>
+    resolveAppLink(`${ORIGIN}/ledger/${LEDGER}/${page}`, {
+      serverUrl: ORIGIN,
+    });
+
+  it("opens Notifications for errors and commits", () => {
+    expect(open("errors")).toEqual({
+      ledgerFullName: LEDGER,
+      href: "/notifications",
+    });
+    expect(open("commits")).toEqual({
+      ledgerFullName: LEDGER,
+      href: "/notifications",
+    });
+  });
+
+  it("opens Reports for cash-flow and trial-balance", () => {
+    expect(open("cash-flow")).toEqual({
+      ledgerFullName: LEDGER,
+      href: "/reports",
+    });
+    expect(open("trial-balance")).toEqual({
+      ledgerFullName: LEDGER,
+      href: "/reports",
+    });
+  });
+
+  it("still opens Home for a page the app has no screen for", () => {
+    expect(open("holdings")).toEqual({ ledgerFullName: LEDGER, href: "/" });
   });
 });
