@@ -10,6 +10,7 @@
 
 ## Inbox
 
+- [067](./067.md) — a posting before its account's `open` is reported as "never opened" (engine wording), inviting a duplicate `open`
 - [066](./066.md) — asset download URL reveals which numeric ledger IDs exist (pinned: `FORBIDDEN` vs `NOT_FOUND`; account-wide: two different not-found messages)
 - [065](./blocked/065.md) — a ledger-pinned credential keeps the old name after a rename — **blocked:** owner picks repository-ID pins, canonical-name pins, or an accurate refusal (credential trust boundary)
 - [059](./blocked/059.md) — every product-created ledger ships `auto_accounts`, so a misspelt account is silently opened — **blocked:** owner picks drop-plugin (which also limits AI categorization to existing accounts) vs report-new-accounts
