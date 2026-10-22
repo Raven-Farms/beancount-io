@@ -28,7 +28,7 @@ from beancount.core.data import (
     Query,
     Transaction,
 )
-from beancount.core.position import CostSpec, cost_to_str
+from beancount.core.position import Cost, CostSpec, cost_to_str
 from beancount.core.number import MISSING
 from beancount.parser.printer import EntryPrinter
 from beancount.utils import misc_utils
@@ -120,6 +120,14 @@ class DirectivePrinter(EntryPrinter):
             faithful = _cost_spec_text(posting.cost, self.dformat)
             if faithful != dropped:
                 position_str = position_str.replace(f"{{{dropped}}}", f"{{{faithful}}}", 1)
+        elif isinstance(posting.cost, Cost) and posting.cost.label == "":
+            # A booked cost is what a loaded ledger holds, so query exports and
+            # a native importer's resolved lots reach here; upstream drops its
+            # empty label, merging a lot the ledger kept apart (w5/915).
+            booked = posting.cost
+            spec = CostSpec(booked.number, None, booked.currency, booked.date, booked.label, False)
+            dropped = cost_to_str(booked, self.dformat, True)  # type: ignore[no-untyped-call]
+            position_str = position_str.replace(f"{{{dropped}}}", f"{{{_cost_spec_text(spec, self.dformat)}}}", 1)
         total = (posting.meta or {}).get(TOTAL_PRICE_META)
         if total is None:
             return flag_account, position_str, weight_str
