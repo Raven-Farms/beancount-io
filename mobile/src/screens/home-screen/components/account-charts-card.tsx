@@ -200,7 +200,7 @@ export function AccountChartsCard({
       }
       hitSlop={8}
       accessibilityRole="button"
-      accessibilityLabel={t("seeAll")}
+      accessibilityLabel={t("seeAllAccounts")}
     >
       <Text
         key={fontScale}

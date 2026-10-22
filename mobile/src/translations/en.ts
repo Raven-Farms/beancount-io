@@ -426,6 +426,8 @@ export const en = {
   notFoundGoHome: "Go to Home",
   // home dashboard
   seeAll: "See all",
+  seeAllCard: "See all {{title}}",
+  seeAllAccounts: "See all accounts",
   netWorth: "Net Worth",
   noAccounts: "No accounts",
   recentTransactions: "Recent Transactions",

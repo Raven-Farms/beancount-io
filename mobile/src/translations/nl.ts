@@ -420,6 +420,8 @@ export const nl: Translations = {
   notFoundGoHome: "Ga naar start",
   // home dashboard
   seeAll: "Alles bekijken",
+  seeAllCard: "Alles bekijken: {{title}}",
+  seeAllAccounts: "Alle rekeningen bekijken",
   netWorth: "Nettovermogen",
   noAccounts: "Geen accounts",
   recentTransactions: "Recente transacties",

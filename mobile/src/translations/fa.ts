@@ -411,6 +411,8 @@ export const fa: Translations = {
   notFoundGoHome: "رفتن به خانه",
   // home dashboard
   seeAll: "دیدن همه",
+  seeAllCard: "دیدن همه: {{title}}",
+  seeAllAccounts: "دیدن همه حساب‌ها",
   netWorth: "ارزش خالص",
   noAccounts: "بدون حساب",
   recentTransactions: "تراکنش‌های اخیر",

@@ -424,6 +424,8 @@ export const ru: Translations = {
   notFoundGoHome: "На главную",
   // home dashboard
   seeAll: "Показать все",
+  seeAllCard: "Показать все: {{title}}",
+  seeAllAccounts: "Показать все счета",
   netWorth: "Чистые активы",
   noAccounts: "Нет счетов",
   recentTransactions: "Последние транзакции",

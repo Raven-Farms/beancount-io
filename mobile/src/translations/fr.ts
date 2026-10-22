@@ -429,6 +429,8 @@ export const fr: Translations = {
   notFoundGoHome: "Aller à l'accueil",
   // home dashboard
   seeAll: "Tout voir",
+  seeAllCard: "Tout voir : {{title}}",
+  seeAllAccounts: "Voir tous les comptes",
   netWorth: "Patrimoine net",
   noAccounts: "Aucun compte",
   recentTransactions: "Transactions récentes",

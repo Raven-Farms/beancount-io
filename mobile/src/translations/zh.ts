@@ -379,6 +379,8 @@ export const zh: Translations = {
   notFoundGoHome: "返回首页",
   // home dashboard
   seeAll: "查看全部",
+  seeAllCard: "查看全部：{{title}}",
+  seeAllAccounts: "查看全部账户",
   netWorth: "净资产",
   noAccounts: "暂无账户",
   recentTransactions: "最近交易",

@@ -428,6 +428,8 @@ export const sk: Translations = {
   notFoundGoHome: "Prejsť na domov",
   // home dashboard
   seeAll: "Zobraziť všetko",
+  seeAllCard: "Zobraziť všetko: {{title}}",
+  seeAllAccounts: "Zobraziť všetky účty",
   netWorth: "Čisté imanie",
   noAccounts: "Žiadne účty",
   recentTransactions: "Nedávne transakcie",

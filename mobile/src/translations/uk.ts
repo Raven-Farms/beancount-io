@@ -423,6 +423,8 @@ export const uk: Translations = {
   notFoundGoHome: "На головну",
   // home dashboard
   seeAll: "Показати всі",
+  seeAllCard: "Показати все: {{title}}",
+  seeAllAccounts: "Показати всі рахунки",
   netWorth: "Чисті активи",
   noAccounts: "Немає рахунків",
   recentTransactions: "Останні транзакції",

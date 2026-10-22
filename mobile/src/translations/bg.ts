@@ -417,6 +417,8 @@ export const bg: Translations = {
   notFoundGoHome: "Към началния екран",
   // home dashboard
   seeAll: "Виж всички",
+  seeAllCard: "Виж всички: {{title}}",
+  seeAllAccounts: "Виж всички сметки",
   netWorth: "Нетна стойност",
   noAccounts: "Няма сметки",
   recentTransactions: "Последни транзакции",
