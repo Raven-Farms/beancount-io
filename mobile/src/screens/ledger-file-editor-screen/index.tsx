@@ -735,6 +735,44 @@ function LedgerFileEditorSession({
     [t],
   );
 
+  // The changed-elsewhere alert: keep editing, copy and reload, or overwrite the
+  // remote after a confirmation. A save that lost a race and a Recreate that
+  // found the file already back (w21/564) both end here.
+  const presentConflict = useCallback(
+    (content: string, epoch: number, revision: number) => {
+      Alert.alert(
+        t("ledgerEditorConflictTitle"),
+        t("ledgerEditorConflictMessage"),
+        [
+          { text: t("ledgerEditorKeepEditing"), style: "cancel" },
+          {
+            text: t("ledgerEditorCopyReload"),
+            onPress: () => void copyThenReload(content),
+          },
+          {
+            text: t("ledgerEditorOverwrite"),
+            style: "destructive",
+            onPress: () =>
+              Alert.alert(
+                t("ledgerEditorOverwriteTitle"),
+                t("ledgerEditorOverwriteMessage"),
+                [
+                  { text: t("cancel"), style: "cancel" },
+                  {
+                    text: t("ledgerEditorOverwrite"),
+                    style: "destructive",
+                    onPress: () =>
+                      void overwriteRemote(content, epoch, revision),
+                  },
+                ],
+              ),
+          },
+        ],
+      );
+    },
+    [copyThenReload, overwriteRemote, t],
+  );
+
   const recreateFile = useCallback(
     async (content: string, epoch: number, revision: number) => {
       const latest = recoveryRef.current.latest();
@@ -765,13 +803,27 @@ function LedgerFileEditorSession({
       } catch (err: unknown) {
         if (isAuthTeardownError(err)) return;
         haptics.error();
+        // Someone else put the file back first: the server says CONFLICT, which
+        // is the changed-elsewhere case, not a bodiless "Save failed" (w21/564).
+        if (isConflictFailure(err)) {
+          presentConflict(content, epoch, revision);
+          return;
+        }
         Alert.alert(
           t("ledgerEditorSaveFailed"),
           ledgerWriteFailureMessage(err, { t }) ?? undefined,
         );
       }
     },
-    [client, createLedgerFile, ledgerId, path, rebaseOnSaved, t],
+    [
+      client,
+      createLedgerFile,
+      ledgerId,
+      path,
+      presentConflict,
+      rebaseOnSaved,
+      t,
+    ],
   );
 
   const handleSave = useCallback(
@@ -833,35 +885,7 @@ function LedgerFileEditorSession({
         if (isAuthTeardownError(err)) return false;
         haptics.error();
         if (isConflictFailure(err)) {
-          Alert.alert(
-            t("ledgerEditorConflictTitle"),
-            t("ledgerEditorConflictMessage"),
-            [
-              { text: t("ledgerEditorKeepEditing"), style: "cancel" },
-              {
-                text: t("ledgerEditorCopyReload"),
-                onPress: () => void copyThenReload(content),
-              },
-              {
-                text: t("ledgerEditorOverwrite"),
-                style: "destructive",
-                onPress: () =>
-                  Alert.alert(
-                    t("ledgerEditorOverwriteTitle"),
-                    t("ledgerEditorOverwriteMessage"),
-                    [
-                      { text: t("cancel"), style: "cancel" },
-                      {
-                        text: t("ledgerEditorOverwrite"),
-                        style: "destructive",
-                        onPress: () =>
-                          void overwriteRemote(content, epoch, revision),
-                      },
-                    ],
-                  ),
-              },
-            ],
-          );
+          presentConflict(content, epoch, revision);
         } else if (isLedgerGone(err)) {
           // Deleted elsewhere: the update can never succeed, and the draft is
           // the only copy (w21/378).
@@ -912,6 +936,7 @@ function LedgerFileEditorSession({
       ledgerId,
       overwriteRemote,
       path,
+      presentConflict,
       recreateFile,
       reportNewErrors,
       t,

@@ -561,6 +561,18 @@ export function LedgerFileBrowserScreen(): JSX.Element {
         });
       } catch (createError: unknown) {
         haptics.error();
+        // A file of that name is there already (another device made it, or the
+        // list was stale): say so by name, remember it, and refresh the list,
+        // where the generic failure toast told the user nothing (w21/564).
+        if (isConflictFailure(createError)) {
+          setKnownExisting((known) => [...known, filename]);
+          void invalidateLedgerData(client, "file");
+          toast.showToast({
+            message: t("ledgerFileNameExists", { name: filename }),
+            type: "error",
+          });
+          return;
+        }
         const message =
           ledgerWriteFailureMessage(createError, { t }) ??
           t("ledgerCreateFileFailed");
