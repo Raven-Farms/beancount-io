@@ -119,6 +119,13 @@ type RawChild = {
  */
 type TreeRules = {
   /**
+   * Whether a node with rows beneath it survives the zero-value filter even
+   * when its own value is zero: the Accounts tab keeps a parent whose children
+   * net to nothing (w21/423); a report category that nets to nothing is "$0.00 ·
+   * 0%", noise (w21/055, w21/492).
+   */
+  keepNetZeroParents: boolean;
+  /**
    * Whether two rolled-up balances are the same amount (see `amountTolerance`).
    */
   same: (a: number, b: number) => boolean;
@@ -143,7 +150,11 @@ type TreeRules = {
  * net to nothing, and went with it (w21/423).
  */
 function spared(node: AccountNode, rules: TreeRules): boolean {
-  return node.value !== 0 || node.children.length > 0 || rules.keep(node);
+  return (
+    node.value !== 0 ||
+    (rules.keepNetZeroParents && node.children.length > 0) ||
+    rules.keep(node)
+  );
 }
 
 function toNode(
@@ -337,6 +348,7 @@ function treeRules(
   if (!wholeBalance) {
     return {
       same,
+      keepNetZeroParents: false,
       ownHoldsMore: () => false,
       keep: (node) => keep.has(node.account),
       sameHoldings: () => true,
@@ -350,6 +362,7 @@ function treeRules(
   );
   return {
     same,
+    keepNetZeroParents: true,
     ownHoldsMore: (balance) =>
       balance != null && notInTotalOf(balance, currency).length > 0,
     keep: (node) =>

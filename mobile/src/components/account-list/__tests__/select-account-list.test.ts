@@ -340,16 +340,61 @@ describe("selectAccountTreeFromRoot", () => {
       },
       { account: "Assets:Checking", balanceChildren: { USD: 100 } },
     ]);
-    // Neither child is in the listed (open) set.
+    // Neither child is in the listed (open) set. The Accounts tab's rules.
     const rows = selectAccountTreeFromRoot("USD", root, 1, {
       accounts: ["Assets:Checking"],
       rootAccount: "Assets",
+      wholeBalance: true,
     });
     const receivable = rows.find((row) => row.account === "Assets:Receivable");
     expect(receivable?.children.map((child) => child.account).sort()).toEqual([
       "Assets:Receivable:Alice",
       "Assets:Receivable:Bob",
     ]);
+  });
+
+  // w21/492: the same keep made a Reports category print "$0.00 · 0%" again.
+  it("leaves a report category that nets to zero out, as w21/055 had it", () => {
+    const root = createIncomeRoot("Expenses", [
+      { account: "Expenses:Food:Groceries", balanceChildren: { USD: 300 } },
+      {
+        account: "Expenses:Travel",
+        balanceChildren: { USD: 0 },
+        children: [
+          { account: "Expenses:Travel:Flights", balanceChildren: { USD: 500 } },
+          {
+            account: "Expenses:Travel:Refunds",
+            balanceChildren: { USD: -500 },
+          },
+        ],
+      },
+    ]);
+    // The Reports tree takes no zero-balance options.
+    const rows = selectAccountTreeFromRoot("USD", root);
+    expect(rows.map((row) => row.account)).toEqual(["Expenses:Food:Groceries"]);
+  });
+
+  it("still keeps that parent on the Accounts tab, which counts the whole balance", () => {
+    const root = createIncomeRoot("Expenses", [
+      { account: "Expenses:Food:Groceries", balanceChildren: { USD: 300 } },
+      {
+        account: "Expenses:Travel",
+        balanceChildren: { USD: 0 },
+        children: [
+          { account: "Expenses:Travel:Flights", balanceChildren: { USD: 500 } },
+          {
+            account: "Expenses:Travel:Refunds",
+            balanceChildren: { USD: -500 },
+          },
+        ],
+      },
+    ]);
+    const rows = selectAccountTreeFromRoot("USD", root, 1, {
+      wholeBalance: true,
+    });
+    expect(rows.some((row) => row.account.startsWith("Expenses:Travel"))).toBe(
+      true,
+    );
   });
 
   it("still drops a parent that holds nothing at all", () => {
