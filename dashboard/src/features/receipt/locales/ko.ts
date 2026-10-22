@@ -220,6 +220,12 @@ const koReceipt: Record<string, TranslationEntry> = {
     message: "영수증 거래 기록 실패",
     description: "Error message when recording the transaction fails",
   },
+  "receipt.workflow.recordUnconfirmed": {
+    message:
+      "이미 기록되었을 수 있습니다. 다시 기록하기 전에 분개장을 확인하세요.",
+    description:
+      "Added after a connection failure while recording: the transaction may exist",
+  },
 };
 
 export default koReceipt;

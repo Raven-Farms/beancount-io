@@ -43,7 +43,6 @@ describe("ReceiptReviewForm date prefill", () => {
         primaryCurrency="USD"
         onSubmit={onSubmit}
         onReset={() => {}}
-        isSubmitting={false}
       />,
     );
 

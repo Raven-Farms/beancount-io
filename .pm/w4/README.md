@@ -100,7 +100,7 @@
 
 - [ ] **m49** — [Keep entry-source saves within their pending draft session](./m49/README.md) (6 tasks) ← dashboard QA,2026-10-22; major client draft loss, pending source edits and a different newly opened entry draft disappear at an older modeled acknowledgement; failure/retry controls pass, no hosted writes.
 
-- [ ] **m48** — [Preserve receipt review through recording and failure](./m48/README.md) (6 tasks) ← dashboard QA,2026-10-22; minor, pending corrections disappear at success and failed Record drops the corrected review; promoted from973, local responses only.
+- [x] **m48** — [Preserve receipt review through recording and failure](./done/m48/README.md) (6 tasks) ← dashboard QA,2026-10-22; minor, pending corrections disappear at success and failed Record drops the corrected review; promoted from973, local responses only.
 
 - [x] **m47** — [Keep profile saves within their submitted dialog session](./done/m47/README.md) (6 tasks) ← dashboard QA,2026-10-22; minor, concurrent Enter requests and older completion closing a newer draft; promoted from975, all writes intercepted or locally modeled.
 
@@ -188,7 +188,7 @@
 
 - ~~**328**~~ — Offer a retry after a statement or Account Journal read fails — dropped 2026-10-22: promoted to [m50](./m50/README.md), preserving all evidence and adding independently repeated Commodities primary-read failure; six observer integrations plus regressions exceed one hour, with no new historical group.
 
-- ~~**973**~~ — Freeze receipt review edits while recording — dropped 2026-10-22: promoted to [m48](./m48/README.md), preserving the original report and adding independently repeated failed-record review loss; separate pending/failure repairs and real regressions exceed one hour.
+- ~~**973**~~ — Freeze receipt review edits while recording — dropped 2026-10-22: promoted to [m48](./done/m48/README.md), preserving the original report and adding independently repeated failed-record review loss; separate pending/failure repairs and real regressions exceed one hour.
 
 - ~~**975**~~ — Guard pending Change Name submissions from Enter — dropped 2026-10-22: promoted to [m47](./done/m47/README.md), retaining the reproducer and adding independently repeated pending dialog/draft ownership; two implementation tasks plus real regressions exceed one hour.
 

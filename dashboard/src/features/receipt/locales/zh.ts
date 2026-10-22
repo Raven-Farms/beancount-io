@@ -232,6 +232,11 @@ const zhReceipt: Record<string, TranslationEntry> = {
     message: "记录收据交易失败",
     description: "Error message when recording the transaction fails",
   },
+  "receipt.workflow.recordUnconfirmed": {
+    message: "交易可能已经记录，请先查看流水账再重新记录。",
+    description:
+      "Added after a connection failure while recording: the transaction may exist",
+  },
 };
 
 export default zhReceipt;

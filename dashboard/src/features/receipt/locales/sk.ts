@@ -235,6 +235,12 @@ const skReceipt: Record<string, TranslationEntry> = {
     message: "Transakciu z bločku sa nepodarilo zaznamenať",
     description: "Error message when recording the transaction fails",
   },
+  "receipt.workflow.recordUnconfirmed": {
+    message:
+      "Možno bola aj tak zaznamenaná, preto pred opätovným zaznamenaním skontrolujte Denník.",
+    description:
+      "Added after a connection failure while recording: the transaction may exist",
+  },
 };
 
 export default skReceipt;

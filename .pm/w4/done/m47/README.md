@@ -33,4 +33,4 @@
 
 ## Scope and dedupe
 
-Own UserProfileSection and its bounded pending/dialog integration. [296](../296.md) supplies the existing composition guard; [M33](../m33/README.md) and [M42](../m42/README.md) cover separate entry/account/budget callers, not settings. [973](../../m48/README.md) owns the standalone receipt form. No backend/API, persistent draft store, global mutation observer or dependency change. Actual profile persistence, server write ordering, refetch failure and other engines remain unverified.
+Own UserProfileSection and its bounded pending/dialog integration. [296](../296.md) supplies the existing composition guard; [M33](../m33/README.md) and [M42](../m42/README.md) cover separate entry/account/budget callers, not settings. [973](../m48/README.md) owns the standalone receipt form. No backend/API, persistent draft store, global mutation observer or dependency change. Actual profile persistence, server write ordering, refetch failure and other engines remain unverified.
