@@ -55,6 +55,26 @@ export function filterFileErrors<T extends FileError>(
 }
 
 /**
+ * The rows the editor's error banner shows for this file: message, line and the
+ * engine's fix hint. The hint was dropped here, so the banner never showed what
+ * Notifications showed for the same error (w21/521).
+ */
+export function fileBannerErrors(
+  allErrors: FileError[],
+  filePath: string,
+): {
+  message: string;
+  lineno: number | null | undefined;
+  hint?: string | null;
+}[] {
+  return filterFileErrors(allErrors, filePath).map((e) => ({
+    message: e.message,
+    lineno: e.lineno,
+    hint: e.hint,
+  }));
+}
+
+/**
  * Colors for the read-only notice. It is an explanatory sentence, not a
  * disabled control, so it uses the secondary-text role (`black80`) rather than
  * the placeholder/disabled ramp: light `black60` on the `black10` inset band

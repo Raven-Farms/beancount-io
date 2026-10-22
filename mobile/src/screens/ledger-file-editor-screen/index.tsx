@@ -82,7 +82,7 @@ import {
   errorMessageWithHint,
   firstNewLedgerError,
 } from "@/common/new-ledger-error";
-import { filterFileErrors, readOnlyNoticeColors } from "./utils";
+import { fileBannerErrors, readOnlyNoticeColors } from "./utils";
 import { selectLedgerFileEditorState } from "./select-editor-state";
 import { LEADING_TEXT_ALIGN, directionalIcon } from "@/common/rtl";
 import { useRouteParams } from "@/common/hooks/use-route-params";
@@ -955,9 +955,7 @@ function LedgerFileEditorSession({
 
   const fileName = path.split("/").pop() ?? path;
 
-  const fileErrors: FileError[] = filterFileErrors(allErrors, path).map(
-    (e) => ({ message: e.message, lineno: e.lineno }),
-  );
+  const fileErrors: FileError[] = fileBannerErrors(allErrors, path);
 
   // ── Header right ────────────────────────────────────────────────────────
 
