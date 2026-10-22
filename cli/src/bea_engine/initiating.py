@@ -228,8 +228,11 @@ def answer_preset(
     balances = _parse_opening_balances(opening_balances, accounts, "preset's")
 
     open_day = day - datetime.timedelta(days=1) if balances else day
+    # Beancount string content: a quote or backslash left bare ended the string
+    # early or began an escape, so the saved title was not the one supplied.
+    saved_title = (title or entry["title"]).replace("\\", "\\\\").replace('"', '\\"')
     lines = [
-        f'option "title" "{(title or entry["title"]).replace(chr(34), "")}"',
+        f'option "title" "{saved_title}"',
         f'option "operating_currency" "{currency}"',
         'option "inferred_tolerance_default" "*:0.001"',
         "",

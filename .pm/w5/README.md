@@ -44,7 +44,6 @@
 - [959 — Treat repeated allowed currencies as one during transaction inference](./959.md) — minor CLI existing-ledger/native-import inference finding; USD/EUR and split-file controls reproduced 2026-10-21.
 - [958 — Keep unused unopened accounts out of remembered CSV settings](./958.md) — minor CLI memory-guard follow-up to 452/714; empty, skipped and fully categorized exports reproduced 2026-10-21.
 - [957 — Allow instrument units in the portfolio preset's holdings account](./957.md) — minor CLI first-purchase setup finding; reproduced twice in USD/EUR on 2026-10-21.
-- [875 — Preserve quotes and backslashes in preset ledger titles](./875.md) — minor CLI title-serialization finding; reproduced 2026-10-20.
 - [876 — Retain confirmed zero opening balances in preset creation](./876.md) — minor CLI gap against completed m53's opening-state contract; reproduced 2026-10-20.
 - [877 — Match preset creation summaries to actual account counts and opening dates](./877.md) — minor CLI success-output finding; reproduced 2026-10-20.
 - [878 — Validate preset currencies before unrelated prompts and retry invalid answers](./878.md) — minor CLI PTY onboarding finding; reproduced 2026-10-20.
