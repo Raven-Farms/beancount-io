@@ -107,41 +107,48 @@ export function useBudgetPanel({
     // ends on today and changes daily (w21/184).
     const time = budgetPanelWindow(today);
 
-    mapInBatches(groups, BUDGET_PANEL_BATCH, async (group) => {
-      const { end } = currentPeriodRange(group.interval, today);
-      const totals = (fetchPolicy: "network-only" | "cache-only") =>
-        client
-          .query<
-            GetLedgerIntervalTotalsQuery,
-            GetLedgerIntervalTotalsQueryVariables
-          >({
-            query: GetLedgerIntervalTotalsDocument,
-            variables: budgetTotalsVariables({ ledgerId, group, time }),
-            fetchPolicy,
-          })
-          .then(({ data }) => data?.getLedgerIntervalTotals ?? []);
-      // Current totals first: the persisted cache holds the last session's
-      // spending (w21/006). Offline, that cache is still better than nothing.
-      const items = await totals("network-only")
-        .catch(() => totals("cache-only"))
-        // Nothing fetched and nothing cached: the row would read "$0.00 of
-        // $500.00", a claim about spending a failed read cannot back
-        // (w21/080).
-        .catch(() => null);
+    mapInBatches(
+      groups,
+      BUDGET_PANEL_BATCH,
+      async (group) => {
+        const { end } = currentPeriodRange(group.interval, today);
+        const totals = (fetchPolicy: "network-only" | "cache-only") =>
+          client
+            .query<
+              GetLedgerIntervalTotalsQuery,
+              GetLedgerIntervalTotalsQueryVariables
+            >({
+              query: GetLedgerIntervalTotalsDocument,
+              variables: budgetTotalsVariables({ ledgerId, group, time }),
+              fetchPolicy,
+            })
+            .then(({ data }) => data?.getLedgerIntervalTotals ?? []);
+        // Current totals first: the persisted cache holds the last session's
+        // spending (w21/006). Offline, that cache is still better than nothing.
+        const items = await totals("network-only")
+          .catch(() => totals("cache-only"))
+          // Nothing fetched and nothing cached: the row would read "$0.00 of
+          // $500.00", a claim about spending a failed read cannot back
+          // (w21/080).
+          .catch(() => null);
 
-      // The last interval in the window is the one in progress.
-      const last = items && items.length > 0 ? items[items.length - 1] : null;
-      return {
-        input: {
-          group,
-          periodEnd: end,
-          actual: last
-            ? resolveCurrencyBalance(last.balance, group.currency)
-            : null,
-        },
-        failed: items === null,
-      };
-    }).then((results) => {
+        // The last interval in the window is the one in progress.
+        const last = items && items.length > 0 ? items[items.length - 1] : null;
+        return {
+          input: {
+            group,
+            periodEnd: end,
+            actual: last
+              ? resolveCurrencyBalance(last.balance, group.currency)
+              : null,
+          },
+          failed: items === null,
+        };
+      },
+      // A new run (another ledger, a write) supersedes this one: stop between
+      // batches instead of firing every remaining read (w21/336).
+      () => cancelled,
+    ).then((results) => {
       if (cancelled) {
         return;
       }

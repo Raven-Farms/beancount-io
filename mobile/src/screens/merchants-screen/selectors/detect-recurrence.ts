@@ -58,6 +58,11 @@ export interface RecurrenceVerdict {
   scheduled?: string;
 }
 
+/** Whether two amounts differ by no more than float round-off. */
+function sameAmount(a: number, b: number): boolean {
+  return Math.abs(a - b) <= 1e-9 * Math.max(1, Math.abs(a), Math.abs(b));
+}
+
 /** Minimum distinct event dates before a cadence can be inferred. */
 const MIN_EVENT_DATES = 3;
 
@@ -500,9 +505,12 @@ export function detectRecurrence(
     }
     const recent = amounts.slice(-RECENT_CHARGES);
     const latest = median(recent);
+    // Compared with a tolerance: 7 months at 11.87 and 3 charges of 10.99 +
+    // 0.88 sum to 11.870000000000001, and an exact compare read an unchanged
+    // price as "~" (w21/336).
     const changed =
       latest !== null &&
-      latest !== overall &&
+      !sameAmount(latest, overall) &&
       !amountSpreadIsApproximate(recent);
     typicalAmountByCurrency[currency] = changed ? latest : overall;
     if (changed || amountSpreadIsApproximate(amounts)) {

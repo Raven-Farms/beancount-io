@@ -33,9 +33,60 @@ describe("mapInBatches", () => {
       ),
       "utf8",
     );
-    expect(hook.includes("mapInBatches(groups, BUDGET_PANEL_BATCH,")).toBe(
-      true,
-    );
+    expect(
+      hook
+        .replace(/\s+/gu, "")
+        .includes("mapInBatches(groups,BUDGET_PANEL_BATCH,"),
+    ).toBe(true);
     expect(hook.includes("groups.slice(0,")).toBe(false);
+  });
+
+  // w21/336: a superseded run (another ledger, a write) kept firing every
+  // remaining read.
+  it("starts no further batch once cancelled, and keeps what it has", async () => {
+    const started: number[] = [];
+    let stop = false;
+    const items = Array.from({ length: 30 }, (_, index) => index);
+    const results = await mapInBatches(
+      items,
+      12,
+      async (item) => {
+        started.push(item);
+        // The user switches ledger while the first batch is in flight.
+        stop = true;
+        return item;
+      },
+      () => stop,
+    );
+    expect(started.length).toBe(12);
+    expect(results).toEqual(items.slice(0, 12));
+  });
+
+  it("runs every batch when it is never cancelled, as before", async () => {
+    const results = await mapInBatches(
+      [1, 2, 3],
+      2,
+      async (n) => n,
+      () => false,
+    );
+    expect(results).toEqual([1, 2, 3]);
+  });
+
+  it("is told by the panel's cleanup", () => {
+    const hook = fs
+      .readFileSync(
+        path.join(
+          __dirname,
+          "..",
+          "..",
+          "screens",
+          "home-screen",
+          "hooks",
+          "use-budget-panel.ts",
+        ),
+        "utf8",
+      )
+      .replace(/\s+/gu, "");
+    expect(hook.includes("()=>cancelled,).then((results)=>{")).toBe(true);
   });
 });

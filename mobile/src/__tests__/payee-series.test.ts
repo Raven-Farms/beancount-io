@@ -210,3 +210,46 @@ describe("a payee that is only ever a transfer", () => {
     expect(bql.includes(" OR number > 0)")).toBe(true);
   });
 });
+
+// w21/336: legs of one charge are summed, and the float sum made an unchanged
+// price read "~".
+describe("a steady price whose legs sum with float noise", () => {
+  const WITH_ACCOUNT = [...TYPES, { name: "account", dtype: "str" }];
+
+  it("sums split legs cleanly and is not approximate", () => {
+    const rows: unknown[][] = [];
+    for (let month = 1; month <= 7; month += 1) {
+      rows.push([
+        `2026-0${month}-05`,
+        "Streamer",
+        "11.87",
+        "USD",
+        "Expenses:Media",
+      ]);
+    }
+    for (const month of [8, 9, 10]) {
+      rows.push([
+        `2026-${String(month).padStart(2, "0")}-05`,
+        "Streamer",
+        "10.99",
+        "USD",
+        "Expenses:Media",
+      ]);
+      rows.push([
+        `2026-${String(month).padStart(2, "0")}-05`,
+        "Streamer",
+        "0.88",
+        "USD",
+        "Expenses:Media:Tax",
+      ]);
+    }
+    const series = mapPayeeSeries(table(rows, WITH_ACCOUNT)).get("Streamer")!;
+    expect(series.map((point) => point.amount).slice(-3)).toEqual([
+      11.87, 11.87, 11.87,
+    ]);
+    const verdict = detectRecurrence(series, "2026-10-21");
+    expect(verdict?.cadence).toBe("monthly");
+    expect(verdict?.typicalAmountByCurrency.USD).toBe(11.87);
+    expect(verdict?.isApproximate).toBe(false);
+  });
+});

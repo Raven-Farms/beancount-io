@@ -184,7 +184,8 @@ export function mapPayeeSeries(
       const sep = key.indexOf("\0");
       const date = key.slice(0, sep);
       const currency = key.slice(sep + 1);
-      points.push({ date, currency, amount });
+      // Summed legs carry float noise (10.99 + 0.88 is 11.870000000000001).
+      points.push({ date, currency, amount: Number(amount.toFixed(10)) });
     }
     points.sort((a, b) => {
       const byDate = a.date.localeCompare(b.date);
