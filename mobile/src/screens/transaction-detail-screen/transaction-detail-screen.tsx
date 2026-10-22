@@ -688,7 +688,11 @@ const TransactionDetailImpl = ({
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.hero}>
-          <View style={styles.heroIcon}>
+          <View
+            style={styles.heroIcon}
+            accessible={false}
+            importantForAccessibility="no-hide-descendants"
+          >
             <AccountTypeIcon postings={iconPostings} />
           </View>
           <Text style={styles.heroTitle}>{title}</Text>
@@ -707,7 +711,13 @@ const TransactionDetailImpl = ({
             <Text style={styles.heroSubtitle}>{entry.narration}</Text>
           ) : null}
           <View style={styles.heroMeta}>
-            <Ionicons name="calendar-outline" size={16} color={theme.black80} />
+            <Ionicons
+              name="calendar-outline"
+              accessibilityElementsHidden
+              importantForAccessibility="no"
+              size={16}
+              color={theme.black80}
+            />
             <Text style={styles.heroDate}>{formattedDate}</Text>
             {isPending && (
               <View style={styles.statusBadge}>
@@ -724,6 +734,8 @@ const TransactionDetailImpl = ({
               <View key={`${error.lineno}-${index}`} style={styles.errorRow}>
                 <Ionicons
                   name="warning-outline"
+                  accessibilityElementsHidden
+                  importantForAccessibility="no"
                   size={16}
                   color={theme.error}
                 />
@@ -777,6 +789,8 @@ const TransactionDetailImpl = ({
                 <View style={styles.metadataRow}>
                   <Ionicons
                     name="pricetag-outline"
+                    accessibilityElementsHidden
+                    importantForAccessibility="no"
                     size={20}
                     color={theme.black80}
                     style={styles.metadataIcon}
@@ -802,6 +816,8 @@ const TransactionDetailImpl = ({
                 >
                   <Ionicons
                     name="link-outline"
+                    accessibilityElementsHidden
+                    importantForAccessibility="no"
                     size={20}
                     color={theme.black80}
                     style={styles.metadataIcon}
@@ -828,6 +844,8 @@ const TransactionDetailImpl = ({
                 >
                   <Ionicons
                     name="document-text-outline"
+                    accessibilityElementsHidden
+                    importantForAccessibility="no"
                     size={20}
                     color={theme.black80}
                     style={styles.metadataIcon}
