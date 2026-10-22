@@ -76,6 +76,11 @@ oauth_not_configured`, so the native mobile app cannot complete discovery.
 Compose; see [`backend-v2` OAuth deployment contract](../../backend-cluster/backend-v2/README.md#oauth-deployment-contract)
 for the reverse-proxy well-known routes.
 
+The OAuth issuer is `https://<APP_DOMAIN>`, so the Caddyfile also sends
+`/api-gateway/*` on the app domain to backend-v2 (GraphQL and
+`/api-gateway/oauth/*`). Enter `https://<APP_DOMAIN>` as the server URL in the
+mobile app; the API domain alone does not match the issuer.
+
 If startup stops at either one-shot service, inspect it directly:
 
 ```zsh

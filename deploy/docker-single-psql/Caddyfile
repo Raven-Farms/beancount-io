@@ -9,6 +9,12 @@
 	handle /.well-known/* {
 		reverse_proxy backend-v2:4104
 	}
+	# The OAuth issuer is this host (DASHBOARD_URL), so the mobile app finds the
+	# GraphQL endpoint and /api-gateway/oauth/* here: one front door, not only
+	# the API domain.
+	handle /api-gateway/* {
+		reverse_proxy backend-v2:4104
+	}
 	handle {
 		reverse_proxy dashboard:3000
 	}
