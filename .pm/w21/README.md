@@ -85,5 +85,10 @@
 - [570](./570.md) — A currency exchange with a fee reads as "−$110.00" spent, though only the $1.00 fee left
 - [571](./571.md) — A stock split or merger reads as shares gained or lost in money colours ("+90.00 NVDA", green)
 - [572](./572.md) — Home's Spending counts expenses in raw units while Reports and the dashboard count at cost
+- [573](./573.md) — Home's Recent Transactions says "No transactions yet" (with an Add CTA) when every entry is after today (w21/471)
+- [574](./574.md) — Pulling to refresh on Reports never re-reads the read context, so "Failed to load" or the stale banner stays
+- [575](./575.md) — A failed pull on merchant detail replaces cached rows with "Failed to load" (missed by w21/081)
+- [576](./576.md) — A failed refresh on Budget replaces cached charts with "Failed to load budgets" and hides Actual and Variance
+- [577](./577.md) — Account detail's chart "Try again" leaves the journal stuck on "Failed to load journal", with no retry of its own
 - [508](./blocked/508.md) — Mobile guesses that an entry is a plugin copy from its first line; read the ledger's `generated_from` instead (split from 443) — **blocked:** production's GraphQL schema lacks `generated_from` until the ledger service and backend-v2 deploy; mobile's client is generated from it
 - [315](./blocked/315.md) — In-app commits signed with Gitea username and real email (no full_name, no noreply) — **blocked:** needs the owner's noreply-address and published-history decisions, and a production backfill of existing Gitea users that can't be verified here
