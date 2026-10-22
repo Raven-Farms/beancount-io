@@ -269,6 +269,12 @@ HOOL_ROUTED = "HOOL → EUR has no price before 2026-01-01; earlier rows shown i
 # The mixed ledger pays EUR for its held USD-cost lot, leaving a genuine USD
 # conversion residual that stays unvalued in December.
 USD_ROUTED = "USD → EUR has no price before 2026-01-01; earlier rows shown in USD"
+# That ledger also holds a lot at a cost in EUR, which the USD route cannot
+# value, so the route is qualified (w5/905).
+HOOL_ROUTED_MIXED = (
+    HOOL_ROUTED + "; from then only lots held at a cost in USD are valued, "
+    "the others still need a direct HOOL → EUR price"
+)
 
 
 @pytest.mark.parametrize(
@@ -276,7 +282,7 @@ USD_ROUTED = "USD → EUR has no price before 2026-01-01; earlier rows shown in 
     [
         (SOLD_USD_LOT, [HOOL_NEVER], [HOOL_NEVER]),
         (LATER_USD_LOT, [HOOL_NEVER], [HOOL_NEVER]),
-        (SOLD_AND_HELD_USD_LOTS, [HOOL_ROUTED, USD_ROUTED], [HOOL_ROUTED]),
+        (SOLD_AND_HELD_USD_LOTS, [HOOL_ROUTED_MIXED, USD_ROUTED], [HOOL_ROUTED_MIXED]),
     ],
     ids=["sold-before-the-row", "bought-after-the-row", "one-held-one-sold"],
 )
