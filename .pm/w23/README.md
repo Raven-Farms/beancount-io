@@ -10,6 +10,7 @@
 
 ## Inbox
 
+- [072](./072.md) — concurrent writes (append, add entries, exact-text edits) still lose with `SERVICE_UNAVAILABLE` on production after w23/017; the production lost-race signature differs
 - [071](./071.md) — a structured `budget` for an account the ledger doesn't have (not opened, no opened children) is accepted and never applies
 - [070](./070.md) — REST answers a rejected bearer token (MCP audience, expired, malformed) with "send `Authorization: Bearer <token>`"
 - [069](./069.md) — admin actions (collaborators, rename, delete) on a ledger the caller can read answer "Ledger not found"; 063 fixed leave only
