@@ -4,8 +4,10 @@ import {
   findAccountLocation,
   RECENT_LIMIT,
   showCreateAccountRow,
+  showCreateBelowResults,
   visibleAccountSections,
 } from "../picker-sections";
+import { filterAccounts } from "../../../common/account-search";
 import type { AccountUsage } from "../../../common/account-frecency";
 
 /** The screen groups once and passes the result in; mirror that here. */
@@ -341,5 +343,71 @@ describe("showCreateAccountRow", () => {
         error: new Error("offline"),
       }),
     ).toBe(false);
+  });
+});
+
+// w21/258: the scattered-letter matcher finds something for almost any word, so
+// a genuinely new category had no Create row.
+describe("showCreateBelowResults", () => {
+  const writer: {
+    canWrite: boolean;
+    loading: boolean;
+    error?: unknown;
+  } = { canWrite: true, loading: false };
+  const chart = [
+    "Assets:Bank:Checking",
+    "Assets:Cash",
+    "Expenses:Food:Groceries",
+    "Expenses:Housing:Rent",
+    "Expenses:Transport:Tram",
+    "Expenses:Travel:Hotels",
+    "Income:US:Babble:Salary",
+    "Liabilities:CreditCard:Visa",
+  ];
+  const below = (query: string, access = writer) =>
+    showCreateBelowResults(query, filterAccounts(query, chart), access);
+
+  it("offers Create under loose matches for a name the ledger lacks", () => {
+    // "pets" scatters across Expenses:Transport:Tram and Expenses:Travel:Hotels.
+    expect(filterAccounts("pets", chart).length > 0).toBe(true);
+    expect(below("pets")).toBe(true);
+    expect(below("uber")).toBe(true);
+    expect(below("phone")).toBe(true);
+  });
+
+  it("does not, when an account really contains the query", () => {
+    expect(below("food")).toBe(false);
+    expect(below("rent")).toBe(false);
+    expect(below("credit card")).toBe(false);
+    expect(below("FOOD:groc")).toBe(false);
+  });
+
+  it("is left to the empty state when there are no results", () => {
+    expect(showCreateBelowResults("zzzz", [], writer)).toBe(false);
+  });
+
+  it("is not offered to someone who may not create accounts", () => {
+    expect(below("pets", { ...writer, canWrite: false })).toBe(false);
+    expect(below("pets", { ...writer, error: new Error("denied") })).toBe(
+      false,
+    );
+  });
+
+  it("reads composed and decomposed spellings alike", () => {
+    expect(
+      showCreateBelowResults("caf\u00e9", ["Expenses:Cafe\u0301"], writer),
+    ).toBe(false);
+  });
+
+  it("is what the picker renders under the results", () => {
+    const source = require("fs")
+      .readFileSync(
+        require("path").join(__dirname, "..", "account-picker-screen.tsx"),
+        "utf8",
+      )
+      .replace(/\s+/g, "");
+    expect(
+      source.includes("ListFooterComponent={showCreateFooter?createRow:null}"),
+    ).toBe(true);
   });
 });

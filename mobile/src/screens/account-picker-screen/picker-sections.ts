@@ -142,6 +142,36 @@ export function showCreateAccountRow(
   return isSearchQuery(query) && visibleSectionCount === 0;
 }
 
+/**
+ * Whether the create-account row also belongs under search results. The
+ * scattered-letter matcher finds something for almost any word ("pets" in
+ * `Expenses:Transport:Tram`), which left a genuinely new name with no way to
+ * create it (w21/258). The row follows the results whenever no result contains
+ * every word of the query as a contiguous piece of its name — a name the
+ * ledger already has is a real hit and needs no Create. Same access rules as
+ * the empty state's row.
+ */
+export function showCreateBelowResults(
+  query: string,
+  results: readonly string[],
+  access: LedgerWriteAccess,
+): boolean {
+  if (!access.canWrite || access.error || results.length === 0) {
+    return false;
+  }
+  const words = query
+    .trim()
+    .normalize("NFC")
+    .toLowerCase()
+    .split(/\s+/)
+    .filter(Boolean);
+  if (words.length === 0) return false;
+  return !results.some((account) => {
+    const name = account.normalize("NFC").toLowerCase();
+    return words.every((word) => name.includes(word));
+  });
+}
+
 /** Where an account sits in rendered sections, for scrolling it into view. */
 export function findAccountLocation(
   sections: AccountSection[],

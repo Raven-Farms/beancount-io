@@ -31,6 +31,7 @@ import {
   findAccountLocation,
   isSearchQuery,
   showCreateAccountRow,
+  showCreateBelowResults,
   visibleAccountSections,
   withParentAccounts,
   type PickerSection,
@@ -521,6 +522,41 @@ function AccountPickerScreenComponent(): JSX.Element {
       error: accessError,
     });
 
+  // Loose matches ("pets" in `Expenses:Transport:Tram`) must not hide Create
+  // for a name the ledger does not have (w21/258).
+  const searchResults = isSearching ? (visibleSections[0]?.data ?? []) : [];
+  const showCreateFooter =
+    !closedMatch &&
+    showCreateBelowResults(query, searchResults, {
+      canWrite,
+      loading: accessLoading,
+      error: accessError,
+    });
+
+  const createRow = (
+    <TouchableOpacity
+      testID="account-picker-create-row"
+      style={[styles.listItem, styles.createRow]}
+      onPress={onCreate}
+      accessibilityRole="button"
+      accessibilityLabel={t("accountPickerCreate", { name: trimmedQuery })}
+    >
+      <Ionicons name="add-circle-outline" size={24} color={theme.primary} />
+      <Text
+        key={fontScale}
+        style={[styles.listItemText, styles.createText]}
+        numberOfLines={1}
+      >
+        {t("accountPickerCreate", { name: trimmedQuery })}
+      </Text>
+      <Ionicons
+        name={directionalIcon("chevron-forward")}
+        size={24}
+        color={theme.black}
+      />
+    </TouchableOpacity>
+  );
+
   if (loading && accounts.length === 0) {
     return (
       <View style={styles.container}>
@@ -630,37 +666,10 @@ function AccountPickerScreenComponent(): JSX.Element {
                 })}
               </Text>
             ) : null}
-            {showCreateRow && (
-              <TouchableOpacity
-                testID="account-picker-create-row"
-                style={[styles.listItem, styles.createRow]}
-                onPress={onCreate}
-                accessibilityRole="button"
-                accessibilityLabel={t("accountPickerCreate", {
-                  name: trimmedQuery,
-                })}
-              >
-                <Ionicons
-                  name="add-circle-outline"
-                  size={24}
-                  color={theme.primary}
-                />
-                <Text
-                  key={fontScale}
-                  style={[styles.listItemText, styles.createText]}
-                  numberOfLines={1}
-                >
-                  {t("accountPickerCreate", { name: trimmedQuery })}
-                </Text>
-                <Ionicons
-                  name={directionalIcon("chevron-forward")}
-                  size={24}
-                  color={theme.black}
-                />
-              </TouchableOpacity>
-            )}
+            {showCreateRow && createRow}
           </View>
         }
+        ListFooterComponent={showCreateFooter ? createRow : null}
         renderItem={({ item }) => (
           <AccountRow
             account={item}
