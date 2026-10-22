@@ -15,6 +15,6 @@
 - [062](./062.md) — auto-routed writes (`transaction_file "txns/{year}.bean"`) create a new year file nothing includes: the entry is committed, invisible to every report, and the write says "No new bean-check errors"
 - [061](./061.md) — after a ledger rename, `createLedger` with the old name says "Name already exists" (a host redirect, not a ledger); a pinned token's own `listLedgers` shows the new name but refuses it as outside its restriction
 - [060](./060.md) — `addLedgerEntries`/`appendLedgerText` always return `entryHashes: []`: an agent can't verify or undo the entry it just wrote without guessing via `listLedgerEntries` (pairs with w5/942)
-- [059](./059.md) — every product-created ledger (STARTER, signup default, guided setup) ships `auto_accounts`, so a misspelt account is silently opened and writes report "No new bean-check errors" — owner picks drop-plugin vs report-new-accounts
+- [059](./blocked/059.md) — every product-created ledger ships `auto_accounts`, so a misspelt account is silently opened — **blocked:** owner picks drop-plugin (which also limits AI categorization to existing accounts) vs report-new-accounts
 - [022](./blocked/022.md) — report rustledger BQL gaps upstream (`cost(sum(position))`, `neg`/`filter_currency`, `meta('lineno')`, `AT value`, `BALANCES FROM`) — **blocked:** filing in an external tracker needs the user's approval
 - [026](./blocked/026.md) — streaming archive route for MCP OAuth clients over 8 MiB (option 1 from 023) — **blocked:** an ADR 0007 trust-boundary decision for the owner
