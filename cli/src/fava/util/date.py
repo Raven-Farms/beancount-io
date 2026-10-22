@@ -7,6 +7,7 @@ Note:
 
 from __future__ import annotations
 
+import calendar
 import datetime
 import re
 from abc import ABC, abstractmethod
@@ -522,13 +523,25 @@ def get_fiscal_period(
 
     """
     fye = fye or END_OF_YEAR
-    start = datetime.date(year - 1 + fye.year_offset, fye.month_of_year, fye.day) + ONE_DAY
-    # Special case 02-28 because of leap years
-    if fye.month_of_year == 2 and fye.day == 28:
-        start = start.replace(month=3, day=1)
+    # The fiscal year starts the day after the previous one ended. Work in
+    # (year, month, day) triples and build only the bounds asked for: the
+    # previous year's end, or a whole year's start, can lie in year zero when
+    # the requested period itself is representable (w5/932).
+    previous_end_year = year - 1 + fye.year_offset
+    month, day = fye.month_of_year, fye.day
+    if month == 2 and day == 28:
+        # Special case 02-28 because of leap years
+        start_year, start_month, start_day = previous_end_year, 3, 1
+    elif day == calendar.monthrange(2001, month)[1]:
+        start_year, start_month, start_day = previous_end_year + (month == 12), month % 12 + 1, 1
+    else:
+        start_year, start_month, start_day = previous_end_year, month, day + 1
 
     if quarter is None:
-        return start, start.replace(year=start.year + 1)
+        return (
+            datetime.date(start_year, start_month, start_day),
+            datetime.date(start_year + 1, start_month, start_day),
+        )
 
     if not fye.has_quarters():
         return None, None
@@ -536,9 +549,11 @@ def get_fiscal_period(
     if quarter < 1 or quarter > 4:
         return None, None
 
-    start = month_offset(start, (quarter - 1) * 3)
+    def at(months: int) -> datetime.date:
+        year_delta, month_index = divmod(start_month - 1 + months, 12)
+        return datetime.date(start_year + year_delta, month_index + 1, start_day)
 
-    return start, month_offset(start, 3)
+    return at((quarter - 1) * 3), at(quarter * 3)
 
 
 def days_in_daterange(
