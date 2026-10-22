@@ -95,8 +95,32 @@ with no credential fields. An initial generic evidence reader inspected flat
 extension fields; the retained corrected record reads the actual nested shape.
 
 This preparation does not approve OAuth, invoke a model, discover authenticated
-tools or run a ledger query/preview. The native browser tooling currently has
-no connected browser, and its connection request remains pending. Complete
+tools or run a ledger query/preview. Browser control was unavailable in this
+snapshot; the later native Hub observation below records its restoration. Complete
 fresh native OAuth with the separately approved synthetic-ledger grant before
 making authenticated-install or stability claims. The task settings remain
 isolated and ready; existing user and Cursor configuration are untouched.
+
+## Native Hub catalog observation — 2026-10-22 UTC
+
+The official CLI 3.0.73 starts its supported `hub dashboard --no-open` with
+the task's isolated config/data, workspace and credential-free MCP settings.
+The real browser interface displays Hub version 0.0.95. Its Installed panel
+shows the one enabled Streamable HTTP entry at the canonical hosted URL and
+the task-owned settings path. The Marketplace view reports 149 MCP entries;
+typing `beancount` in its actual name filter returns zero Marketplace matches,
+while the installed task entry remains visible.
+
+This is native Hub rendering and name-filter evidence. It does not replace the
+earlier blank VS Code extension observation, prove another effective catalog,
+or establish an authenticated connection. The inspected Installed view exposes
+configuration/removal controls; the Tools view configures built-in/plugin tools.
+Neither inspected view exposes MCP authentication or manual MCP execution.
+No provider credentials are inherited, model session launched, access grant
+approved or accounting query/preview performed. Any later model-assisted CLI
+rehearsal must use its documented `--auto-approve false` option.
+
+The prior browser-connection limitation is cleared for this observation. OAuth,
+authenticated discovery/query/preview and the actual submission/review gates
+remain open. Raw DOM and the rendered filter screenshot are retained under
+ignored `backend-cluster/backend-v2/tmp/w6-native-20261022T0818/`.

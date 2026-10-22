@@ -68,7 +68,13 @@
   Fresh Node 22 typechecking, the complete 373-suite / 6,479-test run on baseline
   `ae156599` plus this patch, and OpenAPI snapshot-drift validation pass. A later
   ledger-path rebase also passes typechecking and all nine affected suites / 325
-  tests; combined-revision full CI remains the integration check.
+  tests. Exact pushed `5b962094` subsequently passes
+  [integration CI 39736952457](https://github.com/bex-co/beancount-io/actions/runs/39736952457),
+  all 375 suites / 6,587 tests and one snapshot; that earlier gate is cleared.
+  The later isolated CLI Hub displays the installed entry and 149 Marketplace
+  MCPs; its real `beancount` filter returns zero Marketplace results. This does
+  not replace the extension's earlier blank-panel observation or establish
+  authentication/query/preview.
 
 - **t005:** concrete GitHub nomination is prepared and unsent. Source-backed anonymous API checks of installed VS Code 1.135.0's public default feed return zero name/identity results; all six latest-feed pages contain 560 unique records with no canonical name/endpoint/repository match. This independent read substep is complete without a user-input gate. The earlier native `@mcp` snapshot remains 51 entries/50 observed names; effective organization policy, typed native filtering and install/Copilot OAuth/query/preview are not inferred from the public feed. **Unblock:** authorized operator request, curated acceptance and fresh native QA discovery/OAuth/query/preview under w1/m34/t003. **Owner:** publisher, GitHub reviewers and QA/client account holder.
 
