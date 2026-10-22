@@ -29,6 +29,54 @@ describe("newLedgerErrors", () => {
     expect(newLedgerErrors(before, after)).toEqual([after[1]]);
   });
 
+  // w21/367: interpolation and lot-match errors end with the entry's date and
+  // narration, so editing either made the existing error read as a new one.
+  describe("an error that quotes the entry's date and narration", () => {
+    const interpolation = (date: string, narration: string) =>
+      `interpolation failed: cannot infer currency for posting to account Expenses:QaInterp (${date}, "${narration}")`;
+    const lot = (date: string, narration: string) =>
+      `Ambiguous lot match for 10 AAPL {} (${date}, "${narration}")`;
+
+    it("is not new after a narration-only edit", () => {
+      const before = [
+        at(interpolation("2026-08-30", "Groceries"), "main.bean", 3),
+      ];
+      const after = [
+        at(interpolation("2026-08-30", "Groceries edited"), "main.bean", 3),
+      ];
+      expect(newLedgerErrors(before, after)).toEqual([]);
+    });
+
+    it("is not new after a date-only edit, nor for a lot match", () => {
+      expect(
+        newLedgerErrors(
+          [at(interpolation("2026-08-30", "Groceries"), "main.bean", 3)],
+          [at(interpolation("2026-09-02", "Groceries"), "main.bean", 3)],
+        ),
+      ).toEqual([]);
+      expect(
+        newLedgerErrors(
+          [at(lot("2026-03-01", "Sell"), "main.bean", 8)],
+          [at(lot("2026-03-04", 'Sell "all"'), "main.bean", 8)],
+        ),
+      ).toEqual([]);
+    });
+
+    it("still counts a second broken entry, a different message and another file as new", () => {
+      const old = at(interpolation("2026-08-30", "Groceries"), "main.bean", 3);
+      const second = at(interpolation("2026-09-01", "Rent"), "main.bean", 9);
+      expect(newLedgerErrors([old], [old, second])).toEqual([second]);
+      const other = at(
+        'interpolation failed: cannot infer currency for posting to account Expenses:Other (2026-08-30, "Groceries")',
+        "main.bean",
+        3,
+      );
+      expect(newLedgerErrors([old], [other])).toEqual([other]);
+      const elsewhere = at(old.message, "other.bean", 3);
+      expect(newLedgerErrors([old], [elsewhere])).toEqual([elsewhere]);
+    });
+  });
+
   it("matches errors without a source by message", () => {
     expect(
       newLedgerErrors(

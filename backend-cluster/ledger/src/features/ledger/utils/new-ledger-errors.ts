@@ -2,6 +2,18 @@ import type { BeancountErrorPublic } from "@/foundation/ledger-api-types";
 import { NewLedgerErrorsError, type LedgerWriteAction } from "@/shared/errors";
 
 /**
+ * The engine ends an interpolation or lot-match error with the entry's date
+ * and narration, `(2026-08-30, "Groceries")`. Editing either one rewrote the
+ * message, so the error the ledger already had read as a new one and the
+ * entry could no longer be renamed or re-dated, which is when it most needs
+ * editing (w21/367). Matching ignores that tag; the per-error count below
+ * still makes a second broken entry count as introduced.
+ */
+function withoutEntryTag(message: string): string {
+  return message.replace(/ \(\d{4}-\d{2}-\d{2}, ".*"\)$/s, "");
+}
+
+/**
  * Errors in `after` that `before` did not have, matched by message and file
  * but not line: editing or deleting a block shifts every later line, so an
  * existing error below the edit moves without being new (w21/m1). Each
@@ -13,7 +25,7 @@ export function newLedgerErrors(
   after: readonly BeancountErrorPublic[],
 ): BeancountErrorPublic[] {
   const key = (error: BeancountErrorPublic) =>
-    `${error.message}\u0000${error.source?.filename ?? ""}`;
+    `${withoutEntryTag(error.message)}\u0000${error.source?.filename ?? ""}`;
   const left = new Map<string, number>();
   for (const error of before) {
     left.set(key(error), (left.get(key(error)) ?? 0) + 1);
