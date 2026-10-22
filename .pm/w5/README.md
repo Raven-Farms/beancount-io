@@ -36,6 +36,7 @@
 
 ## Inbox
 
+- [982 — Preserve labels in stranded-lot close advice](./982.md) — minor CLI follow-up to 909/913; omitted or unescaped labels make the copied recovery fail or leave wrong lots open, reproduced 2026-10-22.
 - [981 — Keep empty acquisition labels distinct in import identities](./981.md) — major CLI follow-up to 899/915; empty and absent labels share one hash, silently skipping a second purchase even with include, reproduced 2026-10-22.
 - [980 — Preserve independent trade dependencies in same-day bulk ordering](./980.md) — major CLI follow-up to 884; combined pairs reject a valid short cover, and the inferred-purchase fallback changes an independent LIFO/HIFO lot and profit, reproduced 2026-10-22.
 
