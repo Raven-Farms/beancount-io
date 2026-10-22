@@ -61,7 +61,6 @@
 - [462](./462.md) — Deleting the last posting overwrites the typed amount above it
 - [463](./463.md) — Locale-formatted amounts (1.234,56, 1 234,56, U+2212) refused
 - [315](./blocked/315.md) — In-app commits signed with Gitea username and real email (no full_name, no noreply) — **blocked:** needs the owner's noreply-address and published-history decisions, and a production backfill of existing Gitea users that can't be verified here
-- [370](./370.md) — Reports category shares divide by net total; refunds push sum over 100%
 - [371](./371.md) — Reports "Other" nets refunds against spending, hiding real amounts
 - [372](./372.md) — Reports empty period says "No accounts" beside foreign-currency spending
 - [373](./373.md) — Reports rounded percentages don't sum to 100%

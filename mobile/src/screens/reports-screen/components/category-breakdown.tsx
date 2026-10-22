@@ -30,6 +30,7 @@ import { AccountNode } from "@/components/account-list/select-account-list";
 import {
   breakdownRowAccessibilityValue,
   breakdownShare,
+  shareBase,
 } from "../selectors/select-breakdown-rows";
 import { LEADING_TEXT_ALIGN, directionalIcon } from "@/common/rtl";
 
@@ -213,6 +214,7 @@ export function CategoryBreakdown({
   const { fontScale } = useWindowDimensions();
   const stacked = prefersStackedLayout(fontScale);
   const [overrides, setOverrides] = useState<Record<string, boolean>>({});
+  const base = shareBase(items);
 
   const toggle = (account: string, currentlyExpanded: boolean) => {
     setOverrides((prev) => ({ ...prev, [account]: !currentlyExpanded }));
@@ -296,10 +298,10 @@ export function CategoryBreakdown({
   const renderTop = (node: AccountNode): JSX.Element => {
     const hasChildren = node.children.length > 0;
     const isExpanded = overrides[node.account] ?? false;
-    // Share of the section total. Negative rows (a net-refunded category) and a
-    // section that nets to zero or below have none: the bar is hidden and no
-    // percentage is printed or spoken, but the amount still shows (w21/039).
-    const pct = breakdownShare(node.value, total);
+    // Share of the section's positive rows, which add up to 100%. Negative rows
+    // (a net-refunded category) have none: the bar is hidden and no percentage
+    // is printed or spoken, but the amount still shows (w21/039, w21/370).
+    const pct = breakdownShare(node.value, base);
 
     const amountText = formatSignedMoneyWithCurrency(
       node.value,

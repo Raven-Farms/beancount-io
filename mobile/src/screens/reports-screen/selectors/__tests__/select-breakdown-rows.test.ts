@@ -2,6 +2,7 @@ import { AccountNode } from "@/components/account-list/select-account-list";
 import {
   breakdownRowAccessibilityValue,
   breakdownShare,
+  shareBase,
   topNWithOther,
   OTHER_ACCOUNT,
 } from "../select-breakdown-rows";
@@ -104,5 +105,39 @@ describe("breakdownShare", () => {
     expect(
       breakdownRowAccessibilityValue("-$250.00", breakdownShare(-250, -250), t),
     ).toBe("-$250.00");
+  });
+});
+
+// w21/370: with a refunded category the headline is the net total, and shares
+// divided by it added up to 125%.
+describe("shares with a refunded category", () => {
+  const rows = [{ value: 300 }, { value: 200 }, { value: -100 }];
+
+  it("divide by the positive rows, so they add up to 100%", () => {
+    const base = shareBase(rows);
+    expect(base).toBe(500);
+    expect(breakdownShare(300, base)).toBe(60);
+    expect(breakdownShare(200, base)).toBe(40);
+    expect(breakdownShare(-100, base)).toBe(null);
+  });
+
+  it("have none when no row is positive", () => {
+    expect(shareBase([{ value: -250 }])).toBe(0);
+    expect(breakdownShare(-250, shareBase([{ value: -250 }]))).toBe(null);
+    expect(shareBase([])).toBe(0);
+  });
+
+  it("are what the breakdown card divides by", () => {
+    const src = require("fs")
+      .readFileSync(
+        require("path").join(
+          __dirname,
+          "../../components/category-breakdown.tsx",
+        ),
+        "utf8",
+      )
+      .replace(/\s+/g, "");
+    expect(src.includes("constbase=shareBase(items);")).toBe(true);
+    expect(src.includes("breakdownShare(node.value,base)")).toBe(true);
   });
 });

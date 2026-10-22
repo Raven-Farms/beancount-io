@@ -37,6 +37,17 @@ export function topNWithOther(
 }
 
 /**
+ * What the shares are divided by: the sum of the rows that count towards one.
+ * The headline is the net total, so with a refunded category in the period
+ * (Food 300, Shopping 200, a TV return -100) the section reads $400 and the
+ * shares came out 75% + 50% = 125%. Dividing by the positive rows gives 60% and
+ * 40% (w21/370). Zero when no row is positive, which leaves no shares at all.
+ */
+export function shareBase(rows: readonly { value: number }[]): number {
+  return rows.reduce((sum, row) => sum + Math.max(0, row.value), 0);
+}
+
+/**
  * A top-level row's share of its section, in percent, or `null` when it has
  * none worth stating: a section that nets to zero or below, or a net-refunded
  * row. Those used to print and speak a literal "0%" beside a lone -$250.00
