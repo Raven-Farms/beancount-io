@@ -82,5 +82,8 @@
 - [567](./567.md) — Server: pull requests refuse edits to existing legacy-named files, against w23/054's new-paths-only rule (backend-v2)
 - [568](./568.md) — A transaction whose payee is only spaces shows as a blank row (and a blank detail title)
 - [569](./569.md) — Searching Transactions or Merchants for "iş" misses payees with a Turkish "İ" (sibling of w21/060 and w21/257)
+- [570](./570.md) — A currency exchange with a fee reads as "−$110.00" spent, though only the $1.00 fee left
+- [571](./571.md) — A stock split or merger reads as shares gained or lost in money colours ("+90.00 NVDA", green)
+- [572](./572.md) — Home's Spending counts expenses in raw units while Reports and the dashboard count at cost
 - [508](./blocked/508.md) — Mobile guesses that an entry is a plugin copy from its first line; read the ledger's `generated_from` instead (split from 443) — **blocked:** production's GraphQL schema lacks `generated_from` until the ledger service and backend-v2 deploy; mobile's client is generated from it
 - [315](./blocked/315.md) — In-app commits signed with Gitea username and real email (no full_name, no noreply) — **blocked:** needs the owner's noreply-address and published-history decisions, and a production backfill of existing Gitea users that can't be verified here
