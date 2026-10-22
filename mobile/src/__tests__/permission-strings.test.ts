@@ -87,3 +87,29 @@ describe("localized purpose strings", () => {
     expect(strings("en").NSPhotoLibraryUsageDescription).toBe(PHOTOS);
   });
 });
+
+// w21/359: the bare `ios` pattern in .gitignore also matched locales/ios, so the
+// localized strings existed only in one working tree, the camera prompt stayed
+// English in builds, and this suite failed on a clean checkout.
+describe("the localized iOS permission strings are tracked", () => {
+  const { execFileSync } = require("child_process");
+  const files = Object.values(app.locales ?? {});
+
+  it("lists a file for each language", () => {
+    expect(files.length).toBe(13);
+  });
+
+  it("none of them is ignored by git", () => {
+    const ignored = files.filter((file) => {
+      try {
+        execFileSync("git", ["check-ignore", "-q", file], {
+          cwd: path.join(__dirname, "..", ".."),
+        });
+        return true; // exit 0: ignored
+      } catch (error) {
+        return (error as { status?: number }).status !== 1;
+      }
+    });
+    expect(ignored).toEqual([]);
+  });
+});

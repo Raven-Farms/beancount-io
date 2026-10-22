@@ -52,7 +52,6 @@
 - [452](./452.md) — Picker hides Create for a full name that prefixes an account
 - [454](./454.md) — Welcome keeps old server's sign-in error; not announced
 - [315](./blocked/315.md) — In-app commits signed with Gitea username and real email (no full_name, no noreply) — **blocked:** needs the owner's noreply-address and published-history decisions, and a production backfill of existing Gitea users that can't be verified here
-- [359](./359.md) — 176's iOS locale files gitignored, never committed; unit suite fails
 - [360](./360.md) — Budget chart y-axis fixed 50 px clips localized labels (177 sibling)
 - [361](./361.md) — Merchant exact-payee filter can exceed 256-char limit (181)
 - [362](./362.md) — Splash late ledger check clears a ledger picked after launch (183)
