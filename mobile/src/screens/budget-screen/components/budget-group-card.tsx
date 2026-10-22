@@ -22,7 +22,7 @@ import {
   formatMoneyWithCurrency,
   formatSignedMoneyWithCurrency,
 } from "@/common/number-utils";
-import { AmountText, DashboardCard } from "@/components";
+import { AmountText, DashboardCard, StaleDataBanner } from "@/components";
 import { LoadingTile } from "@/components/loading-tile";
 import {
   BudgetBarChartD3,
@@ -201,7 +201,7 @@ export function BudgetGroupCard({
 
   // A budget on a closed account ends with it (w21/398).
   const closeDates = useAccountCloseDates(ledgerId);
-  const { series, loading, error, settled } = useBudgetActuals({
+  const { series, loading, error, stale, settled } = useBudgetActuals({
     ledgerId,
     group,
     currency,
@@ -349,6 +349,7 @@ export function BudgetGroupCard({
         </View>
       )}
 
+      {stale ? <StaleDataBanner /> : null}
       <View style={styles.chartWrap}>
         {loading && series.length === 0 ? (
           <LoadingTile height={CHART_HEIGHT + LEGEND_HEIGHT} />

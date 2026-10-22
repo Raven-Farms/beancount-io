@@ -5,6 +5,7 @@ import { getFormatDate } from "@/common/format-util";
 import {
   budgetForInterval,
   allTimeThroughToday,
+  budgetActualsState,
   currentPeriodKnown,
   currentPeriodRange,
   periodsThrough,
@@ -145,7 +146,13 @@ export function useBudgetActuals({
 
   // Whether the series ends on a period whose figures are in; until then the
   // card shows no judged stats (w21/455).
-  const settled = !error && currentPeriodKnown(time, currentData);
+  const state = budgetActualsState({ data, currentData, error, time });
 
-  return { series, loading, error, settled };
+  return {
+    series,
+    loading,
+    error: state.error,
+    stale: state.stale,
+    settled: state.settled,
+  };
 }

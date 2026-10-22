@@ -49,13 +49,67 @@ describe("useBudgetActuals before the current period is known", () => {
   it("judges nothing on the card until it is known", () => {
     expect(
       read("hooks", "use-budget-actuals.ts").includes(
-        "constsettled=!error&&currentPeriodKnown(time,currentData);",
+        "conststate=budgetActualsState({data,currentData,error,time});",
       ),
+    ).toBe(true);
+    expect(
+      read("hooks", "use-budget-actuals.ts").includes("settled:state.settled,"),
     ).toBe(true);
     expect(
       read("components", "budget-group-card.tsx").includes(
         "selectBudgetCardStats(group,settled?series:[],today)",
       ),
     ).toBe(true);
+  });
+});
+
+// w21/576: a refresh that failed over loaded figures replaced every card's chart
+// with "Failed to load budgets" and hid Actual, Variance and the meter.
+describe("budgetActualsState", () => {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { budgetActualsState } = require("../selectors/budget-selectors");
+  const failure = new Error("offline");
+  const held = { data: { rows: [] }, currentData: { rows: [] } };
+
+  it("keeps the figures it holds when a refresh fails, as stale", () => {
+    expect(
+      budgetActualsState({ ...held, error: failure, time: undefined }),
+    ).toEqual({ error: undefined, stale: true, settled: true });
+    expect(
+      budgetActualsState({
+        data: { rows: [] },
+        currentData: undefined,
+        error: failure,
+        time: "2026-01-01 - 2026-10-22",
+      }),
+    ).toEqual({ error: undefined, stale: true, settled: true });
+  });
+
+  it("is a failure when nothing is held", () => {
+    expect(
+      budgetActualsState({
+        data: undefined,
+        currentData: undefined,
+        error: failure,
+        time: undefined,
+      }),
+    ).toEqual({ error: failure, stale: false, settled: false });
+  });
+
+  it("does not judge a card whose current period has not arrived", () => {
+    expect(
+      budgetActualsState({
+        data: { rows: [] },
+        currentData: undefined,
+        error: undefined,
+        time: undefined,
+      }),
+    ).toEqual({ error: undefined, stale: false, settled: false });
+  });
+
+  it("is plainly settled when everything is in and nothing failed", () => {
+    expect(
+      budgetActualsState({ ...held, error: undefined, time: undefined }),
+    ).toEqual({ error: undefined, stale: false, settled: true });
   });
 });

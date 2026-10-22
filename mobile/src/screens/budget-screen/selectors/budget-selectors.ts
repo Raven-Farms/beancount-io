@@ -357,6 +357,34 @@ export function currentPeriodKnown(
 }
 
 /**
+ * What a budget card makes of its actuals reads. A refresh that failed over
+ * figures already loaded is stale data, not a failure: Apollo keeps the old
+ * `data` and sets `error`, and the card replaced the chart with "Failed to load
+ * budgets" and dropped Actual, Variance and the meter (w21/576). `error` is a
+ * failure only when nothing is held; `stale` is a failure over held figures,
+ * which the card shows under the stale banner; `settled` is whether the series
+ * ends on a period whose figures are in.
+ */
+export function budgetActualsState({
+  data,
+  currentData,
+  error,
+  time,
+}: {
+  data: unknown;
+  currentData: unknown;
+  error: unknown;
+  time: string | undefined;
+}): { error: unknown; stale: boolean; settled: boolean } {
+  const held = data !== undefined && currentPeriodKnown(time, currentData);
+  return {
+    error: held ? undefined : error,
+    stale: held && Boolean(error),
+    settled: held,
+  };
+}
+
+/**
  * The fraction digits a budget's amounts are recorded at: 3 for `0.003 BTC`,
  * 0 for `1500 JPY`. For display, where the currency's own minor units already
  * set the floor — a floor of cents here printed "¥1,016.13" (w21/425).
