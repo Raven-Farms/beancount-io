@@ -301,6 +301,11 @@ export function useCSVParser() {
     const hasUnsupportedPrecision = rows.some(
       (row) => row.amountFailureReason === "unsupported-precision",
     );
+    // The file named columns we read and every record has them: whatever is
+    // wrong is in the values, for the Preview to show and the reader to fix.
+    // Headerless files and records of the wrong width stay unreadable.
+    const recognizedLayout =
+      hasHeader && dataRecords.every((columns) => isValidRowFormat(columns));
 
     return {
       rows,
@@ -309,7 +314,9 @@ export function useCSVParser() {
       hasErrors: errorCount > 0,
       blockLlmFallback: hasUnsupportedPrecision
         ? "unsupported-precision"
-        : undefined,
+        : recognizedLayout
+          ? "recognized-layout"
+          : undefined,
     };
   }, []);
 

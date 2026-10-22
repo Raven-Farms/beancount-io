@@ -58,9 +58,9 @@ export function useMultiStageParser() {
       try {
         const result = await csvParser.parseFile(file);
 
-        // Keep recognized CSV rows for repair when any amount failed the
-        // representability guard — even if validCount is 0. AI parsing
-        // would re-stringify already-rounded Numbers.
+        // Keep CSV rows for repair even if validCount is 0 when the parser
+        // read their columns (w4/961) or an amount failed the
+        // representability guard, which AI parsing would re-stringify.
         if (result.validCount > 0 || result.blockLlmFallback) {
           setStage("complete");
           return result;

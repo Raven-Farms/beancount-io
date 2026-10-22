@@ -38,7 +38,10 @@ Preview. It clears on a new upload or reset/finish — never via localStorage.
 - **`use-multi-stage-parser.ts`** — Client CSV first; other formats go to the
   LLM. A CSV the client cannot read stops at the `ai-offer` stage until the
   user chooses "Parse with AI" — AI parsing spends the account's AI tokens, so
-  it is never a silent fallback
+  it is never a silent fallback. A CSV whose header the parser recognized and
+  whose records all carry its columns is readable even with no valid row: it
+  goes to Preview for repair, or to Preview's empty state when it has no rows
+  (`blockLlmFallback: "recognized-layout"`, w4/961)
 
 ## Key Utils
 
