@@ -877,3 +877,61 @@ describe("money precision in an account that holds a commodity", () => {
     expect(only.moneyScale).toBe(3);
   });
 });
+
+// w21/241: a transaction with no payee or narration was titled with the
+// English directive type, so the row's translated fallback never ran.
+describe("the title of a bare transaction", () => {
+  const titleOf = (entry: Record<string, unknown>) =>
+    selectAccountJournalRows("USD", [item(entry)])[0].title;
+
+  it("is left empty for the row's translated fallback", () => {
+    expect(titleOf({ date: "2026-10-01", directive_type: "Transaction" })).toBe(
+      "",
+    );
+    expect(
+      titleOf({
+        date: "2026-10-01",
+        directive_type: "Transaction",
+        payee: "",
+        narration: "",
+      }),
+    ).toBe("");
+  });
+
+  it("still names a transaction by its payee, else its narration", () => {
+    expect(
+      titleOf({ directive_type: "Transaction", payee: "Cafe", narration: "x" }),
+    ).toBe("Cafe");
+    expect(titleOf({ directive_type: "Transaction", narration: "Lunch" })).toBe(
+      "Lunch",
+    );
+  });
+
+  it("keeps naming other directives by their account or type", () => {
+    expect(titleOf({ directive_type: "Open", account: "Assets:Cash" })).toBe(
+      "Assets:Cash",
+    );
+    expect(titleOf({ directive_type: "Balance" })).toBe("Balance");
+  });
+
+  it("is translated by the rows that show it", () => {
+    const fs = require("fs") as typeof import("fs");
+    const path = require("path") as typeof import("path");
+    const read = (...parts: string[]) =>
+      fs
+        .readFileSync(path.join(__dirname, "..", "..", "..", ...parts), "utf8")
+        .replace(/\s+/g, "");
+    expect(
+      read(
+        "account-detail-screen",
+        "components",
+        "account-entry-row.tsx",
+      ).includes('consttitle=row.title||t("transaction");'),
+    ).toBe(true);
+    expect(
+      read("transactions-screen", "entry-row", "index.tsx").includes(
+        "constname=entry.payee||entry.narration||untitledLabel;",
+      ),
+    ).toBe(true);
+  });
+});

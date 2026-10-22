@@ -119,6 +119,7 @@ const getStyles = (theme: ColorTheme) =>
 const getDisplayInfo = (
   entry: JournalDirectiveType,
   mixedLabel: string,
+  untitledLabel: string,
   operatingCurrency: string | undefined,
   roots: RootNames,
 ): { name: string; amountStr: string; isPositive: boolean | null } => {
@@ -139,7 +140,9 @@ const getDisplayInfo = (
     };
   }
 
-  const name = entry.payee || entry.narration || entry.directive_type;
+  // A bare transaction is titled in the app's language, not by its English
+  // directive type (w21/241).
+  const name = entry.payee || entry.narration || untitledLabel;
 
   return {
     name,
@@ -164,6 +167,7 @@ export const EntryRow: React.FC<EntryRowProps> = ({ entry, onPress }) => {
   const { name, amountStr, isPositive } = getDisplayInfo(
     entry,
     t("multiplePostings"),
+    t("transaction"),
     operatingCurrency,
     roots,
   );
@@ -229,7 +233,9 @@ export const EntryRow: React.FC<EntryRowProps> = ({ entry, onPress }) => {
             { color: theme.black60 },
           ]}
         >
-          {entry.directive_type}
+          {isJournalTransaction(entry)
+            ? t("transaction")
+            : entry.directive_type}
         </AmountText>
       )}
     </>

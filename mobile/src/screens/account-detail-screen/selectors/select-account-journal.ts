@@ -273,12 +273,12 @@ function entryDetail(
 }
 
 function entryTitle(entry: AccountJournalItem["entry"]): string {
-  return (
-    asString(entry.payee) ||
-    asString(entry.narration) ||
-    asString(entry.account) ||
-    asString(entry.directive_type)
-  );
+  const named = asString(entry.payee) || asString(entry.narration);
+  // A bare transaction has no name of its own. Its directive type is the
+  // English word "Transaction", which the row's translated fallback never got
+  // to replace (w21/241): leave the title empty for it.
+  if (!named && asString(entry.directive_type) === "Transaction") return "";
+  return named || asString(entry.account) || asString(entry.directive_type);
 }
 
 /**

@@ -157,7 +157,7 @@ export function AccountEntryRow({
   const changeColor =
     effect > 0 ? theme.success : effect < 0 ? theme.error : theme.black60;
 
-  const title = row.title || t("transactions");
+  const title = row.title || t("transaction");
   const costText =
     units && units.cost !== null
       ? t("atCost", {
