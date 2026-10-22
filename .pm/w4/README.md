@@ -4,6 +4,8 @@
 
 ## Inbox
 
+- [990 — Keep a newer Time draft when an earlier filter change finishes](./990.md) — minor; live QA,2026-10-22; focused September text is replaced by the previous August navigation at both widths; genuine reads held unchanged, zero hosted writes.
+
 - [989 — Keep a newer BQL draft when its earlier submission finishes URL navigation](./989.md) — minor residual of W3/m12; live QA,2026-10-22; genuine delayed navigation replaces a later unexecuted draft at both widths; no hosted writes.
 
 - [988 — Keep focus after deleting BQL history cards](./988.md) — minor; real public-query history at both widths,2026-10-22; deleting focused middle/last cards leaves BODY while exact storage/editor controls pass; next-Tab behavior recorded, no writes.
@@ -88,7 +90,6 @@
 
 - [325 — Accept Persian digits in localized Gregorian date entry](./325.md) — minor; dashboard QA, 2026-10-21; Persian/Arabic-Indic digits for the same Gregorian day are refused, while ASCII enables the form and prepares the correct canonical date; no hosted write.
 
-- [324 — Count applied AI account suggestions in the completion message](./324.md) — minor; dashboard QA with client-only responses, 2026-10-21; zero and one applied targets both announce two categorized; full-result/threshold controls pass and no AI request is forwarded.
 
 
 
