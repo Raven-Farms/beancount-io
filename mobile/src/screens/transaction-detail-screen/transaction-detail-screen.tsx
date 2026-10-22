@@ -700,7 +700,9 @@ const TransactionDetailImpl = ({
                   size={16}
                   color={theme.error}
                 />
-                <Text style={styles.errorText}>{error.message}</Text>
+                <Text style={styles.errorText} selectable>
+                  {error.message}
+                </Text>
               </View>
             ))}
             <Text

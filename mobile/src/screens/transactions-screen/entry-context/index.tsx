@@ -312,7 +312,7 @@ export const EntryContext: React.FC<EntryContextProps> = ({
             </Text>
             <View style={styles.sourceContainer}>
               <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                <Text style={styles.sourceText}>
+                <Text style={styles.sourceText} selectable>
                   {entryContext.slice || ""}
                 </Text>
               </ScrollView>

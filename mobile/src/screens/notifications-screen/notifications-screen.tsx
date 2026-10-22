@@ -12,7 +12,8 @@ import { useEffect, useState } from "react";
 import { Ionicons } from "@expo/vector-icons";
 import { ColorTheme } from "@/types/theme-props";
 import { fonts, useTheme } from "@/common/theme";
-import { useThemeStyle } from "@/common/hooks";
+import { useThemeStyle, useToast } from "@/common/hooks";
+import * as Clipboard from "expo-clipboard";
 import { useTranslations } from "@/common/hooks/use-translations";
 import { useLedgerErrors } from "@/common/hooks/use-ledger-errors";
 import { selectSectionsPending } from "./section-state";
@@ -30,6 +31,7 @@ import { LedgerGuard } from "@/components/ledger-guard";
 import { FadeInView } from "@/components/crossfade";
 import { ThemedRefreshControl } from "@/components/dashboard-scroll-view";
 import {
+  errorCopyText,
   formatErrorLocation,
   formatCommitAuthorLine,
   commitRowAccessibilityLabel,
@@ -175,6 +177,14 @@ function ErrorRow({
   const theme = useTheme().colorTheme;
   const styles = useThemeStyle(getStyles);
   const canFix = !!err.filename;
+  const { t } = useTranslations();
+  const toast = useToast();
+  // A long press, or VoiceOver's actions rotor, copies the message with its
+  // place (w21/432).
+  const copyError = async () => {
+    await Clipboard.setStringAsync(errorCopyText(err));
+    toast.showToast({ message: t("copied"), type: "text" });
+  };
 
   const handlePress = () => {
     if (!canFix) return;
@@ -191,7 +201,9 @@ function ErrorRow({
   const inner = (
     <View style={styles.errorRow}>
       <View style={styles.errorContent}>
-        <Text style={styles.errorMessage}>{err.message}</Text>
+        <Text style={styles.errorMessage} selectable={!canFix}>
+          {err.message}
+        </Text>
         {err.filename && (
           <Text style={styles.errorLocation}>{formatErrorLocation(err)}</Text>
         )}
@@ -207,12 +219,17 @@ function ErrorRow({
       <TouchableOpacity
         activeOpacity={0.7}
         onPress={handlePress}
+        onLongPress={() => void copyError()}
         accessibilityRole="button"
         accessibilityLabel={
           err.filename
             ? `${err.message}. ${formatErrorLocation(err)}`
             : err.message
         }
+        accessibilityActions={[{ name: "copy", label: t("copy") }]}
+        onAccessibilityAction={(event) => {
+          if (event.nativeEvent.actionName === "copy") void copyError();
+        }}
       >
         {inner}
       </TouchableOpacity>

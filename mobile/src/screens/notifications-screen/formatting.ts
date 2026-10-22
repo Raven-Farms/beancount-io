@@ -11,6 +11,17 @@ export function formatErrorLocation(error: LedgerError): string {
   return `${error.filename}${line}`;
 }
 
+/**
+ * What copying an error row puts on the clipboard: the message, then where it
+ * is ("main.bean:12") on its own line, to search for or send to someone
+ * (w21/432).
+ */
+export function errorCopyText(error: LedgerError): string {
+  return error.filename
+    ? `${error.message}\n${formatErrorLocation(error)}`
+    : error.message;
+}
+
 export function formatShortSha(sha: string, shortSha?: string | null): string {
   return shortSha ?? sha.slice(0, 7);
 }
