@@ -915,9 +915,17 @@ def answer(
                     "those rows in the source file, or map a different id column"
                 )
             if price_conflicts:
+                from bea_engine.ledger.adding import one_price_per_day_plugin
+
+                loader = one_price_per_day_plugin(options)
                 fixes.append(
                     "a price differs from the quote already recorded for that commodity and day — drop the row, "
-                    "or record a second quote deliberately with bea add price --force"
+                    + (
+                        f"or edit the recorded quote at the location the row names ({loader} allows one price "
+                        "per pair and day, so a second quote cannot be recorded)"
+                        if loader is not None
+                        else "or record a second quote deliberately with bea add price --force"
+                    )
                 )
             conflict_fix = "; ".join(fixes)
             if conflicts and not (preview["possible_duplicates"] and duplicates == "review"):

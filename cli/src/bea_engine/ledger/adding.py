@@ -911,6 +911,21 @@ def _parse_balance_amount(text: str) -> tuple[Decimal, str, Decimal | None]:
 # --------------------------------------------------------------------------- #
 
 
+def one_price_per_day_plugin(options: Any) -> str | None:
+    """The plugin this ledger loads that allows one price per pair and day, as a phrase, or None.
+
+    `unique_prices` rejects a second same-day quote, so `--force` could only
+    end in its bare "Disagreeing price entries" (w5/397); `pedantic` bundles
+    it (w5/766). Import's advice asks the same question (w5/902).
+    """
+    loaded = [str(name) for name, _ in options.get("plugin") or ()]
+    if any(name == "pedantic" or name.endswith(".pedantic") for name in loaded):
+        return "the pedantic plugin (which bundles unique_prices)"
+    if any(name.endswith("unique_prices") for name in loaded):
+        return "the unique_prices plugin"
+    return None
+
+
 def _price(
     file: Path, request: dict[str, Any], *, into: Path | None, allow_errors: bool, strict_read: bool
 ) -> dict[str, Any]:
@@ -979,13 +994,10 @@ def _price(
     # unique_prices rejects a second quote for the day, so --force could only
     # end in its bare "Disagreeing price entries" (w5/397). pedantic bundles
     # unique_prices, so it counts too (w5/766).
-    loaded = [str(name) for name, _ in options.get("plugin") or ()]
-    unique = any(name.endswith("unique_prices") for name in loaded)
-    pedantic = any(name == "pedantic" or name.endswith(".pedantic") for name in loaded)
-    if conflict is not None and (unique or pedantic or not request.get("force")):
+    loader = one_price_per_day_plugin(options)
+    if conflict is not None and (loader is not None or not request.get("force")):
         where = f"{conflict.meta.get('filename')}:{conflict.meta.get('lineno')}"
-        if unique or pedantic:
-            loader = "the pedantic plugin (which bundles unique_prices)" if pedantic else "the unique_prices plugin"
+        if loader is not None:
             remedy = (
                 f"This ledger loads {loader}, which allows one {currency} price in {amount_currency} "
                 f"per day; edit the existing price at {where} instead."
