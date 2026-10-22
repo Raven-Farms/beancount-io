@@ -1,5 +1,6 @@
 import type { AccountNode } from "../../../components/account-list/select-account-list";
 import { leafName } from "../../../common/account-util";
+import { getCurrencySymbol } from "../../../common/currency-util";
 import { topNWithOther } from "./select-breakdown-rows";
 import { formatShortMoneyWithCurrency } from "../../../common/number-utils";
 import { getAccountRoot, type RootNames } from "../../../common/account-root";
@@ -11,6 +12,19 @@ import { getAccountRoot, type RootNames } from "../../../common/account-root";
  * it as zero (w4/130).
  */
 const HALF_CENT = 0.005;
+
+/**
+ * Below this a flow is residue in `currency`. Half a cent for a currency the app
+ * knows; a commodity it has no symbol for (BTC as the operating currency) keeps
+ * what is recorded, where a flat half cent dropped a 0.004 BTC Food node and left
+ * Savings wrong (w21/541). Float residue is far below the floor.
+ */
+const COMMODITY_RESIDUE = 1e-9;
+function flowResidue(currency: string | undefined): number {
+  return currency === undefined || getCurrencySymbol(currency) !== ""
+    ? HALF_CENT
+    : COMMODITY_RESIDUE;
+}
 /** Depth of account path the Sankey draws — matches the web transformer. */
 const SANKEY_DEPTH = 2;
 
@@ -261,6 +275,8 @@ type TransformOptions = {
   roots?: RootNames;
   depth?: number;
   topN?: number;
+  /** The currency the amounts are in; sets what counts as residue. */
+  currency?: string;
 };
 
 function treeTotal(nodes: AccountNode[]): number {
@@ -272,6 +288,7 @@ function extractAtDepth(
   targetDepth: number,
   out: Map<string, number>,
   roots: RootNames,
+  residue: number,
 ): void {
   for (const node of nodes) {
     if (!node || !node.account) {
@@ -289,11 +306,11 @@ function extractAtDepth(
       // Zero is dropped here so a balanced-to-nothing category does not
       // occupy a node; negatives are kept in the map so totals still match
       // the statement, then stripped from *links* below.
-      if (Math.abs(node.value) >= HALF_CENT) {
+      if (Math.abs(node.value) >= residue) {
         out.set(key, (out.get(key) ?? 0) + node.value);
       }
     } else {
-      extractAtDepth(node.children, targetDepth, out, roots);
+      extractAtDepth(node.children, targetDepth, out, roots, residue);
     }
   }
 }
@@ -301,9 +318,10 @@ function extractAtDepth(
 function toRankedNodes(
   values: Map<string, number>,
   labelOf: (id: string) => string,
+  residue: number,
 ): AccountNode[] {
   return Array.from(values.entries())
-    .filter(([, value]) => value >= HALF_CENT)
+    .filter(([, value]) => value >= residue)
     .map(([account, value]) => ({
       account,
       name: labelOf(account),
@@ -350,24 +368,26 @@ export function transformToSankeyData(options: TransformOptions): SankeyData {
     roots = {},
     depth = SANKEY_DEPTH,
     topN = SANKEY_TOP_N,
+    currency,
   } = options;
+  const residue = flowResidue(currency);
 
   const totalIncome = treeTotal(income);
   const totalExpenses = treeTotal(expenses);
 
   const incomeValues = new Map<string, number>();
   const expenseValues = new Map<string, number>();
-  extractAtDepth(income, depth, incomeValues, roots);
-  extractAtDepth(expenses, depth, expenseValues, roots);
+  extractAtDepth(income, depth, incomeValues, roots, residue);
+  extractAtDepth(expenses, depth, expenseValues, roots, residue);
 
   const incomeRows = topNWithOther(
-    toRankedNodes(incomeValues, leafName),
+    toRankedNodes(incomeValues, leafName, residue),
     topN,
     otherLabel,
     OTHER_INCOME_ACCOUNT,
   );
   const expenseRows = topNWithOther(
-    toRankedNodes(expenseValues, leafName),
+    toRankedNodes(expenseValues, leafName, residue),
     topN,
     otherLabel,
     OTHER_EXPENSES_ACCOUNT,
@@ -393,7 +413,7 @@ export function transformToSankeyData(options: TransformOptions): SankeyData {
   // What ran against its side, as positive amounts (w21/112).
   const against = (values: Map<string, number>) =>
     Array.from(values.values())
-      .filter((value) => value <= -HALF_CENT)
+      .filter((value) => value <= -residue)
       .reduce((sum, value) => sum - value, 0);
   const refunds = against(expenseValues);
   const clawbacks = against(incomeValues);
@@ -401,8 +421,8 @@ export function transformToSankeyData(options: TransformOptions): SankeyData {
   const hasFlows =
     incomeRows.length > 0 ||
     expenseRows.length > 0 ||
-    refunds >= HALF_CENT ||
-    clawbacks >= HALF_CENT;
+    refunds >= residue ||
+    clawbacks >= residue;
   if (!hasFlows) {
     return { nodes, links, totalIncome, totalExpenses };
   }
@@ -453,11 +473,11 @@ export function transformToSankeyData(options: TransformOptions): SankeyData {
   // A category's own ribbon never goes negative; what ran against its side
   // has one ribbon of its own instead, so the hub balances on every dollar
   // and Savings equals Net Profit (w21/112).
-  if (refunds >= HALF_CENT) {
+  if (refunds >= residue) {
     pushNode(nodes, seen, REFUNDS_ID, refundsLabel, "source");
     links.push({ source: REFUNDS_ID, target: CASH_FLOW_ID, value: refunds });
   }
-  if (clawbacks >= HALF_CENT) {
+  if (clawbacks >= residue) {
     pushNode(nodes, seen, CLAWBACKS_ID, clawbacksLabel, "operating");
     links.push({
       source: CASH_FLOW_ID,
@@ -476,14 +496,14 @@ export function transformToSankeyData(options: TransformOptions): SankeyData {
     .filter((l) => l.source === CASH_FLOW_ID)
     .reduce((sum, l) => sum + l.value, 0);
   const savings = linkedIncome - linkedExpenses;
-  if (savings >= HALF_CENT) {
+  if (savings >= residue) {
     pushNode(nodes, seen, SAVINGS_ID, savingsLabel, "savings");
     links.push({
       source: CASH_FLOW_ID,
       target: SAVINGS_ID,
       value: savings,
     });
-  } else if (savings <= -HALF_CENT) {
+  } else if (savings <= -residue) {
     pushNode(nodes, seen, SHORTFALL_ID, savingsLabel, "savings");
     links.push({
       source: SHORTFALL_ID,

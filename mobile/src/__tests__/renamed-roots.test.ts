@@ -283,6 +283,8 @@ describe("Reports' Cash flow on a renamed-roots ledger", () => {
       )
       .replace(/\s+/g, "");
     expect(card.includes("constroots=useLedgerRootNames();")).toBe(true);
-    expect(card.includes("roots,}),[income,expenses,roots,t]")).toBe(true);
+    expect(
+      card.includes("roots,currency,}),[income,expenses,roots,t,currency]"),
+    ).toBe(true);
   });
 });

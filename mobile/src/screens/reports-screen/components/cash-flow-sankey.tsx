@@ -257,8 +257,9 @@ function CashFlowSankeyPlot({
         incomeNodeLabel: (name) => t("sankeyIncomeNodeLabel", { name }),
         expensesNodeLabel: (name) => t("sankeyExpensesNodeLabel", { name }),
         roots,
+        currency,
       }),
-    [income, expenses, roots, t],
+    [income, expenses, roots, t, currency],
   );
 
   const ready = data.links.length > 0;

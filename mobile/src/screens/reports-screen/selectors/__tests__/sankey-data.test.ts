@@ -460,3 +460,51 @@ describe("sankeyLabelLines", () => {
     );
   });
 });
+
+// w21/541: a flat half cent dropped a BTC ledger's 0.004 Food node and left
+// Savings wrong.
+describe("transformToSankeyData in a commodity the app has no symbol for", () => {
+  const btc = (currency?: string) =>
+    transformToSankeyData({
+      ...labels,
+      income: [node("Income:Salary", 0.05)],
+      expenses: [node("Expenses:Rent", 0.02), node("Expenses:Food", 0.004)],
+      currency,
+    });
+
+  it("keeps a 0.004 node and gives Savings the rest", () => {
+    const data = btc("BTC");
+    expect(data.nodes.some((n) => n.id === "Expenses:Food")).toBe(true);
+    expect(Math.round((sankeySavings(data) ?? 0) * 1e9) / 1e9).toBe(0.026);
+  });
+
+  it("draws a month of 0.004 in and 0.003 out", () => {
+    const data = transformToSankeyData({
+      ...labels,
+      income: [node("Income:Salary", 0.004)],
+      expenses: [node("Expenses:Food", 0.003)],
+      currency: "BTC",
+    });
+    expect(data.links.length > 0).toBe(true);
+  });
+
+  it("still treats half a cent as nothing in a known currency", () => {
+    const data = transformToSankeyData({
+      ...labels,
+      income: [node("Income:Salary", 0.05)],
+      expenses: [node("Expenses:Food", 0.004)],
+      currency: "USD",
+    });
+    expect(data.nodes.some((n) => n.id === "Expenses:Food")).toBe(false);
+  });
+
+  it("still drops float residue in a commodity", () => {
+    const data = transformToSankeyData({
+      ...labels,
+      income: [node("Income:Salary", 1)],
+      expenses: [node("Expenses:Food", 1 + 5.55e-17)],
+      currency: "BTC",
+    });
+    expect(sankeySavings(data)).toBe(null);
+  });
+});
