@@ -197,8 +197,7 @@
           },
           "message": {
             "type": "string",
-            "minLength": 1,
-            "description": "Commit message; defaults to a generated one",
+            "description": "Commit message; \"Create <path>\" or \"Update <path>\" when omitted or empty",
             "example": "Add January transactions"
           },
           "sha": {
@@ -215,8 +214,7 @@
         "type": "object",
         "properties": {
           "message": {
-            "type": "string",
-            "minLength": 1
+            "type": "string"
           },
           "sha": {
             "type": "string",

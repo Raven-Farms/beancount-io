@@ -360,6 +360,42 @@ describe("v1 files", () => {
     });
   });
 
+  // w21/553: REST committed "Update <path>" for a create and refused an empty
+  // message, where GraphQL committed "Create <path>" and took "" as omitted.
+  it("commits Create <path> for a new file and Update <path> for a replacement, and reads an empty message as omitted", async () => {
+    server.setIdentity(writeToken);
+    const messageOf = (index: number) =>
+      (
+        services.ledgerRepo.changeFiles.mock.calls as unknown as Array<
+          [{ message: string }]
+        >
+      )[index][0].message;
+    const before = services.ledgerRepo.changeFiles.mock.calls.length;
+    await call("PUT", `${LEDGER}/files/new.bean`, { content: "; new" });
+    await call("PUT", `${LEDGER}/files/new.bean`, {
+      content: "; new",
+      message: "",
+    });
+    await call("PUT", `${LEDGER}/files/new.bean`, {
+      content: "; edited",
+      sha: "sha123",
+    });
+    await call("PUT", `${LEDGER}/files/new.bean`, {
+      content: "; edited",
+      sha: "sha123",
+      message: "Tidy",
+    });
+    expect(messageOf(before)).toBe("Create new.bean");
+    expect(messageOf(before + 1)).toBe("Create new.bean");
+    expect(messageOf(before + 2)).toBe("Update new.bean");
+    expect(messageOf(before + 3)).toBe("Tidy");
+    const { status } = await call("DELETE", `${LEDGER}/files/new.bean`, {
+      message: "",
+    });
+    expect(status).toBe(200);
+    expect(messageOf(before + 4)).toBe("Delete new.bean");
+  });
+
   it("hands the service the caller's UTF-8 text, not an encoding of it (w2/011)", async () => {
     // The bug this pins: the handler forwarded `body.content` verbatim while
     // the service passed it straight to the ledger service, which hands it to
