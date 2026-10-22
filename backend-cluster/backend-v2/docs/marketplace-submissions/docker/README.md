@@ -55,6 +55,28 @@ catalog was published by this local operation.
 
 The [remote contribution guide](https://github.com/docker/mcp-registry/blob/main/CONTRIBUTING.md#-adding-a-remote-mcp-server) requires these three files and OAuth testing, followed by a Docker-team-reviewed upstream pull request. No submission is represented by this directory. Use the private credential-sharing channel linked by Docker only when the operator proceeds with review; never attach credentials to a commit, pull request, or public board.
 
+## Renewed native preparation — 2026-10-22 UTC
+
+The standalone gateway is restored in task scratch from the official v0.44.1
+Darwin arm64 release. The downloaded archive matches the release API's SHA-256
+`4c00011371aa1e04931aed31bf4f3fd044ec58c4fc7ddeaaf6c5a5c445307321`,
+and the executable reports v0.44.1. The existing Docker engine answers version
+29.8.2 through its existing OrbStack context; no second engine or backend stack
+is created and no global CLI plugin is installed.
+
+A uniquely named local OCI catalog and profile each contain exactly one remote
+server. Actual `catalog show` and `profile show` confirm the canonical endpoint,
+Streamable HTTP and the generated `oauth.providers` shape. No client is
+automatically connected. These records remain ready for the narrow synthetic-QA
+rehearsal. They establish configuration preparation, not OAuth, tool discovery,
+a ledger query, a write preview or publication.
+
+Chrome opens, but the browser tooling currently exposes no connected browser.
+The native authorization callback is therefore not started again. Browser
+connection and the separate exact Docker scope decision remain prerequisites
+before completing the already documented read/preview/callback journey. The
+retained Cursor grant does not provide Docker authorization.
+
 ## Primary references
 
 - [Remote entry example](https://github.com/docker/mcp-registry/blob/49b643ce3fc73e6ee80bb962719b6e2990e3d397/servers/linear/server.yaml)
