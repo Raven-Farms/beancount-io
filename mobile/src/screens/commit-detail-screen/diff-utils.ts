@@ -6,6 +6,18 @@ export type DiffLine = {
 };
 
 /**
+ * A diff's lines without their terminators. A CRLF file's content lines end in
+ * `\r`, which iOS lays out as a paragraph break (every row double-spaced), and
+ * the newline that ends the diff left an empty last row (w21/272). An empty
+ * diff is still one empty line.
+ */
+function diffLines(diff: string): string[] {
+  const lines = diff.split(/\r?\n/u);
+  if (lines.length > 1 && lines[lines.length - 1] === "") lines.pop();
+  return lines;
+}
+
+/**
  * Classify each line of a unified diff by where it sits, not by prefix alone.
  * Inside a hunk a `+`/`-` always marks content, even when the content starts
  * with `++`/`--` (deleting a `---` line emits `----`). The `--- a/file` and
@@ -13,7 +25,7 @@ export type DiffLine = {
  */
 export function parseDiff(diff: string): DiffLine[] {
   let inHunk = false;
-  return diff.split("\n").map((line): DiffLine => {
+  return diffLines(diff).map((line): DiffLine => {
     if (line.startsWith("diff --git")) {
       inHunk = false;
     } else if (line.startsWith("@@")) {
@@ -54,7 +66,7 @@ function fileHeaders(
   let current: Pick<CommitFileRow, "status" | "previousFilename"> | null = null;
   let path = "";
   let inHunk = false;
-  for (const line of diff.split("\n")) {
+  for (const line of diffLines(diff)) {
     if (line.startsWith("diff --git ")) {
       // `a/<p> b/<p>`: the two halves agree unless the file was renamed, and
       // then `rename to` names the new path.
