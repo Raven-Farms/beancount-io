@@ -19,6 +19,7 @@ import shlex
 import sys
 import unicodedata
 from collections.abc import Callable, Iterable, Iterator, Sequence
+from contextvars import ContextVar
 from dataclasses import dataclass, replace
 from decimal import Context, Decimal
 from itertools import combinations
@@ -2518,7 +2519,17 @@ def _exact_amount(number: Decimal, currency: str) -> str:
     The currency is part of the identity. Without it, `1 ETH` and `1 BTC` on
     one date with one description shared a digest.
     """
-    return f"{_exactly_normalized(number):f} {currency}"
+    value = _exactly_normalized(number)
+    if not value:
+        # Zero has no sign as money: `-0.00` and `0.00` are one amount. The ids
+        # written before this kept the sign, which a legacy spelling still finds
+        # (w5/920).
+        value = Decimal("-0") if _NEGATIVE_ZERO.get() else Decimal(0)
+    return f"{value:f} {currency}"
+
+
+#: Set while an older release's spelling of a signed zero is rebuilt for a lookup-only id.
+_NEGATIVE_ZERO: ContextVar[bool] = ContextVar("negative_zero", default=False)
 
 
 def _exactly_normalized(number: Decimal) -> Decimal:
@@ -2724,6 +2735,21 @@ def _hash_import_ids(
         for p in _source_postings(entry, account)
     )
     blind_legs = sorted((p.units.number, p.units.currency, _lot_text(p)) for p in _source_postings(entry, account))
+
+    def spelled_with_negative_zero() -> str:
+        # The release before zero lost its sign printed every zero amount, cost
+        # and price as `-0` for a `-0.00` source, and an export that now reads
+        # `0.00` must still find that id (w5/920).
+        token = _NEGATIVE_ZERO.set(True)
+        try:
+            rebuilt = sorted(
+                (p.units.number, p.units.currency, _lot_text(p) + ("" if p.account == account else f" [{p.account}]"))
+                for p in _source_postings(entry, account)
+            )
+            return "+".join(_exact_amount(number, currency) + lot for number, currency, lot in rebuilt)
+        finally:
+            _NEGATIVE_ZERO.reset(token)
+
     per_legs = sorted(
         (p.units.number, p.units.currency, _lot_text(p, per_only=True, historic=True))
         for p in _source_postings(entry, account)
@@ -2750,6 +2776,7 @@ def _hash_import_ids(
     per_only = "+".join(_exact_amount(number, currency) + lot for number, currency, lot in per_legs)
     undated = "+".join(_exact_amount(number, currency) + lot for number, currency, lot in undated_legs)
     blind = "+".join(_exact_amount(number, currency) + lot for number, currency, lot in blind_legs)
+    negative_zero = spelled_with_negative_zero()
 
     single_base = _hash_base(date, exact, description, nfc_account)
     seen[single_base] = seen.get(single_base, 0) + 1
@@ -2790,6 +2817,11 @@ def _hash_import_ids(
         counter = f"units\0{units_base}"
         seen[counter] = seen.get(counter, 0) + 1
         older.append(_digest_import_id(units_base, seen[counter]))
+    if negative_zero != exact:
+        negative_base = _hash_base(date, negative_zero, description, nfc_account)
+        negative_counter = f"negzero\0{negative_base}"
+        seen[negative_counter] = seen.get(negative_counter, 0) + 1
+        older.append(_digest_import_id(negative_base, seen[negative_counter]))
     if blind != exact:
         # Written before the child account a parent-filed row posts to was part
         # of the id: lookup-only and content-checked like every older spelling,
@@ -2835,6 +2867,11 @@ def _hash_import_ids(
             units_counter = f"paired-units\0{units_paired}"
             seen[units_counter] = seen.get(units_counter, 0) + 1
             older.append(_digest_import_id(units_paired, seen[units_counter]))
+        if negative_zero != exact:
+            negative_paired = _hash_base(date, negative_zero, f"{payee}|{description}", nfc_account)
+            negative_paired_counter = f"paired-negzero\0{negative_paired}"
+            seen[negative_paired_counter] = seen.get(negative_paired_counter, 0) + 1
+            older.append(_digest_import_id(negative_paired, seen[negative_paired_counter]))
         if blind != exact:
             blind_paired = _hash_base(date, blind, f"{payee}|{description}", nfc_account)
             blind_paired_counter = f"paired-blind\0{blind_paired}"
