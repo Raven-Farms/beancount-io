@@ -96,7 +96,6 @@
 
 - [319 — Name the import configuration's amount filter and mapping table](./319.md) — minor; dashboard QA, 2026-10-21; native AX exposes both empty identities at both widths; filtering/selection/focus and named Preview controls pass.
 
-- [318 — Keep composing Escape inside searchable popovers](./318.md) — minor; dashboard QA, 2026-10-21; trusted composing Escape dismisses the ledger switcher and clears its search at both widths; ordinary Escape, composing Enter and read-retry controls pass.
 
 
 
