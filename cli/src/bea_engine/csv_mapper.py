@@ -215,7 +215,14 @@ def _split_amount_sign(value: str) -> tuple[str, str, int]:
 
 
 def _separator_vote(core: str) -> str | None:
-    """Vote on a cell's decimal convention: 'us', 'eu', 'eu-weak', or None."""
+    """Vote on a cell's decimal convention: 'us', 'eu', 'eu-weak', or None.
+
+    The grouping fillers the parser removes (spaces, apostrophes) are removed
+    first, so `1 234,567` votes as `1234,567` does: otherwise the vote saw one
+    shape and the parse another, and the column fell back to point decimals
+    and was refused (w5/906).
+    """
+    core = _THOUSAND_SEPARATOR_FILLER.sub("", core)
     if "." in core and "," in core:
         return "eu" if core.rfind(",") > core.rfind(".") else "us"
     if _COMMA_DECIMAL_TAIL.match(core):
