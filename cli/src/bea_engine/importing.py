@@ -1069,6 +1069,24 @@ def _named_rows(file: Path, texts: list[str], error: LedgerError, *, allow_error
     return named_rows(file, texts, error, allow_errors=allow_errors, into=into)
 
 
+def _native_units_as_none(entry: Any) -> Any:
+    """An entry whose omitted posting amounts are `None`, as the rest of the import reads them.
+
+    Beancount's own parser marks an omitted amount with its `MISSING` sentinel,
+    not `None`, so an importer returning parsed entries failed on the first
+    attribute read (w5/926). An amount with a stated number and an omitted
+    currency is kept: the number is real, and the printer spells it.
+    """
+    from beancount.core.number import MISSING
+
+    postings = getattr(entry, "postings", None)
+    if not postings or not any(posting.units is MISSING for posting in postings):
+        return entry
+    return entry._replace(
+        postings=[posting._replace(units=None) if posting.units is MISSING else posting for posting in postings]
+    )
+
+
 def _extracted(importer: Any, source: Path, existing: Any) -> list[Any]:
     """The importer's rows, refusing a return value that is not a list of directives.
 
@@ -1097,7 +1115,7 @@ def _extracted(importer: Any, source: Path, existing: Any) -> list[Any]:
             f"Importer {_name(importer)} extract() returned {_type_name(result)} instead of a list of "
             f"Beancount directives{single}."
         )
-    return copy.deepcopy(list(result))
+    return [_native_units_as_none(entry) for entry in copy.deepcopy(list(result))]
 
 
 def _type_name(value: Any) -> str:
@@ -2125,11 +2143,13 @@ def _posting_currency(posting: Any, entry: Any) -> str | None:
     fills it with the balancing weight, so its currency is the single weight
     currency of the other legs; with several, it cannot be told before booking.
     """
-    if posting.units is not None:
+    from beancount.core.number import MISSING
+
+    if posting.units is not None and posting.units.currency is not MISSING:
         return str(posting.units.currency)
     weights = set()
     for other in entry.postings:
-        if other.units is None:
+        if other.units is None or other.units.currency is MISSING:
             continue
         if other.cost is not None and getattr(other.cost, "currency", None):
             weights.add(other.cost.currency)

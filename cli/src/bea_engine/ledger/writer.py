@@ -116,6 +116,15 @@ class DirectivePrinter(EntryPrinter):
         return str(super().__call__(entry))  # type: ignore[no-untyped-call]
 
     def render_posting_strings(self, posting: Any) -> tuple[str, str, str]:
+        units = posting.units
+        if units is not None and units is not MISSING and getattr(units, "currency", None) is MISSING:
+            # A stated number with its currency left to interpolation: upstream
+            # prints the sentinel class, which no ledger can hold (w5/926).
+            placeholder = " \u0000currency"
+            flag_account, position_str, weight_str = super().render_posting_strings(  # type: ignore[no-untyped-call]
+                posting._replace(units=BcAmount(units.number, placeholder.strip()))
+            )
+            return flag_account, position_str.replace(placeholder, "", 1), weight_str
         flag_account, position_str, weight_str = super().render_posting_strings(posting)  # type: ignore[no-untyped-call]
         if isinstance(posting.cost, CostSpec):
             dropped = cost_to_str(posting.cost, self.dformat, True)  # type: ignore[no-untyped-call]
