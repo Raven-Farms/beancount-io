@@ -12,6 +12,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Stack, useFocusEffect, useRouter } from "expo-router";
+import { CardLoadFailure } from "@/components/card-load-failure";
 import { useApolloClient, useReactiveVar } from "@apollo/client";
 import { Ionicons } from "@expo/vector-icons";
 import { ColorTheme } from "@/types/theme-props";
@@ -550,6 +551,12 @@ const TransactionDetailImpl = ({
               <LoadingTile style={styles.skeletonMeta} />
               <LoadingTile style={styles.skeletonSection} />
             </View>
+          ) : error ? (
+            // A cold link whose read failed (not "gone": that returned above)
+            // is not "no data": it can be retried (w21/296).
+            <CardLoadFailure
+              onRetry={() => void refetchContext().catch(() => undefined)}
+            />
           ) : (
             <Text style={styles.stateText}>{t("journalNoData")}</Text>
           )}
