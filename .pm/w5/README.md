@@ -65,7 +65,6 @@
 - [959 — Treat repeated allowed currencies as one during transaction inference](./959.md) — minor CLI existing-ledger/native-import inference finding; USD/EUR and split-file controls reproduced 2026-10-21.
 - [958 — Keep unused unopened accounts out of remembered CSV settings](./958.md) — minor CLI memory-guard follow-up to 452/714; empty, skipped and fully categorized exports reproduced 2026-10-21.
 - [957 — Allow instrument units in the portfolio preset's holdings account](./957.md) — minor CLI first-purchase setup finding; reproduced twice in USD/EUR on 2026-10-21.
-- [893 — Avoid opening remembered CSV rules paths that became FIFOs](./893.md) — minor CLI unattended-hang follow-up to 582 and 792; reproduced 2026-10-20.
 - [894 — Validate device-login expiry before replacing the stored credential](./894.md) — minor CLI false-success finding; reproduced 2026-10-20.
 - [895 — Resolve Debit and Credit decimals independently to preserve withdrawal amounts](./895.md) — major CLI bookkeeping error; reproduced 2026-10-20.
 - [896 — Match multi-fill sales to their booked cost lots without importing them twice](./896.md) — major CLI brokerage deduplication gap after 467 and 603; reproduced 2026-10-20.

@@ -634,7 +634,12 @@ def _recall_csv(
             entry["rules"] = None
             return entry
         try:
-            load_rules(Path(rules_path))
+            remembered = Path(rules_path)
+            # Opening a pipe nobody feeds waits forever, so it is judged
+            # before `load_rules` reads it (w5/893).
+            if remembered.exists() and not remembered.is_file() and not remembered.is_dir():
+                raise UsageError(output.not_a_file(remembered))
+            load_rules(remembered)
         except UsageError as exc:
             notes.append(
                 f"Remembered --rules {shlex.quote(rules_path)} cannot be used ({exc}); importing without rules. "
