@@ -27,7 +27,7 @@ export function ExampleTabsLayout() {
     exit,
     signInLabel,
     signInPending,
-    signInFailed,
+    signInFailure,
   } = useExamples();
   const { t } = useTranslations();
   if (!visit.ledgerId) return <Redirect href="/examples" />;
@@ -65,7 +65,7 @@ export function ExampleTabsLayout() {
           serverUrl: visit.serverUrl,
           signInLabel,
           signInPending,
-          signInFailed,
+          signInFailure,
           onSignIn: requestSignIn,
           onExit: exit,
         },

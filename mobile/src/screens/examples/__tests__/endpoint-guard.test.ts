@@ -50,6 +50,7 @@ vm.runInNewContext(
           "@/common/hooks",
           "@/common/theme",
           "@/screens/welcome/use-native-sign-in",
+          "@/screens/welcome/failure-message",
           "./use-example-catalog",
         ].includes(id)
       )

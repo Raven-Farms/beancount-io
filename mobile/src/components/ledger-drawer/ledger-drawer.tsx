@@ -452,7 +452,7 @@ export type LedgerDrawerData = {
     serverUrl: string;
     signInLabel: string;
     signInPending: boolean;
-    signInFailed: boolean;
+    signInFailure: string | null;
     onSignIn: () => void;
     onExit: () => void;
   };
@@ -726,8 +726,11 @@ export function LedgerDrawer({
     <View style={styles.navSection}>
       {guest ? (
         <>
-          {guest.signInFailed && (
-            <InlineError style={styles.stateText} message={t("signInFailed")} />
+          {guest.signInFailure && (
+            <InlineError
+              style={styles.stateText}
+              message={guest.signInFailure}
+            />
           )}
           <DrawerMenuRow
             testID="guest-sign-in"

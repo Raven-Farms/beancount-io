@@ -1,3 +1,4 @@
+import { signInFailureMessageKey } from "@/screens/welcome/failure-message";
 import {
   View,
   ScrollView,
@@ -19,10 +20,7 @@ import { getServerUrl, serverUrlOverrideVar } from "@/common/vars/server-url";
 import { useReactiveVar } from "@apollo/client";
 import { signOutReasonVar } from "@/common/vars/sign-out-reason";
 import { isOfficialServerUrl } from "@/common/server-url-validation";
-import {
-  useNativeSignIn,
-  type NativeSignIn,
-} from "@/screens/welcome/use-native-sign-in";
+import { useNativeSignIn } from "@/screens/welcome/use-native-sign-in";
 import { InlineError } from "@/components/inline-error";
 
 const getStyles = (theme: ColorTheme) =>
@@ -80,30 +78,6 @@ const getStyles = (theme: ColorTheme) =>
       textAlign: "center",
     },
   });
-
-/**
- * A server problem is named as one — the same words the Server screen's
- * "Test connection" uses — so a stale custom URL does not read as a wrong
- * password. Only a rejection blames the sign-in or sign-up itself.
- */
-function failureMessageKey(
-  failure: NonNullable<NativeSignIn["failure"]>,
-): string {
-  switch (failure.reason) {
-    case "unreachable":
-      return "serverConnectionUnreachable";
-    case "incompatible":
-      return "serverConnectionIncompatible";
-    case "timeout":
-      return "serverConnectionTimeout";
-    case "not_configured":
-      return "serverConnectionNotConfigured";
-    case "mismatch":
-      return "serverConnectionMismatch";
-    case "rejected":
-      return failure.flow === "sign_up" ? "signUpFailed" : "signInFailed";
-  }
-}
 
 export function WelcomeScreen(): JSX.Element {
   useReactiveVar(serverUrlOverrideVar);
@@ -192,7 +166,7 @@ export function WelcomeScreen(): JSX.Element {
           {failure && (
             <InlineError
               style={styles.error}
-              message={t(failureMessageKey(failure))}
+              message={t(signInFailureMessageKey(failure))}
             />
           )}
           {signOutReason === "sessionEnded" && !failure ? (

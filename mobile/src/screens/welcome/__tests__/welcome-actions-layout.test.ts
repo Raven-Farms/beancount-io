@@ -91,6 +91,8 @@ function loadWelcome(): any {
       if (id === "@/components") return { Button: "Button" };
       if (id === "@/components/pressable-scale")
         return { PressableScale: "PressableScale" };
+      if (id === "@/screens/welcome/failure-message")
+        return require("../failure-message");
       if (id === "@/screens/welcome/use-native-sign-in")
         return { useNativeSignIn: () => signIn };
       if (id === "@/assets/images/icon.png") return 1;
