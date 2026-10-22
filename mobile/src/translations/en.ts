@@ -452,6 +452,8 @@ export const en = {
   seeAllAccounts: "See all accounts",
   netWorth: "Net Worth",
   noAccounts: "No accounts",
+  reportsNoExpenses: "No expenses in this period",
+  reportsNoIncome: "No income in this period",
   recentTransactions: "Recent Transactions",
   recentTransactionsEmpty: "No transactions yet",
   recentTransactionsEmptyRange: "No transactions in this range",

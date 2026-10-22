@@ -451,6 +451,8 @@ export const uk: Translations = {
   seeAllAccounts: "Показати всі рахунки",
   netWorth: "Чисті активи",
   noAccounts: "Немає рахунків",
+  reportsNoExpenses: "Немає витрат за цей період",
+  reportsNoIncome: "Немає доходів за цей період",
   recentTransactions: "Останні транзакції",
   recentTransactionsEmpty: "Транзакцій поки немає",
   recentTransactionsEmptyRange: "Немає транзакцій за цей період",

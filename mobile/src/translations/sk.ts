@@ -455,6 +455,8 @@ export const sk: Translations = {
   seeAllAccounts: "Zobraziť všetky účty",
   netWorth: "Čisté imanie",
   noAccounts: "Žiadne účty",
+  reportsNoExpenses: "V tomto období nie sú žiadne výdavky",
+  reportsNoIncome: "V tomto období nie sú žiadne príjmy",
   recentTransactions: "Nedávne transakcie",
   recentTransactionsEmpty: "Zatiaľ žiadne transakcie",
   recentTransactionsEmptyRange: "V tomto období nie sú žiadne transakcie",

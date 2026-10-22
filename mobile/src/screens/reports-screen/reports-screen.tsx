@@ -241,6 +241,7 @@ const ReportsScreenImpl = (): JSX.Element => {
                     currency={currency}
                     tone={(theme) => theme.error}
                     note={notInTotalNote(expense.notInTotal, t)}
+                    emptyMessage={t("reportsNoExpenses")}
                   />
                 </DashboardCard>
               </FadeInView>
@@ -262,6 +263,7 @@ const ReportsScreenImpl = (): JSX.Element => {
                     currency={currency}
                     tone={(theme) => theme.success}
                     note={notInTotalNote(income.notInTotal, t)}
+                    emptyMessage={t("reportsNoIncome")}
                   />
                 </DashboardCard>
               </FadeInView>

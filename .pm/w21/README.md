@@ -61,7 +61,6 @@
 - [462](./462.md) — Deleting the last posting overwrites the typed amount above it
 - [463](./463.md) — Locale-formatted amounts (1.234,56, 1 234,56, U+2212) refused
 - [315](./blocked/315.md) — In-app commits signed with Gitea username and real email (no full_name, no noreply) — **blocked:** needs the owner's noreply-address and published-history decisions, and a production backfill of existing Gitea users that can't be verified here
-- [372](./372.md) — Reports empty period says "No accounts" beside foreign-currency spending
 - [373](./373.md) — Reports rounded percentages don't sum to 100%
 - [374](./374.md) — Account picker offers Create for a not-yet-open account → "already open" dead end
 - [375](./375.md) — No-ledger users still can't reach Settings (drawer header inside guard; 217 follow-up)

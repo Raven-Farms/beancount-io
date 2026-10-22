@@ -459,6 +459,8 @@ export const de: Translations = {
   seeAllAccounts: "Alle Konten ansehen",
   netWorth: "Nettovermögen",
   noAccounts: "Keine Konten",
+  reportsNoExpenses: "Keine Ausgaben in diesem Zeitraum",
+  reportsNoIncome: "Keine Einnahmen in diesem Zeitraum",
   recentTransactions: "Letzte Transaktionen",
   recentTransactionsEmpty: "Noch keine Transaktionen",
   recentTransactionsEmptyRange: "Keine Transaktionen in diesem Zeitraum",

@@ -452,6 +452,8 @@ export const ru: Translations = {
   seeAllAccounts: "Показать все счета",
   netWorth: "Чистые активы",
   noAccounts: "Нет счетов",
+  reportsNoExpenses: "Нет расходов за этот период",
+  reportsNoIncome: "Нет доходов за этот период",
   recentTransactions: "Последние транзакции",
   recentTransactionsEmpty: "Транзакций пока нет",
   recentTransactionsEmptyRange: "Нет транзакций за этот период",

@@ -457,6 +457,8 @@ export const es: Translations = {
   seeAllAccounts: "Ver todas las cuentas",
   netWorth: "Patrimonio neto",
   noAccounts: "Sin cuentas",
+  reportsNoExpenses: "Sin gastos en este periodo",
+  reportsNoIncome: "Sin ingresos en este periodo",
   recentTransactions: "Transacciones recientes",
   recentTransactionsEmpty: "Todavía no hay transacciones",
   recentTransactionsEmptyRange: "Sin transacciones en este período",

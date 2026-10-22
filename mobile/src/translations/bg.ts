@@ -444,6 +444,8 @@ export const bg: Translations = {
   seeAllAccounts: "Виж всички сметки",
   netWorth: "Нетна стойност",
   noAccounts: "Няма сметки",
+  reportsNoExpenses: "Няма разходи през този период",
+  reportsNoIncome: "Няма приходи през този период",
   recentTransactions: "Последни транзакции",
   recentTransactionsEmpty: "Още няма транзакции",
   recentTransactionsEmptyRange: "Няма транзакции за този период",

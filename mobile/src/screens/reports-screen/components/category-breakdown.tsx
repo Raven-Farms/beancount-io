@@ -191,6 +191,8 @@ type CategoryBreakdownProps = {
    * under the headline (w21/038).
    */
   note?: string | null;
+  /** What an empty section says, e.g. "No expenses in this period". */
+  emptyMessage: string;
 };
 
 /**
@@ -207,6 +209,7 @@ export function CategoryBreakdown({
   currency,
   tone,
   note,
+  emptyMessage,
 }: CategoryBreakdownProps): JSX.Element {
   const styles = useThemeStyle(getStyles);
   const theme = useTheme().colorTheme;
@@ -400,7 +403,12 @@ export function CategoryBreakdown({
         ) : null}
       </View>
       {items.length === 0 ? (
-        <Text style={styles.empty}>{t("noAccounts")}</Text>
+        // "No accounts" was wrong for a quiet period and for one whose activity
+        // is all in other currencies, which the note under the headline names
+        // (w21/372).
+        note ? null : (
+          <Text style={styles.empty}>{emptyMessage}</Text>
+        )
       ) : (
         items.map((node, index) => (
           <Fragment key={`group-${node.account}`}>

@@ -175,3 +175,30 @@ describe("shares with a refunded category", () => {
     expect(src.includes("breakdownShare(node.value,base)")).toBe(true);
   });
 });
+
+// w21/372: an empty section said "No accounts", even under a note naming
+// activity in another currency.
+describe("the empty breakdown", () => {
+  const read = (relative: string) =>
+    require("fs")
+      .readFileSync(require("path").join(__dirname, "../..", relative), "utf8")
+      .replace(/\s+/g, "");
+
+  it("says what the period lacks, and stays quiet under a note", () => {
+    const card = read("components/category-breakdown.tsx");
+    expect(
+      card.includes(
+        "note?null:(<Textstyle={styles.empty}>{emptyMessage}</Text>)",
+      ),
+    ).toBe(true);
+    expect(card.includes('t("noAccounts")')).toBe(false);
+  });
+
+  it("is worded per section on Reports", () => {
+    const screen = read("reports-screen.tsx");
+    expect(screen.includes('emptyMessage={t("reportsNoExpenses")}')).toBe(true);
+    expect(screen.includes('emptyMessage={t("reportsNoIncome")}')).toBe(true);
+    expect(en.reportsNoExpenses).toBe("No expenses in this period");
+    expect(en.reportsNoIncome).toBe("No income in this period");
+  });
+});

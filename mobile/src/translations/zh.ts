@@ -403,6 +403,8 @@ export const zh: Translations = {
   seeAllAccounts: "查看全部账户",
   netWorth: "净资产",
   noAccounts: "暂无账户",
+  reportsNoExpenses: "此期间没有支出",
+  reportsNoIncome: "此期间没有收入",
   recentTransactions: "最近交易",
   recentTransactionsEmpty: "还没有交易记录",
   recentTransactionsEmptyRange: "此区间没有交易记录",

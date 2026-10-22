@@ -447,6 +447,8 @@ export const nl: Translations = {
   seeAllAccounts: "Alle rekeningen bekijken",
   netWorth: "Nettovermogen",
   noAccounts: "Geen accounts",
+  reportsNoExpenses: "Geen uitgaven in deze periode",
+  reportsNoIncome: "Geen inkomsten in deze periode",
   recentTransactions: "Recente transacties",
   recentTransactionsEmpty: "Nog geen transacties",
   recentTransactionsEmptyRange: "Geen transacties in deze periode",

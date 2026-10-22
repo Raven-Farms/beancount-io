@@ -457,6 +457,8 @@ export const ca: Translations = {
   seeAllAccounts: "Mostra tots els comptes",
   netWorth: "Patrimoni net",
   noAccounts: "Cap compte",
+  reportsNoExpenses: "Cap despesa en aquest període",
+  reportsNoIncome: "Cap ingrés en aquest període",
   recentTransactions: "Transaccions recents",
   recentTransactionsEmpty: "Encara no hi ha transaccions",
   recentTransactionsEmptyRange: "Sense transaccions en aquest període",

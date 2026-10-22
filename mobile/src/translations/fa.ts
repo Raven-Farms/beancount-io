@@ -438,6 +438,8 @@ export const fa: Translations = {
   seeAllAccounts: "دیدن همه حساب‌ها",
   netWorth: "ارزش خالص",
   noAccounts: "بدون حساب",
+  reportsNoExpenses: "در این بازه هزینه‌ای نیست",
+  reportsNoIncome: "در این بازه درآمدی نیست",
   recentTransactions: "تراکنش‌های اخیر",
   recentTransactionsEmpty: "هنوز تراکنشی نیست",
   recentTransactionsEmptyRange: "در این بازه تراکنشی نیست",
