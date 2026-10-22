@@ -1175,8 +1175,14 @@ def _normalize_header(cell: str) -> str:
 
 
 def _is_header_repeat(row: dict[str, str], headers: list[str]) -> bool:
-    """Whether a record repeats the header exactly (a bank's page break)."""
-    return bool(headers) and all((row.get(header) or "").strip() == header for header in headers)
+    """Whether a record repeats the header (a bank's page break).
+
+    Compared the way the header itself was read: the initial cells are
+    normalized into the column names, so a page header spelled with decomposed
+    accents or an inner format character must be too, or it was refused as a
+    row with a bad date (w5/923).
+    """
+    return bool(headers) and all(_normalize_header(row.get(header) or "") == header for header in headers)
 
 
 @contextmanager
