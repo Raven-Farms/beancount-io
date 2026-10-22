@@ -285,6 +285,24 @@ export const formatSignedMoneyWithCurrency = (
 };
 
 /**
+ * A signed money string that names its currency by code ("-42.50 CAD"), for a
+ * currency whose symbol another currency shown beside it shares (w21/535).
+ */
+export const formatSignedMoneyWithCode = (
+  value: number,
+  currency: string,
+  includePlus = false,
+  minScale = 0,
+): string => {
+  const { sign, amount } = signedAmount(
+    value,
+    includePlus,
+    Math.max(currencyMinorUnits(currency), minScale),
+  );
+  return `${sign}${amount} ${currency}`;
+};
+
+/**
  * `shortNumber` with its currency, for chart axes and chart summaries. Same
  * rules as the long form: the sign always leads, and a currency with no symbol
  * is labelled by its code, so a tick reads "-$50" or "400 MUSD", never "$-50"

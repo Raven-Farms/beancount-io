@@ -72,7 +72,8 @@ import {
   mapMerchantCurrencyTotals,
   mapMerchantMeta,
 } from "./selectors/merchant-stats";
-import { formatMerchantTotal } from "./selectors/format-merchant-total";
+import { useLedgerReadContext } from "@/common/hooks/use-ledger-read-context";
+import { formatMerchantTotals } from "./selectors/format-merchant-total";
 import { MerchantDetailSkeleton } from "./merchant-detail-skeleton";
 import { merchantKey } from "@/common/merchant-key";
 import { useRouteParams } from "@/common/hooks/use-route-params";
@@ -330,6 +331,14 @@ function MerchantDetailBody({
     [metaData?.queryShell?.table, totalsData?.queryShell?.table],
   );
 
+  // Totals in currencies that share a symbol read by code, the ledger's own
+  // keeping it (w21/535).
+  const { primaryCurrency } = useLedgerReadContext(ledgerId!);
+  const totalLines = formatMerchantTotals(
+    stats?.totalsByCurrency ?? [],
+    primaryCurrency,
+  );
+
   const rawEntries = useMemo(
     () =>
       (journalData?.getLedgerJournal.data ||
@@ -515,7 +524,7 @@ function MerchantDetailBody({
         </View>
       ) : null}
 
-      {stats?.totalsByCurrency.map((row) => (
+      {stats?.totalsByCurrency.map((row, index) => (
         // A total must never ellipsize — "51,230.00…" loses its currency at
         // accessibility text sizes. AmountText caps the scale like every other
         // amount, and the hero fit shrinks a still-too-wide figure instead.
@@ -524,7 +533,7 @@ function MerchantDetailBody({
           style={styles.totalLine}
           {...HERO_AMOUNT_FIT}
         >
-          {formatMerchantTotal(row)}
+          {totalLines[index]}
         </AmountText>
       ))}
 
