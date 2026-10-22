@@ -325,6 +325,8 @@ export const uk: Translations = {
   transactionsLoadError: "Не вдалося завантажити транзакції",
   // transactions filter modal
   filters: "Фільтри",
+  filtersActive: "Активно: {{count}}",
+  clearAccount: "Очистити рахунок",
   filterStatus: "Статус",
   filterDateRange: "Період",
   filterDateRangeInvalid: "Кінцева дата має бути не раніше за початкову дату.",

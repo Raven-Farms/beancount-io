@@ -324,6 +324,8 @@ export const de: Translations = {
   transactionsLoadError: "Transaktionen konnten nicht geladen werden",
   // transactions filter modal
   filters: "Filter",
+  filtersActive: "Aktiv: {{count}}",
+  clearAccount: "Konto entfernen",
   filterStatus: "Status",
   filterDateRange: "Zeitraum",
   filterDateRangeInvalid:

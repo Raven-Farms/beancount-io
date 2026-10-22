@@ -316,6 +316,8 @@ export const bg: Translations = {
   transactionsLoadError: "Транзакциите не бяха заредени",
   // transactions filter modal
   filters: "Филтри",
+  filtersActive: "Активни: {{count}}",
+  clearAccount: "Изчисти сметката",
   filterStatus: "Състояние",
   filterDateRange: "Период",
   filterDateRangeInvalid:

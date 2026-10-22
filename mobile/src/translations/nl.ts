@@ -317,6 +317,8 @@ export const nl: Translations = {
   transactionsLoadError: "Laden van transacties mislukt",
   // transactions filter modal
   filters: "Filters",
+  filtersActive: "Actief: {{count}}",
+  clearAccount: "Rekening wissen",
   filterStatus: "Status",
   filterDateRange: "Periode",
   filterDateRangeInvalid: "De einddatum moet op of na de startdatum liggen.",

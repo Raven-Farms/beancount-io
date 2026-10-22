@@ -285,6 +285,8 @@ export const zh: Translations = {
   transactionsLoadError: "加载交易记录失败",
   // transactions filter modal
   filters: "筛选",
+  filtersActive: "已启用：{{count}}",
+  clearAccount: "清除账户",
   filterStatus: "状态",
   filterDateRange: "日期范围",
   filterDateRangeInvalid: "结束日期必须不早于开始日期。",

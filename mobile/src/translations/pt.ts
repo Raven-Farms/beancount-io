@@ -324,6 +324,8 @@ export const pt: Translations = {
   transactionsLoadError: "Falha ao carregar as transações",
   // transactions filter modal
   filters: "Filtros",
+  filtersActive: "Ativos: {{count}}",
+  clearAccount: "Limpar a conta",
   filterStatus: "Status",
   filterDateRange: "Período",
   filterDateRangeInvalid:

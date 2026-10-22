@@ -327,6 +327,8 @@ export const sk: Translations = {
   transactionsLoadError: "Načítanie transakcií zlyhalo",
   // transactions filter modal
   filters: "Filtre",
+  filtersActive: "Aktívne: {{count}}",
+  clearAccount: "Vymazať účet",
   filterStatus: "Stav",
   filterDateRange: "Obdobie",
   filterDateRangeInvalid:

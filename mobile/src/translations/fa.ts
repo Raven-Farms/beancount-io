@@ -313,6 +313,8 @@ export const fa: Translations = {
   transactionsLoadError: "بارگذاری تراکنش‌ها ناموفق بود",
   // transactions filter modal
   filters: "فیلترها",
+  filtersActive: "فعال: {{count}}",
+  clearAccount: "پاک کردن حساب",
   filterStatus: "وضعیت",
   filterDateRange: "بازهٔ زمانی",
   filterDateRangeInvalid: "تاریخ پایان باید برابر یا پس از تاریخ شروع باشد.",

@@ -325,6 +325,8 @@ export const ca: Translations = {
   transactionsLoadError: "No s'han pogut carregar les transaccions",
   // transactions filter modal
   filters: "Filtres",
+  filtersActive: "Actius: {{count}}",
+  clearAccount: "Esborra el compte",
   filterStatus: "Estat",
   filterDateRange: "Període",
   filterDateRangeInvalid:

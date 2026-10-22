@@ -307,6 +307,8 @@ export const en = {
   transactionsLoadError: "Failed to load transactions",
   // transactions filter modal
   filters: "Filters",
+  filtersActive: "Active: {{count}}",
+  clearAccount: "Clear account",
   filterStatus: "Status",
   filterDateRange: "Date range",
   filterDateRangeInvalid: "End date must be on or after the start date.",

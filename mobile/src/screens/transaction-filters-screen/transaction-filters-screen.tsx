@@ -392,7 +392,7 @@ const TransactionFiltersSheet = ({
                 }
                 hitSlop={10}
                 accessibilityRole="button"
-                accessibilityLabel={t("reset")}
+                accessibilityLabel={t("clearAccount")}
               >
                 <Ionicons name="close-circle" size={20} color={theme.black60} />
               </TouchableOpacity>

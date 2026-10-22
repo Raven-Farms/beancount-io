@@ -327,6 +327,8 @@ export const ru: Translations = {
   transactionsLoadError: "Не удалось загрузить транзакции",
   // transactions filter modal
   filters: "Фильтры",
+  filtersActive: "Активно: {{count}}",
+  clearAccount: "Очистить счёт",
   filterStatus: "Статус",
   filterDateRange: "Период",
   filterDateRangeInvalid: "Конечная дата должна быть не раньше начальной даты.",
