@@ -144,5 +144,9 @@
 - [629](./629.md) — With renamed roots, Open Account's root button reads the English root to VoiceOver
 - [630](./630.md) — If ledger metadata fails, Open Account's Done stays grey forever with no message or retry
 - [631](./631.md) — Open Account and Add Budget drop typed input on Back without asking (product call)
+- [632](./632.md) — A guest opening an example entry or account link (from the app's own Copy link) is sent back to Welcome; the link is replayed after sign-in
+- [633](./633.md) — The example holdings sheet offers guests "Sign In" where owners see "Update prices", which sign-in doesn't grant
+- [634](./634.md) — Signing in from the example drawer says "Could not complete sign-in" for every failure, including offline
+- [635](./635.md) — Latent: the guest client blocks `LedgerAccountCloseDates` and `QueryShell`, so w21/099 and w21/337 are off for guests
 - [508](./blocked/508.md) — Mobile guesses that an entry is a plugin copy from its first line; read the ledger's `generated_from` instead (split from 443) — **blocked:** production's GraphQL schema lacks `generated_from` until the ledger service and backend-v2 deploy; mobile's client is generated from it
 - [315](./blocked/315.md) — In-app commits signed with Gitea username and real email (no full_name, no noreply) — **blocked:** needs the owner's noreply-address and published-history decisions, and a production backfill of existing Gitea users that can't be verified here
