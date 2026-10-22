@@ -26,6 +26,8 @@ interface ReportErrorStateProps {
   error?: unknown;
   /** Optional retry callback - shows retry button when provided */
   onRetry?: () => void;
+  /** A retry is in flight: Try Again is busy and refuses another. */
+  retrying?: boolean;
   /** Additional CSS classes */
   className?: string;
 }
@@ -121,6 +123,7 @@ export function ReportErrorState({
   message,
   error,
   onRetry,
+  retrying = false,
   className,
 }: ReportErrorStateProps = {}) {
   const { t } = useTranslations();
@@ -162,6 +165,7 @@ export function ReportErrorState({
                   variant="outline"
                   size="sm"
                   onClick={onRetry}
+                  loading={retrying}
                   className="mt-2 animate-in fade-in slide-in-from-bottom-2 duration-500 delay-200"
                 >
                   {t("common.tryAgain")}

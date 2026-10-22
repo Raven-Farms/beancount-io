@@ -17,7 +17,7 @@ features/ledger-data/commodities/index.tsx:157–168 obtains data/loading/error 
 
 Wire the owning GetLedgerCommodities observer to the existing local action, handling pending/rejected retry and preserving its ledger/context, price history, loading/empty state and independent managed-source status. Retry this read, not RefreshLedgerManagedPrices or the whole document. The same callback omission is already owned by328 for five report/Account observers, so extend/promote that work instead of filing another historical group.
 
-[332](../332.md) separately handles a successful managed-price mutation followed by a failed read; its truthful acknowledgement and recovery remain required. This primary-read case has no mutation, acknowledgement, refreshed source or quota action. The unrelated QueryView callers found in the source census are source-audit scope only; none is claimed independently broken here.
+[332](../../332.md) separately handles a successful managed-price mutation followed by a failed read; its truthful acknowledgement and recovery remain required. This primary-read case has no mutation, acknowledgement, refreshed source or quota action. The unrelated QueryView callers found in the source census are source-audit scope only; none is claimed independently broken here.
 
 ## Equivalent statements independently repeated
 

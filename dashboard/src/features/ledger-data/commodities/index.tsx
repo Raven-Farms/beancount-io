@@ -158,6 +158,7 @@ export default function LedgerCommoditiesPage() {
     data,
     loading: isLoading,
     error,
+    refetch,
   } = useQuery(GetLedgerCommoditiesDocument, {
     variables: {
       ledgerId: ledgerId,
@@ -179,6 +180,7 @@ export default function LedgerCommoditiesPage() {
       <QueryView
         loading={isLoading}
         error={error}
+        onRetry={refetch}
         data={commodities}
         loadingSlot={
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">

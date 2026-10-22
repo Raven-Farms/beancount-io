@@ -106,7 +106,7 @@
 
 ## Milestones
 
-- [ ] **m50** — [Retry failed statement, Account Journal and commodity reads](./m50/README.md) (6 tasks) ← dashboard QA,2026-10-21/22; minor, promoted from328 with a sixth equivalent observer; current variables and read-only recovery preserved.
+- [x] **m50** — [Retry failed statement, Account Journal and commodity reads](./done/m50/README.md) (6 tasks) ← dashboard QA,2026-10-21/22; minor, promoted from328 with a sixth equivalent observer; current variables and read-only recovery preserved.
 
 - [x] **m49** — [Keep entry-source saves within their pending draft session](./done/m49/README.md) (6 tasks) ← dashboard QA,2026-10-22; major client draft loss, pending source edits and a different newly opened entry draft disappear at an older modeled acknowledgement; failure/retry controls pass, no hosted writes.
 
@@ -196,7 +196,7 @@
 
 ## Dropped
 
-- ~~**328**~~ — Offer a retry after a statement or Account Journal read fails — dropped 2026-10-22: promoted to [m50](./m50/README.md), preserving all evidence and adding independently repeated Commodities primary-read failure; six observer integrations plus regressions exceed one hour, with no new historical group.
+- ~~**328**~~ — Offer a retry after a statement or Account Journal read fails — dropped 2026-10-22: promoted to [m50](./done/m50/README.md), preserving all evidence and adding independently repeated Commodities primary-read failure; six observer integrations plus regressions exceed one hour, with no new historical group.
 
 - ~~**973**~~ — Freeze receipt review edits while recording — dropped 2026-10-22: promoted to [m48](./done/m48/README.md), preserving the original report and adding independently repeated failed-record review loss; separate pending/failure repairs and real regressions exceed one hour.
 
