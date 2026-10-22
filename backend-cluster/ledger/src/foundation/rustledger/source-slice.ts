@@ -724,11 +724,10 @@ function documentTagsAndLinks(blockText: string): {
 
 /**
  * Produce the new file content with the block `[startLine, endLine)` removed,
- * matching fava's `delete_source_slice`:
- * `lines[:entry_start] + lines[entry_end:]`. Only the entry's own lines are
- * removed; surrounding blank lines are preserved verbatim (so a deleted entry
- * that had a blank line on each side leaves two adjacent blanks — byte-exact
- * fava behaviour).
+ * plus the one blank separator the entry no longer needs. Fava's
+ * `delete_source_slice` (`lines[:entry_start] + lines[entry_end:]`) kept the
+ * blank lines on both sides, so a deleted entry left two adjacent blanks and
+ * deleting what an append wrote did not restore the file (w23/055).
  */
 export function deleteSliceFromFile(
   fileText: string,
@@ -736,8 +735,20 @@ export function deleteSliceFromFile(
   endLine: number,
 ): string {
   const lines = splitKeepEnds(fileText);
-  const kept = [...lines.slice(0, startLine), ...lines.slice(endLine)];
-  return kept.join("");
+  const blank = (line: string | undefined) =>
+    line !== undefined && line.trim() === "";
+  let start = startLine;
+  let end = endLine;
+  // Entries are written with one blank line around them; removing just the
+  // block left both, so every add → delete grew the file (w23/055). Between
+  // two separators, one goes with the entry…
+  if ((start === 0 || blank(lines[start - 1])) && blank(lines[end])) end += 1;
+  // …and at the end of the file the one before it has nothing left to
+  // separate.
+  if (start > 0 && blank(lines[start - 1]) && lines.slice(end).every(blank)) {
+    start -= 1;
+  }
+  return [...lines.slice(0, start), ...lines.slice(end)].join("");
 }
 
 /**

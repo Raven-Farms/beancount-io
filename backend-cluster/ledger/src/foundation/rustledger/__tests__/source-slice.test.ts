@@ -197,10 +197,10 @@ describe("splitIntoBlocks — multiline strings", () => {
       "",
     ].join("\n");
     const block = splitIntoBlocks(source)[1];
+    // One separator goes with the entry (w23/055).
     expect(deleteSliceFromFile(source, block.startLine, block.endLine)).toBe(
       [
         '2024-03-01 note Assets:Cash "keep before"',
-        "",
         "",
         '2024-03-03 note Assets:Cash "keep after"',
         "",
@@ -686,8 +686,10 @@ describe("findEntrySliceBySourceSha — inventory-independent CAS relocation", (
   });
 });
 
-describe("deleteSliceFromFile — Fava parity", () => {
-  it("removes exactly the block, preserving surrounding blank lines", () => {
+describe("deleteSliceFromFile — Fava parity, minus one separator", () => {
+  // Fava kept the blank lines on both sides of the deleted block; one of
+  // them now goes with it, so its two adjacent blanks become one (w23/055).
+  it("removes the block and the separator it leaves doubled", () => {
     const found = findEntrySlice(
       data.files,
       data.entryPoint,
@@ -699,7 +701,12 @@ describe("deleteSliceFromFile — Fava parity", () => {
       found.startLine,
       found.endLine,
     );
-    expect(newContent).toBe(data.delete_groceries.new_main_content);
+    expect(newContent).toBe(
+      data.delete_groceries.new_main_content.replace(
+        "USD\n\n\n2024-02-01 balance",
+        "USD\n\n2024-02-01 balance",
+      ),
+    );
   });
 });
 
@@ -886,5 +893,51 @@ describe("replacing a slice keeps the file's line endings", () => {
     expect(
       replacementLineEnding(mixed, blocks[1].startLine, blocks[1].endLine),
     ).toBe("\n");
+  });
+});
+
+// w23/055: deleting what an append wrote left its blank separators, so every
+// add → delete cycle grew the file. These rebuild what the append writes.
+describe("deleteSliceFromFile — add then delete restores the file", () => {
+  const ORIGINAL =
+    "2026-01-01 open Assets:Cash\n\n2026-01-02 open Expenses:Food\n";
+  const TX1 = '2026-03-01 * "One"\n  Assets:Cash  -1 USD\n  Expenses:Food\n';
+  const TX2 = '2026-03-02 * "Two"\n  Assets:Cash  -2 USD\n  Expenses:Food\n';
+  const deleteBlocks = (text: string, blocks: string[]) => {
+    // Bottom-to-top, as the delete transform applies them.
+    const ranges = blocks
+      .map((block) => {
+        const before =
+          text.slice(0, text.indexOf(block)).split("\n").length - 1;
+        return [before, before + block.split("\n").length - 1] as const;
+      })
+      .sort((a, b) => b[0] - a[0]);
+    return ranges.reduce(
+      (content, [start, end]) => deleteSliceFromFile(content, start, end),
+      text,
+    );
+  };
+
+  it.each([
+    ["one entry at the end", `${ORIGINAL}\n${TX1}\n`, [TX1]],
+    ["two entries at the end", `${ORIGINAL}\n${TX1}\n${TX2}\n`, [TX1, TX2]],
+    [
+      "one entry between two",
+      `2026-01-01 open Assets:Cash\n\n${TX1}\n2026-01-02 open Expenses:Food\n`,
+      [TX1],
+    ],
+  ])("for %s", (_case, added, blocks) => {
+    expect(deleteBlocks(added, blocks)).toBe(ORIGINAL);
+  });
+
+  it("keeps a comment directly above the entry", () => {
+    const text = `2026-01-01 open Assets:Cash\n\n; why\n${TX1}\n2026-01-02 open Expenses:Food\n`;
+    expect(deleteBlocks(text, [TX1])).toBe(
+      "2026-01-01 open Assets:Cash\n\n; why\n\n2026-01-02 open Expenses:Food\n",
+    );
+  });
+
+  it("drops a leading separator when the first entry goes", () => {
+    expect(deleteBlocks(`${TX1}\n${ORIGINAL}`, [TX1])).toBe(ORIGINAL);
   });
 });
