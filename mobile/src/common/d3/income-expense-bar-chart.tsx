@@ -2,7 +2,10 @@ import { Circle, G, Path, Text as SvgText } from "react-native-svg";
 import { scaleBand, scaleLinear } from "d3-scale";
 import { curveMonotoneX, line as d3Line } from "d3-shape";
 import { contentPadding, ScreenWidth } from "@/common/screen-util";
-import { formatShortMoneyWithCurrency } from "@/common/number-utils";
+import {
+  formatShortMoneyWithCurrency,
+  roundMoney,
+} from "@/common/number-utils";
 import { useTheme } from "@/common/theme";
 import { useTranslations } from "@/common/hooks/use-translations";
 import { AnimatedBar } from "./animated-bar";
@@ -182,17 +185,26 @@ function IncomeExpenseBarChart({
       accessibilityLabel={t("incomeExpenseChartSummary", {
         count: months.length,
         income: formatShortMoneyWithCurrency(
-          income.reduce((sum, v) => sum + v, 0),
+          roundMoney(
+            income.reduce((sum, v) => sum + v, 0),
+            currency,
+          ),
           currency,
           locale,
         ),
         expense: formatShortMoneyWithCurrency(
-          expense.reduce((sum, v) => sum + v, 0),
+          roundMoney(
+            expense.reduce((sum, v) => sum + v, 0),
+            currency,
+          ),
           currency,
           locale,
         ),
         net: formatShortMoneyWithCurrency(
-          net.reduce((sum, v) => sum + v, 0),
+          roundMoney(
+            net.reduce((sum, v) => sum + v, 0),
+            currency,
+          ),
           currency,
           locale,
         ),

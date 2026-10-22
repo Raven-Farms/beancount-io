@@ -220,6 +220,18 @@ export function settleBudgetPanel(
  * Pure and string-only: the same `formatMoneyWithCurrency` the row renders, so
  * the spoken amounts cannot drift from the visible ones.
  */
+/**
+ * The percent a budget row speaks. Rounding to nearest said "100% used" for
+ * $497.60 of $500 (under target) and for $502.00 (over it), and "0%" for $2:
+ * under 100 it rounds down, over 100 it rounds up, and a small non-zero spend
+ * is "<1", which a screen reader says as "less than 1 percent" (w21/597).
+ */
+export function spokenPercent(percent: number): number | string {
+  if (percent > 0 && percent < 1) return "<1";
+  if (Math.abs(percent - 100) < 1e-9) return 100;
+  return percent < 100 ? Math.floor(percent) : Math.ceil(percent);
+}
+
 export function budgetPanelRowAccessibilityValue(
   row: BudgetPanelRow,
   t: (key: string, options?: Record<string, string | number>) => string,
@@ -259,7 +271,7 @@ export function budgetPanelRowAccessibilityValue(
     budget: formatMoneyWithCurrency(row.budget, row.currency, row.scale),
     // Whole percent: a spoken "73.4166 percent" is noise, and the meter it
     // describes is a bar, not a readout.
-    percent: Math.round(row.progressPercent),
+    percent: spokenPercent(row.progressPercent),
     status,
   });
 }

@@ -293,6 +293,22 @@ const annotateCurrency = (
     : `${sign}${absAmount} ${currency}`;
 };
 
+/**
+ * `value` settled at money precision: a sum of monthly nets such as +10.10,
+ * +20.20 and -30.30 lands on -3.6e-15, which a screen reader read out as
+ * "$0.0000000000000036" (w21/597). A national currency rounds to its minor unit,
+ * a commodity to eight places.
+ */
+export const roundMoney = (value: number, currency: string): number => {
+  if (!Number.isFinite(value)) return value;
+  const digits = isFiatCurrency(currency)
+    ? currencyMinorUnits(currency)
+    : COMMODITY_MONEY_DIGITS;
+  const rounded = Math.round(value * 10 ** digits) / 10 ** digits;
+  // Never a negative zero: it prints "-$0.00".
+  return rounded === 0 ? 0 : rounded;
+};
+
 /** Most fraction digits a commodity shown as money keeps (a satoshi). */
 const COMMODITY_MONEY_DIGITS = 8;
 
