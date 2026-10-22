@@ -321,6 +321,44 @@ def _held_through(entries: list[Any], account: str, date: datetime.date) -> dict
     return {currency: number for currency, number in held.items() if number != 0}
 
 
+def _drained_checks(entries: list[Any], options: Any, account: str, date: datetime.date) -> set[str]:
+    """The currencies `check_drained` will assert zero for on closing `account` at `date`.
+
+    The plugin covers balance-sheet accounts only, and skips a currency the
+    ledger already asserts on the close date, whatever that assertion says; an
+    Income or Expenses balance, or one a statement assertion hides, is not
+    its to refuse.
+    """
+    from beancount.core import account_types
+    from beancount.core.data import Balance
+    from beancount.parser import options as beancount_options
+
+    if not account_types.is_balance_sheet_account(
+        account,
+        beancount_options.get_account_types(options),  # type: ignore[no-untyped-call]
+    ):
+        return set()
+    asserted = {
+        entry.amount.currency
+        for entry in entries
+        if isinstance(entry, Balance) and entry.account == account and entry.date == date
+    }
+    return _plugin_currencies(entries, account) - asserted
+
+
+def _plugin_currencies(entries: list[Any], account: str) -> set[str]:
+    """Every currency the account has posted or declared, as the plugin accumulates them."""
+    from beancount.core.data import Open, Transaction
+
+    seen: set[str] = set()
+    for entry in entries:
+        if isinstance(entry, Transaction):
+            seen |= {p.units.currency for p in entry.postings if p.account == account and p.units is not None}
+        elif isinstance(entry, Open) and entry.account == account and entry.currencies:
+            seen |= set(entry.currencies)
+    return seen
+
+
 def _close(
     file: Path, request: dict[str, Any], *, into: Path | None, allow_errors: bool, strict_read: bool
 ) -> dict[str, Any]:
@@ -334,9 +372,13 @@ def _close(
     entries, _errors, options = managed_load.load_file(file, snapshot=snapshot, check_types=True)
     # A close over a balance strands it: later postings to the account are
     # refused and reports keep counting it (w2/092). A ledger that loads
-    # check_drained refuses it in validation already, with its own hint.
+    # check_drained refuses it in validation already, with its own hint, but
+    # only for what the plugin really checks (w5/888).
+    held = _held_through(entries, directive.account, directive.date)
     drained = any(str(name).endswith("check_drained") for name, _ in options.get("plugin") or ())
-    held = {} if drained else _held_through(entries, directive.account, directive.date)
+    if drained and held:
+        covered = _drained_checks(entries, options, directive.account, directive.date)
+        held = {currency: number for currency, number in held.items() if currency not in covered}
     if held and not request.get("force"):
         amounts = ", ".join(f"{_plain(number)} {currency}" for currency, number in sorted(held.items()))
         day = directive.date.isoformat()
