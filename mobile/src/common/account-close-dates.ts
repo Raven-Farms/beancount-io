@@ -41,7 +41,36 @@ export function closeDatesOf(
 }
 
 /**
- * Whether `account` closed before `day`. A budget on it has nothing left to
+ * The day a budget on `account` ends: the account's close date, once every
+ * account beneath it is closed too, else null. The budget's actuals roll up
+ * every descendant, and Beancount refuses postings only to the closed account
+ * itself, so a parent closed when it was split into open children keeps taking
+ * spending and its budget runs on (w21/486). Without a declared-account list
+ * the descendants are not known and the account's own date stands.
+ */
+export function budgetEndsOn(
+  account: string,
+  closeDates: CloseDates,
+): string | undefined {
+  const own = closeDates.get(account);
+  if (own === undefined) return undefined;
+  let end = own;
+  // Every account the read knows: the closed ones and the declared ones.
+  const known = new Set([
+    ...closeDates.keys(),
+    ...(closeDates.openedOn?.keys() ?? []),
+  ]);
+  for (const declared of known) {
+    if (!declared.startsWith(`${account}:`)) continue;
+    const closedAt = closeDates.get(declared);
+    if (closedAt === undefined) return undefined;
+    if (closedAt > end) end = closedAt;
+  }
+  return end;
+}
+
+/**
+ * Whether a budget on `account` ended before `day`. It has nothing left to
  * track: a former job's income target went red every month after the account
  * closed and outranked real overspends on Home (w21/398).
  */
@@ -50,8 +79,8 @@ export function closedBefore(
   day: string,
   closeDates: CloseDates,
 ): boolean {
-  const closedAt = closeDates.get(account);
-  return closedAt !== undefined && closedAt < day;
+  const end = budgetEndsOn(account, closeDates);
+  return end !== undefined && end < day;
 }
 
 /**

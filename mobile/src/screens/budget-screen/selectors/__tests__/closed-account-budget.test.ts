@@ -2,6 +2,7 @@ import fs from "fs";
 import path from "path";
 import {
   closeDatesOf,
+  budgetEndsOn,
   closedBefore,
 } from "../../../../common/account-close-dates";
 import {
@@ -68,6 +69,84 @@ describe("a budget on an account that closed", () => {
     expect(closedBefore("Income:Salary", "2026-10-21", closeDates)).toBe(false);
   });
 
+  // w21/486: a parent closed when it was split into children that took over
+  // read $0 and red "Above target" every month, and left Home.
+  describe("a parent account closed when it was split into children", () => {
+    const closeDates = closeDatesOf([
+      {
+        account: "Expenses:Food",
+        closedAt: "2026-06-30",
+        openedAt: "2024-01-01",
+      },
+      { account: "Expenses:Food:Groceries", openedAt: "2026-06-01" },
+      { account: "Expenses:Food:Restaurants", openedAt: "2026-06-01" },
+      {
+        account: "Expenses:Old",
+        closedAt: "2026-06-30",
+        openedAt: "2024-01-01",
+      },
+    ]);
+
+    it("runs on while any account beneath it is open", () => {
+      expect(budgetEndsOn("Expenses:Food", closeDates)).toBe(undefined);
+      expect(closedBefore("Expenses:Food", "2026-10-21", closeDates)).toBe(
+        false,
+      );
+    });
+
+    it("ends at the last close once every account beneath it is closed", () => {
+      const allClosed = closeDatesOf([
+        { account: "Expenses:Food", closedAt: "2026-06-30" },
+        { account: "Expenses:Food:Groceries", closedAt: "2026-09-30" },
+        { account: "Expenses:Food:Restaurants", closedAt: "2026-08-15" },
+      ]);
+      expect(budgetEndsOn("Expenses:Food", allClosed)).toBe("2026-09-30");
+      expect(closedBefore("Expenses:Food", "2026-10-01", allClosed)).toBe(true);
+      expect(closedBefore("Expenses:Food", "2026-09-30", allClosed)).toBe(
+        false,
+      );
+    });
+
+    it("still ends a closed leaf at its own close", () => {
+      expect(budgetEndsOn("Expenses:Old", closeDates)).toBe("2026-06-30");
+      expect(closedBefore("Expenses:Old", "2026-07-01", closeDates)).toBe(true);
+    });
+
+    it("keeps a sibling with a similar name apart", () => {
+      const siblings = closeDatesOf([
+        {
+          account: "Expenses:Food",
+          closedAt: "2026-06-30",
+          openedAt: "2024-01-01",
+        },
+        { account: "Expenses:Foodie", openedAt: "2026-01-01" },
+      ]);
+      expect(budgetEndsOn("Expenses:Food", siblings)).toBe("2026-06-30");
+    });
+
+    it("keeps the budget at its 500 target from July on", () => {
+      const history = [
+        {
+          date: "2026-01-01",
+          interval: "monthly",
+          amount: "500 USD",
+          entry_hash: "h",
+        },
+      ];
+      const at = (date: string) =>
+        calculateBudgetForInterval(
+          date,
+          "monthly",
+          history,
+          "2026-10-21",
+          undefined,
+          budgetEndsOn("Expenses:Food", closeDates),
+        );
+      expect(at("2026-07-31")).toBe(500);
+      expect(at("2026-09-30")).toBe(500);
+    });
+  });
+
   it("the card ends its budget at the close and Home leaves the budget out", () => {
     const read = (relative: string) =>
       fs
@@ -75,7 +154,7 @@ describe("a budget on an account that closed", () => {
         .replace(/\s+/g, "");
     expect(
       read("budget-screen/components/budget-group-card.tsx").includes(
-        "endsOn:closeDates.get(group.account),",
+        "endsOn:budgetEndsOn(group.account,closeDates),",
       ),
     ).toBe(true);
     const home = read("home-screen/components/budget-card.tsx");

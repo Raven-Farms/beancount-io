@@ -30,6 +30,7 @@ import {
 } from "@/common/d3/budget-bar-chart-d3";
 import { useToday } from "@/common/hooks/use-today";
 import { useAccountCloseDates } from "@/common/hooks/use-account-close-dates";
+import { budgetEndsOn } from "@/common/account-close-dates";
 import { useBudgetActuals } from "@/screens/budget-screen/hooks/use-budget-actuals";
 import {
   groupDirection,
@@ -205,7 +206,7 @@ export function BudgetGroupCard({
     currency,
     time,
     direction,
-    endsOn: closeDates.get(group.account),
+    endsOn: budgetEndsOn(group.account, closeDates),
   });
 
   // While the current period's read is pending or failed there is nothing to
