@@ -243,7 +243,9 @@ function CommitDetailScreenImpl({
             <ScrollView>
               {/* Summary */}
               <View style={styles.section}>
-                <Text style={styles.messageLine}>{message.subject}</Text>
+                <Text style={styles.messageLine}>
+                  {message.subject || t("commitNoMessage")}
+                </Text>
                 {message.body !== null && (
                   <Text style={styles.messageBody}>{message.body}</Text>
                 )}

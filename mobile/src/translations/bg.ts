@@ -477,6 +477,7 @@ export const bg: Translations = {
   notificationsChangesSection: "Последни промени",
   notificationsLedgerHealthy: "Книгата е наред — няма грешки.",
   notificationsNoChanges: "Няма скорошни промени.",
+  commitNoMessage: "(без съобщение)",
   // commit detail
   commitDetailAuthor: "Автор",
   commitDetailStats: "Статистика",

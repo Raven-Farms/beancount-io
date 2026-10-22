@@ -488,6 +488,7 @@ export const es: Translations = {
   notificationsChangesSection: "Cambios recientes",
   notificationsLedgerHealthy: "El libro está en orden: sin errores.",
   notificationsNoChanges: "Sin cambios recientes.",
+  commitNoMessage: "(sin mensaje)",
   // commit detail
   commitDetailAuthor: "Autor",
   commitDetailStats: "Estadísticas",

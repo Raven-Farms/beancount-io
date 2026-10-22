@@ -16,6 +16,30 @@ export function formatShortSha(sha: string, shortSha?: string | null): string {
 }
 
 /**
+ * What a commit row reads as one sentence, in the order it shows: the subject
+ * (or `noMessage` for a commit with an empty message, which rendered a blank
+ * row), then "author · date", then the short SHA. A label on a pressable
+ * replaces its children, so with the subject alone VoiceOver spoke five
+ * identical "qa: mobile remove" rows (w21/224).
+ */
+export function commitRowAccessibilityLabel(
+  commit: {
+    subject: string;
+    sha: string;
+    shortSha?: string | null;
+    author: { name: string; date?: unknown };
+  },
+  noMessage: string,
+  locale: string,
+): string {
+  return [
+    commit.subject || noMessage,
+    formatCommitAuthorLine(commit.author.name, commit.author.date, locale),
+    formatShortSha(commit.sha, commit.shortSha),
+  ].join(", ");
+}
+
+/**
  * The muted line under a commit: its author and, when the commit carries a
  * usable timestamp, the day it was made in the reader's locale. A missing or
  * unparseable date shows the author alone, never "Invalid Date" or 1970.

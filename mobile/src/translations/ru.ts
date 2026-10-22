@@ -483,6 +483,7 @@ export const ru: Translations = {
   notificationsChangesSection: "Последние изменения",
   notificationsLedgerHealthy: "С книгой всё в порядке — ошибок нет.",
   notificationsNoChanges: "Недавних изменений нет.",
+  commitNoMessage: "(без сообщения)",
   // commit detail
   commitDetailAuthor: "Автор",
   commitDetailStats: "Статистика",

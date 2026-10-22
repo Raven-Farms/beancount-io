@@ -480,6 +480,7 @@ export const nl: Translations = {
   notificationsChangesSection: "Recente wijzigingen",
   notificationsLedgerHealthy: "Het grootboek is in orde — geen fouten.",
   notificationsNoChanges: "Geen recente wijzigingen.",
+  commitNoMessage: "(geen bericht)",
   // commit detail
   commitDetailAuthor: "Auteur",
   commitDetailStats: "Statistieken",

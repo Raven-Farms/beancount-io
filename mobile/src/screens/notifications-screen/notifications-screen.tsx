@@ -26,6 +26,7 @@ import { ThemedRefreshControl } from "@/components/dashboard-scroll-view";
 import {
   formatErrorLocation,
   formatCommitAuthorLine,
+  commitRowAccessibilityLabel,
   formatShortSha,
   LedgerError,
   splitCommitMessage,
@@ -337,7 +338,11 @@ function NotificationsScreenImpl(): JSX.Element {
                       style={styles.changeRow}
                       activeOpacity={0.7}
                       accessibilityRole="button"
-                      accessibilityLabel={commit.subject}
+                      accessibilityLabel={commitRowAccessibilityLabel(
+                        commit,
+                        t("commitNoMessage"),
+                        locale,
+                      )}
                       onPress={() =>
                         router.push({
                           pathname: "/(app)/commit-detail",
@@ -349,7 +354,7 @@ function NotificationsScreenImpl(): JSX.Element {
                     >
                       <View style={styles.changeContent}>
                         <Text style={styles.changeMessage} numberOfLines={2}>
-                          {commit.subject}
+                          {commit.subject || t("commitNoMessage")}
                         </Text>
                         <Text style={styles.changeMeta}>
                           {formatCommitAuthorLine(
