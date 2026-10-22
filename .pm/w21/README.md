@@ -164,3 +164,6 @@
 - [364](./364.md) — Home budget panel shows weekly/daily budgets as $0 (reads future interval; 184 regression)
 - [365](./365.md) — Create Ledger "Books begin" refuses Persian/Arabic/full-width digits and years 1-99
 - [366](./366.md) — Budget history rows/Delete label/alert show raw ISO dates
+- [367](./367.md) — Narration edit refused when entry has an existing interpolation/lot error quoting it
+- [368](./368.md) — BOM-prefixed include: first entry can't be saved or deleted
+- [369](./369.md) — Edit refusal cites off-screen file lines and repeats parse errors
