@@ -23,6 +23,5 @@
 - [054](./054.md) — file paths accept control characters, bidi overrides and Windows-invalid names (`\n`, `aux.bean`, `a:b`): committed files break `git clone` on Windows and can't be `include`d
 - [053](./053.md) — `addLedgerEntries` writes numeric/date-looking string meta unquoted: `"00123"` reads back `123`, `"02134"` `2134` (hosted counterpart of CLI w5/128)
 - [052](./052.md) — `updateLedgerFiles` small gaps: identical old/new makes an empty commit ("Committed 1 change(s)"); empty `old_string` "matches 47 times"; unknown key → "files.0: Invalid input"
-- [051](./051.md) — `updateLedgerFiles` commits `new_string` through `String.replace`: `$&`/`$$`/`` $` ``/`$'` expand, so the commit differs from the literal dry-run preview
 - [022](./blocked/022.md) — report rustledger BQL gaps upstream (`cost(sum(position))`, `neg`/`filter_currency`, `meta('lineno')`, `AT value`, `BALANCES FROM`) — **blocked:** filing in an external tracker needs the user's approval
 - [026](./blocked/026.md) — streaming archive route for MCP OAuth clients over 8 MiB (option 1 from 023) — **blocked:** an ADR 0007 trust-boundary decision for the owner

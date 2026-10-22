@@ -568,6 +568,63 @@ describe("a whole-file write or delete with the sha the caller read", () => {
   });
 });
 
+/**
+ * w23/051. `String.replace` reads `$$`, `$&`, `` $` ``, `$'` and `$1` in its
+ * replacement as patterns, so the commit wrote the matched text and its
+ * surroundings where the preview showed the literal `new_string`. The fix
+ * shipped with w23/028's single fold; this pins it.
+ */
+describe("a new_string holding replacement patterns", () => {
+  it("commits the literal text the preview showed", async () => {
+    const f = await fixture();
+    f.changeLedgerFiles.mockResolvedValue({
+      data: { success: true, data: {} },
+    });
+    const new_string = '02-05 * "price $$5 and $& and $` and $\' and $1 end"';
+    const files = [
+      { path: "main.bean", old_string: '02-05 * "Cafe"', new_string },
+    ];
+    const expected = `2026-01-05 * "Cafe"\n2026-${new_string}\n`;
+    try {
+      const preview = await f.client.callTool({
+        name: "updateLedgerFiles",
+        arguments: {
+          ledger: "alice/main",
+          description: "edit",
+          dry_run: true,
+          files,
+        },
+      });
+      expect(f.checkProjectedErrors).toHaveBeenCalledWith("alice", "main", {
+        files: [
+          {
+            path: "main.bean",
+            content: Buffer.from(expected).toString("base64"),
+          },
+        ],
+      });
+      expect(
+        (preview.structuredContent as { result: { diff: { diff: string }[] } })
+          .result.diff[0]!.diff,
+      ).toContain(`+2026-${new_string}`);
+      await f.client.callTool({
+        name: "updateLedgerFiles",
+        arguments: { ledger: "alice/main", description: "edit", files },
+      });
+      const [, , body] = f.changeLedgerFiles.mock.calls[0] as [
+        string,
+        string,
+        { files: { content: string }[] },
+      ];
+      expect(Buffer.from(body.files[0]!.content, "base64").toString()).toBe(
+        expected,
+      );
+    } finally {
+      await f.close();
+    }
+  });
+});
+
 /** w5/036: an ambiguous `old_string` is the caller's to fix, in production too. */
 describe("an old_string that matches more than once", () => {
   it("is refused as bad input with the count and a way forward", async () => {
