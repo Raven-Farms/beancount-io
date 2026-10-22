@@ -146,6 +146,10 @@ export function resolveAppLink(
       if (!path) {
         return { ledgerFullName, href: "/" };
       }
+      // The editor reads and writes main only. The dashboard 404s any other
+      // branch rather than show main's file under a URL naming another, so the
+      // link is no app link and opens in the browser (w21/347).
+      if (tail[1] !== "main") return null;
       // A positive whole number only; anything else opens at the top.
       const lineNumber = parsed.searchParams.get("lineNumber") ?? "";
       const initialLine = /^[1-9]\d{0,8}$/.test(lineNumber)

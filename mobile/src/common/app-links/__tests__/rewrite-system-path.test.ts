@@ -93,3 +93,23 @@ describe("browserFallbackUrl", () => {
     expect(data.pathPrefix).toBe(undefined);
   });
 });
+
+// w21/347: the branch segment was dropped, so a link naming another branch
+// opened main's file, editable.
+describe("a file link on a branch other than main", () => {
+  const base = "https://beancount.io/ledger/alice/books/files/blob";
+
+  it("is no app link and goes to the browser", () => {
+    expect(resolveAppLink(`${base}/feature-x/main.bean`)).toBe(null);
+    expect(browserFallbackUrl(`${base}/feature-x/main.bean`)).toBe(
+      `${base}/feature-x/main.bean`,
+    );
+  });
+
+  it("still opens main's file in the editor", () => {
+    expect(resolveAppLink(`${base}/main/accounts/bank.bean`)?.href).toEqual({
+      pathname: "/ledger-file-editor",
+      params: { path: "accounts/bank.bean", ledger: "alice/books" },
+    });
+  });
+});
