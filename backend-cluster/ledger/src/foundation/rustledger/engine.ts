@@ -36,6 +36,7 @@ import {
   type DirectiveSourceLocation,
 } from "./plugins";
 import { reconcileDocumentErrors } from "./document-validation";
+import { locateBookErrors } from "./book-errors";
 import { locateOptionErrors, reconcileOptionErrors } from "./option-validation";
 import { isDocumentValidationError } from "./document-validation";
 import { reportUrlIncludes } from "./url-include-errors";
@@ -678,6 +679,7 @@ async function parseLedgerFilesUncached(
   // inventory (`repoPaths`), then recompute validity from the resulting errors.
   errors = reconcileDocumentErrors(errors, options.repoPaths);
   errors = locateOptionErrors(reconcileOptionErrors(errors), files, entryPoint);
+  errors = locateBookErrors(errors, files, entryPoint);
   errors = reportUrlIncludes(errors, files);
   errors = reportUndecodableSources(errors, files, entryPoint);
 
