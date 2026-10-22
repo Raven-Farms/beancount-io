@@ -20,19 +20,25 @@ Setup/authentication guide: https://github.com/bex-co/beancount-io/blob/main/bac
 Icon: https://beancount.io/lgasset/logo.png
 Public support: https://github.com/bex-co/beancount-io/issues
 
-The guide distinguishes verified hosts from unverified ones. Existing native
-Cursor/VS Code account-linking rehearsals are still open; we are not claiming a
-verified VS Code marketplace installation. Review uses a dedicated QA account
-and synthetic ledger, with credentials supplied privately only through an agreed
-review channel. Please let us know the supported inclusion/review process for
-this existing official-registry record.
+The guide distinguishes verified hosts from unverified ones. Cursor desktop
+3.24.18's community connection has completed native OAuth, a synthetic balance
+query and a dry-run write preview. The dated evidence and its visibility limits
+are recorded here:
+https://github.com/bex-co/beancount-io/blob/main/backend-cluster/backend-v2/docs/marketplace-submissions/cursor/native-desktop-rehearsal-20261022.md
+
+VS Code's native gallery installation and authenticated Copilot journey remain
+unverified; we are not claiming a verified VS Code marketplace installation.
+Review uses a dedicated QA account and synthetic ledger, with credentials
+supplied privately only through an agreed review channel. Please let us know the
+supported inclusion/review process for this existing official-registry record.
 
 Thank you,
 Beancount.io publisher
 
 ---
 
-Operator preparation, checked 2026-10-21 UTC. No email or review request was sent.
+Operator preparation, checked 2026-10-21 UTC; Cursor evidence updated
+2026-10-22 UTC. No email or review request was sent.
 The sender/contact is selected by the authorized operator outside this public
 file. Recheck the guide/evidence and curated dedup search before sending; do not
 remove the native-verification caveat until that rehearsal actually passes.

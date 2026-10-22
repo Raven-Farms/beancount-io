@@ -133,7 +133,12 @@ Claude Code signed in for real against `https://beancount.io` through its
 CIMD document on 2026-10-08. On 2026-10-16, OpenClaw 2026.10.4 (through
 dynamic registration) and Hermes Agent v0.22.2 (through its CIMD document)
 each signed in, read the ledger, and previewed a write with `dry_run`. The
-other hosts have not been verified with a real sign-in yet.
+Cursor desktop 3.24.18 community connection completed native OAuth, a synthetic
+balance query and a dry-run preview on 2026-10-22. Its
+[dated desktop record](./marketplace-submissions/cursor/native-desktop-rehearsal-20261022.md)
+preserves the approved grant's retention and native-card visibility limits.
+Official Cursor publication and VS Code's native gallery/Copilot journey remain
+separate. The other hosts have not been verified with a real sign-in yet.
 
 | Host                                | Identifies itself by                                            | Redirect the fixture authorizes with                                                                                  | Notes                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
 | ----------------------------------- | --------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |

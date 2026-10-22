@@ -72,4 +72,9 @@
 
 - **t005:** concrete GitHub nomination is prepared and unsent. Source-backed anonymous API checks of installed VS Code 1.135.0's public default feed return zero name/identity results; all six latest-feed pages contain 560 unique records with no canonical name/endpoint/repository match. This independent read substep is complete without a user-input gate. The earlier native `@mcp` snapshot remains 51 entries/50 observed names; effective organization policy, typed native filtering and install/Copilot OAuth/query/preview are not inferred from the public feed. **Unblock:** authorized operator request, curated acceptance and fresh native QA discovery/OAuth/query/preview under w1/m34/t003. **Owner:** publisher, GitHub reviewers and QA/client account holder.
 
+  The [nomination evidence correction](./t005.md#nomination-evidence-correction--2026-10-22-utc)
+  removes its stale claim that Cursor native verification is still open and
+  links the completed community OAuth/query/preview record. VS Code verification
+  remains open; the corrected request is still unsent.
+
 - **Milestone / t006–t010:** final publication verification and standing closing acceptance depend on unresolved t002–t005 gates. This does not prevent independent setup, payload validation or documentation substeps inside those tasks. **Unblock:** complete each gate and the actual accepted listing/connection journeys, then finish adoption/simplification/coverage/closeout. **Owners:** recorded account holder/publisher/platforms, then repository worker. Current preparation: Docker fbe47be0e, Cursor 7ed1cfe05, Cline 6e5a556b8 plus the native setup above, GitHub/VS Code bb3f23e4a. The separate community Cursor entry is observed in New and its native install link works; the native desktop query/preview also completes; official agreement/submission and remaining eligible gallery criteria stay open.

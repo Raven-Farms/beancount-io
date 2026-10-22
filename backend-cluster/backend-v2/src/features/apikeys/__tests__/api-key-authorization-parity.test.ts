@@ -109,9 +109,15 @@ const restCall = async (
 ) => {
   const response = await fetch(`${server.url}${path}`, {
     method,
-    headers: body === undefined ? {} : { "content-type": "application/json" },
+    // These assertions cover authorization, not pooled-connection lifetime.
+    // Avoid reusing an idle socket that can close during a slow GraphQL check.
+    headers: {
+      connection: "close",
+      ...(body === undefined ? {} : { "content-type": "application/json" }),
+    },
     ...(body === undefined ? {} : { body: JSON.stringify(body) }),
   });
+  await response.arrayBuffer();
   return response.status;
 };
 
@@ -245,7 +251,7 @@ describe("API-key authorization parity", () => {
       server.setIdentity(caller);
       const response = await fetch(`${server.url}/api-gateway/v1/api-keys`, {
         method: "POST",
-        headers: { "content-type": "application/json" },
+        headers: { "content-type": "application/json", connection: "close" },
         body: JSON.stringify(input),
       });
       expect(response.status).toBe(200);
