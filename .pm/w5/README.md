@@ -88,7 +88,7 @@
 - [917 — Skip unchanged document imports with relative attachment paths](./917.md) — minor CLI reload-identity follow-up to 224; root and included-file imports append the same reference on every run, reproduced 2026-10-21.
 - [918 — Give a complete CSV direction repair when `sign=ledger` is active](./918.md) — trivial CLI recovery-message follow-up to 755; the suggested added option conflicts with the existing sign setting, reproduced 2026-10-21.
 - [919 — Keep accented bank references stable on repeat import](./919.md) — major CLI native-ID lookup gap; unchanged NFD references lose exact matching and changed amounts double-book with exit 0, reproduced 2026-10-21.
-- [920 — Treat signed zero as equal in import amounts and prices](./920.md) — major CLI identity issue; signed-zero prices can double-book a disposal, and unchanged native zero amounts/prices falsely conflict, reproduced 2026-10-22.
+- [920 — Treat signed zero as equal in import amounts, costs and prices](./920.md) — major CLI identity issue; equal zero prices or costs can book another disposal, while unchanged native zero amounts/prices falsely conflict, reproduced 2026-10-22.
 - [921 — Classify report series by root components](./921.md) — major CLI accounting mismatch; prefix-sharing roots contaminate income and net-worth breakdowns while headlines remain correct, reproduced 2026-10-21.
 - [922 — Detect delimiters from complete CSV records](./922.md) — minor CLI separator/header-memory finding; multiline preambles and headers reproduced 2026-10-21/22.
 - [923 — Normalize repeated CSV page headers](./923.md) — minor CLI framing gap; byte-identical headers with supported normalized spellings are refused as data rows, reproduced 2026-10-21.
