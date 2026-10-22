@@ -160,8 +160,12 @@ export function LedgerSelectionScreen() {
     : tab === "explore"
       ? state.items
       : filterLedgers(state.items, query);
-  const showError = () =>
+  // A star that fails after the user left (a slow connection, then Back) must
+  // not toast over whatever screen is showing now (w21/300).
+  const showError = () => {
+    if (!mounted.current) return;
     toast.showToast({ message: t("discoveryActionError"), type: "error" });
+  };
   const open = async (id: string) => {
     if (openingRef.current) return;
     openingRef.current = true;
