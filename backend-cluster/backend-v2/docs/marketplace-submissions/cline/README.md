@@ -77,3 +77,26 @@ from the native Marketplace panel, which appeared blank. It does not diagnose
 that UI discrepancy or prove enterprise-filtered rendering. Native setup and
 catalog preparation do not satisfy the unchecked authenticated installation,
 query, preview or stability claims; no issue or listing was submitted.
+
+## Renewed isolated CLI installation — 2026-10-22 UTC
+
+The existing official Cline CLI reports3.0.73. In separate `CLINE_DIR`,
+`CLINE_DATA_DIR` and `CLINE_MCP_SETTINGS_PATH` locations, its native
+`mcp add <name> <url> --transport streamable-http --yes --json` command returns
+exit0, status `installed` and no warnings for the canonical MCP endpoint.
+Auto-update is disabled with `CLINE_NO_AUTO_UPDATE=1`; the task process does not
+inherit model credentials. The original user settings checksum is unchanged.
+
+Readback verifies exactly one task server. This CLI's managed settings nest
+`type: streamableHttp` and `url` under a `transport` object; this is distinct
+from the extension configuration above. Use the CLI's own installation command
+for CLI-managed settings. The resulting task entry has only transport metadata,
+with no credential fields. An initial generic evidence reader inspected flat
+extension fields; the retained corrected record reads the actual nested shape.
+
+This preparation does not approve OAuth, invoke a model, discover authenticated
+tools or run a ledger query/preview. The native browser tooling currently has
+no connected browser, and its connection request remains pending. Complete
+fresh native OAuth with the separately approved synthetic-ledger grant before
+making authenticated-install or stability claims. The task settings remain
+isolated and ready; existing user and Cursor configuration are untouched.
