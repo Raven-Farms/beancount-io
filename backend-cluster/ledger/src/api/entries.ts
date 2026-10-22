@@ -13,7 +13,7 @@ import { ledgerIdOf, servicesForRequest } from "./service-context";
 import { refuseNewLedgerErrors } from "@/features/ledger/utils/new-ledger-errors";
 import {
   checkTransactionBalance,
-  scanInferredToleranceDefault,
+  scanInferredToleranceDefaults,
   type BalancePosting,
 } from "@/features/ledger/utils/transaction-balance";
 import { NotFoundDetailError } from "@/server/py-errors";
@@ -211,9 +211,9 @@ export function setEntriesHandler(router: Router): void {
       // elided, as written.
       if (!allowInvalid) {
         // Only the files this batch touches are scanned for the override; an
-        // `inferred_tolerance_default` living in an unrelated file falls back
-        // to Beancount's default (see scanInferredToleranceDefault).
-        const toleranceDefault = scanInferredToleranceDefault(
+        // `inferred_tolerance_default` living in an unrelated file is missed
+        // (see scanInferredToleranceDefaults).
+        const toleranceDefaults = scanInferredToleranceDefaults(
           [...currentContents.values()].map(({ current }) => current),
         );
         rows.forEach((row, idx) => {
@@ -223,7 +223,7 @@ export function setEntriesHandler(router: Router): void {
           if (!Array.isArray(postings)) return;
           const check = checkTransactionBalance(
             postings as BalancePosting[],
-            toleranceDefault,
+            toleranceDefaults,
           );
           if (check.ok) return;
           if (check.value.kind === "unbalanced") {

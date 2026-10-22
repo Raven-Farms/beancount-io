@@ -41,6 +41,10 @@ import { stripBqlBlockComments } from "@/features/ledger/service/bql-comments";
 import { UNDECODABLE_SOURCE } from "@/foundation/rustledger/file-map-loader";
 import { filterDirectives } from "@/foundation/rustledger/directive-filter";
 import { assertEntryTokens } from "@/features/ledger/utils/entry-tokens";
+import {
+  checkTransactionBalance,
+  scanInferredToleranceDefaults,
+} from "@/features/ledger/utils/transaction-balance";
 import { formatCellValue } from "@/foundation/rustledger/mappers";
 import { LedgerDataService } from "@/features/ledger/service/ledger-data-service";
 import { LedgerFinanceService } from "@/features/ledger/service/ledger-finance-service";
@@ -1864,6 +1868,45 @@ async function main(): Promise<void> {
     windowSum.errors.length === 0 && windowSum.rows.length > 0,
     "the windowed sum the lot-error hint names runs",
   );
+
+  // w21/648: the entries precheck balances a transaction as the engine does,
+  // on the cases where Beancount and rustledger agree.
+  const toleranceCases: Array<[string, string[]]> = [
+    ['option "inferred_tolerance_default" "USD:0.01"', ["-10.00", "3.33", "3.33", "3.33"]],
+    ["", ["-10.00", "3.33", "3.33", "3.33"]],
+    ["", ["10", "-9.6"]],
+    ["", ["10", "-10.004"]],
+    ["", ["100.0000", "-99.9960"]],
+    ["", ["10.000", "-10.0004"]],
+    ["", ["10.00", "-9.995"]],
+    ["", ["10.00", "-9.9949"]],
+    ['option "inferred_tolerance_default" "EUR:0.5"', ["10", "-9.6"]],
+    ['option "inferred_tolerance_default" "*:1"', ["10", "-9"]],
+    ['option "inferred_tolerance_default" "0.01"', ["-10.00", "3.33", "3.33", "3.33"]],
+  ];
+  for (const [option, numbers] of toleranceCases) {
+    const accounts = numbers.map((_number, index) => `Assets:A${index}`);
+    const balanced = await parseLedgerFiles(
+      {
+        "main.bean": `${option}\n${accounts.map((account) => `2024-01-01 open ${account}\n`).join("")}2024-01-02 * "t"\n${numbers.map((number, index) => `  ${accounts[index]} ${number} USD\n`).join("")}`,
+      },
+      "main.bean",
+    );
+    const engineBalances = !balanced.errors.some((error) =>
+      error.message.startsWith("Transaction does not balance"),
+    );
+    const precheck = checkTransactionBalance(
+      numbers.map((number, index) => ({
+        account: accounts[index]!,
+        units: { number, currency: "USD" },
+      })),
+      scanInferredToleranceDefaults([option]),
+    ).ok;
+    assert(
+      precheck === engineBalances,
+      `the precheck ${precheck ? "accepts" : "refuses"} ${numbers.join(" / ")} USD${option ? ` under ${option.slice(36)}` : ""}, as the engine does`,
+    );
+  }
 
   // w21/653: the entry validator accepts a tag (or a flag) exactly when the
   // engine reads it back as written.

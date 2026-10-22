@@ -1,8 +1,7 @@
 import BigNumber from "bignumber.js";
 import {
   checkTransactionBalance,
-  scanInferredToleranceDefault,
-  DEFAULT_INFERRED_TOLERANCE,
+  scanInferredToleranceDefaults,
 } from "@/features/ledger/utils/transaction-balance";
 import { entryInputToText } from "@/foundation/rustledger/entry-build";
 
@@ -60,24 +59,51 @@ describe("checkTransactionBalance", () => {
     ).toBe(true);
   });
 
-  it(" floors tolerance at inferred_tolerance_default", () => {
-    // High-precision numbers imply a tiny tolerance, but the 0.005 default
-    // still covers a 0.004 residual.
+  // w21/648: Beancount has no 0.005 floor: high-precision numbers imply a
+  // tiny tolerance, and both engines refuse a 0.004 residual on them.
+  it("has no tolerance floor without a declared default", () => {
     expect(
       checkTransactionBalance([
         posting("Expenses:Food", "100.0000"),
         posting("Assets:Cash", "-99.9960"),
       ]).ok,
-    ).toBe(true);
+    ).toBe(false);
   });
 
-  it("honours a custom inferred_tolerance_default", () => {
-    const postings = [
-      posting("Expenses:Food", "100.0000"),
-      posting("Assets:Cash", "-99.9900"),
+  // w21/648: a whole number implied a 0.5 tolerance; Beancount gives none.
+  it("infers no tolerance from a whole number", () => {
+    expect(
+      checkTransactionBalance([
+        posting("Expenses:Food", "10"),
+        posting("Assets:Cash", "-9.6"),
+      ]).ok,
+    ).toBe(false);
+  });
+
+  it("raises a currency's tolerance to its declared default", () => {
+    const split = [
+      posting("Assets:Cash", "-10.00"),
+      posting("Expenses:A", "3.33"),
+      posting("Expenses:B", "3.33"),
+      posting("Expenses:C", "3.33"),
     ];
-    expect(checkTransactionBalance(postings, "0.005").ok).toBe(false);
-    expect(checkTransactionBalance(postings, "0.02").ok).toBe(true);
+    const usd = new Map([["USD", new BigNumber("0.01")]]);
+    expect(checkTransactionBalance(split).ok).toBe(false);
+    expect(checkTransactionBalance(split, usd).ok).toBe(true);
+    // A `*` default covers only a currency that implies no tolerance of its
+    // own, as in Beancount: the split's 0.005 stands.
+    const star = new Map([["*", new BigNumber("0.01")]]);
+    expect(checkTransactionBalance(split, star).ok).toBe(false);
+    const whole = [
+      posting("Expenses:Food", "10"),
+      posting("Assets:Cash", "-9"),
+    ];
+    expect(
+      checkTransactionBalance(whole, new Map([["*", new BigNumber("1")]])).ok,
+    ).toBe(true);
+    expect(
+      checkTransactionBalance(whole, new Map([["EUR", new BigNumber("1")]])).ok,
+    ).toBe(false);
   });
 
   it("rejects two or more elided postings", () => {
@@ -119,20 +145,27 @@ describe("checkTransactionBalance", () => {
   });
 });
 
-describe("scanInferredToleranceDefault", () => {
-  it("finds the option override", () => {
+describe("scanInferredToleranceDefaults", () => {
+  // w21/648: only a bare number was read; Beancount's "USD:0.01" was not.
+  it("reads each currency and the * default, the later one winning", () => {
+    const defaults = scanInferredToleranceDefaults([
+      'option "inferred_tolerance_default" "USD:0.02"\n2020-01-01 open Assets:Cash USD\n',
+      'option "inferred_tolerance_default" "*:0.005" ; all\noption "inferred_tolerance_default" "USD:0.01"\n',
+    ]);
     expect(
-      scanInferredToleranceDefault([
-        '2020-01-01 open Assets:Cash USD\n\noption "inferred_tolerance_default" "0.02"\n',
-      ]),
-    ).toBe("0.02");
+      Object.fromEntries(
+        [...defaults].map(([currency, value]) => [currency, value.toString()]),
+      ),
+    ).toEqual({ USD: "0.01", "*": "0.005" });
   });
 
-  it("falls back to Beancount's default", () => {
+  it("declares nothing for a bare number, which is not Beancount syntax", () => {
     expect(
-      scanInferredToleranceDefault(["2020-01-01 open Assets:Cash USD\n"]),
-    ).toBe(DEFAULT_INFERRED_TOLERANCE);
-    expect(scanInferredToleranceDefault([])).toBe(DEFAULT_INFERRED_TOLERANCE);
+      scanInferredToleranceDefaults([
+        'option "inferred_tolerance_default" "0.02"\n',
+      ]).size,
+    ).toBe(0);
+    expect(scanInferredToleranceDefaults([]).size).toBe(0);
   });
 });
 
