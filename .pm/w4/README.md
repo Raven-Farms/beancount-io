@@ -109,7 +109,7 @@
 
 - [x] **m42** — [Keep keyboard focus owned during and after modal submissions](./done/m42/README.md) (5 tasks) ← dashboard QA, 2026-10-20; minor, pending reverse-Tab escapes New Entry and failed submits lose the retry position.
 
-- [ ] **m41** — [Preserve acknowledged actions through refresh failures](./m41/README.md) (6 tasks) ← dashboard QA, 2026-10-20; minor, promoted 294 with independent Budget submission scope. — deployed browser controls pass 2026-10-22; t001–t003 done, final review/gates open
+- [x] **m41** — [Preserve acknowledged actions through refresh failures](./done/m41/README.md) (6 tasks) ← dashboard QA, 2026-10-20; minor, promoted 294 with independent Budget submission scope.
 
 - [x] **m40** — [Keep picker popups sized and scrollable inside modals](./done/m40/README.md) (6 tasks) ← dashboard QA, 2026-10-20; minor, promoted 293 with independently reproduced Combobox wheel scope.
 

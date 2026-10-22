@@ -8,6 +8,7 @@ import { ApolloProvider } from "@apollo/client/react";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { useState } from "react";
 import { describe, expect, it, vi } from "vitest";
+import type { BulkEntriesMutationVariables } from "@/graphql/definitions";
 import { AddBudgetDialog } from "../add-budget-dialog";
 import { useBudgetEntries } from "../use-budget-entries";
 
@@ -38,8 +39,14 @@ vi.mock("@/common/hooks/use-date-locale", async () => {
  */
 type Write = { success: boolean; message: string } | "transport";
 
-function setup(write: Write) {
-  const writes: unknown[] = [];
+function setup(
+  write: Write,
+  {
+    refreshFails = true,
+    lockedAccount,
+  }: { refreshFails?: boolean; lockedAccount?: string } = {},
+) {
+  const writes: BulkEntriesMutationVariables[] = [];
   let reads = 0;
   const client = new ApolloClient({
     cache: new InMemoryCache(),
@@ -47,7 +54,7 @@ function setup(write: Write) {
       (operation) =>
         new Observable((observer) => {
           if (operation.operationName === "BulkEntries") {
-            writes.push(operation.variables);
+            writes.push(operation.variables as BulkEntriesMutationVariables);
             if (write === "transport") {
               observer.error(new Error("Failed to fetch"));
               return;
@@ -62,7 +69,7 @@ function setup(write: Write) {
           }
           if (operation.operationName === "GetLedgerJournal") {
             reads += 1;
-            if (reads > 1) {
+            if (refreshFails && reads > 1) {
               observer.error(new Error("Failed to fetch"));
               return;
             }
@@ -100,6 +107,7 @@ function setup(write: Write) {
           }}
           ledgerId="ledger-1"
           defaultCurrency="USD"
+          lockedAccount={lockedAccount}
         />
       </>
     );
@@ -112,13 +120,15 @@ function setup(write: Write) {
   return { writes, onOpenChange, reads: () => reads };
 }
 
-async function submit500() {
+async function submit500({ pickAccount = true } = {}) {
   await waitFor(() =>
     expect(screen.getByTestId("list")).toHaveTextContent("list"),
   );
-  fireEvent.change(screen.getByTestId("account-combobox"), {
-    target: { value: "Expenses:Food:Coffee" },
-  });
+  if (pickAccount) {
+    fireEvent.change(screen.getByTestId("account-combobox"), {
+      target: { value: "Expenses:Food:Coffee" },
+    });
+  }
   fireEvent.change(screen.getByRole("spinbutton", { name: /amount/i }), {
     target: { value: "500" },
   });
@@ -138,11 +148,38 @@ describe("AddBudgetDialog acknowledgement versus the list read", () => {
     await waitFor(() => expect(onOpenChange).toHaveBeenCalledWith(false));
     expect(screen.queryByRole("dialog")).toBeNull();
     expect(writes).toHaveLength(1);
-    expect(
-      (writes[0] as { entries: { budget: { amount: { number: string } } }[] })
-        .entries[0].budget.amount.number,
-    ).toBe("500");
+    expect(writes[0]!.entries[0]!.budget!.amount.number).toBe("500");
     await waitFor(() => expect(reads()).toBeGreaterThanOrEqual(2));
+    await waitFor(() =>
+      expect(screen.getByTestId("list")).toHaveTextContent("list failed"),
+    );
+  });
+
+  it("finishes once and keeps the list when the refresh succeeds", async () => {
+    const { writes, onOpenChange, reads } = setup(
+      { success: true, message: "Added 1 entry successfully" },
+      { refreshFails: false },
+    );
+    await submit500();
+
+    await waitFor(() => expect(onOpenChange).toHaveBeenCalledWith(false));
+    await waitFor(() => expect(reads()).toBeGreaterThanOrEqual(2));
+    expect(screen.getByTestId("list")).toHaveTextContent("list");
+    expect(screen.getByTestId("list")).not.toHaveTextContent("failed");
+    expect(writes).toHaveLength(1);
+  });
+
+  it("finishes an update to an existing budget once when the refresh fails", async () => {
+    // Updating opens the same dialog with the budget's account locked.
+    const { writes, onOpenChange } = setup(
+      { success: true, message: "Added 1 entry successfully" },
+      { lockedAccount: "Expenses:Food:Coffee" },
+    );
+    await submit500({ pickAccount: false });
+
+    await waitFor(() => expect(onOpenChange).toHaveBeenCalledWith(false));
+    expect(writes).toHaveLength(1);
+    expect(writes[0]!.entries[0]!.budget!.account).toBe("Expenses:Food:Coffee");
     await waitFor(() =>
       expect(screen.getByTestId("list")).toHaveTextContent("list failed"),
     );

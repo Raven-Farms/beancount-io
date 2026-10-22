@@ -32,7 +32,7 @@ export function StarButton({
   const isUserAuthenticated = useIsAuthenticated();
   const next = useSafeReturnPath();
 
-  // Sync local state with prop when it changes (e.g., after refetch)
+  // Sync local state with the prop, which the confirmed cache write updates
   useEffect(() => {
     setLocalIsStarred(initialIsStarred);
   }, [initialIsStarred]);

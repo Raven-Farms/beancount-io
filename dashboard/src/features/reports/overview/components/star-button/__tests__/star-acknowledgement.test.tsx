@@ -78,7 +78,7 @@ const ledger = (isStarred: boolean) => ({
 type Outcome = { success: boolean; isStarred: boolean } | "transport";
 
 function setup(startStarred: boolean, outcome: Outcome) {
-  const reads: number[] = [];
+  let reads = 0;
   const writes: string[] = [];
   const client = new ApolloClient({
     cache: new InMemoryCache(),
@@ -86,9 +86,9 @@ function setup(startStarred: boolean, outcome: Outcome) {
       (operation) =>
         new Observable((observer) => {
           if (operation.operationName === "GetLedger") {
-            reads.push(reads.length);
+            reads += 1;
             // The first read succeeds; any later read fails.
-            if (reads.length > 1) {
+            if (reads > 1) {
               observer.error(new Error("Failed to fetch"));
               return;
             }
@@ -132,7 +132,7 @@ function setup(startStarred: boolean, outcome: Outcome) {
       <Overview />
     </ApolloProvider>,
   );
-  return { reads, writes, client };
+  return { writes, client };
 }
 
 const STAR = "page.overview.starButton.star";

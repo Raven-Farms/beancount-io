@@ -2,12 +2,9 @@ import type { ApolloCache } from "@apollo/client";
 import { GetLedgerDocument } from "@/graphql/definitions";
 
 /**
- * Record a confirmed star/unstar in the cached ledger.
- *
- * The mutation's own `isStarred` is the authority. An awaited GetLedger
- * refetch used to be part of the mutation, so a failed read rejected an
- * already acknowledged star and the button rolled it back (w4/m41). Starring
- * changes no other ledger field, so nothing needs reading again.
+ * Record a confirmed star/unstar in the cached ledger. The mutation's own
+ * `isStarred` is the authority, and starring changes no other field, so there
+ * is no read to fail after an acknowledged write (w4/m41).
  */
 export function writeStarredState(
   cache: ApolloCache,
