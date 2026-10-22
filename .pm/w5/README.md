@@ -120,6 +120,7 @@
 - [953 — Name generator extraction failures without the configuration repair hint](./953.md) — minor CLI diagnostic follow-up to 852; deferred extract() exits get an unrelated Ingest/main-guard remedy while immediate method exits are correctly identified, reproduced 2026-10-21.
 - [954 — Find ledger suffix case variants during directory formatting](./954.md) — minor CLI formatting-discovery gap; `.BEAN` and mixed-case ledgers are omitted from successful directory checks and mixed-directory applies, reproduced 2026-10-21.
 - [955 — Count same-day assertions before treating a pad as staged](./955.md) — major CLI financial-guard gap; add and import silently backdate a EUR adjustment when the pad's existing USD assertion has the new assertion's date, reproduced 2026-10-21.
+- [956 — Preserve valid Unicode spaces in read account filters](./956.md) — minor CLI wrong-account read regression from 626; trailing-space names select 100 USD instead of their 200 USD, while list/balance include both accounts, reproduced 2026-10-21.
 
 The 27 findings from the MCP QA auth sweep against the hosted endpoint (023–054, less the five under [Dropped](#dropped)) were fixed in `backend-cluster/backend-v2` and closed on 2026-10-02 and 2026-10-03; each note under [`done/`](./done/) records what shipped and in which commit. None has been re-observed against the hosted endpoint yet — the fixes reach it with the next backend deploy.
 
