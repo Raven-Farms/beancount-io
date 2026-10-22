@@ -692,3 +692,21 @@ describe("Open Account against decomposed Unicode", () => {
     ).toEqual({ alreadyOpen: false, canSubmit: true });
   });
 });
+
+// w21/628: "Credit Card" was refused while "Assets:Credit Card" became CreditCard.
+describe("peelTypedRoot joins words with or without a root", () => {
+  it("gives the same name for the same words", () => {
+    const bare = peelTypedRoot("Credit Card", "Liabilities");
+    const rooted = peelTypedRoot("Liabilities:Credit Card", "Assets");
+    expect(bare).toEqual({ rootPrefix: "Liabilities", subPath: "CreditCard" });
+    expect(rooted).toEqual(bare);
+    expect(peelTypedRoot("Bank:credit card", "Assets").subPath).toBe(
+      "Bank:CreditCard",
+    );
+  });
+
+  it("leaves a single word, and a word with a trailing space, as typed", () => {
+    expect(peelTypedRoot("Credit", "Assets").subPath).toBe("Credit");
+    expect(peelTypedRoot("Credit ", "Assets").subPath).toBe("Credit ");
+  });
+});

@@ -85,6 +85,17 @@ function joinPrefillWords(subPath: string): string {
     .join(":");
 }
 
+/**
+ * Words with a space between them join into one component as they are typed or
+ * pasted, as they do after a root (w21/255): "Credit Card" and
+ * "Assets:Credit Card" gave different results, the first refused (w21/628). A
+ * trailing space, the one just typed after a word, is left alone so typing the
+ * next word is not fought.
+ */
+function joinTypedWords(typed: string): string {
+  return /\S\s+\S/.test(typed) ? joinPrefillWords(typed) : typed;
+}
+
 function splitPrefillRoot(
   input: string,
   fallbackRoot: AccountRootPrefix,
@@ -124,7 +135,7 @@ export function peelTypedRoot(
   );
   return root
     ? splitPrefillAccountName(typed, root, roots)
-    : { rootPrefix: currentRoot, subPath: typed };
+    : { rootPrefix: currentRoot, subPath: joinTypedWords(typed) };
 }
 
 /**
