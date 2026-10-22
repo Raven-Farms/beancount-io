@@ -65,7 +65,6 @@
 - [959 — Treat repeated allowed currencies as one during transaction inference](./959.md) — minor CLI existing-ledger/native-import inference finding; USD/EUR and split-file controls reproduced 2026-10-21.
 - [958 — Keep unused unopened accounts out of remembered CSV settings](./958.md) — minor CLI memory-guard follow-up to 452/714; empty, skipped and fully categorized exports reproduced 2026-10-21.
 - [957 — Allow instrument units in the portfolio preset's holdings account](./957.md) — minor CLI first-purchase setup finding; reproduced twice in USD/EUR on 2026-10-21.
-- [909 — Keep cost lots in the funded-close check](./909.md) — minor CLI closing-guard follow-up to w2/092; offsetting quantities with a residual book balance reproduced 2026-10-21.
 - [910 — Check funded children closed by `close_tree`](./910.md) — minor CLI closing-guard follow-up to w2/092; generated descendant closes reproduced 2026-10-21.
 - [911 — Honor valid remembered custom date formats](./911.md) — minor CLI import-recall follow-up to w1/m24/t007; unchanged-file refusals and unsafe replacement hints reproduced 2026-10-21.
 - [912 — Keep child source accounts in parent-importer identity](./912.md) — major CLI identity gap; generated IDs skip different children and native IDs accept swapped child amounts as exact duplicates, reproduced 2026-10-21.

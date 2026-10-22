@@ -359,6 +359,45 @@ def _plugin_currencies(entries: list[Any], account: str) -> set[str]:
     return seen
 
 
+def _stranded_lots(entries: list[Any], account: str, date: datetime.date) -> list[str]:
+    """Each lot the account still holds at the end of `date` although every commodity's units net to zero.
+
+    Units alone cannot tell: `+1 HOOL {100 USD}` and `-1 HOOL {200 USD}` are
+    two lots the inventory keeps apart, worth −100 USD at cost, however
+    `_held_through` reads the shares (w5/909). The booked postings are netted
+    per lot (cost number, currency, date and label), and a commodity whose
+    units already show a balance is left to that report.
+    """
+    from beancount.core.data import Transaction
+
+    lots: dict[tuple[str, Any], Decimal] = {}
+    for entry in entries:
+        if not isinstance(entry, Transaction) or entry.date > date:
+            continue
+        for posting in entry.postings:
+            if posting.account != account or posting.units is None or posting.units.number is None:
+                continue
+            cost: Any = posting.cost
+            key = None if cost is None else (cost.number, cost.currency, cost.date, getattr(cost, "label", None))
+            slot = (posting.units.currency, key)
+            lots[slot] = lots.get(slot, Decimal(0)) + posting.units.number
+    by_currency: dict[str, Decimal] = {}
+    for (currency, _), number in lots.items():
+        by_currency[currency] = by_currency.get(currency, Decimal(0)) + number
+    stranded = []
+    for (currency, key), number in sorted(lots.items(), key=lambda item: (item[0][0], str(item[0][1]))):
+        if number == 0 or by_currency[currency] != 0:
+            continue
+        spelled = ""
+        if key is not None:
+            parts = [f"{_plain(key[0])} {key[1]}", key[2].isoformat()]
+            if key[3]:
+                parts.append(f'"{key[3]}"')
+            spelled = f" {{{', '.join(parts)}}}"
+        stranded.append(f"{_plain(number)} {currency}{spelled}")
+    return stranded
+
+
 def _close(
     file: Path, request: dict[str, Any], *, into: Path | None, allow_errors: bool, strict_read: bool
 ) -> dict[str, Any]:
@@ -379,6 +418,16 @@ def _close(
     if drained and held:
         covered = _drained_checks(entries, options, directive.account, directive.date)
         held = {currency: number for currency, number in held.items() if currency not in covered}
+    # Lots that cancel in units but not at cost: no units check, the plugin's
+    # included, can see them (w5/909).
+    stranded = [] if held else _stranded_lots(entries, directive.account, directive.date)
+    if stranded and not request.get("force"):
+        day = directive.date.isoformat()
+        raise protocol.LedgerError(
+            f"{directive.account} still holds {', '.join(stranded)} on {day}: the units cancel but the lots do not. "
+            f"Close those lots with a transaction posting each one's cost, dated on or before {day}, then close "
+            f"{directive.account}, or pass --force to close it with them. Nothing was written."
+        )
     if held and not request.get("force"):
         amounts = ", ".join(f"{_plain(number)} {currency}" for currency, number in sorted(held.items()))
         day = directive.date.isoformat()
