@@ -4,6 +4,8 @@
 
 ## Inbox
 
+- [967 — Keep Add posting from becoming Remove posting while focused](./967.md) — minor; dashboard QA,2026-10-22; Add reuses its focused button as Remove posting2, so a second Enter deletes that draft at both widths; explicit new-row editing/removal controls pass, no writes.
+
 - [966 — Retire useFormatQuantity in favor of useFormatNumber with source digits](./966.md) — minor; m45 follow-up: three chart/net-worth callers format cash without ISO minor units through the now-parallel quantity hook; move them to useFormatNumber(value, currency, digits) and delete the hook.
 
 - [965 — Keep transaction submit shortcuts out of active composition](./965.md) — major; trusted composing Ctrl/Meta+Enter requests an unfinished transaction at both widths; four writes intercepted, ordinary controls pass, matching form handler lacks the shared guard.
