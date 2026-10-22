@@ -700,11 +700,30 @@ export function LedgerForm({
                 </div>
                 <div className="flex justify-between">
                   <dt className="text-muted-foreground">
+                    {t("page.dashboard.ledgerTemplate")}
+                  </dt>
+                  {/* The chosen kind, not the preset kept for switching back
+                      to it: a retained preset is not what Starter or Sample
+                      creates (w4/315). */}
+                  <dd>
+                    {startKind === "preset" && preset
+                      ? t(preset.titleKey)
+                      : startKind === "sample"
+                        ? t("page.dashboard.sampleTemplate")
+                        : t("page.dashboard.starterTemplate")}
+                  </dd>
+                </div>
+                <div className="flex justify-between gap-4">
+                  <dt className="text-muted-foreground">
                     {isPrivate
                       ? t("page.dashboard.private")
                       : t("page.dashboard.public")}
                   </dt>
-                  <dd>{preset ? t(preset.titleKey) : startKind}</dd>
+                  <dd className="text-end">
+                    {isPrivate
+                      ? t("page.dashboard.privateAccess")
+                      : t("page.dashboard.publicWarning")}
+                  </dd>
                 </div>
               </dl>
               {startKind === "preset" ? (

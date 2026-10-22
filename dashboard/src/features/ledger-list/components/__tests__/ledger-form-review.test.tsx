@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import * as apolloClient from "@apollo/client/react";
@@ -94,5 +94,52 @@ describe("LedgerForm review step", () => {
     screen.getByLabelText("Ledger Name").closest("form")!.requestSubmit();
     await waitFor(() => expect(review()).toBeInTheDocument());
     expect(onSubmit).not.toHaveBeenCalled();
+  });
+
+  /** The starting point Review names. */
+  const reviewed = () =>
+    within(review()!).getByText("Template").nextElementSibling?.textContent;
+
+  it("names the chosen starting point, not a preset kept from earlier (w4/315)", async () => {
+    const user = userEvent.setup();
+    const onSubmit = vi.fn();
+    render(<LedgerForm onSubmit={onSubmit} onCancel={vi.fn()} />);
+    const toReview = async () => {
+      await user.click(button("Next"));
+      await user.click(button("Next"));
+    };
+    const toStart = async () => {
+      await user.click(button("Back"));
+      await user.click(button("Back"));
+    };
+
+    await toReview();
+    expect(reviewed()).toBe("Starter template");
+
+    await toStart();
+    await user.click(screen.getByRole("radio", { name: /^Template/ }));
+    await user.click(screen.getByRole("radio", { name: /^Freelance ledger/ }));
+    await toReview();
+    expect(reviewed()).toBe("Freelance ledger");
+
+    await toStart();
+    await user.click(screen.getByRole("radio", { name: /^Sample ledger/ }));
+    await toReview();
+    expect(reviewed()).toBe("Sample ledger");
+    await user.click(button("Create Ledger"));
+    await waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(1));
+    expect(onSubmit.mock.calls[0][0]).toMatchObject({ template: "SAMPLE" });
+    expect(onSubmit.mock.calls[0][0].setup).toBeUndefined();
+
+    await toStart();
+    await user.click(screen.getByRole("radio", { name: /^Starter template/ }));
+    await toReview();
+    expect(reviewed()).toBe("Starter template");
+
+    // Switching back to a preset keeps the one chosen before.
+    await toStart();
+    await user.click(screen.getByRole("radio", { name: /^Template/ }));
+    await toReview();
+    expect(reviewed()).toBe("Freelance ledger");
   });
 });
