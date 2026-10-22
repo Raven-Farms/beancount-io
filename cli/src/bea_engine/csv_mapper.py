@@ -132,6 +132,11 @@ _SYMBOL_CURRENCIES: dict[str, tuple[str, ...]] = {
     "฿": ("THB",),
     "₱": ("PHP",),
     "₦": ("NGN",),
+    "₾": ("GEL",),
+    "₸": ("KZT",),
+    "₮": ("MNT",),
+    "₼": ("AZN",),
+    "₲": ("PYG",),
 }
 
 
