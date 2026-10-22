@@ -111,3 +111,38 @@ describe("Books begin with other keyboards and early years", () => {
     expect(isHistoryStart("0050-02-30")).toBe(false);
   });
 });
+
+// w21/502: a blank Books begin was re-read as "today" on every send, so a retry
+// across local midnight changed the request and minted a new requestId.
+describe("a blank Books begin settled on entering Review", () => {
+  const beforeMidnight = new Date(2026, 9, 21, 23, 59, 50);
+  const afterMidnight = new Date(2026, 9, 22, 0, 0, 10);
+  const blank = { currency: "USD", historyStart: "" };
+
+  it("moves with the clock while the field stays blank", () => {
+    expect(setupFields(blank, beforeMidnight).historyStart).toBe("2026-10-21");
+    expect(setupFields(blank, afterMidnight).historyStart).toBe("2026-10-22");
+  });
+
+  it("holds once the filled date is written back, across midnight", () => {
+    const settled = {
+      ...blank,
+      historyStart: setupFields(blank, beforeMidnight).historyStart,
+    };
+    expect(setupFields(settled, afterMidnight).historyStart).toBe("2026-10-21");
+  });
+
+  it("is written back when Next leaves the form step", () => {
+    const source = fs
+      .readFileSync(
+        path.join(__dirname, "..", "create-ledger-screen.tsx"),
+        "utf8",
+      )
+      .replace(/\s+/g, "");
+    expect(
+      source.includes(
+        'if(step===1)setValue("historyStart",setupFields(getValues()).historyStart,);',
+      ),
+    ).toBe(true);
+  });
+});

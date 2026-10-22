@@ -525,6 +525,14 @@ export function CreateLedgerScreen(): JSX.Element {
                     // opening amount included: one left invalid used to
                     // surface only as a Create that did nothing (w21/105).
                     if (step === 1 && !(await trigger())) return;
+                    // A blank Books begin becomes today once, here, so the
+                    // preview, the create and a retry past midnight all carry
+                    // the same date (w21/502).
+                    if (step === 1)
+                      setValue(
+                        "historyStart",
+                        setupFields(getValues()).historyStart,
+                      );
                     setStep((current) => Math.min(current + 1, 2));
                   })();
                 } else {
