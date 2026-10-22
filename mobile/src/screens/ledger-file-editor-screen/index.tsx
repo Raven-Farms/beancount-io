@@ -60,7 +60,6 @@ import {
 import { createEditorRecovery } from "@/components/code-editor/editor-recovery";
 import { isBeancountFile } from "@/common/ledger-file-types";
 import {
-  GetLedgerErrorsDocument,
   useCreateLedgerFileMutation,
   useGetLedgerFileQuery,
   useUpdateLedgerFileMutation,
@@ -77,6 +76,7 @@ import {
   resetRevisionTracker,
 } from "@/components/code-editor/revision-tracker";
 import { isConflictFailure } from "@/common/ledger-conflict";
+import { queryLedgerErrors } from "@/common/ledger-errors-read";
 import {
   errorHint,
   errorMessageWithHint,
@@ -517,12 +517,7 @@ function LedgerFileEditorSession({
       await invalidateLedgerData(client, "errors");
       let after: typeof allErrors | undefined;
       try {
-        const { data } = await client.query({
-          query: GetLedgerErrorsDocument,
-          variables: { ledgerId },
-          fetchPolicy: "cache-first",
-        });
-        after = data?.getLedgerErrors;
+        after = await queryLedgerErrors(client, ledgerId);
       } catch {
         return;
       }

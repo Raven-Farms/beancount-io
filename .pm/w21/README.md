@@ -30,7 +30,6 @@
 - [586](./blocked/586.md) — The Android build declares the advertising-ID permission (`AD_ID`) though nothing uses it — **blocked:** needs the store owner to confirm why it was added and to change Play's advertising-ID declaration (Play Console access)
 - [587](./blocked/587.md) — Deleting a file that `main.bean` includes just says "Deleted": the ledger breaks or silently loses the file's entries — **blocked:** needs an owner decision on the delete contract for REST, GraphQL and MCP (refuse, preview, or warn after)
 - [588](./blocked/588.md) — New File creates a file nothing includes, so its entries never count, and Files doesn't show which files are read — **blocked:** needs an owner product decision on including new files (app only or every surface) and on marking files the ledger does not read
-- [591](./591.md) — On servers older than 2026-10-21, `getLedgerErrors` (now selecting `code`/`hint`) fails: Notifications breaks, the bell reads 0, the editor's checks go silent
 - [592](./592.md) — Creating a ledger fails on servers older than 2026-10-20, even Starter and Sample (ADR021's older-backend rule not followed)
 - [593](./593.md) — Test connection says "Connected" without checking that the server's schema is new enough
 - [594](./594.md) — Amounts with 17+ significant digits show wrong digits: "1.234567890123456690 ETH" for …789

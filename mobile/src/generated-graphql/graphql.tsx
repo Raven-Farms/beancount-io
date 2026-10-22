@@ -204,6 +204,13 @@ export type GetLedgerErrorsQueryVariables = Exact<{
 
 export type GetLedgerErrorsQuery = { getLedgerErrors: Array<{ filename: string | null, lineno: number | null, message: string, code: string | null, hint: string | null }> };
 
+export type GetLedgerErrorsBasicQueryVariables = Exact<{
+  ledgerId: string;
+}>;
+
+
+export type GetLedgerErrorsBasicQuery = { getLedgerErrors: Array<{ filename: string | null, lineno: number | null, message: string }> };
+
 export type GetLedgerFileQueryVariables = Exact<{
   ledgerId: string;
   path: string;
@@ -1546,6 +1553,51 @@ export type GetLedgerErrorsQueryHookResult = ReturnType<typeof useGetLedgerError
 export type GetLedgerErrorsLazyQueryHookResult = ReturnType<typeof useGetLedgerErrorsLazyQuery>;
 export type GetLedgerErrorsSuspenseQueryHookResult = ReturnType<typeof useGetLedgerErrorsSuspenseQuery>;
 export type GetLedgerErrorsQueryResult = Apollo.QueryResult<GetLedgerErrorsQuery, GetLedgerErrorsQueryVariables>;
+export const GetLedgerErrorsBasicDocument = gql`
+    query getLedgerErrorsBasic($ledgerId: String!) {
+  getLedgerErrors(ledgerId: $ledgerId) {
+    filename
+    lineno
+    message
+  }
+}
+    `;
+
+/**
+ * __useGetLedgerErrorsBasicQuery__
+ *
+ * To run a query within a React component, call `useGetLedgerErrorsBasicQuery` and pass it any options that fit your needs.
+ * When your component renders, `useGetLedgerErrorsBasicQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useGetLedgerErrorsBasicQuery({
+ *   variables: {
+ *      ledgerId: // value for 'ledgerId'
+ *   },
+ * });
+ */
+export function useGetLedgerErrorsBasicQuery(baseOptions: Apollo.QueryHookOptions<GetLedgerErrorsBasicQuery, GetLedgerErrorsBasicQueryVariables> & ({ variables: GetLedgerErrorsBasicQueryVariables; skip?: boolean; } | { skip: boolean; }) ) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<GetLedgerErrorsBasicQuery, GetLedgerErrorsBasicQueryVariables>(GetLedgerErrorsBasicDocument, options);
+      }
+export function useGetLedgerErrorsBasicLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<GetLedgerErrorsBasicQuery, GetLedgerErrorsBasicQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<GetLedgerErrorsBasicQuery, GetLedgerErrorsBasicQueryVariables>(GetLedgerErrorsBasicDocument, options);
+        }
+// @ts-ignore
+export function useGetLedgerErrorsBasicSuspenseQuery(baseOptions?: Apollo.SuspenseQueryHookOptions<GetLedgerErrorsBasicQuery, GetLedgerErrorsBasicQueryVariables>): Apollo.UseSuspenseQueryResult<GetLedgerErrorsBasicQuery, GetLedgerErrorsBasicQueryVariables>;
+export function useGetLedgerErrorsBasicSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<GetLedgerErrorsBasicQuery, GetLedgerErrorsBasicQueryVariables>): Apollo.UseSuspenseQueryResult<GetLedgerErrorsBasicQuery | undefined, GetLedgerErrorsBasicQueryVariables>;
+export function useGetLedgerErrorsBasicSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<GetLedgerErrorsBasicQuery, GetLedgerErrorsBasicQueryVariables>) {
+          const options = baseOptions === Apollo.skipToken ? baseOptions : {...defaultOptions, ...baseOptions}
+          return Apollo.useSuspenseQuery<GetLedgerErrorsBasicQuery, GetLedgerErrorsBasicQueryVariables>(GetLedgerErrorsBasicDocument, options);
+        }
+export type GetLedgerErrorsBasicQueryHookResult = ReturnType<typeof useGetLedgerErrorsBasicQuery>;
+export type GetLedgerErrorsBasicLazyQueryHookResult = ReturnType<typeof useGetLedgerErrorsBasicLazyQuery>;
+export type GetLedgerErrorsBasicSuspenseQueryHookResult = ReturnType<typeof useGetLedgerErrorsBasicSuspenseQuery>;
+export type GetLedgerErrorsBasicQueryResult = Apollo.QueryResult<GetLedgerErrorsBasicQuery, GetLedgerErrorsBasicQueryVariables>;
 export const GetLedgerFileDocument = gql`
     query getLedgerFile($ledgerId: String!, $path: String!) {
   getLedgerFile(ledgerId: $ledgerId, path: $path) {

@@ -96,8 +96,9 @@ describe("w21/006 cold-start revalidation", () => {
     const path = require("path") as typeof import("path");
     const root = path.join(__dirname, "..", "..", "..");
     const allowed = new Set([
-      // The read right after `invalidateLedgerData(…, "errors")` evicted it.
-      "screens/ledger-file-editor-screen/index.tsx",
+      // The read right after `invalidateLedgerData(…, "errors")` evicted it
+      // (the editor's check after a save, w21/591).
+      "common/ledger-errors-read.ts",
       // The client default's own follow-up policy.
       "common/apollo/default-options.ts",
     ]);
