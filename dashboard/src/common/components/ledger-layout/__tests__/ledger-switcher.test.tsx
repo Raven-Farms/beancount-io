@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import * as apolloClient from "@apollo/client/react";
@@ -258,6 +258,46 @@ describe("LedgerSwitcher", () => {
   });
 
   /** A failed ledger read is not "no ledgers found" (w4/275). */
+  // An input method's Escape cancels its composition; it must not close the
+  // switcher and drop the search (w4/318).
+  it.each([
+    { isComposing: true, keyCode: 27 },
+    { isComposing: false, keyCode: 229 },
+  ])(
+    "keeps the search open for a composing Escape (%o), then closes on an ordinary one",
+    async (composing) => {
+      const user = userEvent.setup();
+      render(
+        <SidebarProvider>
+          <LedgerSwitcher
+            currentLedgerId="open_ledger/ledger-1"
+            currentLedgerName="ledger-1"
+            currentLedgerFullName="open_ledger/ledger-1"
+          />
+        </SidebarProvider>,
+      );
+      const opener = screen.getByRole("combobox", {
+        name: "ledger-1 — switch ledger",
+      });
+      await user.click(opener);
+      const search = screen.getByRole("combobox", { name: /search ledgers/i });
+      await user.type(search, "ledger-1");
+
+      fireEvent.keyDown(search, { key: "Escape", ...composing });
+      expect(search).toBeInTheDocument();
+      expect(search).toHaveValue("ledger-1");
+      expect(opener).toHaveAttribute("aria-expanded", "true");
+
+      fireEvent.keyDown(search, { key: "Escape", keyCode: 27 });
+      await waitFor(() =>
+        expect(opener).toHaveAttribute("aria-expanded", "false"),
+      );
+      expect(
+        screen.queryByRole("combobox", { name: /search ledgers/i }),
+      ).toBeNull();
+    },
+  );
+
   describe("failed ledger read", () => {
     const view = () => (
       <SidebarProvider>

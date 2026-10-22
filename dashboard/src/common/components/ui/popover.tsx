@@ -2,6 +2,7 @@ import * as React from "react";
 import * as PopoverPrimitive from "@radix-ui/react-popover";
 
 import { cn } from "@/common/lib/utils/utils.ts";
+import { isCompositionKey } from "@/common/lib/keyboard/is-composition-key";
 
 function Popover({
   ...props
@@ -26,6 +27,7 @@ function PopoverContent({
   sideOffset = 4,
   onWheel,
   onTouchMove,
+  onEscapeKeyDown,
   ...props
 }: React.ComponentProps<typeof PopoverPrimitive.Content>) {
   return (
@@ -39,6 +41,16 @@ function PopoverContent({
           className,
         )}
         {...props}
+        // Radix hears Escape at the document before any field does. An input
+        // method's Escape only cancels its composition, so it must not close
+        // the popup and drop its search, as in DialogContent (w4/318).
+        onEscapeKeyDown={(event) => {
+          if (isCompositionKey(event)) {
+            event.preventDefault();
+            return;
+          }
+          onEscapeKeyDown?.(event);
+        }}
         onWheel={(event) => {
           onWheel?.(event);
           event.stopPropagation();

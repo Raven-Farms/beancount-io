@@ -2,6 +2,7 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { useState } from "react";
 import { describe, expect, it, vi } from "vitest";
 import { Combobox } from "../combobox";
+import { Popover, PopoverContent, PopoverTrigger } from "../popover";
 import {
   Dialog,
   DialogContent,
@@ -115,6 +116,35 @@ describe("Dialog Escape during IME composition", () => {
 
     fireEvent.keyDown(picker, { key: "Escape", keyCode: 27 });
     expect(picker).toHaveAttribute("aria-expanded", "false");
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+  });
+
+  it("keeps a plain popover and its dialog open while composing (w4/318)", () => {
+    const onOpenChange = vi.fn();
+    render(
+      <Dialog open onOpenChange={onOpenChange}>
+        <DialogContent>
+          <DialogTitle>Switch</DialogTitle>
+          <DialogDescription>QA</DialogDescription>
+          <Popover defaultOpen>
+            <PopoverTrigger>Pick</PopoverTrigger>
+            <PopoverContent>
+              <input aria-label="Search" defaultValue="東" />
+            </PopoverContent>
+          </Popover>
+        </DialogContent>
+      </Dialog>,
+    );
+    const search = screen.getByLabelText("Search");
+
+    fireEvent.keyDown(search, { key: "Escape", isComposing: true });
+    expect(screen.getByLabelText("Search")).toHaveValue("東");
+    expect(onOpenChange).not.toHaveBeenCalled();
+
+    // An ordinary Escape closes only the top layer, the popover.
+    fireEvent.keyDown(search, { key: "Escape", keyCode: 27 });
+    expect(screen.queryByLabelText("Search")).toBeNull();
+    expect(onOpenChange).not.toHaveBeenCalled();
     expect(screen.getByRole("dialog")).toBeInTheDocument();
   });
 });
