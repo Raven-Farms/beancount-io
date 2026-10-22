@@ -2,6 +2,7 @@ import BigNumber from "bignumber.js";
 import type { DirectiveJson, MetaValueJson } from "@rustledger/wasm";
 import { collectLedgerAccounts } from "./account-list";
 import { divideWithPythonDecimalContext } from "./decimal-context";
+import { documentFilePath } from "./document-validation";
 
 /**
  * Pure directive-walk reports over a parsed `DirectiveJson[]` — the Tier-2
@@ -321,6 +322,7 @@ export function commodityPairsWithPrices(
 export interface LedgerDocument {
   date: string;
   account: string;
+  /** Repository-relative, resolved against the declaring file (w4/301). */
   path: string;
   tags: string[];
   links: string[];
@@ -339,7 +341,7 @@ export function collectDocuments(
     .map((directive) => ({
       date: directive.date,
       account: directive.account,
-      path: directive.path,
+      path: documentFilePath(directive),
       tags: directive.tags ?? [],
       links: directive.links ?? [],
       meta: directive.meta ?? {},

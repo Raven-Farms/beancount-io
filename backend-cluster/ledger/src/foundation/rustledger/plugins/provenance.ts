@@ -109,3 +109,23 @@ export function restoreDirectiveSourceIds(
     if (id !== undefined && id !== null) sourceIds.set(directive, id);
   });
 }
+
+/** Serialize source locations, parallel to the input, across a worker clone. */
+export function captureDirectiveSourceLocations(
+  directives: readonly DirectiveJson[],
+): Array<DirectiveSourceLocation | null> {
+  return directives.map((directive) => sourceLocations.get(directive) ?? null);
+}
+
+/** Restore source locations on the fresh directive objects from postMessage. */
+export function restoreDirectiveSourceLocations(
+  directives: readonly DirectiveJson[],
+  captured: readonly (DirectiveSourceLocation | null)[],
+): void {
+  directives.forEach((directive, index) => {
+    const location = captured[index];
+    if (location !== undefined && location !== null)
+      sourceLocations.set(directive, location);
+  });
+}
+

@@ -16,6 +16,7 @@ import {
   makeAccountNameMatcher,
   type EntrySourceLocation,
 } from "@/foundation/rustledger";
+import { documentFilePath } from "@/foundation/rustledger/document-validation";
 import type { PostingCostJson, PostingJson } from "@rustledger/wasm";
 
 /** beancount class name for each rustledger directive tag. */
@@ -172,7 +173,7 @@ export function serialiseV1Directive(
       return {
         ...base,
         account: directive.account,
-        filename: directive.path,
+        filename: documentFilePath(directive),
         tags: directive.tags ? [...directive.tags] : [],
         links: directive.links ? [...directive.links] : [],
       };

@@ -11,6 +11,7 @@ import { tagDiscoveredDocuments } from "./tag-discovered-documents";
 import { getDirectiveSourceId as sourceIdOf } from "./provenance";
 export {
   captureDirectiveSourceIds,
+  captureDirectiveSourceLocations,
   captureGeneratedDirectives,
   getDirectiveSourceId,
   getDirectiveSourceLocation,
@@ -18,6 +19,7 @@ export {
   isGeneratedDirective,
   markGeneratedDirective,
   restoreDirectiveSourceIds,
+  restoreDirectiveSourceLocations,
   restoreGeneratedDirectives,
   seedDirectiveSourceIds,
   type DirectiveSourceLocation,

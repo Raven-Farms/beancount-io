@@ -17,6 +17,7 @@ import { LedgerHandleCache } from "./ledger-handle-cache";
 import {
   applyPlugins,
   captureDirectiveSourceIds,
+  captureDirectiveSourceLocations,
   captureGeneratedDirectives,
   collectLedgerPlugins,
   getDirectiveSourceId,
@@ -26,6 +27,7 @@ import {
   markGeneratedDirective,
   seedDirectiveSourceIds,
   restoreDirectiveSourceIds,
+  restoreDirectiveSourceLocations,
   restoreGeneratedDirectives,
   localTodayStr,
   neutralizeIncludedOptionsAndPlugins,
@@ -104,6 +106,12 @@ export interface LedgerSnapshot {
   directiveCount: number;
   /** Worker-safe provenance, parallel to `directives`; internal engine data. */
   sourceIds?: Array<string | null>;
+  /**
+   * Each directive's declaring file and line, parallel to `directives`, so a
+   * Document path resolves against its own file after the worker clone
+   * (w4/301).
+   */
+  sourceLocations?: Array<DirectiveSourceLocation | null>;
   /** Which directives are generated copies, parallel to `directives`. */
   generated?: boolean[];
   /** Complete source index, built only for callers that explicitly request it. */
@@ -468,6 +476,12 @@ export async function parseLedgerFiles(
     if (snapshot.sourceIds !== undefined) {
       restoreDirectiveSourceIds(snapshot.directives, snapshot.sourceIds);
     }
+    if (snapshot.sourceLocations !== undefined) {
+      restoreDirectiveSourceLocations(
+        snapshot.directives,
+        snapshot.sourceLocations,
+      );
+    }
     if (snapshot.generated !== undefined) {
       restoreGeneratedDirectives(snapshot.directives, snapshot.generated);
     }
@@ -484,6 +498,13 @@ export async function parseLedgerFiles(
         : {}),
       ...(snapshot.generated
         ? { generated: Object.freeze(snapshot.generated) as boolean[] }
+        : {}),
+      ...(snapshot.sourceLocations
+        ? {
+            sourceLocations: Object.freeze(snapshot.sourceLocations) as Array<
+              DirectiveSourceLocation | null
+            >,
+          }
         : {}),
       ...(snapshot.sourceDetails
         ? { sourceDetails: Object.freeze(snapshot.sourceDetails) }
@@ -679,6 +700,10 @@ async function parseLedgerFilesUncached(
     capturedSourceIds !== undefined
       ? captureGeneratedDirectives(directives)
       : undefined;
+  const capturedLocations =
+    capturedSourceIds !== undefined
+      ? captureDirectiveSourceLocations(directives)
+      : undefined;
   const serializedSourceDetails =
     options.includeSourceDetails === true && sourceDetails !== undefined
       ? Object.fromEntries(sourceDetails)
@@ -699,6 +724,13 @@ async function parseLedgerFilesUncached(
       : {}),
     ...(capturedGenerated !== undefined
       ? { generated: Object.freeze(capturedGenerated) as boolean[] }
+      : {}),
+    ...(capturedLocations !== undefined
+      ? {
+          sourceLocations: Object.freeze(capturedLocations) as Array<
+            DirectiveSourceLocation | null
+          >,
+        }
       : {}),
     ...(serializedSourceDetails !== undefined
       ? { sourceDetails: Object.freeze(serializedSourceDetails) }

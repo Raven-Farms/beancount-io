@@ -15,6 +15,7 @@ import {
   buildEntryIdMap,
   collectAttributes,
   closeRustledgerWorkerPool,
+  collectDocuments,
   countDirectives,
   countLedgerDirectives,
   countLedgerDirectivesInProcess,
@@ -583,6 +584,47 @@ async function verifyWindowedPlaintextExport(): Promise<void> {
  * complete source block, and the source-details marker probe must not land
  * inside the literal.
  */
+/**
+ * w4/301: a Document's relative path names a file beside its declaring source,
+ * through the production worker clone and snapshot cache. The report used to
+ * hand `books/documents.bean`'s `"receipt.txt"` out as a root `receipt.txt`.
+ */
+async function verifyDocumentSourcePaths(): Promise<void> {
+  const files: FileMap = {
+    "main.bean": [
+      "2026-01-01 open Assets:Cash USD",
+      'include "books/documents.bean"',
+      'include "other/documents.bean"',
+      '2026-10-19 document Assets:Cash "books/receipt.txt"',
+      "",
+    ].join("\n"),
+    "books/documents.bean": '2026-10-21 document Assets:Cash "receipt.txt"\n',
+    "other/documents.bean": '2026-10-22 document Assets:Cash "receipt.txt"\n',
+    "books/receipt.txt": "qa root and included\n",
+    "other/receipt.txt": "qa other include\n",
+  };
+  const repoPaths = Object.keys(files);
+  for (const round of ["parsed", "cached"]) {
+    const snapshot = await parseLedgerFiles(files, "main.bean", { repoPaths });
+    assert(
+      snapshot.valid && snapshot.errors.length === 0,
+      `document source fixture is valid (${round})`,
+    );
+    const byDate = Object.fromEntries(
+      collectDocuments(snapshot.directives).map((doc) => [doc.date, doc.path]),
+    );
+    deepStrictEqual(byDate, {
+      "2026-10-19": "books/receipt.txt",
+      "2026-10-21": "books/receipt.txt",
+      "2026-10-22": "other/receipt.txt",
+    });
+    assert(
+      Object.values(byDate).every((path) => path in files),
+      `every reported document path names a committed file (${round})`,
+    );
+  }
+}
+
 async function verifyMultilineSources(): Promise<void> {
   const notes = [
     'qa "quoted" C:\\qa\\receipts\nsecond line\nthird line',
@@ -1596,6 +1638,7 @@ async function main(): Promise<void> {
   );
 
   await verifyMultilineSources();
+  await verifyDocumentSourcePaths();
 
   // w23/011: an undecodable source the entry point does not reach changes
   // nothing; one it includes is reported by path, and the rest still parses.
