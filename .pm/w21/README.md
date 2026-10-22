@@ -21,6 +21,7 @@
 - [228](./blocked/228.md) — New Transaction stamps the first operating currency on every posting; no currency or price control — **blocked:** needs account-constraint currencies on the client, a price path (legacy field or typed mutation, deploy first) and an owner-approved form design
 - [304](./blocked/304.md) — Budgets on Liabilities/Assets get favourability backwards (owner decision) — **blocked:** needs an owner decision between deriving direction from the account root and limiting the picker to Income and Expenses, which reverses w1/023's "every root" rule
 - [424](./blocked/424.md) — Mobile does not show the ledger service's fix hints (split from 311) — **blocked:** production's GraphQL schema lacks `code`/`hint` until backend-v2 deploys; mobile's client is generated from it
+- [449](./blocked/449.md) — addEntries/bulkEntries have no idempotency key: a retry after a lost response can duplicate the entry (split from 351) — **blocked:** needs an owner-approved contract (field, bounds, retention) across REST/GraphQL/MCP and a backend-v2 deploy
 - [425](./425.md) — Zero-decimal budgets show ¥1,016.13 (290 regression)
 - [426](./426.md) — Single-commodity account detail lacks price note (291/279 follow-up)
 - [427](./427.md) — Guest: per-entry NOT_FOUND blanks whole example (292 gap)
@@ -50,7 +51,6 @@
 - [451](./451.md) — Fixed 0.005 tolerance folds BTC balances away
 - [452](./452.md) — Picker hides Create for a full name that prefixes an account
 - [315](./blocked/315.md) — In-app commits signed with Gitea username and real email (no full_name, no noreply) — **blocked:** needs the owner's noreply-address and published-history decisions, and a production backfill of existing Gitea users that can't be verified here
-- [351](./351.md) — Mid-save connection drop says "Nothing was saved"; retry duplicates
 - [352](./352.md) — Log out hangs ~60 s on a captive network, no busy state
 - [353](./353.md) — Load more fails silently on Transactions and Account detail
 - [354](./354.md) — Toasts/inline errors silent under iOS VoiceOver (liveRegion is Android-only)

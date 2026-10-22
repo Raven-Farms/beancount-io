@@ -127,14 +127,30 @@ describe("ledgerWriteFailureMessage", () => {
   });
 
   // w21/117: transport text reached the screen raw, in English, as if the
-  // ledger had refused the write.
-  it("says offline, in the user's language, for a write that never arrived", () => {
-    expect(
-      ledgerWriteFailureMessage(new Error("Network request failed"), i18n),
-    ).toBe(i18n.t("ledgerWriteOffline"));
+  // ledger had refused the write. w21/351: a dropped connection looks the same
+  // as an offline one and the write may have committed, so only a failure
+  // before the request left says nothing was saved.
+  it("says nothing was saved only for a write that never left", () => {
     expect(
       ledgerWriteFailureMessage(new Error("OAuth refresh failed"), i18n),
     ).toBe(i18n.t("ledgerWriteOffline"));
+    expect(
+      ledgerWriteFailureMessage(
+        Object.assign(new Error("Network request failed"), {
+          networkError: new Error("OAuth refresh failed"),
+        }),
+        i18n,
+      ),
+    ).toBe(i18n.t("ledgerWriteOffline"));
+  });
+
+  it("cannot confirm a write whose connection failed", () => {
+    expect(
+      ledgerWriteFailureMessage(new Error("Network request failed"), i18n),
+    ).toBe(i18n.t("ledgerWriteUnconfirmed"));
+    expect(ledgerWriteFailureMessage(new Error("Failed to fetch"), i18n)).toBe(
+      i18n.t("ledgerWriteUnconfirmed"),
+    );
     expect(
       ledgerWriteFailureMessage(
         Object.assign(new Error("Network request failed"), {
@@ -142,7 +158,7 @@ describe("ledgerWriteFailureMessage", () => {
         }),
         i18n,
       ),
-    ).toBe(i18n.t("ledgerWriteOffline"));
+    ).toBe(i18n.t("ledgerWriteUnconfirmed"));
   });
 
   // w21/327: a response means the server was reached, so a gateway 5xx may have
@@ -206,5 +222,25 @@ describe("ledgerWriteFailureMessage", () => {
 
   it("returns null when there is nothing to say, so the screen's copy shows", () => {
     expect(ledgerWriteFailureMessage("boom", i18n)).toBe(null);
+  });
+});
+
+// w21/351: New Transaction said "Failed to save" for a dropped connection; the
+// shared write hook now words every write failure through this module.
+describe("useLedgerWrite", () => {
+  it("describes a failed write with ledgerWriteFailureMessage", () => {
+    const fs = require("fs");
+    const path = require("path");
+    const src = fs
+      .readFileSync(
+        path.join(__dirname, "../hooks/use-ledger-write.ts"),
+        "utf8",
+      )
+      .replace(/\s+/g, "");
+    expect(
+      src.includes(
+        "describeRefusal:(error)=>ledgerWriteFailureMessage(error,i18n)",
+      ),
+    ).toBe(true);
   });
 });

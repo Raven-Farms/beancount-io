@@ -110,13 +110,13 @@ describe("deleteTransaction", () => {
   });
 
   // w21/117: transport text showed raw, in English, as if the ledger refused.
-  it("shows a failure that never reached the ledger as offline", async () => {
+  it("shows a lost connection as unconfirmed, not as nothing saved", async () => {
     const { run, record } = harness(async () => {
       throw new Error("Network request failed");
     });
 
     expect(await run).toBe(false);
-    expect(record.dialogs[0]?.message).toBe("ledgerWriteOffline");
+    expect(record.dialogs[0]?.message).toBe("ledgerWriteUnconfirmed");
   });
 
   it("confirms, refreshes and returns on success with no dialog", async () => {
@@ -241,7 +241,7 @@ describe("deleting an entry that changed elsewhere", () => {
     );
     expect(await run).toBe(false);
     expect(record.stale).toEqual([]);
-    expect(record.dialogs[0]?.message).toBe("ledgerWriteOffline");
+    expect(record.dialogs[0]?.message).toBe("ledgerWriteUnconfirmed");
   });
 
   it("classifies the two codes and nothing else", () => {

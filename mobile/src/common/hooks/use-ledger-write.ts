@@ -2,7 +2,7 @@ import { useCallback } from "react";
 import { useRouter } from "expo-router";
 import { haptics } from "@/common/haptics";
 import { useToast } from "@/common/hooks/use-toast";
-import { describeLedgerRefusal } from "@/common/ledger-refusal";
+import { ledgerWriteFailureMessage } from "@/common/ledger-refusal";
 import { i18n } from "@/translations";
 import {
   runLedgerWrite,
@@ -33,7 +33,7 @@ export const useLedgerWrite = () => {
           goBack: () => {
             if (isHere()) router.back();
           },
-          describeRefusal: (error) => describeLedgerRefusal(error, i18n),
+          describeRefusal: (error) => ledgerWriteFailureMessage(error, i18n),
         },
         spec,
       ),

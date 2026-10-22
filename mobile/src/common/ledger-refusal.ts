@@ -82,6 +82,17 @@ function responseStatus(error: unknown): number | null {
   return null;
 }
 
+/** Failures raised before any write request was sent. */
+const PRE_SEND_FAILURE = /OAuth refresh failed/i;
+
+function errorText(error: unknown): string {
+  const read = (candidate: unknown): string => {
+    const message = (candidate as { message?: unknown } | null)?.message;
+    return typeof message === "string" ? message : "";
+  };
+  return `${read(error)} ${read((error as { networkError?: unknown } | null)?.networkError)}`;
+}
+
 function isTransportFailure(error: unknown): boolean {
   if (typeof error !== "object" || error === null) return false;
   if ((error as { networkError?: unknown }).networkError) return true;
@@ -114,7 +125,18 @@ export function ledgerWriteFailureMessage(
   }
   if (codes.includes("RATE_LIMITED")) return i18n.t("ledgerWriteRateLimited");
   if (responseStatus(error) !== null) return i18n.t("ledgerWriteUnconfirmed");
-  if (isTransportFailure(error)) return i18n.t("ledgerWriteOffline");
+  if (isTransportFailure(error)) {
+    // A request that never left (the token refresh failed first) saved
+    // nothing. Any other transport failure is also what a connection that
+    // drops after the request was sent looks like, and then the write may
+    // have committed: "Nothing was saved" invited a retry that wrote the entry
+    // twice (w21/351).
+    return i18n.t(
+      PRE_SEND_FAILURE.test(errorText(error))
+        ? "ledgerWriteOffline"
+        : "ledgerWriteUnconfirmed",
+    );
+  }
   return null;
 }
 
