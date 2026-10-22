@@ -589,7 +589,11 @@ skills deduplicate against each other: the ledger itself is the dedup database.
   narration is empty) uppercased with whitespace collapsed, and the source
   account. A row with both a payee and a narration hashes both, as
   `date|amount|payee|narration|account`, so rows that differ only in payee
-  keep distinct ids however the export orders them. Identical rows within one
+  keep distinct ids however the export orders them. A payee or narration that
+  itself contains `|` or `\` is written with each as `\|` or `\\` in the hash
+  input, so payee `Shop|Branch` with narration `Purchase` and payee `Shop` with
+  narration `Branch|Purchase` are different rows; ids written before that
+  (unescaped) still match, but only when the payee and narration agree. Identical rows within one
   file take an occurrence suffix, so re-importing the same file skips every row.
   A row with one description is counted among the one-description rows only, so
   a blank payee cell beside rows that name a payee gives the same id wherever

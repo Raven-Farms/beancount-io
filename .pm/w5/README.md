@@ -65,7 +65,6 @@
 - [959 — Treat repeated allowed currencies as one during transaction inference](./959.md) — minor CLI existing-ledger/native-import inference finding; USD/EUR and split-file controls reproduced 2026-10-21.
 - [958 — Keep unused unopened accounts out of remembered CSV settings](./958.md) — minor CLI memory-guard follow-up to 452/714; empty, skipped and fully categorized exports reproduced 2026-10-21.
 - [957 — Allow instrument units in the portfolio preset's holdings account](./957.md) — minor CLI first-purchase setup finding; reproduced twice in USD/EUR on 2026-10-21.
-- [900 — Keep payee and narration boundaries in generated import IDs](./900.md) — major CLI skipped-payment follow-up to w1/149 and 140; reproduced 2026-10-20.
 - [901 — Preserve exact equity offsets for wide preset opening balances](./901.md) — trivial CLI precision follow-up to 310; reproduced 2026-10-20.
 - [902 — Make import price-conflict advice respect `unique_prices`](./902.md) — trivial CLI recovery-advice follow-up to 397; reproduced 2026-10-20.
 - [903 — Explain recorded quotes that lose to another price](./903.md) — minor CLI price-feedback follow-up to 741; generated winners and forced written corrections in included files reproduced 2026-10-20/21.

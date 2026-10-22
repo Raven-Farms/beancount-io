@@ -19,7 +19,7 @@ import shlex
 import sys
 import unicodedata
 from collections.abc import Callable, Iterable, Iterator, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from decimal import Context, Decimal
 from itertools import combinations
 from pathlib import Path
@@ -1912,6 +1912,10 @@ def _same_row(
     if not _legs_agree(fingerprint[3], found_print[3]):
         return False
     if generated:
+        # An older id spelled a description without framing its `|`, so it can
+        # name a different payee and narration split; those must agree (w5/900).
+        if lookup_only and _needs_framing(found_print[1], found_print[2], fingerprint[1], fingerprint[2]):
+            return bool(found_print[:3] == fingerprint[:3])
         return bool(found_print[0] == fingerprint[0])
     if key[1] in {"bank", "import-id"}:
         return True
@@ -2475,6 +2479,10 @@ def _hash_rows(entries: list[Any], account: str, keys: list[str], transaction: t
     Hashing ahead of the loop lets a group of rows claim stored ids together.
     """
     seen: dict[str, int] = {}
+    # Rows with a `|` or `\\` in a payee or narration number their ids twice: with
+    # the fields framed (the canonical id) and as older releases wrote them,
+    # which stays a lookup-only spelling (w5/900).
+    unframed_seen: dict[str, int] = {}
     hashed: dict[int, _HashedRow] = {}
     for index, raw in enumerate(entries):
         entry = normalize_entry_strings(raw)
@@ -2482,7 +2490,15 @@ def _hash_rows(entries: list[Any], account: str, keys: list[str], transaction: t
             continue
         if entry.meta.get("import-id") or _native_import_id(entry.meta, keys) is not None:
             continue
-        hashed[index] = _hash_import_ids(entry, account, seen, raw_narration=raw.narration, raw_payee=raw.payee)
+        if not _needs_framing(raw.narration, raw.payee, entry.narration, entry.payee):
+            hashed[index] = _hash_import_ids(entry, account, seen, raw_narration=raw.narration, raw_payee=raw.payee)
+            continue
+        framed = _hash_import_ids(entry, account, seen, raw_narration=raw.narration, raw_payee=raw.payee, framed=True)
+        older = _hash_import_ids(entry, account, unframed_seen, raw_narration=raw.narration, raw_payee=raw.payee)
+        hashed[index] = replace(
+            framed,
+            narration_only=tuple(dict.fromkeys([*framed.narration_only, older.canonical, *older.narration_only])),
+        )
     return hashed
 
 
@@ -2548,8 +2564,24 @@ def _claim_payeeless_ids(
     return claimed, owners
 
 
+def _frame(text: str, framed: bool) -> str:
+    """A description field with the separator and its escape made literal, so field boundaries are unambiguous."""
+    return text.replace("\\", "\\\\").replace("|", "\\|") if framed else text
+
+
+def _needs_framing(*fields: str | None) -> bool:
+    """Whether a payee or narration holds the hash separator `|` or the backslash that escapes it (w5/900)."""
+    return any(char in (field or "") for field in fields for char in "|\\")
+
+
 def _hash_import_ids(
-    entry: Any, account: str, seen: dict[str, int], *, raw_narration: str | None, raw_payee: str | None
+    entry: Any,
+    account: str,
+    seen: dict[str, int],
+    *,
+    raw_narration: str | None,
+    raw_payee: str | None,
+    framed: bool = False,
 ) -> _HashedRow:
     """The canonical import id, plus every older spelling to also match on.
 
@@ -2593,9 +2625,11 @@ def _hash_import_ids(
     raw_description = " ".join(str(raw_narration or raw_payee or "").upper().split())
     # Normalize after upper(): uppercasing NFD text can itself emit a
     # non-canonical form, and the digest has to be stable byte-for-byte.
-    description = unicodedata.normalize("NFC", raw_description)
-    escaped = unicodedata.normalize("NFC", " ".join(str(entry.narration or entry.payee or "").upper().split()))
-    escaped_payee = unicodedata.normalize("NFC", " ".join(str(entry.payee or "").upper().split()))
+    description = _frame(unicodedata.normalize("NFC", raw_description), framed)
+    escaped = _frame(
+        unicodedata.normalize("NFC", " ".join(str(entry.narration or entry.payee or "").upper().split())), framed
+    )
+    escaped_payee = _frame(unicodedata.normalize("NFC", " ".join(str(entry.payee or "").upper().split())), framed)
     nfc_account = unicodedata.normalize("NFC", account)
     date = entry.date.isoformat()
     units_only = _amounts_exact(amounts)
@@ -2663,7 +2697,7 @@ def _hash_import_ids(
         older.append(_digest_import_id(per_base, seen[per_counter]))
     single = _digest_import_id(single_base, occurrence)
 
-    payee = unicodedata.normalize("NFC", " ".join(str(raw_payee or "").upper().split()))
+    payee = _frame(unicodedata.normalize("NFC", " ".join(str(raw_payee or "").upper().split())), framed)
     if payee and str(raw_narration or "").strip():
         base = _hash_base(date, exact, f"{payee}|{description}", nfc_account)
         paired_escaped = _hash_base(date, exact, f"{escaped_payee}|{escaped}", nfc_account)
