@@ -7,6 +7,7 @@ import { typedCurrencyCode } from "@/screens/open-account-screen/account-name";
 import { useState } from "react";
 import { InlineError } from "@/components/inline-error";
 import {
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -390,7 +391,9 @@ function AddBudgetScreenImpl(): JSX.Element {
                 params.currentAmount,
               )}
               placeholderTextColor={theme.controlPlaceholder}
-              keyboardType="numbers-and-punctuation"
+              keyboardType={
+                Platform.OS === "ios" ? "numbers-and-punctuation" : "numeric"
+              }
               returnKeyType="done"
               accessibilityHint={
                 amountInvalid ? t("budgetAmountInvalid") : undefined
