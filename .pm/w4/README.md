@@ -7,7 +7,7 @@
 
 - [330 — Open Help Center in the dashboard's selected language](./330.md) — minor; dashboard QA, 2026-10-21; German/Persian menu actions open English despite translated pages returning200; English/navigation/focus controls pass.
 
-- [329 — Explain a failed BQL CSV download and keep retry usable](./329.md) — minor; dashboard QA with a simulated browser API failure, 2026-10-21; Download CSV throws without feedback at both widths, while restoration/retry and exact Unicode output pass.
+- [329 — Explain failed BQL and Holdings CSV downloads and keep retry usable](./329.md) — minor; dashboard QA with a simulated browser API failure,2026-10-21; both actions throw without feedback at both widths, while restored retries preserve exact CSV output.
 
 - [328 — Offer a retry after a statement read fails](./328.md) — minor; dashboard QA with injected read failures, 2026-10-21; Trial Balance removes its conversion control and supplies no retry; reload/same-period recovery passes, with three equivalent statement callers source-traced.
 
