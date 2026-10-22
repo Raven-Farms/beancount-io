@@ -232,6 +232,8 @@ export const ru: Translations = {
   postingCost: "себестоимость {{amount}}",
   postingPrice: "цена {{amount}}",
   notInTotal: "Не входит в итог: {{amounts}}",
+  spendingLastMonthNotInTotal:
+    "В прошлом месяце, не учтено в сумме: {{amounts}}",
   atMarket: "{{amount}} по рыночной стоимости",
   atMarketValue: "По рыночной стоимости",
   pricesNotUpdatedSince: {

@@ -208,6 +208,7 @@ export const zh: Translations = {
   postingCost: "成本 {{amount}}",
   postingPrice: "价格 {{amount}}",
   notInTotal: "未计入合计：{{amounts}}",
+  spendingLastMonthNotInTotal: "上月未计入总额：{{amounts}}",
   atMarket: "市值 {{amount}}",
   atMarketValue: "按市值计",
   pricesNotUpdatedSince: {

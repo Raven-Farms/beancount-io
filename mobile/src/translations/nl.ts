@@ -230,6 +230,7 @@ export const nl: Translations = {
   postingCost: "kostprijs {{amount}}",
   postingPrice: "prijs {{amount}}",
   notInTotal: "Niet in totaal: {{amounts}}",
+  spendingLastMonthNotInTotal: "Vorige maand, niet in het totaal: {{amounts}}",
   atMarket: "{{amount}} tegen marktwaarde",
   atMarketValue: "Tegen marktwaarde",
   pricesNotUpdatedSince: {

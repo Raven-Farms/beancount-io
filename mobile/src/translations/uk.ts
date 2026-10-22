@@ -231,6 +231,8 @@ export const uk: Translations = {
   postingCost: "собівартість {{amount}}",
   postingPrice: "ціна {{amount}}",
   notInTotal: "Не входить до підсумку: {{amounts}}",
+  spendingLastMonthNotInTotal:
+    "Минулого місяця, не враховано в сумі: {{amounts}}",
   atMarket: "{{amount}} за ринковою вартістю",
   atMarketValue: "За ринковою вартістю",
   pricesNotUpdatedSince: {

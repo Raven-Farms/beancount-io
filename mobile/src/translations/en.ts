@@ -222,6 +222,7 @@ export const en = {
   postingCost: "cost {{amount}}",
   postingPrice: "price {{amount}}",
   notInTotal: "Not in total: {{amounts}}",
+  spendingLastMonthNotInTotal: "Last month, not in total: {{amounts}}",
   atMarket: "{{amount}} at market",
   atMarketValue: "At market value",
   pricesNotUpdatedSince: {

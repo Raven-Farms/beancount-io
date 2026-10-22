@@ -236,6 +236,7 @@ export const de: Translations = {
   postingCost: "Kosten {{amount}}",
   postingPrice: "Preis {{amount}}",
   notInTotal: "Nicht in der Summe: {{amounts}}",
+  spendingLastMonthNotInTotal: "Letzter Monat, nicht enthalten: {{amounts}}",
   atMarket: "{{amount}} zum Marktwert",
   atMarketValue: "Zum Marktwert",
   pricesNotUpdatedSince: {

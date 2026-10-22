@@ -7,11 +7,15 @@ export type SpendingCompare = {
   thisMonth: number;
   lastMonth: number;
   /**
-   * Spending over the two months in other currencies, which the bars cannot
-   * include: the card used to read "This month $0" over a 50 EUR expense with
-   * no hint (w21/038).
+   * This month's spending in other currencies, which the bars cannot include:
+   * the card used to read "This month $0" over a 50 EUR expense with no hint
+   * (w21/038). Per month: netted with last month's, a refund last month hid
+   * this month's spending, and 80 EUR spent against a 30 EUR refund read "50
+   * EUR", which neither month spent (w21/263).
    */
   notInTotal: Holding[];
+  /** Last month's, disclosed on its own line when it has any. */
+  lastMonthNotInTotal: Holding[];
   thisMonthKey: string;
   lastMonthKey: string;
 };
@@ -73,13 +77,16 @@ export function selectSpendingCompare(
   const { thisMonthKey, lastMonthKey } = monthKeys(referenceDate);
   let thisMonth = 0;
   let lastMonth = 0;
-  const omitted = new Map<string, Holding>();
+  const omittedThis = new Map<string, Holding>();
+  const omittedLast = new Map<string, Holding>();
   for (const month of months) {
     const key = month.date.slice(0, 7);
     if (key !== thisMonthKey && key !== lastMonthKey) continue;
     const spent = resolveCurrencyBalance(month.balance, currency);
+    const omitted = key === thisMonthKey ? omittedThis : omittedLast;
     if (key === thisMonthKey) thisMonth += spent;
     else lastMonth += spent;
+    // Within one month, entries of one currency still add up.
     for (const holding of notInTotalOf(month.balance, currency)) {
       const prior = omitted.get(holding.currency);
       const scale = Math.max(prior?.scale ?? 0, holding.scale);
@@ -90,10 +97,18 @@ export function selectSpendingCompare(
       });
     }
   }
-  const notInTotal = [...omitted.values()].filter(
-    (holding) => holding.number !== 0,
-  );
-  return { thisMonth, lastMonth, notInTotal, thisMonthKey, lastMonthKey };
+  const nonZero = (held: Map<string, Holding>) =>
+    [...held.values()].filter((holding) => holding.number !== 0);
+  const notInTotal = nonZero(omittedThis);
+  const lastMonthNotInTotal = nonZero(omittedLast);
+  return {
+    thisMonth,
+    lastMonth,
+    notInTotal,
+    lastMonthNotInTotal,
+    thisMonthKey,
+    lastMonthKey,
+  };
 }
 
 /**

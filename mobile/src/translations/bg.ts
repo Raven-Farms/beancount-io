@@ -229,6 +229,7 @@ export const bg: Translations = {
   postingCost: "себестойност {{amount}}",
   postingPrice: "цена {{amount}}",
   notInTotal: "Не е включено в общата сума: {{amounts}}",
+  spendingLastMonthNotInTotal: "Миналия месец, извън сбора: {{amounts}}",
   atMarket: "{{amount}} по пазарна стойност",
   atMarketValue: "По пазарна стойност",
   pricesNotUpdatedSince: {

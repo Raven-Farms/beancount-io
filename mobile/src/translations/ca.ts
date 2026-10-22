@@ -235,6 +235,7 @@ export const ca: Translations = {
   postingCost: "preu de cost {{amount}}",
   postingPrice: "preu {{amount}}",
   notInTotal: "No inclòs al total: {{amounts}}",
+  spendingLastMonthNotInTotal: "El mes passat, no inclòs al total: {{amounts}}",
   atMarket: "{{amount}} a valor de mercat",
   atMarketValue: "A valor de mercat",
   pricesNotUpdatedSince: {

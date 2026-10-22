@@ -25,7 +25,8 @@ import {
   selectReadContextState,
 } from "@/common/apollo/card-load-state";
 import { useGuest } from "@/common/guest/guest-context";
-import { notInTotalNotes } from "@/common/balance-display";
+import { formatHolding, notInTotalNotes } from "@/common/balance-display";
+import { isolateLtr } from "@/common/bidi";
 
 // Static x-axis labels (translation keys) for the two comparison bars.
 const SPENDING_LABELS = ["lastMonth", "thisMonth"];
@@ -117,11 +118,18 @@ export function SpendingCard({
   }, [refreshSignal, ledgerId, refetch]);
 
   const months = data?.getLedgerIntervalTotals ?? [];
-  const { thisMonth, lastMonth, notInTotal } = selectSpendingCompare(
-    months,
-    currency,
-  );
+  const { thisMonth, lastMonth, notInTotal, lastMonthNotInTotal } =
+    selectSpendingCompare(months, currency);
   const [note] = notInTotalNotes(notInTotal, t);
+  // Last month's own, so a refund then does not cancel this month's spending.
+  const lastNote =
+    lastMonthNotInTotal.length > 0
+      ? t("spendingLastMonthNotInTotal", {
+          amounts: lastMonthNotInTotal
+            .map((holding) => isolateLtr(formatHolding(holding)))
+            .join(", "),
+        })
+      : null;
 
   return (
     <DashboardCard
@@ -169,6 +177,15 @@ export function SpendingCard({
               style={styles.note}
             >
               {note}
+            </Text>
+          ) : null}
+          {lastNote ? (
+            <Text
+              key={`last-note-${fontScale}`}
+              testID="spending-last-not-in-total"
+              style={styles.note}
+            >
+              {lastNote}
             </Text>
           ) : null}
         </FadeInView>

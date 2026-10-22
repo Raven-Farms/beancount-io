@@ -233,6 +233,8 @@ export const sk: Translations = {
   postingCost: "obstarávacia cena {{amount}}",
   postingPrice: "cena {{amount}}",
   notInTotal: "Nie je v súčte: {{amounts}}",
+  spendingLastMonthNotInTotal:
+    "Minulý mesiac, nezahrnuté do súčtu: {{amounts}}",
   atMarket: "{{amount}} v trhovej hodnote",
   atMarketValue: "V trhovej hodnote",
   pricesNotUpdatedSince: {

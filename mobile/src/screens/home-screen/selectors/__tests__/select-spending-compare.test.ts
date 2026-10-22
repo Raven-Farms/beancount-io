@@ -38,6 +38,7 @@ describe("selectSpendingCompare", () => {
       thisMonth: 0,
       lastMonth: 0,
       notInTotal: [],
+      lastMonthNotInTotal: [],
       thisMonthKey: "2026-10",
       lastMonthKey: "2026-09",
     });
@@ -146,9 +147,59 @@ describe("selectSpendingCompare: other currencies", () => {
     );
     expect(result.thisMonth).toBe(12);
     expect(result.lastMonth).toBe(0);
+    // Each month on its own: the 50.00 EUR is this month's, the 20.10 EUR
+    // last month's (w21/263).
     expect(result.notInTotal).toEqual([
-      { currency: "EUR", number: 70.1, scale: 2 },
+      { currency: "EUR", number: 50, scale: 2 },
     ]);
+    expect(result.lastMonthNotInTotal).toEqual([
+      { currency: "EUR", number: 20.1, scale: 2 },
+    ]);
+  });
+
+  // w21/263: the two months were netted together, so a refund last month hid
+  // this month's spending.
+  it("does not let a refund last month hide spending this month", () => {
+    const result = selectSpendingCompare(
+      [
+        { date: "2026-09-12", balance: { USD: "1200.00", EUR: "-50.00" } },
+        { date: "2026-10-05", balance: { USD: "300.00", EUR: "50.00" } },
+      ],
+      "USD",
+      REF,
+    );
+    expect(result.notInTotal).toEqual([
+      { currency: "EUR", number: 50, scale: 2 },
+    ]);
+    expect(result.lastMonthNotInTotal).toEqual([
+      { currency: "EUR", number: -50, scale: 2 },
+    ]);
+  });
+
+  it("does not report an amount neither month spent", () => {
+    const result = selectSpendingCompare(
+      [
+        { date: "2026-09-12", balance: { EUR: "-30.00" } },
+        { date: "2026-10-05", balance: { EUR: "80.00" } },
+      ],
+      "USD",
+      REF,
+    );
+    expect(result.notInTotal).toEqual([
+      { currency: "EUR", number: 80, scale: 2 },
+    ]);
+  });
+
+  it("still adds one currency's entries within a month, and drops zeros", () => {
+    const result = selectSpendingCompare(
+      [
+        { date: "2026-10-05", balance: { EUR: "50.00" } },
+        { date: "2026-10-20", balance: { EUR: "-50.00" } },
+      ],
+      "USD",
+      REF,
+    );
+    expect(result.notInTotal).toEqual([]);
   });
 
   it("discloses nothing for a single-currency ledger", () => {
@@ -174,5 +225,25 @@ describe("spendingChartSummary: other currencies", () => {
         "Not in total: 50.00 EUR",
       ),
     ).toBe("$0.00 then $12.00. Not in total: 50.00 EUR");
+  });
+});
+
+describe("the Spending card's notes", () => {
+  it("shows last month's omissions on their own line", () => {
+    const card = require("fs")
+      .readFileSync(
+        require("path").join(
+          __dirname,
+          "..",
+          "..",
+          "components",
+          "spending-card.tsx",
+        ),
+        "utf8",
+      )
+      .replace(/\s+/g, "");
+    expect(card.includes('t("spendingLastMonthNotInTotal"')).toBe(true);
+    expect(card.includes('testID="spending-last-not-in-total"')).toBe(true);
+    expect(card.includes("lastMonthNotInTotal")).toBe(true);
   });
 });
