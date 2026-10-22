@@ -324,12 +324,13 @@ describe("selectPostingRows: cost and price", () => {
       amount: "-4 QAX",
       sign: -1,
       cost: "$1.50",
+      lot: "2026-10-01",
       price: "$2.00",
     });
     // Each amount isolated, so Persian keeps its currency on the written side
     // (w21/536).
     expect(postingBasisText(lot, t)).toBe(
-      `cost ${isolateLtr("$1.50")} · price ${isolateLtr("$2.00")}`,
+      `cost ${isolateLtr("$1.50")} · ${isolateLtr("2026-10-01")} · price ${isolateLtr("$2.00")}`,
     );
     expect(postingBasisText(cash, t)).toBe(null);
   });
@@ -343,7 +344,9 @@ describe("selectPostingRows: cost and price", () => {
         },
       ]),
     );
-    expect(postingBasisText(buy, t)).toBe(`cost ${isolateLtr("$1.50")}`);
+    expect(postingBasisText(buy, t)).toBe(
+      `cost ${isolateLtr("$1.50")} · ${isolateLtr("2026-10-01")}`,
+    );
     const [eur] = selectPostingRows(
       txn([
         {
@@ -379,7 +382,9 @@ describe("selectPostingRows: cost and price", () => {
         },
       ]),
     );
-    expect(postingBasisText(lot, t)).toBe(`cost ${isolateLtr("≈$33.3333")}`);
+    expect(postingBasisText(lot, t)).toBe(
+      `cost ${isolateLtr("≈$33.3333")} · ${isolateLtr("2026-10-01")}`,
+    );
     const [dust] = selectPostingRows(
       txn([
         {
@@ -573,5 +578,46 @@ describe("selectPostingRows amounts", () => {
     // Without a cost the same codes are currencies, as before.
     expect(amounts("4.5", "EUR")).toBe("+4.50 EUR");
     expect(amounts("10", "NOK")).toBe("+10.00 NOK");
+  });
+});
+
+// w21/603: two sales from different lots read "-5 VTI · cost $100.00 · price
+// $120.00", though the lot's date decides short- or long-term gain.
+describe("selectPostingRows: the lot behind a cost", () => {
+  const t = (key: "postingCost" | "postingPrice", params: { amount: string }) =>
+    en[key].replace("{{amount}}", params.amount);
+  const sale = (date: string, label?: string) =>
+    selectPostingRows(
+      txn([
+        {
+          ...posting("Assets:Brokerage", "-5", "VTI"),
+          cost: { number: "100.00", currency: "USD", date, label },
+          price: { number: "120.00", currency: "USD" },
+        },
+      ]),
+    )[0]!;
+
+  it("tells two sales from different lots apart, on screen and to VoiceOver", () => {
+    const old = sale("2023-01-15");
+    const recent = sale("2025-06-01", "lot-b");
+    expect(old.lot).toBe("2023-01-15");
+    expect(recent.lot).toBe("2025-06-01 · lot-b");
+    expect(postingBasisText(old, t)).not.toBe(postingBasisText(recent, t));
+    expect(postingBasisText(recent, t)).toBe(
+      `cost ${isolateLtr("$100.00")} · ${isolateLtr("2025-06-01 · lot-b")} · price ${isolateLtr("$120.00")}`,
+    );
+  });
+
+  it("names no lot when the cost has neither a date nor a label", () => {
+    const bare = selectPostingRows(
+      txn([
+        {
+          ...posting("Assets:Brokerage", "5", "VTI"),
+          cost: { number: "100.00", currency: "USD" } as never,
+        },
+      ]),
+    )[0]!;
+    expect(bare.lot).toBe(undefined);
+    expect(postingBasisText(bare, t)).toBe(`cost ${isolateLtr("$100.00")}`);
   });
 });

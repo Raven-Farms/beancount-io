@@ -73,6 +73,12 @@ export type PostingDisplayRow = {
   sign: -1 | 0 | 1;
   /** Per-unit lot cost, unsigned, when the posting holds one (`{1.50 USD}`). */
   cost?: string;
+  /**
+   * The lot a cost belongs to: its date and label as the ledger writes them
+   * (`2023-01-15`, `lot-b`). Two sales from different lots read alike without
+   * it, and the lot's date decides short- or long-term gain (w21/603).
+   */
+  lot?: string;
   /** Per-unit price, unsigned, when the posting carries one (`@ 2.00 USD`). */
   price?: string;
   /**
@@ -218,6 +224,18 @@ const formatPerUnit = (amount: {
   return derived === null ? shown : `≈${shown}`;
 };
 
+/** A cost's lot: its date and label, when it has them. */
+const lotOf = (cost: {
+  date?: string | null;
+  label?: string | null;
+}): { lot?: string } => {
+  const lot = [cost.date, cost.label]
+    .map((part) => part?.trim())
+    .filter(Boolean)
+    .join(" · ");
+  return lot ? { lot } : {};
+};
+
 export function selectPostingRows(
   txn: JournalTransaction,
 ): PostingDisplayRow[] {
@@ -234,7 +252,7 @@ export function selectPostingRows(
       // A trade's cost basis and sale price explain its gain; the row used
       // to show only the units (w21/059).
       ...(p.cost?.number && p.cost.currency
-        ? { cost: formatPerUnit(p.cost) }
+        ? { cost: formatPerUnit(p.cost), ...lotOf(p.cost) }
         : {}),
       ...(p.price?.number && p.price.currency
         ? { price: formatPerUnit(p.price) }
@@ -252,7 +270,7 @@ export function selectPostingRows(
  * ordinary posting. A price alone reads as the ledger writes it, `@ 1.10 USD`.
  */
 export function postingBasisText(
-  row: Pick<PostingDisplayRow, "cost" | "price">,
+  row: Pick<PostingDisplayRow, "cost" | "price" | "lot">,
   t: (
     key: "postingCost" | "postingPrice",
     params: { amount: string },
@@ -260,10 +278,12 @@ export function postingBasisText(
 ): string | null {
   // Each amount isolated, so a right-to-left sentence keeps "185.00 USD" in
   // order and its currency on the side the number was written (w21/536).
+  const lot = row.lot ? ` · ${isolateLtr(row.lot)}` : "";
   if (row.cost && row.price) {
-    return `${t("postingCost", { amount: isolateLtr(row.cost) })} · ${t("postingPrice", { amount: isolateLtr(row.price) })}`;
+    return `${t("postingCost", { amount: isolateLtr(row.cost) })}${lot} · ${t("postingPrice", { amount: isolateLtr(row.price) })}`;
   }
-  if (row.cost) return t("postingCost", { amount: isolateLtr(row.cost) });
+  if (row.cost)
+    return `${t("postingCost", { amount: isolateLtr(row.cost) })}${lot}`;
   if (row.price) return `@ ${row.price}`;
   return null;
 }
