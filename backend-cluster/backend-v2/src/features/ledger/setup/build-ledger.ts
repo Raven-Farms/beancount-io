@@ -111,14 +111,34 @@ function ledgerOpeningAmount(account: string, amount: string): string {
 }
 
 /**
+ * The setup with every explicit `null` taken as an omitted field. GraphQL marks
+ * `title`, `currency`, `amount` and other fields nullable and passes a client's
+ * `null` through unchanged, where REST and MCP (`.optional()`) never carry one:
+ * `title: null` was a TypeError, and `amount: null` or `currency: null` was
+ * refused as a value (w21/552).
+ */
+function omitNulls<T>(value: T): T {
+  if (Array.isArray(value)) return value.map(omitNulls) as T;
+  if (value !== null && typeof value === "object") {
+    return Object.fromEntries(
+      Object.entries(value)
+        .filter(([, field]) => field !== null)
+        .map(([key, field]) => [key, omitNulls(field)]),
+    ) as T;
+  }
+  return value;
+}
+
+/**
  * Pure builder: turns a setup specification (ADR021) into the files it
  * would create plus their summary, without creating anything. Throws
  * `ValidationError` for any invalid explicit value.
  */
 export function previewLedgerSetup(
-  setup: LedgerSetup,
+  input: LedgerSetup,
   today: string = new Date().toISOString().slice(0, 10),
 ): LedgerSetupPreview {
+  const setup = omitNulls(input);
   const preset =
     presetById(setup.preset) ?? fail(`Unknown preset "${setup.preset}"`);
 

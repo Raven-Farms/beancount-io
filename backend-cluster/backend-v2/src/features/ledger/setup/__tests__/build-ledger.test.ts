@@ -213,6 +213,49 @@ describe("buildLedgerFiles (w3/m53/t002)", () => {
     expect(main).not.toContain("--30.50");
   });
 
+  // w21/552: GraphQL passes a client's explicit null through; REST and MCP never
+  // carry one.
+  it("takes an explicit null on a nullable field as omitted", () => {
+    const omitted = previewLedgerSetup(
+      {
+        preset: "personal@1",
+        accounts: [{ name: "Assets:Cash" }],
+      } as never,
+      "2026-01-01",
+    );
+    const nulls = previewLedgerSetup(
+      {
+        preset: "personal@1",
+        title: null,
+        operatingCurrency: null,
+        historyStart: null,
+        capabilities: null,
+        accounts: [
+          {
+            name: "Assets:Cash",
+            openingState: null,
+            amount: null,
+            currency: null,
+          },
+        ],
+      } as never,
+      "2026-01-01",
+    );
+    expect(nulls).toEqual(omitted);
+  });
+
+  it("still refuses an amount on an account that is not known", () => {
+    expect(() =>
+      previewLedgerSetup(
+        {
+          preset: "personal@1",
+          accounts: [{ name: "Assets:Cash", amount: "5", openingState: null }],
+        } as never,
+        "2026-01-01",
+      ),
+    ).toThrow("must not carry an amount");
+  });
+
   // w21/548: `Date.UTC` read years 0001-0099 as 1900-1999, so a valid early
   // Books begin was refused (the ledger itself accepts them, w4/m38).
   it("accepts a history start in years 0001-0099 and still refuses impossible days", () => {
