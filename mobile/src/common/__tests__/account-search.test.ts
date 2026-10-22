@@ -215,3 +215,26 @@ describe("filterAccounts with several words", () => {
     ]);
   });
 });
+
+// w21/256: a ledger from a system that writes decomposed Unicode holds "Café"
+// as "Cafe" + U+0301; search for the typed "café" found nothing.
+describe("filterAccounts with decomposed Unicode", () => {
+  const nfd = "Expenses:Café";
+  const accounts = [nfd, "Expenses:Food"];
+
+  it("finds a decomposed account by its composed spelling, in either case", () => {
+    expect(filterAccounts("café", accounts)).toEqual([nfd]);
+    expect(filterAccounts("Café", accounts)).toEqual([nfd]);
+    expect(filterAccounts("caf", accounts)).toEqual([nfd]);
+  });
+
+  it("returns the ledger's own spelling, not the normalised one", () => {
+    expect(filterAccounts("café", accounts)[0]).toBe("Expenses:Café");
+  });
+
+  it("finds a composed account by a decomposed query too", () => {
+    expect(filterAccounts("café", ["Expenses:Café"])).toEqual([
+      "Expenses:Café",
+    ]);
+  });
+});

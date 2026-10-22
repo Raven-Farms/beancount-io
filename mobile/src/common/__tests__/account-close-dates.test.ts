@@ -1,4 +1,9 @@
-import { closeDatesOf, isOpenOn, openOn } from "../account-close-dates";
+import {
+  closeDatesOf,
+  closedAccountNamed,
+  isOpenOn,
+  openOn,
+} from "../account-close-dates";
 
 // w21/045: the posting picker offered a closed account, and the save was then
 // refused at Done ("Posting to inactive account … (closed on …)").
@@ -168,5 +173,20 @@ describe("accounts opened after an entry's date", () => {
         closeDatesOf([{ account: "Assets:NewBank", closedAt: null }]),
       ),
     ).toBe(true);
+  });
+});
+
+// w21/256: a closed account stored decomposed is still the one the user typed.
+describe("closedAccountNamed against decomposed Unicode", () => {
+  it("finds it by the composed spelling", () => {
+    const dates = closeDatesOf([
+      { account: "Expenses:Cafe\u0301", closedAt: "2026-01-31" },
+    ]);
+    expect(
+      closedAccountNamed("expenses:caf\u00e9", "2026-10-01", dates),
+    ).toEqual({
+      account: "Expenses:Cafe\u0301",
+      closedAt: "2026-01-31",
+    });
   });
 });

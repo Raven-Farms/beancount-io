@@ -657,3 +657,38 @@ describe("Create seeded from a search with spaces", () => {
     });
   });
 });
+
+// w21/256: Open Account's duplicate check compared raw strings, so it created a
+// second, identical-looking "Expenses:Café" next to a decomposed one.
+describe("Open Account against decomposed Unicode", () => {
+  it("says an account is already open whichever way it is spelled", () => {
+    const nfd = "Expenses:Café";
+    expect(
+      openAccountSubmitState({
+        account: "Expenses:Café",
+        nameOk: true,
+        openAccounts: [nfd],
+        busy: false,
+      }),
+    ).toEqual({ alreadyOpen: true, canSubmit: false });
+    expect(
+      openAccountSubmitState({
+        account: nfd,
+        nameOk: true,
+        openAccounts: ["Expenses:Café"],
+        busy: false,
+      }).alreadyOpen,
+    ).toBe(true);
+  });
+
+  it("still lets a different account through", () => {
+    expect(
+      openAccountSubmitState({
+        account: "Expenses:Cafés",
+        nameOk: true,
+        openAccounts: ["Expenses:Café"],
+        busy: false,
+      }),
+    ).toEqual({ alreadyOpen: false, canSubmit: true });
+  });
+});

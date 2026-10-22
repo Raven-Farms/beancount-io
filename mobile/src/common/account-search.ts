@@ -45,6 +45,11 @@ function lowerAligned(text: string): string {
   return lower;
 }
 
+function toNfc(text: string): string {
+  // eslint-disable-next-line no-control-regex
+  return /^[\x00-\x7f]*$/.test(text) ? text : text.normalize("NFC");
+}
+
 function isSegmentStart(text: string, index: number): boolean {
   return index === 0 || text[index - 1] === SEGMENT_SEPARATOR;
 }
@@ -85,6 +90,11 @@ function substringIndex(
  * An empty pattern matches everything with a neutral score of 1.
  */
 export function fuzzyMatch(pattern: string, text: string): number {
+  // Both sides as NFC: a ledger imported from a system that writes decomposed
+  // Unicode holds "Café" as "Cafe" + U+0301, which neither "café" nor "Café"
+  // would find (w21/256). Plain ASCII, nearly every account, skips the work.
+  pattern = toNfc(pattern);
+  text = toNfc(text);
   if (pattern.length === 0) {
     return 1;
   }

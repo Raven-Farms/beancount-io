@@ -222,8 +222,16 @@ export function openAccountSubmitState(input: {
   /** A save is running or already committed. */
   busy: boolean;
 }): { canSubmit: boolean; alreadyOpen: boolean } {
+  // Compared as NFC: the typed name is composed in NFC, but a ledger imported
+  // from a system that writes decomposed Unicode (macOS file names, some bank
+  // exports) holds "Café" as "Cafe" + U+0301, which the engine keeps as a
+  // different account that looks identical (w21/256).
+  const wanted = input.account.normalize("NFC");
   const alreadyOpen =
-    input.nameOk && (input.openAccounts ?? []).includes(input.account);
+    input.nameOk &&
+    (input.openAccounts ?? []).some(
+      (account) => account.normalize("NFC") === wanted,
+    );
   return {
     alreadyOpen,
     canSubmit:

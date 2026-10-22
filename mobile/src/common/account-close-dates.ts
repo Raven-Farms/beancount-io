@@ -93,11 +93,13 @@ export function closedAccountNamed(
   onDate: string,
   closeDates: CloseDates,
 ): { account: string; closedAt: string } | null {
-  const wanted = query.trim().toLowerCase();
+  // As NFC, like the picker's search: a decomposed "Cafe" + U+0301 is the
+  // account the user typed as "Café" (w21/256).
+  const wanted = query.trim().normalize("NFC").toLowerCase();
   if (!wanted) return null;
   for (const [account, closedAt] of closeDates) {
     if (
-      account.toLowerCase() === wanted &&
+      account.normalize("NFC").toLowerCase() === wanted &&
       !isOpenOn(account, onDate, closeDates)
     ) {
       return { account, closedAt };
