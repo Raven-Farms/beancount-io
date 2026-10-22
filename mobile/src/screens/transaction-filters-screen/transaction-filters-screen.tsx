@@ -36,6 +36,7 @@ import {
 } from "@/screens/transactions-screen/filters/types";
 import {
   isDateRangeValid,
+  MAX_FILTER_DAY,
   monthsBack,
   selectFiltersForLedger,
 } from "@/screens/transactions-screen/filters/select-filter-query";
@@ -43,6 +44,9 @@ import { transactionFiltersVar } from "@/screens/transactions-screen/filters/var
 import { useLedgerGuard } from "@/components/ledger-guard";
 
 type PickerTarget = "start" | "end";
+
+/** The latest day the server can query past (w21/307). */
+const MAX_FILTER_DATE = parseFormatDate(MAX_FILTER_DAY);
 
 const getStyles = (theme: ColorTheme) =>
   StyleSheet.create({
@@ -415,6 +419,7 @@ const TransactionFiltersSheet = ({
         isVisible={pickerTarget !== null}
         mode="date"
         date={pickerDate}
+        maximumDate={MAX_FILTER_DATE}
         onConfirm={confirmDate}
         onCancel={() => setPickerTarget(null)}
       />

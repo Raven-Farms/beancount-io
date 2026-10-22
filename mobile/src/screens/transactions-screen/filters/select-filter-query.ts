@@ -22,6 +22,13 @@ export const selectFiltersForLedger = (
 ): TransactionFilters =>
   ledgerId && scoped.ledgerId === ledgerId ? scoped.filters : NO_FILTERS;
 
+/**
+ * The last day a custom window may reach. The server computes the day after the
+ * end, so an end of 9999-12-31 overflows to year 10000, fails to parse and
+ * takes the whole journal with it (w21/307).
+ */
+export const MAX_FILTER_DAY = "9999-12-30";
+
 /** An inclusive `YYYY-MM-DD` window. */
 export type DateRange = { start: string; end: string };
 
@@ -88,7 +95,16 @@ export const resolveDateRange = (
       // silently swapping the ends would query a window the user never asked
       // for. The sheet blocks Apply, so this is the backstop.
       return filters.startDate && filters.endDate && isDateRangeValid(filters)
-        ? { start: filters.startDate, end: filters.endDate }
+        ? {
+            start:
+              filters.startDate <= MAX_FILTER_DAY
+                ? filters.startDate
+                : MAX_FILTER_DAY,
+            end:
+              filters.endDate <= MAX_FILTER_DAY
+                ? filters.endDate
+                : MAX_FILTER_DAY,
+          }
         : null;
     case "all":
     default:

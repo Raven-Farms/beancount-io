@@ -424,3 +424,48 @@ describe("selecting every status", () => {
     expect(countActiveFilters(both, TODAY)).toBe(2);
   });
 });
+
+// w21/307: an end of 9999-12-31 passed validation, but the server asks for the
+// day after it (year 10000), fails to parse it and takes the whole journal.
+describe("the last day a custom window may reach", () => {
+  const custom = (startDate: string, endDate: string) =>
+    filters({ range: "custom", startDate, endDate });
+
+  it("never sends 9999-12-31", () => {
+    expect(toFilterQuery(custom("2026-01-01", "9999-12-31"), TODAY).time).toBe(
+      "2026-01-01 - 9999-12-30",
+    );
+    expect(resolveDateRange(custom("9999-12-31", "9999-12-31"), TODAY)).toEqual(
+      { start: "9999-12-30", end: "9999-12-30" },
+    );
+  });
+
+  it("leaves an ordinary or far-future window as it is", () => {
+    expect(toFilterQuery(custom("2026-01-01", "2030-12-31"), TODAY).time).toBe(
+      "2026-01-01 - 2030-12-31",
+    );
+    expect(toFilterQuery(custom("2026-01-01", "9999-12-30"), TODAY).time).toBe(
+      "2026-01-01 - 9999-12-30",
+    );
+  });
+
+  it("caps the picker at the same day", () => {
+    const sheet = fs
+      .readFileSync(
+        path.join(
+          __dirname,
+          "..",
+          "..",
+          "..",
+          "transaction-filters-screen",
+          "transaction-filters-screen.tsx",
+        ),
+        "utf8",
+      )
+      .replace(/\s+/g, "");
+    expect(sheet.includes("maximumDate={MAX_FILTER_DATE}")).toBe(true);
+    expect(
+      sheet.includes("constMAX_FILTER_DATE=parseFormatDate(MAX_FILTER_DAY);"),
+    ).toBe(true);
+  });
+});
