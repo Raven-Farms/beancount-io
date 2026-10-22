@@ -283,6 +283,31 @@ function treeTotal(nodes: AccountNode[]): number {
   return nodes.reduce((sum, node) => sum + node.value, 0);
 }
 
+/**
+ * The depth to draw a side at. The tree arrives with its single-child levels
+ * lifted (`Income:US` holding only Hoogle and ETrade lists those two), so when
+ * every top-level account sits under one shared sub-account the nodes belong
+ * below it: keyed at a flat depth, the whole side merged into one "US" node
+ * while the cards listed its parts, and a refunded category netted inside it
+ * hid the Refunds ribbon (w21/610). One top-level account keeps the flat depth.
+ */
+function sideDepth(nodes: AccountNode[], depth: number): number {
+  const live = nodes.filter((node) => node?.account);
+  if (live.length < 2) {
+    return depth;
+  }
+  const parents = live.map((node) => node.account.split(":").slice(0, -1));
+  let common = 0;
+  const shortest = Math.min(...parents.map((parent) => parent.length));
+  while (
+    common < shortest &&
+    parents.every((parent) => parent[common] === parents[0][common])
+  ) {
+    common += 1;
+  }
+  return Math.max(depth, common + 1);
+}
+
 function extractAtDepth(
   nodes: AccountNode[],
   targetDepth: number,
@@ -377,8 +402,20 @@ export function transformToSankeyData(options: TransformOptions): SankeyData {
 
   const incomeValues = new Map<string, number>();
   const expenseValues = new Map<string, number>();
-  extractAtDepth(income, depth, incomeValues, roots, residue);
-  extractAtDepth(expenses, depth, expenseValues, roots, residue);
+  extractAtDepth(
+    income,
+    sideDepth(income, depth),
+    incomeValues,
+    roots,
+    residue,
+  );
+  extractAtDepth(
+    expenses,
+    sideDepth(expenses, depth),
+    expenseValues,
+    roots,
+    residue,
+  );
 
   const incomeRows = topNWithOther(
     toRankedNodes(incomeValues, leafName, residue),

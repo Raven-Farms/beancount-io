@@ -508,3 +508,44 @@ describe("transformToSankeyData in a commodity the app has no symbol for", () =>
     expect(sankeySavings(data)).toBe(null);
   });
 });
+
+// w21/610: income only under Income:US:* drew one "US" node while the cards
+// listed Hoogle and ETrade, and a refund netted inside the merged expense node.
+describe("a side whose accounts share a sub-account", () => {
+  const opts = { ...labels };
+
+  it("draws the accounts under it, not the shared sub-account", () => {
+    const data = transformToSankeyData({
+      ...opts,
+      income: [node("Income:US:Hoogle", 9000), node("Income:US:ETrade", 400)],
+      expenses: [node("Expenses:P:Rent", 2000), node("Expenses:P:Food", 300)],
+    });
+    const labelsOf = data.nodes.map((n) => n.label);
+    expect(labelsOf.includes("Hoogle")).toBe(true);
+    expect(labelsOf.includes("ETrade")).toBe(true);
+    expect(labelsOf.includes("Rent")).toBe(true);
+    expect(labelsOf.includes("US")).toBe(false);
+    expect(labelsOf.includes("P")).toBe(false);
+  });
+
+  it("keeps the flat depth for accounts directly under the root", () => {
+    const data = transformToSankeyData({
+      ...opts,
+      income: [node("Income:Salary:Gross", 100), node("Income:Gift", 20)],
+      expenses: [node("Expenses:Food:Dining", 50)],
+    });
+    const labelsOf = data.nodes.map((n) => n.label);
+    expect(labelsOf.includes("Salary")).toBe(true);
+    expect(labelsOf.includes("Gross")).toBe(false);
+  });
+
+  it("keeps the flat depth for a single top-level account", () => {
+    const data = transformToSankeyData({
+      ...opts,
+      income: [node("Income:Salary:Gross", 100)],
+      expenses: [node("Expenses:Food", 50)],
+    });
+    const labelsOf = data.nodes.map((n) => n.label);
+    expect(labelsOf.includes("Salary")).toBe(true);
+  });
+});
