@@ -204,11 +204,11 @@ describe("guest read isolation", () => {
     });
   }
 
-  // w21/427: a vanished entry or file is that screen's "removed", not the end
-  // of the example.
+  // w21/427: a vanished entry is that screen's "removed", not the end of the
+  // example. (A missing file is not an error at all: the ledger answers null,
+  // so a file read is not exempt, w21/495.)
   for (const [name, document, extra] of [
     ["entry", GetLedgerEntryContextDocument, { entryHash: "gone" }],
-    ["file", GetLedgerFileDocument, { path: "gone.bean" }],
   ] as const) {
     it(`leaves a missing ${name} to its own screen`, async () => {
       await client.query({ query, variables });
@@ -237,6 +237,20 @@ describe("guest read isolation", () => {
       expect(failures).toEqual(["unavailable"]);
     });
   }
+
+  it("does not exempt a file read: the server never answers it NOT_FOUND", async () => {
+    await client.query({ query, variables });
+    response = {
+      errors: [{ message: "Not found", extensions: { code: "NOT_FOUND" } }],
+    };
+    await rejects(() =>
+      client.query({
+        query: GetLedgerFileDocument,
+        variables: { ...variables, path: "gone.bean" },
+      }),
+    );
+    expect(failures).toEqual(["unavailable"]);
+  });
 
   it("distinguishes connection failures and never falls back to the managed server", async () => {
     globalThis.fetch = async (url) => {

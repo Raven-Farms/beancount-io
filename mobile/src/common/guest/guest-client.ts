@@ -48,9 +48,10 @@ const PUBLIC_OPERATIONS = new Set([
   "AccountJournal",
 ]);
 
-// Reads of one entry or one file: their NOT_FOUND says that item is gone, which
-// the screen shows itself ("removed"), not that the example is (w21/427).
-const ITEM_OPERATIONS = new Set(["GetLedgerEntryContext", "getLedgerFile"]);
+// The read of one entry: its NOT_FOUND says that entry is gone, which the screen
+// shows itself ("removed"), not that the example is (w21/427). A file read is not
+// here: the ledger answers a missing file with null, never NOT_FOUND (w21/495).
+const ITEM_OPERATIONS = new Set(["GetLedgerEntryContext"]);
 
 function isMissingItem(
   operationName: string,
