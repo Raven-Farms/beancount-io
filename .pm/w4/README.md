@@ -100,7 +100,6 @@
 
 - [316 — Keep opening-balance choices consistent when ledger presets change](./316.md) — minor; dashboard QA, 2026-10-21; Portfolio displays Decide later while sending the previous Personal account; an unattached amount is silently omitted; valid-account recovery passes.
 
-- [315 — Review the selected ledger starting point rather than the retained preset](./315.md) — minor; dashboard QA, 2026-10-21; Starter and Sample both review as Personal ledger despite correct template/setup payloads; no ledger created.
 
 
 
