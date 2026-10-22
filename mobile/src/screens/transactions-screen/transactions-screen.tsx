@@ -3,6 +3,7 @@ import { parseFormatDate } from "@/common/format-util";
 import { useToday } from "@/common/hooks/use-today";
 import { useLedgerAccess } from "@/common/hooks/use-ledger-access";
 import { useMemo, useCallback, useRef, useState } from "react";
+import { LoadMoreFailed } from "@/components/load-more-failed";
 import { useRouter, useScrollToTop } from "expo-router";
 import {
   ActivityIndicator,
@@ -182,61 +183,76 @@ const TransactionList = () => {
 
   // The list the query shows now, read when a page lands (w21/116).
   const listKeyRef = useRef("");
-  listKeyRef.current = journalListKey(ledgerId, { filter, ...filterQuery });
+  const listKey = journalListKey(ledgerId, { filter, ...filterQuery });
+  listKeyRef.current = listKey;
 
-  const loadMore = useCallback(async () => {
-    if (isLoadingMore || !hasMore || loading || !ledgerId) return;
-    const requestedFor = listKeyRef.current;
+  // The list whose next page failed to load, so a different list starts clean.
+  // While set, scrolling to the end does not ask again; Retry does (w21/353).
+  const [loadMoreFailedFor, setLoadMoreFailedFor] = useState<string | null>(
+    null,
+  );
+  const loadMoreFailed = loadMoreFailedFor === listKey;
 
-    // An entry added elsewhere shifted the pages; reload from the top, where
-    // it now sits (w21/035).
-    let listMoved = false;
-    try {
-      await fetchMore({
-        variables: {
-          ledgerId,
-          query: {
-            offset: transactions.length,
-            limit: PAGE_SIZE,
-            directiveTypes: DIRECTIVE_TYPES,
-            filter,
-            ...filterQuery,
-          },
-        },
-        updateQuery: (prev, { fetchMoreResult }) => {
-          // Requested for a list no longer shown (w21/116).
-          if (listKeyRef.current !== requestedFor) return prev;
-          if (!fetchMoreResult?.getLedgerJournal?.data) return prev;
-          const { data, overlapped } = mergeJournalPage(
-            prev.getLedgerJournal.data || [],
-            fetchMoreResult.getLedgerJournal.data,
-          );
-          listMoved = overlapped;
-          return {
-            ...prev,
-            getLedgerJournal: {
-              ...prev.getLedgerJournal,
-              data,
-              total: fetchMoreResult.getLedgerJournal.total,
+  const loadMore = useCallback(
+    async (retry = false) => {
+      if (isLoadingMore || !hasMore || loading || !ledgerId) return;
+      if (loadMoreFailed && !retry) return;
+      const requestedFor = listKeyRef.current;
+      setLoadMoreFailedFor(null);
+
+      // An entry added elsewhere shifted the pages; reload from the top, where
+      // it now sits (w21/035).
+      let listMoved = false;
+      try {
+        await fetchMore({
+          variables: {
+            ledgerId,
+            query: {
+              offset: transactions.length,
+              limit: PAGE_SIZE,
+              directiveTypes: DIRECTIVE_TYPES,
+              filter,
+              ...filterQuery,
             },
-          };
-        },
-      });
-      if (listMoved) void refetch().catch(() => undefined);
-    } catch (err) {
-      console.error("Error loading more transactions:", err);
-    }
-  }, [
-    isLoadingMore,
-    hasMore,
-    loading,
-    ledgerId,
-    transactions.length,
-    fetchMore,
-    refetch,
-    filter,
-    filterQuery,
-  ]);
+          },
+          updateQuery: (prev, { fetchMoreResult }) => {
+            // Requested for a list no longer shown (w21/116).
+            if (listKeyRef.current !== requestedFor) return prev;
+            if (!fetchMoreResult?.getLedgerJournal?.data) return prev;
+            const { data, overlapped } = mergeJournalPage(
+              prev.getLedgerJournal.data || [],
+              fetchMoreResult.getLedgerJournal.data,
+            );
+            listMoved = overlapped;
+            return {
+              ...prev,
+              getLedgerJournal: {
+                ...prev.getLedgerJournal,
+                data,
+                total: fetchMoreResult.getLedgerJournal.total,
+              },
+            };
+          },
+        });
+        if (listMoved) void refetch().catch(() => undefined);
+      } catch (err) {
+        console.error("Error loading more transactions:", err);
+        setLoadMoreFailedFor(requestedFor);
+      }
+    },
+    [
+      isLoadingMore,
+      hasMore,
+      loading,
+      loadMoreFailed,
+      ledgerId,
+      transactions.length,
+      fetchMore,
+      refetch,
+      filter,
+      filterQuery,
+    ],
+  );
 
   const onRefresh = async () => {
     try {
@@ -335,7 +351,7 @@ const TransactionList = () => {
             onRefresh={onRefresh}
           />
         }
-        onEndReached={loadMore}
+        onEndReached={() => void loadMore()}
         onEndReachedThreshold={0.5}
         removeClippedSubviews={true}
         maxToRenderPerBatch={10}
@@ -366,6 +382,8 @@ const TransactionList = () => {
               <ActivityIndicator color={theme.primary} />
               <Text style={styles.loadingFooterText}>{t("loadingMore")}</Text>
             </View>
+          ) : loadMoreFailed && hasMore ? (
+            <LoadMoreFailed onRetry={() => void loadMore(true)} />
           ) : !hasMore && transactions.length > 0 ? (
             <View style={styles.loadingFooter}>
               <Text style={styles.loadingFooterText}>{t("noMoreEntries")}</Text>

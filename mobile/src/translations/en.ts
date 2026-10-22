@@ -365,6 +365,7 @@ export const en = {
   transactionActions: "Transaction actions",
   loadingMore: "Loading more...",
   noMoreEntries: "No more entries",
+  loadMoreFailed: "Couldn't load more entries.",
   noEntries: "No entries",
   accountDetailUnavailable:
     "This account isn't available in the selected ledger.",

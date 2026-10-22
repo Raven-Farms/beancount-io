@@ -384,6 +384,7 @@ export const pt: Translations = {
   transactionActions: "Ações da transação",
   loadingMore: "Carregando mais...",
   noMoreEntries: "Não há mais entradas",
+  loadMoreFailed: "Não foi possível carregar mais lançamentos.",
   noEntries: "Sem registros",
   accountDetailUnavailable:
     "Esta conta não está disponível no livro-razão selecionado.",

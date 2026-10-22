@@ -376,6 +376,7 @@ export const bg: Translations = {
   transactionActions: "Действия за транзакцията",
   loadingMore: "Зарежда се още...",
   noMoreEntries: "Няма повече записи",
+  loadMoreFailed: "Не успяхме да заредим още записи.",
   noEntries: "Няма записи",
   accountDetailUnavailable: "Тази сметка не е налична в избраната книга.",
   transactionDetailUnavailable:

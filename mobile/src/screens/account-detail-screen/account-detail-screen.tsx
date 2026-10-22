@@ -21,6 +21,7 @@ import { isShowingStaleDataFromQueries } from "@/common/apollo/stale-data";
 import { selectChartFailed } from "./selectors/select-chart-failed";
 import { LedgerGuard, useLedgerGuard } from "@/components/ledger-guard";
 import { ThemedRefreshControl } from "@/components/dashboard-scroll-view";
+import { LoadMoreFailed } from "@/components/load-more-failed";
 import { useLedgerReadContext } from "@/common/hooks/use-ledger-read-context";
 import { useAccountReport } from "@/screens/accounts-screen/hooks/use-account-report";
 import { useTrialBalance } from "@/screens/accounts-screen/hooks/use-trial-balance";
@@ -317,65 +318,82 @@ const AccountDetailScreenImpl = ({
   const isInitialLoading =
     (journalLoading || unitsReportPending) && items.length === 0;
 
-  const loadMore = useCallback(async () => {
-    if (isLoadingMore || !hasMore || journalLoading || !ledgerId) {
-      return;
-    }
-    let listMoved = false;
-    try {
-      await fetchMore({
-        variables: {
-          ledgerId,
-          query: {
-            account,
-            limit: ACCOUNT_JOURNAL_PAGE_SIZE,
-            offset: items.length,
-            with_children: true,
-            conversion: journalConversion,
-          },
-        },
-        updateQuery: (prev, { fetchMoreResult }) => {
-          if (!fetchMoreResult?.getLedgerAccountJournal) {
-            return prev;
-          }
-          const incoming = fetchMoreResult.getLedgerAccountJournal.items;
-          const merged = mergeAccountJournalItems(
-            prev.getLedgerAccountJournal.items,
-            incoming,
-          );
-          const page = {
-            incoming: incoming.length,
-            added: merged.length - prev.getLedgerAccountJournal.items.length,
-          };
-          listMoved = accountJournalPageOverlapped(page);
-          setLastJournalPage(page);
-          return {
-            ...prev,
-            getLedgerAccountJournal: {
-              ...fetchMoreResult.getLedgerAccountJournal,
-              items: merged,
-            },
-          };
-        },
-      });
-      if (listMoved) {
-        setLastJournalPage(null);
-        void journalRefetch().catch(() => undefined);
+  // The list whose next page failed to load, so another account or ledger
+  // starts clean. While set, scrolling to the end does not ask again; Retry
+  // does (w21/353).
+  const listKey = `${ledgerId}|${account}|${journalConversion}`;
+  const [loadMoreFailedFor, setLoadMoreFailedFor] = useState<string | null>(
+    null,
+  );
+  const loadMoreFailed = loadMoreFailedFor === listKey;
+
+  const loadMore = useCallback(
+    async (retry = false) => {
+      if (isLoadingMore || !hasMore || journalLoading || !ledgerId) {
+        return;
       }
-    } catch (err) {
-      console.error("Error loading more account entries:", err);
-    }
-  }, [
-    isLoadingMore,
-    hasMore,
-    journalLoading,
-    ledgerId,
-    account,
-    items.length,
-    journalConversion,
-    fetchMore,
-    journalRefetch,
-  ]);
+      if (loadMoreFailed && !retry) return;
+      setLoadMoreFailedFor(null);
+      let listMoved = false;
+      try {
+        await fetchMore({
+          variables: {
+            ledgerId,
+            query: {
+              account,
+              limit: ACCOUNT_JOURNAL_PAGE_SIZE,
+              offset: items.length,
+              with_children: true,
+              conversion: journalConversion,
+            },
+          },
+          updateQuery: (prev, { fetchMoreResult }) => {
+            if (!fetchMoreResult?.getLedgerAccountJournal) {
+              return prev;
+            }
+            const incoming = fetchMoreResult.getLedgerAccountJournal.items;
+            const merged = mergeAccountJournalItems(
+              prev.getLedgerAccountJournal.items,
+              incoming,
+            );
+            const page = {
+              incoming: incoming.length,
+              added: merged.length - prev.getLedgerAccountJournal.items.length,
+            };
+            listMoved = accountJournalPageOverlapped(page);
+            setLastJournalPage(page);
+            return {
+              ...prev,
+              getLedgerAccountJournal: {
+                ...fetchMoreResult.getLedgerAccountJournal,
+                items: merged,
+              },
+            };
+          },
+        });
+        if (listMoved) {
+          setLastJournalPage(null);
+          void journalRefetch().catch(() => undefined);
+        }
+      } catch (err) {
+        console.error("Error loading more account entries:", err);
+        setLoadMoreFailedFor(listKey);
+      }
+    },
+    [
+      isLoadingMore,
+      hasMore,
+      journalLoading,
+      loadMoreFailed,
+      listKey,
+      ledgerId,
+      account,
+      items.length,
+      journalConversion,
+      fetchMore,
+      journalRefetch,
+    ],
+  );
 
   const [refreshing, setRefreshing] = useState(false);
   const onRefresh = async () => {
@@ -511,7 +529,7 @@ const AccountDetailScreenImpl = ({
         showsVerticalScrollIndicator={false}
         indicatorStyle={themeName === "dark" ? "white" : "default"}
         stickySectionHeadersEnabled={false}
-        onEndReached={loadMore}
+        onEndReached={() => void loadMore()}
         onEndReachedThreshold={0.5}
         refreshControl={
           <ThemedRefreshControl refreshing={refreshing} onRefresh={onRefresh} />
@@ -528,6 +546,8 @@ const AccountDetailScreenImpl = ({
               <ActivityIndicator color={theme.primary} />
               <Text style={styles.footerText}>{t("loadingMore")}</Text>
             </View>
+          ) : loadMoreFailed && hasMore ? (
+            <LoadMoreFailed onRetry={() => void loadMore(true)} />
           ) : !hasMore && rows.length > 0 ? (
             <View style={styles.footer}>
               <Text style={styles.footerText}>{t("noMoreEntries")}</Text>

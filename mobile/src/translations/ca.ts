@@ -384,6 +384,7 @@ export const ca: Translations = {
   transactionActions: "Accions de la transacció",
   loadingMore: "Carregant més...",
   noMoreEntries: "No hi ha més entrades",
+  loadMoreFailed: "No s'han pogut carregar més entrades.",
   noEntries: "Cap entrada",
   accountDetailUnavailable:
     "Aquest compte no està disponible al llibre seleccionat.",

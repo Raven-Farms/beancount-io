@@ -384,6 +384,7 @@ export const fr: Translations = {
   transactionActions: "Actions de la transaction",
   loadingMore: "Chargement en cours...",
   noMoreEntries: "Aucune autre entrée",
+  loadMoreFailed: "Impossible de charger d'autres écritures.",
   noEntries: "Aucune entrée",
   accountDetailUnavailable:
     "Ce compte n'est pas disponible dans le grand livre sélectionné.",

@@ -386,6 +386,7 @@ export const de: Translations = {
   transactionActions: "Transaktionsaktionen",
   loadingMore: "Lädt mehr...",
   noMoreEntries: "Keine weiteren Einträge",
+  loadMoreFailed: "Weitere Einträge konnten nicht geladen werden.",
   noEntries: "Keine Einträge",
   accountDetailUnavailable:
     "Dieses Konto ist im ausgewählten Hauptbuch nicht verfügbar.",

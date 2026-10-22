@@ -383,6 +383,7 @@ export const uk: Translations = {
   transactionActions: "Дії з транзакцією",
   loadingMore: "Завантажується ще...",
   noMoreEntries: "Більше записів немає",
+  loadMoreFailed: "Не вдалося завантажити більше записів.",
   noEntries: "Немає записів",
   accountDetailUnavailable: "Цей рахунок недоступний у вибраній книзі.",
   transactionDetailUnavailable: "Ця транзакція недоступна у вибраній книзі.",

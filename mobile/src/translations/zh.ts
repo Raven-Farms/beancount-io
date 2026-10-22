@@ -337,6 +337,7 @@ export const zh: Translations = {
   transactionActions: "交易操作",
   loadingMore: "加载更多...",
   noMoreEntries: "没有更多记录",
+  loadMoreFailed: "无法加载更多条目。",
   noEntries: "暂无记录",
   accountDetailUnavailable: "所选账本中没有这个账户。",
   transactionDetailUnavailable: "所选账本中没有这笔交易。",

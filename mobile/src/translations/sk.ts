@@ -386,6 +386,7 @@ export const sk: Translations = {
   transactionActions: "Akcie transakcie",
   loadingMore: "Načítava sa viac...",
   noMoreEntries: "Žiadne ďalšie záznamy",
+  loadMoreFailed: "Nepodarilo sa načítať ďalšie záznamy.",
   noEntries: "Žiadne záznamy",
   accountDetailUnavailable: "Tento účet nie je vo zvolenej knihe dostupný.",
   transactionDetailUnavailable:

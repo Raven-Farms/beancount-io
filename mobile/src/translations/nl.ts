@@ -375,6 +375,7 @@ export const nl: Translations = {
   transactionActions: "Transactieacties",
   loadingMore: "Meer laden...",
   noMoreEntries: "Geen verdere vermeldingen",
+  loadMoreFailed: "Meer boekingen laden is mislukt.",
   noEntries: "Geen boekingen",
   accountDetailUnavailable:
     "Dit account is niet beschikbaar in het geselecteerde grootboek.",
