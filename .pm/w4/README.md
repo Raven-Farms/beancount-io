@@ -94,8 +94,6 @@
 
 - [308 — Refuse malformed CSV quote boundaries instead of joining their text](./308.md) — minor; dashboard QA, 2026-10-21; closed quoted fields accept trailing text, silently turning malformed payee/amount tokens into2Valid rows at both widths.
 
-- [307 — Show copy failure during stale-entry draft recovery](./307.md) — minor; dashboard QA, 2026-10-21; Copy my edit leaves a rejected clipboard promise unhandled and gives no failure feedback; exact-payload retry succeeds at both widths.
-
 - [265 — Keep financial text and private paths out of GA4 automatic events](./blocked/265.md) — major; dashboard QA, 2026-10-20; stream-editor completion dependency. — **blocked:** checklist shipped in `181e7a996`; needs a GA4 Editor to turn off Site search / history page views
 - [289 — Preserve long amount digits in portrait statement print output](./blocked/289.md) — minor; dashboard QA, 2026-10-20. — **blocked:** fix shipped in `68e973700`; awaiting portrait PDF check
 
