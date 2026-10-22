@@ -4,6 +4,8 @@
 
 ## Inbox
 
+- [985 — Default newly opened forms to the opening day](./985.md) — minor; Date-only browser fixtures with real reads,2026-10-22; Budget/Open Account first open keeps yesterday at both widths; same-day, explicit-date and close/reopen controls pass, no writes.
+
 - [984 — Keep cached Activity cards after a failed refresh](./984.md) — minor; real cached dashboard reads with injected offset0 failure,2026-10-22; ten cards become zero at both widths despite retained query data; initial-error/retry controls pass, no writes.
 
 - [983 — Offer Try Again on the remaining QueryView read failures](./983.md) — minor; w4/m50 simplify reviews plus live QA,2026-10-22; Accounts, Documents and Events lack retry at both widths, with real reload controls; Settings/Errors and older retry migrations remain source-derived.
