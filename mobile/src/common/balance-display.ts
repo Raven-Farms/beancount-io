@@ -124,12 +124,11 @@ export function selectBalanceDisplay(
 
   if (held.length === 1 && held[0].currency !== currency) {
     // Some of the commodity converted (its lots with a cost) and some did not
-    // (cost-less ones, `@ price` rewards): the value stands, and names the
-    // remainder, rather than being dropped for it (w21/278).
-    const partial = notInTotal.every(
-      (holding) => holding.currency === held[0].currency,
-    );
-    const valued = partial && value !== 0;
+    // (cost-less ones, `@ price` rewards, lots bought in a second currency that
+    // has no price): the value stands, and names the remainder, rather than
+    // being dropped for it (w21/278, w21/555). A balance of one commodity can
+    // leave only that commodity or its lots' cost currencies in the map.
+    const valued = value !== 0;
     return {
       kind: "units",
       units: held[0],

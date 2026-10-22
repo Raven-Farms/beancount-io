@@ -206,3 +206,42 @@ describe("a commodity held with and without a cost", () => {
     });
   });
 });
+
+// w21/555: 0.5 BTC {30000 USD} and 0.5 BTC {28000 EUR} read "1.0 BTC" with no
+// value and no note, though the Assets total includes the USD part.
+describe("selectBalanceDisplay for a commodity bought in two currencies", () => {
+  const display = () =>
+    selectBalanceDisplay(
+      { USD: "30000.00", EUR: "14000.00" },
+      { BTC: "1.0" },
+      "USD",
+      () => "market",
+    );
+
+  it("keeps the operating-currency value of the part it converted", () => {
+    const shown = display();
+    expect(shown.kind).toBe("units");
+    if (shown.kind !== "units") return;
+    expect(shown.units).toEqual({ currency: "BTC", number: 1, scale: 1 });
+    expect(shown.value).toEqual({ amount: 30000, basis: "market" });
+  });
+
+  it("names the other currency's part as not in the total", () => {
+    const shown = display();
+    expect(shown.kind === "units" ? shown.notInTotal : []).toEqual([
+      { currency: "EUR", number: 14000, scale: 2 },
+    ]);
+  });
+
+  it("stays plain units when nothing converted", () => {
+    const shown = selectBalanceDisplay(
+      { EUR: "14000.00" },
+      { BTC: "0.5" },
+      "USD",
+    );
+    expect(shown.kind).toBe("units");
+    if (shown.kind !== "units") return;
+    expect(shown.value).toBe(null);
+    expect(shown.notInTotal).toEqual([]);
+  });
+});
