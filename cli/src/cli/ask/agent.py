@@ -262,10 +262,13 @@ def translated_failures(deps: BqlDeps | None = None) -> Iterator[None]:
     except ModelHTTPError as exc:
         if 300 <= exc.status_code < 400:
             raise _naming_writes(redirect_error(exc.status_code, getattr(exc, "headers", None)), deps) from exc
+        request_id = request_id_from(getattr(exc, "headers", None))
         quota = _quota_refusal(exc.body, written_so_far(deps))
         if quota is not None:
-            raise BeaError(quota) from exc
-        raise _naming_writes(error_from_status(exc.status_code, _server_message(exc.body)), deps) from exc
+            raise BeaError(quota, request_id=request_id) from exc
+        raise _naming_writes(
+            error_from_status(exc.status_code, _server_message(exc.body), request_id=request_id), deps
+        ) from exc
     except ModelAPIError as exc:
         # The SDK wraps redirects as ModelAPIError rather than ModelHTTPError,
         # just like connection failures. Inspect the actual cause before
