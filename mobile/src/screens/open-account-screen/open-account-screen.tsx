@@ -341,6 +341,9 @@ export function OpenAccountScreenComponent(): JSX.Element {
     if (!canSubmit) return;
 
     setSubmitError(null);
+    // Taken before the save: leaving during it unmounts the screen, which
+    // discards the registration (w21/581).
+    const onCreated = AccountCreated.getFn();
     const result = await openAccount({
       account,
       currencies: currency ? [currency] : [],
@@ -371,7 +374,7 @@ export function OpenAccountScreenComponent(): JSX.Element {
           router.replace("/(app)/(tabs)/accounts");
         }
       }
-      runAccountCreatedCallback(account);
+      runAccountCreatedCallback(account, onCreated);
       return;
     }
 
