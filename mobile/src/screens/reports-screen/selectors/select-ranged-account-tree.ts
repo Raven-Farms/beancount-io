@@ -265,3 +265,18 @@ export function notInTotalNote(
           .join(", "),
       });
 }
+
+/**
+ * What the charts say for a range with no flow in the operating currency: that
+ * there is none, and, when the range does have flow in another currency, what
+ * the totals leave out. "No cash flow" beside a card listing 420 EUR as not in
+ * the total asserted something false (w21/515).
+ */
+export function emptyFlowLabel(
+  noFlow: string,
+  notInTotal: readonly NotInTotalAmount[],
+  t: Translate,
+): string {
+  const note = notInTotalNote(notInTotal, t);
+  return note ? `${noFlow} ${note}` : noFlow;
+}

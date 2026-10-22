@@ -21,7 +21,6 @@
 - [228](./blocked/228.md) — New Transaction stamps the first operating currency on every posting; no currency or price control — **blocked:** needs account-constraint currencies on the client, a price path (legacy field or typed mutation, deploy first) and an owner-approved form design
 - [304](./blocked/304.md) — Budgets on Liabilities/Assets get favourability backwards (owner decision) — **blocked:** needs an owner decision between deriving direction from the account root and limiting the picker to Income and Expenses, which reverses w1/023's "every root" rule
 - [453](./blocked/453.md) — addEntries/bulkEntries have no idempotency key: a retry after a lost response can duplicate the entry (split from 351) — **blocked:** needs an owner-approved contract (field, bounds, retention) across REST/GraphQL/MCP and a backend-v2 deploy
-- [515](./515.md) — Reports' chart and Cash flow say "No cash flow in this range" above Expenses' "Not in total: 420.00 EUR" (sibling of w21/493)
 - [516](./516.md) — An account with only a future posting shows "$0.00 · Not enough data" while its Accounts row says −$20,000.00 (w21/491)
 - [517](./517.md) — A units account chart still runs past today: 1M reads "+3 VOO" from next month's buy (w21/491 incomplete)
 - [518](./518.md) — New Transaction books a plain first-row amount as money *into* the bank (Checking +4.50, Groceries −4.50); needs a product call

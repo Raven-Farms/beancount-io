@@ -1,5 +1,6 @@
 import { isolateLtr } from "../../../../common/bidi";
 import {
+  emptyFlowLabel,
   notInTotalNote,
   selectRangedAccountTree,
 } from "../select-ranged-account-tree";
@@ -322,5 +323,30 @@ describe("a parent's own postings on a breakdown", () => {
       ["Groceries", 100, true],
       ["Costco", 60, false],
     ]);
+  });
+});
+
+// w21/515: a range whose only flow was in EUR read "No cash flow" in a USD
+// ledger, beside the Expenses card listing 420.00 EUR as not in the total.
+describe("emptyFlowLabel", () => {
+  const t = (key: string, params?: Record<string, unknown>) =>
+    `${key}:${String(params?.amounts)}`;
+
+  it("discloses flow outside the operating currency", () => {
+    const expense = selectRangedAccountTree(
+      "USD",
+      [point("2026-10", { "Expenses:QaTravel:Hotel": { EUR: "420.00" } })],
+      "6M",
+      "expenses",
+      "2026-10",
+    );
+    expect(expense.total).toBe(0);
+    expect(emptyFlowLabel("No cash flow", expense.notInTotal, t)).toBe(
+      `No cash flow notInTotal:${isolateLtr("420.00 EUR (QaTravel)")}`,
+    );
+  });
+
+  it("stays the plain empty message for a range with nothing in any currency", () => {
+    expect(emptyFlowLabel("No cash flow", [], t)).toBe("No cash flow");
   });
 });

@@ -125,6 +125,8 @@ function sankeyRibbonPath(link: LayoutLink): string | null {
 }
 
 type CashFlowSankeyProps = {
+  /** What the empty state says: see `IncomeExpenseBarChart`'s (w21/515). */
+  emptyLabel?: string;
   income: AccountNode[];
   expenses: AccountNode[];
   /** Ledger currency code, for the screen-reader summary's amounts. */
@@ -224,6 +226,7 @@ function AnimatedNodeRect({
 }
 
 function CashFlowSankeyPlot({
+  emptyLabel,
   income,
   expenses,
   currency,
@@ -285,7 +288,10 @@ function CashFlowSankeyPlot({
 
   if (!ready) {
     return (
-      <ChartPlaceholder height={SANKEY_HEIGHT} label={t("cashFlowEmpty")} />
+      <ChartPlaceholder
+        height={SANKEY_HEIGHT}
+        label={emptyLabel ?? t("cashFlowEmpty")}
+      />
     );
   }
 

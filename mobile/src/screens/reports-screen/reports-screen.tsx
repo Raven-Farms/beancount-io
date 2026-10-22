@@ -28,6 +28,7 @@ import { useLedgerReadContext } from "@/common/hooks/use-ledger-read-context";
 import { isShowingStaleDataFromQueries } from "@/common/apollo/stale-data";
 import { useIncomeStatement } from "./hooks/use-income-statement";
 import {
+  emptyFlowLabel,
   notInTotalNote,
   selectRangedAccountTree,
 } from "./selectors/select-ranged-account-tree";
@@ -161,6 +162,12 @@ const ReportsScreenImpl = (): JSX.Element => {
     [currency, stmt, timeRange, currentMonth],
   );
 
+  const emptyLabel = emptyFlowLabel(
+    t("cashFlowEmpty"),
+    [...expense.notInTotal, ...income.notInTotal],
+    t,
+  );
+
   // A failed first load has nothing to show; the cards would read an empty
   // statement as $0.00 and "no activity" (w21/080).
   const statementState = selectCardLoadState({
@@ -215,6 +222,7 @@ const ReportsScreenImpl = (): JSX.Element => {
               ) : (
                 <FadeInView>
                   <IncomeExpenseBarChartD3
+                    emptyLabel={emptyLabel}
                     currency={currency}
                     months={chart.months}
                     income={chart.income}
@@ -231,6 +239,7 @@ const ReportsScreenImpl = (): JSX.Element => {
               ) : (
                 <FadeInView>
                   <CashFlowSankey
+                    emptyLabel={emptyLabel}
                     income={income.tree}
                     expenses={expense.tree}
                     currency={currency}

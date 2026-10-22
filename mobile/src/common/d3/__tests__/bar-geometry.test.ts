@@ -119,7 +119,7 @@ test("the income and expense chart shows the empty state for it", () => {
     .replace(/\s+/g, "");
   expect(
     source.includes(
-      'if(hasNoFlow(income,expense,net)){return<ChartPlaceholderheight={chartHeight}label={t("cashFlowEmpty")}/>;}',
+      'if(hasNoFlow(income,expense,net)){return(<ChartPlaceholderheight={chartHeight}label={emptyLabel??t("cashFlowEmpty")}/>);}',
     ),
   ).toBe(true);
 });

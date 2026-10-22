@@ -30,6 +30,11 @@ export { LEGEND_HEIGHT } from "./chart-chrome";
 
 type IncomeExpenseBarChartProps = {
   /**
+   * What the empty state says in place of "No cash flow in this range": a range
+   * whose only flow is outside the operating currency is not empty (w21/515).
+   */
+  emptyLabel?: string;
+  /**
    * Unique, ascending "YYYY-MM" month keys — the x identity. Full keys (not "MM")
    * so a span crossing a year keeps a distinct column per month. The display
    * label is derived per column via `t(month.slice(5, 7))`.
@@ -60,6 +65,7 @@ const MIN_GROUP_WIDTH = 44;
  * horizontally while the y-axis stays pinned on the left.
  */
 function IncomeExpenseBarChart({
+  emptyLabel,
   months,
   income,
   expense,
@@ -87,7 +93,12 @@ function IncomeExpenseBarChart({
   // expense, no net. Two bars over a "$0 to $1" axis read as cents of activity,
   // beside a Cash flow card that says there is none (w21/496).
   if (hasNoFlow(income, expense, net)) {
-    return <ChartPlaceholder height={chartHeight} label={t("cashFlowEmpty")} />;
+    return (
+      <ChartPlaceholder
+        height={chartHeight}
+        label={emptyLabel ?? t("cashFlowEmpty")}
+      />
+    );
   }
 
   // Every series sets the bounds, bars included: a refund month's negative
