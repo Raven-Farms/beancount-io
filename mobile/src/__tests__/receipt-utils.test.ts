@@ -7,6 +7,11 @@ import {
   shotFromLibraryResult,
 } from "../screens/receipt-capture-screen/receipt-utils";
 import { getFormatDate } from "../common/format-util";
+import { currencyMinorUnits } from "../common/currency-util";
+import {
+  buildEntryInput,
+  createPrefilledPostings,
+} from "../screens/multi-postings-transaction/postings-utils";
 
 // ──────────────────────────────────────────────────────────────────────────────
 // receiptDate
@@ -176,7 +181,7 @@ describe("receiptAmountText", () => {
 
   it("shows 2-decimal currencies as before, positive", () => {
     expect(receiptAmountText(-42.5)).toBe("42.50");
-    expect(receiptAmountText(12)).toBe("12.00");
+    expect(receiptAmountText(12)).toBe("12");
     expect(receiptAmountText(19.99)).toBe("19.99");
   });
 
@@ -270,4 +275,33 @@ test("receiptDate falls back to today for anything that is not an ISO day", () =
     expect(receiptDate(bad)).toBe(today);
   }
   expect(receiptDate("2024-02-29")).toBe("2024-02-29");
+});
+
+// w21/389: a scanned 1500 JPY receipt saved "1500.00 JPY" because the prefill was
+// always padded to two places and the payload never trimmed it.
+describe("a scanned receipt's amount in the payload", () => {
+  const payload = (total: number, currency: string) => {
+    const postings = createPrefilledPostings(
+      "Assets:Cash",
+      "Expenses:Food",
+      receiptAmountText(total),
+      currencyMinorUnits(currency),
+    );
+    return buildEntryInput(postings, {
+      date: "2026-10-21",
+      payee: "Shop",
+      narration: "x",
+      currency,
+    }).postings.map((posting) => posting.amount);
+  };
+
+  it("saves a whole yen total without decimals", () => {
+    expect(payload(1500, "JPY")).toEqual(["-1500 JPY", "1500 JPY"]);
+  });
+
+  it("still pads a whole dollar total and keeps a fractional one", () => {
+    expect(payload(1500, "USD")).toEqual(["-1500.00 USD", "1500.00 USD"]);
+    expect(payload(42.5, "USD")).toEqual(["-42.50 USD", "42.50 USD"]);
+    expect(payload(12.345, "KWD")).toEqual(["-12.345 KWD", "12.345 KWD"]);
+  });
 });

@@ -29,15 +29,18 @@ const isIsoDay = (date: string | null | undefined): date is string => {
 /**
  * The parsed receipt total as the form's amount text: positive (receipts are
  * expenses, however the model signed them) and at the precision the parser
- * returned, padded to two places. `toFixed(2)` cut a KWD 12.345 to "12.35"
- * and binary-rounded 1.005 to "1.00" (w21/069).
+ * returned. A fractional total keeps at least two places ("42.5" is "42.50"),
+ * and a whole one keeps none: the form pads it to the ledger currency's own
+ * minor unit, so a 1500 total saves "1500 JPY" where an always-padded "1500.00"
+ * saved "1500.00 JPY" (w21/389). `toFixed(2)` cut a KWD 12.345 to "12.35" and
+ * binary-rounded 1.005 to "1.00" (w21/069).
  */
 export const receiptAmountText = (amount: number): string => {
   const text = String(Math.abs(amount));
   // Exponent forms (1e-7, 1e21) are not realistic totals; keep them parseable.
   if (/e/i.test(text)) return Math.abs(amount).toFixed(2);
-  const [whole, fraction = ""] = text.split(".");
-  return `${whole}.${fraction.padEnd(2, "0")}`;
+  const [whole, fraction] = text.split(".");
+  return fraction === undefined ? whole : `${whole}.${fraction.padEnd(2, "0")}`;
 };
 
 /**
