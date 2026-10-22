@@ -1311,8 +1311,19 @@ def _parses(value: str, date_format: str) -> bool:
 
 
 def _has_year_directive(date_format: str) -> bool:
-    """Whether a strptime format reads a year; without one every row lands in 1900 (w5/783)."""
+    """Whether a strptime format spells out a year directive (w5/783).
+
+    A format without one is refused: a genuinely yearless one lands every row in
+    1900, and the locale shorthands `%x`/`%c` read a year only as the platform
+    defines them, so they must be expanded into explicit fields (w5/930).
+    """
     return any(directive in date_format.replace("%%", "") for directive in ("%Y", "%y", "%G"))
+
+
+def _locale_shorthand(date_format: str) -> str | None:
+    """The first unescaped locale-dependent directive, `%x` or `%c`, in a strptime format."""
+    unescaped = date_format.replace("%%", "")
+    return next((directive for directive in ("%x", "%c") if directive in unescaped), None)
 
 
 def header_signature(headers: list[str] | None) -> str | None:
@@ -1404,6 +1415,14 @@ class CsvImporter:
         # A remedy to paste names the ledger it is about (w5/838, as w5/619).
         self._bea = bea_command(ledger) if ledger is not None else "bea"
         if not _has_year_directive(date_format):
+            shorthand = _locale_shorthand(date_format)
+            if shorthand is not None:
+                example = "'%m/%d/%y'" if shorthand == "%x" else "'%a %b %d %H:%M:%S %Y'"
+                raise UsageError(
+                    f"--date-format {date_format!r} uses the locale shorthand {shorthand}, whose layout depends on "
+                    "the platform's locale, so it is not accepted. Spell the file's date out with an explicit year "
+                    f"directive (%Y, %y or %G), for example {example}."
+                )
             raise UsageError(
                 f"--date-format {date_format!r} has no year directive (%Y, %y or %G), so every row would be read "
                 "as 1900. Pass a format that reads the file's year (for example '%d/%m/%Y'), or add the year to "

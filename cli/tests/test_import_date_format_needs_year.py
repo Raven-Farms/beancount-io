@@ -70,3 +70,32 @@ def test_year_directives_keep_working(books: Path, source: str, value: str, show
 
     assert result.returncode == 0, result.stderr
     assert shown in result.stdout
+
+
+@pytest.mark.parametrize(
+    ("value", "shorthand", "example"),
+    [("%x", "%x", "%m/%d/%y"), ("%c", "%c", "%a %b %d %H:%M:%S %Y")],
+)
+def test_a_locale_shorthand_is_explained_without_claiming_1900(
+    books: Path, value: str, shorthand: str, example: str
+) -> None:
+    before = (books / "main.bean").read_bytes()
+
+    result = _bea(books, "import", "short.csv", "--csv", MAPPING, "--account", "Assets:Cash", "--date-format", value)
+
+    assert result.returncode == 2, result.stdout + result.stderr
+    message = " ".join(result.stderr.split())
+    assert f"uses the locale shorthand {shorthand}" in message
+    assert example in message
+    assert "1900" not in message
+    assert (books / "main.bean").read_bytes() == before
+
+
+def test_an_escaped_locale_shorthand_is_still_a_yearless_format(books: Path) -> None:
+    result = _bea(
+        books, "import", "noyear.csv", "--csv", MAPPING, "--account", "Assets:Cash", "--date-format", "%%x %d/%m"
+    )
+
+    assert result.returncode == 2, result.stdout + result.stderr
+    assert "locale shorthand" not in result.stderr
+    assert "1900" in result.stderr
