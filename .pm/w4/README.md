@@ -76,7 +76,6 @@
 
 - [961 — Keep recognized CSV validation failures available for repair](./961.md) — minor; dashboard QA,2026-10-22; invalid date, mixed conventions and a recognized header-only file are mislabeled unreadable columns/AI at both widths; repair, precision and existing empty-state controls pass; no writes/AI.
 
-- [340 — Return search focus after Accounts and Budget no-match resets](./340.md) — minor; public dashboard QA,2026-10-21; both body resets restore results but leave BODY focused/typing ignored at both widths; their repaired input-clear icons pass, with distinct filter semantics retained.
 
 
 
