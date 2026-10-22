@@ -1,6 +1,8 @@
 import { resolveCurrencyBalance } from "../../common/balance-util";
 import { notInTotalOf, type Holding } from "../../common/balance-display";
 import { dropRoot, leafName } from "../../common/account-util";
+import { getCurrencySymbol } from "../../common/currency-util";
+import { amountScale } from "../../common/number-utils";
 
 export type AccountNode = {
   /** Full beancount account, e.g. "Assets:Bank:Checking". */
@@ -117,6 +119,10 @@ type RawChild = {
  */
 type TreeRules = {
   /**
+   * Whether two rolled-up balances are the same amount (see `amountTolerance`).
+   */
+  same: (a: number, b: number) => boolean;
+  /**
    * Whether a parent's own postings earn a row of their own beyond what their
    * operating-currency value says: its euros or shares, when the whole balance
    * counts (w21/450).
@@ -157,7 +163,7 @@ function toNode(
     : 0;
   if (
     children.length > 0 &&
-    (!sameAmount(ownValue, 0) || rules.ownHoldsMore(raw.balance))
+    (!rules.same(ownValue, 0) || rules.ownHoldsMore(raw.balance))
   ) {
     children.push({
       account: raw.account,
@@ -181,8 +187,30 @@ function toNode(
  * Two rolled-up balances that round to the same cent. Values are float sums, so
  * an exact `===` would miss `902.36` vs `902.3600000000001`.
  */
-function sameAmount(a: number, b: number): boolean {
-  return Math.abs(a - b) < 0.005;
+function sameWithin(tolerance: number): (a: number, b: number) => boolean {
+  return (a, b) => Math.abs(a - b) < tolerance;
+}
+
+/**
+ * How close two balances in `currency` must be to count as one. Half a cent for
+ * a known currency. A commodity the app has no symbol for (BTC as a ledger's
+ * operating currency) is held at its own recorded digits instead: a flat half
+ * cent folded a wallet's 0.004 BTC into nothing and left the rows short of their
+ * total (w21/451). Never less than half a cent.
+ */
+function amountTolerance(raw: readonly RawChild[], currency: string): number {
+  if (getCurrencySymbol(currency) !== "") return 0.005;
+  let scale = 2;
+  for (const node of rawNodes(raw)) {
+    for (const balance of [node.balance_children, node.balance]) {
+      const entry = balance?.[currency];
+      if (entry !== undefined) {
+        scale = Math.max(scale, amountScale(String(entry)));
+      }
+    }
+  }
+  // Bounded: float residue near 1e-15 must still fold.
+  return 0.5 * 10 ** -Math.min(scale, 12);
 }
 
 /**
@@ -202,7 +230,7 @@ function compressChain(node: AccountNode, rules: TreeRules): AccountNode {
   const segments = [node.name];
   while (
     current.children.length === 1 &&
-    sameAmount(current.children[0].value, current.value) &&
+    rules.same(current.children[0].value, current.value) &&
     rules.sameHoldings(current.children, current)
   ) {
     current = current.children[0];
@@ -230,7 +258,7 @@ function isPassThrough(node: AccountNode, rules: TreeRules): boolean {
   }
   const childSum = node.children.reduce((sum, child) => sum + child.value, 0);
   return (
-    sameAmount(childSum, node.value) && rules.sameHoldings(node.children, node)
+    rules.same(childSum, node.value) && rules.sameHoldings(node.children, node)
   );
 }
 
@@ -305,8 +333,10 @@ function treeRules(
   keep: ReadonlySet<string>,
   wholeBalance = false,
 ): TreeRules {
+  const same = sameWithin(amountTolerance(raw, currency));
   if (!wholeBalance) {
     return {
+      same,
       ownHoldsMore: () => false,
       keep: (node) => keep.has(node.account),
       sameHoldings: () => true,
@@ -319,6 +349,7 @@ function treeRules(
     ]),
   );
   return {
+    same,
     ownHoldsMore: (balance) =>
       balance != null && notInTotalOf(balance, currency).length > 0,
     keep: (node) =>

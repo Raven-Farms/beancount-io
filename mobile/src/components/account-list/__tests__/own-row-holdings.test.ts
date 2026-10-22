@@ -125,3 +125,65 @@ describe("a parent's own shares", () => {
     expect(rowsOf(none).some((row) => row.own)).toBe(false);
   });
 });
+
+// w21/451: a flat half-cent tolerance folded a BTC wallet's 0.004 into nothing.
+describe("a ledger whose operating currency is a fine commodity", () => {
+  const btc = trial(
+    node("Assets", {}, { BTC: "1.507" }, [
+      node("Assets:Wallet", { BTC: "0.004" }, { BTC: "1.004" }, [
+        node("Assets:Wallet:Cold", { BTC: "1.000" }, { BTC: "1.000" }),
+      ]),
+      node("Assets:Exchange", { BTC: "0.500" }, { BTC: "0.500" }),
+      node("Assets:Dust", { BTC: "0.003" }, { BTC: "0.003" }),
+    ]),
+  );
+  it("keeps the wallet's own 0.004 and a row for each balance", () => {
+    const rows = flattenRows(selectTrialBalanceCategories("BTC", btc), {
+      Assets: true,
+      "Assets:Wallet": true,
+    });
+    const own = rows.find((row) => row.own);
+    expect(own?.account).toBe("Assets:Wallet");
+    expect(own?.value).toBe(0.004);
+    const leaves = rows
+      .filter((row) => row.depth > 0 && !row.hasChildren)
+      .map((row) => row.value)
+      .sort();
+    expect(leaves).toEqual([0.003, 0.004, 0.5, 1]);
+    // The rows add up to the category.
+    expect(
+      Number(leaves.reduce((sum, value) => sum + value, 0).toFixed(3)),
+    ).toBe(1.507);
+  });
+
+  it("still folds float residue", () => {
+    const residue = trial(
+      node("Assets", {}, { BTC: "1.000" }, [
+        node(
+          "Assets:Wallet",
+          { BTC: "1.0000000000000002" },
+          { BTC: "1.0000000000000002" },
+          [node("Assets:Wallet:Cold", { BTC: "1.000" }, { BTC: "1.000" })],
+        ),
+      ]),
+    );
+    const rows = flattenRows(selectTrialBalanceCategories("BTC", residue), {
+      Assets: true,
+    });
+    expect(rows.some((row) => row.own)).toBe(false);
+  });
+
+  it("keeps the half-cent rule for a known currency", () => {
+    const usd = trial(
+      node("Assets", {}, { USD: "100.003" }, [
+        node("Assets:Bank", { USD: "0.003" }, { USD: "100.003" }, [
+          node("Assets:Bank:Checking", { USD: "100.000" }, { USD: "100.000" }),
+        ]),
+      ]),
+    );
+    const rows = flattenRows(selectTrialBalanceCategories("USD", usd), {
+      Assets: true,
+    });
+    expect(rows.some((row) => row.own)).toBe(false);
+  });
+});
