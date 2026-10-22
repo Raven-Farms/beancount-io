@@ -444,6 +444,8 @@ export const uk: Translations = {
     "Видалити цю транзакцію? Скасувати цю дію буде неможливо.",
   deleteSuccess: "Транзакцію видалено",
   deleteFailed: "Не вдалося видалити транзакцію",
+  deleteTransactionChanged:
+    "Цю транзакцію змінено деінде. Її перезавантажено; спробуйте видалити її ще раз.",
   editSuccess: "Транзакцію збережено",
   editFailed: "Не вдалося зберегти транзакцію",
   editTransactionEmpty:

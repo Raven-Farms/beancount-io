@@ -448,6 +448,8 @@ export const en = {
     "Are you sure you want to delete this transaction? This action cannot be undone.",
   deleteSuccess: "Transaction deleted",
   deleteFailed: "Failed to delete transaction",
+  deleteTransactionChanged:
+    "This transaction was changed elsewhere. It has been reloaded; try deleting it again.",
   editSuccess: "Transaction saved",
   editFailed: "Failed to save transaction",
   editTransactionEmpty:

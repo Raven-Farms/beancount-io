@@ -442,6 +442,8 @@ export const nl: Translations = {
     "Weet je zeker dat je deze transactie wilt verwijderen? Dit kan niet ongedaan worden gemaakt.",
   deleteSuccess: "Transactie verwijderd",
   deleteFailed: "Verwijderen van transactie mislukt",
+  deleteTransactionChanged:
+    "Deze transactie is elders gewijzigd. Ze is opnieuw geladen; probeer haar opnieuw te verwijderen.",
   editSuccess: "Transactie opgeslagen",
   editFailed: "Opslaan van transactie mislukt",
   editTransactionEmpty:

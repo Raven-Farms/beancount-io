@@ -453,6 +453,8 @@ export const de: Translations = {
     "Möchten Sie diese Transaktion wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.",
   deleteSuccess: "Transaktion gelöscht",
   deleteFailed: "Transaktion konnte nicht gelöscht werden",
+  deleteTransactionChanged:
+    "Diese Transaktion wurde an anderer Stelle geändert. Sie wurde neu geladen; versuchen Sie, sie erneut zu löschen.",
   editSuccess: "Transaktion gespeichert",
   editFailed: "Transaktion konnte nicht gespeichert werden",
   editTransactionEmpty:

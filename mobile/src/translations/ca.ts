@@ -451,6 +451,8 @@ export const ca: Translations = {
     "Segur que vols eliminar aquesta transacció? L'acció no es pot desfer.",
   deleteSuccess: "Transacció eliminada",
   deleteFailed: "No s'ha pogut eliminar la transacció",
+  deleteTransactionChanged:
+    "Aquesta transacció s'ha canviat en un altre lloc. S'ha tornat a carregar; torneu a provar d'eliminar-la.",
   editSuccess: "Transacció desada",
   editFailed: "No s'ha pogut desar la transacció",
   editTransactionEmpty:

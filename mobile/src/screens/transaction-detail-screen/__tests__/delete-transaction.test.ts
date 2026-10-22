@@ -13,7 +13,7 @@ import {
   runLedgerWrite,
   type LedgerWriteSpec,
 } from "../../../common/ledger-write";
-import { deleteTransaction } from "../delete-transaction";
+import { classifyStaleDelete, deleteTransaction } from "../delete-transaction";
 
 const BALANCE_FAILED =
   "Balance failed for Assets:Cash: expected 49.75 USD, got 73.25 USD (main.bean:84)";
@@ -41,12 +41,16 @@ const i18n = {
       : key,
 };
 
-function harness(perform: () => Promise<unknown>) {
+function harness(
+  perform: () => Promise<unknown>,
+  options: { withStale?: boolean } = {},
+) {
   const record = {
     toasts: [] as string[],
     backs: 0,
     refreshed: 0,
     dialogs: [] as { title: string; message: string }[],
+    stale: [] as string[],
   };
   const run = deleteTransaction({
     confirmWrite: (spec: LedgerWriteSpec<unknown>) =>
@@ -71,10 +75,18 @@ function harness(perform: () => Promise<unknown>) {
       loading: "Deleting...",
       success: "Transaction deleted",
       failure: "Failed to delete transaction",
+      changed: "This transaction was changed elsewhere. It has been reloaded.",
     },
     afterSuccess: () => {
       record.refreshed += 1;
     },
+    ...(options.withStale
+      ? {
+          onStale: async (kind) => {
+            record.stale.push(kind);
+          },
+        }
+      : {}),
   });
   return { run, record };
 }
@@ -176,5 +188,80 @@ describe("deleteTransaction when the session ends", () => {
     });
     expect(await run).toBe(false);
     expect(record.dialogs).toEqual([]);
+  });
+});
+
+// w21/250: an entry changed elsewhere is answered NOT_FOUND (its content hash
+// moved) or a conflict (its slice checksum), and every retry failed the same
+// way with a bare "Failed to delete transaction".
+describe("deleting an entry that changed elsewhere", () => {
+  const gone = Object.assign(new Error("Ledger resource not found"), {
+    graphQLErrors: [
+      { message: "not found", extensions: { code: "NOT_FOUND" } },
+    ],
+  });
+
+  it("reloads a removed entry and leaves it to its own state, with no dialog", async () => {
+    const { run, record } = harness(
+      async () => {
+        throw gone;
+      },
+      { withStale: true },
+    );
+    expect(await run).toBe(false);
+    expect(record.stale).toEqual(["gone"]);
+    expect(record.dialogs).toEqual([]);
+    expect(record.backs).toBe(0);
+  });
+
+  it("reloads on a checksum conflict and says to delete it again", async () => {
+    const { run, record } = harness(
+      async () => {
+        throw new Error("sha does not match the file's current revision");
+      },
+      { withStale: true },
+    );
+    expect(await run).toBe(false);
+    expect(record.stale).toEqual(["conflict"]);
+    expect(record.dialogs).toEqual([
+      {
+        title: "Failed to delete transaction",
+        message:
+          "This transaction was changed elsewhere. It has been reloaded.",
+      },
+    ]);
+  });
+
+  it("treats any other failure as before", async () => {
+    const { run, record } = harness(
+      async () => {
+        throw new Error("Network request failed");
+      },
+      { withStale: true },
+    );
+    expect(await run).toBe(false);
+    expect(record.stale).toEqual([]);
+    expect(record.dialogs[0]?.message).toBe("ledgerWriteOffline");
+  });
+
+  it("classifies the two codes and nothing else", () => {
+    expect(classifyStaleDelete(gone)).toBe("gone");
+    expect(classifyStaleDelete(new Error("409 conflict"))).toBe("conflict");
+    expect(classifyStaleDelete(new Error("boom"))).toBe(null);
+    expect(classifyStaleDelete(undefined)).toBe(null);
+  });
+
+  it("is wired to reload the entry on the detail screen", () => {
+    const source = require("fs")
+      .readFileSync(
+        require("path").join(__dirname, "..", "transaction-detail-screen.tsx"),
+        "utf8",
+      )
+      .replace(/\s+/g, "");
+    expect(source.includes("onStale:async()=>{")).toBe(true);
+    expect(source.includes("awaitrefetchContext().catch(()=>undefined);")).toBe(
+      true,
+    );
+    expect(source.includes('changed:t("deleteTransactionChanged")')).toBe(true);
   });
 });

@@ -451,6 +451,8 @@ export const fr: Translations = {
     "Voulez-vous vraiment supprimer cette transaction ? Cette action est irréversible.",
   deleteSuccess: "Transaction supprimée",
   deleteFailed: "Échec de la suppression de la transaction",
+  deleteTransactionChanged:
+    "Cette transaction a été modifiée ailleurs. Elle a été rechargée ; essayez de la supprimer à nouveau.",
   editSuccess: "Transaction enregistrée",
   editFailed: "Échec de l'enregistrement de la transaction",
   editTransactionEmpty:

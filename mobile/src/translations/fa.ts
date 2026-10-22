@@ -433,6 +433,8 @@ export const fa: Translations = {
     "از حذف این تراکنش مطمئن هستید؟ این کار برگشت‌پذیر نیست.",
   deleteSuccess: "تراکنش حذف شد",
   deleteFailed: "حذف تراکنش ناموفق بود",
+  deleteTransactionChanged:
+    "این تراکنش در جای دیگری تغییر کرده است. دوباره بارگذاری شد؛ حذف آن را دوباره امتحان کنید.",
   editSuccess: "تراکنش ذخیره شد",
   editFailed: "ذخیرهٔ تراکنش ناموفق بود",
   editTransactionEmpty:

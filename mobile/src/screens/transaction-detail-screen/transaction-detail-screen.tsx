@@ -402,8 +402,16 @@ const TransactionDetailImpl = ({
                 loading: t("deleting"),
                 success: t("deleteSuccess"),
                 failure: t("deleteFailed"),
+                changed: t("deleteTransactionChanged"),
               },
               afterSuccess: () => invalidateLedgerData(client, "entries"),
+              // The entry moved on elsewhere: reload it, so a removed one
+              // shows its state and a changed one deletes on the fresh copy
+              // instead of failing the same way again (w21/250).
+              onStale: async () => {
+                void invalidateLedgerData(client, "entries");
+                await refetchContext().catch(() => undefined);
+              },
             }),
           ),
       },
@@ -415,6 +423,7 @@ const TransactionDetailImpl = ({
     ledgerId,
     deleteMutation,
     client,
+    refetchContext,
     t,
     confirmWrite,
     deleteFlight,

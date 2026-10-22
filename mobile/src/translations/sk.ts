@@ -449,6 +449,8 @@ export const sk: Translations = {
     "Naozaj chcete odstrániť túto transakciu? Túto akciu nemožno vrátiť späť.",
   deleteSuccess: "Transakcia odstránená",
   deleteFailed: "Transakciu sa nepodarilo odstrániť",
+  deleteTransactionChanged:
+    "Táto transakcia bola zmenená inde. Bola znova načítaná; skúste ju vymazať znova.",
   editSuccess: "Transakcia uložená",
   editFailed: "Transakciu sa nepodarilo uložiť",
   editTransactionEmpty:
