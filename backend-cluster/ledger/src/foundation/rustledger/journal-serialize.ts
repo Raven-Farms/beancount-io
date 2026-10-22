@@ -229,7 +229,11 @@ function decimalKey(number: string): string {
  * amounts but carry no date. A key (account, asserted amount) shared by more
  * assertions than errors cannot say which of them failed, so those stay null
  * rather than mark a passing assertion failed; otherwise errors pair with
- * their assertions in source order.
+ * their assertions in date order. The validator checks assertions in date
+ * order, so that is the order its errors come in whatever line each sits on: a
+ * file that is not in date order (a backdated assertion appended last) put the
+ * errors by line against the assertions by date and swapped their differences
+ * (w21/532).
  */
 export function failedBalanceDiffs(
   directives: readonly DirectiveJson[],
@@ -240,10 +244,7 @@ export function failedBalanceDiffs(
     line?: number | null;
   }[],
 ): Map<DirectiveJson, JournalAmountPublic> {
-  const failures = new Map<
-    string,
-    { at: [string, number]; diff: JournalAmountPublic }[]
-  >();
+  const failures = new Map<string, { diff: JournalAmountPublic }[]>();
   for (const error of errors) {
     if (error.code !== "E2001") continue;
     const match = BALANCE_FAILED.exec(error.message.trim());
@@ -252,10 +253,7 @@ export function failedBalanceDiffs(
     if (gotCurrency !== currency) continue;
     const key = `${account}\u0000${decimalKey(expected)}\u0000${currency}`;
     const list = failures.get(key) ?? [];
-    list.push({
-      at: [error.file ?? "", error.line ?? 0],
-      diff: { number: subtractDecimal(got, expected), currency },
-    });
+    list.push({ diff: { number: subtractDecimal(got, expected), currency } });
     failures.set(key, list);
   }
   const diffs = new Map<DirectiveJson, JournalAmountPublic>();
@@ -273,13 +271,10 @@ export function failedBalanceDiffs(
   for (const [key, list] of failures) {
     const candidates = assertions.get(key) ?? [];
     if (candidates.length !== list.length) continue;
-    const ordered = [...list].sort(
-      (a, b) => a.at[0].localeCompare(b.at[0]) || a.at[1] - b.at[1],
-    );
     const dated = [...candidates].sort((a, b) =>
       a.date < b.date ? -1 : a.date > b.date ? 1 : 0,
     );
-    dated.forEach((directive, i) => diffs.set(directive, ordered[i].diff));
+    dated.forEach((directive, i) => diffs.set(directive, list[i].diff));
   }
   return diffs;
 }

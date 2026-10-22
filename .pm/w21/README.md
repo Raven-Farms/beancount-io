@@ -23,7 +23,6 @@
 - [453](./blocked/453.md) — addEntries/bulkEntries have no idempotency key: a retry after a lost response can duplicate the entry (split from 351) — **blocked:** needs an owner-approved contract (field, bounds, retention) across REST/GraphQL/MCP and a backend-v2 deploy
 - [518](./blocked/518.md) — New Transaction books a plain first-row amount as money *into* the bank (Checking +4.50, Groceries −4.50) — **blocked:** needs an owner product decision on the default row signs (negative source row vs From/To labels)
 - [526](./blocked/526.md) — Transactions, Account and Merchant detail drop back to the newest 20 rows after a return to the app or any write; a stale "Couldn't load more" footer stays — **blocked:** needs an owner decision on how to keep loaded pages through a refresh (field policy vs refetch to depth vs accept page 1)
-- [532](./532.md) — Account detail's "Off by" amounts land on the wrong balance assertion when the file isn't in date order (ledger)
 - [533](./533.md) — A balance assertion failing its explicit `~` tolerance shows as passing: `diff_amount` is null for E2002 (ledger)
 - [534](./534.md) — Booking and interpolation (`BOOK`) errors have no file or line, so the app can't open them (ledger)
 - [535](./535.md) — Every dollar currency shows as "$" (¥ for CNY/JPY, kr for SEK/NOK), so a USD+CAD merchant shows two identical "$42.50" totals

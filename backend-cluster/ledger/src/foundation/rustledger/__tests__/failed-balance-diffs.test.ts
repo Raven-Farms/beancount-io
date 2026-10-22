@@ -69,18 +69,52 @@ describe("failedBalanceDiffs", () => {
     expect(diffs.size).toBe(0);
   });
 
-  it("pairs several failures of one amount with their assertions in order", () => {
+  it("pairs several failures of one amount with their assertions in date order", () => {
     const first = balance("2026-09-01", "Assets:Cash", "50.00");
     const second = balance("2026-10-01", "Assets:Cash", "50.00");
+    // The validator reports them in date order.
     const diffs = failedBalanceDiffs(
       [second, first],
       [
-        failed("Assets:Cash", "50.00", "48.00", 12),
         failed("Assets:Cash", "50.00", "49.75", 9),
+        failed("Assets:Cash", "50.00", "48.00", 12),
       ],
     );
     expect(diffs.get(first)).toEqual({ number: "-0.25", currency: "USD" });
     expect(diffs.get(second)).toEqual({ number: "-2.00", currency: "USD" });
+  });
+
+  // w21/532: a backdated assertion appended last has the highest line number
+  // and the earliest date. Errors from the real engine for the note's fixture
+  // (`Liabilities:QaCard` −40.00 on 01-03, `balance 0.00` on 02-01, +15.00 on
+  // 01-20, then a `balance 0.00` on 01-10 at line 11): line 11 is reported
+  // first, because it is checked first.
+  it("pairs by date when the file is not in date order", () => {
+    const february = balance("2026-02-01", "Liabilities:QaCard", "0.00");
+    const backdated = balance("2026-01-10", "Liabilities:QaCard", "0.00");
+    const diffs = failedBalanceDiffs(
+      [february, backdated],
+      [
+        failed("Liabilities:QaCard", "0.00", "-40.00", 11),
+        failed("Liabilities:QaCard", "0.00", "-25.00", 7),
+      ],
+    );
+    expect(diffs.get(backdated)).toEqual({ number: "-40.00", currency: "USD" });
+    expect(diffs.get(february)).toEqual({ number: "-25.00", currency: "USD" });
+  });
+
+  it("pairs by date across two included files whose names sort the other way", () => {
+    const early = balance("2026-01-10", "Assets:Cash", "10.00");
+    const late = balance("2026-03-10", "Assets:Cash", "10.00");
+    const diffs = failedBalanceDiffs(
+      [late, early],
+      [
+        { ...failed("Assets:Cash", "10.00", "9.00", 2), file: "z.bean" },
+        { ...failed("Assets:Cash", "10.00", "8.00", 2), file: "a.bean" },
+      ],
+    );
+    expect(diffs.get(early)).toEqual({ number: "-1.00", currency: "USD" });
+    expect(diffs.get(late)).toEqual({ number: "-2.00", currency: "USD" });
   });
 
   it("ignores other errors", () => {
