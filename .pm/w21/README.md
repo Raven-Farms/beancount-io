@@ -110,5 +110,8 @@
 - [595](./595.md) — In a BTC ledger, Accounts, Spending, Reports and merchant totals round BTC to 2 decimals ("0.00 BTC" for 0.004)
 - [596](./596.md) — JPY/KRW/VND budgets read "Variance +¥0 · Above target" in red (status judged at cents, shown at yen)
 - [597](./597.md) — VoiceOver readouts: chart net "−$0.0000000000000036"; budget rows round to "100% used" either side of target, and "0%" for a small spend
+- [598](./598.md) — Latest Updates puts an evening (Pacific) commit above the next day's blog posts, so the dates read out of order
+- [599](./599.md) — Latest Updates shows every save as an identical "Committed to books" row (message and author dropped)
+- [600](./600.md) — Latest Updates never shows the commit you just made (not invalidated on write, and cached for 5 minutes server-side)
 - [508](./blocked/508.md) — Mobile guesses that an entry is a plugin copy from its first line; read the ledger's `generated_from` instead (split from 443) — **blocked:** production's GraphQL schema lacks `generated_from` until the ledger service and backend-v2 deploy; mobile's client is generated from it
 - [315](./blocked/315.md) — In-app commits signed with Gitea username and real email (no full_name, no noreply) — **blocked:** needs the owner's noreply-address and published-history decisions, and a production backfill of existing Gitea users that can't be verified here
