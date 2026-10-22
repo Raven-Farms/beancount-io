@@ -4,6 +4,7 @@
 
 ## Inbox
 
+
 - [974 — Preserve BQL result focus when the editor loads](./974.md) — minor; public dashboard QA with unchanged delayed stylesheet,2026-10-22; native-Tab result focus transfers to the late editor at both widths; untouched autofocus and settled navigation/CSV controls pass, no writes.
 
 - [973 — Freeze receipt review edits while recording](./973.md) — minor; modeled receipt responses against deployed client,2026-10-22; pending text/amount edits update the preview then disappear at success at both widths; pre-submit and single-request controls pass, no hosted writes/AI.
@@ -101,6 +102,8 @@
 
 ## Milestones
 
+- [ ] **m47** — [Keep profile saves within their submitted dialog session](./m47/README.md) (6 tasks) ← dashboard QA,2026-10-22; minor, concurrent Enter requests and older completion closing a newer draft; promoted from975, all writes intercepted or locally modeled.
+
 - [x] **m46** — [Preserve editor drafts through ledger refresh](./done/m46/README.md) (6 tasks) ← continuous dashboard QA, 2026-10-21; major. Done 2026-10-22: Out of date → Refresh keeps an already shown ledger page, unsaved file draft (bound to its original SHA) and unexecuted BQL query; failed refreshes keep content and offer Try Again.
 
 - [x] **m45** — [Keep commodity quantities precise in Budget and statements](./done/m45/README.md) (6 tasks) ← promoted 331 and actual public statement QA, 2026-10-21; minor. Done 2026-10-22: statement cells and Budget readouts keep source commodity digits (4.00995 ETH, 0.0004 BTC) through one opt-in digit count on the shared formatter; ISO cash unchanged.
@@ -182,6 +185,8 @@
 - [x] **m13** — [Preserve ledger pages through loading and hydration](./done/m13/README.md) (6 tasks) ← repeated dashboard QA, promoted w4/073, 2026-09-17
 
 ## Dropped
+
+- ~~**975**~~ — Guard pending Change Name submissions from Enter — dropped 2026-10-22: promoted to [m47](./m47/README.md), retaining the reproducer and adding independently repeated pending dialog/draft ownership; two implementation tasks plus real regressions exceed one hour.
 
 - ~~**331**~~ — Preserve fractional commodity values in Budget readouts — dropped2026-10-21: promoted to [m45](./done/m45/README.md), preserving all modeled Budget evidence and adding actual Trial Balance/Balance Sheet precision loss; two renderers and computed precision regressions exceed one hour.
 
