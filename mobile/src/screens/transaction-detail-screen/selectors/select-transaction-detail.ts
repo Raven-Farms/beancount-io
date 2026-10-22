@@ -148,13 +148,27 @@ function metaValueText(value: unknown): string {
 export function userMetadataLines(
   meta: Record<string, unknown> | null | undefined,
 ): string[] {
-  return Object.entries(meta ?? {})
-    .filter(([key]) => !SOURCE_META_KEYS.has(key) && !key.startsWith("__"))
-    .map(([key, value]) => `${key}: ${metaValueText(value)}`);
+  return (
+    Object.entries(meta ?? {})
+      .filter(([key]) => !SOURCE_META_KEYS.has(key) && !key.startsWith("__"))
+      // A bare `key:` line has no value; "key: null" was not what was written
+      // (w21/322).
+      .map(([key, value]) =>
+        value === null || value === undefined
+          ? key
+          : `${key}: ${metaValueText(value)}`,
+      )
+  );
 }
 
-/** More fractional digits than anyone writes: a total divided per unit. */
-const DERIVED_SCALE = 8;
+/**
+ * More fractional digits than anyone writes: a total divided per unit. Twelve:
+ * at eight, a precise FX rate (`@ 1.123456789 USD`) or a tiny crypto price
+ * read as derived and showed "≈" and rounded, an exact written value marked
+ * approximate (w21/322). A division the decimal context carries out runs to
+ * twenty-odd digits, so it is still caught.
+ */
+const DERIVED_SCALE = 12;
 /** Significant decimals a derived per-unit figure is shown to. */
 const DERIVED_DIGITS = 4;
 

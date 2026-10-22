@@ -376,6 +376,26 @@ describe("selectPostingRows: cost and price", () => {
     expect(postingBasisText(dust, t)).toBe("@ ≈$0.00006667");
   });
 
+  // w21/322: eight decimals marked precise FX rates and tiny prices "≈".
+  it("shows an exact written price of up to twelve decimals as written", () => {
+    const shown = (number: string) => {
+      const [row] = selectPostingRows(
+        txn([
+          {
+            ...posting("Assets:Wallet", "100", "QAX"),
+            price: { number, currency: "USD" },
+          },
+        ]),
+      );
+      return postingBasisText(row!, t);
+    };
+    expect(shown("1.123456789")).toBe("@ $1.123456789");
+    expect(shown("0.000000012")).toBe("@ $0.000000012");
+    expect(shown("0.123456789012")).toBe("@ $0.123456789012");
+    // Beyond twelve it is still a division carried out at full precision.
+    expect(shown("0.1234567890123")).toBe("@ ≈$0.1235");
+  });
+
   it("keeps a price as written, however many decimals it has", () => {
     const [btc] = selectPostingRows(
       txn([
@@ -453,6 +473,13 @@ describe("user metadata", () => {
       }),
     ).toEqual(["invoice: INV-0914", "paid: true", "total: 12.00 USD"]);
     expect(userMetadataLines(null)).toEqual([]);
+  });
+
+  // w21/322: a bare `key:` line has no value to print.
+  it("shows a bare key without a value as just the key", () => {
+    expect(
+      userMetadataLines({ reviewed: null, invoice: "INV-1", note: undefined }),
+    ).toEqual(["reviewed", "invoice: INV-1", "note"]);
   });
 
   it("puts a posting's metadata under its own row", () => {
