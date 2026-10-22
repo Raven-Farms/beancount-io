@@ -89,6 +89,39 @@ describe("toErrorResponse", () => {
     expect(otherFailure.status).toBe(500);
   });
 
+  // w23/032: Gitea answers these with 422, which backend-v2 read as the
+  // caller's bad input instead of the documented 409 CONFLICT.
+  it("answers a stale sha with 409 and a retry", () => {
+    const stale = toErrorResponse({
+      status: 422,
+      error: { message: "sha does not match [given: abc, expected: def]" },
+    });
+    expect(stale.status).toBe(409);
+    expect(stale.body.error).toBe(
+      "the ledger changed under a concurrent write; re-read it and retry",
+    );
+  });
+
+  it("answers a create over an existing file with 409 naming it", () => {
+    const taken = toErrorResponse({
+      status: 422,
+      error: { message: "repository file already exists [path: qa.bean]" },
+    });
+    expect(taken.status).toBe(409);
+    expect(taken.body.error).toBe(
+      "qa.bean already exists; update it with its sha, or choose another path",
+    );
+  });
+
+  it("keeps any other 422 a 422 with Gitea's message", () => {
+    const invalid = toErrorResponse({
+      status: 422,
+      error: { message: "path contains a malformed path component" },
+    });
+    expect(invalid.status).toBe(422);
+    expect(invalid.body.error).toBe("path contains a malformed path component");
+  });
+
   it("falls back to 500 Internal server error for unknown throwables", () => {
     const res = toErrorResponse(new Error("boom"));
     expect(res.status).toBe(500);

@@ -43,6 +43,22 @@ function giteaErrorMessage(err: GiteaHttpErrorLike): string {
   return `Gitea API error (${err.status})`;
 }
 
+/**
+ * A write conflict in words a caller can act on: a file that already exists
+ * is named, anything else is a lost race to re-read and retry.
+ */
+function conflictMessage(err: GiteaHttpErrorLike): string {
+  const message = giteaErrorMessage(err);
+  if (/already exists?/iu.test(message)) {
+    // Gitea: "repository file already exists [path: qa.bean]".
+    const path = /\[path: ([^\]]+)\]/u.exec(message)?.[1];
+    return path === undefined
+      ? message
+      : `${path} already exists; update it with its sha, or choose another path`;
+  }
+  return "the ledger changed under a concurrent write; re-read it and retry";
+}
+
 /** Map any thrown error to the Python service's error envelope + status. */
 export function toErrorResponse(err: unknown): {
   status: number;
@@ -73,13 +89,13 @@ export function toErrorResponse(err: unknown): {
     // Gitea answers the loser of two commits racing for the branch ref with a
     // 500. Forwarded as-is it read as "dependency down, retry with backoff";
     // it is a lost compare-and-swap, which callers re-read and retry (w23/017).
-    if (err.status >= 500 && isGiteaWriteConflict(err)) {
-      return {
-        status: 409,
-        body: errorResponse(
-          "the ledger changed under a concurrent write; re-read it and retry",
-        ),
-      };
+    // A stale sha or a create over an existing file is a 422 that backend-v2
+    // read as the caller's bad input, so its retry never ran (w23/032).
+    if (
+      (err.status === 422 || err.status >= 500) &&
+      isGiteaWriteConflict(err)
+    ) {
+      return { status: 409, body: errorResponse(conflictMessage(err)) };
     }
     return { status: err.status, body: errorResponse(giteaErrorMessage(err)) };
   }
