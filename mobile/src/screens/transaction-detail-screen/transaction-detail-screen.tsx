@@ -64,6 +64,10 @@ import {
   type TransactionMenuAction,
   userMetadataLines,
 } from "./selectors/select-transaction-detail";
+import {
+  holdGeneratedEntry,
+  selectOwnEntry,
+} from "./selectors/select-own-entry";
 import { isPluginCopy } from "./selectors/select-plugin-copy";
 import { shouldShowTransactionWriteActions } from "./selectors/select-transaction-write-actions";
 import {
@@ -336,7 +340,15 @@ const TransactionDetailImpl = ({
     entryHash,
     ledgerId,
   });
-  const shouldLoadContext = !stashedEntry || hasEditableSource(stashedEntry);
+  // A generated entry stays known after another transaction is stashed over
+  // it (w21/444).
+  const [heldGenerated, setHeldGenerated] = useState<JournalTransaction | null>(
+    null,
+  );
+  const nextHeld = holdGeneratedEntry(heldGenerated, stashedEntry);
+  if (nextHeld !== heldGenerated) setHeldGenerated(nextHeld);
+  const ownEntry = selectOwnEntry(stashedEntry, nextHeld, entryHash);
+  const shouldLoadContext = !ownEntry || hasEditableSource(ownEntry);
 
   // Also serves as the fallback entry source when the stash is cold (deep
   // link or remount) — the context payload carries the full entry JSON.
@@ -432,15 +444,15 @@ const TransactionDetailImpl = ({
   ]);
 
   const entry: JournalTransaction | null = useMemo(() => {
-    if (stashedEntry) {
-      return stashedEntry;
+    if (ownEntry) {
+      return ownEntry;
     }
     const contextEntry = data?.getLedgerEntryContext?.entry as unknown as
       JournalDirectiveType | undefined;
     return contextEntry && isJournalTransaction(contextEntry)
       ? contextEntry
       : null;
-  }, [stashedEntry, data]);
+  }, [ownEntry, data]);
 
   // Errors the ledger reports inside this entry's own lines (w21/030).
   const { errors: ledgerErrors } = useLedgerErrors(ledgerId);
