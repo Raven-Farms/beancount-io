@@ -77,7 +77,12 @@ function ExamplesSession({ visit }: { visit: GuestVisit }) {
   const select = useCallback((ledgerId: ExampleId) => {
     const current = guestVisitVar();
     if (!current) return;
-    updateGuestVisit({ ledgerId, resumeFailure: undefined });
+    // A journal link's filters were for the example it named (w21/525).
+    updateGuestVisit({
+      ledgerId,
+      resumeFailure: undefined,
+      filters: undefined,
+    });
     router.replace(exampleRoutes[current.view]);
   }, []);
 

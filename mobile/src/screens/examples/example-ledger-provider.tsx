@@ -90,8 +90,13 @@ function GuestLedgerSession({
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [],
   );
+  // They belong to the example the link named and are spent once seeded: left
+  // on the visit they followed the guest to every other example and came back
+  // after Reset (w21/525).
   useEffect(() => {
-    if (linkFilters) transactionFilters({ ledgerId, filters: linkFilters });
+    if (!linkFilters) return;
+    transactionFilters({ ledgerId, filters: linkFilters });
+    updateGuestVisit({ filters: undefined });
   }, [linkFilters, ledgerId, transactionFilters]);
   useEffect(
     () => () => {

@@ -109,7 +109,7 @@ describe("a signed-out journal link with filters", () => {
     ).toBe(true);
     expect(
       provider.includes(
-        "if(linkFilters)transactionFilters({ledgerId,filters:linkFilters});",
+        "if(!linkFilters)return;transactionFilters({ledgerId,filters:linkFilters});",
       ),
     ).toBe(true);
   });
