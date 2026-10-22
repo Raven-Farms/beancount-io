@@ -36,6 +36,7 @@
 
 ## Inbox
 
+- [986 — Reject day 366 in a non-leap CSV year](./986.md) — minor CLI date-validation gap; an explicit ordinal date in 2023 is accepted and written as January 1, 2024, reproduced 2026-10-22.
 - [985 — Keep transaction details parseable when redirected](./985.md) — minor CLI follow-up to completed 834; bare source-location headings make the full details stream fail native parsing, reproduced 2026-10-22.
 - [984 — Preserve account names when discovering documents](./984.md) — minor CLI inherited directory-walker NFKC mismatch; valid ligature/full-width account folders lose automatic receipts and doctor reports undeclared ASCII names, reproduced 2026-10-22.
 - [983 — Preserve cover selectors from actual short-lot inventory](./983.md) — major CLI follow-up to completed 925; staged or netted short positions are missing from cover context, causing wrong lots, repeat-import changes or stranded Cost positions, reproduced 2026-10-22.
