@@ -181,9 +181,10 @@ def _probed_amount(tail: str) -> tuple[str, str] | None:
     falls back to the parsed unit price.
     """
     from beancount.core.number import MISSING
-    from beancount.parser import parser as beancount_parser
 
-    entries, errors, _ = beancount_parser.parse_string(f'2026-01-02 * "probe"\n  Assets:Probe {tail}\n  Equity:Probe\n')
+    # Exact like every other parse here: the default 28-digit context rounded
+    # a wide arithmetic total before it was written (w5/898).
+    entries, errors, _ = parse_exact(f'2026-01-02 * "probe"\n  Assets:Probe {tail}\n  Equity:Probe\n')
     entry: Any = entries[0] if len(entries) == 1 and not errors else None
     if entry is None or len(entry.postings) != 2:
         return None
