@@ -29,6 +29,7 @@ export const fa: Translations = {
   discoveryTab_explore: "کاوش",
   discoverySearch: "جستجوی دفترها",
   discoveryClear: "پاک کردن جستجو",
+  clearSearch: "پاک کردن جستجو",
   discoveryOpen: "باز کردن {{name}}",
   discoveryStar: "ستاره‌دار کردن {{name}}",
   discoveryUnstar: "حذف ستارهٔ {{name}}",

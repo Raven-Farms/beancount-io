@@ -25,6 +25,7 @@ export const en = {
   discoveryTab_explore: "Explore",
   discoverySearch: "Search ledgers",
   discoveryClear: "Clear search",
+  clearSearch: "Clear search",
   discoveryOpen: "Open {{name}}",
   discoveryStar: "Star {{name}}",
   discoveryUnstar: "Unstar {{name}}",

@@ -30,6 +30,7 @@ export const de: Translations = {
   discoveryTab_explore: "Entdecken",
   discoverySearch: "Bücher suchen",
   discoveryClear: "Suche löschen",
+  clearSearch: "Suche löschen",
   discoveryOpen: "{{name}} öffnen",
   discoveryStar: "{{name}} als Favorit speichern",
   discoveryUnstar: "{{name}} aus Favoriten entfernen",

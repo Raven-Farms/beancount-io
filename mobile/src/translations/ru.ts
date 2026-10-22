@@ -30,6 +30,7 @@ export const ru: Translations = {
   discoveryTab_explore: "Обзор",
   discoverySearch: "Поиск книг",
   discoveryClear: "Очистить поиск",
+  clearSearch: "Очистить поиск",
   discoveryOpen: "Открыть {{name}}",
   discoveryStar: "Добавить {{name}} в избранное",
   discoveryUnstar: "Убрать {{name}} из избранного",

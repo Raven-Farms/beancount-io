@@ -30,6 +30,7 @@ export const uk: Translations = {
   discoveryTab_explore: "Огляд",
   discoverySearch: "Пошук книг",
   discoveryClear: "Очистити пошук",
+  clearSearch: "Очистити пошук",
   discoveryOpen: "Відкрити {{name}}",
   discoveryStar: "Додати {{name}} до обраного",
   discoveryUnstar: "Вилучити {{name}} з обраного",

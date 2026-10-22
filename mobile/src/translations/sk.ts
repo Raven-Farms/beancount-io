@@ -30,6 +30,7 @@ export const sk: Translations = {
   discoveryTab_explore: "Preskúmať",
   discoverySearch: "Hľadať knihy",
   discoveryClear: "Vymazať vyhľadávanie",
+  clearSearch: "Vymazať vyhľadávanie",
   discoveryOpen: "Otvoriť {{name}}",
   discoveryStar: "Pridať {{name}} k obľúbeným",
   discoveryUnstar: "Odstrániť {{name}} z obľúbených",

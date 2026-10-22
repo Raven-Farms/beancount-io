@@ -30,6 +30,7 @@ export const nl: Translations = {
   discoveryTab_explore: "Ontdekken",
   discoverySearch: "Boeken zoeken",
   discoveryClear: "Zoekopdracht wissen",
+  clearSearch: "Zoekopdracht wissen",
   discoveryOpen: "{{name}} openen",
   discoveryStar: "{{name}} als favoriet opslaan",
   discoveryUnstar: "{{name}} uit favorieten verwijderen",

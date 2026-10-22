@@ -26,6 +26,7 @@ export const zh: Translations = {
   discoveryTab_explore: "探索",
   discoverySearch: "搜索账本",
   discoveryClear: "清除搜索",
+  clearSearch: "清除搜索",
   discoveryOpen: "打开 {{name}}",
   discoveryStar: "收藏 {{name}}",
   discoveryUnstar: "取消收藏 {{name}}",

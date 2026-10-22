@@ -30,6 +30,7 @@ export const bg: Translations = {
   discoveryTab_explore: "Разглеждане",
   discoverySearch: "Търсене на книги",
   discoveryClear: "Изчистване на търсенето",
+  clearSearch: "Изчистване на търсенето",
   discoveryOpen: "Отваряне на {{name}}",
   discoveryStar: "Добавяне на {{name}} в любими",
   discoveryUnstar: "Премахване на {{name}} от любими",

@@ -30,6 +30,7 @@ export const ca: Translations = {
   discoveryTab_explore: "Explora",
   discoverySearch: "Cerca llibres",
   discoveryClear: "Esborra la cerca",
+  clearSearch: "Esborra la cerca",
   discoveryOpen: "Obre {{name}}",
   discoveryStar: "Desa {{name}} als preferits",
   discoveryUnstar: "Treu {{name}} dels preferits",
