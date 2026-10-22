@@ -43,7 +43,6 @@
 - [444](./444.md) — Padding entry detail turns "removed" after another entry opens
 - [445](./445.md) — Money flow pads decimals only for USD
 - [315](./blocked/315.md) — In-app commits signed with Gitea username and real email (no full_name, no noreply) — **blocked:** needs the owner's noreply-address and published-history decisions, and a production backfill of existing Gitea users that can't be verified here
-- [338](./338.md) — File editor: Enter twice after a posting indents the next transaction ("unexpected INDENT")
 - [339](./339.md) — File editor: no tabs (Makefiles/Python break); "" replaces a selection
 - [340](./340.md) — File editor: error-row jump lands behind the keyboard
 - [341](./341.md) — File editor text ignores Dynamic Type (fixed 14px), including AX2

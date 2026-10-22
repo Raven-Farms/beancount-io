@@ -24,6 +24,7 @@ import {
 import { defaultKeymap, history, historyKeymap } from "@codemirror/commands";
 import {
   StreamLanguage,
+  indentService,
   syntaxHighlighting,
   HighlightStyle,
   indentUnit,
@@ -32,6 +33,7 @@ import { tags } from "@lezer/highlight";
 import type { EditorTheme } from "@/types/theme-props";
 import { isSameEditorTheme } from "./editor-theme";
 import {
+  beancountIndent,
   copyBeancountState,
   startBeancountState,
   tokenizeBeancount,
@@ -80,6 +82,19 @@ const beancountStreamLanguage = StreamLanguage.define<BeancountState>({
   token: tokenizeBeancount,
   copyState: copyBeancountState,
 });
+
+// Enter indents a posting under its header and puts a new date at column 0
+// (w21/338); without a rule the line's own indentation was copied, so a date
+// typed after a posting was indented and bean-check refused it ("unexpected
+// INDENT"). An indent service rather than the stream parser's `indent`, since
+// only the service is told which position is being indented. The line "above"
+// is the one before that position: the text before the cursor on Enter.
+const beancountLanguage: Extension = [
+  beancountStreamLanguage,
+  indentService.of((cx, pos) =>
+    beancountIndent(cx.lineAt(pos, -1).text, cx.textAfterPos(pos), cx.unit),
+  ),
+];
 
 // ─── Theme extensions ─────────────────────────────────────────────────────────
 
@@ -161,7 +176,7 @@ function buildExtensions(
     // Wrapping is not a language concern: a phone-width editor wraps every
     // file, and only Beancount files add the language mode.
     EditorView.lineWrapping,
-    languageCompartment.of(beancount ? beancountStreamLanguage : []),
+    languageCompartment.of(beancount ? beancountLanguage : []),
     themeCompartment.of(buildThemeExtensions(editorTheme)),
     // Disable autocorrect / autocapitalize on the contenteditable
     EditorView.contentAttributes.of({
@@ -389,7 +404,7 @@ export default function CodeEditor({
     appliedLanguageRef.current = beancount;
     viewRef.current?.dispatch({
       effects: languageCompartmentRef.current.reconfigure(
-        beancount ? beancountStreamLanguage : [],
+        beancount ? beancountLanguage : [],
       ),
     });
   }, [beancount]);

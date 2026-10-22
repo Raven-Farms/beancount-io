@@ -1,4 +1,5 @@
 import {
+  beancountIndent,
   startBeancountState,
   tokenizeBeancount,
   type BeancountState,
@@ -203,4 +204,67 @@ test("a transaction line highlights every supported construct", () => {
     ["#food", "tagName"],
     ["^receipt-42", "labelName"],
   ]);
+});
+
+// w21/338: Enter copied the current line's indentation, so a new date typed
+// after a posting was indented ("unexpected INDENT"), and the first posting
+// after a header started at column 0.
+describe("beancountIndent", () => {
+  const HEADER = '2026-10-20 * "Coffee"';
+  const POSTING = "  Expenses:Food  4.50 USD";
+
+  it("indents the first posting under a header", () => {
+    expect(beancountIndent(HEADER, "", 2)).toBe(2);
+    expect(beancountIndent("2026-10-20 open Assets:Cash", "", 2)).toBe(2);
+  });
+
+  it("keeps postings and metadata at the posting indent", () => {
+    expect(beancountIndent(POSTING, "", 2)).toBe(2);
+    expect(beancountIndent('    invoice: "INV-1"', "", 2)).toBe(2);
+  });
+
+  it("starts the line after a blank one at column 0", () => {
+    // Enter twice after a posting: the second Enter sees an empty line above.
+    expect(beancountIndent("", "", 2)).toBe(0);
+    expect(beancountIndent("   ", "", 2)).toBe(0);
+    expect(beancountIndent(null, "", 2)).toBe(0);
+  });
+
+  it("puts a date at column 0 wherever it is typed", () => {
+    expect(beancountIndent(POSTING, '2026-10-21 * "Lunch"', 2)).toBe(0);
+    expect(
+      beancountIndent(HEADER, "2026-10-21 balance Assets:Cash 1 USD", 2),
+    ).toBe(0);
+  });
+
+  it("leaves other top-level lines to the default", () => {
+    expect(beancountIndent('option "title" "x"', "", 2)).toBe(null);
+    expect(beancountIndent("; a comment", "", 2)).toBe(null);
+    expect(beancountIndent('include "a.bean"', "", 2)).toBe(null);
+  });
+
+  it("gives the note's sequence an unindented date line", () => {
+    // Doc: header, posting, posting. Enter → "  "; Enter again → blank line.
+    const afterPosting = beancountIndent("  Assets:Cash", "", 2);
+    expect(afterPosting).toBe(2);
+    const afterBlank = beancountIndent("", "", 2);
+    expect(afterBlank).toBe(0);
+  });
+});
+
+describe("the editor uses it", () => {
+  it("wires the rule into the Beancount language", () => {
+    const fs = require("fs") as typeof import("fs");
+    const path = require("path") as typeof import("path");
+    const editor = fs
+      .readFileSync(path.join(__dirname, "..", "code-editor.tsx"), "utf8")
+      .replace(/\s+/gu, "");
+    expect(
+      editor.includes(
+        "indentService.of((cx,pos)=>beancountIndent(cx.lineAt(pos,-1).text,cx.textAfterPos(pos),cx.unit),)",
+      ),
+    ).toBe(true);
+    // Both places the language is installed (initially and via the compartment).
+    expect(editor.split("beancount?beancountLanguage:[]").length - 1).toBe(2);
+  });
 });
