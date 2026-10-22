@@ -7,7 +7,7 @@ import { dropRoot } from "../../../common/account-util";
 import { formatLedgerDate } from "../../../common/date-format";
 import { formatMoneyWithCurrency } from "../../../common/number-utils";
 import {
-  budgetDirection,
+  groupDirection,
   budgetScale,
   calculateBudgetForInterval,
 } from "../../budget-screen/selectors/budget-selectors";
@@ -67,7 +67,7 @@ export function selectBudgetPanelRows(
     // Reuse the card's derivation so the two surfaces can't drift on the
     // favorability rules. It reads a series, so hand it the single period the
     // panel cares about, sign-corrected the way the card's series already is.
-    const direction = budgetDirection(group.value);
+    const direction = groupDirection(group);
     const scale = budgetScale(group.budgetHistory);
     const stats = selectBudgetCardStats(
       group,

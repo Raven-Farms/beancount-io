@@ -4,7 +4,7 @@
  * the easiest part of budget to get subtly wrong (income budgets invert them).
  */
 import {
-  budgetDirection,
+  groupDirection,
   budgetScale,
   isFavorableVariance,
   varianceStatus,
@@ -100,7 +100,7 @@ export function selectBudgetCardStats(
   series: BudgetSeriesPoint[],
   today?: string,
 ): BudgetCardStats {
-  const direction = budgetDirection(group.value);
+  const direction = groupDirection(group);
   const latest = series.length > 0 ? series[series.length - 1] : null;
 
   // The series already carries the budget that was in effect for each charted

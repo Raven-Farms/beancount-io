@@ -31,7 +31,7 @@ import {
 import { useToday } from "@/common/hooks/use-today";
 import { useBudgetActuals } from "@/screens/budget-screen/hooks/use-budget-actuals";
 import {
-  budgetDirection,
+  groupDirection,
   budgetScale,
   type BudgetGroup,
 } from "@/screens/budget-screen/selectors/budget-selectors";
@@ -184,7 +184,7 @@ export function BudgetGroupCard({
   const { fontScale } = useWindowDimensions();
   const stacked = prefersStackedLayout(fontScale);
 
-  const direction = budgetDirection(group.value);
+  const direction = groupDirection(group);
   const { currency } = group;
   // The day a budget dated after it has not started on (w21/301).
   const today = useToday();

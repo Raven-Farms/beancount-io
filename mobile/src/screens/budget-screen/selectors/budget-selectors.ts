@@ -503,6 +503,22 @@ export function budgetDirection(budgetValue: number): 1 | -1 {
   return budgetValue < 0 ? -1 : 1;
 }
 
+/**
+ * The direction of a budget, from its history rather than from the amount in
+ * effect today. Zeroing an income target (the natural way to stop tracking it,
+ * since Delete rewrites history) is stored as "0", whose sign says nothing, and
+ * the whole card then ran on expense rules: income drawn as negative bars and a
+ * missed month green (w21/394). The newest entry that has a sign decides; a
+ * budget that was only ever zero is an expense cap.
+ */
+export function groupDirection(group: BudgetGroup): 1 | -1 {
+  for (let i = group.budgetHistory.length - 1; i >= 0; i -= 1) {
+    const value = Number.parseFloat(group.budgetHistory[i].amount);
+    if (Number.isFinite(value) && value !== 0) return budgetDirection(value);
+  }
+  return budgetDirection(group.value);
+}
+
 export type VarianceStatus = "above" | "below" | "on";
 
 /**
