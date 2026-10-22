@@ -69,9 +69,54 @@ _ZERO_FOOTNOTE = (
 )
 
 
+def _code_only(query: str) -> str:
+    """The query with its comments and string literals blanked, so `FROM` is looked for in code.
+
+    `WHERE narration ~ 'from entries'` is no relation, and a comment between
+    `FROM` and `#entries` hides nothing (w5/892). A double-quoted name right
+    after `FROM` is a quoted table and stays.
+    """
+    out: list[str] = []
+    i, n = 0, len(query)
+    while i < n:
+        char = query[i]
+        if query.startswith("/*", i):
+            end = query.find("*/", i + 2)
+            end = n if end == -1 else end + 2
+            out.append(" " * (end - i))
+            i = end
+        elif query.startswith("--", i):
+            end = query.find("\n", i)
+            end = n if end == -1 else end
+            out.append(" " * (end - i))
+            i = end
+        elif char in "'\"":
+            j = i + 1
+            while j < n:
+                if query[j] == "\\":
+                    j += 2
+                elif query[j] == char:
+                    if query.startswith(char, j + 1):
+                        j += 2
+                        continue
+                    break
+                else:
+                    j += 1
+            end = min(j + 1, n)
+            if char == '"' and re.search(r"(?i)\bFROM\s+#?$", "".join(out)):
+                out.append(query[i:end])
+            else:
+                out.append(" " * (end - i))
+            i = end
+        else:
+            out.append(char)
+            i += 1
+    return "".join(out)
+
+
 def table_named(query: str) -> str:
     """Which relation this query reads, for stating the grain of a row."""
-    match = _FROM_TABLE.search(query)
+    match = _FROM_TABLE.search(_code_only(query))
     return match.group(1).lower() if match else "postings"
 
 
