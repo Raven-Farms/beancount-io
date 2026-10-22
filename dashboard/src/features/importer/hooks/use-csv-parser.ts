@@ -20,16 +20,23 @@ type ParseRecordsResult =
 
 const DELIMITERS = [",", ";", "\t"] as const;
 
-/** The first record's text, up to the first newline outside quotes. */
+/**
+ * The first nonblank record's text, up to its newline outside quotes. The
+ * reader skips empty and whitespace-only records, so a file opening with
+ * them must not leave nothing to detect its delimiter from (w4/311).
+ */
 function firstRecordText(text: string): string {
   let inQuotes = false;
+  let start = 0;
   for (let i = 0; i < text.length; i++) {
     if (text[i] === '"') inQuotes = !inQuotes;
     else if (!inQuotes && (text[i] === "\n" || text[i] === "\r")) {
-      return text.slice(0, i);
+      const record = text.slice(start, i);
+      if (record.trim() !== "") return record;
+      start = i + 1;
     }
   }
-  return text;
+  return text.slice(start);
 }
 
 /**

@@ -749,6 +749,63 @@ describe("useCSVParser", () => {
     });
   });
 
+  /**
+   * The delimiter used to be read from the first record only, so a semicolon
+   * or tab file opening with blank records fell back to comma and offered AI
+   * instead of its preview (w4/311).
+   */
+  describe("parseCSV – leading blank records", () => {
+    const parse = (csv: string) =>
+      renderHook(() => useCSVParser()).result.current.parseCSV(csv);
+    const semicolon = [
+      "Date;Payee;Description;Amount",
+      "2026-10-21;qa leading record;coffee;-12,50",
+      "2026-10-22;qa leading record two;tea;1.000,00",
+    ].join("\r\n");
+    const tab = [
+      "Date\tPayee\tDescription\tAmount",
+      "2026-10-21\tqa leading record\tcoffee\t-12.50",
+      "2026-10-22\tqa leading record two\ttea\t1000.00",
+    ].join("\r\n");
+    const comma = [
+      "Date,Payee,Description,Amount",
+      "2026-10-21,qa leading record,coffee,-12.50",
+      "2026-10-22,qa leading record two,tea,1000.00",
+    ].join("\r\n");
+
+    it.each([
+      ["semicolon", semicolon],
+      ["tab", tab],
+      ["comma", comma],
+    ])("previews a %s file the same after blank records", (_, csv) => {
+      const plain = parse(csv);
+      for (const prefix of ["\r\n   \r\n", "\n\n", "\uFEFF\r\n"]) {
+        const prefixed = parse(prefix + csv);
+        expect(prefixed.validCount).toBe(2);
+        expect(prefixed.rows.map((row) => [row.payee, row.amount])).toEqual(
+          plain.rows.map((row) => [row.payee, row.amount]),
+        );
+      }
+      expect(plain.rows.map((row) => row.amount)).toEqual([-12.5, 1000]);
+    });
+
+    it("still reads headerless four-column data after blank records", () => {
+      const parsed = parse("\n \n2026-10-21;qa headerless;coffee;-12,50");
+      expect(parsed.validCount).toBe(1);
+      expect(parsed.rows[0]).toMatchObject({
+        payee: "qa headerless",
+        amount: -12.5,
+      });
+    });
+
+    it("still refuses a malformed header after blank records", () => {
+      const parsed = parse(
+        '\r\n\r\nDate;"Payee"x;Description;Amount\n2026-10-21;a;b;1',
+      );
+      expect(parsed.validCount).toBe(0);
+    });
+  });
+
   describe("parseCSV – amount precision boundaries", () => {
     const FIXTURE = [
       "Date,Payee,Description,Amount",
