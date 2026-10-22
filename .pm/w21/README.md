@@ -51,6 +51,9 @@
 - [451](./451.md) — Fixed 0.005 tolerance folds BTC balances away
 - [452](./452.md) — Picker hides Create for a full name that prefixes an account
 - [454](./454.md) — Welcome keeps old server's sign-in error; not announced
+- [455](./455.md) — Budget ALL shows $0 / Below target while current period loads or fails
+- [456](./456.md) — Budget chart y-axis floored at 1 hides BTC bars
+- [457](./457.md) — Budget chart summary says missed income is over target; no years
 - [315](./blocked/315.md) — In-app commits signed with Gitea username and real email (no full_name, no noreply) — **blocked:** needs the owner's noreply-address and published-history decisions, and a production backfill of existing Gitea users that can't be verified here
 - [367](./367.md) — Narration edit refused when entry has an existing interpolation/lot error quoting it
 - [368](./368.md) — BOM-prefixed include: first entry can't be saved or deleted
