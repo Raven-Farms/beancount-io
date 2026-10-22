@@ -92,6 +92,5 @@
 - [648](./648.md) — The entries precheck ignores `inferred_tolerance_default` in Beancount syntax and gives integer postings a 0.5 tolerance (ledger)
 - [649](./649.md) — Since w23/033, valid account names with ZWNJ/ZWJ (normal in Persian) are refused with raw English API text (undoes w21/192) (ledger)
 - [650](./650.md) — A `%` posting flag is accepted and committed, but the engine reads the postings as comments: the entry has 0 postings (silent loss) (ledger)
-- [651](./651.md) — Futures currencies like "/ESZ24" are refused as "not a valid currency", though both engines accept them (ledger)
 - [508](./blocked/508.md) — Mobile guesses that an entry is a plugin copy from its first line; read the ledger's `generated_from` instead (split from 443) — **blocked:** production's GraphQL schema lacks `generated_from` until the ledger service and backend-v2 deploy; mobile's client is generated from it
 - [315](./blocked/315.md) — In-app commits signed with Gitea username and real email (no full_name, no noreply) — **blocked:** needs the owner's noreply-address and published-history decisions, and a production backfill of existing Gitea users that can't be verified here

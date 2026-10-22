@@ -70,6 +70,14 @@ describe("assertEntryTokens", () => {
     ["usd", false],
     ["US D", false],
     ["USD-", false],
+    // w21/651: futures, as both engines read them as written.
+    ["/ESZ24", true],
+    ["/NQH21_QNEG21C13100", true],
+    ["/6.3", false],
+    ["/E_", false],
+    // Valid Beancount, but rustledger reads `1 /6E` as 1/6 of `E`.
+    ["/6E", false],
+    ["/", false],
   ])("currency %p is accepted: %p", (currency, ok) => {
     const call = () =>
       assertEntryTokens([

@@ -27,7 +27,11 @@ const TOKEN_RULES = {
   "transaction flag": /^(?:[*!&#?%A-Z]|txn)$/,
   tag: /^[A-Za-z0-9_/.-]+$/,
   link: /^[A-Za-z0-9_/.-]+$/,
-  currency: /^[A-Z](?:[A-Z0-9'._-]{0,22}[A-Z0-9])?$/,
+  // A futures contract starts with a slash (`/ESZ24`, w21/651). A digit right
+  // after it is valid Beancount (`/6E`), but rustledger reads `1 /6E` as one
+  // sixth of `E`, so the slash must be followed by a letter.
+  currency:
+    /^(?:[A-Z](?:[A-Z0-9'._-]{0,22}[A-Z0-9])?|\/[A-Z](?:[A-Z0-9'._-]{0,21}[A-Z0-9])?)$/,
   "metadata key": /^[a-z][A-Za-z0-9_-]*$/,
   account: ACCOUNT,
 } as const;

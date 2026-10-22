@@ -1912,6 +1912,33 @@ async function main(): Promise<void> {
     );
   }
 
+  // w21/651: a futures currency is accepted exactly when the engine reads it
+  // as written (`/6E` is read as one sixth of `E`).
+  for (const currency of ["/ESZ24", "/NQH21_QNEG21C13100", "/6E", "/6.3"]) {
+    const futures = await parseLedgerFiles(
+      {
+        "main.bean": `2024-01-01 open Assets:Cash\n2024-01-01 open Equity:Open\n2024-01-02 * "t"\n  Assets:Cash 1 ${currency}\n  Equity:Open\n`,
+      },
+      "main.bean",
+    );
+    const read = futures.directives.find(
+      (directive) => directive.type === "transaction",
+    );
+    const intact =
+      futures.errors.length === 0 &&
+      read?.type === "transaction" &&
+      read.postings[0]?.units?.number === "1" &&
+      read.postings[0]?.units?.currency === currency;
+    assert(
+      accepts({
+        postings: [
+          { account: "Assets:Cash", units: { number: "1", currency } },
+        ],
+      }) === intact,
+      `the validator ${intact ? "accepts" : "refuses"} currency ${currency}, as the engine reads it`,
+    );
+  }
+
   // w21/654: the engine still opens a string at a `"` on an org heading or a
   // `#` line and loses every entry after it; the parse comments such lines.
   const headingFiles = {
