@@ -45,10 +45,8 @@ import {
 } from "./option-validation";
 import { isDocumentValidationError } from "./document-validation";
 import { reportUrlIncludes } from "./url-include-errors";
-import {
-  parseableFiles,
-  reportUndecodableSources,
-} from "./undecodable-sources";
+import { parseableFiles } from "./parseable-files";
+import { reportUndecodableSources } from "./undecodable-sources";
 import { collapsedCostOfSumError } from "./cost-of-sum-guard";
 import { atValueError } from "./at-value-guard";
 import { OPTION_LINE_RE } from "./beancount-options";

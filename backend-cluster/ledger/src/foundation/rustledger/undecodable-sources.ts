@@ -1,29 +1,5 @@
 import type { BeancountError, FileMap } from "@rustledger/wasm";
-import {
-  collectSourceFiles,
-  isHiddenRepoPath,
-  UNDECODABLE_SOURCE,
-} from "./file-map-loader";
-
-/**
- * The files the engine parses: undecodable sources read as empty files, and a
- * hidden file no include reaches is left out, since the engine's glob matches
- * `y/.draft.bean` for `include "y/*.bean"` where Beancount's skips it (w21/657).
- */
-export function parseableFiles(files: FileMap, entryPoint: string): FileMap {
-  const undecodable = Object.values(files).includes(UNDECODABLE_SOURCE);
-  const hidden = Object.keys(files).some(isHiddenRepoPath);
-  if (!undecodable && !hidden) return files;
-  const reached = hidden
-    ? new Set(collectSourceFiles(files, entryPoint))
-    : undefined;
-  const parseable = Object.create(null) as FileMap;
-  for (const [path, content] of Object.entries(files)) {
-    if (reached && !reached.has(path) && isHiddenRepoPath(path)) continue;
-    parseable[path] = content === UNDECODABLE_SOURCE ? "" : content;
-  }
-  return parseable;
-}
+import { collectSourceFiles, UNDECODABLE_SOURCE } from "./file-map-loader";
 
 /** One error per undecodable file the entry point's includes reach. */
 export function reportUndecodableSources(

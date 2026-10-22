@@ -1864,6 +1864,49 @@ async function main(): Promise<void> {
     "the windowed sum the lot-error hint names runs",
   );
 
+  // w21/654: the engine still opens a string at a `"` on an org heading or a
+  // `#` line and loses every entry after it; the parse comments such lines.
+  const headingFiles = {
+    "main.bean": `2024-01-01 open Assets:Cash
+2024-01-01 open Equity:Open
+* Notes: 12" pizza budget
+2024-01-02 * "after the heading"
+  Assets:Cash 1 USD
+  Equity:Open
+# It's 5" wide
+2024-01-03 note Assets:Cash "agenda:
+* kept inside the string"
+2024-01-04 balance Assets:Cash 1 USD
+`,
+  };
+  const headingSnapshot = await parseLedgerFiles(headingFiles, "main.bean");
+  assert(
+    headingSnapshot.errors.length === 0 &&
+      headingSnapshot.directives.some(
+        (directive) =>
+          directive.type === "transaction" &&
+          directive.narration === "after the heading",
+      ) &&
+      headingSnapshot.directives.some(
+        (directive) =>
+          directive.type === "note" &&
+          directive.comment === "agenda:\n* kept inside the string",
+      ) &&
+      headingSnapshot.directives.some(
+        (directive) => directive.type === "balance",
+      ),
+    "an org heading or # line with a quote keeps every entry after it",
+  );
+  const headingCount = await queryLedgerFilesResult(
+    headingFiles,
+    "main.bean",
+    "SELECT count(*)",
+  );
+  assert(
+    JSON.stringify(headingCount.rows) === "[[2]]",
+    "BQL counts the postings after a quoted heading",
+  );
+
   // w21/655: the engine still drops a note's tags and links and pushtag on
   // notes and documents; the parse restores them, so the filters see them.
   const noteSnapshot = await parseLedgerFiles(

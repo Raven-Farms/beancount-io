@@ -1,6 +1,6 @@
 import type { FileMap } from "@rustledger/wasm";
 import { collectSourceFiles } from "../file-map-loader";
-import { parseableFiles } from "../undecodable-sources";
+import { parseableFiles } from "../parseable-files";
 
 /**
  * w21/657. The FileMap holds every `.bean` file, and rustledger's glob matched
