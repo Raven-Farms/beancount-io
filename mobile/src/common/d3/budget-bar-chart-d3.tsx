@@ -3,6 +3,7 @@ import { View } from "react-native";
 import { Path, Text as SvgText } from "react-native-svg";
 import { scaleLinear } from "d3-scale";
 import { contentPadding, ScreenWidth } from "@/common/screen-util";
+import { formatShortMoneyWithCurrency } from "@/common/number-utils";
 import { useTheme } from "@/common/theme";
 import { useTranslations } from "@/common/hooks/use-translations";
 import { AnimatedBar } from "./animated-bar";
@@ -10,7 +11,9 @@ import { useEntranceProgress } from "./use-entrance-progress";
 import { restingBarRect } from "./bar-geometry";
 import { ScrollableAxisChart } from "./scrollable-axis-chart";
 import { budgetColumnWidth } from "./budget-chart-columns";
+import { axisLabelWidth } from "./axis-label-width";
 import {
+  AXIS_FONT_SIZE,
   BOTTOM_PADDING,
   ChartErrorBoundary,
   ChartPlaceholder,
@@ -71,7 +74,7 @@ function BudgetBarChart({
   height = 200,
 }: BudgetBarChartProps): JSX.Element {
   const theme = useTheme().colorTheme;
-  const { t } = useTranslations();
+  const { t, locale } = useTranslations();
 
   const chartHeight = height;
   // The width the chart really has, once laid out. Until then, the screen less
@@ -86,15 +89,6 @@ function BudgetBarChart({
     return <ChartPlaceholder height={chartHeight} />;
   }
 
-  const columnWidth = budgetColumnWidth(
-    containerWidth,
-    LEFT_PADDING,
-    labels.length,
-    MIN_COLUMN_WIDTH,
-  );
-  const plotWidth = columnWidth * labels.length;
-  const barWidth = columnWidth * (1 - BAR_INSET * 2);
-
   const yMax = Math.max(1, ...actuals, ...budgets);
   const yMin = Math.min(0, ...actuals, ...budgets);
   const yScale = scaleLinear()
@@ -102,6 +96,23 @@ function BudgetBarChart({
     .range([chartHeight - BOTTOM_PADDING, TOP_PADDING])
     .nice();
   const zeroY = yScale(0);
+  const yTicks = yScale.ticks(5);
+  // The y-axis column fits its widest tick: the fixed 50 px clipped "2,5 Tsd. $"
+  // to "5 Tsd. $" in German, so 2,500 and 1,500 read alike (w21/360).
+  const axisWidth = axisLabelWidth(
+    yTicks.map((tick) => formatShortMoneyWithCurrency(tick, currency, locale)),
+    AXIS_FONT_SIZE,
+    LEFT_PADDING,
+  );
+
+  const columnWidth = budgetColumnWidth(
+    containerWidth,
+    axisWidth,
+    labels.length,
+    MIN_COLUMN_WIDTH,
+  );
+  const plotWidth = columnWidth * labels.length;
+  const barWidth = columnWidth * (1 - BAR_INSET * 2);
 
   const columnX = (i: number) => i * columnWidth;
   const centerX = (i: number) => columnX(i) + columnWidth / 2;
@@ -124,7 +135,8 @@ function BudgetBarChart({
       <ScrollableAxisChart
         chartHeight={chartHeight}
         plotWidth={plotWidth}
-        yTicks={yScale.ticks(5)}
+        yTicks={yTicks}
+        axisWidth={axisWidth}
         yScale={yScale}
         currency={currency}
         accessibilityLabel={accessibilityLabel}
