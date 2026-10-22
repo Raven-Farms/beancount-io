@@ -418,3 +418,61 @@ describe("selectAccountBalanceSeries with month-end balances", () => {
     ).toEqual([2100]);
   });
 });
+
+// w21/491: the dense month-end rows are dated at period end and span the whole
+// ledger, whichever account is asked about.
+describe("selectAccountBalanceSeries with the ledger's span of month-end rows", () => {
+  // A savings account opened 2026-03-10 with $1,000 and never touched; the
+  // ledger runs from 2020-01 to a rent entry pre-entered for 2026-11-01.
+  const months: string[] = [];
+  for (let year = 2020; year <= 2026; year += 1) {
+    for (let month = 1; month <= 12; month += 1) {
+      if (year === 2026 && month > 11) continue;
+      const last = new Date(Date.UTC(year, month, 0)).getUTCDate();
+      months.push(
+        `${year}-${String(month).padStart(2, "0")}-${String(last).padStart(2, "0")}`,
+      );
+    }
+  }
+  const savings = {
+    getLedgerAccountReport: {
+      linechartData: [{ date: "2026-03-10", balance: { USD: 1000 } }],
+      accountBalanceData: months.map((date) => ({
+        date,
+        balance: { USD: date >= "2026-03-10" ? 1000 : 0 },
+      })),
+    },
+  } as unknown as AccountReportQuery;
+  const today = "2026-10-21";
+  const current = { balance: { USD: 1000 }, today };
+
+  it("ends today, not at the end of the month or next month", () => {
+    const series = selectAccountBalanceSeries("USD", savings, current, today);
+    expect(series[series.length - 1]).toEqual({ date: today, value: 1000 });
+    expect(series.some((point) => point.date > today)).toBe(false);
+    expect(
+      series.filter((point) => point.date.startsWith("2026-10")).length,
+    ).toBe(1);
+  });
+
+  it("starts at the account's first posting, not at the ledger's", () => {
+    const series = selectAccountBalanceSeries("USD", savings, current, today);
+    expect(series[0]!.date.slice(0, 7)).toBe("2026-03");
+    expect(series.length).toBe(8);
+  });
+
+  it("keeps the 1M window on months that have begun, with an entry pre-entered elsewhere", () => {
+    const series = selectAccountBalanceSeries("USD", savings, current, today);
+    const window = filterBalanceSeriesByRange(series, "1M" as TimeRange, 2026);
+    expect(window.some((point) => point.date.slice(0, 7) === "2026-11")).toBe(
+      false,
+    );
+    expect(window[window.length - 1]!.value).toBe(1000);
+  });
+
+  it("does the same without today's balance, from the day alone", () => {
+    const series = selectAccountBalanceSeries("USD", savings, undefined, today);
+    expect(series[series.length - 1]!.date <= today).toBe(true);
+    expect(series[0]!.date.slice(0, 7)).toBe("2026-03");
+  });
+});

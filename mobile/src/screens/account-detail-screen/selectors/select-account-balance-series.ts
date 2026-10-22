@@ -114,6 +114,41 @@ export function selectAccountUnitsScale(
   );
 }
 
+type DatedBalance = { date: string; balance: unknown };
+
+/**
+ * The dense month-end rows, cut to the account and to today. They are dated at
+ * each period's last day and run over the ledger's whole span, whichever
+ * account is asked about, so they would start months before the account's first
+ * posting, end on a day that has not happened, and run into next month for
+ * every account as soon as one entry anywhere is pre-entered (w21/491). Rows
+ * before the month of the account's first posting go, rows after the current
+ * month go, and the current month's row is dated today.
+ */
+function boundedMonthEnds<T extends DatedBalance>(
+  monthEnds: readonly T[],
+  changes: readonly DatedBalance[] | undefined,
+  day: string | undefined,
+): T[] {
+  const firstMonth = changes?.[0]?.date.slice(0, 7);
+  const thisMonth = day?.slice(0, 7);
+  return monthEnds
+    .filter((point) => {
+      const month = point.date.slice(0, 7);
+      return (
+        (firstMonth === undefined || month >= firstMonth) &&
+        (thisMonth === undefined || month <= thisMonth)
+      );
+    })
+    .map((point) =>
+      day !== undefined &&
+      point.date.slice(0, 7) === day.slice(0, 7) &&
+      point.date > day
+        ? { ...point, date: day }
+        : point,
+    );
+}
+
 /**
  * Convert an account report's monthly `linechartData` into a chart series in
  * the active currency: one (most recent) point per month, ascending by date.
@@ -131,11 +166,14 @@ export function selectAccountBalanceSeries(
   // today's value (w21/420). It stays the fallback for a report without them.
   const report = data?.getLedgerAccountReport;
   const monthEnds = report?.accountBalanceData;
+  const day = current?.today ?? today;
   // The ledger sends a point only where the balance changed (w21/164).
   const series = forwardFillMonths(
     pointsToMonthlySeries(
       currency,
-      monthEnds?.length ? monthEnds : report?.linechartData,
+      monthEnds?.length
+        ? boundedMonthEnds(monthEnds, report?.linechartData, day)
+        : report?.linechartData,
     ),
   );
   const last = series[series.length - 1];
