@@ -35,9 +35,7 @@ describe("labels that tell siblings apart", () => {
 
   it("reads a dimmed drawer row's reason", () => {
     const source = read("components/ledger-drawer/ledger-drawer.tsx");
-    expect(source.includes("`${item.fullName}, ${item.statusLabel}`")).toBe(
-      true,
-    );
+    expect(source.includes("`${item.name}, ${item.statusLabel}`")).toBe(true);
   });
 
   it("names the budget an Update or Delete acts on", () => {

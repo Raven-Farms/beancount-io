@@ -9,6 +9,8 @@ export type DrawerLedger = {
   description?: string | null;
   disabled?: boolean;
   statusLabel?: string;
+  /** Secondary text under the name, e.g. a guest example's id (w21/294). */
+  subtitle?: string;
 };
 
 /** The list the drawer shows: the user's collection, in the order the API

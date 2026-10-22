@@ -1,4 +1,5 @@
 import { exampleCardAccessibilityLabel } from "./example-card-label";
+import { EXAMPLE_TITLE_KEYS } from "./example-titles";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
 import { EXAMPLE_IDS, type ExampleId } from "@/common/guest/guest-state";
 import { useTranslations } from "@/common/hooks/use-translations";
@@ -8,7 +9,7 @@ import { LoadingTile } from "@/components/loading-tile";
 import { PressableScale } from "@/components/pressable-scale";
 
 import type { ExampleAvailability } from "./use-example-catalog";
-const titles = ["guestExample0", "guestExample1", "guestExample2"];
+const titles = EXAMPLE_TITLE_KEYS;
 const descriptions = [
   "guestExampleDescription0",
   "guestExampleDescription1",

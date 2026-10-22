@@ -15,6 +15,7 @@ import {
 import { LedgerTabLayout } from "@/components/ledger-tabs";
 import { useExamples } from "./examples-layout";
 import { ExampleReadScreen } from "./example-ledger-provider";
+import { EXAMPLE_TITLE_KEYS } from "./example-titles";
 
 export function ExampleTabsLayout() {
   const {
@@ -38,7 +39,9 @@ export function ExampleTabsLayout() {
           ? EXAMPLE_IDS.map((id, index) => ({
               id,
               fullName: id,
-              name: id.split("/")[1],
+              // The name the chooser showed, with the id beneath it (w21/294).
+              name: t(EXAMPLE_TITLE_KEYS[index]),
+              subtitle: id,
               private: false,
               disabled: availability[index] !== "available",
               statusLabel:

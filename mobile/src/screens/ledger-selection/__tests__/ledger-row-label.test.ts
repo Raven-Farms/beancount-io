@@ -85,7 +85,7 @@ describe("the three ledger lists", () => {
     // The drawer's rows already read their status (w21/142); keep it so.
     expect(
       read("components", "ledger-drawer", "ledger-drawer.tsx").includes(
-        "`${item.fullName},${item.statusLabel}`",
+        "`${item.name},${item.statusLabel}`",
       ),
     ).toBe(true);
   });

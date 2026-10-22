@@ -944,8 +944,10 @@ export function LedgerDrawer({
                     // A dimmed row says why, as its caption does (w21/142).
                     accessibilityLabel={
                       item.statusLabel
-                        ? `${item.fullName}, ${item.statusLabel}`
-                        : item.fullName
+                        ? `${item.name}, ${item.statusLabel}`
+                        : item.subtitle
+                          ? `${item.name}, ${item.subtitle}`
+                          : item.fullName
                     }
                     accessibilityState={{
                       selected: isSelected,
@@ -960,6 +962,9 @@ export function LedgerDrawer({
                     >
                       {item.name}
                     </Text>
+                    {item.subtitle ? (
+                      <Text style={styles.caption}>{item.subtitle}</Text>
+                    ) : null}
                     {item.statusLabel && (
                       <Text style={styles.caption}>{item.statusLabel}</Text>
                     )}

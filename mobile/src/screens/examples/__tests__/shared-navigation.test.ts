@@ -163,6 +163,14 @@ function load(relative: string): any {
           return { DashboardScrollView: "ScrollView" };
         if (id === "@/components/button") return { Button: "Button" };
         if (id === "./examples-layout") return {};
+        if (id === "./example-titles")
+          return {
+            EXAMPLE_TITLE_KEYS: [
+              "guestExample0",
+              "guestExample1",
+              "guestExample2",
+            ],
+          };
         if (id === "./example-ledger-provider")
           return { ExampleReadScreen: "ExampleReadScreen" };
         throw new Error(`Unexpected dependency ${id}`);
