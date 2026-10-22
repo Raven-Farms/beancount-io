@@ -1,7 +1,7 @@
 import { PageHeader } from "@/common/components/page-header";
 import { RelatedLinks } from "@/common/components/related-links";
 import { getLedgerFilesRootPath } from "@/common/hooks/use-file-navigate";
-import { useState, useRef, useId, useMemo } from "react";
+import { useState, useRef, useId, useMemo, useEffect } from "react";
 import type { DragEvent } from "react";
 import { useParams, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery } from "@apollo/client/react";
@@ -72,6 +72,16 @@ const UploadFilesPage = () => {
   // the busy state. While a batch is in flight no new file is staged — the
   // success path leaves with exactly that batch (w4/259).
   const uploadingRef = useRef(false);
+  // Leaving this page or its folder ends the upload journey, so an older
+  // batch's late completion cannot take the reader away from where they went
+  // (w4/305). Its writes still land.
+  const journeyRef = useRef(0);
+  useEffect(
+    () => () => {
+      journeyRef.current += 1;
+    },
+    [ledgerId, dirPath],
+  );
   const setIsUploading = (busy: boolean) => {
     uploadingRef.current = busy;
     setIsUploadingState(busy);
@@ -160,6 +170,7 @@ const UploadFilesPage = () => {
 
     setIsUploading(true);
     setUploadFailure(null);
+    const journey = journeyRef.current;
     const batch = selectedFiles;
     const message = commitMessage.trim() || `Upload ${batch.length} file(s)`;
     const uploaded: string[] = [];
@@ -203,6 +214,7 @@ const UploadFilesPage = () => {
     // Only after every write: a failed folder read is not a failed upload.
     await refreshDirectory();
     setIsUploading(false);
+    if (journey !== journeyRef.current) return;
     void navigate({
       to: "/ledger/$ledgerOwner/$ledgerName/files/tree/$branch/$",
       params: {
