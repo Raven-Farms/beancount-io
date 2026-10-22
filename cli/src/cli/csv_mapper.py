@@ -11,7 +11,7 @@ import csv
 import hashlib
 import re
 import unicodedata
-from collections.abc import Iterator
+from collections.abc import Iterator, Sequence
 from contextlib import contextmanager
 from dataclasses import dataclass, field
 from datetime import datetime
@@ -815,11 +815,23 @@ class DateRejection:
 
 
 def infer_date_format(
-    source: Path, column: str, *, delimiter: str | None = None, encoding: str = "utf-8", skip: int = 0
+    source: Path,
+    column: str,
+    *,
+    delimiter: str | None = None,
+    encoding: str = "utf-8",
+    skip: int = 0,
+    also: Sequence[str] = (),
 ) -> tuple[str | None, bool]:
-    """The one date format that parses this column, and whether others also did."""
+    """The one date format that parses this column, and whether others also did.
+
+    `also` adds formats the built-in list does not hold, such as a custom one
+    remembered from an earlier import: it competes like any other, so a column
+    it still reads is not called a mismatch for another format's fitting too
+    (w5/911).
+    """
     date_format, ambiguous, _rejection = inspect_date_column(
-        source, column, delimiter=delimiter, encoding=encoding, skip=skip
+        source, column, delimiter=delimiter, encoding=encoding, skip=skip, also=also
     )
     return date_format, ambiguous
 
@@ -873,6 +885,7 @@ def inspect_date_column(
     encoding: str = "utf-8",
     mapped_columns: dict[str, str] | None = None,
     skip: int = 0,
+    also: Sequence[str] = (),
 ) -> tuple[str | None, bool, DateRejection | None]:
     """The one date format that parses this column, whether others also did,
     and — when none fits — the cell that ruled out the last candidate.
@@ -891,7 +904,7 @@ def inspect_date_column(
     error points at the record to fix. ``mapped_columns`` is the `--csv`
     mapping that decides which cells count; without it only the date cell does.
     """
-    working = list(_DATE_FORMATS)
+    working = [*_DATE_FORMATS, *(item for item in dict.fromkeys(also) if item not in _DATE_FORMATS)]
     seen = False
     try:
         with open_records(source, delimiter=delimiter, encoding=encoding, skip=skip) as (headers, rows):
