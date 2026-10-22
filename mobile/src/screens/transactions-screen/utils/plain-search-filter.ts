@@ -25,9 +25,17 @@ export function toPlainSearchFilter(raw: string): string | undefined {
 
   // A lone `#tag` or `^link` is Fava filter syntax for that tag or link, and
   // only works unquoted: quoted, it matched payee and narration only, so a
-  // search for the tags the detail screen shows found nothing (w21/025).
-  if (TAG_OR_LINK.test(trimmed)) return trimmed;
+  // search for the tags the detail screen shows found nothing (w21/025). But
+  // the same token is also how a check or order number is written in a
+  // narration ("Check #1042"), which the bare form never finds, so it is sent
+  // as an alternative: the tag or link, or the text (`,` is Fava's OR) (w21/400).
+  if (TAG_OR_LINK.test(trimmed)) return `${trimmed},${quoted(trimmed)}`;
 
+  return quoted(trimmed);
+}
+
+/** The text as one quoted STRING literal that matches it as typed. */
+function quoted(trimmed: string): string {
   // Lexer forms: `"[^"]*"` and `'[^']*'`, with no escape processing inside.
   // Prefer double quotes; fall back to single quotes when the needle itself
   // contains `"`. When both quote kinds appear, keep double quotes and encode

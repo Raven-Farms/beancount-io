@@ -75,12 +75,25 @@ describe("toPlainSearchFilter", () => {
 });
 
 // A lone tag or link is Fava filter syntax and must reach it unquoted: the
-// quoted form matched payee and narration only (w21/025).
+// quoted form matched payee and narration only (w21/025). It is also how a check
+// or order number reads in a narration ("Check #1042"), so it goes with the text
+// as an alternative (`,` is Fava's OR) (w21/400).
 describe("toPlainSearchFilter tags and links", () => {
-  it("passes a single tag or link token through", () => {
-    expect(toPlainSearchFilter(" #work ")).toBe("#work");
-    expect(toPlainSearchFilter("^qa-receipt-001")).toBe("^qa-receipt-001");
-    expect(toPlainSearchFilter("#trip/2026.q3")).toBe("#trip/2026.q3");
+  it("sends a single tag or link token as the tag or the text", () => {
+    expect(toPlainSearchFilter(" #work ")).toBe('#work,"#work"');
+    expect(toPlainSearchFilter("^qa-receipt-001")).toBe(
+      '^qa-receipt-001,"\\^qa-receipt-001"',
+    );
+    expect(toPlainSearchFilter("#trip/2026.q3")).toBe(
+      '#trip/2026.q3,"#trip/2026\\.q3"',
+    );
+  });
+
+  it("finds a check number in a narration as well as a real tag", () => {
+    expect(toPlainSearchFilter("#1042")).toBe('#1042,"#1042"');
+    expect(toPlainSearchFilter("#112-3456789-1234567")).toBe(
+      '#112-3456789-1234567,"#112-3456789-1234567"',
+    );
   });
 
   it("keeps quoting anything that is not exactly one token", () => {
