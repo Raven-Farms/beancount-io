@@ -156,3 +156,38 @@ describe("a merchant spelled composed and decomposed", () => {
     expect(merchantKey(` ${NFD} `)).toBe(merchantKey(NFC.toUpperCase()));
   });
 });
+
+// w21/460: double spaces from bank imports split one merchant in two, and a
+// search found only one of them.
+describe("a merchant with runs of whitespace in its payee", () => {
+  const data = table([
+    ["Whole Foods", 5, "2026-01-01", "2026-05-01"],
+    ["Whole  Foods", 3, "2026-06-01", "2026-08-01"],
+    ["WHOLE FOODS", 1, "2026-09-01", "2026-09-01"],
+    ["Whole Foods", 2, "2026-09-05", "2026-09-20"],
+  ]);
+
+  it("is one merchant with every transaction and spelling kept", () => {
+    const merchants = aggregatePayees(data);
+    expect(merchants.length).toBe(1);
+    expect(merchants[0].transactionCount).toBe(11);
+    expect(merchants[0].payee).toBe("Whole Foods");
+    expect(merchants[0].otherSpellings?.length).toBe(3);
+  });
+
+  it("is found by a search for either spelling", () => {
+    const {
+      filterMerchants,
+    } = require("../screens/merchants-screen/selectors/aggregate-payees");
+    const merchants = aggregatePayees(data);
+    expect(filterMerchants(merchants, "whole foods").length).toBe(1);
+    expect(filterMerchants(merchants, "whole   foods").length).toBe(1);
+    expect(filterMerchants(merchants, "foods").length).toBe(1);
+  });
+
+  it("shares one merchant key", () => {
+    const { merchantKey } = require("../common/merchant-key");
+    expect(merchantKey("Whole  Foods")).toBe(merchantKey("whole foods"));
+    expect(merchantKey("  Whole \t Foods ")).toBe("whole foods");
+  });
+});

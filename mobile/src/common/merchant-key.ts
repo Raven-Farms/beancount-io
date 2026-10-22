@@ -1,6 +1,7 @@
 /**
- * One merchant however its payee is spelled: trimmed, composed (NFC) and
- * case-folded, the same grouping the Merchants directory merges spellings by
+ * One merchant however its payee is spelled: trimmed, composed (NFC), with each
+ * run of whitespace one space ("Whole  Foods" from a bank import is "Whole
+ * Foods", w21/460), and case-folded, the same grouping the Merchants directory merges spellings by
  * (w21/046). A decomposed "Café" ("e" and a combining accent) and a composed
  * one look identical and are two strings, so they were two merchants with half
  * the history each (w21/410).
@@ -9,7 +10,7 @@
  * (w21/169). Import-free so the unit runner can load it.
  */
 export function merchantKey(payee: string): string {
-  return payee.trim().normalize("NFC").toLowerCase();
+  return payee.trim().normalize("NFC").replace(/\s+/g, " ").toLowerCase();
 }
 
 /** Every spelling's series merged under its merchant key, by date. */
