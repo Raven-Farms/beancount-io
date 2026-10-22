@@ -168,6 +168,25 @@ const LedgerGuardProviderComponent = ({
               >
                 <Text style={styles.buttonText}>{t("discoveryRetry")}</Text>
               </TouchableOpacity>
+              <TouchableOpacity
+                testID="ledger-guard-settings"
+                style={[styles.button, styles.buttonSecondary]}
+                onPress={() => {
+                  router.push("/(app)/settings");
+                }}
+                activeOpacity={0.7}
+                accessibilityRole="button"
+                accessibilityLabel={t("settings")}
+              >
+                <Ionicons
+                  name="settings-outline"
+                  size={20}
+                  color={theme.black}
+                />
+                <Text style={[styles.buttonText, styles.buttonTextSecondary]}>
+                  {t("settings")}
+                </Text>
+              </TouchableOpacity>
             </View>
           </View>
         </View>
@@ -217,6 +236,21 @@ const LedgerGuardProviderComponent = ({
                 {t("createLedgerEmptyDiscover")}
               </Text>
             </TouchableOpacity>
+            <TouchableOpacity
+              testID="ledger-guard-settings"
+              style={[styles.button, styles.buttonSecondary]}
+              onPress={() => {
+                router.push("/(app)/settings");
+              }}
+              activeOpacity={0.7}
+              accessibilityRole="button"
+              accessibilityLabel={t("settings")}
+            >
+              <Ionicons name="settings-outline" size={20} color={theme.black} />
+              <Text style={[styles.buttonText, styles.buttonTextSecondary]}>
+                {t("settings")}
+              </Text>
+            </TouchableOpacity>
           </View>
         </View>
       </View>
@@ -248,6 +282,21 @@ const LedgerGuardProviderComponent = ({
               <Ionicons name="search-outline" size={20} color={theme.white} />
               <Text style={styles.buttonText}>
                 {t("createLedgerEmptyDiscover")}
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              testID="ledger-guard-settings"
+              style={[styles.button, styles.buttonSecondary]}
+              onPress={() => {
+                router.push("/(app)/settings");
+              }}
+              activeOpacity={0.7}
+              accessibilityRole="button"
+              accessibilityLabel={t("settings")}
+            >
+              <Ionicons name="settings-outline" size={20} color={theme.black} />
+              <Text style={[styles.buttonText, styles.buttonTextSecondary]}>
+                {t("settings")}
               </Text>
             </TouchableOpacity>
           </View>
