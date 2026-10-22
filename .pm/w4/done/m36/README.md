@@ -51,7 +51,7 @@ The initial implementation shipped in c293ab9c1 and the TanStack useHydrated ref
 
 ## Repository-card deployment verification
 
-**Unblocked 2026-10-22** — matching repaired RepositoryListItem is deployed. Fresh native-focus held-startup controls at1440/390 cross a real relative-age boundary and preserve every original card/time node and focused control without React418. Stable-window controls pass, and all initial/expanded titles agree across both widths × UTC/Kiritimati. t003 is complete using these new controls plus its previously recorded commit/activity/locale/navigation evidence. t009/t010 and final closeout remain open. [FINDINGS.md](./FINDINGS.md) retains details and the old blocker. Independent vertical startup restoration now has [963](../../963.md); it does not undo the proven timestamp/node repair and is not silently treated as fixed here.
+**Unblocked 2026-10-22** — matching repaired RepositoryListItem is deployed. Fresh native-focus held-startup controls at1440/390 cross a real relative-age boundary and preserve every original card/time node and focused control without React418. Stable-window controls pass, and all initial/expanded titles agree across both widths × UTC/Kiritimati. t003 is complete using these new controls plus its previously recorded commit/activity/locale/navigation evidence. t009/t010 and final closeout remain open. [FINDINGS.md](./FINDINGS.md) retains details and the old blocker. Independent vertical startup restoration now has [963](../963.md); it does not undo the proven timestamp/node repair and is not silently treated as fixed here.
 
 ## Closeout — 2026-10-22
 
