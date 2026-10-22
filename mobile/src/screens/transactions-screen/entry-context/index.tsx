@@ -276,7 +276,13 @@ export const EntryContext: React.FC<EntryContextProps> = ({
             {t("journalEntryContext")}
           </Text>
           {entryFilename && entryLineNumber ? (
-            <Text style={styles.contextLocation} numberOfLines={1}>
+            // Cut at the head, not the tail: the line number is what tells
+            // two entries in one file apart (w21/433).
+            <Text
+              style={styles.contextLocation}
+              numberOfLines={1}
+              ellipsizeMode="head"
+            >
               {entryFilename}:{entryLineNumber}
             </Text>
           ) : null}

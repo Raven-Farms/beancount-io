@@ -56,3 +56,27 @@ describe("the texts a person may need to copy", () => {
     ).toBe(true);
   });
 });
+
+// w21/433: at the tail, a long nested path cut the line number off first.
+describe("the Entry Context location line", () => {
+  it("keeps its line number by cutting the path's head", () => {
+    const source = fs
+      .readFileSync(
+        path.join(
+          __dirname,
+          "..",
+          "..",
+          "transactions-screen",
+          "entry-context",
+          "index.tsx",
+        ),
+        "utf8",
+      )
+      .replace(/\s+/g, "");
+    expect(
+      source.includes(
+        'numberOfLines={1}ellipsizeMode="head">{entryFilename}:{entryLineNumber}',
+      ),
+    ).toBe(true);
+  });
+});
