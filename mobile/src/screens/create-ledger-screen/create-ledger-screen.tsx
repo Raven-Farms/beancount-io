@@ -65,6 +65,7 @@ import {
   isNewCreateRequest,
   isRequestIdReuse,
   previewFailureKind,
+  isNewLedgerName,
   slugifyLedgerName,
   ledgerSlugPreview,
 } from "./ledger-name";
@@ -221,7 +222,7 @@ export function CreateLedgerScreen(): JSX.Element {
             .string()
             .min(1, t("createLedgerNameRequired"))
             .max(100, t("createLedgerNameMaxLength"))
-            .refine((val) => slugifyLedgerName(val).length > 0, {
+            .refine(isNewLedgerName, {
               message: t("createLedgerNameInvalid"),
             }),
           description: z.string(),

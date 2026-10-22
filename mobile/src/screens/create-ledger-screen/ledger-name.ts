@@ -12,6 +12,22 @@ export function slugifyLedgerName(text: string): string {
 }
 
 /**
+ * What the server accepts as a new ledger's name: lowercase letters, digits and
+ * underscores joined by single hyphens, with at least one letter or digit. A
+ * copy of backend-v2's `NEW_LEDGER_NAME_PATTERN` (packages share no code), pinned
+ * by `ledger-name.test.ts`. A name of only underscores or hyphens passed the
+ * form's "something is left after slugifying" check and was refused on Create
+ * with a generic message (w21/547).
+ */
+const NEW_LEDGER_NAME_PATTERN =
+  /^(?=[a-z0-9_-]*[a-z0-9])[a-z0-9_]+(?:-[a-z0-9_]+)*$/;
+
+/** Whether `name` slugifies to a name the server will create. */
+export function isNewLedgerName(name: string): boolean {
+  return NEW_LEDGER_NAME_PATTERN.test(slugifyLedgerName(name));
+}
+
+/**
  * The slug to preview under the name field ("Will be created as …"), or null
  * when there is nothing worth showing: the name is already the slug, or it
  * slugifies away entirely (the form's own validation reports that case). A

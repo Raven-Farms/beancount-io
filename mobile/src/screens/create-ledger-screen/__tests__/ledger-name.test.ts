@@ -3,6 +3,7 @@ import {
   createRequestFingerprint,
   generateDefaultLedgerName,
   isNewCreateRequest,
+  isNewLedgerName,
   isRequestIdReuse,
   ledgerSlugPreview,
   slugifyLedgerName,
@@ -213,5 +214,29 @@ describe("the Review step", () => {
             .includes("createLedgerPublic:"),
       );
     expect(missing).toEqual([]);
+  });
+});
+
+// w21/547: "___" slugified to something, so the form passed it and the server
+// refused it (backend-v2's NEW_LEDGER_NAME_PATTERN wants a letter or digit).
+describe("isNewLedgerName", () => {
+  it("refuses a name with no letter or digit once slugified", () => {
+    for (const name of ["___", "_", "_-", "!!_", "  _  ", "-_-"]) {
+      expect(isNewLedgerName(name)).toBe(false);
+    }
+  });
+
+  it("accepts what the server creates", () => {
+    for (const name of ["a", "My Book!", "2026", "_a", "a_", "Hello__World"]) {
+      expect(isNewLedgerName(name)).toBe(true);
+    }
+  });
+
+  it("agrees with the server's pattern on the slug", () => {
+    // The server's `NEW_LEDGER_NAME_PATTERN`, restated here to pin the client.
+    const server = /^(?=[a-z0-9_-]*[a-z0-9])[a-z0-9_]+(?:-[a-z0-9_]+)*$/;
+    for (const name of ["x-", "a--b", "a-b", "__", "_x_", "---", "9"]) {
+      expect(isNewLedgerName(name)).toBe(server.test(slugifyLedgerName(name)));
+    }
   });
 });
