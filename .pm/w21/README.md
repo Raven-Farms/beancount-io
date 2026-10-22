@@ -75,5 +75,6 @@
 - [560](./560.md) — Time-range pills are named only by abbreviations ("1M", "YTD", "1Г") for VoiceOver
 - [561](./561.md) — The posting sign toggle reads only "Toggle amount sign": no plus or minus, and no posting named
 - [562](./562.md) — The file editor's shortcut keys mostly read as just "Insert" (symbols unspoken, ⇥, raw ISO date)
+- [563](./563.md) — Reports' Income/Expenses transaction cards look only at the 200 newest transactions, so a busy month hides the salary (w21/011 on Reports)
 - [508](./blocked/508.md) — Mobile guesses that an entry is a plugin copy from its first line; read the ledger's `generated_from` instead (split from 443) — **blocked:** production's GraphQL schema lacks `generated_from` until the ledger service and backend-v2 deploy; mobile's client is generated from it
 - [315](./blocked/315.md) — In-app commits signed with Gitea username and real email (no full_name, no noreply) — **blocked:** needs the owner's noreply-address and published-history decisions, and a production backfill of existing Gitea users that can't be verified here
