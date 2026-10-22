@@ -242,6 +242,7 @@ export const zh: Translations = {
     "从 {{start}}（{{startValue}}）到 {{end}}（{{endValue}}）。最低 {{low}}，最高 {{high}}。",
   chartPointValue: "{{period}}，{{value}}，自开始以来 {{change}}",
   chartAdjustHint: "向上或向下轻扫以逐月切换",
+  chartAdjustHintAndroid: "打开操作菜单以逐月切换",
   done: "完成",
   payee: "收款方",
   narration: "备注",

@@ -87,7 +87,7 @@ describe("the chart plot", () => {
       "accessible={hasSeries}",
       'accessibilityRole={hasSeries?"adjustable":undefined}',
       "accessibilityLabel={plotLabel??undefined}",
-      'accessibilityHint={hasSeries?t("chartAdjustHint"):undefined}',
+      'accessibilityHint={hasSeries?t(Platform.OS==="android"?"chartAdjustHintAndroid":"chartAdjustHint",):undefined}',
       'accessibilityActions={hasSeries?[{name:"increment"},{name:"decrement"}]:undefined}',
       "onAccessibilityAction={onAccessibilityAction}",
     ]) {
@@ -107,7 +107,12 @@ describe("the chart's strings", () => {
     for (const locale of translationLocales()) {
       // eslint-disable-next-line @typescript-eslint/no-require-imports
       const catalog = require(`../../../translations/${locale}`)[locale];
-      for (const key of ["chartSummary", "chartPointValue", "chartAdjustHint"])
+      for (const key of [
+        "chartSummary",
+        "chartPointValue",
+        "chartAdjustHint",
+        "chartAdjustHintAndroid",
+      ])
         expect(typeof catalog[key]).toBe("string");
       expect(catalog.chartSummary.includes("{{startValue}}")).toBe(true);
       expect(catalog.chartPointValue.includes("{{change}}")).toBe(true);
@@ -166,5 +171,32 @@ describe("stepping through a re-render", () => {
         "stepRest.current=setTimeout(()=>{stepRest.current=null;setStepIndex(null);",
       ),
     ).toBe(true);
+  });
+});
+
+// w21/441: three Home curves read the same summary, and TalkBack was told to
+// swipe like VoiceOver.
+describe("which curve a chart is, and how Android steps it", () => {
+  const read = (...parts: string[]) =>
+    fs
+      .readFileSync(path.join(__dirname, "..", "..", "..", ...parts), "utf8")
+      .replace(/\s+/g, "");
+
+  it("passes each Home chart its own title", () => {
+    expect(
+      read(
+        "screens",
+        "home-screen",
+        "components",
+        "account-charts-card.tsx",
+      ).includes("label={t(key)}footnote={footnotes[key]}"),
+    ).toBe(true);
+  });
+
+  it("words Android's hint for TalkBack, not a swipe", () => {
+    expect(en.chartAdjustHintAndroid.includes("Swipe")).toBe(false);
+    expect(en.chartAdjustHintAndroid).toBe(
+      "Open the actions menu to step through the months",
+    );
   });
 });

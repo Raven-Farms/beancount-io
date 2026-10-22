@@ -270,6 +270,7 @@ export const nl: Translations = {
     "Van {{start}}, {{startValue}}, tot {{end}}, {{endValue}}. Laagste {{low}}, hoogste {{high}}.",
   chartPointValue: "{{period}}, {{value}}, {{change}} sinds het begin",
   chartAdjustHint: "Veeg omhoog of omlaag om door de maanden te gaan",
+  chartAdjustHintAndroid: "Open het actiemenu om door de maanden te gaan",
   done: "Klaar",
   payee: "Begunstigde",
   narration: "Beschrijving",

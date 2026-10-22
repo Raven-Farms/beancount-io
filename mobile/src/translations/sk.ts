@@ -280,6 +280,7 @@ export const sk: Translations = {
     "Od {{start}}, {{startValue}}, do {{end}}, {{endValue}}. Minimum {{low}}, maximum {{high}}.",
   chartPointValue: "{{period}}, {{value}}, {{change}} od začiatku",
   chartAdjustHint: "Potiahnutím nahor alebo nadol prechádzate mesiace",
+  chartAdjustHintAndroid: "Otvorením ponuky akcií prechádzate mesiace",
   done: "Hotovo",
   payee: "Príjemca",
   narration: "Popis",

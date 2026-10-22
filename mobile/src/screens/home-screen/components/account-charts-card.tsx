@@ -265,6 +265,9 @@ export function AccountChartsCard({
     return (
       <InteractiveLineChartD3
         key={`${key}|${scope}`}
+        // Which curve it is: the tab above names the page for the eye, but a
+        // screen reader met three identical summaries (w21/441).
+        label={t(key)}
         footnote={footnotes[key]}
         labels={chart.labels}
         periods={chart.periods}

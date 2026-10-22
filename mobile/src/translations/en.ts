@@ -261,6 +261,7 @@ export const en = {
     "From {{start}}, {{startValue}}, to {{end}}, {{endValue}}. Low {{low}}, high {{high}}.",
   chartPointValue: "{{period}}, {{value}}, {{change}} since start",
   chartAdjustHint: "Swipe up or down to step through the months",
+  chartAdjustHintAndroid: "Open the actions menu to step through the months",
   done: "Done",
   payee: "Payee",
   narration: "Narration",

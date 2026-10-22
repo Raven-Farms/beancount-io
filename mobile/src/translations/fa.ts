@@ -266,6 +266,7 @@ export const fa: Translations = {
     "از {{start}}، {{startValue}}، تا {{end}}، {{endValue}}. کمترین {{low}}، بیشترین {{high}}.",
   chartPointValue: "{{period}}، {{value}}، {{change}} از ابتدا",
   chartAdjustHint: "برای حرکت میان ماه‌ها به بالا یا پایین بکشید",
+  chartAdjustHintAndroid: "برای حرکت میان ماه‌ها منوی عملیات را باز کنید",
   done: "تمام",
   payee: "دریافت‌کننده",
   narration: "شرح",

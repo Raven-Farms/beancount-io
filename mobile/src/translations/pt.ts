@@ -276,6 +276,7 @@ export const pt: Translations = {
     "De {{start}}, {{startValue}}, a {{end}}, {{endValue}}. Mínimo {{low}}, máximo {{high}}.",
   chartPointValue: "{{period}}, {{value}}, {{change}} desde o início",
   chartAdjustHint: "Deslize para cima ou para baixo para percorrer os meses",
+  chartAdjustHintAndroid: "Abra o menu de ações para percorrer os meses",
   done: "Pronto",
   payee: "Beneficiário",
   narration: "Descrição",

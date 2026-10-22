@@ -22,7 +22,6 @@
 - [304](./blocked/304.md) — Budgets on Liabilities/Assets get favourability backwards (owner decision) — **blocked:** needs an owner decision between deriving direction from the account root and limiting the picker to Income and Expenses, which reverses w1/023's "every root" rule
 - [424](./blocked/424.md) — Mobile does not show the ledger service's fix hints (split from 311) — **blocked:** production's GraphQL schema lacks `code`/`hint` until backend-v2 deploys; mobile's client is generated from it
 - [453](./blocked/453.md) — addEntries/bulkEntries have no idempotency key: a retry after a lost response can duplicate the entry (split from 351) — **blocked:** needs an owner-approved contract (field, bounds, retention) across REST/GraphQL/MCP and a backend-v2 deploy
-- [441](./441.md) — Home charts announced without curve name; iOS-only hint
 - [442](./442.md) — Android reinstall never sets account-choice mark (318 sibling)
 - [443](./443.md) — Delete/Edit on a plugin copy acts on the whole series
 - [444](./444.md) — Padding entry detail turns "removed" after another entry opens

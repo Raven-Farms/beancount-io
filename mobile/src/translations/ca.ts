@@ -278,6 +278,7 @@ export const ca: Translations = {
     "De {{start}}, {{startValue}}, a {{end}}, {{endValue}}. Mínim {{low}}, màxim {{high}}.",
   chartPointValue: "{{period}}, {{value}}, {{change}} des de l'inici",
   chartAdjustHint: "Llisqueu amunt o avall per recórrer els mesos",
+  chartAdjustHintAndroid: "Obriu el menú d'accions per recórrer els mesos",
   done: "Fet",
   payee: "Beneficiari",
   narration: "Descripció",

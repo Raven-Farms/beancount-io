@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { Platform, StyleSheet, Text, View } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Svg, {
   Path,
@@ -862,7 +862,15 @@ function InteractiveLineChart({
             accessible={hasSeries}
             accessibilityRole={hasSeries ? "adjustable" : undefined}
             accessibilityLabel={plotLabel ?? undefined}
-            accessibilityHint={hasSeries ? t("chartAdjustHint") : undefined}
+            accessibilityHint={
+              hasSeries
+                ? t(
+                    Platform.OS === "android"
+                      ? "chartAdjustHintAndroid"
+                      : "chartAdjustHint",
+                  )
+                : undefined
+            }
             accessibilityValue={
               hasSeries
                 ? {

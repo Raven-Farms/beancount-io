@@ -279,6 +279,7 @@ export const ru: Translations = {
     "С {{start}}, {{startValue}}, по {{end}}, {{endValue}}. Минимум {{low}}, максимум {{high}}.",
   chartPointValue: "{{period}}, {{value}}, {{change}} с начала",
   chartAdjustHint: "Проведите вверх или вниз, чтобы перебирать месяцы",
+  chartAdjustHintAndroid: "Откройте меню действий, чтобы перебирать месяцы",
   done: "Готово",
   payee: "Получатель",
   narration: "Описание",

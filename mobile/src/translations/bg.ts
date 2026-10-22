@@ -269,6 +269,8 @@ export const bg: Translations = {
     "От {{start}}, {{startValue}}, до {{end}}, {{endValue}}. Минимум {{low}}, максимум {{high}}.",
   chartPointValue: "{{period}}, {{value}}, {{change}} от началото",
   chartAdjustHint: "Плъзнете нагоре или надолу, за да преминете през месеците",
+  chartAdjustHintAndroid:
+    "Отворете менюто с действия, за да преминавате през месеците",
   done: "Готово",
   payee: "Получател",
   narration: "Описание",

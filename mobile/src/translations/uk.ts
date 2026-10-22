@@ -278,6 +278,7 @@ export const uk: Translations = {
     "Від {{start}}, {{startValue}}, до {{end}}, {{endValue}}. Мінімум {{low}}, максимум {{high}}.",
   chartPointValue: "{{period}}, {{value}}, {{change}} від початку",
   chartAdjustHint: "Проведіть угору або вниз, щоб перемикати місяці",
+  chartAdjustHintAndroid: "Відкрийте меню дій, щоб перемикати місяці",
   done: "Готово",
   payee: "Отримувач",
   narration: "Опис",
