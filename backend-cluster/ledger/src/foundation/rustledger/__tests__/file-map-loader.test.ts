@@ -35,6 +35,25 @@ describe("globToRegExp safety bounds", () => {
     expect(globToRegExp("accounts/[z-a].bean")).toBeNull();
   });
 
+  // w21/657: Python's glob skips hidden names, which rustledger's matched.
+  it("never lets a wildcard match a hidden file or directory name", () => {
+    const pattern = globToRegExp("y/*.bean");
+    expect(pattern?.test("y/a.bean")).toBe(true);
+    expect(pattern?.test("y/.hidden.bean")).toBe(false);
+    expect(globToRegExp("y/?hidden.bean")?.test("y/.hidden.bean")).toBe(false);
+    expect(globToRegExp("y/[.]hidden.bean")?.test("y/.hidden.bean")).toBe(
+      false,
+    );
+    expect(globToRegExp("**/*.bean")?.test(".archive/old.bean")).toBe(false);
+    expect(globToRegExp("y/**/*.bean")?.test("y/.d/x.bean")).toBe(false);
+    // A dot inside a name is ordinary; a literal leading dot opts in.
+    expect(pattern?.test("y/a.b.bean")).toBe(true);
+    expect(globToRegExp("y/.*.bean")?.test("y/.hidden.bean")).toBe(true);
+    expect(globToRegExp(".archive/*.bean")?.test(".archive/old.bean")).toBe(
+      true,
+    );
+  });
+
   it("rejects a hostile non-match without exponential backtracking", () => {
     const pattern = globToRegExp(`${"a*".repeat(30)}b`);
     expect(pattern?.test("a".repeat(256))).toBe(false);

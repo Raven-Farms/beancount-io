@@ -147,7 +147,10 @@ export async function withLedger<T>(
   fn: (ledger: Ledger) => T,
 ): Promise<T> {
   const mod = await loadRustledger();
-  const ledger = mod.Ledger.fromFiles(parseableFiles(files), entryPoint);
+  const ledger = mod.Ledger.fromFiles(
+    parseableFiles(files, entryPoint),
+    entryPoint,
+  );
   try {
     return fn(ledger);
   } finally {
@@ -502,9 +505,9 @@ export async function parseLedgerFiles(
         : {}),
       ...(snapshot.sourceLocations
         ? {
-            sourceLocations: Object.freeze(snapshot.sourceLocations) as Array<
-              DirectiveSourceLocation | null
-            >,
+            sourceLocations: Object.freeze(
+              snapshot.sourceLocations,
+            ) as Array<DirectiveSourceLocation | null>,
           }
         : {}),
       ...(snapshot.sourceDetails
@@ -593,7 +596,7 @@ async function parseLedgerFilesUncached(
   // (w21/187).
   const located = locateParseErrors(
     raw.errors,
-    parseableFiles(stripResult?.strippedFiles ?? scoped),
+    parseableFiles(stripResult?.strippedFiles ?? scoped, entryPoint),
     entryPoint,
     await loadRustledger(),
   );
@@ -729,9 +732,9 @@ async function parseLedgerFilesUncached(
       : {}),
     ...(capturedLocations !== undefined
       ? {
-          sourceLocations: Object.freeze(capturedLocations) as Array<
-            DirectiveSourceLocation | null
-          >,
+          sourceLocations: Object.freeze(
+            capturedLocations,
+          ) as Array<DirectiveSourceLocation | null>,
         }
       : {}),
     ...(serializedSourceDetails !== undefined
@@ -821,7 +824,10 @@ export async function queryLedgerFilesResultInProcess(
     key,
     async () => {
       const mod = await loadRustledger();
-      return mod.Ledger.fromFiles(parseableFiles(queryFiles), queryEntryPoint);
+      return mod.Ledger.fromFiles(
+        parseableFiles(queryFiles, queryEntryPoint),
+        queryEntryPoint,
+      );
     },
     (ledger) => {
       if (materialized !== undefined) {

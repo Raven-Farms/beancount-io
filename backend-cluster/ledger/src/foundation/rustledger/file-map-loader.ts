@@ -129,6 +129,11 @@ export function isGlob(target: string): boolean {
   return /[*?[]/u.test(target);
 }
 
+/** Whether a repo path has a hidden segment (`y/.draft.bean`, `.archive/x.bean`). */
+export function isHiddenRepoPath(path: string): boolean {
+  return path.split("/").some((segment) => segment.startsWith("."));
+}
+
 /** Run repository-content reads with a fixed number of in-flight requests. */
 async function fetchPathsWithBoundedConcurrency(
   paths: readonly string[],
@@ -206,7 +211,9 @@ function classMatches(
  * Compile a beancount-style include glob to a bounded, non-backtracking
  * matcher. It matches Python's `glob.glob(..., recursive=True)`: `*` stays
  * within one path segment, `**` crosses segments, `?` consumes one non-`/`
- * character, and `[…]` / `[!…]` are character classes.
+ * character, and `[…]` / `[!…]` are character classes. Like Python's, no
+ * wildcard matches the leading `.` of a file or directory name; only a literal
+ * `.` does (`y/*.bean` skips `y/.draft.bean`, `y/.*.bean` matches it).
  *
  * This intentionally does not use RegExp. A user-controlled pattern such as
  * `a*a*a*…b` causes exponential backtracking in JavaScript's regex engine and
@@ -319,13 +326,18 @@ export function globToRegExp(glob: string): GlobMatcher | null {
     test(path: string): boolean {
       let states = new Set<number>([0]);
       addEpsilonClosure(states);
+      let segmentStart = true;
       for (const char of path) {
+        const hiddenLead = segmentStart && char === ".";
+        segmentStart = char === "/";
         const next = new Set<number>();
         for (const state of states) {
           const token = tokens[state];
           if (token === undefined) continue;
           if (token.type === "literal" && token.value === char) {
             next.add(state + 1);
+          } else if (hiddenLead) {
+            continue;
           } else if (token.type === "one" && char !== "/") {
             next.add(state + 1);
           } else if (
