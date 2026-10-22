@@ -1,3 +1,4 @@
+import { merchantDateRangeText } from "./selectors/merchant-date-range";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLedgerRootNames } from "@/common/hooks/use-ledger-root-names";
 import {
@@ -21,7 +22,6 @@ import {
 import { useThemeStyle } from "@/common/hooks";
 import { useTranslations } from "@/common/hooks/use-translations";
 import { useToday } from "@/common/hooks/use-today";
-import { formatLedgerDateShort } from "@/common/date-format";
 import { LEADING_TEXT_ALIGN } from "@/common/rtl";
 import { ColorTheme } from "@/types/theme-props";
 import {
@@ -543,17 +543,13 @@ function MerchantDetailBody({
 
       {stats?.firstDate && stats?.lastDate ? (
         <Text style={styles.dateRange}>
-          {t("merchantDetailDateRange", {
-            first: formatLedgerDateShort(stats.firstDate, locale),
-            // The last date may be a pre-entered payment, not one made: say so
-            // (w21/335).
-            last:
-              stats.lastDate > today
-                ? t("merchantsScheduled", {
-                    date: formatLedgerDateShort(stats.lastDate, locale),
-                  })
-                : formatLedgerDateShort(stats.lastDate, locale),
-          })}
+          {merchantDateRangeText(
+            stats.firstDate,
+            stats.lastDate,
+            today,
+            locale,
+            t,
+          )}
         </Text>
       ) : null}
 

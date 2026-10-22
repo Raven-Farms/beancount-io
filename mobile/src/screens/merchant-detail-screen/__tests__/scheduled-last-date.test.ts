@@ -16,7 +16,7 @@ describe("pre-entered payments on the merchant screens", () => {
     expect(detail.includes("consttoday=useToday();")).toBe(true);
     expect(
       detail.includes(
-        'last:stats.lastDate>today?t("merchantsScheduled",{date:formatLedgerDateShort(stats.lastDate,locale),}):formatLedgerDateShort(stats.lastDate,locale),',
+        "merchantDateRangeText(stats.firstDate,stats.lastDate,today,locale,t,)",
       ),
     ).toBe(true);
   });
