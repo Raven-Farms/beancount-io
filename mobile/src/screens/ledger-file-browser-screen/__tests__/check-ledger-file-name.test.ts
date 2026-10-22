@@ -86,7 +86,7 @@ describe("New Ledger File dialog", () => {
       "index.tsx",
     );
     expect(
-      modal.includes("const isConfirmDisabled = validation !== true;"),
+      modal.includes("const isConfirmDisabled = validation !== true || busy;"),
     ).toBe(true);
     expect(
       modal.includes(
@@ -134,7 +134,7 @@ describe("a new file into a folder that already holds it", () => {
       .readFileSync(path.join(__dirname, "..", "index.tsx"), "utf8")
       .replace(/\s+/g, "");
     const lookup = source.indexOf("query:GetLedgerDirContentDocument");
-    const closes = source.indexOf("setCreateModalVisible(false);");
+    const closes = source.indexOf("setCreateModalVisible(false);try{");
     expect(lookup > -1 && lookup < closes).toBe(true);
   });
 });

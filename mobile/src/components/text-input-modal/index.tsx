@@ -138,6 +138,8 @@ type TextInputModalProps = {
    * unexplained (w21/014). `false` disables without a message.
    */
   validateInput?: (text: string) => boolean | string;
+  /** The caller is checking the input against the server: Confirm waits. */
+  busy?: boolean;
 };
 
 export const TextInputModal: React.FC<TextInputModalProps> = ({
@@ -151,6 +153,7 @@ export const TextInputModal: React.FC<TextInputModalProps> = ({
   cancelButtonText,
   destructive = false,
   validateInput,
+  busy = false,
 }) => {
   const theme = useTheme().colorTheme;
   // Translated defaults, never English ones (w21/178).
@@ -194,7 +197,8 @@ export const TextInputModal: React.FC<TextInputModalProps> = ({
   }));
 
   const validation = validateInput ? validateInput(inputText) : true;
-  const isConfirmDisabled = validation !== true;
+  // `busy`: the caller is checking the input against the server; Confirm waits.
+  const isConfirmDisabled = validation !== true || busy;
   const inputError = typeof validation === "string" ? validation : null;
 
   const handleConfirm = () => {
@@ -272,6 +276,7 @@ export const TextInputModal: React.FC<TextInputModalProps> = ({
                 onPress={handleConfirm}
                 activeOpacity={0.6}
                 disabled={isConfirmDisabled}
+                accessibilityState={{ disabled: isConfirmDisabled, busy }}
               >
                 <Text
                   style={

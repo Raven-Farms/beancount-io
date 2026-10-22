@@ -47,6 +47,8 @@ import { useLedgerGuard } from "@/components/ledger-guard";
 import { TextInputModal } from "@/components/text-input-modal";
 import { invalidateLedgerData } from "@/common/apollo/invalidate-ledger";
 import { haptics } from "@/common/haptics";
+import { settleWithin } from "@/common/settle-within";
+import { CONNECTION_TIMEOUT_MS } from "@/common/oauth/discovery";
 import { encodeLedgerFileContent } from "@/common/ledger-file-content";
 import { isEditableTextFile } from "@/common/ledger-file-types";
 import {
@@ -385,6 +387,16 @@ export function LedgerFileBrowserScreen(): JSX.Element {
   const [deletingPath, setDeletingPath] = useState<string | null>(null);
   const isHere = useIsHere();
   const createInFlightRef = useRef(false);
+  // Which Create attempt is current. Cancel moves it on, so an attempt still
+  // waiting on the folder lookup finds itself void and writes nothing (w21/376).
+  const createAttemptRef = useRef(0);
+  const [lookingUp, setLookingUp] = useState(false);
+  const cancelCreate = () => {
+    createAttemptRef.current += 1;
+    createInFlightRef.current = false;
+    setLookingUp(false);
+    setCreateModalVisible(false);
+  };
   const deleteInFlightRef = useRef(false);
 
   const { data, loading, error, refetch } = useGetLedgerDirContentQuery({
@@ -465,28 +477,44 @@ export function LedgerFileBrowserScreen(): JSX.Element {
 
       const filePath = buildLedgerFilePath(currentPath, filename);
       createInFlightRef.current = true;
+      const attempt = (createAttemptRef.current += 1);
       // A name into another folder is checked against that folder's listing
       // while the dialog is still open, so a clash shows under the field with
       // the typed name kept, instead of a failed create after it closed
       // (w21/222). If the listing cannot be read, the server stays the judge.
       if (filename.includes("/")) {
+        setLookingUp(true);
         try {
-          const folder = await client.query<GetLedgerDirContentQuery>({
-            query: GetLedgerDirContentDocument,
-            variables: { ledgerId, dirPath: parentDirectory(filePath) },
-            fetchPolicy: "network-only",
-          });
+          // Bounded: a hung server must not hold the dialog open for the OS
+          // request timeout. Past the bound the server stays the judge.
+          const lookup = await settleWithin(
+            client.query<GetLedgerDirContentQuery>({
+              query: GetLedgerDirContentDocument,
+              variables: { ledgerId, dirPath: parentDirectory(filePath) },
+              fetchPolicy: "network-only",
+            }),
+            CONNECTION_TIMEOUT_MS,
+          );
+          // Cancelled meanwhile: create nothing, open nothing (w21/376).
+          if (createAttemptRef.current !== attempt) return;
           if (
-            listingHasFile(folder.data?.getLedgerDirContent ?? [], filePath)
+            lookup.status === "done" &&
+            listingHasFile(
+              lookup.value.data?.getLedgerDirContent ?? [],
+              filePath,
+            )
           ) {
             setKnownExisting((known) => [...known, filename]);
             createInFlightRef.current = false;
+            setLookingUp(false);
             return;
           }
         } catch {
           // Unreadable or absent folder: nothing to clash with, or the server
           // will say so.
         }
+        if (createAttemptRef.current !== attempt) return;
+        setLookingUp(false);
       }
       setCreateModalVisible(false);
       try {
@@ -769,8 +797,9 @@ export function LedgerFileBrowserScreen(): JSX.Element {
         confirmButtonText={t("ledgerCreateFile")}
         cancelButtonText={t("cancel")}
         validateInput={validateNewFilename}
+        busy={lookingUp}
         onConfirm={(input) => void handleCreate(input)}
-        onCancel={() => setCreateModalVisible(false)}
+        onCancel={cancelCreate}
       />
     </View>
   );
