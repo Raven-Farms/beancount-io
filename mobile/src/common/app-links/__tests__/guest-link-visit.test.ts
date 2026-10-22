@@ -114,3 +114,39 @@ describe("a signed-out journal link with filters", () => {
     ).toBe(true);
   });
 });
+
+// w21/490: Accounts and Files are guest tabs, and their links waited behind sign-in.
+describe("a signed-out link to an example's Accounts or Files tab", () => {
+  it("opens the Accounts tab", () => {
+    expect(
+      guestLinkVisit(link("open_ledger/example/accounts"), HOSTED),
+    ).toEqual({ ledgerId: "open_ledger/example", view: "accounts" });
+  });
+
+  it("opens the Files tab for the tree of the main branch", () => {
+    expect(
+      guestLinkVisit(link("open_ledger/example/files/tree/main"), HOSTED),
+    ).toEqual({ ledgerId: "open_ledger/example", view: "files" });
+  });
+
+  it("still leaves the open-account form and a file to sign-in, and another branch is no link", () => {
+    expect(
+      guestLinkVisit(
+        link("open_ledger/example/accounts?action=open-account"),
+        HOSTED,
+      ),
+    ).toBe(null);
+    expect(
+      guestLinkVisit(
+        link("open_ledger/example/files/blob/main/main.bean"),
+        HOSTED,
+      ),
+    ).toBe(null);
+    // Another branch is no app link at all.
+    expect(
+      resolveAppLink(
+        "https://beancount.io/ledger/open_ledger/example/files/tree/dev",
+      ),
+    ).toBe(null);
+  });
+});

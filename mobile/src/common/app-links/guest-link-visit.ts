@@ -7,11 +7,17 @@ import { isOfficialServerUrl } from "../server-url-validation";
 import type { TransactionFilters } from "../../screens/transactions-screen/filters/types";
 import type { AppLinkTarget } from "./resolve-app-link";
 
-/** The guest tabs a link can name: the app has no guest budget or reports detail. */
+/**
+ * The guest tabs a link can name; the app has no guest budget or reports
+ * detail. Accounts and Files are guest tabs too (w21/490); a file link other
+ * than the Files tab itself keeps waiting for sign-in.
+ */
 const GUEST_VIEWS: Record<string, GuestView> = {
   "/": "home",
+  "/accounts": "accounts",
   "/transactions": "transactions",
   "/reports": "reports",
+  "/ledger": "files",
 };
 
 /**
