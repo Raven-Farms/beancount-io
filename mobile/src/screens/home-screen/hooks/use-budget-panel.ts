@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useApolloClient, useReactiveVar } from "@apollo/client";
 import {
   GetLedgerIntervalTotalsDocument,
+  QueryShellDocument,
   type GetLedgerIntervalTotalsQuery,
   type GetLedgerIntervalTotalsQueryVariables,
 } from "@/generated-graphql/graphql";
@@ -18,6 +19,10 @@ import {
   budgetPanelWindow,
   timeWindowStart,
 } from "@/screens/budget-screen/selectors/budget-labels";
+import {
+  hasScheduledRows,
+  scheduledThisMonthBql,
+} from "@/screens/home-screen/selectors/scheduled-this-month";
 import {
   settleBudgetPanel,
   type BudgetPanelRow,
@@ -107,63 +112,97 @@ export function useBudgetPanel({
     // ends on today and changes daily (w21/184).
     const time = budgetPanelWindow(today);
 
-    mapInBatches(
-      groups,
-      BUDGET_PANEL_BATCH,
-      async (group) => {
-        const { end } = currentPeriodRange(group.interval, today);
-        const totals = (fetchPolicy: "network-only" | "cache-only") =>
-          client
-            .query<
-              GetLedgerIntervalTotalsQuery,
-              GetLedgerIntervalTotalsQueryVariables
-            >({
-              query: GetLedgerIntervalTotalsDocument,
-              variables: budgetTotalsVariables({ ledgerId, group, time }),
-              fetchPolicy,
-            })
-            .then(({ data }) => data?.getLedgerIntervalTotals ?? []);
-        // Current totals first: the persisted cache holds the last session's
-        // spending (w21/006). Offline, that cache is still better than nothing.
-        const items = await totals("network-only")
-          .catch(() => totals("cache-only"))
-          // Nothing fetched and nothing cached: the row would read "$0.00 of
-          // $500.00", a claim about spending a failed read cannot back
-          // (w21/080).
-          .catch(() => null);
+    // The month-long window holds anything pre-entered for later this month,
+    // which is not spent yet. When there is any, the period in progress is read
+    // to today instead; otherwise the stable window is kept for the cache
+    // (w21/337). A failed check reads as none.
+    const scheduledCheck = client
+      .query({
+        query: QueryShellDocument,
+        variables: { ledgerId, query: scheduledThisMonthBql(today) },
+        fetchPolicy: "network-only",
+      })
+      .then(({ data }) => hasScheduledRows(data?.queryShell?.table))
+      .catch(() => false);
 
-        // The last interval in the window is the one in progress.
-        const last = items && items.length > 0 ? items[items.length - 1] : null;
-        return {
-          input: {
-            group,
-            periodEnd: end,
-            actual: last
-              ? resolveCurrencyBalance(last.balance, group.currency)
-              : null,
+    scheduledCheck
+      .then((scheduled) =>
+        mapInBatches(
+          groups,
+          BUDGET_PANEL_BATCH,
+          async (group) => {
+            const { end, start } = currentPeriodRange(group.interval, today);
+            const totals = (
+              fetchPolicy: "network-only" | "cache-only",
+              window: string = time,
+            ) =>
+              client
+                .query<
+                  GetLedgerIntervalTotalsQuery,
+                  GetLedgerIntervalTotalsQueryVariables
+                >({
+                  query: GetLedgerIntervalTotalsDocument,
+                  variables: budgetTotalsVariables({
+                    ledgerId,
+                    group,
+                    time: window,
+                  }),
+                  fetchPolicy,
+                })
+                .then(({ data }) => data?.getLedgerIntervalTotals ?? []);
+            // The period in progress, to today, but never before the window's own
+            // start (a weekly period spanning New Year's).
+            const windowStart = timeWindowStart(time, today) ?? start;
+            const toToday = `${start > windowStart ? start : windowStart} - ${today}`;
+            // Current totals first: the persisted cache holds the last session's
+            // spending (w21/006). Offline, that cache is still better than nothing.
+            const items = await (
+              scheduled
+                ? totals("network-only", toToday).catch(() => null)
+                : Promise.resolve(null)
+            )
+              .then((read) => read ?? totals("network-only"))
+              .catch(() => totals("cache-only"))
+              // Nothing fetched and nothing cached: the row would read "$0.00 of
+              // $500.00", a claim about spending a failed read cannot back
+              // (w21/080).
+              .catch(() => null);
+
+            // The last interval in the window is the one in progress.
+            const last =
+              items && items.length > 0 ? items[items.length - 1] : null;
+            return {
+              input: {
+                group,
+                periodEnd: end,
+                actual: last
+                  ? resolveCurrencyBalance(last.balance, group.currency)
+                  : null,
+              },
+              failed: items === null,
+            };
           },
-          failed: items === null,
-        };
-      },
-      // A new run (another ledger, a write) supersedes this one: stop between
-      // batches instead of firing every remaining read (w21/336).
-      () => cancelled,
-    ).then((results) => {
-      if (cancelled) {
-        return;
-      }
-      const settled = settleBudgetPanel(
-        results,
-        BUDGET_PANEL_ROWS,
-        today,
-        // The panel's current period can be the window's clipped first one
-        // (a weekly budget in early January).
-        timeWindowStart(time, today),
-      );
-      setRows(settled.rows);
-      setFailed(settled.failed);
-      setLoading(false);
-    });
+          // A new run (another ledger, a write) supersedes this one: stop between
+          // batches instead of firing every remaining read (w21/336).
+          () => cancelled,
+        ),
+      )
+      .then((results) => {
+        if (cancelled) {
+          return;
+        }
+        const settled = settleBudgetPanel(
+          results,
+          BUDGET_PANEL_ROWS,
+          today,
+          // The panel's current period can be the window's clipped first one
+          // (a weekly budget in early January).
+          timeWindowStart(time, today),
+        );
+        setRows(settled.rows);
+        setFailed(settled.failed);
+        setLoading(false);
+      });
 
     return () => {
       cancelled = true;

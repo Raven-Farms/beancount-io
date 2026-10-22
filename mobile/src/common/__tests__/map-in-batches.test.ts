@@ -87,6 +87,6 @@ describe("mapInBatches", () => {
         "utf8",
       )
       .replace(/\s+/gu, "");
-    expect(hook.includes("()=>cancelled,).then((results)=>{")).toBe(true);
+    expect(hook.includes("()=>cancelled,),).then((results)=>{")).toBe(true);
   });
 });

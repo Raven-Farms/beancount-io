@@ -25,6 +25,12 @@ import {
   selectReadContextState,
 } from "@/common/apollo/card-load-state";
 import { useGuest } from "@/common/guest/guest-context";
+import { getFormatDate } from "@/common/format-util";
+import { useScheduledThisMonth } from "@/screens/home-screen/hooks/use-scheduled-this-month";
+import {
+  monthToDateWindow,
+  withMonthToDate,
+} from "@/screens/home-screen/selectors/scheduled-this-month";
 import { formatHolding, notInTotalNotes } from "@/common/balance-display";
 import { isolateLtr } from "@/common/bidi";
 
@@ -117,7 +123,27 @@ export function SpendingCard({
     }
   }, [refreshSignal, ledgerId, refetch]);
 
-  const months = data?.getLedgerIntervalTotals ?? [];
+  // Entries pre-entered for later this month are not spent yet: when there are
+  // any, this month is read to today (w21/337). Guests have no such entries,
+  // and the statement is not one an example may run.
+  const today = getFormatDate(new Date());
+  const scheduled = useScheduledThisMonth(ledgerId, today, Boolean(guest));
+  const toToday = useGetLedgerIntervalTotalsQuery({
+    variables: {
+      ledgerId: ledgerId!,
+      accountName: expensesRoot,
+      interval: "month",
+      conversion: "units",
+      time: monthToDateWindow(today),
+    },
+    skip: !ledgerId || !contextSettled || !scheduled,
+    fetchPolicy: "cache-and-network",
+  });
+  const months = withMonthToDate(
+    data?.getLedgerIntervalTotals ?? [],
+    scheduled ? toToday.data?.getLedgerIntervalTotals : undefined,
+    today,
+  );
   const { thisMonth, lastMonth, notInTotal, lastMonthNotInTotal } =
     selectSpendingCompare(months, currency);
   const [note] = notInTotalNotes(notInTotal, t);
