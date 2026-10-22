@@ -7,6 +7,7 @@ import { useThemeStyle } from "@/common/hooks/use-theme-style";
 import { useTranslations } from "@/common/hooks/use-translations";
 import { useToday } from "@/common/hooks/use-today";
 import { RecentTransactionsSkeleton } from "./home-skeletons";
+import { recentTransactionsWindow } from "../selectors/recent-window";
 import { FadeInView } from "@/components/crossfade";
 import { DashboardCard } from "@/components";
 import { useGetLedgerJournalQuery } from "@/generated-graphql/graphql";
@@ -61,6 +62,8 @@ export function RecentTransactionsCard({
         offset: 0,
         limit: RECENT_LIMIT,
         directiveTypes: [DirectiveType.TRANSACTION],
+        // What has happened, not what is booked for later (w21/471).
+        time: recentTransactionsWindow(today),
       },
     },
     skip: !ledgerId,
