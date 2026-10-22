@@ -41,8 +41,16 @@ type Scaled = { coeff: bigint; scale: number };
  * numeric prefix the way parseFloat does.
  */
 export function parseExactAmount(input: string): string | null {
-  const trimmed = toAsciiNumerals(input).trim();
+  let trimmed = toAsciiNumerals(input).trim();
   if (!trimmed) return null;
+  // The Arabic thousands separator groups three digits and is never a decimal
+  // mark: `۱٬۲۳۴` is 1,234, where the ASCII comma it was mapped to read as a
+  // decimal comma and saved 1.234 (w21/386). A grouping that is not threes is
+  // refused, not guessed.
+  if (trimmed.includes("\u066c")) {
+    if (!/^-?\d{1,3}(\u066c\d{3})+(\.\d+)?$/.test(trimmed)) return null;
+    trimmed = trimmed.replace(/\u066c/g, "");
+  }
 
   let normalized = trimmed;
   if (

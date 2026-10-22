@@ -927,3 +927,21 @@ describe("createRootForPosting", () => {
     expect(createRootForPosting(refund, 1)).toBe("Assets");
   });
 });
+
+// w21/386: U+066C was mapped to an ASCII comma, which a lone comma reads as a
+// decimal mark, so ۱٬۲۳۴ (1,234 as Persian writes it) was saved as 1.234.
+test("parseExactAmount reads the Arabic thousands separator as grouping only", () => {
+  expect(parseExactAmount("۱٬۲۳۴")).toBe("1234");
+  expect(parseExactAmount("١٬٢٣٤")).toBe("1234");
+  expect(parseExactAmount("۱٬۲۳۴٬۵۶۷")).toBe("1234567");
+  expect(parseExactAmount("-۱٬۲۳۴٫۵۰")).toBe("-1234.50");
+  expect(parseExactAmount("۱۲٬۳۴۵")).toBe("12345");
+});
+
+test("parseExactAmount refuses a grouping that is not threes", () => {
+  expect(parseExactAmount("١٢٬٥٠")).toBe(null);
+  expect(parseExactAmount("۱٬۲۳")).toBe(null);
+  expect(parseExactAmount("٬۱۲۳")).toBe(null);
+  expect(parseExactAmount("۱٬۲۳۴٬")).toBe(null);
+  expect(parseExactAmount("۱٬۲۳۴,۵۰")).toBe(null);
+});

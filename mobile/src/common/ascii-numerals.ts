@@ -31,8 +31,9 @@ const DIGIT_ZEROS = [
  * Amounts as the ledger keeps them: ASCII. A Persian or Arabic keyboard types
  * `۱۲٫۵۰` or `١٢٫٥٠`, and every such amount was refused as "use digits and one
  * decimal point" (w21/230). Maps each script's digits to 0-9, the Arabic
- * decimal and thousands separators (`٫` `٬`) and the fullwidth period and
- * comma to `.` and `,`.
+ * decimal separator (`٫`) and the fullwidth period and comma to `.` and `,`.
+ * The Arabic thousands separator (`٬`) is kept as it is: it is never a decimal
+ * mark, which an ASCII comma can be (w21/386).
  */
 export function toAsciiNumerals(input: string): string {
   let out = "";
@@ -44,7 +45,7 @@ export function toAsciiNumerals(input: string): string {
         : undefined;
     if (zero !== undefined) out += String(code - zero);
     else if (char === "\u066b" || char === "\uff0e") out += ".";
-    else if (char === "\u066c" || char === "\uff0c") out += ",";
+    else if (char === "\uff0c") out += ",";
     else out += char;
   }
   return out;
