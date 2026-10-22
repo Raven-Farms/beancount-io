@@ -19,6 +19,20 @@ export const createIdleGuard = (ms: number, onIdle: () => void) => {
   return { touch, stop };
 };
 
+/**
+ * How an upload ended. A finished 2xx wins over the idle flag: iOS's background
+ * session keeps uploading while JS is suspended, and on return the overdue idle
+ * timer could fire before the completion event, so a photo that reached S3 was
+ * thrown away as "upload_s3_timeout" and uploaded again (w21/636).
+ */
+export const uploadOutcome = (
+  result: { status: number } | null | undefined,
+  timedOut: boolean,
+): "ok" | "timeout" | "failed" => {
+  if (result && result.status >= 200 && result.status < 300) return "ok";
+  return timedOut ? "timeout" : "failed";
+};
+
 /** Whole-percent progress of an upload, or `null` while the size is unknown. */
 export const uploadPercent = (progress: {
   totalBytesSent: number;

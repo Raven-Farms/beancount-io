@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from "react";
+import { AppState } from "react-native";
 import * as FileSystem from "expo-file-system/legacy";
 import {
   useGenerateTempAssetUploadUrlMutation,
@@ -9,6 +10,7 @@ import { captureError } from "@/common/sentry/capture";
 import {
   abandonAttempt,
   createIdleGuard,
+  uploadOutcome,
   uploadPercent,
   type ReceiptAttempt,
 } from "./upload-guard";
@@ -127,21 +129,24 @@ export const useReceiptWorkflow = (): ReceiptWorkflow => {
         );
         run.upload = task;
         idle.touch();
+        // The background session keeps uploading while JS is suspended, so the
+        // silence there is not a stall: the clock stops with the app and starts
+        // afresh on return (w21/636).
+        const appState = AppState.addEventListener("change", (state) => {
+          if (state === "active") idle.touch();
+          else idle.stop();
+        });
         let uploadResult: Awaited<ReturnType<typeof task.uploadAsync>>;
         try {
           uploadResult = await task.uploadAsync();
         } finally {
           idle.stop();
+          appState.remove();
         }
         if (!live()) return;
-        if (timedOut) throw new Error("upload_s3_timeout");
-        if (
-          !uploadResult ||
-          uploadResult.status < 200 ||
-          uploadResult.status >= 300
-        ) {
-          throw new Error("upload_failed");
-        }
+        const outcome = uploadOutcome(uploadResult, timedOut);
+        if (outcome === "timeout") throw new Error("upload_s3_timeout");
+        if (outcome === "failed") throw new Error("upload_failed");
 
         // 3. Parse receipt with LLM. Under Apollo's default errorPolicy a
         // GraphQL error rejects here rather than populating `result.errors`;

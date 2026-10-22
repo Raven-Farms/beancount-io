@@ -3,6 +3,7 @@ import path from "path";
 import {
   abandonAttempt,
   createIdleGuard,
+  uploadOutcome,
   uploadPercent,
 } from "../upload-guard";
 
@@ -102,6 +103,37 @@ describe("cancelling a receipt upload", () => {
       read("use-receipt-workflow.ts").includes(
         "useEffect(()=>()=>{abandonAttempt(attempt.current);},[],);",
       ),
+    ).toBe(true);
+  });
+});
+
+// w21/636: leaving the app past the idle limit during an upload made it fail on
+// return even when the photo had reached S3.
+describe("how a receipt upload ended", () => {
+  it("is ok for a finished 2xx, even when the idle timer fired on return", () => {
+    expect(uploadOutcome({ status: 200 }, true)).toBe("ok");
+    expect(uploadOutcome({ status: 204 }, false)).toBe("ok");
+  });
+
+  it("is a timeout only when the idle guard fired and nothing finished", () => {
+    expect(uploadOutcome(undefined, true)).toBe("timeout");
+    expect(uploadOutcome({ status: 0 }, true)).toBe("timeout");
+  });
+
+  it("is failed for a rejection or a missing result without a timeout", () => {
+    expect(uploadOutcome({ status: 403 }, false)).toBe("failed");
+    expect(uploadOutcome(null, false)).toBe("failed");
+  });
+
+  it("stops the clock with the app and restarts it on return", () => {
+    const hook = read("use-receipt-workflow.ts");
+    expect(
+      hook.includes(
+        'AppState.addEventListener("change",(state)=>{if(state==="active")idle.touch();elseidle.stop();})',
+      ),
+    ).toBe(true);
+    expect(
+      hook.includes("constoutcome=uploadOutcome(uploadResult,timedOut);"),
     ).toBe(true);
   });
 });
