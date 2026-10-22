@@ -2,6 +2,17 @@ const HEADER = /^(\d{4}-\d{2}-\d{2})\s+(\S+)\s*(.*)$/;
 const FLAG = /^(txn|[*!#?%&A-Z])$/;
 const QUOTED = /^"((?:[^"\\]|\\.)*)"\s*/;
 
+/**
+ * A written string as the entry shows it: Beancount's `\"` and `\\` read
+ * back. Any other escape is not judged (null), so an ordinary entry keeps its
+ * Edit and Delete; skipping every string with a backslash left the first copy
+ * of an escaped narration deletable (w21/504).
+ */
+function unescapeWritten(written: string): string | null {
+  if (/\\[^"\\]/.test(written.replace(/\\\\/g, ""))) return null;
+  return written.replace(/\\(["\\])/g, "$1");
+}
+
 /** The transaction header a source slice opens with: its day and quoted strings. */
 function sliceHeader(slice: string): {
   date: string;
@@ -31,7 +42,7 @@ function sliceHeader(slice: string): {
  * source on newer servers (`generated_from`); until then the copy gives itself
  * away by a day or a name its source's first line does not carry.
  *
- * Conservative: a slice that cannot be read, or a string with an escape, is not
+ * Conservative: a slice that cannot be read, or a string with an escape other than a quote or backslash, is not
  * judged, so an ordinary entry keeps its Edit and Delete.
  */
 export function isPluginCopy(
@@ -46,8 +57,10 @@ export function isPluginCopy(
     header.strings.length >= 2
       ? [header.strings[0]!, header.strings[1]!]
       : ["", header.strings[0] ?? ""];
-  const differs = (shown: string | null | undefined, written: string) =>
-    !written.includes("\\") && (shown ?? "") !== written;
+  const differs = (shown: string | null | undefined, written: string) => {
+    const text = unescapeWritten(written);
+    return text !== null && (shown ?? "") !== text;
+  };
   return differs(entry.payee, payee) || differs(entry.narration, narration);
 }
 

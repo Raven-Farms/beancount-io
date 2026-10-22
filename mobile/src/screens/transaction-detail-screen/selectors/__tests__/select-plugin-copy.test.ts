@@ -83,11 +83,70 @@ describe("isPluginCopy", () => {
     expect(isPluginCopy(entry, undefined)).toBe(false);
     expect(isPluginCopy(entry, "")).toBe(false);
     expect(isPluginCopy(entry, "not a directive")).toBe(false);
-    // An escape in the written string is not compared.
+    // A quote or backslash escape is read back, so an ordinary entry is not a copy.
     expect(
       isPluginCopy(
         { date: "2026-08-06", narration: 'He said "hi"' },
         '2026-08-06 * "He said \\"hi\\""',
+      ),
+    ).toBe(false);
+  });
+
+  // w21/504: a written string with an escaped quote was never compared, so the
+  // first copy of such a series kept Edit and Delete.
+  it("tells the first copy of an escaped narration from its template", () => {
+    const template = [
+      '2026-10-01 * "QA Insurer" "qa car \\"premium\\" insurance"',
+      '  amortize_months: "12"',
+      "  Expenses:Insurance  600.00 USD",
+      "  Assets:Bank",
+    ].join("\n");
+    expect(
+      isPluginCopy(
+        {
+          date: "2026-10-01",
+          payee: "QA Insurer",
+          narration: 'qa car "premium" insurance (1/12)',
+        },
+        template,
+      ),
+    ).toBe(true);
+    // The template itself is not a copy.
+    expect(
+      isPluginCopy(
+        {
+          date: "2026-10-01",
+          payee: "QA Insurer",
+          narration: 'qa car "premium" insurance',
+        },
+        template,
+      ),
+    ).toBe(false);
+  });
+
+  it("tells a forecast's first month with an escaped quote", () => {
+    const slice = ['2026-10-01 # "Landlord" "Rent \\"flat\\" [MONTHLY]"'].join(
+      "\n",
+    );
+    expect(
+      isPluginCopy(
+        {
+          date: "2026-10-01",
+          payee: "Landlord",
+          narration: 'Rent "flat"',
+        },
+        slice,
+      ),
+    ).toBe(true);
+  });
+
+  it("still does not judge other escapes, and reads a doubled backslash", () => {
+    const entry = { date: "2026-08-06", narration: "a\\nb" };
+    expect(isPluginCopy(entry, '2026-08-06 * "a\\nb"')).toBe(false);
+    expect(
+      isPluginCopy(
+        { date: "2026-08-06", narration: "C:\\dir" },
+        '2026-08-06 * "C:\\\\dir"',
       ),
     ).toBe(false);
   });
