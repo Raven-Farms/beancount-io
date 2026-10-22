@@ -21,7 +21,7 @@
 - [228](./blocked/228.md) — New Transaction stamps the first operating currency on every posting; no currency or price control — **blocked:** needs account-constraint currencies on the client, a price path (legacy field or typed mutation, deploy first) and an owner-approved form design
 - [304](./blocked/304.md) — Budgets on Liabilities/Assets get favourability backwards (owner decision) — **blocked:** needs an owner decision between deriving direction from the account root and limiting the picker to Income and Expenses, which reverses w1/023's "every root" rule
 - [453](./blocked/453.md) — addEntries/bulkEntries have no idempotency key: a retry after a lost response can duplicate the entry (split from 351) — **blocked:** needs an owner-approved contract (field, bounds, retention) across REST/GraphQL/MCP and a backend-v2 deploy
-- [518](./518.md) — New Transaction books a plain first-row amount as money *into* the bank (Checking +4.50, Groceries −4.50); needs a product call
+- [518](./blocked/518.md) — New Transaction books a plain first-row amount as money *into* the bank (Checking +4.50, Groceries −4.50) — **blocked:** needs an owner product decision on the default row signs (negative source row vs From/To labels)
 - [519](./519.md) — Payee suggestions, usual accounts and merchants miss a Smart Punctuation apostrophe ("Trader Joe’s") (sibling of w21/401)
 - [520](./520.md) — New Transaction writes USD into a ledger without `operating_currency` (missed by w21/415 and w21/395)
 - [521](./521.md) — The file editor's error banner drops the fix hint Notifications shows (w21/424 incomplete)
