@@ -18,6 +18,7 @@ import { useTranslations } from "@/common/hooks/use-translations";
 import { getPrimaryCurrency } from "@/common/currency-util";
 import { BalanceChartCard, StaleDataBanner } from "@/components";
 import { isShowingStaleDataFromQueries } from "@/common/apollo/stale-data";
+import { selectChartFailed } from "./selectors/select-chart-failed";
 import { LedgerGuard, useLedgerGuard } from "@/components/ledger-guard";
 import { ThemedRefreshControl } from "@/components/dashboard-scroll-view";
 import { useLedgerReadContext } from "@/common/hooks/use-ledger-read-context";
@@ -423,6 +424,15 @@ const AccountDetailScreenImpl = ({
     [],
   );
 
+  const chartFailed = selectChartFailed({
+    unitsCurrency,
+    report: { data: reportData, error: reportError },
+    unitsReport: { data: unitsReportData, error: unitsReportError },
+  });
+  const retryChart = useCallback(() => {
+    void (unitsCurrency ? unitsReportRefetch() : reportRefetch());
+  }, [unitsCurrency, unitsReportRefetch, reportRefetch]);
+
   const listHeader = useMemo(
     () => (
       <>
@@ -443,7 +453,10 @@ const AccountDetailScreenImpl = ({
             // visible under the RefreshControl spinner rather than collapsing
             // it back to a tile.
             loading={reportPending || unitsReportPending || valuationPending}
-            error={Boolean(unitsCurrency ? unitsReportError : reportError)}
+            // Only a first load with nothing to draw is an error card; a failed
+            // refresh keeps the chart under the stale banner (w21/239).
+            error={chartFailed}
+            onRetry={retryChart}
             netWorthSign={netWorthSign}
           />
         </View>
@@ -460,8 +473,8 @@ const AccountDetailScreenImpl = ({
       reportPending,
       unitsReportPending,
       valuationPending,
-      reportError,
-      unitsReportError,
+      chartFailed,
+      retryChart,
       styles.sectionTitle,
       styles.accountPath,
       account,
@@ -474,6 +487,9 @@ const AccountDetailScreenImpl = ({
       <Stack.Screen options={{ title: accountLeafName(account) }} />
       {isShowingStaleDataFromQueries([
         { data: journalData, error: journalError },
+        // A refresh that failed over a chart already drawn (w21/239).
+        { data: reportData, error: reportError },
+        { data: unitsReportData, error: unitsReportError },
       ]) ? (
         <StaleDataBanner />
       ) : null}
