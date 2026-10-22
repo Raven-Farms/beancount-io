@@ -18,7 +18,6 @@
 - [201](./blocked/201.md) — Missing file: GraphQL returns null, REST/MCP NOT_FOUND; directory path differs too — **blocked:** needs an owner decision on the file-read contract (null vs NOT_FOUND), which the dashboard's README reads and shipped mobile builds rely on
 - [206](./blocked/206.md) — Refund/return receipts are always prefilled as a purchase — **blocked:** needs an owner-approved AI-quota evaluation and a parse-contract decision (`isRefund` vs signed amount)
 - [210](./blocked/210.md) — Holdings sheet labels a user-typed price "Live price" and applies the feed's staleness rule — **blocked:** needs an owner decision on exposing the feed's effective price dates (cross-package contract) and a deploy before mobile can read it
-- [212](./212.md) — Account detail rows drop the narration; same-payee entries look identical there
 - [213](./213.md) — The production self-host stack (deploy/docker) can't be used from the mobile app with any URL
 - [214](./214.md) — Every discovery mismatch reads "does not expose the required Beancount.io API"; no hint of the right URL
 - [215](./215.md) — Sign-in discovery has no timeout (~60 s spinner); changing the server doesn't release it

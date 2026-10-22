@@ -8,6 +8,7 @@ import {
 import { amountScale, formatUnits } from "../../../common/number-utils";
 import { currencyMinorUnits } from "../../../common/currency-util";
 import { formatAccountJournalChange } from "../utils/format-account-journal-balance";
+import { entryRowSecondaryText } from "../../transactions-screen/entry-row/entry-row-secondary";
 import { formatLedgerDate } from "../../../common/date-format";
 
 /** One `{ entry, change, balance }` row from the account journal response. */
@@ -221,6 +222,7 @@ export function hasMoreAccountJournal(
 type AccountJournalDetail =
   | { kind: "note"; text: string }
   | { kind: "document"; text: string }
+  | { kind: "narration"; text: string }
   | {
       kind: "balance";
       /** The asserted amount, as recorded ("49.75 USD"). */
@@ -249,6 +251,15 @@ function entryDetail(
     case "Document": {
       const text = typeof raw.filename === "string" ? raw.filename : "";
       return text ? { kind: "document", text } : undefined;
+    }
+    case "Transaction": {
+      // The line Transactions shows under a payee, so same-payee rows tell
+      // apart here too (w21/212).
+      const text = entryRowSecondaryText({
+        payee: asString(raw.payee as string | undefined),
+        narration: asString(raw.narration as string | undefined),
+      });
+      return text ? { kind: "narration", text } : undefined;
     }
     case "Balance": {
       const amount = amountText(raw.amount);

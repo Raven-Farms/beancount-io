@@ -649,10 +649,32 @@ describe("selectAccountJournalRows: what a directive says", () => {
     ).toEqual({ kind: "balance", amount: "50.00 USD", offBy: "-0.25 USD" });
   });
 
-  it("adds nothing to a transaction", () => {
+  // w21/212: two "QA REPEAT" rows differed only by amount here, while
+  // Transactions told them apart by their narrations.
+  it("shows a transaction's narration under its payee, as Transactions does", () => {
+    expect(
+      directive({
+        directive_type: "Transaction",
+        payee: "QA REPEAT",
+        narration: "Bus pass September",
+      }),
+    ).toEqual({ kind: "narration", text: "Bus pass September" });
+  });
+
+  it("adds nothing when the narration repeats or replaces the payee", () => {
     expect(directive({ directive_type: "Transaction", payee: "Cafe" })).toBe(
       undefined,
     );
+    expect(
+      directive({
+        directive_type: "Transaction",
+        payee: "Cafe",
+        narration: "Cafe",
+      }),
+    ).toBe(undefined);
+    expect(
+      directive({ directive_type: "Transaction", narration: "Lunch" }),
+    ).toBe(undefined);
   });
 
   it("words the failed difference in every locale", () => {
