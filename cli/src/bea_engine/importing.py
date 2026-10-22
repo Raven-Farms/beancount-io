@@ -174,7 +174,7 @@ def answer(
     always skipped. Nothing is written unless `--apply` is set and the preview
     is free of conflicts / unresolved possible duplicates / validation errors.
     """
-    from beancount.core.data import Balance, Open, Price, Transaction
+    from beancount.core.data import Balance, Close, Open, Price, Transaction
 
     from bea_engine import managed_load
     from bea_engine.csv_mapper import (
@@ -829,6 +829,12 @@ def answer(
         for item in included
         if isinstance(item, Price) and item.amount.number is not None
     ]
+    closes = [item for item in included if isinstance(item, Close)]
+
+    def inspect(candidate: list[Any]) -> None:
+        advisories.extend(unused_quote_advisories(candidate, existing, wanted))
+        advisories.extend(_funded_close_advisories(candidate, options, closes))
+
     try:
         validation_warnings = ledger_write.validate_append(
             file,
@@ -836,9 +842,7 @@ def answer(
             allow_errors=allow_errors,
             into=into,
             snapshot=snapshot,
-            inspect=(lambda candidate: advisories.extend(unused_quote_advisories(candidate, existing, wanted)))
-            if wanted
-            else None,
+            inspect=inspect if wanted or closes else None,
         )
         validation_warnings = [*validation_warnings, *advisories]
     except LedgerError as exc:
@@ -998,6 +1002,30 @@ def answer(
         )
         preview["written"] = len(texts)
     return preview
+
+
+def _funded_close_advisories(candidate: list[Any], options: Any, closes: list[Any]) -> list[str]:
+    """A warning for each imported close whose account still holds money once the whole batch is booked.
+
+    Native validation accepts a funded close, and later postings to the account
+    are then refused, so the money cannot be moved out afterwards; `add close`
+    refuses it. An import keeps its native behavior and says so instead
+    (w5/913). Judged on the candidate, so a same-day drain in the same import
+    keeps it quiet.
+    """
+    from bea_engine.ledger.adding import _plain, _remaining_balance
+
+    advisories = []
+    for close in closes:
+        held, stranded = _remaining_balance(candidate, options, close.account, close.date)
+        left = [f"{_plain(number)} {currency}" for currency, number in sorted(held.items())] or stranded
+        if left:
+            advisories.append(
+                f"{close.account} is closed on {close.date.isoformat()} while it still holds {', '.join(left)}; "
+                f"later transactions cannot move it out. Move the money on or before {close.date.isoformat()}, "
+                "or review the close."
+            )
+    return advisories
 
 
 def _unlocated(lines: list[str]) -> list[str]:
