@@ -235,11 +235,12 @@ const AccountDetailScreenImpl = ({
   const balanceSeries = useMemo(
     () =>
       unitsCurrency
-        ? selectAccountUnitsSeries(unitsCurrency, unitsReportData)
+        ? selectAccountUnitsSeries(unitsCurrency, unitsReportData, today)
         : selectAccountBalanceSeries(
             currency,
             reportData,
             currentBalance ? { balance: currentBalance, today } : undefined,
+            today,
           ),
     [
       currency,

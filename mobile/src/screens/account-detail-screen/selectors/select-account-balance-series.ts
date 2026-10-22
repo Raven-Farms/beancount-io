@@ -3,6 +3,7 @@ import { resolveCurrencyBalance } from "../../../common/balance-util";
 import {
   SeriesPoint,
   latestBalance,
+  carryBalanceToToday,
   forwardFillMonths,
   pointsToMonthlySeries,
 } from "../../../common/series-util";
@@ -78,14 +79,18 @@ export function selectAccountBalanceDisplay(
 export function selectAccountUnitsSeries(
   commodity: string,
   data?: AccountReportQuery,
+  today?: string,
 ): SeriesPoint[] {
-  return forwardFillMonths(
+  const series = forwardFillMonths(
     pointsToMonthlySeries(
       commodity,
       data?.getLedgerAccountReport?.linechartData,
       (balance, currency) => amountIn(balance, currency).number,
     ),
   );
+  // Held units are the same until the next posting, so a quiet commodity
+  // account reads unchanged over a recent window (w21/240).
+  return today === undefined ? series : carryBalanceToToday(series, today);
 }
 
 /**
@@ -116,6 +121,7 @@ export function selectAccountBalanceSeries(
   currency: string,
   data?: AccountReportQuery,
   current?: { balance: BalanceMap; today: string },
+  today?: string,
 ): SeriesPoint[] {
   // The ledger sends a point only where the balance changed (w21/164).
   const series = forwardFillMonths(
@@ -125,7 +131,11 @@ export function selectAccountBalanceSeries(
     ),
   );
   const last = series[series.length - 1];
-  if (!current || !last || last.date > current.today) return series;
+  // Without today's value (an account the trial balance does not list), the
+  // last balance still holds until today (w21/240).
+  if (!current)
+    return today === undefined ? series : carryBalanceToToday(series, today);
+  if (!last || last.date > current.today) return series;
   // The chart's headline is its last point, priced on the account's last
   // change; end it on today's value, as the Accounts row reads (w21/179).
   const now = {

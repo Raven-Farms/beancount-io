@@ -4,6 +4,11 @@ import {
   selectAccountUnitsSeries,
 } from "../select-account-balance-series";
 import { AccountReportQuery } from "@/generated-graphql/graphql";
+import {
+  balanceSeriesBaseline,
+  filterBalanceSeriesByRange,
+  type TimeRange,
+} from "../../../../common/series-util";
 
 function createReport(
   linechartData: Array<{
@@ -258,5 +263,74 @@ describe("a mixed account's balance today", () => {
     expect(selectAccountBalanceSeries("USD", report)).toEqual([
       { date: "2026-09-02", value: 1000 },
     ]);
+  });
+});
+
+// w21/240: windows counted back from an account's last posting, not from today,
+// so a Savings account last moved in March read "+$500.00" over 1M in October.
+describe("a quiet account over the recent ranges", () => {
+  const today = "2026-10-21";
+  const report = createReport([
+    { date: "2026-02-03", balance: { USD: 1000 } },
+    { date: "2026-03-05", balance: { USD: 1500 } },
+  ]);
+  const change = (
+    series: ReturnType<typeof selectAccountBalanceSeries>,
+    range: TimeRange,
+  ) => {
+    const windowed = filterBalanceSeriesByRange(series, range, 2026);
+    return (
+      windowed[windowed.length - 1].value -
+      balanceSeriesBaseline(series, range, 2026)
+    );
+  };
+
+  it("reads no change over 1M, 3M and 6M, and the whole rise over 1Y", () => {
+    // No trial-balance value for the account: its last balance holds.
+    const series = selectAccountBalanceSeries("USD", report, undefined, today);
+    expect(series[series.length - 1]).toEqual({ date: today, value: 1500 });
+    for (const range of ["1M", "3M", "6M"] as const) {
+      expect(change(series, range)).toBe(0);
+    }
+    expect(change(series, "1Y")).toBe(1500);
+  });
+
+  it("does the same when today's value is known", () => {
+    const series = selectAccountBalanceSeries(
+      "USD",
+      report,
+      { balance: { USD: 1500 }, today },
+      today,
+    );
+    for (const range of ["1M", "3M", "6M"] as const) {
+      expect(change(series, range)).toBe(0);
+    }
+    expect(change(series, "1Y")).toBe(1500);
+  });
+
+  it("carries a commodity's held units to today too", () => {
+    const units = createReport([
+      { date: "2026-02-03", balance: { VTI: 10 } },
+      { date: "2026-03-05", balance: { VTI: 15 } },
+    ]);
+    const series = selectAccountUnitsSeries("VTI", units, today);
+    expect(series[series.length - 1]).toEqual({ date: today, value: 15 });
+    expect(change(series, "3M")).toBe(0);
+    expect(change(series, "1Y")).toBe(15);
+  });
+
+  it("leaves an account that moved this month, and callers without a day, as they were", () => {
+    const active = createReport([
+      { date: "2026-09-02", balance: { USD: 100 } },
+      { date: "2026-10-05", balance: { USD: 150 } },
+    ]);
+    const series = selectAccountBalanceSeries("USD", active, undefined, today);
+    expect(series[series.length - 1]).toEqual({
+      date: "2026-10-05",
+      value: 150,
+    });
+    expect(change(series, "1M")).toBe(50);
+    expect(selectAccountBalanceSeries("USD", report).length).toBe(2);
+    expect(selectAccountUnitsSeries("VTI", undefined, today)).toEqual([]);
   });
 });

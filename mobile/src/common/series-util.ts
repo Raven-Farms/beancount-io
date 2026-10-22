@@ -105,6 +105,23 @@ export function forwardFillMonths(
   return filled;
 }
 
+/**
+ * A balance series carried to `today`'s month with its last balance. A series
+ * has a point only where the balance changed, so one account's last point is
+ * that account's last posting; windows counted back from it showed a quiet
+ * account's old changes as recent: on 21 October, a Savings account last moved
+ * in March read "+$500.00" over 1M (w21/240). Balances only. A series already
+ * in or past the current month is returned as it is.
+ */
+export function carryBalanceToToday(
+  series: SeriesPoint[],
+  today: string,
+): SeriesPoint[] {
+  const last = series[series.length - 1];
+  if (!last || last.date.slice(0, 7) >= today.slice(0, 7)) return series;
+  return forwardFillMonths([...series, { date: today, value: last.value }]);
+}
+
 /** The balance map of a series' latest point (series are chronological). */
 export function latestBalance(
   points: ReadonlyArray<DateBalancePoint | null | undefined> | null | undefined,

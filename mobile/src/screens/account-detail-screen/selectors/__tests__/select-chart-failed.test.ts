@@ -98,3 +98,24 @@ describe("the account detail chart", () => {
     expect(card.includes("if(loading||error)")).toBe(false);
   });
 });
+
+describe("the account detail chart's series", () => {
+  it("is carried to today, for the money and the units chart", () => {
+    const screen = fs
+      .readFileSync(
+        path.join(__dirname, "..", "..", "account-detail-screen.tsx"),
+        "utf8",
+      )
+      .replace(/\s+/g, "");
+    expect(
+      screen.includes(
+        "selectAccountUnitsSeries(unitsCurrency,unitsReportData,today)",
+      ),
+    ).toBe(true);
+    expect(
+      screen.includes(
+        "currentBalance?{balance:currentBalance,today}:undefined,today,",
+      ),
+    ).toBe(true);
+  });
+});
