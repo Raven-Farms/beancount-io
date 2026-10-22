@@ -68,3 +68,74 @@ describe("one shifted payment does not move Next", () => {
     expect(verdict.nextExpected).toBe("2026-09-21");
   });
 });
+
+// w21/529: a bill due on the last day of the month is paid on the 30th in a
+// 30-day month; counting days as they fell made the 30th the anchor.
+describe("a bill due on the last day of the month", () => {
+  it("predicts Dec 31 for quarter-ends, seven of them on the 30th", () => {
+    const dates = [
+      "2023-09-30",
+      "2023-12-31",
+      "2024-03-31",
+      "2024-06-30",
+      "2024-09-30",
+      "2024-12-31",
+      "2025-03-31",
+      "2025-06-30",
+      "2025-09-30",
+      "2025-12-31",
+      "2026-03-31",
+      "2026-06-30",
+      "2026-09-30",
+    ];
+    const verdict = detectRecurrence(on(dates), "2026-10-22")!;
+    expect(verdict.nextExpected).toBe("2026-12-31");
+  });
+
+  it("predicts Jul 31 for a monthly series that started on the 30th", () => {
+    const dates = [
+      "2026-01-31",
+      "2026-02-28",
+      "2026-03-31",
+      "2026-04-30",
+      "2026-05-31",
+      "2026-06-30",
+    ];
+    expect(detectRecurrence(on(dates), "2026-06-30")!.nextExpected).toBe(
+      "2026-07-31",
+    );
+  });
+
+  it("still keeps a bill that is really due on the 30th on the 30th", () => {
+    const dates = [
+      "2026-01-30",
+      "2026-02-28",
+      "2026-03-30",
+      "2026-04-30",
+      "2026-05-30",
+      "2026-06-30",
+    ];
+    expect(detectRecurrence(on(dates), "2026-06-30")!.nextExpected).toBe(
+      "2026-07-30",
+    );
+  });
+});
+
+describe("a twice-a-month bill paid on the 15th and the last day", () => {
+  it("lands on the month's last day", () => {
+    const dates = [
+      "2026-03-15",
+      "2026-03-31",
+      "2026-04-15",
+      "2026-04-30",
+      "2026-05-15",
+      "2026-05-31",
+      "2026-06-15",
+      "2026-06-30",
+    ];
+    const verdict = detectRecurrence(on(dates), "2026-06-30")!;
+    expect(verdict.nextExpected).toBe("2026-07-15");
+    const later = detectRecurrence(on([...dates, "2026-07-15"]), "2026-07-15")!;
+    expect(later.nextExpected).toBe("2026-07-31");
+  });
+});

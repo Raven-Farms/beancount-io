@@ -187,6 +187,25 @@ function addMonthsClamped(
   );
 }
 
+/**
+ * How many events each day of the month could be the anchor of. An event on its
+ * month's last day also counts for any later anchor: a bill due on the 31st is
+ * paid on the 30th in a 30-day month and the 28th in February, so counting the
+ * days as they fell made the 30th win a quarter-end series and Next came a day
+ * early (w21/529).
+ */
+function anchorCounts(days: readonly CalendarDay[]): Map<number, number> {
+  const counts = new Map<number, number>();
+  for (const d of days) counts.set(d.day, (counts.get(d.day) ?? 0) + 1);
+  const lastDays = days.filter((d) => d.day === daysInMonth(d.year, d.month));
+  for (const anchor of [...counts.keys()]) {
+    for (const d of lastDays) {
+      if (d.day < anchor) counts.set(anchor, counts.get(anchor)! + 1);
+    }
+  }
+  return counts;
+}
+
 /** How far a payment may sit from its due day and still be that month's. */
 const ANCHOR_TOLERANCE_DAYS = 3;
 
@@ -216,8 +235,7 @@ function monthDayAnchor(
     if (gaps.every((gap) => gap >= 27 && gap <= 29)) return null;
   }
   const days = eventDays.map(calendarDay);
-  const counts = new Map<number, number>();
-  for (const d of days) counts.set(d.day, (counts.get(d.day) ?? 0) + 1);
+  const counts = anchorCounts(days);
   let anchor = 0;
   let best = 0;
   for (const [day, count] of counts) {
@@ -298,8 +316,7 @@ function semiMonthlyDueDay(occurrence: number, days: SemiMonthly): number {
 function semiMonthlyDays(eventDays: readonly number[]): SemiMonthly | null {
   if (eventDays.length < 4) return null;
   const days = eventDays.map(calendarDay);
-  const counts = new Map<number, number>();
-  for (const d of days) counts.set(d.day, (counts.get(d.day) ?? 0) + 1);
+  const counts = anchorCounts(days);
   const modal = (candidates: Iterable<[number, number]>): number | null => {
     let best: [number, number] | null = null;
     for (const [day, count] of candidates) {
