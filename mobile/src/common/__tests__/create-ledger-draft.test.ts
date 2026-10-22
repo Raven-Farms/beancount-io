@@ -235,3 +235,46 @@ describe("the Create Ledger draft's lifetime", () => {
     );
   });
 });
+
+// w21/546: a Books begin the user typed was replaced by today on a next-day
+// resume, and a Create sent before midnight changed its fingerprint after it.
+describe("the Create Ledger draft's Books begin across a day", () => {
+  const saved = new Date(2026, 9, 20, 23, 58);
+  const nextDay = new Date(2026, 9, 21, 0, 5);
+  const typed = {
+    ...draft,
+    historyStartTyped: true,
+    values: { ...draft.values, historyStart: "2026-01-01" },
+  };
+
+  it("keeps a date that was typed", () => {
+    const restored = restoreCreateLedgerDraft<Values>(
+      serializeCreateLedgerDraft(typed, saved),
+      nextDay,
+    );
+    expect(restored?.values.historyStart).toBe("2026-01-01");
+  });
+
+  it("still refreshes an untouched default", () => {
+    const restored = restoreCreateLedgerDraft<Values>(
+      serializeCreateLedgerDraft({ ...draft, historyStartTyped: false }, saved),
+      nextDay,
+    );
+    expect(restored?.values.historyStart).toBe("2026-10-21");
+  });
+
+  it("keeps the date a Create was already sent with, so its retry is the same request", () => {
+    const sent = { ...draft, historyStartTyped: false, sentFingerprint: "abc" };
+    const restored = restoreCreateLedgerDraft<Values>(
+      serializeCreateLedgerDraft(sent, saved),
+      nextDay,
+    );
+    expect(restored?.values.historyStart).toBe("2026-10-20");
+    expect(restored?.requestId).toBe("req-1");
+  });
+
+  it("stores whether it was typed, never more than a flag", () => {
+    const raw = serializeCreateLedgerDraft(typed, saved);
+    expect(JSON.parse(raw).historyStartTyped).toBe(true);
+  });
+});

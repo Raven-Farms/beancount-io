@@ -43,6 +43,12 @@ export interface CreateLedgerDraft<Values> {
    * (w21/510); a draft saved before this field existed counts as typed.
    */
   amountTyped?: boolean;
+  /**
+   * Whether Books begin was typed. Only an untouched default follows the day:
+   * a date the user chose on purpose is theirs (w21/546). A draft saved before
+   * the flag existed counts as untouched.
+   */
+  historyStartTyped?: boolean;
   values: Values;
 }
 
@@ -118,7 +124,14 @@ export function restoreCreateLedgerDraft<Values extends DraftValues>(
   }
   const { savedAt, ...draft } = parsed;
   const today = getFormatDate(now);
-  const stale = getFormatDate(new Date(savedAt)) < today;
+  // An untouched default left on an earlier day reopens on today. A typed date
+  // stays, and so does one a Create was already sent with: moving it changed
+  // the request's fingerprint, so a retry across midnight minted a new id for
+  // a ledger the first one had created (w21/546).
+  const stale =
+    getFormatDate(new Date(savedAt)) < today &&
+    draft.historyStartTyped !== true &&
+    draft.sentFingerprint === undefined;
   const amountLost =
     Boolean(draft.values.openingAccount) && draft.amountTyped !== false;
   return {

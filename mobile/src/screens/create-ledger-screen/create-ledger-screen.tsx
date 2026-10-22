@@ -302,6 +302,8 @@ export function CreateLedgerScreen(): JSX.Element {
   // duplicate). The requestId is restored with it, so a retried submission
   // after an OTP round-trip returns the original ledger.
   const restoredRef = useRef(false);
+  // Whether Books begin was typed, which the draft keeps (w21/546).
+  const historyStartTypedRef = useRef(false);
   useEffect(() => {
     if (restoredRef.current) return;
     restoredRef.current = true;
@@ -319,6 +321,7 @@ export function CreateLedgerScreen(): JSX.Element {
         requestedAtRef.current = draft.requestedAt;
       }
       setAmountLost(draft.amountLost);
+      historyStartTypedRef.current = draft.historyStartTyped === true;
       reset(draft.values);
     });
   }, [reset]);
@@ -332,6 +335,7 @@ export function CreateLedgerScreen(): JSX.Element {
       requestId: requestIdRef.current,
       requestedAt: requestedAtRef.current,
       sentFingerprint: sentFingerprintRef.current,
+      historyStartTyped: historyStartTypedRef.current,
       values,
     };
     void AsyncStorage.setItem(
@@ -763,7 +767,10 @@ export function CreateLedgerScreen(): JSX.Element {
                 render={({ field: { onChange, onBlur, value } }) => (
                   <TextInput
                     value={value}
-                    onChangeText={edited("historyStart", onChange)}
+                    onChangeText={(text) => {
+                      historyStartTypedRef.current = true;
+                      edited("historyStart", onChange)(text);
+                    }}
                     onBlur={onBlur}
                     autoCapitalize="none"
                     autoCorrect={false}

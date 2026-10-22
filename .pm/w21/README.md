@@ -24,7 +24,6 @@
 - [518](./blocked/518.md) — New Transaction books a plain first-row amount as money *into* the bank (Checking +4.50, Groceries −4.50) — **blocked:** needs an owner product decision on the default row signs (negative source row vs From/To labels)
 - [526](./blocked/526.md) — Transactions, Account and Merchant detail drop back to the newest 20 rows after a return to the app or any write; a stale "Couldn't load more" footer stays — **blocked:** needs an owner decision on how to keep loaded pages through a refresh (field policy vs refetch to depth vs accept page 1)
 - [542](./blocked/542.md) — The balance chart's dashed start line and VoiceOver's "From" use the first point, while the change row uses the opening balance — **blocked:** needs an owner design decision on where the balance chart measures its change from (opening balance with a widened y-domain vs first plotted point)
-- [546](./546.md) — A next-day Create Ledger draft silently replaces a typed Books begin with today and reopens on Review (w21/053 over-applied)
 - [547](./547.md) — Create Ledger accepts "___"-style names the server refuses, then shows only a generic retry error
 - [548](./548.md) — Books begin in years 0001–0099 passes the form, but the server refuses it (`Date.UTC` in build-ledger) (backend-v2)
 - [549](./549.md) — Create Ledger's "Amount owed" can't express a card in credit, and Review shows the opposite sign to the file
