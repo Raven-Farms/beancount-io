@@ -257,8 +257,15 @@ function stripTransactionNoise(lowered: string): string {
  *
  * @returns The brand's domain string (e.g. "starbucks.com") or null if unrecognised.
  */
-/** A letter, digit or combining mark, in any script. */
-const WORD_CHAR = /[\p{L}\p{N}\p{M}]/u;
+/**
+ * A letter, digit or combining mark of a script that separates its words with
+ * spaces. Han, Hiragana, Katakana and Thai do not, so an ASCII brand written
+ * against them ("Amazon购物", "Netflix会员", "Uberタクシー") still sits on a word
+ * boundary; counting them as word characters stopped those matching (w21/333).
+ * "Café Amazonía" stays no match: its neighbours are Latin letters.
+ */
+const WORD_CHAR =
+  /(?![\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Thai}])[\p{L}\p{N}\p{M}]/u;
 
 export function matchBrand(text: string): string | null {
   if (!text) return null;

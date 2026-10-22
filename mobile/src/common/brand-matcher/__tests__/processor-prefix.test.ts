@@ -32,3 +32,22 @@ describe("# store numbers", () => {
     expect(matchBrand("STARBUCKS #1234")).toBe("starbucks.com");
   });
 });
+
+// w21/333: any letter counted as a word character (w21/172), but Han, kana and
+// Thai write no spaces between words, so a brand beside them stopped matching.
+describe("a brand beside Chinese, Japanese or Thai text", () => {
+  it("matches", () => {
+    expect(matchBrand("Amazon购物")).toBe("amazon.com");
+    expect(matchBrand("京东Amazon旗舰店")).toBe("amazon.com");
+    expect(matchBrand("Netflix会员")).toBe("netflix.com");
+    expect(matchBrand("支付宝Starbucks")).toBe("starbucks.com");
+    expect(matchBrand("Uberタクシー")).toBe("uber.com");
+    expect(matchBrand("Spotifyสมาชิก")).toBe("spotify.com");
+  });
+
+  it("still refuses a brand inside a longer Latin or accented word", () => {
+    expect(matchBrand("Café Amazonía")).toBe(null);
+    expect(matchBrand("Amazonas")).toBe(null);
+    expect(matchBrand("Sub-Uberia")).toBe(null);
+  });
+});

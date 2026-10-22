@@ -40,7 +40,6 @@
 - [441](./441.md) — Home charts announced without curve name; iOS-only hint
 - [442](./442.md) — Android reinstall never sets account-choice mark (318 sibling)
 - [315](./blocked/315.md) — In-app commits signed with Gitea username and real email (no full_name, no noreply) — **blocked:** needs the owner's noreply-address and published-history decisions, and a production backfill of existing Gitea users that can't be verified here
-- [333](./333.md) — Brands next to CJK/kana no longer match after 172 ("Amazon购物")
 - [334](./334.md) — A fee leg makes a transfer payee lose its recurring series (173 follow-up)
 - [335](./335.md) — Future events still count as history: manual mark reads "Irregular" (167 follow-up)
 - [336](./336.md) — Float-exact "~" on steady prices (171) and uncancelled budget batches (165)
