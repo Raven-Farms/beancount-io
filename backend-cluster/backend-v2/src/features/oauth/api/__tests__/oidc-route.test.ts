@@ -1761,6 +1761,26 @@ describe("oidc-route: unified MCP + identity provider", () => {
     expect(reg.status).toBe(400);
   });
 
+  // w23/040: oidc-provider's web rules accepted a plain http redirect to any
+  // host, which could carry the authorization code over cleartext.
+  it.each([
+    ["plain http to a remote host", "http://qa-evil.example/cb", 400],
+    ["https", "https://client.example/cb", 201],
+    ["http to localhost", "http://localhost:8080/cb", 201],
+    ["http to 127.0.0.1", "http://127.0.0.1:8080/cb", 201],
+    ["http to [::1]", "http://[::1]:8080/cb", 201],
+  ])("for a web client, answers %s with %p", async (_case, uri, status) => {
+    const reg = await registerHost([uri], {
+      application_type: "web",
+      grant_types: ["authorization_code"],
+    });
+    expect(reg.status).toBe(status);
+    if (status === 400)
+      expect(reg.error).toBe(
+        "redirect_uris must use https unless they are loopback",
+      );
+  });
+
   it("keeps web rules for a dynamic client that states application_type web", async () => {
     const reg = await registerHost(CURSOR_REDIRECTS, {
       application_type: "web",

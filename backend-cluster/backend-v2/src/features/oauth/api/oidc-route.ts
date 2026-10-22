@@ -70,6 +70,20 @@ interface IdentityClaims {
   [key: string]: unknown;
 }
 
+/**
+ * An https redirect, or plain http to a loopback address. An unparseable
+ * value passes here so oidc-provider's own check names it.
+ */
+function isHttpsOrLoopback(uri: string): boolean {
+  const parsed = URL.parse(uri);
+  if (!parsed) return true;
+  if (parsed.protocol === "https:") return true;
+  return (
+    parsed.protocol === "http:" &&
+    ["localhost", "127.0.0.1", "[::1]"].includes(parsed.hostname)
+  );
+}
+
 export function oauthWellKnownPath(kind: string, absoluteUrl: string): string {
   const path = new URL(absoluteUrl).pathname.replace(/^\/|\/$/g, "");
   return `/.well-known/${kind}${path ? `/${path}` : ""}`;
@@ -340,6 +354,26 @@ export function setOidcRoutes(
       const parts = accountId.split(":");
       const ledgerId = parts.slice(1).join(":");
       return { ledger_id: ledgerId || undefined };
+    },
+
+    // Not extra metadata: listing `redirect_uris` runs the validator over it
+    // for every client — DCR registrations, CIMD documents and stored clients.
+    // oidc-provider's web rules allow a plain `http` redirect to any host; the
+    // MCP authorization spec, OAuth 2.1 and the security BCP allow only https
+    // or loopback, as native rules already enforce (w23/040).
+    extraClientMetadata: {
+      properties: ["redirect_uris"],
+      validator: (_ctx, key, value, metadata) => {
+        if (key !== "redirect_uris" || metadata.application_type !== "web")
+          return;
+        for (const uri of (value as string[] | undefined) ?? []) {
+          if (!isHttpsOrLoopback(uri)) {
+            throw new errors.InvalidClientMetadata(
+              "redirect_uris must use https unless they are loopback",
+            );
+          }
+        }
+      },
     },
 
     clientDefaults: {

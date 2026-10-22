@@ -25,6 +25,5 @@
 - [043](./043.md) — structured amount `.5` passes the decimal check but is written raw: opaque "parse errors in main.bean"
 - [042](./042.md) — entry-source write tools hard-code `wrote: []` (documented as files touched); `deleteEntrySources` echoes duplicate hashes
 - [041](./041.md) — `appendLedgerText` moves entries away from their `pushtag`/`poptag` (date insertion): the tag is silently dropped, or a dangling push breaks the file
-- [040](./040.md) — DCR accepts a `web` client with a plain `http://` non-loopback redirect URI (MCP auth spec requires https or loopback)
 - [022](./blocked/022.md) — report rustledger BQL gaps upstream (`cost(sum(position))`, `neg`/`filter_currency`, `meta('lineno')`, `AT value`, `BALANCES FROM`) — **blocked:** filing in an external tracker needs the user's approval
 - [026](./blocked/026.md) — streaming archive route for MCP OAuth clients over 8 MiB (option 1 from 023) — **blocked:** an ADR 0007 trust-boundary decision for the owner
