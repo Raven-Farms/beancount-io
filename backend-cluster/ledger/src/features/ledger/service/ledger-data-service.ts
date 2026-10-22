@@ -28,6 +28,7 @@ import {
   buildPriceMap,
   clampDirectives,
   collectAttributes,
+  collectSourceFiles,
   DEFAULT_ENTRY_POINT,
   collectDocuments,
   collectEvents,
@@ -148,6 +149,19 @@ interface ILedgerDataService {
       enforceInputLimits?: boolean;
     },
   ): Promise<(string | null)[]>;
+
+  /**
+   * The files the projected ledger loads — its include closure, globs and
+   * all — so a write can tell whether a file it creates would be read
+   * (w23/062). Empty when the projection has no entry point.
+   */
+  projectedSourceFiles(
+    params: BaseParams & {
+      overlays: ProjectedFileOverlay[];
+      /** As for `checkProjectedErrors`. */
+      enforceInputLimits?: boolean;
+    },
+  ): Promise<string[]>;
 
   /**
    * bean-check over a complete set of files that is not a repository yet —
@@ -510,6 +524,18 @@ export class LedgerDataService implements ILedgerDataService {
       includeSourceDetails: true,
     });
     return resolveEntryIdsAtSources(snapshot, ranges).map((id) => id ?? null);
+  }
+
+  async projectedSourceFiles(
+    params: BaseParams & {
+      overlays: ProjectedFileOverlay[];
+      enforceInputLimits?: boolean;
+    },
+  ): Promise<string[]> {
+    const { projected, entryPoint } = await this.projectFileMap(params);
+    return Object.hasOwn(projected, entryPoint)
+      ? collectSourceFiles(projected, entryPoint)
+      : [];
   }
 
   /** The repository's file map with `overlays` applied (`null` deletes). */

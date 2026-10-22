@@ -1,7 +1,7 @@
 import { BadUserInputError } from "@/shared/errors";
 
 /** The file the ledger service loads first; every other file hangs off it. */
-const LEDGER_ENTRY_POINT = "main.bean";
+export const LEDGER_ENTRY_POINT = "main.bean";
 
 /**
  * Refuses deleting or renaming the entry point: the commit lands, then every

@@ -370,7 +370,11 @@ and is inserted after the last directive dated on or before it rather than at
 the end of the file. A `path` must be a file the ledger loads — one of its
 `source-files` — or the call is refused as `BAD_USER_INPUT`: an entry written
 anywhere else would never appear in a report. Create and `include` a new file
-first. A file whose own directives are out of date order gets
+first. A file the routing rules pick that nothing includes — a new year's file
+under per-year includes — gains an `include` in `main.bean` in the same commit,
+and the message says so ("main.bean now includes txns/2027.bean"); a glob
+include that already covers it needs nothing (w23/062). The same applies to
+`addLedgerEntries`. A file whose own directives are out of date order gets
 them appended, and says so in `appendedUnsorted`.
 
 Before committing, it bean-checks the projected ledger. New errors are a
@@ -1478,7 +1482,8 @@ the REST input shapes. GraphQL instead uses an uppercase enum and a payload fiel
 named after the directive; its budget interval enum maps to lowercase here.
 
 The tool uses the real entry writer, including file routing and the normal web
-quota policy. Every write result carries the write outcome first: a `summary`
+quota policy. A routed file nothing includes is included from `main.bean` in
+the same commit, and the summary says so (w23/062). Every write result carries the write outcome first: a `summary`
 of what was written and how many new bean-check errors it introduced, then
 `wrote` (files touched), `entryHashes`, and `validation` (`errorsBefore`,
 `errorsAfter`, `newErrors`) — learn about a broken ledger from the write

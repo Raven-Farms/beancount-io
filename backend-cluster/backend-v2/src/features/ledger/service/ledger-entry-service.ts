@@ -16,6 +16,7 @@ import { operationNotAllowedFromCause } from "@/features/ledger/utils/operation-
 import { BadUserInputError } from "@/shared/errors";
 import { resolveEntryFile } from "@/features/ledger/utils/entry-file-resolver";
 import { parseDirectiveDate } from "@/features/ledger/utils/directive-date";
+import { LEDGER_ENTRY_POINT } from "@/features/ledger/utils/ledger-entry-point";
 import { directiveLimitExemptParams } from "@/features/ledger/operations/directive-limit-bypass";
 import type { FavaApiClient } from "@/foundation/fava";
 import type { IFavaClientFactory } from "@/foundation/clients/fava-client-factory";
@@ -137,6 +138,11 @@ export type AddBulkEntriesResult = {
    * they could not be resolved after the commit (w23/060).
    */
   entryHashes?: string[];
+  /**
+   * Files the write routed to outside the include closure, now included
+   * from the entry point in the same commit (w23/062).
+   */
+  includedFiles?: string[];
 };
 
 type BulkEntries = EntryAddBulkEntriesRequest["entries"];
@@ -363,7 +369,7 @@ class FavaLedgerEntryWriter implements ILedgerEntryWriter {
       );
     }
 
-    const entryHashes = await this.addEntries(
+    const { entryHashes, includedFiles } = await this.addEntries(
       favaApiClient,
       ledgerOwner,
       ledgerName,
@@ -374,11 +380,18 @@ class FavaLedgerEntryWriter implements ILedgerEntryWriter {
     );
 
     const noun = inputs.length === 1 ? "entry" : "entries";
+    // A routed file nothing included is included from the entry point in the
+    // same commit (w23/062); the result says so.
+    const included =
+      includedFiles.length > 0
+        ? `; ${LEDGER_ENTRY_POINT} now includes ${includedFiles.join(", ")}`
+        : "";
     return {
       success: true,
-      message: `Added ${inputs.length} ${noun} successfully`,
+      message: `Added ${inputs.length} ${noun} successfully${included}`,
       files: distinctFiles,
       entryHashes,
+      ...(includedFiles.length > 0 && { includedFiles }),
     };
   }
 
@@ -572,7 +585,7 @@ class FavaLedgerEntryWriter implements ILedgerEntryWriter {
     platform: "web" | "mobile" = "web",
     allowInvalid = false,
     dryRun = false,
-  ): Promise<string[]> {
+  ): Promise<{ entryHashes: string[]; includedFiles: string[] }> {
     const written = await unwrapFavaResponse(
       favaApiClient.entries.addBulkEntries(
         ledgerOwner,
@@ -584,7 +597,11 @@ class FavaLedgerEntryWriter implements ILedgerEntryWriter {
       (cause) => operationNotAllowedFromCause("add entries", cause),
     );
     // A ledger service older than w23/060 answers `null`.
-    return (written as typeof written | null)?.entry_hashes ?? [];
+    const result = written as Partial<typeof written> | null;
+    return {
+      entryHashes: result?.entry_hashes ?? [],
+      includedFiles: result?.included_files ?? [],
+    };
   }
 }
 

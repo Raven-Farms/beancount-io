@@ -43,6 +43,10 @@ function fixture(
     baselineErrors?: BeanError[];
     /** How the ledger locates committed entries; echoes `path:line` unless set. */
     locate?: "throws" | "misses";
+    /** Files the ledger's include closure leaves out; none unless set. */
+    unloaded?: string[];
+    /** The closure lookup fails, as against a ledger without the route. */
+    closureFails?: boolean;
   } = {},
 ) {
   const files = new Map(Object.entries(options.files ?? {}));
@@ -66,6 +70,15 @@ function fixture(
     changeGeneratedFiles: jest.fn(
       async (_params: { operations: { path: string; content?: string }[] }) =>
         undefined,
+    ),
+    projectedSourceFiles: jest.fn(
+      async (params: { overlays: { path: string; content: string }[] }) => {
+        if (options.closureFails) throw new Error("404 Not Found");
+        return [
+          ...files.keys(),
+          ...params.overlays.map((overlay) => overlay.path),
+        ].filter((path) => !options.unloaded?.includes(path));
+      },
     ),
     projectedEntryHashes: jest.fn(
       async (params: {
@@ -477,5 +490,140 @@ describe("DirectiveAppendWorkflow", () => {
         expect(result.entryHashes).toEqual([]);
       },
     );
+  });
+  // w23/062: a routed write to a file nothing included committed directives
+  // no report loaded, and its check passed because it never loaded them.
+  describe("routed files outside the include closure", () => {
+    const MAIN =
+      'include "txns/2025.bean"\n\n2020-01-01 open Assets:Cash USD\n';
+    const ledger = (unloaded: string[]) =>
+      fixture({
+        files: { "main.bean": MAIN, "txns/2025.bean": "" },
+        transactionFile: "txns/{year}.bean",
+        unloaded,
+      });
+
+    it("includes a new year's file from the entry point in the same commit", async () => {
+      const { workflow, ledgerRepo } = ledger(["txns/2026.bean"]);
+      const result = await workflow.appendDirectiveText({
+        identity: IDENTITY,
+        ledgerId: LEDGER_ID,
+        input: { text: TXN },
+      });
+
+      expect(result.message).toBe(
+        "Added 1 directive to txns/2026.bean; main.bean now includes txns/2026.bean",
+      );
+      // Only the file the write creates is projected; the rest is the repo.
+      expect(ledgerRepo.projectedSourceFiles).toHaveBeenCalledWith(
+        expect.objectContaining({
+          overlays: [{ path: "txns/2026.bean", content: "" }],
+        }),
+      );
+      const { operations } = ledgerRepo.changeGeneratedFiles.mock.calls[0]![0];
+      expect(operations).toEqual([
+        expect.objectContaining({
+          operation: "create",
+          path: "txns/2026.bean",
+        }),
+        expect.objectContaining({
+          operation: "update",
+          path: "main.bean",
+          sha: "sha-main.bean",
+          content:
+            'include "txns/2025.bean"\ninclude "txns/2026.bean"\n\n2020-01-01 open Assets:Cash USD\n',
+        }),
+      ]);
+      // The check loads what the commit will: the include and the new file.
+      const projected = ledgerRepo.checkProjectedFiles.mock.calls
+        .map(([call]) => call as { overlays: { path: string }[] })
+        .find(({ overlays }) => overlays.length > 0)!;
+      expect(projected.overlays.map(({ path }) => path)).toEqual([
+        "txns/2026.bean",
+        "main.bean",
+      ]);
+    });
+
+    it("previews the include without committing", async () => {
+      const { workflow, ledgerRepo } = ledger(["txns/2026.bean"]);
+      const result = await workflow.appendDirectiveText({
+        identity: IDENTITY,
+        ledgerId: LEDGER_ID,
+        input: { text: TXN, dryRun: true },
+      });
+      expect(result.message).toBe(
+        "Would add 1 directive to txns/2026.bean; main.bean would include txns/2026.bean",
+      );
+      expect(
+        result.diff.find(({ path }) => path === "main.bean")?.diff,
+      ).toContain('+include "txns/2026.bean"');
+      expect(ledgerRepo.changeGeneratedFiles).not.toHaveBeenCalled();
+    });
+
+    it("leaves the entry point alone when an include already covers the file", async () => {
+      const { workflow, ledgerRepo } = ledger([]);
+      const result = await workflow.appendDirectiveText({
+        identity: IDENTITY,
+        ledgerId: LEDGER_ID,
+        input: { text: TXN },
+      });
+      expect(result.message).toBe("Added 1 directive to txns/2026.bean");
+      const { operations } = ledgerRepo.changeGeneratedFiles.mock.calls[0]![0];
+      expect(operations.map(({ path }) => path)).toEqual(["txns/2026.bean"]);
+    });
+
+    it("keeps directive lines right when the entry point is also a target", async () => {
+      const { workflow, ledgerRepo } = fixture({
+        files: { "main.bean": MAIN, "txns/2025.bean": "" },
+        transactionFile: "txns/{year}.bean",
+        unloaded: ["txns/2026.bean"],
+      });
+      const result = await workflow.appendDirectiveText({
+        identity: IDENTITY,
+        ledgerId: LEDGER_ID,
+        input: { text: `2026-01-01 open Expenses:Food USD\n\n${TXN}` },
+      });
+      const committed = new Map(
+        ledgerRepo.changeGeneratedFiles.mock.calls[0]![0].operations.map(
+          (operation) => [operation.path, operation.content!],
+        ),
+      );
+      expect(result.wrote.map(({ path }) => path).sort()).toEqual([
+        "main.bean",
+        "txns/2026.bean",
+      ]);
+      for (const { path, line } of result.wrote) {
+        expect(committed.get(path)!.split("\n")[line - 1]).toMatch(
+          /^2026-0[12]-0[15] /,
+        );
+      }
+      expect(committed.get("main.bean")).toContain('include "txns/2026.bean"');
+    });
+
+    it("appends as before when the ledger cannot list the closure", async () => {
+      const { workflow, ledgerRepo } = fixture({
+        files: { "main.bean": MAIN, "txns/2025.bean": "" },
+        transactionFile: "txns/{year}.bean",
+        closureFails: true,
+      });
+      const result = await workflow.appendDirectiveText({
+        identity: IDENTITY,
+        ledgerId: LEDGER_ID,
+        input: { text: TXN },
+      });
+      expect(result.message).toBe("Added 1 directive to txns/2026.bean");
+      const { operations } = ledgerRepo.changeGeneratedFiles.mock.calls[0]![0];
+      expect(operations.map(({ path }) => path)).toEqual(["txns/2026.bean"]);
+    });
+
+    it("does not look up the closure for a named path", async () => {
+      const { workflow, ledgerRepo } = ledger([]);
+      await workflow.appendDirectiveText({
+        identity: IDENTITY,
+        ledgerId: LEDGER_ID,
+        input: { text: TXN, path: "txns/2025.bean" },
+      });
+      expect(ledgerRepo.projectedSourceFiles).not.toHaveBeenCalled();
+    });
   });
 });

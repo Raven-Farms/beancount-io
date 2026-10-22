@@ -111,6 +111,7 @@ import {
   withPostWriteValidation,
 } from "../tools/write-validation";
 import { BANK_OPERATIONS } from "../tools/bank-import-tool";
+import { LEDGER_ENTRY_POINT } from "@/features/ledger/utils/ledger-entry-point";
 import {
   checkLedgerDescription,
   checkLedgerInputSchema,
@@ -409,18 +410,26 @@ export const MCP_TOOLS: readonly McpToolDescriptor[] = [
             allowInvalid ?? false,
           ),
       );
-      const written = outcome.written;
+      const { includedFiles = [], ...written } = outcome.written;
       const files = written.files ?? [];
       const noun = entries.length === 1 ? "entry" : "entries";
+      // The entry point gained an include for a routed file (w23/062).
+      const included =
+        includedFiles.length > 0
+          ? `; ${LEDGER_ENTRY_POINT} now includes ${includedFiles.join(", ")}`
+          : "";
+      const touched = [
+        ...new Set([...files, ...(included ? [LEDGER_ENTRY_POINT] : [])]),
+      ];
       return {
         ok: true,
         result: {
           summary: summarizeWrite(
-            `Added ${entries.length} ${noun}${files.length > 0 ? ` to ${files.join(", ")}` : ""}`,
+            `Added ${entries.length} ${noun}${files.length > 0 ? ` to ${files.join(", ")}` : ""}${included}`,
             outcome.validation,
           ),
           ...written,
-          wrote: files.map((path) => ({ path })),
+          wrote: touched.map((path) => ({ path })),
           entryHashes: written.entryHashes ?? [],
           validation: outcome.validation,
         },

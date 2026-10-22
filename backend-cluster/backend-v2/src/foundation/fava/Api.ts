@@ -3573,6 +3573,11 @@ export interface EntryAddBulkEntriesResult {
    * The entry hash each committed entry now carries, in request order; empty for a dry run, or when they could not be resolved after the commit.
    */
   entry_hashes: string[];
+  /**
+   * Included Files
+   * Files the write reached outside the include closure, now included from the entry point in the same commit.
+   */
+  included_files: string[];
 }
 
 /** SuccessResponse[EntryAddBulkEntriesResult] */
@@ -4674,6 +4679,29 @@ export class Api<
         path: `/reports/${encodeURIComponent(owner)}/${encodeURIComponent(repoName)}/source-files`,
         method: "GET",
         secure: true,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description The files the projected ledger loads (base64 text; null deletes): its include closure, globs included. How a write tells whether a file it routes to would be read.
+     *
+     * @tags reports
+     * @name GetProjectedSourceFiles
+     * @summary Projected source files
+     * @request POST:/reports/{owner}/{repo_name}/source-files
+     */
+    getProjectedSourceFiles: (
+      owner: string,
+      repoName: string,
+      data: LedgerCheckProjectedFilesOptions,
+      params: RequestParams = {},
+    ) =>
+      this.request<SuccessResponseListStr, ErrorResponse>({
+        path: `/reports/${encodeURIComponent(owner)}/${encodeURIComponent(repoName)}/source-files`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
         format: "json",
         ...params,
       }),

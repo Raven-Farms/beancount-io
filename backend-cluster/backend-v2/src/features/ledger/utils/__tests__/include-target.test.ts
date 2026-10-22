@@ -1,4 +1,5 @@
 import {
+  addIncludeLines,
   formatIncludeLine,
   globMatches,
   includeTargetFor,
@@ -87,5 +88,44 @@ describe("include globs", () => {
   it("matches a long name against many stars without backtracking", () => {
     const pattern = `d/${"*a".repeat(40)}*b`;
     expect(globMatches(pattern, `d/${"a".repeat(2000)}`)).toBe(false);
+  });
+});
+
+// w23/062: a routed write's new file joins the closure from the entry point.
+describe("addIncludeLines", () => {
+  it("adds the lines after the last include, keeping a per-year list together", () => {
+    const main = [
+      'include "txns/2025.bean"',
+      "include 'txns/2026.bean' ; per year",
+      "",
+      "2020-01-01 open Assets:Cash USD",
+      "",
+    ].join("\n");
+    expect(addIncludeLines(main, ["txns/2027.bean"])).toBe(
+      [
+        'include "txns/2025.bean"',
+        "include 'txns/2026.bean' ; per year",
+        'include "txns/2027.bean"',
+        "",
+        "2020-01-01 open Assets:Cash USD",
+        "",
+      ].join("\n"),
+    );
+  });
+
+  it("appends them when the file has none, and reads back what it wrote", () => {
+    const written = addIncludeLines("2020-01-01 open Assets:Cash USD\n\n", [
+      "a.bean",
+      'odd "name".bean',
+    ]);
+    expect(written).toBe(
+      '2020-01-01 open Assets:Cash USD\ninclude "a.bean"\ninclude "odd \\"name\\".bean"\n',
+    );
+    expect(
+      written
+        .split("\n")
+        .flatMap((line) => parseIncludeLine(line)?.target ?? []),
+    ).toEqual(["a.bean", 'odd "name".bean']);
+    expect(addIncludeLines("x\n", [])).toBe("x\n");
   });
 });

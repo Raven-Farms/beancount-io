@@ -91,6 +91,23 @@ export function setReportsHandler(router: Router): void {
     );
   });
 
+  // operationId: getProjectedSourceFiles — POST /reports/{o}/{r}/source-files
+  // The files the projected ledger loads (base64 text; null deletes): how a
+  // write tells whether a file it routes to would be read at all (w23/062).
+  router.post(`${base}/source-files`, authMiddleware, async (ctx) => {
+    const { data } = servicesForRequest(ctx);
+    const body = (ctx.request.body ?? {}) as {
+      files?: { path: string; content: string | null }[];
+    };
+    ctx.body = successResponse(
+      await data.projectedSourceFiles({
+        ledgerId: ledgerIdOf(ctx),
+        userId: undefined,
+        overlays: body.files ?? [],
+      }),
+    );
+  });
+
   // operationId: getProjectedEntryIds — POST /reports/{o}/{r}/entry-ids
   // The entry ID of the directive starting on each `{path, line}` (1-based)
   // of the projected ledger, `null` where none does: how a write that

@@ -118,6 +118,8 @@ async function fixture(
     wouldBreak: false,
     /** bcio `account_file` routing template, when the ledger routes opens. */
     accountFile: null as string | null,
+    /** Files the ledger included from the entry point for this write. */
+    includedFiles: [] as string[],
   };
   const errorCalls = { count: 0 };
   const envelope = (data: unknown) => ({ data: { success: true, data } });
@@ -153,6 +155,7 @@ async function fixture(
       entry_hashes: body.entries.map(
         (_entry: unknown, index: number) => `hash-${index}`,
       ),
+      included_files: state.includedFiles,
     });
   });
   const createFile = jest.fn();
@@ -943,6 +946,50 @@ describe.each(["rest", "gql", "mcp"])(
         expect(JSON.stringify(result)).toContain("0000-01-01");
         expect(f.write).not.toHaveBeenCalled();
         expect(f.committed).toEqual([]);
+      } finally {
+        await f.close();
+      }
+    });
+  },
+);
+
+// w23/062: the ledger includes a routed file nothing loaded; every surface
+// says so, and MCP lists the entry point among the files written.
+describe.each(["rest", "gql", "mcp"])(
+  "a routed file the ledger includes via %s",
+  (surface) => {
+    it("names the include in the result", async () => {
+      const f = await fixture();
+      f.state.accountFile = "accounts/{year}.bean";
+      f.state.includedFiles = ["accounts/2028.bean"];
+      try {
+        const result = await f.call(surface, [
+          {
+            type: "open" as const,
+            entry: {
+              date: "2028-01-04",
+              account: "Assets:Qa-20261022:Routed",
+              currencies: ["USD"],
+            },
+          },
+        ]);
+        expect(result.success).toBe(true);
+        const note = "main.bean now includes accounts/2028.bean";
+        const data = result.result as {
+          message?: string;
+          summary?: string;
+          wrote?: { path: string }[];
+        };
+        expect(data.message).toBe(`Added 1 entry successfully; ${note}`);
+        if (surface === "mcp") {
+          expect(data.summary).toContain(
+            `Added 1 entry to accounts/2028.bean; ${note}`,
+          );
+          expect(data.wrote).toEqual([
+            { path: "accounts/2028.bean" },
+            { path: "main.bean" },
+          ]);
+        }
       } finally {
         await f.close();
       }

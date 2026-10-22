@@ -270,3 +270,40 @@ describe("projectedEntryIds", () => {
     expect(parseMock).not.toHaveBeenCalled();
   });
 });
+
+// w23/062: whether a file a write routes to would be loaded at all.
+describe("projectedSourceFiles", () => {
+  const withMain = (main: string) =>
+    loadMock.mockResolvedValue({
+      files: { "main.bean": main, "txns/2026.bean": "" },
+      entryPoint: "main.bean",
+      repoPaths: ["main.bean", "txns/2026.bean"],
+      managedPrices: [],
+      managedPricePaths: [],
+    });
+  const project = () =>
+    service().projectedSourceFiles({
+      ledgerId: "alice/main",
+      userId: "user-1",
+      overlays: [{ path: "txns/2027.bean", content: b64("") }],
+    });
+
+  it("leaves a new file out under per-year includes", async () => {
+    withMain('include "txns/2026.bean"\n');
+    expect(await project()).toEqual(["main.bean", "txns/2026.bean"]);
+  });
+
+  it("loads a new file a glob include covers", async () => {
+    withMain('include "txns/*.bean"\n');
+    expect(await project()).toEqual([
+      "main.bean",
+      "txns/2026.bean",
+      "txns/2027.bean",
+    ]);
+  });
+
+  it("loads a new file an include already names", async () => {
+    withMain('include "txns/2026.bean"\ninclude "txns/2027.bean"\n');
+    expect(await project()).toContain("txns/2027.bean");
+  });
+});

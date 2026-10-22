@@ -8,6 +8,8 @@ import {
   parseDirectiveText,
 } from "@/features/ledger/utils/directive-text";
 import { assertSafeRepoPath } from "@/features/ledger/utils/safe-repo-path";
+import { addIncludeLines } from "@/features/ledger/utils/include-target";
+import { LEDGER_ENTRY_POINT } from "@/features/ledger/utils/ledger-entry-point";
 import { assertWritableText } from "@/shared/file-content";
 import { unifiedDiff } from "@/shared/unified-diff";
 import {
@@ -62,7 +64,10 @@ export interface IDirectiveAppendWorkflow {
 /** Exactly the repository capabilities an append needs, and no others. */
 type RepoDeps = Pick<
   ILedgerRepoService,
-  "getFilesContent" | "checkProjectedFiles" | "projectedEntryHashes"
+  | "getFilesContent"
+  | "checkProjectedFiles"
+  | "projectedSourceFiles"
+  | "projectedEntryHashes"
 > &
   ILedgerGeneratedFileWriter;
 
@@ -144,6 +149,33 @@ export class DirectiveAppendWorkflow implements IDirectiveAppendWorkflow {
       ).map((file) => [file.path, file]),
     );
 
+    // Routing can reach a file nothing includes — a new year's file under
+    // per-year includes — whose directives would commit unseen by any report
+    // and pass a check that never loads them. The entry point gains the
+    // include in the same commit, ahead of any directive threaded into it
+    // (w23/062). A named `path` is a loaded file already (w23/035).
+    const included =
+      path === undefined
+        ? await this.unloadedTargets(
+            ledgerId,
+            identity,
+            [...byPath.keys()],
+            existing,
+          )
+        : [];
+    if (included.length > 0 && !existing.has(LEDGER_ENTRY_POINT)) {
+      const [entryPoint] = await this.ledgerRepo.getFilesContent({
+        ledgerId,
+        identity,
+        paths: [LEDGER_ENTRY_POINT],
+      });
+      if (entryPoint) existing.set(LEDGER_ENTRY_POINT, entryPoint);
+    }
+    const withIncludes = (target: string, content: string) =>
+      target === LEDGER_ENTRY_POINT
+        ? addIncludeLines(content, included)
+        : content;
+
     // One record per touched file rather than five collections keyed on the
     // same path: the sha, the projected text, and where each directive landed
     // travel together, so nothing has to be re-looked-up to build the commit.
@@ -152,7 +184,10 @@ export class DirectiveAppendWorkflow implements IDirectiveAppendWorkflow {
       // Inserting re-encodes the whole file (w23/030).
       if (current) assertWritableText(current);
       const before = current?.content ?? "";
-      const result = insertDirectives(before, targetDirectives);
+      const result = insertDirectives(
+        withIncludes(target, before),
+        targetDirectives,
+      );
       return {
         path: target,
         sha: current?.sha,
@@ -162,6 +197,18 @@ export class DirectiveAppendWorkflow implements IDirectiveAppendWorkflow {
         appended: result.appended,
       };
     });
+    const entryPoint = existing.get(LEDGER_ENTRY_POINT);
+    if (included.length > 0 && entryPoint && !byPath.has(LEDGER_ENTRY_POINT)) {
+      assertWritableText(entryPoint);
+      targets.push({
+        path: LEDGER_ENTRY_POINT,
+        sha: entryPoint.sha,
+        before: entryPoint.content,
+        content: withIncludes(LEDGER_ENTRY_POINT, entryPoint.content),
+        lines: [],
+        appended: false,
+      });
+    }
 
     const [baseline, projected] = await Promise.all([
       this.checkProjected(ledgerId, identity, []),
@@ -181,9 +228,13 @@ export class DirectiveAppendWorkflow implements IDirectiveAppendWorkflow {
       throw unbalancedOrValidationError(newErrors);
     }
 
-    const paths = targets.map((target) => target.path);
+    const paths = [...byPath.keys()];
     const noun = directives.length === 1 ? "directive" : "directives";
-    const summary = `${directives.length} ${noun} to ${paths.join(", ")}`;
+    const includes =
+      included.length === 0
+        ? ""
+        : `; ${LEDGER_ENTRY_POINT} ${dryRun ? "would include" : "now includes"} ${included.join(", ")}`;
+    const summary = `${directives.length} ${noun} to ${paths.join(", ")}${includes}`;
     const wrote = targets.flatMap((target) =>
       target.lines.map((line) => ({ path: target.path, line })),
     );
@@ -237,6 +288,39 @@ export class DirectiveAppendWorkflow implements IDirectiveAppendWorkflow {
         .filter((target) => target.appended)
         .map((target) => target.path),
     };
+  }
+
+  /**
+   * The routed targets the ledger would not load once written: the closure
+   * of the repository plus the files this write creates (w23/062). A ledger
+   * service that cannot answer — one deployed before the route — leaves the
+   * write as it was before, rather than refusing every routed append.
+   */
+  private async unloadedTargets(
+    ledgerId: string,
+    identity: Identity,
+    paths: string[],
+    existing: Map<string, { content: string }>,
+  ): Promise<string[]> {
+    let loaded: Set<string>;
+    try {
+      loaded = new Set(
+        await this.ledgerRepo.projectedSourceFiles({
+          ledgerId,
+          identity,
+          overlays: paths
+            .filter((target) => !existing.has(target))
+            .map((target) => ({ path: target, content: "" })),
+        }),
+      );
+    } catch (error) {
+      this.logger.warn("Could not list the projected include closure", {
+        ledgerId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return [];
+    }
+    return paths.filter((target) => !loaded.has(target));
   }
 
   /**

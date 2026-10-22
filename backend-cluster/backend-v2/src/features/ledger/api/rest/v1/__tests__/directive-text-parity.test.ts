@@ -112,6 +112,18 @@ async function fixture(caller = identity) {
       envelope(body.files.length === 0 ? [] : state.projectedErrors),
   );
 
+  // The projected include closure: the narrowed closure when a test sets one
+  // (a new file stays out of it), otherwise every file and overlay (w23/062).
+  const getProjectedSourceFiles = jest.fn(
+    async (_o, _n, body: { files: { path: string }[] }) =>
+      envelope(
+        state.sourceFiles ?? [
+          ...state.files.keys(),
+          ...body.files.map((file) => file.path),
+        ],
+      ),
+  );
+
   // The ledger's entry IDs, scripted as the location each was asked for.
   const getProjectedEntryIds = jest.fn(
     async (
@@ -151,6 +163,7 @@ async function fixture(caller = identity) {
           }),
         checkProjectedErrors,
         getProjectedEntryIds,
+        getProjectedSourceFiles,
         getLedgerSourceFiles: async () =>
           envelope(state.sourceFiles ?? [...state.files.keys()]),
       },
@@ -667,6 +680,35 @@ describe("appending Beancount text through the real adapters", () => {
         });
         expect(result.ok).toBe(true);
         expect(f.commits[0].files[0]).toMatchObject({ path: "2026/02.bean" });
+      } finally {
+        await f.close();
+      }
+    },
+  );
+
+  // w23/062: a routed write to a year file nothing included committed an
+  // entry no report loaded, and said it added no bean-check errors.
+  it.each(["rest", "gql", "mcp"] as const)(
+    "includes a routed file the ledger does not load, in the same commit, on %s",
+    async (surface) => {
+      const f = await fixture();
+      f.state.routeTransactionsTo = "txns/{year}.bean";
+      f.state.sourceFiles = ["main.bean"];
+      try {
+        const result = await f.call(surface, { text: TXN });
+        expect(result.ok).toBe(true);
+        const data = result.ok ? (result.data as Record<string, never>) : {};
+        expect(JSON.stringify(data)).toContain(
+          "Added 1 directive to txns/2026.bean; main.bean now includes txns/2026.bean",
+        );
+        expect(f.commits).toHaveLength(1);
+        expect(f.commits[0].files.map(({ path }) => path)).toEqual([
+          "txns/2026.bean",
+          "main.bean",
+        ]);
+        expect(f.state.files.get("main.bean")).toBe(
+          `${EXISTING.trimEnd()}\ninclude "txns/2026.bean"\n`,
+        );
       } finally {
         await f.close();
       }

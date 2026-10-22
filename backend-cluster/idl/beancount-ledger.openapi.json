@@ -2256,6 +2256,66 @@
             }
           }
         }
+      },
+      "post": {
+        "tags": [
+          "reports"
+        ],
+        "summary": "Projected source files",
+        "description": "The files the projected ledger loads (base64 text; null deletes): its include closure, globs included. How a write tells whether a file it routes to would be read.",
+        "operationId": "getProjectedSourceFiles",
+        "parameters": [
+          {
+            "name": "owner",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Owner"
+            }
+          },
+          {
+            "name": "repo_name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Repo Name"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LedgerCheckProjectedFilesOptions"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SuccessResponse_list_str__"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/reports/{owner}/{repo_name}/commodities": {
@@ -15006,11 +15066,20 @@
             "type": "array",
             "title": "Entry Hashes",
             "description": "The entry hash each committed entry now carries, in request order; empty for a dry run, or when they could not be resolved after the commit."
+          },
+          "included_files": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Included Files",
+            "description": "Files the write reached outside the include closure, now included from the entry point in the same commit."
           }
         },
         "type": "object",
         "required": [
-          "entry_hashes"
+          "entry_hashes",
+          "included_files"
         ],
         "title": "EntryAddBulkEntriesResult"
       },

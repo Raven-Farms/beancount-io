@@ -50,6 +50,32 @@ export function formatIncludeLine(line: IncludeLine, target: string): string {
   return `${line.prefix}${written}${line.suffix}`;
 }
 
+/**
+ * `content` with an `include` line for each path after its last `include`,
+ * or at its end: how a file a write routes to joins the include closure
+ * (w23/062). The ledger service's `addIncludes` is the bulk route's twin.
+ */
+export function addIncludeLines(
+  content: string,
+  paths: readonly string[],
+): string {
+  if (paths.length === 0) return content;
+  const block = paths.map((path) =>
+    formatIncludeLine(
+      { prefix: "include ", target: path, quote: '"', suffix: "" },
+      path,
+    ),
+  );
+  const lines = content.split("\n");
+  const last = lines.findLastIndex((line) => parseIncludeLine(line) !== null);
+  if (last >= 0) {
+    lines.splice(last + 1, 0, ...block);
+    return lines.join("\n");
+  }
+  const body = content.replace(/\n+$/, "");
+  return `${body}${body ? "\n" : ""}${block.join("\n")}\n`;
+}
+
 /** A URL target names nothing in the repository and is never resolved. */
 export function isUrlTarget(target: string): boolean {
   return /^[a-z][a-z0-9+.-]*:\/\//i.test(target);

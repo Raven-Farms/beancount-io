@@ -22,6 +22,10 @@ let baselineErrors: {
 const committed: { files: { path: string; content: string }[] }[] = [];
 // Paths the handler read; a refused amount must not read any file.
 const reads: string[] = [];
+// Repository files besides main.bean, and the paths the include closure
+// leaves out (w23/062); by default everything the write touches is loaded.
+const mockFiles = new Map<string, string>();
+let unincluded = new Set<string>();
 // The ranges each committed write asked to locate (w23/060), and whether the
 // scripted locator fails or finds nothing.
 const located: { file: string; startLine: number; lineCount: number }[][] = [];
@@ -34,9 +38,10 @@ jest.mock("@/server/auth", () => ({
     repos: {
       repoGetContents: async (_owner: string, _repo: string, path: string) => {
         reads.push(path);
-        if (path !== "main.bean")
+        const content = path === "main.bean" ? MAIN : mockFiles.get(path);
+        if (content === undefined)
           throw Object.assign(new Error("404"), { status: 404 });
-        return { data: { content: b64(MAIN), sha: "sha-main" } };
+        return { data: { content: b64(content), sha: `sha-${path}` } };
       },
       repoChangeFiles: async (
         _owner: string,
@@ -88,6 +93,14 @@ jest.mock("../service-context", () => ({
         const main = overlays.find((overlay) => overlay.path === "main.bean");
         return errorsOf(main ? fromB64(main.content) : MAIN);
       },
+      projectedSourceFiles: async ({
+        overlays,
+      }: {
+        overlays: { path: string }[];
+      }) =>
+        ["main.bean", ...overlays.map((overlay) => overlay.path)].filter(
+          (path) => !unincluded.has(path),
+        ),
       // A stand-in for the engine's entry IDs: the dated line a range starts
       // on, so a test sees which line each entry was located at.
       projectedEntryIds: async ({
@@ -529,5 +542,105 @@ describe("bulk entries return the hashes they wrote", () => {
     locator = "misses";
     expect(await post(entries)).toEqual([]);
     expect(committed).toHaveLength(2);
+  });
+});
+
+// w23/062: a routed write to a file nothing includes committed entries that
+// no report loaded, and said "No new bean-check errors" about them.
+describe("bulk entries include a routed file the ledger does not load", () => {
+  let server: http.Server;
+  let url: string;
+
+  beforeAll(async () => {
+    const app = new Koa();
+    const router = new Router();
+    setEntriesHandler(router);
+    app.use(restErrorMiddleware());
+    app.use(bodyParser());
+    app.use(router.routes());
+    server = http.createServer(app.callback());
+    url = await listen(server);
+  });
+
+  afterAll(() => new Promise<void>((resolve) => server.close(() => resolve())));
+
+  beforeEach(() => {
+    baselineErrors = [];
+    committed.length = 0;
+    mockFiles.clear();
+    mockFiles.set("txns/2027.bean", "");
+    unincluded = new Set(["txns/2027.bean"]);
+  });
+
+  afterEach(() => {
+    mockFiles.clear();
+    unincluded = new Set();
+  });
+
+  const post = (body: Record<string, unknown>) =>
+    fetch(`${url}/entries/alice/books/bulk`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(body),
+    });
+  const routed = (filename: string) => ({
+    type: "transaction",
+    filename,
+    item: {
+      date: "2027-01-03",
+      flag: "*",
+      narration: "new year",
+      postings: [
+        { account: "Assets:Cash", units: { number: "-5.00", currency: "USD" } },
+        {
+          account: "Equity:Opening",
+          units: { number: "5.00", currency: "USD" },
+        },
+      ],
+    },
+  });
+
+  it("adds the entry point's include in the same commit and names it", async () => {
+    const response = await post({ entries: [routed("txns/2027.bean")] });
+
+    expect(response.status).toBe(200);
+    expect(
+      ((await response.json()) as { data: { included_files: string[] } }).data
+        .included_files,
+    ).toEqual(["txns/2027.bean"]);
+    expect(committed).toHaveLength(1);
+    const files = Object.fromEntries(
+      committed[0]!.files.map((file) => [file.path, fromB64(file.content)]),
+    );
+    expect(Object.keys(files).sort()).toEqual(["main.bean", "txns/2027.bean"]);
+    expect(files["main.bean"]).toBe(`${MAIN}include "txns/2027.bean"\n`);
+    expect(files["txns/2027.bean"]).toContain('2027-01-03 * "new year"');
+  });
+
+  it("includes a file a dry run would create, committing nothing", async () => {
+    mockFiles.clear();
+    const response = await post({
+      entries: [routed("txns/2027.bean")],
+      dryRun: true,
+    });
+    expect(response.status).toBe(200);
+    expect(
+      ((await response.json()) as { data: { included_files: string[] } }).data
+        .included_files,
+    ).toEqual(["txns/2027.bean"]);
+    expect(committed).toEqual([]);
+  });
+
+  it("leaves the entry point alone when the file is already loaded", async () => {
+    unincluded = new Set();
+    const response = await post({ entries: [routed("txns/2027.bean")] });
+    expect(response.status).toBe(200);
+    expect(
+      ((await response.json()) as { data: { included_files: string[] } }).data
+        .included_files,
+    ).toEqual([]);
+    expect(committed[0]!.files.map((file) => file.path)).toEqual([
+      "txns/2027.bean",
+    ]);
   });
 });

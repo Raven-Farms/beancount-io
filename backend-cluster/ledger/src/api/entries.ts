@@ -24,7 +24,11 @@ import {
   assertEntryTokens,
   isSingleDirective,
 } from "@/features/ledger/utils/entry-tokens";
-import type { ReplacedSourceRange } from "@/foundation/rustledger";
+import {
+  DEFAULT_ENTRY_POINT,
+  type ReplacedSourceRange,
+} from "@/foundation/rustledger";
+import { addIncludes } from "@/features/ledger/utils/routed-includes";
 import { logger } from "@/shared/logger";
 
 const log = logger.child({ module: "entries-api" });
@@ -169,10 +173,7 @@ export function setEntriesHandler(router: Router): void {
         string,
         { current: string; sha: string }
       >();
-      for (const [idx, row] of rows.entries()) {
-        const target = row.filename || defaultFilename;
-        assertSafeRepoPath(target, `entries[${idx}].filename`);
-        if (currentContents.has(target)) continue;
+      const readFile = async (target: string) => {
         const safeUrlPath = toSafeRepoUrlPath(target, "filename");
         let file: ContentsResponse | null = null;
         try {
@@ -188,16 +189,19 @@ export function setEntriesHandler(router: Router): void {
         }
         if (file === null) {
           // A routed file the write would create first: check against empty.
-          if (dryRun) {
-            currentContents.set(target, { current: "", sha: "" });
-            continue;
-          }
+          if (dryRun) return { current: "", sha: "" };
           throw new NotFoundDetailError(`File ${target} not found`);
         }
-        currentContents.set(target, {
+        return {
           current: Buffer.from(file.content ?? "", "base64").toString("utf8"),
           sha: file.sha as string,
-        });
+        };
+      };
+      for (const [idx, row] of rows.entries()) {
+        const target = row.filename || defaultFilename;
+        assertSafeRepoPath(target, `entries[${idx}].filename`);
+        if (currentContents.has(target)) continue;
+        currentContents.set(target, await readFile(target));
       }
 
       // Like Beancount, refuse a transaction whose residual is outside the
@@ -256,6 +260,36 @@ export function setEntriesHandler(router: Router): void {
         byFile.set(target, list);
       });
 
+      // Routing can reach a file nothing includes — a new year's file under
+      // per-year includes — whose entries would commit unseen by any report.
+      // The entry point gains the include in the same commit, ahead of any
+      // entry text, so the check below loads it too (w23/062).
+      const { data } = servicesForRequest(ctx);
+      const ledgerId = ledgerIdOf(ctx);
+      const loaded = new Set(
+        rows.length === 0
+          ? []
+          : await data.projectedSourceFiles({
+              ledgerId,
+              userId: undefined,
+              overlays: [...currentContents].map(([path, { current }]) => ({
+                path,
+                content: Buffer.from(current, "utf8").toString("base64"),
+              })),
+              enforceInputLimits: false,
+            }),
+      );
+      const included = [...byFile.keys()].filter((path) => !loaded.has(path));
+      if (included.length > 0) {
+        const entry =
+          currentContents.get(DEFAULT_ENTRY_POINT) ??
+          (await readFile(DEFAULT_ENTRY_POINT));
+        currentContents.set(DEFAULT_ENTRY_POINT, {
+          ...entry,
+          current: addIncludes(entry.current, included),
+        });
+      }
+
       const updates: Array<{ path: string; content: string; sha: string }> = [];
       // Where each row's text lands, to find its hash once committed.
       const ranges: ReplacedSourceRange[] = [];
@@ -281,6 +315,18 @@ export function setEntriesHandler(router: Router): void {
           sha: cached.sha,
         });
       }
+      const entryPoint = currentContents.get(DEFAULT_ENTRY_POINT);
+      if (
+        included.length > 0 &&
+        entryPoint &&
+        !byFile.has(DEFAULT_ENTRY_POINT)
+      ) {
+        updates.push({
+          path: DEFAULT_ENTRY_POINT,
+          content: Buffer.from(entryPoint.current, "utf8").toString("base64"),
+          sha: entryPoint.sha,
+        });
+      }
 
       if (updates.length > 0) {
         // Check the projection, then commit — the text-append route's order
@@ -288,8 +334,6 @@ export function setEntriesHandler(router: Router): void {
         // an unopened one, used to be committed and only surfaced later as a
         // ledger error. `allowInvalid` records such entries deliberately.
         if (!allowInvalid) {
-          const { data } = servicesForRequest(ctx);
-          const ledgerId = ledgerIdOf(ctx);
           const after = await data.checkProjectedErrors({
             ledgerId,
             userId: undefined,
@@ -313,7 +357,10 @@ export function setEntriesHandler(router: Router): void {
         // receipt — asks whether the entries would be accepted, so a refusal
         // leaves nothing behind (w23/058).
         if (dryRun) {
-          ctx.body = successResponse({ entry_hashes: [] });
+          ctx.body = successResponse({
+            entry_hashes: [],
+            included_files: included,
+          });
           return;
         }
         await client.repos.repoChangeFiles(owner, repoName, {
@@ -327,15 +374,16 @@ export function setEntriesHandler(router: Router): void {
         });
         ctx.body = successResponse({
           entry_hashes: await writtenEntryHashes(
-            servicesForRequest(ctx).data,
-            ledgerIdOf(ctx),
+            data,
+            ledgerId,
             updates.map(({ path, content }) => ({ path, content })),
             ranges,
           ),
+          included_files: included,
         });
         return;
       }
-      ctx.body = successResponse({ entry_hashes: [] });
+      ctx.body = successResponse({ entry_hashes: [], included_files: [] });
     },
   );
 }
