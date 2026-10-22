@@ -12,7 +12,10 @@ import {
 import { Sheet, SheetContent, SheetDescription, SheetTitle } from "../sheet";
 
 vi.mock("@/common/hooks/use-translations", () => ({
-  useTranslations: () => ({ t: (key: string) => key }),
+  useTranslations: () => ({
+    t: (key: string) => key,
+    i18n: { dir: () => "ltr" },
+  }),
 }));
 vi.mock("@/common/hooks/use-date-locale", () => ({
   useDateLocale: () => enUS,

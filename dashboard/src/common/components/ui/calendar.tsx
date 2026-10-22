@@ -9,6 +9,7 @@ import { DayButton, DayPicker, getDefaultClassNames } from "react-day-picker";
 import { cn } from "@/common/lib/utils/utils.ts";
 import { Button, buttonVariants } from "@/common/components/ui/button.tsx";
 import { useDateLocale } from "@/common/hooks/use-date-locale";
+import { useTranslations } from "@/common/hooks/use-translations";
 
 function Calendar({
   className,
@@ -19,6 +20,7 @@ function Calendar({
   formatters,
   components,
   locale: localeProp,
+  dir: dirProp,
   ...props
 }: React.ComponentProps<typeof DayPicker> & {
   buttonVariant?: React.ComponentProps<typeof Button>["variant"];
@@ -26,15 +28,21 @@ function Calendar({
   const defaultClassNames = getDefaultClassNames();
   const activeLocale = useDateLocale();
   const locale = localeProp ?? activeLocale;
+  // DayPicker's arrow keys follow `dir`, not the inherited CSS direction:
+  // without it ArrowLeft in a Persian grid focused the day drawn on its right
+  // (w4/298). The month chevrons turn with the same direction.
+  const { i18n } = useTranslations();
+  const dir = dirProp ?? i18n.dir();
 
   return (
     <DayPicker
       showOutsideDays={showOutsideDays}
       locale={locale}
+      dir={dir}
       className={cn(
         "bg-background group/calendar p-3 [--cell-size:--spacing(8)] [[data-slot=card-content]_&]:bg-transparent [[data-slot=popover-content]_&]:bg-transparent",
-        String.raw`rtl:**:[.rdp-button\_next>svg]:rotate-180`,
-        String.raw`rtl:**:[.rdp-button\_previous>svg]:rotate-180`,
+        dir === "rtl" && String.raw`**:[.rdp-button\_next>svg]:rotate-180`,
+        dir === "rtl" && String.raw`**:[.rdp-button\_previous>svg]:rotate-180`,
         className,
       )}
       captionLayout={captionLayout}
