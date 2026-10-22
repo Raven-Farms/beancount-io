@@ -146,3 +146,25 @@ export function isRequestIdReuse(error: unknown): boolean {
     message.toLowerCase().includes("requestid was already used"),
   );
 }
+
+/**
+ * What a failed setup preview means for Review: `refused` when the server read
+ * the setup and said what is wrong with it (its own words are the answer), else
+ * `unreachable`, a transport or server failure whose raw text ("Network request
+ * failed", "Received status code 502") is English and says nothing the person
+ * can use (w21/478).
+ */
+export function previewFailureKind(error: unknown): "refused" | "unreachable" {
+  const codes = (
+    (
+      error as {
+        graphQLErrors?: Array<{ extensions?: { code?: unknown } }>;
+      } | null
+    )?.graphQLErrors ?? []
+  ).map((entry) => String(entry.extensions?.code ?? ""));
+  return codes.some(
+    (code) => code === "BAD_USER_INPUT" || code === "VALIDATION_FAILED",
+  )
+    ? "refused"
+    : "unreachable";
+}

@@ -55,6 +55,7 @@ import {
 import { useLedgerDirectory } from "@/common/ledger-directory/ledger-directory-provider";
 import { ledgerVar } from "@/common/vars";
 import { LEADING_TEXT_ALIGN, leadingInputTextAlign } from "@/common/rtl";
+import { CardLoadFailure } from "@/components/card-load-failure";
 import type { ColorTheme } from "@/types/theme-props";
 import {
   classifyCreateLedgerError,
@@ -62,6 +63,7 @@ import {
   generateDefaultLedgerName,
   isNewCreateRequest,
   isRequestIdReuse,
+  previewFailureKind,
   slugifyLedgerName,
   ledgerSlugPreview,
 } from "./ledger-name";
@@ -387,6 +389,14 @@ export function CreateLedgerScreen(): JSX.Element {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [step, startKind]);
 
+  // Create waits for the preview: without it the accounts to be made are not
+  // known, and a refused setup would be refused again (w21/478).
+  const previewBlocked = startKind === "preset" && Boolean(previewError);
+  const retryPreview = () => {
+    const setup = buildSetup(getValues());
+    if (setup) void runPreview({ variables: { setup } });
+  };
+
   const nameValue = watch("name");
   const openingAccountValue = watch("openingAccount");
   // A card or loan balance is asked as what is owed; the server stores it as
@@ -498,7 +508,7 @@ export function CreateLedgerScreen(): JSX.Element {
                   void onSubmit();
                 }
               }}
-              disabled={busy}
+              disabled={busy || (step === 2 && previewBlocked)}
               accessibilityRole="button"
               accessibilityLabel={
                 step < 2 ? t("createLedgerNext") : t("createLedgerSubmit")
@@ -829,7 +839,11 @@ export function CreateLedgerScreen(): JSX.Element {
                 previewLoading ? (
                   <ActivityIndicator color={theme.primary} />
                 ) : previewError ? (
-                  <Text style={styles.error}>{previewError.message}</Text>
+                  previewFailureKind(previewError) === "refused" ? (
+                    <Text style={styles.error}>{previewError.message}</Text>
+                  ) : (
+                    <CardLoadFailure onRetry={retryPreview} />
+                  )
                 ) : previewData?.previewLedgerSetup ? (
                   <>
                     <Text style={styles.label}>
