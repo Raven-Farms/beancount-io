@@ -98,6 +98,22 @@ describe("buildBudgetEntry", () => {
       ).toBe("500");
     });
 
+    // w21/302: a negative amount reads as an income target, so an Expenses cap
+    // typed "-500" showed always red and "0% used".
+    it("stores a spending cap positive whatever sign was typed", () => {
+      const expense = { ...base, incomeRoot: "Income" };
+      for (const typed of ["-500", "+500", "500"]) {
+        const number = buildBudgetEntry({ ...expense, number: typed }).budget
+          ?.amount.number;
+        expect(number).toBe("500");
+        expect(budgetDirection(Number(number))).toBe(1);
+      }
+      expect(
+        buildBudgetEntry({ ...expense, number: "-1234.50" }).budget?.amount
+          .number,
+      ).toBe("1234.50");
+    });
+
     it("leaves expense budgets, and any budget without a known root, as typed", () => {
       expect(
         buildBudgetEntry({ ...base, incomeRoot: "Income" }).budget?.amount

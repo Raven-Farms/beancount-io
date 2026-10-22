@@ -13,7 +13,8 @@ export type BudgetEntryInput = {
    * Amount as typed. Kept a string all the way to the server so the ledger
    * records exactly what the user entered, and because a negative amount is
    * meaningful: it declares an income target rather than a spending cap. The
-   * one change is the sign of an income target (see `incomeRoot`).
+   * one change is the sign: an income target is stored negative and any other
+   * budget positive (see `incomeRoot`).
    */
   number: string;
   currency: string;
@@ -22,6 +23,10 @@ export type BudgetEntryInput = {
    * The ledger's income root (`name_income`). A budget on an account under it
    * is an income target and is stored negative whatever sign was typed, so the
    * user does not have to know the convention for its status to read right.
+   * Any other account's budget is stored positive whatever sign was typed: a
+   * negative amount reads as an income target, so an Expenses cap typed "-500"
+   * showed always red and "0% used" (w21/302). Unknown (the ledger's roots not
+   * loaded) leaves the text as typed.
    */
   incomeRoot?: string;
 };
@@ -51,6 +56,11 @@ function asIncomeTarget(amount: string): string {
   return Number(unsigned) === 0 ? unsigned : `-${unsigned}`;
 }
 
+/** A spending cap typed with a sign: stored as the positive amount. */
+function asSpendingCap(amount: string): string {
+  return amount.replace(/^[+-]/u, "");
+}
+
 /**
  * Build the single schema input that writes a Beancount `custom "budget"`
  * directive. There is no update mutation: revising a budget means adding a
@@ -73,9 +83,11 @@ export function buildBudgetEntry({
       interval: interval.toUpperCase() as BudgetInterval,
       date: getFormatDate(date),
       amount: {
-        number: isIncomeAccount(trimmedAccount, incomeRoot)
-          ? asIncomeTarget(amount)
-          : amount,
+        number: !incomeRoot
+          ? amount
+          : isIncomeAccount(trimmedAccount, incomeRoot)
+            ? asIncomeTarget(amount)
+            : asSpendingCap(amount),
         currency: currency.trim().toUpperCase(),
       },
     },
