@@ -1,4 +1,7 @@
-import { isConflictError } from "../../common/ledger-conflict";
+import {
+  isConflictError,
+  isConflictFailure,
+} from "../../common/ledger-conflict";
 import { isEntryGone } from "../transaction-detail-screen/selectors/select-entry-gone";
 import {
   ledgerWriteFailureMessage,
@@ -41,9 +44,10 @@ export function selectOutcomeFailure(
   if (isEntryGone(outcome.error)) return { kind: "conflict" };
   // A stale checksum is read from the server's own text; what is shown is
   // the user's language, never transport text (w21/117).
-  const raw = outcome.error instanceof Error ? outcome.error.message : "";
-  if (isConflictError(raw)) return { kind: "conflict" };
-  return selectSaveFailure(
-    ledgerWriteFailureMessage(outcome.error, i18n, context) ?? outcome.message,
-  );
+  if (isConflictFailure(outcome.error)) return { kind: "conflict" };
+  // The app's own words for a refusal are never read again for "conflict":
+  // they name accounts and amounts (w21/387).
+  const shown = ledgerWriteFailureMessage(outcome.error, i18n, context);
+  if (shown !== null) return { kind: "rejected", message: shown };
+  return selectSaveFailure(outcome.message);
 }

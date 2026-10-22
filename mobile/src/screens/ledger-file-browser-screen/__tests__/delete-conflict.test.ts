@@ -42,4 +42,31 @@ describe("deleting a file that changed elsewhere", () => {
     ).toBe(true);
     expect(src.includes('t("ledgerDeleteFileChanged")')).toBe(true);
   });
+
+  // w21/387: a refusal the server explained is never a conflict, whatever its
+  // text names.
+  it("is not a refusal about an account named Shares", () => {
+    const refusal = Object.assign(
+      new Error(
+        "Validation failed: Balance failed for Assets:Brokerage:Shares conflict",
+      ),
+      {
+        graphQLErrors: [
+          {
+            message: "x",
+            extensions: {
+              code: "VALIDATION_FAILED",
+              newLedgerErrors: "Balance failed for Assets:Brokerage:Shares",
+            },
+          },
+        ],
+      },
+    );
+    expect(isConflictFailure(refusal)).toBe(false);
+    expect(
+      isConflictFailure(
+        new Error("Balance failed for Assets:Brokerage:Shares"),
+      ),
+    ).toBe(false);
+  });
 });

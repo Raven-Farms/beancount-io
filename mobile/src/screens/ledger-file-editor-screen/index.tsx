@@ -76,7 +76,7 @@ import {
   markRevisionsSaved,
   resetRevisionTracker,
 } from "@/components/code-editor/revision-tracker";
-import { isConflictError } from "@/common/ledger-conflict";
+import { isConflictFailure } from "@/common/ledger-conflict";
 import { firstNewLedgerError } from "@/common/new-ledger-error";
 import { filterFileErrors, readOnlyNoticeColors } from "./utils";
 import { selectLedgerFileEditorState } from "./select-editor-state";
@@ -737,7 +737,7 @@ function LedgerFileEditorSession({
         // Signed out mid-save: Welcome says why (w21/119).
         if (isAuthTeardownError(err)) return false;
         haptics.error();
-        if (isConflictError(err instanceof Error ? err.message : "")) {
+        if (isConflictFailure(err)) {
           Alert.alert(
             t("ledgerEditorConflictTitle"),
             t("ledgerEditorConflictMessage"),

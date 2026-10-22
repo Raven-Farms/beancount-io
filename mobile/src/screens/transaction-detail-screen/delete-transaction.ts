@@ -2,7 +2,7 @@ import type {
   LedgerWriteOutcome,
   LedgerWriteSpec,
 } from "../../common/ledger-write";
-import { isConflictError } from "../../common/ledger-conflict";
+import { isConflictFailure } from "../../common/ledger-conflict";
 import { isEntryGone } from "./selectors/select-entry-gone";
 
 export type DeleteTransactionDeps = {
@@ -44,9 +44,7 @@ export type StaleDelete = "gone" | "conflict";
 export function classifyStaleDelete(error: unknown): StaleDelete | null {
   if (isEntryGone(error)) return "gone";
   // The server's text is read to detect a stale checksum, never shown.
-  return isConflictError(error instanceof Error ? error.message : "")
-    ? "conflict"
-    : null;
+  return isConflictFailure(error) ? "conflict" : null;
 }
 
 /**

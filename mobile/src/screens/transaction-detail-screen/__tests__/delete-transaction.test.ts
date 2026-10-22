@@ -298,3 +298,47 @@ describe("the transaction detail's menu button", () => {
     expect(en.transactionActions === en.details).toBe(false);
   });
 });
+
+// w21/387: a refused delete whose text happened to contain "sha", "409" or
+// "conflict" was reported as "changed elsewhere".
+describe("a refused delete that names Shares", () => {
+  const detail =
+    "Balance failed for Assets:Brokerage:Shares: expected 409.00 USD, got 73.25 USD (main.bean:1409)";
+  const shares = Object.assign(
+    new Error(`Validation failed for entry: ${detail}`),
+    {
+      graphQLErrors: [
+        {
+          message: "Validation failed",
+          extensions: {
+            code: "VALIDATION_FAILED",
+            field: "entry",
+            newLedgerErrors: detail,
+          },
+        },
+      ],
+    },
+  );
+
+  it("is not classified as stale", () => {
+    expect(classifyStaleDelete(shares)).toBe(null);
+    expect(classifyStaleDelete(new Error(detail))).toBe(null);
+  });
+
+  it("shows the refusal reason, not the changed-elsewhere dialog", async () => {
+    const { run, record } = harness(
+      async () => {
+        throw shares;
+      },
+      { withStale: true },
+    );
+    expect(await run).toBe(false);
+    expect(record.stale).toEqual([]);
+    expect(record.dialogs).toEqual([
+      {
+        title: "Failed to delete transaction",
+        message: `This would add an error to your ledger: ${detail}`,
+      },
+    ]);
+  });
+});

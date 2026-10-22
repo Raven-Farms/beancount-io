@@ -245,6 +245,26 @@ test("isConflictError: case-insensitive SHA detection", () => {
     throw new Error("should detect 'SHA' case-insensitively");
 });
 
+// w21/387: a substring test read an account named Shares, an amount of 409.00
+// and a line main.bean:1409 as a conflict.
+test("isConflictError: does not read words that merely contain sha or 409", () => {
+  for (const text of [
+    "Balance failed for Assets:Brokerage:Shares: expected 409.00 USD (main.bean:1409)",
+    "Posting to inactive account Expenses:Marshal",
+    "rushed 4090 times",
+  ]) {
+    if (isConflictError(text)) throw new Error(`flagged: ${text}`);
+  }
+  for (const text of [
+    "sha256sum mismatch: the entry changed",
+    "sha does not match [given: a, expected: b]",
+    "HTTP 409 Conflict",
+    "status code 409",
+  ]) {
+    if (!isConflictError(text)) throw new Error(`missed: ${text}`);
+  }
+});
+
 test("isConflictError: returns false for unrelated errors", () => {
   if (isConflictError("Network request failed"))
     throw new Error("unrelated error should not be flagged as conflict");
