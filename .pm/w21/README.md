@@ -74,4 +74,9 @@
 - [488](./488.md) — Invite Friends read twice by VoiceOver; summary never spoken
 - [489](./489.md) — Guest journal link drops its filters (344/345 gap)
 - [490](./490.md) — Guest links to Accounts/Files still hit sign-in (345 follow-up)
+- [491](./491.md) — Regression (420): account chart runs past today; future entry moves 1M
+- [492](./492.md) — Regression (423): Reports shows $0.00 · 0% net-zero category again
+- [493](./493.md) — Regression (418): 'No spending yet' above a Not in total note
+- [494](./494.md) — Regression (418): Spending caption drops refund sign
+- [495](./495.md) — 427 getLedgerFile guard never fires; AGENTS.md dangling ref (413)
 - [315](./blocked/315.md) — In-app commits signed with Gitea username and real email (no full_name, no noreply) — **blocked:** needs the owner's noreply-address and published-history decisions, and a production backfill of existing Gitea users that can't be verified here
