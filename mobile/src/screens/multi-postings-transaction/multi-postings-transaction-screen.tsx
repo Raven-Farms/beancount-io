@@ -57,6 +57,7 @@ import {
   addPosting,
   buildEntryInput,
   createInitialPostings,
+  createRootForPosting,
   createPrefilledPostings,
   defaultPostingAccounts,
   formatRemainderAmount,
@@ -677,6 +678,8 @@ const MultiPostingsTransactionScreenComponent = () => {
       current: postings[index]?.account,
       // A new account opens by this entry's date, not today (w21/008).
       entryDate: date,
+      // A new account starts under the root this row calls for (w21/259).
+      createRoot: createRootForPosting(postings, index),
       onSelect: (account) =>
         setPostings((prev) => updatePostingAccount(prev, index, account)),
     });

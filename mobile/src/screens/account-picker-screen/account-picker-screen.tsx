@@ -40,7 +40,7 @@ import { ColorTheme } from "@/types/theme-props";
 import { useRouter } from "expo-router";
 import { SelectedAccount } from "@/common/globalFnFactory";
 import { pushOpenAccount } from "@/screens/open-account-screen/push-open-account";
-import { accountOrderFor } from "./push-account-picker";
+import { accountOrderFor, parseCreateRoot } from "./push-account-picker";
 import {
   SCROLL_RETRY_DELAY_MS,
   SCROLL_SETTLE_MS,
@@ -261,10 +261,11 @@ function AccountPickerScreenComponent(): JSX.Element {
   const router = useRouter();
   const guest = useGuest();
   const ledgerId = useLedgerGuard();
-  const { type, selectedItem, entryDate } = useRouteParams<{
+  const { type, selectedItem, entryDate, createRoot } = useRouteParams<{
     type: string;
     selectedItem?: string;
     entryDate?: string;
+    createRoot?: string;
   }>();
   const { t, locale } = useTranslations();
   const theme = useTheme().colorTheme;
@@ -496,7 +497,9 @@ function AccountPickerScreenComponent(): JSX.Element {
       prefill: capitalizeAccountPrefill(trimmedQuery),
       // Destination pickers are choosing where money went, so suggest the
       // Expenses root for a rootless query; source pickers suggest Assets.
-      prefillRoot: accountOrderFor(type) === "to" ? "Expenses" : "Assets",
+      prefillRoot:
+        parseCreateRoot(createRoot) ??
+        (accountOrderFor(type) === "to" ? "Expenses" : "Assets"),
       openDate: entryDate,
       onCreated: (account) => {
         confirmSelection(account, Date.now());

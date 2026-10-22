@@ -2,6 +2,7 @@ import {
   addPosting,
   buildEntryInput,
   createInitialPostings,
+  createRootForPosting,
   createPrefilledPostings,
   defaultPostingAccounts,
   formatExactAmount,
@@ -846,5 +847,31 @@ describe("an amount pasted with surrounding spaces", () => {
         "consttyped=posting.amountInput.trim();constisNegative=typed.startsWith",
       ),
     ).toBe(true);
+  });
+});
+
+// w21/259: Create from any row's picker prefilled the Assets root, even on the
+// expense row.
+describe("createRootForPosting", () => {
+  it("suggests Assets for a credit and Expenses for a debit", () => {
+    const postings = createInitialPostings("Assets:Cash", "Expenses:Food");
+    const typed = updatePostingAmount(postings, 0, "-12.50");
+    expect(createRootForPosting(typed, 0)).toBe("Assets");
+    expect(createRootForPosting(typed, 1)).toBe("Expenses");
+  });
+
+  it("follows the row's place while it has no amount", () => {
+    const postings = createInitialPostings("Assets:Cash", "Expenses:Food");
+    expect(createRootForPosting(postings, 0)).toBe("Assets");
+    expect(createRootForPosting(postings, 1)).toBe("Expenses");
+    const split = addPosting(postings);
+    expect(createRootForPosting(split, 2)).toBe("Expenses");
+  });
+
+  it("follows the sign when the first row is the debit", () => {
+    const postings = createInitialPostings("Assets:Cash", "Expenses:Food");
+    const refund = updatePostingAmount(postings, 0, "20.00");
+    expect(createRootForPosting(refund, 0)).toBe("Expenses");
+    expect(createRootForPosting(refund, 1)).toBe("Assets");
   });
 });

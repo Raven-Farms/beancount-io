@@ -35,9 +35,22 @@ interface PushAccountPickerOptions {
    * the pick is a new account, so it opens by then (w21/008).
    */
   entryDate?: string;
+  /**
+   * The root a new account created from this picker starts under, when the
+   * caller knows better than the picker's type: every New Transaction row is a
+   * `posting` picker, so the expense row suggested `Assets:` (w21/259).
+   */
+  createRoot?: CreateRoot;
   /** Receives the pick. Registered here so it cannot be registered wrongly. */
   onSelect: (account: string) => void;
 }
+
+/** The roots a picker can suggest for Create. */
+export type CreateRoot = "Assets" | "Expenses";
+
+/** A route param that names a suggestion, else null. */
+export const parseCreateRoot = (value?: string): CreateRoot | null =>
+  value === "Assets" || value === "Expenses" ? value : null;
 
 /**
  * Open the account picker and register who receives the pick.
@@ -61,6 +74,7 @@ export const pushAccountPicker = (
     onSelect,
     preview = false,
     entryDate,
+    createRoot,
   }: PushAccountPickerOptions,
 ): void => {
   SelectedAccount.setFn(onSelect);
@@ -70,6 +84,7 @@ export const pushAccountPicker = (
       type,
       selectedItem: current,
       ...(entryDate ? { entryDate } : {}),
+      ...(createRoot ? { createRoot } : {}),
     },
   });
 };

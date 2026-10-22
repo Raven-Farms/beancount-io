@@ -544,3 +544,22 @@ export function shouldReseed(
 ): boolean {
   return samePostings(current, lastSeed) && !samePostings(nextSeed, lastSeed);
 }
+
+/**
+ * The root a new account created from posting `index`'s picker should start
+ * under. Every row of New Transaction is a `posting` picker, which suggested
+ * `Assets:` even on the expense row, so one tap on Done booked "groceries" to
+ * `Assets:Groceries` (w21/259). A debit (positive amount) is where money went:
+ * Expenses. A credit is where it came from: Assets. A row with no amount yet
+ * follows its place: the first row is the source, the others the destination.
+ */
+export function createRootForPosting(
+  postings: readonly Posting[],
+  index: number,
+): "Assets" | "Expenses" {
+  const amount = postings[index]?.amount;
+  if (amount != null && !isZeroExact(amount)) {
+    return amount.startsWith("-") ? "Assets" : "Expenses";
+  }
+  return index === 0 ? "Assets" : "Expenses";
+}
