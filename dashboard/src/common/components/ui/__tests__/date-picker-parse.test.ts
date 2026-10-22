@@ -165,6 +165,20 @@ describe("parseStrictCalendarDate", () => {
 });
 
 describe("rollingCalendarBounds", () => {
+  // A ledger year is 0001–9999: no year 0, negative or five-digit choice
+  // reaches the calendar's dropdown (w4/326).
+  it.each([
+    ["0001-01-01", "0001-01-01", "0101-12-31"],
+    ["0050-06-15", "0001-01-01", "0150-12-31"],
+    ["9999-12-31", "9899-01-01", "9999-12-31"],
+  ])("keeps the years around %s inside 0001–9999", (anchor, start, end) => {
+    const { startMonth, endMonth } = rollingCalendarBounds(
+      isoDateToCalendar(anchor),
+    );
+    expect(calendarToIsoDate(startMonth)).toBe(start);
+    expect(calendarToIsoDate(endMonth)).toBe(end);
+  });
+
   it("spans 100 years before and after the anchor year", () => {
     const { startMonth, endMonth } = rollingCalendarBounds(
       isoDateToCalendar("2026-12-01"),

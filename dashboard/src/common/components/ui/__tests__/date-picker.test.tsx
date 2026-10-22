@@ -108,6 +108,46 @@ describe("DatePicker typing contract", () => {
 });
 
 describe("DatePicker calendar year range", () => {
+  // Year 0 rendered as a second "0001" whose February 29 crashed the form;
+  // the dropdown now holds only real ledger years (w4/326).
+  it("offers year 0001 once, and a February 0001 without the 29th", async () => {
+    const user = userEvent.setup();
+    const onValue = vi.fn();
+    render(<ControlledDatePicker initial={"0001-01-01"} onValue={onValue} />);
+    await user.click(screen.getByRole("button", { name: "Select date" }));
+
+    const years = screen.getByRole("combobox", { name: "Choose the Year" });
+    const labels = [...years.querySelectorAll("option")].map(
+      (option) => option.textContent,
+    );
+    expect(labels[0]).toBe("0001");
+    expect(labels.filter((label) => label === "0001")).toHaveLength(1);
+    expect(labels.at(-1)).toBe("0101");
+
+    await user.selectOptions(
+      screen.getByRole("combobox", { name: "Choose the Month" }),
+      "1",
+    );
+    // Day buttons are named by their full date; January's outside days
+    // also show in February's grid.
+    expect(screen.queryByRole("button", { name: /February 29/ })).toBeNull();
+    await user.click(screen.getByRole("button", { name: /February 28/ }));
+    expect(onValue).toHaveBeenLastCalledWith("0001-02-28");
+    expect(screen.getByRole("textbox")).toHaveValue("02/28/0001");
+  });
+
+  it("offers no year past 9999", async () => {
+    const user = userEvent.setup();
+    render(<ControlledDatePicker initial={"9999-12-31"} onValue={vi.fn()} />);
+    await user.click(screen.getByRole("button", { name: "Select date" }));
+    const years = screen.getByRole("combobox", { name: "Choose the Year" });
+    const labels = [...years.querySelectorAll("option")].map(
+      (option) => option.textContent,
+    );
+    expect(labels.at(-1)).toBe("9999");
+    expect(labels[0]).toBe("9899");
+  });
+
   it("opens on a next-year value with that month selected", async () => {
     const user = userEvent.setup();
     const onValue = vi.fn();

@@ -9,6 +9,12 @@ const FALLBACK_PATTERN = "MM/dd/yyyy";
 
 /** Years before/after the displayed month for DayPicker dropdown navigation. */
 const DROPDOWN_YEAR_SPAN = 100;
+/**
+ * A ledger date has a positive four-digit year. The calendar must not offer
+ * year 0 (shown as a second "0001"), negative years or 10000+ (w4/326).
+ */
+const MIN_CALENDAR_YEAR = 1;
+const MAX_CALENDAR_YEAR = 9999;
 
 /**
  * A Date whose calendar fields read and write UTC. Parsing and formatting a
@@ -136,8 +142,16 @@ export function rollingCalendarBounds(anchor: Date): {
 } {
   const year = anchor.getFullYear();
   return {
-    startMonth: civilDay(year - DROPDOWN_YEAR_SPAN, 0, 1),
-    endMonth: civilDay(year + DROPDOWN_YEAR_SPAN, 11, 31),
+    startMonth: civilDay(
+      Math.max(year - DROPDOWN_YEAR_SPAN, MIN_CALENDAR_YEAR),
+      0,
+      1,
+    ),
+    endMonth: civilDay(
+      Math.min(year + DROPDOWN_YEAR_SPAN, MAX_CALENDAR_YEAR),
+      11,
+      31,
+    ),
   };
 }
 

@@ -74,7 +74,10 @@ export function DatePicker({
     formatIsoDate(value, displayPattern),
   );
   const showMonthOf = (day: string | undefined) => {
-    if (day) setMonth(isoDateToCalendar(day));
+    if (!day) return;
+    const shown = isoDateToCalendar(day);
+    // An unparseable day must not become the calendar's month (w4/326).
+    if (!Number.isNaN(shown.getTime())) setMonth(shown);
   };
   // Keep the typed draft while the parent echoes an invalid/empty value.
   const [isEditing, setIsEditing] = React.useState(false);
