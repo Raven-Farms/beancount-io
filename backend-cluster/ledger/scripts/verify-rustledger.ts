@@ -39,6 +39,7 @@ import {
 } from "@/features/ledger/service/ledger-shell-mappers";
 import { stripBqlBlockComments } from "@/features/ledger/service/bql-comments";
 import { UNDECODABLE_SOURCE } from "@/foundation/rustledger/file-map-loader";
+import { filterDirectives } from "@/foundation/rustledger/directive-filter";
 import { formatCellValue } from "@/foundation/rustledger/mappers";
 import { LedgerDataService } from "@/features/ledger/service/ledger-data-service";
 import { LedgerFinanceService } from "@/features/ledger/service/ledger-finance-service";
@@ -1862,6 +1863,31 @@ async function main(): Promise<void> {
     windowSum.errors.length === 0 && windowSum.rows.length > 0,
     "the windowed sum the lot-error hint names runs",
   );
+
+  // w21/655: the engine still drops a note's tags and links and pushtag on
+  // notes and documents; the parse restores them, so the filters see them.
+  const noteSnapshot = await parseLedgerFiles(
+    {
+      "main.bean": `2024-01-01 open Assets:Cash
+pushtag #trip
+2024-02-01 note Assets:Cash "dispute filed" #dispute ^case-42
+2024-02-02 document Assets:Cash "r.pdf"
+poptag #trip
+2024-02-03 note Assets:Cash "after"
+`,
+      "r.pdf": "",
+    },
+    "main.bean",
+    { repoPaths: ["main.bean", "r.pdf"] },
+  );
+  const tagged = (filter: string) =>
+    filterDirectives(noteSnapshot.directives, { filter }).map(
+      (directive) => directive.date,
+    );
+  deepStrictEqual(tagged("#dispute"), ["2024-02-01"]);
+  deepStrictEqual(tagged("^case-42"), ["2024-02-01"]);
+  deepStrictEqual(tagged("#trip"), ["2024-02-01", "2024-02-02"]);
+  console.log("✓ a note's tags and links, and pushed tags, reach the filters");
 
   // w21/656: the engine still ignores raw mode, so the parse undoes its pad
   // and balance steps, and BQL (over the materialized stream) follows.

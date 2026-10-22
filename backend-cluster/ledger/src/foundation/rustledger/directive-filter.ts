@@ -1,6 +1,7 @@
 import BigNumber from "bignumber.js";
 import type { DirectiveJson, PostingJson } from "@rustledger/wasm";
 import { getRustledgerWorkerPool } from "./rustledger-worker-pool";
+import type { SourceSyntax } from "./source-slice";
 import { utcDate } from "./utc-date";
 
 /**
@@ -582,8 +583,8 @@ function tagPredicate(tag: string): EntryPredicate {
     if (target.kind !== "directive") return false;
     const directive = target.directive;
     if (directive.type === "transaction") return directive.tags.includes(tag);
-    if (directive.type === "document") {
-      return (directive.tags ?? []).includes(tag);
+    if (directive.type === "document" || directive.type === "note") {
+      return ((directive as SourceSyntax).tags ?? []).includes(tag);
     }
     return false;
   };
@@ -594,8 +595,8 @@ function linkPredicate(link: string): EntryPredicate {
     if (target.kind !== "directive") return false;
     const directive = target.directive;
     if (directive.type === "transaction") return directive.links.includes(link);
-    if (directive.type === "document") {
-      return (directive.links ?? []).includes(link);
+    if (directive.type === "document" || directive.type === "note") {
+      return ((directive as SourceSyntax).links ?? []).includes(link);
     }
     return false;
   };

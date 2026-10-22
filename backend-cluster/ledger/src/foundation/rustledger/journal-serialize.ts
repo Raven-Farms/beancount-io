@@ -30,7 +30,7 @@ import {
 } from "@/foundation/ledger-api-types";
 import BigNumber from "bignumber.js";
 import { hashEntry } from "./entry-hash";
-import { endsInsideString } from "./source-slice";
+import { endsInsideString, type SourceSyntax } from "./source-slice";
 import { perUnitFromTotalCostString } from "./total-cost";
 
 /**
@@ -791,7 +791,8 @@ export function directiveToText(
         renderMetadata(directive.meta, INDENT, options);
       break;
     case "note": {
-      const suffix = tagsLinksSuffix([], []);
+      const { tags = [], links = [] } = directive as SourceSyntax;
+      const suffix = tagsLinksSuffix(tags, links);
       raw =
         `${directive.date} note ${directive.account} "${escapeString(
           directive.comment,

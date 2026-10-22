@@ -291,6 +291,42 @@ describe("single-parse source details probe", () => {
   });
 });
 
+// w21/655: Beancount gives a note its inline tags and links and gives a note or
+// document the tags `pushtag` holds; rustledger's JSON carries none of them.
+describe("source probe syntax for notes and pushed tags", () => {
+  it("recovers a note's tags and links, and pushed tags until poptag", () => {
+    const source = [
+      "2024-01-01 open Assets:Cash",
+      "pushtag #trip",
+      '2024-02-01 note Assets:Cash "dispute filed" #dispute ^case-42 ; #not-a-tag',
+      '2024-02-02 document Assets:Cash "r.pdf"',
+      '2024-02-03 * "coffee"',
+      "  Assets:Cash -1 USD",
+      "  Expenses:Food",
+      "poptag #trip",
+      '2024-02-04 note Assets:Cash "after"',
+      "",
+    ].join("\n");
+    const probe = buildSourceDetailsProbe({ "main.bean": source });
+    const byLine = new Map(
+      [...probe.detailsByMarker.values()].map((detail) => [
+        detail.lineno,
+        detail,
+      ]),
+    );
+
+    expect(byLine.get(3)).toMatchObject({
+      syntaxTags: ["dispute", "trip"],
+      syntaxLinks: ["case-42"],
+    });
+    expect(byLine.get(4)).toMatchObject({ syntaxTags: ["trip"] });
+    expect(byLine.get(4)?.syntaxLinks).toBeUndefined();
+    // A transaction's pushed tags are the engine's; the probe adds none.
+    expect(byLine.get(5)?.syntaxTags).toBeUndefined();
+    expect(byLine.get(9)?.syntaxTags).toBeUndefined();
+  });
+});
+
 describe("findEntrySlice — Fava parity", () => {
   it("locates each entry's slice + sha256 byte-for-byte", () => {
     for (const entry of data.entries) {
@@ -399,8 +435,8 @@ describe("buildEntrySourceLocationMap", () => {
     expect(details.get(hashEntry(document))).toEqual({
       filename: "main.bean",
       lineno: 1,
-      documentTags: ["receipt", "tax"],
-      documentLinks: ["paper", "scan"],
+      syntaxTags: ["receipt", "tax"],
+      syntaxLinks: ["paper", "scan"],
     });
   });
 
@@ -423,7 +459,7 @@ describe("buildEntrySourceLocationMap", () => {
         parsedBlocks.push(block);
         return block === documentBlock ? [document] : [];
       },
-      { documentsOnly: true },
+      { syntaxOnly: true },
     );
 
     expect(parsedBlocks).toEqual([documentBlock]);
@@ -431,7 +467,7 @@ describe("buildEntrySourceLocationMap", () => {
       {
         filename: "main.bean",
         lineno: 2,
-        documentTags: ["receipt"],
+        syntaxTags: ["receipt"],
       },
     ]);
   });

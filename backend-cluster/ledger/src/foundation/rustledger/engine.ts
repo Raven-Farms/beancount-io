@@ -57,6 +57,7 @@ import {
   buildSourceDetailsProbe,
   sourceDetailsFromProbe,
   type EntrySourceDetails,
+  type SourceSyntax,
 } from "./source-slice";
 import { getRustledgerWorkerPool } from "./rustledger-worker-pool";
 
@@ -380,23 +381,27 @@ async function transformedValidationErrors(
     .map((error) => remapMaterializedError(error, materialized.sourceByLine));
 }
 
-function mergeSourceDocumentSyntax(
+/**
+ * Restore the tags and links rustledger leaves off a Document (inline ones,
+ * pushed tags) or a Note (all of them, w21/655) from the source.
+ */
+function mergeSourceSyntax(
   directives: DirectiveJson[],
   sourceDetails: ReadonlyMap<string, EntrySourceDetails>,
 ): DirectiveJson[] {
   return directives.map((directive) => {
-    if (directive.type !== "document") return directive;
+    if (directive.type !== "document" && directive.type !== "note") {
+      return directive;
+    }
     const sourceId = getDirectiveSourceId(directive);
     const detail =
       sourceId === undefined ? undefined : sourceDetails.get(sourceId);
+    const own = directive as SourceSyntax;
     const tags = [
-      ...new Set([...(directive.tags ?? []), ...(detail?.documentTags ?? [])]),
+      ...new Set([...(own.tags ?? []), ...(detail?.syntaxTags ?? [])]),
     ];
     const links = [
-      ...new Set([
-        ...(directive.links ?? []),
-        ...(detail?.documentLinks ?? []),
-      ]),
+      ...new Set([...(own.links ?? []), ...(detail?.syntaxLinks ?? [])]),
     ];
     if (tags.length === 0 && links.length === 0) return directive;
     const enriched: DirectiveJson = {
@@ -419,6 +424,22 @@ function sourceHasPad(files: FileMap): boolean {
   return Object.values(files).some((source) =>
     /^\d{4}-\d{2}-\d{2}\s+pad\s/mu.test(source),
   );
+}
+
+/**
+ * Whether a note may carry tags or links rustledger drops: a note line with a
+ * `#`/`^` token, or a note in a file that pushes tags (w21/655). Cheap and
+ * loose; a false positive only costs the source probe.
+ */
+function sourceHasNoteSyntax(files: FileMap): boolean {
+  return Object.values(files).some((source) => {
+    const notes = source.match(/^\d{4}-\d{2}-\d{2}\s+note\s.*$/gmu);
+    if (notes === null) return false;
+    return (
+      /^pushtag\s/mu.test(source) ||
+      notes.some((line) => /\s[#^][A-Za-z0-9\-_/.]+/u.test(line))
+    );
+  });
 }
 
 function sourceHasTaggedDocument(files: FileMap): boolean {
@@ -619,7 +640,8 @@ async function parseLedgerFilesUncached(
   if (
     options.includeSourceDetails === true ||
     hasHandledPlugin ||
-    directives.some((directive) => directive.type === "document")
+    directives.some((directive) => directive.type === "document") ||
+    sourceHasNoteSyntax(files)
   ) {
     const needsCompleteSourceIndex =
       options.includeSourceDetails === true || hasHandledPlugin;
@@ -633,14 +655,14 @@ async function parseLedgerFilesUncached(
       (ledger) => ledger.getDirectives(),
     );
     sourceDetails = sourceDetailsFromProbe(probedDirectives, sourceProbe, {
-      documentsOnly: !needsCompleteSourceIndex,
+      syntaxOnly: !needsCompleteSourceIndex,
     });
   }
   if (applyTs || sourceDetails !== undefined) {
     seedDirectiveSourceIds(directives, sourceDetails);
   }
   if (sourceDetails !== undefined) {
-    directives = mergeSourceDocumentSyntax(directives, sourceDetails);
+    directives = mergeSourceSyntax(directives, sourceDetails);
   }
 
   if (applyTs && stripResult) {

@@ -180,6 +180,23 @@ describe("filterDirectives — AdvancedFilter parity", () => {
     ]);
   });
 
+  // w21/655: rustledger's note has no tags or links; the parse restores them.
+  it("matches tags and links the parse restored on a note", () => {
+    const note = {
+      type: "note",
+      date: "2024-02-01",
+      account: "Assets:Cash",
+      comment: "dispute filed",
+      tags: ["dispute", "trip"],
+      links: ["case-42"],
+    } as DirectiveJson;
+
+    for (const filter of ["#dispute", "#trip", "^case-42"]) {
+      expect(filterDirectives([note], { filter })).toEqual([note]);
+    }
+    expect(filterDirectives([note], { filter: "#other" })).toEqual([]);
+  });
+
   it("does not expose Object prototype members as directive attributes", () => {
     expect(
       filterDirectives(DIRECTIVES, { filter: "constructor:native" }),

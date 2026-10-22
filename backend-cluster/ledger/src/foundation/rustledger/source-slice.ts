@@ -137,6 +137,22 @@ const DATE_PREFIX = /^\d{4}-\d{2}-\d{2}\b/;
 const PUSH_POP_TAG_RE = /^(pushtag|poptag)[^\S\r\n]+#(\S+)/;
 
 /**
+ * Apply a `pushtag`/`poptag` block to a file's tag stack. Returns whether the
+ * block was one. `poptag` removes one occurrence (beancount's `list.remove`).
+ */
+function applyTagStackOp(blockText: string, activeTags: string[]): boolean {
+  const tagOp = PUSH_POP_TAG_RE.exec(blockText);
+  if (!tagOp) return false;
+  if (tagOp[1] === "pushtag") {
+    activeTags.push(tagOp[2]);
+  } else {
+    const index = activeTags.indexOf(tagOp[2]);
+    if (index !== -1) activeTags.splice(index, 1);
+  }
+  return true;
+}
+
+/**
  * Hash a directive as beancount would under the file-level `pushtag` set active
  * at its source location. beancount applies the tag stack to TRANSACTIONS (the
  * pushed tags are unioned into the transaction's own tags), so a transaction that
@@ -202,21 +218,28 @@ export interface EntrySourceLocation {
 
 /** Source details recoverable from raw text but absent from DirectiveJson. */
 export interface EntrySourceDetails extends EntrySourceLocation {
-  /** Inline tags on a Document directive, when present in source. */
-  documentTags?: string[];
-  /** Inline links on a Document directive, when present in source. */
-  documentLinks?: string[];
+  /** A Document's or Note's tags, inline and pushed, when it has any. */
+  syntaxTags?: string[];
+  /** A Document's or Note's inline links, when present in source. */
+  syntaxLinks?: string[];
 }
 
 export interface EntrySourceDetailsOptions {
   /**
-   * Parse only Document blocks. This is sufficient for recovering syntax that
-   * rustledger omits and avoids reparsing every transaction in large ledgers.
-   * Callers that need filename/line provenance for arbitrary directives (for
-   * example `link_documents`) leave this disabled.
+   * Parse only Document and Note blocks. This is sufficient for recovering
+   * syntax that rustledger omits and avoids reparsing every transaction in
+   * large ledgers. Callers that need filename/line provenance for arbitrary
+   * directives (for example `link_documents`) leave this disabled.
    */
-  documentsOnly?: boolean;
+  syntaxOnly?: boolean;
 }
+
+/**
+ * The tags and links a Document or Note carries once the parse has restored
+ * them from source: rustledger's note has neither field, and its document
+ * lacks pushed tags (w21/655).
+ */
+export type SourceSyntax = { tags?: string[]; links?: string[] };
 
 /** Annotated parse input used to recover filename/line metadata in one parse. */
 export interface SourceDetailsProbe {
@@ -376,26 +399,18 @@ export function buildSourceDetailsProbe(
     // Keyed by the header's last physical line: the marker must follow the
     // whole header, never land inside a multiline string literal (w4/m34).
     const markerByLine = new Map<number, string>();
+    const activeTags: string[] = [];
     for (const block of splitIntoBlocks(source)) {
+      if (applyTagStackOp(block.text, activeTags)) continue;
       if (!block.isDated) continue;
       const marker = String(nextMarker);
       nextMarker += 1;
       markerByLine.set(block.headerEndLine, marker);
       const original = sourceBlocks.get(block.startLine) ?? block;
-      const documentSyntax = DOCUMENT_LINE_RE.test(
-        original.text.split("\n", 1)[0],
-      )
-        ? documentTagsAndLinks(original.text)
-        : undefined;
       detailsByMarker.set(marker, {
         filename: file,
         lineno: block.startLine + 1,
-        ...(documentSyntax?.tags.length
-          ? { documentTags: documentSyntax.tags }
-          : {}),
-        ...(documentSyntax?.links.length
-          ? { documentLinks: documentSyntax.links }
-          : {}),
+        ...sourceSyntaxDetails(original.text, activeTags),
       });
     }
 
@@ -423,7 +438,11 @@ export function sourceDetailsFromProbe(
   const entryIds = buildEntryIdMap(directives);
   const details = new Map<string, EntrySourceDetails>();
   for (const directive of directives) {
-    if (options.documentsOnly === true && directive.type !== "document") {
+    if (
+      options.syntaxOnly === true &&
+      directive.type !== "document" &&
+      directive.type !== "note"
+    ) {
       continue;
     }
     const marker = directive.meta?.[probe.markerKey];
@@ -583,17 +602,7 @@ export function findEntrySlice(
     // with fresh parser state, so pushed tags do NOT cross `include` boundaries).
     const activeTags: string[] = [];
     for (const block of blocks) {
-      const tagOp = PUSH_POP_TAG_RE.exec(block.text);
-      if (tagOp) {
-        if (tagOp[1] === "pushtag") {
-          activeTags.push(tagOp[2]);
-        } else {
-          // `poptag` removes one occurrence (beancount's `list.remove`).
-          const idx = activeTags.indexOf(tagOp[2]);
-          if (idx !== -1) activeTags.splice(idx, 1);
-        }
-        continue;
-      }
+      if (applyTagStackOp(block.text, activeTags)) continue;
       if (!block.isDated) continue;
       const directives = parseBlock(block.text);
       const matched = directives.some(
@@ -656,20 +665,11 @@ export function buildEntrySourceDetailsMap(
     const activeTags: string[] = [];
 
     for (const block of splitIntoBlocks(fileText)) {
-      const tagOp = PUSH_POP_TAG_RE.exec(block.text);
-      if (tagOp) {
-        if (tagOp[1] === "pushtag") {
-          activeTags.push(tagOp[2]);
-        } else {
-          const index = activeTags.indexOf(tagOp[2]);
-          if (index !== -1) activeTags.splice(index, 1);
-        }
-        continue;
-      }
+      if (applyTagStackOp(block.text, activeTags)) continue;
       if (!block.isDated) continue;
       if (
-        options.documentsOnly === true &&
-        !DOCUMENT_LINE_RE.test(block.text.split("\n", 1)[0])
+        options.syntaxOnly === true &&
+        syntaxSuffix(block.text) === undefined
       ) {
         continue;
       }
@@ -678,18 +678,11 @@ export function buildEntrySourceDetailsMap(
         const base = hashWithActiveTags(directive, activeTags);
         const occurrence = occurrences.get(base) ?? 0;
         occurrences.set(base, occurrence + 1);
-        const documentSyntax =
-          directive.type === "document"
-            ? documentTagsAndLinks(block.text)
-            : undefined;
         details.set(entryIdFor(base, occurrence), {
           filename: file,
           lineno: block.startLine + 1,
-          ...(documentSyntax?.tags.length
-            ? { documentTags: documentSyntax.tags }
-            : {}),
-          ...(documentSyntax?.links.length
-            ? { documentLinks: documentSyntax.links }
+          ...(directive.type === "document" || directive.type === "note"
+            ? sourceSyntaxDetails(block.text, activeTags)
             : {}),
         });
       }
@@ -699,27 +692,40 @@ export function buildEntrySourceDetailsMap(
   return details;
 }
 
-const DOCUMENT_LINE_RE =
-  /^\d{4}-\d{2}-\d{2}\s+document\s+\S+\s+"(?:\\.|[^"\\])*"(?<suffix>.*)$/u;
-const DOCUMENT_TAG_LINK_RE = /(?<sigil>[#^])(?<value>[A-Za-z0-9\-_/.]+)/gu;
+/** A Document or Note header line; `suffix` follows its quoted string. */
+const SYNTAX_LINE_RE =
+  /^\d{4}-\d{2}-\d{2}\s+(?:document|note)\s+\S+\s+"(?:\\.|[^"\\])*"(?<suffix>.*)$/u;
+const TAG_LINK_RE = /(?<sigil>[#^])(?<value>[A-Za-z0-9\-_/.]+)/gu;
 
-function documentTagsAndLinks(blockText: string): {
-  tags: string[];
-  links: string[];
-} {
-  const firstLine = blockText.split("\n", 1)[0];
-  const suffix = (DOCUMENT_LINE_RE.exec(firstLine)?.groups?.suffix ?? "").split(
-    ";",
-    1,
-  )[0];
+/** What follows a Document or Note's string, before any comment. */
+function syntaxSuffix(blockText: string): string | undefined {
+  const suffix = SYNTAX_LINE_RE.exec(blockText.split("\n", 1)[0])?.groups
+    ?.suffix;
+  return suffix?.split(";", 1)[0];
+}
+
+/**
+ * A Document or Note block's tags and links: Beancount gives both directives
+ * their inline ones plus the tags `pushtag` holds there (w21/655).
+ */
+function sourceSyntaxDetails(
+  blockText: string,
+  activeTags: readonly string[],
+): Pick<EntrySourceDetails, "syntaxTags" | "syntaxLinks"> {
+  const suffix = syntaxSuffix(blockText);
+  if (suffix === undefined) return {};
   const tags: string[] = [];
   const links: string[] = [];
-  for (const match of suffix.matchAll(DOCUMENT_TAG_LINK_RE)) {
+  for (const match of suffix.matchAll(TAG_LINK_RE)) {
     const target = match.groups?.sigil === "#" ? tags : links;
     const value = match.groups?.value;
     if (value !== undefined && !target.includes(value)) target.push(value);
   }
-  return { tags, links };
+  for (const tag of activeTags) if (!tags.includes(tag)) tags.push(tag);
+  return {
+    ...(tags.length > 0 ? { syntaxTags: tags } : {}),
+    ...(links.length > 0 ? { syntaxLinks: links } : {}),
+  };
 }
 
 /**
