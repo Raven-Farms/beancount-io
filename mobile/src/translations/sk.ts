@@ -749,6 +749,8 @@ export const sk: Translations = {
   createLedgerNameConflict: "Kniha s týmto názvom už existuje.",
   createLedgerNameReserved:
     "Tento názov patril premenovanej knihe a stále na ňu presmerúva. Vyberte iný názov.",
+  createLedgerSetupUnsupported:
+    "Tento server nepodporuje sprievodcu nastavením. Vráťte sa a vyberte Úvodná alebo Ukážka, aby ste vytvorili knihu s predvolenými hodnotami servera.",
   createLedgerCreated: "{{name}} vytvorený",
   createLedgerSlugPreview: "Vytvorí sa ako {{slug}}",
   createLedgerDescription: "Popis",

@@ -1,3 +1,5 @@
+import { isUnsupportedDocumentError } from "../../common/graphql-unsupported";
+
 /**
  * Slugify a ledger name to match GitHub-style repository naming.
  * Mirrors the dashboard helper and backend ledger name rules.
@@ -189,7 +191,12 @@ export function isRequestIdReuse(error: unknown): boolean {
  * failed", "Received status code 502") is English and says nothing the person
  * can use (w21/478).
  */
-export function previewFailureKind(error: unknown): "refused" | "unreachable" {
+export function previewFailureKind(
+  error: unknown,
+): "refused" | "unreachable" | "unsupported" {
+  // A server older than guided setup rejects the document: there is nothing to
+  // retry, and Starter and Sample still create (ADR021, w21/592).
+  if (isUnsupportedDocumentError(error)) return "unsupported";
   const codes = (
     (
       error as {

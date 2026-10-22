@@ -740,6 +740,8 @@ export const en = {
   createLedgerNameConflict: "A ledger with this name already exists.",
   createLedgerNameReserved:
     "That name belonged to a ledger that was renamed, and still redirects to it. Choose a different name.",
+  createLedgerSetupUnsupported:
+    "This server does not support guided setup. Go back and choose Starter or Sample to create a ledger with the server's defaults.",
   createLedgerCreated: "Created {{name}}",
   createLedgerSlugPreview: "Will be created as {{slug}}",
   createLedgerDescription: "Description",

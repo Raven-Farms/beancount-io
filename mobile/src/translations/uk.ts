@@ -743,6 +743,8 @@ export const uk: Translations = {
   createLedgerNameConflict: "Книга з такою назвою вже існує.",
   createLedgerNameReserved:
     "Ця назва належала перейменованій книзі й досі перенаправляє на неї. Виберіть іншу назву.",
+  createLedgerSetupUnsupported:
+    "Цей сервер не підтримує покрокове налаштування. Поверніться й виберіть «Стартова» або «Приклад», щоб створити книгу зі стандартними налаштуваннями сервера.",
   createLedgerCreated: "Створено {{name}}",
   createLedgerSlugPreview: "Буде створено як {{slug}}",
   createLedgerDescription: "Опис",

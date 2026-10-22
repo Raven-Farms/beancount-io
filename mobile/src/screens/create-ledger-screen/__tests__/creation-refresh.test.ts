@@ -5,7 +5,11 @@ import ts from "typescript";
 import * as names from "../ledger-name";
 
 // Run the real submission handler, replacing only UI/form hosts and its IO.
-function screen(refreshFails: boolean, here = true) {
+function screen(
+  refreshFails: boolean,
+  here = true,
+  older: { startKind?: string } | false = false,
+) {
   const events: string[] = [];
   let submit: () => Promise<void> = async () => {};
   const created = {
@@ -144,7 +148,28 @@ function screen(refreshFails: boolean, here = true) {
             ],
             useCreateLedgerMutation: () => [
               async () => {
+                if (older) {
+                  events.push("rejected");
+                  throw Object.assign(new Error("Unknown argument"), {
+                    graphQLErrors: [
+                      {
+                        message:
+                          'Unknown argument "setup" on field createLedger',
+                        extensions: { code: "GRAPHQL_VALIDATION_FAILED" },
+                      },
+                    ],
+                  });
+                }
                 events.push("created");
+                return { data: { createLedger: created } };
+              },
+              { loading: false },
+            ],
+            useCreateLedgerBasicMutation: () => [
+              async (options: { variables: Record<string, unknown> }) => {
+                events.push(
+                  `basic:${Object.keys(options.variables).sort().join(",")}`,
+                );
                 return { data: { createLedger: created } };
               },
               { loading: false },
@@ -164,6 +189,8 @@ function screen(refreshFails: boolean, here = true) {
               },
             }),
           };
+        if (id === "@/common/graphql-unsupported")
+          return require("../../../common/graphql-unsupported");
         if (id === "@/common/hooks/use-toast")
           return {
             useToast: () => ({ showToast: () => events.push("toast") }),
@@ -217,6 +244,21 @@ describe("ledger creation directory refresh", () => {
       "refresh-start",
       "refresh-settled",
       "toast",
+    ]);
+  });
+
+  // w21/592: a server older than guided setup rejects `setup` and `requestId`
+  // before anything runs. Starter and Sample still create without them.
+  it("creates a Starter ledger on a server that rejects the new arguments", async () => {
+    const { submit, events } = screen(false, true, {});
+    await submit();
+    expect(events).toEqual([
+      "rejected",
+      "basic:description,name,private",
+      "refresh-start",
+      "refresh-settled",
+      "select",
+      "navigate",
     ]);
   });
 });

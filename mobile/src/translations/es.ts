@@ -746,6 +746,8 @@ export const es: Translations = {
   createLedgerNameConflict: "Ya existe un libro con este nombre.",
   createLedgerNameReserved:
     "Ese nombre era de un libro renombrado y todavía redirige a él. Elige otro nombre.",
+  createLedgerSetupUnsupported:
+    "Este servidor no admite la configuración guiada. Vuelve y elige Inicial o Ejemplo para crear un libro con los valores predeterminados del servidor.",
   createLedgerCreated: "{{name}} creado",
   createLedgerSlugPreview: "Se creará como {{slug}}",
   createLedgerDescription: "Descripción",

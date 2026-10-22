@@ -747,6 +747,8 @@ export const fr: Translations = {
   createLedgerNameConflict: "Un grand livre portant ce nom existe déjà.",
   createLedgerNameReserved:
     "Ce nom appartenait à un registre renommé et y redirige encore. Choisissez un autre nom.",
+  createLedgerSetupUnsupported:
+    "Ce serveur ne prend pas en charge la configuration guidée. Revenez en arrière et choisissez Débutant ou Exemple pour créer un registre avec les valeurs par défaut du serveur.",
   createLedgerCreated: "{{name}} créé",
   createLedgerSlugPreview: "Sera créé sous le nom {{slug}}",
   createLedgerDescription: "Description du grand livre",

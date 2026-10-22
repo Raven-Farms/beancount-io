@@ -62,7 +62,7 @@ describe("Create Ledger's preview failure", () => {
   it("shows a translated failure with a retry, and the server's words only for a refusal", () => {
     expect(
       source.includes(
-        'previewFailureKind(previewError)==="refused"?(<InlineErrorstyle={styles.error}message={previewError.message}/>):(<><InlineErrorstyle={styles.error}message={t("ledgerLoadError")}/><PressableonPress={retryPreview}accessibilityRole="button"hitSlop={8}><Textstyle={styles.retry}>{t("discoveryRetry")}</Text></Pressable></>)',
+        'previewFailureKind(previewError)==="refused"?(<InlineErrorstyle={styles.error}message={previewError.message}/>):previewFailureKind(previewError)==="unsupported"?(<InlineErrorstyle={styles.error}message={t("createLedgerSetupUnsupported")}/>):(<><InlineErrorstyle={styles.error}message={t("ledgerLoadError")}/><PressableonPress={retryPreview}accessibilityRole="button"hitSlop={8}><Textstyle={styles.retry}>{t("discoveryRetry")}</Text></Pressable></>)',
       ),
     ).toBe(true);
     expect(

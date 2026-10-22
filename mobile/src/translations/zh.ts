@@ -664,6 +664,8 @@ export const zh: Translations = {
   createLedgerNameConflict: "已存在同名账本。",
   createLedgerNameReserved:
     "该名称曾属于一个已改名的账本，目前仍会跳转到它。请换一个名称。",
+  createLedgerSetupUnsupported:
+    "此服务器不支持引导式设置。请返回并选择“入门”或“示例”，以使用服务器默认设置创建账本。",
   createLedgerCreated: "已创建 {{name}}",
   createLedgerSlugPreview: "将创建为 {{slug}}",
   createLedgerDescription: "描述",

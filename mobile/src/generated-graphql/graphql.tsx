@@ -81,6 +81,16 @@ export type CreateLedgerMutationVariables = Exact<{
 
 export type CreateLedgerMutation = { createLedger: { id: string, name: string, fullName: string, description: string | null, private: boolean, empty: boolean, size: number, createdAt: string, permissions: { admin: boolean, pull: boolean, push: boolean } | null } };
 
+export type CreateLedgerBasicMutationVariables = Exact<{
+  name: string;
+  private?: boolean | null | undefined;
+  description?: string | null | undefined;
+  template?: Types.LedgerTemplate | null | undefined;
+}>;
+
+
+export type CreateLedgerBasicMutation = { createLedger: { id: string, name: string, fullName: string, description: string | null, private: boolean, empty: boolean, size: number, createdAt: string, permissions: { admin: boolean, pull: boolean, push: boolean } | null } };
+
 export type CreateLedgerFileMutationVariables = Exact<{
   ledgerId: string;
   path: string;
@@ -870,6 +880,59 @@ export function useCreateLedgerMutation(baseOptions?: Apollo.MutationHookOptions
 export type CreateLedgerMutationHookResult = ReturnType<typeof useCreateLedgerMutation>;
 export type CreateLedgerMutationResult = Apollo.MutationResult<CreateLedgerMutation>;
 export type CreateLedgerMutationOptions = Apollo.BaseMutationOptions<CreateLedgerMutation, CreateLedgerMutationVariables>;
+export const CreateLedgerBasicDocument = gql`
+    mutation CreateLedgerBasic($name: String!, $private: Boolean, $description: String, $template: LedgerTemplate) {
+  createLedger(
+    name: $name
+    private: $private
+    description: $description
+    template: $template
+  ) {
+    id
+    name
+    fullName
+    description
+    private
+    empty
+    size
+    createdAt
+    permissions {
+      admin
+      pull
+      push
+    }
+  }
+}
+    `;
+export type CreateLedgerBasicMutationFn = Apollo.MutationFunction<CreateLedgerBasicMutation, CreateLedgerBasicMutationVariables>;
+
+/**
+ * __useCreateLedgerBasicMutation__
+ *
+ * To run a mutation, you first call `useCreateLedgerBasicMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useCreateLedgerBasicMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [createLedgerBasicMutation, { data, loading, error }] = useCreateLedgerBasicMutation({
+ *   variables: {
+ *      name: // value for 'name'
+ *      private: // value for 'private'
+ *      description: // value for 'description'
+ *      template: // value for 'template'
+ *   },
+ * });
+ */
+export function useCreateLedgerBasicMutation(baseOptions?: Apollo.MutationHookOptions<CreateLedgerBasicMutation, CreateLedgerBasicMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<CreateLedgerBasicMutation, CreateLedgerBasicMutationVariables>(CreateLedgerBasicDocument, options);
+      }
+export type CreateLedgerBasicMutationHookResult = ReturnType<typeof useCreateLedgerBasicMutation>;
+export type CreateLedgerBasicMutationResult = Apollo.MutationResult<CreateLedgerBasicMutation>;
+export type CreateLedgerBasicMutationOptions = Apollo.BaseMutationOptions<CreateLedgerBasicMutation, CreateLedgerBasicMutationVariables>;
 export const CreateLedgerFileDocument = gql`
     mutation createLedgerFile($ledgerId: String!, $path: String!, $content: String!, $message: String) {
   createLedgerFile(

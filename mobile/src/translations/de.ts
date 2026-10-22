@@ -747,6 +747,8 @@ export const de: Translations = {
   createLedgerNameConflict: "Ein Hauptbuch mit diesem Namen existiert bereits.",
   createLedgerNameReserved:
     "Dieser Name gehörte zu einem umbenannten Hauptbuch und leitet noch dorthin weiter. Wählen Sie einen anderen Namen.",
+  createLedgerSetupUnsupported:
+    "Dieser Server unterstützt die geführte Einrichtung nicht. Wählen Sie zurück Einstieg oder Beispiel, um ein Hauptbuch mit den Standardwerten des Servers anzulegen.",
   createLedgerCreated: "{{name}} angelegt",
   createLedgerSlugPreview: "Wird als {{slug}} erstellt",
   createLedgerDescription: "Beschreibung",

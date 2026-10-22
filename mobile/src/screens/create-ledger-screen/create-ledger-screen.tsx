@@ -13,6 +13,7 @@ import {
 } from "react-native";
 import { Stack, router } from "expo-router";
 import { useToast } from "@/common/hooks/use-toast";
+import { isUnsupportedDocumentError } from "@/common/graphql-unsupported";
 import { useIsHere } from "@/common/hooks/use-is-here";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Controller, useForm } from "react-hook-form";
@@ -22,6 +23,7 @@ import {
   LedgerOpeningState,
   LedgerTemplate,
   useCreateLedgerMutation,
+  useCreateLedgerBasicMutation,
   usePreviewLedgerSetupLazyQuery,
 } from "@/generated-graphql/graphql";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -200,6 +202,7 @@ export function CreateLedgerScreen(): JSX.Element {
   const styles = useThemeStyle(getStyles);
   const { ledgers, loading: directoryLoading, refresh } = useLedgerDirectory();
   const [createLedger, { loading }] = useCreateLedgerMutation();
+  const [createLedgerBasic] = useCreateLedgerBasicMutation();
   const [
     runPreview,
     { data: previewData, loading: previewLoading, error: previewError },
@@ -479,9 +482,29 @@ export function CreateLedgerScreen(): JSX.Element {
       sentFingerprintRef.current = fingerprint;
       saveDraft(values);
       try {
-        const result = await createLedger({
-          variables: { ...request, requestId: requestIdRef.current },
-        });
+        let result;
+        try {
+          result = await createLedger({
+            variables: { ...request, requestId: requestIdRef.current },
+          });
+        } catch (rejected) {
+          // A server older than guided setup rejects `setup` and `requestId`
+          // before anything runs. Starter and Sample still create without them
+          // (ADR021: older backends keep working, w21/592); a preset cannot.
+          if (!isUnsupportedDocumentError(rejected)) throw rejected;
+          if (startKind === "preset") {
+            setError("root", { message: t("createLedgerSetupUnsupported") });
+            return;
+          }
+          result = await createLedgerBasic({
+            variables: {
+              name: request.name,
+              private: request.private,
+              description: request.description,
+              ...("template" in request ? { template: request.template } : {}),
+            },
+          });
+        }
         void clearCreateLedgerDraft();
         const id = result.data?.createLedger?.id;
         if (!id) {
@@ -916,6 +939,11 @@ export function CreateLedgerScreen(): JSX.Element {
                     <InlineError
                       style={styles.error}
                       message={previewError.message}
+                    />
+                  ) : previewFailureKind(previewError) === "unsupported" ? (
+                    <InlineError
+                      style={styles.error}
+                      message={t("createLedgerSetupUnsupported")}
                     />
                   ) : (
                     <>

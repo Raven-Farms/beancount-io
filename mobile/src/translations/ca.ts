@@ -747,6 +747,8 @@ export const ca: Translations = {
   createLedgerNameConflict: "Ja existeix un llibre amb aquest nom.",
   createLedgerNameReserved:
     "Aquest nom era d'un llibre reanomenat i encara hi redirigeix. Tria un altre nom.",
+  createLedgerSetupUnsupported:
+    "Aquest servidor no admet la configuració guiada. Torna enrere i tria Inicial o Mostra per crear un llibre amb els valors per defecte del servidor.",
   createLedgerCreated: "S'ha creat {{name}}",
   createLedgerSlugPreview: "Es crearà com a {{slug}}",
   createLedgerDescription: "Descripció",

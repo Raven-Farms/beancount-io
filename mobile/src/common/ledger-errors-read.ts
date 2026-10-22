@@ -5,37 +5,11 @@ import {
   type GetLedgerErrorsBasicQuery,
   type GetLedgerErrorsQuery,
 } from "../generated-graphql/graphql";
+import { isUnsupportedDocumentError } from "./graphql-unsupported";
 import type { LedgerError } from "./new-ledger-error";
 
-/**
- * Whether a failure is the server rejecting a field of the document, which is
- * what a server older than the app answers to a selection it does not know.
- * `getLedgerErrors` gained `code` and `hint` on 2026-10-21 (w21/311), and an
- * older server (a self-hosted one the app promises to work with) rejected the
- * whole query: Notifications failed, the bell read 0 and the editor's error
- * checks went silent, so a ledger that was broken looked clean (w21/591).
- */
-export function isUnknownFieldError(error: unknown): boolean {
-  if (typeof error !== "object" || error === null) return false;
-  const { graphQLErrors, message } = error as {
-    graphQLErrors?: ReadonlyArray<{
-      message?: string;
-      extensions?: { code?: string };
-    }>;
-    message?: unknown;
-  };
-  const validation = (text: unknown) =>
-    typeof text === "string" && /Cannot query field/i.test(text);
-  return (
-    validation(message) ||
-    (Array.isArray(graphQLErrors) &&
-      graphQLErrors.some(
-        (err) =>
-          err.extensions?.code === "GRAPHQL_VALIDATION_FAILED" ||
-          validation(err.message),
-      ))
-  );
-}
+/** See `isUnsupportedDocumentError`: the `code` and `hint` of w21/311 are what an older server rejects (w21/591). */
+export const isUnknownFieldError = isUnsupportedDocumentError;
 
 /** The basic read's rows as `LedgerError`s, which carry no code or hint. */
 export function basicLedgerErrors(
