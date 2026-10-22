@@ -161,6 +161,10 @@ describe("buildLedgerUrl round trip", () => {
     { kind: "home", ledgerFullName: LEDGER },
     { kind: "account", ledgerFullName: LEDGER, account: "Assets:Cash" },
     { kind: "journal", ledgerFullName: LEDGER },
+    { kind: "accounts", ledgerFullName: LEDGER },
+    { kind: "open-account", ledgerFullName: LEDGER },
+    { kind: "new-entry", ledgerFullName: LEDGER },
+    { kind: "files", ledgerFullName: LEDGER },
     { kind: "commit", ledgerFullName: LEDGER, sha: "abc123" },
     {
       kind: "file",
@@ -191,6 +195,22 @@ describe("buildLedgerUrl round trip", () => {
       }
       if (input.kind === "journal") {
         expect(resolved!.href).toBe("/transactions");
+        return;
+      }
+      if (input.kind === "accounts") {
+        expect(resolved!.href).toBe("/accounts");
+        return;
+      }
+      if (input.kind === "open-account") {
+        expect(resolved!.href).toBe("/open-account");
+        return;
+      }
+      if (input.kind === "new-entry") {
+        expect(resolved!.href).toBe("/add-transaction");
+        return;
+      }
+      if (input.kind === "files") {
+        expect(resolved!.href).toBe("/ledger");
         return;
       }
       if (input.kind === "budget") {

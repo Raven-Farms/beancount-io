@@ -113,3 +113,42 @@ describe("a file link on a branch other than main", () => {
     });
   });
 });
+
+// w21/349: these dashboard links all fell to Home although the app has a
+// screen for each.
+describe("dashboard links with a native counterpart", () => {
+  const base = "https://beancount.io/ledger/alice/books";
+  const href = (suffix: string) => resolveAppLink(`${base}${suffix}`)?.href;
+
+  it("opens Accounts, and the open-account form for its action", () => {
+    expect(href("/accounts")).toBe("/accounts");
+    expect(href("/accounts?search=cash&type=Assets")).toBe("/accounts");
+    expect(href("/accounts?action=open-account")).toBe("/open-account");
+  });
+
+  it("opens the Files tab for the tree on main, and no app link for another branch", () => {
+    expect(href("/files/tree/main")).toBe("/ledger");
+    expect(href("/files/tree/main/accounts/2025")).toBe("/ledger");
+    expect(resolveAppLink(`${base}/files/tree/feature-x/accounts`)).toBe(null);
+  });
+
+  it("opens the add-transaction form for the new-entry action", () => {
+    expect(href("/journal?action=new-entry&directive=transaction")).toBe(
+      "/add-transaction",
+    );
+    expect(href("/journal?action=new-entry")).toBe("/add-transaction");
+    expect(href("/journal?action=new-entry&directive=account")).toBe(
+      "/open-account",
+    );
+  });
+
+  it("keeps the journal for directives the app cannot add and for plain links", () => {
+    expect(href("/journal?action=new-entry&directive=balance")).toBe(
+      "/transactions",
+    );
+    expect(href("/journal?action=new-entry&directive=note")).toBe(
+      "/transactions",
+    );
+    expect(href("/journal")).toBe("/transactions");
+  });
+});

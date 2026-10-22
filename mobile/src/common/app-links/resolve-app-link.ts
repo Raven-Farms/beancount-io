@@ -128,12 +128,31 @@ export function resolveAppLink(
         },
       };
     }
-    case "journal":
+    case "accounts":
+      return {
+        ledgerFullName,
+        href:
+          parsed.searchParams.get("action") === "open-account"
+            ? "/open-account"
+            : "/accounts",
+      };
+    case "journal": {
+      // The dashboard's "new entry" link opens its form; here, the native one.
+      if (parsed.searchParams.get("action") === "new-entry") {
+        const directive = parsed.searchParams.get("directive");
+        if (directive === null || directive === "transaction") {
+          return { ledgerFullName, href: "/add-transaction" };
+        }
+        if (directive === "account") {
+          return { ledgerFullName, href: "/open-account" };
+        }
+      }
       return {
         ledgerFullName,
         href: "/transactions",
         filters: journalLinkFilters(parsed.searchParams),
       };
+    }
     case "commit": {
       if (tail.length !== 1 || !tail[0]) {
         return { ledgerFullName, href: "/" };
@@ -148,6 +167,13 @@ export function resolveAppLink(
       };
     }
     case "files": {
+      // /files/tree/main[/dir...] — the Files tab; it has no folder deep link,
+      // so a folder opens at the root. Other branches are no app link, as for
+      // a file (below).
+      if (tail.length === 0 || tail[0] === "tree") {
+        if (tail.length > 1 && tail[1] !== "main") return null;
+        return { ledgerFullName, href: "/ledger" };
+      }
       // /files/blob/$branch/$path... — mobile editor takes the path only.
       if (tail[0] !== "blob" || tail.length < 3) {
         return { ledgerFullName, href: "/" };
