@@ -22,6 +22,44 @@ function ordered(ledgers: Ledger[]): Ledger[] {
 
 /** One account directory shared by creation and the drawer, backed by Apollo pages. */
 export class LedgerDirectory {
+  /**
+   * A page from the persisted cache, tolerating fields added to the query since
+   * it was written: a list cached before `description` existed missed in
+   * `readQuery`, the read went to the network, and offline the whole drawer
+   * list was dropped (w21/391). The page counts when its rows are there; a
+   * missing description is none.
+   */
+  private cachedPage(variables: {
+    page: number;
+    limit: number;
+  }): LedgerDirectoryQuery | null {
+    const diff = this.client.cache.diff<LedgerDirectoryQuery>({
+      query: LedgerDirectoryDocument,
+      variables,
+      returnPartialData: true,
+      optimistic: false,
+    });
+    const rows = diff.result?.listLedgers as Partial<Ledger>[] | undefined;
+    if (
+      !Array.isArray(rows) ||
+      !rows.every(
+        (row) =>
+          typeof row.id === "string" &&
+          typeof row.name === "string" &&
+          typeof row.fullName === "string" &&
+          typeof row.private === "boolean",
+      )
+    ) {
+      return null;
+    }
+    return {
+      listLedgers: rows.map((row) => ({
+        ...(row as Ledger),
+        description: row.description ?? null,
+      })),
+    };
+  }
+
   private snapshot: Snapshot = { ledgers: [], loading: true, error: false };
   private listeners = new Set<() => void>();
   private request?: AbortController;
@@ -84,12 +122,7 @@ export class LedgerDirectory {
       for (let page = 1; ; page++) {
         if (request.signal.aborted) return;
         const variables = { page, limit: DIRECTORY_PAGE_SIZE };
-        let data = refresh
-          ? null
-          : this.client.readQuery<LedgerDirectoryQuery>({
-              query: LedgerDirectoryDocument,
-              variables,
-            });
+        let data = refresh ? null : this.cachedPage(variables);
         if (!data) {
           const result = await this.client.query<LedgerDirectoryQuery>({
             query: LedgerDirectoryDocument,

@@ -3,6 +3,7 @@ import {
   ApolloLink,
   InMemoryCache,
   Observable,
+  gql,
 } from "@apollo/client";
 import { LedgerDirectoryDocument } from "../../../generated-graphql/graphql";
 import { LedgerDirectory, DIRECTORY_PAGE_SIZE } from "../ledger-directory";
@@ -245,6 +246,78 @@ describe("an offline revalidation", () => {
       loading: false,
       error: false,
     });
+    client.stop();
+  });
+});
+
+// w21/391: a list cached before `description` joined the query missed in
+// `readQuery`, the read went to the network, and offline the whole drawer list
+// was dropped.
+describe("a directory cached before the query gained description", () => {
+  const OLD_QUERY = gql`
+    query LedgerDirectory($page: Float!, $limit: Float!) {
+      listLedgers(page: $page, limit: $limit) {
+        id
+        name
+        fullName
+        private
+      }
+    }
+  `;
+
+  function offlineWithOldCache(count = 3) {
+    const cache = new InMemoryCache();
+    const rows = Array.from({ length: count }, (_, i) => {
+      const { description: _description, ...old } = ledger(i);
+      return old;
+    });
+    cache.writeQuery({
+      query: OLD_QUERY,
+      variables: { page: 1, limit: DIRECTORY_PAGE_SIZE },
+      data: { listLedgers: rows },
+    });
+    const client = new ApolloClient({
+      cache,
+      link: new ApolloLink(
+        () =>
+          new Observable((observer) => {
+            observer.error(new Error("offline"));
+          }),
+      ),
+    });
+    return { client, directory: new LedgerDirectory(client), rows };
+  }
+
+  it("lists the cached ledgers offline, without an error", async () => {
+    const { client, directory, rows } = offlineWithOldCache();
+    await directory.revalidate();
+    const snapshot = directory.getSnapshot();
+    expect(snapshot.error).toBe(false);
+    expect(snapshot.loading).toBe(false);
+    expect(snapshot.ledgers.map((l) => l.id)).toEqual(rows.map((r) => r.id));
+    // A description it never had reads as none.
+    expect(snapshot.ledgers.every((l) => l.description === null)).toBe(true);
+    client.stop();
+  });
+
+  it("still reports the failure when nothing is cached", async () => {
+    const client = new ApolloClient({
+      cache: new InMemoryCache(),
+      link: new ApolloLink(
+        () =>
+          new Observable((observer) => {
+            observer.error(new Error("offline"));
+          }),
+      ),
+    });
+    const directory = new LedgerDirectory(client);
+    let failed = false;
+    try {
+      await directory.revalidate();
+    } catch {
+      failed = true;
+    }
+    expect(failed || directory.getSnapshot().error).toBe(true);
     client.stop();
   });
 });
