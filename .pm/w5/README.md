@@ -36,6 +36,8 @@
 
 ## Inbox
 
+- [967 — Preserve literal quotes in CSV column mappings](./967.md) — trivial CLI mapping gap; valid quoted headers cannot be named losslessly, reproduced 2026-10-22.
+
 - [966 — Keep leap day in February's current fiscal year](./966.md) — minor CLI period-selection finding; clock-controlled Feb29 reports select the next fiscal year, reproduced 2026-10-22.
 - [965 — Give mixed-type query ordering a consistent comparison rule](./965.md) — minor CLI follow-up to 760; source permutations change ORDER BY and LIMIT results, reproduced 2026-10-21.
 - [964 — Report tool-description drift, not only prompt drift](./964.md) — minor backend-v2 eval-harness finding from the w5/m5 Codex measurement ([w4/960](../w4/done/960.md)); observed 2026-10-21.
