@@ -88,7 +88,6 @@
 - [329 — Explain failed BQL and Holdings CSV downloads and keep retry usable](./329.md) — minor; dashboard QA with a simulated browser API failure,2026-10-21; both actions throw without feedback at both widths, while restored retries preserve exact CSV output.
 
 
-- [327 — Resolve README folder links from the README's directory](./327.md) — minor; dashboard QA, 2026-10-21; child-folder and ./ links lose source context, while folder-row and relative-file controls work; two owned fixtures created/deleted with no residue or ledger errors.
 
 
 
