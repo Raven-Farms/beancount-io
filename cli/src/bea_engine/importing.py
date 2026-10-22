@@ -474,6 +474,16 @@ def answer(
     # this same export (banks do reuse ids within one file).
     ledger_conflicts = False
     batch_conflicts = False
+    plugins_ran = bool(options.get("plugin"))
+    written_index: dict[tuple[str, str, str], list[Any]] | None = None
+
+    def written_source(key: tuple[str, str, str]) -> list[Any]:
+        # Parsed on first need: most imports never disagree with the view.
+        nonlocal written_index
+        if written_index is None:
+            written_index = _written_identities(snapshot, account, keys, roots[:2])
+        return written_index.get(key, [])
+
     hashed = _hash_rows(entries, account, keys, Transaction)
     claimed, owners = _claim_payeeless_ids(hashed, identities, account)
     batch_rows: dict[int, int] = {}
@@ -533,7 +543,20 @@ def answer(
             hits = [
                 (key, found, same)
                 for key in ids
-                if (found := _under_id(key, identities, dated, entry, account, fingerprint, key in lookup_only))
+                if (
+                    found := _under_id(
+                        key,
+                        identities,
+                        dated,
+                        entry,
+                        account,
+                        fingerprint,
+                        key in lookup_only,
+                        # The view proves a key only as far as plugins and the
+                        # loader left it alone; without either, a new key is new.
+                        source=written_source if key in identities or plugins_ran else None,
+                    )
+                )
                 is not None
                 # A stored narration-only id belongs to the row that claimed its
                 # entry, whichever other row's own id happens to spell it.
@@ -1733,20 +1756,72 @@ def _under_id(
     account: str,
     fingerprint: tuple[Any, ...],
     lookup_only: bool,
+    source: Callable[[tuple[str, str, str]], list[Any]] | None = None,
 ) -> Any:
     """The entry a native ID names for this row: the nearest one under it that agrees, else the latest.
 
     A reused reference names several entries, and judging the row against the
     latest alone made January's re-import a conflict with February's
     different amount, which held back every other row of the file (w5/822).
+
+    The loaded entries are the ledger after its plugins and the loader's
+    arithmetic: a filtered transaction is gone, a stripped price or an
+    allocated template differs, a wide negative amount is rounded. When none
+    of them agrees, the transactions the files spell decide (w5/881), so a
+    row already written is a duplicate, and a real change still conflicts.
     """
     found = identities.get(key)
-    if found is None or not _is_native_identity(key):
+    if found is not None and not _is_native_identity(key):
         return found
     agreeing = [
         other for other in dated.get(key, []) if _same_row(key, other, account, fingerprint, lookup_only=lookup_only)
     ]
+    if not agreeing and source is not None:
+        agreeing = [
+            other for other in source(key) if _same_row(key, other, account, fingerprint, lookup_only=lookup_only)
+        ]
     return min(agreeing, key=lambda other: abs((entry.date - other.date).days)) if agreeing else found
+
+
+def _written_identities(
+    snapshot: Any, account: str, keys: list[str], balance_roots: tuple[str, ...]
+) -> dict[tuple[str, str, str], list[Any]]:
+    """The ledger's own transactions by stable ID, read from the files without plugins or rounding.
+
+    Parsed at full precision: the default 28 digits rounded a wide negative
+    amount on reload, so an unchanged re-import read as changed data.
+    """
+    from decimal import MAX_PREC, localcontext
+
+    from beancount.core.data import Transaction
+    from beancount.parser import parser
+
+    index: dict[tuple[str, str, str], list[Any]] = {}
+    for path, content in sorted(snapshot.contents.items()):
+        try:
+            text = content.decode("utf-8")
+        except UnicodeDecodeError:
+            continue
+        with localcontext() as exact:
+            exact.prec = MAX_PREC
+            parsed, _, _ = parser.parse_string(unicodedata.normalize("NFC", text), report_filename=str(path))
+        for raw in parsed:
+            if not isinstance(raw, Transaction) or not _source_legs(raw, account):
+                continue
+            # An open lot (`{}`) agrees with any value; the booked entry knows
+            # which lot it took, so only the loaded view can tell a changed one.
+            if any(
+                (stated := _lot_stated(leg)) is not None and stated[0] is None and stated[1] is None
+                for leg in raw.postings
+                if _has_explicit_units(leg)
+            ):
+                continue
+            written = normalize_entry_strings(raw)
+            elsewhere = _issued_elsewhere(written, account, balance_roots)
+            for identity in _identities(written, account, keys):
+                if not (elsewhere and _is_native_identity(identity)):
+                    index.setdefault(identity, []).append(written)
+    return index
 
 
 def _same_row(
