@@ -528,12 +528,18 @@ function LedgerFileEditorSession({
     };
   }, [client]);
 
-  const handleReload = useCallback(async () => {
+  const handleReload = useCallback(async (): Promise<boolean> => {
     // The error strip follows the cache after mount; a reload that swaps in
     // the remote text must refresh it too, or it keeps a fixed error at a line
     // that no longer exists (w21/048).
     void invalidateLedgerData(client, "errors");
-    const result = await refetch();
+    // A reload that fails (a flaky network) says so and changes nothing: the
+    // buffer and the sha stay, and the text is not lost (w21/446).
+    const result = await refetch().catch(() => null);
+    if (!result?.data?.getLedgerFile) {
+      Alert.alert(t("ledgerEditorLoadFailed"));
+      return false;
+    }
     const raw = result.data?.getLedgerFile?.content ?? "";
     const enc = result.data?.getLedgerFile?.encoding;
     const fc = decodeLedgerFileContent(raw, enc);
@@ -554,7 +560,8 @@ function LedgerFileEditorSession({
     recoveryRef.current.loaded(fc);
     setDocumentSpec({ value: fc, epoch });
     setHasUnsavedChanges(false);
-  }, [client, refetch]);
+    return true;
+  }, [client, refetch, t]);
 
   const handleEdit = useCallback(
     async (epoch: number, revision: number, isDirty: boolean) => {
@@ -610,8 +617,7 @@ function LedgerFileEditorSession({
         Alert.alert(t("ledgerEditorCopyFailed"));
         return;
       }
-      haptics.success();
-      await handleReload();
+      if (await handleReload()) haptics.success();
     },
     [handleReload, t],
   );
@@ -860,6 +866,12 @@ function LedgerFileEditorSession({
     );
   }, [hasUnsavedChanges, t]);
 
+  // The first load's Reload, for a file that failed or is unavailable.
+  const retryLoad = () => {
+    void invalidateLedgerData(client, "errors");
+    void refetch();
+  };
+
   // ── Keyboard height ──────────────────────────────────────────────────────
 
   const keyboardHeight = useKeyboardHeight();
@@ -1011,6 +1023,13 @@ function LedgerFileEditorSession({
             <Text style={styles.loadErrorText}>
               {t("ledgerEditorLoadFailed")}
             </Text>
+            <View style={styles.unavailableActions}>
+              <TouchableOpacity accessibilityRole="button" onPress={retryLoad}>
+                <Text style={styles.unavailableAction}>
+                  {t("ledgerEditorReload")}
+                </Text>
+              </TouchableOpacity>
+            </View>
           </FadeInView>
         ) : editorState === "unavailable" ? (
           <FadeInView>
@@ -1018,13 +1037,7 @@ function LedgerFileEditorSession({
               {t("ledgerEditorFileUnavailable")}
             </Text>
             <View style={styles.unavailableActions}>
-              <TouchableOpacity
-                accessibilityRole="button"
-                onPress={() => {
-                  void invalidateLedgerData(client, "errors");
-                  void refetch();
-                }}
-              >
+              <TouchableOpacity accessibilityRole="button" onPress={retryLoad}>
                 <Text style={styles.unavailableAction}>
                   {t("ledgerEditorReload")}
                 </Text>

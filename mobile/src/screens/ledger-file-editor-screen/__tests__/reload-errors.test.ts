@@ -19,7 +19,7 @@ describe("the file editor's Reload", () => {
   it("refreshes the errors with the text after a conflict", () => {
     const reload = body(
       "const handleReload = useCallback(",
-      "}, [client, refetch]);",
+      "}, [client, refetch, t]);",
     );
     const invalidate = reload.indexOf('invalidateLedgerData(client, "errors")');
     expect(invalidate === -1).toBe(false);
@@ -27,12 +27,51 @@ describe("the file editor's Reload", () => {
   });
 
   it("refreshes the errors from the file-unavailable Reload too", () => {
+    const retry = body("const retryLoad = () => {", "};");
+    expect(retry.includes('void invalidateLedgerData(client, "errors");')).toBe(
+      true,
+    );
+    expect(retry.includes("void refetch();")).toBe(true);
     const unavailable = body(
       'editorState === "unavailable"',
       "ledgerEditorReload",
     );
-    expect(
-      unavailable.includes('void invalidateLedgerData(client, "errors");'),
-    ).toBe(true);
+    expect(unavailable.includes("onPress={retryLoad}")).toBe(true);
+  });
+
+  // w21/446: a failed load had no way forward but leaving the file, and a
+  // failed Copy & Reload said nothing and kept the stale sha.
+  it("offers Reload on a failed load, not only on an unavailable file", () => {
+    const failed = body(
+      'editorState === "error"',
+      'editorState === "unavailable"',
+    );
+    expect(failed.includes("onPress={retryLoad}")).toBe(true);
+    expect(failed.includes('t("ledgerEditorReload")')).toBe(true);
+  });
+
+  it("says a reload failed and leaves the text and the sha alone", () => {
+    const reload = body(
+      "const handleReload = useCallback(",
+      "}, [client, refetch, t]);",
+    );
+    const failure = reload.indexOf('Alert.alert(t("ledgerEditorLoadFailed"))');
+    expect(failure === -1).toBe(false);
+    expect(reload.indexOf("await refetch().catch(() => null)") < failure).toBe(
+      true,
+    );
+    // Nothing is swapped in before the guard returns.
+    expect(failure < reload.indexOf("shaRef.current = fs")).toBe(true);
+    expect(failure < reload.indexOf("setDocumentSpec(")).toBe(true);
+  });
+
+  it("plays Copy & Reload's success only when the reload worked", () => {
+    const copy = body(
+      "const copyThenReload = useCallback(",
+      "[handleReload, t]",
+    );
+    expect(copy.includes("if (await handleReload()) haptics.success();")).toBe(
+      true,
+    );
   });
 });

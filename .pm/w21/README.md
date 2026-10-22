@@ -23,7 +23,6 @@
 - [424](./blocked/424.md) — Mobile does not show the ledger service's fix hints (split from 311) — **blocked:** production's GraphQL schema lacks `code`/`hint` until backend-v2 deploys; mobile's client is generated from it
 - [453](./blocked/453.md) — addEntries/bulkEntries have no idempotency key: a retry after a lost response can duplicate the entry (split from 351) — **blocked:** needs an owner-approved contract (field, bounds, retention) across REST/GraphQL/MCP and a backend-v2 deploy
 - [496](./blocked/496.md) — Mobile guesses that an entry is a plugin copy from its first line; read the ledger's `generated_from` instead (split from 443) — **blocked:** production's GraphQL schema lacks `generated_from` until the ledger service and backend-v2 deploy; mobile's client is generated from it
-- [446](./446.md) — File editor load/reload failures have no Retry or message
 - [447](./447.md) — Editor error banner matches a longer file name
 - [448](./448.md) — Back during a last-file delete lands one folder too high
 - [449](./449.md) — VoiceOver names a parent's (own) row as the parent
