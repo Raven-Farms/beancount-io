@@ -2,12 +2,29 @@ import { getFormatDate } from "../../common/format-util";
 import { graphQLErrorCodes } from "../../common/graphql-error-codes";
 
 /**
- * Resolve the receipt's transaction date. The server may now return an
- * empty/absent date when it can't read one off the receipt — fall back to the
- * client's today so the form always opens with a usable date.
+ * Resolve the receipt's transaction date. The server may return an empty or
+ * absent date when it can't read one off the receipt, and a value that is not
+ * a real `YYYY-MM-DD` day would open the form on an Invalid Date (w21/285):
+ * fall back to the client's today so the form always opens with a usable date.
  */
 export const receiptDate = (date: string | null | undefined): string =>
-  date || getFormatDate(new Date());
+  isIsoDay(date) ? date : getFormatDate(new Date());
+
+const isIsoDay = (date: string | null | undefined): date is string => {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(date ?? "");
+  if (!match) return false;
+  const [year, month, day] = [match[1]!, match[2]!, match[3]!].map(Number) as [
+    number,
+    number,
+    number,
+  ];
+  const probe = new Date(Date.UTC(year, month - 1, day));
+  return (
+    probe.getUTCFullYear() === year &&
+    probe.getUTCMonth() === month - 1 &&
+    probe.getUTCDate() === day
+  );
+};
 
 /**
  * The parsed receipt total as the form's amount text: positive (receipts are

@@ -97,7 +97,11 @@ describe("LLMService temp-asset ownership", () => {
 // w21/108: any image/* passed, so an iPhone HEIC reached the model and failed
 // there as an unreadable receipt.
 describe("LLMService receipt formats", () => {
-  const user: Identity = { userId: "usr_1", method: "session", scopes: new Set() };
+  const user: Identity = {
+    userId: "usr_1",
+    method: "session",
+    scopes: new Set(),
+  };
   const getObjectMetadata = jest.fn();
   const generateDownloadUrl = jest.fn();
 

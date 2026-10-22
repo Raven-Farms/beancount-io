@@ -253,3 +253,21 @@ test("a query string does not hide the file's extension", async () => {
     filename: "receipt.jpg",
   });
 });
+
+// w21/285: a date that is not a real YYYY-MM-DD day opened the form on an
+// Invalid Date.
+test("receiptDate falls back to today for anything that is not an ISO day", () => {
+  const today = getFormatDate(new Date());
+  for (const bad of [
+    "2026/10/21",
+    "2026-10-21T14:32:00",
+    "21/10/2026",
+    "2026-1-5",
+    "2026-02-30",
+    "2025-02-29",
+    "yesterday",
+  ]) {
+    expect(receiptDate(bad)).toBe(today);
+  }
+  expect(receiptDate("2024-02-29")).toBe("2024-02-29");
+});

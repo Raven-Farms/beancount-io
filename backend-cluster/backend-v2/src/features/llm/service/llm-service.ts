@@ -17,6 +17,7 @@ import { isLlmConfigured } from "../utils/fallback-language-model";
 import { extractTransactionsFromFile } from "../utils/extract-transactions-from-file";
 import { extractReceiptFromFile } from "../utils/extract-receipt-from-file";
 import { recommendAccounts } from "../utils/recommend-accounts";
+import { normalizeReceiptDate } from "../utils/normalize-receipt-date";
 import { categorizeTransactions } from "../utils/categorize-transactions";
 import { modelProxyError } from "../utils/model-proxy-error";
 import { parseLedgerId } from "@/shared/str";
@@ -273,7 +274,7 @@ export class LLMService implements ILLMService {
     await this.aiCfoUsageService.addTokenUsage(userId, totalTokens);
 
     return {
-      date: txn.date || null,
+      date: normalizeReceiptDate(txn.date),
       payee: txn.payee,
       description: txn.description,
       amount: txn.amount,
