@@ -37,8 +37,20 @@ describe("assertEntryTokens", () => {
     ).toThrow(/entry 0: account [\s\S]* is not a valid account/);
   });
 
-  it.each(["*", "!", "txn", "P"])("accepts transaction flag %p", (flag) => {
-    expect(() => assertEntryTokens([txn({ flag })])).not.toThrow();
+  // w21/652: any capital letter, not only P, S, T, C, U, R and M.
+  it.each(["*", "!", "txn", "P", "A", "Z"])(
+    "accepts transaction flag %p",
+    (flag) => {
+      expect(() => assertEntryTokens([txn({ flag })])).not.toThrow();
+    },
+  );
+
+  it.each(["A", "Z", "!"])("accepts posting flag %p", (flag) => {
+    expect(() =>
+      assertEntryTokens([
+        txn({ postings: [{ account: "Assets:Cash", flag }] }),
+      ]),
+    ).not.toThrow();
   });
 
   // w21/653: a quoted flag is not Beancount syntax; the entry dropped.

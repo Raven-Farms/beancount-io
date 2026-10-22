@@ -1894,7 +1894,7 @@ async function main(): Promise<void> {
       `the validator ${intact ? "accepts" : "refuses"} tag #${tag}, as the engine reads it`,
     );
   }
-  for (const flag of ["*", "!", "P", "'X"]) {
+  for (const flag of ["*", "!", "P", "A", "Z", "'X"]) {
     const flagged = await parseLedgerFiles(
       {
         "main.bean": `2024-01-01 open Assets:Cash\n2024-01-01 open Equity:Open\n2024-01-02 ${flag} "t"\n  Assets:Cash 1 USD\n  Equity:Open\n`,

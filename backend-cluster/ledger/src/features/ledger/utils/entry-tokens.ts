@@ -22,8 +22,9 @@ const NOT_IN_A_TOKEN = /[\s\p{C}]/u;
 
 const TOKEN_RULES = {
   date: /^\d{4}-\d{2}-\d{2}$/,
-  flag: /^[*!&#?%PSTCURM]$/,
-  "transaction flag": /^(?:[*!&#?%PSTCURM]|txn)$/,
+  // Any capital letter, as both engines' grammars and `bea` take (w21/652).
+  flag: /^[*!&#?%A-Z]$/,
+  "transaction flag": /^(?:[*!&#?%A-Z]|txn)$/,
   tag: /^[A-Za-z0-9_/.-]+$/,
   link: /^[A-Za-z0-9_/.-]+$/,
   currency: /^[A-Z](?:[A-Z0-9'._-]{0,22}[A-Z0-9])?$/,
