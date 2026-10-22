@@ -7,12 +7,14 @@ import * as ImagePicker from "expo-image-picker";
 import * as LegacyFS from "expo-file-system/legacy";
 import { useTranslations } from "@/common/hooks/use-translations";
 import { haptics } from "@/common/haptics";
+import { useLedgerReadContext } from "@/common/hooks/use-ledger-read-context";
 import { LedgerGuard, useLedgerGuard } from "@/components/ledger-guard";
 import { useReceiptWorkflow } from "./use-receipt-workflow";
 import {
   receiptAmountText,
   receiptCanRetry,
   receiptErrorKey,
+  receiptRevealFields,
   shotFromLibraryResult,
 } from "./receipt-utils";
 import { CameraView, type CapturedShot } from "./camera-view";
@@ -43,9 +45,10 @@ const TEST_JPEG_B64 =
   "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8UHRofHh0aHBwgJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPC4zNDL/wAALCAABAAEBAREA/8QAHwAAAQUBAQEBAQEAAAAAAAAAAAECAwQFBgcICQoL/8QAtRAAAgEDAwIEAwUFBAQAAAF9AQIDAAQRBRIhMUEGE1FhByJxFDKBkaEII0KxwRVS0fAkM2JyggkKFhcYGRolJicoKSo0NTY3ODk6Q0RFRkdISUpTVFVWV1hZWmNkZWZnaGlqc3R1dnd4eXqDhIWGh4iJipKTlJWWl5iZmqKjpKWmp6ipqrKztLW2t7i5usLDxMXGx8jJytLT1NXW19jZ2uHi4+Tl5ufo6erx8vP09fb3+Pn6/9oACAEBAAA/APvSiigD/9k=";
 
 const ReceiptCaptureScreenImpl = () => {
-  const { t } = useTranslations();
+  const { t, locale } = useTranslations();
   const router = useRouter();
   const ledgerId = useLedgerGuard();
+  const { primaryCurrency } = useLedgerReadContext(ledgerId);
   const workflow = useReceiptWorkflow();
   const { testMode } = useRouteParams<{ testMode?: string }>();
 
@@ -234,11 +237,7 @@ const ReceiptCaptureScreenImpl = () => {
         }
         reveal={
           phase.kind === "parsed"
-            ? {
-                payee: phase.payee,
-                amount: receiptAmountText(phase.amount),
-                date: phase.date,
-              }
+            ? receiptRevealFields(phase, primaryCurrency, locale)
             : undefined
         }
         onRetake={handleRetake}

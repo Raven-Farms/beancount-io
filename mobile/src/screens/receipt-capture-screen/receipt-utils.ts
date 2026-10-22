@@ -1,4 +1,6 @@
+import { formatLedgerDate } from "../../common/date-format";
 import { getFormatDate } from "../../common/format-util";
+import { formatMoneyWithCurrency } from "../../common/number-utils";
 import { graphQLErrorCodes } from "../../common/graphql-error-codes";
 
 /**
@@ -161,3 +163,19 @@ const stem = (fileName: string | null | undefined): string => {
   const base = fileName && dot > 0 ? fileName.slice(0, dot) : (fileName ?? "");
   return base || "receipt";
 };
+
+/**
+ * What the "Receipt read" reveal shows and speaks: the date as the reader's
+ * language writes it and the total as money in the ledger's currency. The raw
+ * "2026-03-01" was read by VoiceOver as digits and "1234.50" had no grouping or
+ * currency (w21/538). The form still gets the plain values (`receiptAmountText`).
+ */
+export const receiptRevealFields = (
+  receipt: { payee: string; amount: number; date: string },
+  currency: string,
+  locale: string,
+): { payee: string; amount: string; date: string } => ({
+  payee: receipt.payee,
+  amount: formatMoneyWithCurrency(Math.abs(receipt.amount), currency),
+  date: formatLedgerDate(receipt.date, locale),
+});
