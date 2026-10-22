@@ -174,9 +174,14 @@ describe("splitPrefillAccountName", () => {
   });
 
   it("puts a rootless string under the fallback root, trimmed but unrewritten", () => {
+    // Words typed with spaces become one component (w21/255).
     expect(splitPrefillAccountName("coffee shop", "Expenses")).toEqual({
       rootPrefix: "Expenses",
-      subPath: "coffee shop",
+      subPath: "CoffeeShop",
+    });
+    expect(splitPrefillAccountName("coffee", "Expenses")).toEqual({
+      rootPrefix: "Expenses",
+      subPath: "coffee",
     });
     expect(splitPrefillAccountName("  Coffee  ")).toEqual({
       rootPrefix: "Assets",
@@ -201,11 +206,11 @@ describe("splitPrefillAccountName", () => {
 
   it("leaves an invalid sub-path for the screen's validation to reject", () => {
     const { rootPrefix, subPath } = splitPrefillAccountName(
-      "coffee shop",
+      "coffee-shop",
       "Expenses",
     );
     const composed = composeAccountName(rootPrefix, subPath);
-    expect(composed).toBe("Expenses:coffee shop");
+    expect(composed).toBe("Expenses:coffee-shop");
     expect(validateAccountName(composed)).toEqual({
       ok: false,
       reason: "componentMustStartUppercase",
@@ -622,5 +627,33 @@ describe("Open Account's typed currency", () => {
     ).toBe(true);
     expect(source.includes("item.value===OTHER_CURRENCY")).toBe(true);
     expect(source.includes("setOtherCurrencyVisible(true)")).toBe(true);
+  });
+});
+
+// w21/255: a space-separated search seeded Create with a name the form refuses.
+describe("Create seeded from a search with spaces", () => {
+  it("joins the words of a component", () => {
+    expect(splitPrefillAccountName("credit card")).toEqual({
+      rootPrefix: "Assets",
+      subPath: "CreditCard",
+    });
+    expect(
+      splitPrefillAccountName("my savings:emergency fund", "Assets"),
+    ).toEqual({ rootPrefix: "Assets", subPath: "MySavings:EmergencyFund" });
+    expect(splitPrefillAccountName("liabilities:credit card")).toEqual({
+      rootPrefix: "Liabilities",
+      subPath: "CreditCard",
+    });
+  });
+
+  it("leaves text without spaces as it was", () => {
+    expect(splitPrefillAccountName("Bank:Checking")).toEqual({
+      rootPrefix: "Assets",
+      subPath: "Bank:Checking",
+    });
+    expect(splitPrefillAccountName("assets:bank:checking")).toEqual({
+      rootPrefix: "Assets",
+      subPath: "bank:checking",
+    });
   });
 });

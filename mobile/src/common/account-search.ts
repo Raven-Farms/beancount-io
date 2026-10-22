@@ -153,6 +153,11 @@ export function filterAccounts(
   if (trimmed.length === 0) {
     return [...accounts];
   }
+  // Every word of the query must match, in any order: an account name has no
+  // spaces, so "credit card" as one pattern matched nothing and then offered
+  // to create an account the form refuses (w21/255). A single word scores
+  // exactly as before.
+  const words = trimmed.split(/\s+/);
 
   const matches: Array<{
     account: string;
@@ -160,7 +165,15 @@ export function filterAccounts(
     frecency: number;
   }> = [];
   for (const account of accounts) {
-    const score = fuzzyMatch(trimmed, account);
+    let score = 0;
+    for (const word of words) {
+      const wordScore = fuzzyMatch(word, account);
+      if (wordScore === 0) {
+        score = 0;
+        break;
+      }
+      score += wordScore;
+    }
     if (score === 0) {
       continue;
     }

@@ -171,3 +171,47 @@ describe("account search with a dotted capital I", () => {
     expect(filterAccounts("İş", accounts)).toEqual(["Assets:İşBank"]);
   });
 });
+
+// w21/255: an account name has no spaces, so "credit card" as one pattern
+// matched nothing, and the Create row then offered a name the form refuses.
+describe("filterAccounts with several words", () => {
+  const accounts = [
+    "Liabilities:CreditCard:Visa",
+    "Expenses:Food:Groceries",
+    "Expenses:Transport:PublicTransit",
+    "Assets:Bank:Checking",
+    "Assets:Cash",
+  ];
+
+  it("finds the account every word matches, in any order", () => {
+    expect(filterAccounts("credit card", accounts)).toEqual([
+      "Liabilities:CreditCard:Visa",
+    ]);
+    expect(filterAccounts("food groc", accounts)).toEqual([
+      "Expenses:Food:Groceries",
+    ]);
+    expect(filterAccounts("public transit", accounts)).toEqual([
+      "Expenses:Transport:PublicTransit",
+    ]);
+    expect(filterAccounts("bank checking", accounts)).toEqual([
+      "Assets:Bank:Checking",
+    ]);
+    expect(filterAccounts("checking bank", accounts)).toEqual([
+      "Assets:Bank:Checking",
+    ]);
+  });
+
+  it("needs every word, and ignores extra spacing", () => {
+    expect(filterAccounts("credit zebra", accounts)).toEqual([]);
+    expect(filterAccounts("  credit    card  ", accounts)).toEqual([
+      "Liabilities:CreditCard:Visa",
+    ]);
+  });
+
+  it("scores a single word exactly as before", () => {
+    expect(filterAccounts("cash", accounts)).toEqual(["Assets:Cash"]);
+    expect(filterAccounts("food:groc", accounts)).toEqual([
+      "Expenses:Food:Groceries",
+    ]);
+  });
+});

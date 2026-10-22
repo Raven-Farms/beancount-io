@@ -52,13 +52,43 @@ export function composeAccountName(rootName: string, subPath: string): string {
  * the inverse of `composeAccountName` for prefilled input. A canonical root is
  * matched case-insensitively so a lowercase search query still lands on the
  * right prefix; everything after it stays verbatim, letting the screen's normal
- * validation speak instead of silently rewriting what the user typed. A string
+ * validation speak instead of silently rewriting what the user typed, except
+ * that words separated by spaces become one component (`credit card` seeds
+ * `CreditCard`), since a space is never valid in a name. A string
  * with no recognizable root becomes the sub-path under `fallbackRoot`.
  */
 export function splitPrefillAccountName(
   input: string,
   fallbackRoot: AccountRootPrefix = "Assets",
   roots: RootNames = {},
+): { rootPrefix: AccountRootPrefix; subPath: string } {
+  const split = splitPrefillRoot(input, fallbackRoot, roots);
+  return { ...split, subPath: joinPrefillWords(split.subPath) };
+}
+
+/**
+ * An account component can't hold a space, so words typed into the search ("my
+ * savings") become one component when they seed Create: `MySavings`, not a
+ * name the form refuses (w21/255). Text without whitespace is untouched.
+ */
+function joinPrefillWords(subPath: string): string {
+  if (!/\s/.test(subPath)) return subPath;
+  return subPath
+    .split(":")
+    .map((component) =>
+      component
+        .trim()
+        .split(/\s+/)
+        .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+        .join(""),
+    )
+    .join(":");
+}
+
+function splitPrefillRoot(
+  input: string,
+  fallbackRoot: AccountRootPrefix,
+  roots: RootNames,
 ): { rootPrefix: AccountRootPrefix; subPath: string } {
   const trimmed = input.trim();
   const lower = trimmed.toLowerCase();
