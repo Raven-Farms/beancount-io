@@ -70,4 +70,7 @@
 - [501](./501.md) — Stored draft fingerprint reveals opening amount (434 vs 053)
 - [502](./502.md) — Create retry across midnight mints new requestId (436+434)
 - [503](./503.md) — 454's sign-in failure still silent on iOS (role alert is no-op)
+- [504](./504.md) — First series copy with escaped quote still offers Delete (443 gap)
+- [505](./505.md) — Multi-line/pipe-header entries lose Edit and Delete (443 false positive)
+- [506](./506.md) — Money flow pads BND/AMD/NOK share counts as money (445 regression)
 - [315](./blocked/315.md) — In-app commits signed with Gitea username and real email (no full_name, no noreply) — **blocked:** needs the owner's noreply-address and published-history decisions, and a production backfill of existing Gitea users that can't be verified here
