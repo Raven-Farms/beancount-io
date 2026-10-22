@@ -98,7 +98,6 @@
 
 - [317 — Default Books begin to the browser's local calendar day](./317.md) — major; dashboard QA clock controls, 2026-10-21; Pacific evening defaults tomorrow and real preview opens all12 accounts tomorrow; UTC and explicit-date controls pass; no ledger created.
 
-- [316 — Keep opening-balance choices consistent when ledger presets change](./316.md) — minor; dashboard QA, 2026-10-21; Portfolio displays Decide later while sending the previous Personal account; an unattached amount is silently omitted; valid-account recovery passes.
 
 
 
