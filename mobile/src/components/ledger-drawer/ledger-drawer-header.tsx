@@ -144,6 +144,13 @@ type HeaderAction = {
 );
 
 /**
+ * How far the header title may shrink to stay on one line. At AX2 the longest
+ * title ("Transaktionen") needs about 0.69 of its scaled size to fit between
+ * the action groups, so the floor leaves room under that.
+ */
+const HEADER_TITLE_MIN_SCALE = 0.6;
+
+/**
  * Every tab uses the same row and 44pt actions, including read-only/empty states.
  * Accept action data instead of arbitrary controls so callers cannot change the
  * bar geometry. Dynamic Type grows the row uniformly, independently of its title.
@@ -167,7 +174,15 @@ export function LedgerDrawerHeader({
         <LedgerDrawerButton />
         {!guest && <NotificationsBellButton />}
       </View>
-      <Text style={styles.navTitle} numberOfLines={1}>
+      {/* Between two fixed action groups there are about 190 pt, and a title
+          that scales with Dynamic Type read "Transacti…" at AX2: it shrinks
+          to fit, down to 60%, before it would truncate (w21/246). */}
+      <Text
+        style={styles.navTitle}
+        numberOfLines={1}
+        adjustsFontSizeToFit
+        minimumFontScale={HEADER_TITLE_MIN_SCALE}
+      >
         {title}
       </Text>
       <View style={styles.navRight}>
