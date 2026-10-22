@@ -59,6 +59,17 @@
 
 - **t004:** required icon/setup/issue payload is prepared. Real Cline 4.1.25 setup accepts the URL-only entry; isolated CLI 3.0.73 reaches native OAuth consent, and the dedicated synthetic QA session is available. The exact public catalog feed has no Beancount match across 203 entries/149 MCP servers; the blank native panel is not rendering proof. No grant was approved; required template confirmations stay unchecked. **Unblock:** the specific temporary access decision, fresh OAuth, authenticated discovery/query/preview/unchanged-state, then authorized submission and review. **Owner:** QA/client account holder, repository worker and Cline reviewers.
 
+  Validation follow-through: the docs-only preparation CI exposes an existing
+  oversized-request transport race. The test-only fix retains actual HTTP 413,
+  response and route assertions; focused 12/12 and 20 repeated suites 240/240 pass,
+  and raised/omitted-limit controls fail as expected. The native access and
+  reviewer conditions above remain pending; details and original CI limits are
+  recorded in [t004](./t004.md#ci-validation-follow-through--2026-10-22-utc).
+  Fresh Node 22 typechecking, the complete 373-suite / 6,479-test run on baseline
+  `ae156599` plus this patch, and OpenAPI snapshot-drift validation pass. A later
+  ledger-path rebase also passes typechecking and all nine affected suites / 325
+  tests; combined-revision full CI remains the integration check.
+
 - **t005:** concrete GitHub nomination is prepared and unsent. Source-backed anonymous API checks of installed VS Code 1.135.0's public default feed return zero name/identity results; all six latest-feed pages contain 560 unique records with no canonical name/endpoint/repository match. This independent read substep is complete without a user-input gate. The earlier native `@mcp` snapshot remains 51 entries/50 observed names; effective organization policy, typed native filtering and install/Copilot OAuth/query/preview are not inferred from the public feed. **Unblock:** authorized operator request, curated acceptance and fresh native QA discovery/OAuth/query/preview under w1/m34/t003. **Owner:** publisher, GitHub reviewers and QA/client account holder.
 
 - **Milestone / t006–t010:** final publication verification and standing closing acceptance depend on unresolved t002–t005 gates. This does not prevent independent setup, payload validation or documentation substeps inside those tasks. **Unblock:** complete each gate and the actual accepted listing/connection journeys, then finish adoption/simplification/coverage/closeout. **Owners:** recorded account holder/publisher/platforms, then repository worker. Current preparation: Docker fbe47be0e, Cursor 7ed1cfe05, Cline 6e5a556b8 plus the native setup above, GitHub/VS Code bb3f23e4a. The separate community Cursor entry is observed in New and its native install link works; the native desktop query/preview also completes; official agreement/submission and remaining eligible gallery criteria stay open.
