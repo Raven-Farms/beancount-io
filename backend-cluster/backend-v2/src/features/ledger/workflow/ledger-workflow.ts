@@ -96,39 +96,21 @@ import {
 import { assertSafeRepoPath } from "@/features/ledger/utils/safe-repo-path";
 import { assertExplicitFileContentSize } from "@/features/ledger/utils/explicit-file-size";
 import { decodeFileContent } from "@/shared/file-content";
+import {
+  formatIncludeLine,
+  globMatches,
+  includeTargetFor,
+  isGlobPattern,
+  isUrlTarget,
+  parseIncludeLine,
+  resolveIncludeTarget,
+} from "@/features/ledger/utils/include-target";
 
 const workflowLogger = logger.child({ module: "ledger-workflow" });
 
 // Each miss is a real git clone + beancount parse (see beancount-ledger-v2's
 // load-cached-ledger-file-map.ts), so directive-count fan-out stays deliberately narrow.
 const DIRECTIVE_COUNT_CONCURRENCY = 3;
-
-function includeTargetOf(line: string): string | null {
-  const match = line.match(
-    /^\s*include\s+(?:"([^"]+)"|'([^']+)'|(\S+))\s*(;.*)?$/,
-  );
-  return match?.[1] ?? match?.[2] ?? match?.[3] ?? null;
-}
-
-function matchesIncludeLine(line: string, oldPath: string): boolean {
-  return includeTargetOf(line) === oldPath;
-}
-
-function rewriteIncludeLine(
-  line: string,
-  oldPath: string,
-  newPath: string,
-): string {
-  const match = line.match(
-    /^(\s*include\s+)(?:"([^"]+)"|'([^']+)'|(\S+))(\s*(;.*)?)$/,
-  );
-  if (!match) return line;
-  const target = match[2] ?? match[3] ?? match[4];
-  if (target !== oldPath) return line;
-  const quote =
-    match[2] !== undefined ? '"' : match[3] !== undefined ? "'" : "";
-  return `${match[1]}${quote}${newPath}${quote}${match[5] ?? ""}`;
-}
 
 /**
  * Orchestration for the ledger feature. Owns the cross-service coordination the
@@ -1034,7 +1016,19 @@ export class LedgerWorkflow implements ILedgerWorkflow {
           beanFiles.push(entry.path);
       }
     }
+    // An include names a file relative to the file that declares it, so it
+    // is matched on what it resolves to, not on its text (w23/029).
+    const namesOldPath = (includingPath: string, line: string) => {
+      const include = parseIncludeLine(line);
+      if (!include || isUrlTarget(include.target)) return null;
+      const resolved = resolveIncludeTarget(includingPath, include.target);
+      if (isGlobPattern(resolved)) return null;
+      return resolved === input.oldPath ? include : null;
+    };
     let includingFiles: { path: string; content: string; sha: string }[] = [];
+    // A glob can't be rewritten for one file; refuse when the file falls out
+    // of a pattern that includes it today.
+    const lostGlobs: string[] = [];
     const candidates = beanFiles.filter(
       (path) => path !== input.oldPath && path !== input.newPath,
     );
@@ -1053,11 +1047,28 @@ export class LedgerWorkflow implements ILedgerWorkflow {
           content: decodeFileContent(file),
           sha: file.sha,
         }))
-        .filter(({ content }) =>
-          content
-            .split("\n")
-            .some((line) => matchesIncludeLine(line, input.oldPath)),
-        );
+        .filter(({ path, content }) => {
+          const lines = content.split("\n");
+          for (const line of lines) {
+            const include = parseIncludeLine(line);
+            if (!include || isUrlTarget(include.target)) continue;
+            const pattern = resolveIncludeTarget(path, include.target);
+            if (
+              isGlobPattern(pattern) &&
+              globMatches(pattern, input.oldPath) &&
+              !globMatches(pattern, input.newPath)
+            )
+              lostGlobs.push(`${path} (include "${include.target}")`);
+          }
+          return lines.some((line) => namesOldPath(path, line));
+        });
+    }
+    if (lostGlobs.length > 0) {
+      throw new BadUserInputError(
+        `${input.oldPath} is included by the glob in ${lostGlobs.join(", ")}, which ${input.newPath} would not match; a glob include can't be rewritten for one file`,
+        "newPath",
+        "Choose a new path the pattern still matches, or change the include line first.",
+      );
     }
     if (includingFiles.length > 0 && !input.updateIncludes) {
       const names = includingFiles.map((file) => file.path).join(", ");
@@ -1090,11 +1101,15 @@ export class LedgerWorkflow implements ILedgerWorkflow {
     for (const including of includingFiles) {
       const rewritten = including.content
         .split("\n")
-        .map((line) =>
-          matchesIncludeLine(line, input.oldPath)
-            ? rewriteIncludeLine(line, input.oldPath, input.newPath)
-            : line,
-        )
+        .map((line) => {
+          const include = namesOldPath(including.path, line);
+          return include
+            ? formatIncludeLine(
+                include,
+                includeTargetFor(including.path, input.newPath, include.target),
+              )
+            : line;
+        })
         .join("\n");
       if (rewritten === including.content) continue;
       files.push({

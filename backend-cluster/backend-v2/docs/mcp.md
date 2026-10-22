@@ -1371,8 +1371,16 @@ ledger; unpinned callers must select it. The protected workflow validates both
 repository-relative paths and moves the file preserving its content in one
 atomic commit (default message `Rename oldPath → newPath`). When `oldPath`
 is still `include`d, the rename is refused unless `updateIncludes: true`
-rewrites those lines in the same commit. The result contains `oldPath` and
-`newPath`. Write capability and current content-write access are required.
+rewrites those lines in the same commit. An include counts when its target
+resolves to `oldPath` the way the ledger loads it, relative to the directory of
+the file that declares it, so `include "x.bean"` in `d/inc.bean` names
+`d/x.bean`. A rewritten include names `newPath` relative to that same
+directory, keeps a leading `./` or `/`, and is escaped so it reads back as the
+same path. A glob include cannot be rewritten for one file: when `oldPath`
+matches a glob that `newPath` would not, the rename is refused even with
+`updateIncludes`. The result contains `oldPath`, `newPath` and
+`updatedIncludes`. Write capability and current content-write access are
+required.
 
 This operation exposes GraphQL's existing contract: it has no caller-supplied
 SHA or preview flag. Repository conflicts remain errors.

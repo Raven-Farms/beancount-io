@@ -519,3 +519,130 @@ describe.each(["rest", "gql", "mcp"])("rename via %s", (surface) => {
     }
   });
 });
+
+/**
+ * w23/029. Includes resolve against the directory of the file that declares
+ * them, but the rename matched their text against repo-root paths: it missed
+ * `d/inc.bean`'s `include "x.bean"`, refused over `d/inc2.bean`'s unrelated
+ * `include "b.bean"`, and with `updateIncludes` rewrote that one to a file
+ * that does not exist while leaving `include "./b.bean"` dangling.
+ */
+describe.each(["rest", "gql", "mcp"])(
+  "rename with relative includes via %s",
+  (surface) => {
+    const tree = {
+      "d/x.bean": "; x\n",
+      "d/inc.bean": 'include "x.bean"\n',
+      "d/b.bean": "; d/b\n",
+      "d/inc2.bean": 'include "b.bean"\n',
+      "d/up.bean": 'include "../b.bean" ; parent\n',
+      "b.bean": "; b\n",
+      "inc3.bean": 'include "./b.bean"\n',
+    };
+    const message = (result: unknown) => JSON.stringify(result ?? "");
+    const updated = (result: unknown) =>
+      (result as { updatedIncludes?: string[] } | undefined)?.updatedIncludes;
+
+    it("refuses a rename an include in a subdirectory still names", async () => {
+      const f = await fixture(identity, tree);
+      try {
+        const outcome = await f.call(surface, "d/x.bean", "d/y.bean");
+        expect(outcome.success).toBe(false);
+        expect(f.change).not.toHaveBeenCalled();
+        const done = await f.call(surface, "d/x.bean", "d/y.bean", {
+          updateIncludes: true,
+        });
+        expect(updated(done.result)).toEqual(["d/inc.bean"]);
+        expect(f.files.get("d/inc.bean")?.content).toBe('include "y.bean"\n');
+      } finally {
+        await f.close();
+      }
+    });
+
+    it("names only the includes that resolve to the file", async () => {
+      const f = await fixture(identity, tree);
+      try {
+        const outcome = await f.call(surface, "b.bean", "c.bean");
+        expect(outcome.success).toBe(false);
+        if (surface === "rest") {
+          const text = message(outcome.result);
+          expect(text).toContain("inc3.bean");
+          expect(text).toContain("d/up.bean");
+          expect(text).not.toContain("d/inc2.bean");
+        }
+        expect(f.change).not.toHaveBeenCalled();
+      } finally {
+        await f.close();
+      }
+    });
+
+    it("rewrites each include relative to its own file and leaves others alone", async () => {
+      const f = await fixture(identity, tree);
+      try {
+        const done = await f.call(surface, "b.bean", "e/c.bean", {
+          updateIncludes: true,
+        });
+        expect(done.success).toBe(true);
+        expect(updated(done.result)).toEqual(
+          expect.arrayContaining(["inc3.bean", "d/up.bean"]),
+        );
+        expect(updated(done.result)).toHaveLength(2);
+        expect(f.files.get("inc3.bean")?.content).toBe(
+          'include "./e/c.bean"\n',
+        );
+        expect(f.files.get("d/up.bean")?.content).toBe(
+          'include "../e/c.bean" ; parent\n',
+        );
+        expect(f.files.get("d/inc2.bean")?.content).toBe('include "b.bean"\n');
+      } finally {
+        await f.close();
+      }
+    });
+
+    it.each(["my file.bean", 'c"x.bean'])(
+      "writes a new name %p that reads back as the same path",
+      async (newPath) => {
+        const f = await fixture(identity, {
+          "main.bean": 'include "b.bean"\n',
+          "b.bean": "; b\n",
+        });
+        try {
+          const done = await f.call(surface, "b.bean", newPath, {
+            updateIncludes: true,
+          });
+          expect(done.success).toBe(true);
+          // Renaming it back finds the include it wrote, so that include names it.
+          const back = await f.call(surface, newPath, "b.bean", {
+            updateIncludes: true,
+          });
+          expect(updated(back.result)).toEqual(["main.bean"]);
+          expect(f.files.get("main.bean")?.content).toBe('include "b.bean"\n');
+        } finally {
+          await f.close();
+        }
+      },
+    );
+
+    it("keeps a glob that still matches and refuses one the file would leave", async () => {
+      const f = await fixture(identity, {
+        "main.bean": 'include "d/*.bean"\n',
+        "d/x.bean": "; x\n",
+      });
+      try {
+        const kept = await f.call(surface, "d/x.bean", "d/y.bean");
+        expect(kept.success).toBe(true);
+        expect(updated(kept.result)).toEqual([]);
+        const left = await f.call(surface, "d/y.bean", "e/y.bean", {
+          updateIncludes: true,
+        });
+        expect(left.success).toBe(false);
+        if (surface === "rest")
+          expect(message(left.result)).toContain('include \\"d/*.bean\\"');
+        expect(f.files.has("d/y.bean")).toBe(true);
+        expect(f.files.get("main.bean")?.content).toBe('include "d/*.bean"\n');
+      } finally {
+        await f.close();
+      }
+    });
+  },
+);
