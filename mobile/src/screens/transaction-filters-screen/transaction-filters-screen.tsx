@@ -318,7 +318,11 @@ const TransactionFiltersSheet = ({
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.section}>
-          <Text key={`status-title-${fontScale}`} style={styles.sectionTitle}>
+          <Text
+            key={`status-title-${fontScale}`}
+            style={styles.sectionTitle}
+            accessibilityRole="header"
+          >
             {t("filterStatus")}
           </Text>
           <View style={styles.chipRow}>
@@ -334,7 +338,11 @@ const TransactionFiltersSheet = ({
         </View>
 
         <View style={styles.section}>
-          <Text key={`range-title-${fontScale}`} style={styles.sectionTitle}>
+          <Text
+            key={`range-title-${fontScale}`}
+            style={styles.sectionTitle}
+            accessibilityRole="header"
+          >
             {t("filterDateRange")}
           </Text>
           <View style={styles.chipRow}>
@@ -376,7 +384,11 @@ const TransactionFiltersSheet = ({
         </View>
 
         <View style={styles.section}>
-          <Text key={`account-title-${fontScale}`} style={styles.sectionTitle}>
+          <Text
+            key={`account-title-${fontScale}`}
+            style={styles.sectionTitle}
+            accessibilityRole="header"
+          >
             {t("filterAccount")}
           </Text>
           <View style={[styles.rows, styles.accountRow]}>

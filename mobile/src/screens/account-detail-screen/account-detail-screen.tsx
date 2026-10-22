@@ -461,7 +461,9 @@ const AccountDetailScreenImpl = ({
             netWorthSign={netWorthSign}
           />
         </View>
-        <Text style={styles.sectionTitle}>{t("transactions")}</Text>
+        <Text style={styles.sectionTitle} accessibilityRole="header">
+          {t("transactions")}
+        </Text>
       </>
     ),
     [

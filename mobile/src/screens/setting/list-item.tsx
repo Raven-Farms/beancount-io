@@ -172,7 +172,9 @@ export const SectionHeader = ({ title }: { title: string }) => {
   );
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>{title}</Text>
+      <Text style={styles.title} accessibilityRole="header">
+        {title}
+      </Text>
     </View>
   );
 };

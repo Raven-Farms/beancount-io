@@ -715,7 +715,9 @@ const TransactionDetailImpl = ({
 
         {postingRows.length > 0 && (
           <>
-            <Text style={styles.sectionTitle}>{t("moneyFlow")}</Text>
+            <Text style={styles.sectionTitle} accessibilityRole="header">
+              {t("moneyFlow")}
+            </Text>
             <View style={[styles.card, styles.flowCard]}>
               {postingRows.map((posting, index) => (
                 <PostingRow
@@ -738,7 +740,9 @@ const TransactionDetailImpl = ({
 
         {hasMetadata && (
           <>
-            <Text style={styles.sectionTitle}>{t("details")}</Text>
+            <Text style={styles.sectionTitle} accessibilityRole="header">
+              {t("details")}
+            </Text>
             <View style={styles.card}>
               {entry.tags?.length ? (
                 <View style={styles.metadataRow}>

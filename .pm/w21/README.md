@@ -31,7 +31,6 @@
 - [432](./432.md) — Error text and Entry Context source not copyable
 - [433](./433.md) — Entry Context location truncates the line number first
 - [315](./blocked/315.md) — In-app commits signed with Gitea username and real email (no full_name, no noreply) — **blocked:** needs the owner's noreply-address and published-history decisions, and a production backfill of existing Gitea users that can't be verified here
-- [320](./320.md) — More section titles still aren't VoiceOver headings (143 follow-up)
 - [321](./321.md) — Zero-total receipt prefill and the auto leg still seed a real "0.00" (159 follow-up)
 - [322](./322.md) — Exact 9+-decimal prices shown as "≈"; bare metadata key reads "key: null" (160/162 follow-ups)
 - [323](./323.md) — BQL still returns the padded balance after 135

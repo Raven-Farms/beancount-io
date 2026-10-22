@@ -306,7 +306,9 @@ export const EntryContext: React.FC<EntryContextProps> = ({
           )}
 
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>{t("journalSource")}</Text>
+            <Text style={styles.sectionTitle} accessibilityRole="header">
+              {t("journalSource")}
+            </Text>
             <View style={styles.sourceContainer}>
               <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                 <Text style={styles.sourceText}>
