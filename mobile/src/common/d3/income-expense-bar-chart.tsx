@@ -7,6 +7,7 @@ import { useTheme } from "@/common/theme";
 import { useTranslations } from "@/common/hooks/use-translations";
 import { AnimatedBar } from "./animated-bar";
 import { barChartValueDomain, hasNoFlow } from "./bar-chart-domain";
+import { withYearMarks } from "./axis-year-marks";
 import { useEntranceProgress } from "./use-entrance-progress";
 import { restingBarRect } from "./bar-geometry";
 import { ScrollableAxisChart } from "./scrollable-axis-chart";
@@ -92,6 +93,10 @@ function IncomeExpenseBarChart({
   // Every series sets the bounds, bars included: a refund month's negative
   // expense bar ran off the plot floor through the month label when only the
   // net line could lower it (w21/022).
+  const columnLabels = withYearMarks(
+    months.map((month) => t(month.slice(5, 7))),
+    months,
+  );
   const yScale = scaleLinear()
     .domain(barChartValueDomain([...income, ...expense, ...net]))
     .range([chartHeight - BOTTOM_PADDING, TOP_PADDING])
@@ -226,7 +231,8 @@ function IncomeExpenseBarChart({
         />
       ))}
 
-      {/* X axis labels — month abbreviation per column */}
+      {/* X axis labels — month abbreviation per column, with the year where
+          it changes (w21/497) */}
       {months.map((month, i) => (
         <SvgText
           key={`x-${month}`}
@@ -236,7 +242,7 @@ function IncomeExpenseBarChart({
           fill={theme.text01}
           textAnchor="middle"
         >
-          {t(month.slice(5, 7))}
+          {columnLabels[i]}
         </SvgText>
       ))}
     </ScrollableAxisChart>

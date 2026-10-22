@@ -47,6 +47,7 @@ import {
   periodAxisLabel,
   STATUS_LABEL_KEYS,
 } from "@/screens/budget-screen/selectors/budget-labels";
+import { withYearMarks } from "@/common/d3/axis-year-marks";
 import { BudgetHistoryRows } from "@/screens/budget-screen/components/budget-history-rows";
 import { BudgetMeter } from "@/screens/budget-screen/components/budget-meter";
 import { LEADING_TEXT_ALIGN } from "@/common/rtl";
@@ -221,10 +222,14 @@ export function BudgetGroupCard({
 
   // One object so the chart and its spoken summary can never describe different
   // series.
+  const periodLabels = series.map((point) =>
+    periodAxisLabel(point.date, group.interval, t, locale),
+  );
+  const periodDates = series.map((point) => point.date);
   const chartSeries = {
-    labels: series.map((point) =>
-      periodAxisLabel(point.date, group.interval, t, locale),
-    ),
+    // A year where it changes, so a 12-month window's two Octobers differ
+    // (w21/497); the spoken summary names its own years.
+    labels: withYearMarks(periodLabels, periodDates),
     actuals: series.map((point) => point.actual),
     budgets: series.map((point) => point.budget),
     favorables,
@@ -351,7 +356,8 @@ export function BudgetGroupCard({
               accessibilityLabel={budgetChartSummary(
                 {
                   ...chartSeries,
-                  dates: series.map((point) => point.date),
+                  labels: periodLabels,
+                  dates: periodDates,
                   direction,
                 },
                 t,
