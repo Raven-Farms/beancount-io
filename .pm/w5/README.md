@@ -36,6 +36,8 @@
 
 ## Inbox
 
+- [975 — Retain transfer history under a reused native reference](./975.md) — major CLI follow-up to 598/882; an older bank-shared reference disappears after reuse and the other side of its transfer is booked again, reproduced 2026-10-22.
+
 - [974 — Keep native IDs when lot matching is incomplete](./974.md) — major CLI follow-up to 881; filtered Cash/Stock sale reimports lose native-ID ownership at the open-lot guard, reproduced 2026-10-22.
 
 - [973 — Keep native-ID conflicts when a plugin filters the original row](./973.md) — major CLI follow-up to 881; a changed amount under an existing bank reference is imported as new, reproduced 2026-10-22.
