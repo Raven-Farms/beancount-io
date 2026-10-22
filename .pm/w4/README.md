@@ -76,7 +76,6 @@
 
 - [962 — Keep Budget's first Add action from being lost](./962.md) — minor; dashboard QA,2026-10-22; four natural-load Enter/pointer cases lose an enabled header activation before handler readiness; retry/dismissal focus pass, matching page source traced; no writes.
 
-- [961 — Keep recognized CSV validation failures available for repair](./961.md) — minor; dashboard QA,2026-10-22; invalid date, mixed conventions and a recognized header-only file are mislabeled unreadable columns/AI at both widths; repair, precision and existing empty-state controls pass; no writes/AI.
 
 
 
