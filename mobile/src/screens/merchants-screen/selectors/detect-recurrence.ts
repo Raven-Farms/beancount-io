@@ -260,53 +260,105 @@ function monthDayAnchor(
 /** The least distance between a semi-monthly bill's two days. */
 const SEMIMONTHLY_MIN_SPREAD = 10;
 
+/** The days a semi-monthly series is due on, and the occurrence it last paid. */
+type SemiMonthly = { first: number; second: number; lastOccurrence: number };
+
+/** The day number a semi-monthly bill is due for one occurrence. */
+function semiMonthlyDueDay(occurrence: number, days: SemiMonthly): number {
+  const month = Math.floor(occurrence / 2);
+  const year = Math.floor(month / 12);
+  const monthOfYear = month - year * 12;
+  const anchor = occurrence % 2 === 0 ? days.first : days.second;
+  const first = Math.floor(
+    utcDate(year, monthOfYear, 1).getTime() / MS_PER_DAY,
+  );
+  return first + Math.min(anchor, daysInMonth(year, monthOfYear)) - 1;
+}
+
 /**
  * The two days of the month a series alternates between (the 1st and 15th,
  * or the 15th and the last day, clamped at a short month's end), or null.
  * Their gaps run 14, 16, 17 days, so the median read biweekly and Next came
  * two to three days early every cycle (w21/170).
+ *
+ * The days are the most common one and the most common one at least
+ * `SEMIMONTHLY_MIN_SPREAD` away from it, and each payment may sit within
+ * `ANCHOR_TOLERANCE_DAYS` of its due day, in its own month or the one beside it
+ * (a payment moved off a weekend, or paid on the 31st for the 1st), and one
+ * occurrence may be missing: a single early, late or skipped payment kept
+ * turning "Twice a month" into "Every 2 weeks" (w21/458). Occurrences are the
+ * 1st, 2nd, … due day counted from the first month, and each payment is the
+ * next one or, once, the one after.
  */
-function semiMonthlyDays(
-  eventDays: readonly number[],
-): { first: number; second: number } | null {
+function semiMonthlyDays(eventDays: readonly number[]): SemiMonthly | null {
   if (eventDays.length < 4) return null;
   const days = eventDays.map(calendarDay);
-  const first = Math.min(...days.map((d) => d.day));
-  const second = Math.max(...days.map((d) => d.day));
-  if (second - first < SEMIMONTHLY_MIN_SPREAD) return null;
-  const slot = (d: CalendarDay) =>
-    d.day === first
-      ? 0
-      : d.day === Math.min(second, daysInMonth(d.year, d.month))
-        ? 1
-        : null;
-  const monthIndex = (d: CalendarDay) => d.year * 12 + d.month;
+  const counts = new Map<number, number>();
+  for (const d of days) counts.set(d.day, (counts.get(d.day) ?? 0) + 1);
+  const modal = (candidates: Iterable<[number, number]>): number | null => {
+    let best: [number, number] | null = null;
+    for (const [day, count] of candidates) {
+      if (!best || count > best[1] || (count === best[1] && day > best[0])) {
+        best = [day, count];
+      }
+    }
+    return best === null ? null : best[0];
+  };
+  const one = modal(counts);
+  // One of the two days must be a day the bill really keeps: it repeats, and
+  // is a third of the payments. Otherwise a 14-day series, whose days walk
+  // through the month, fits two anchors by chance for a few payments.
+  if (one === null) return null;
+  const keptCount = counts.get(one) ?? 0;
+  if (keptCount < 2 || keptCount * 3 < days.length) return null;
+  const other = modal(
+    [...counts].filter(
+      ([day]) => Math.abs(day - one) >= SEMIMONTHLY_MIN_SPREAD,
+    ),
+  );
+  if (other === null) return null;
+  const found: SemiMonthly = {
+    first: Math.min(one, other),
+    second: Math.max(one, other),
+    lastOccurrence: 0,
+  };
+
+  let previous: number | null = null;
+  let missing = 0;
   for (let i = 0; i < days.length; i++) {
-    const current = slot(days[i]!);
-    if (current === null) return null;
-    if (i === 0) continue;
-    const previous = slot(days[i - 1]!);
-    const months = monthIndex(days[i]!) - monthIndex(days[i - 1]!);
-    // first → second within a month, second → first into the next.
-    const steps =
-      (previous === 0 && current === 1 && months === 0) ||
-      (previous === 1 && current === 0 && months === 1);
-    if (!steps) return null;
+    const d = days[i]!;
+    const own = d.year * 12 + d.month;
+    // The due day nearest this payment, in its month or a neighbour's.
+    let occurrence = -1;
+    let distance = Infinity;
+    for (const month of [own, own - 1, own + 1]) {
+      for (const slot of [0, 1]) {
+        const candidate = month * 2 + slot;
+        const gap = Math.abs(
+          eventDays[i]! - semiMonthlyDueDay(candidate, found),
+        );
+        if (gap < distance) {
+          distance = gap;
+          occurrence = candidate;
+        }
+      }
+    }
+    if (distance > ANCHOR_TOLERANCE_DAYS) return null;
+    if (previous !== null) {
+      const step = occurrence - previous;
+      if (step < 1 || step > 2) return null;
+      missing += step - 1;
+      if (missing > 1) return null;
+    }
+    previous = occurrence;
   }
-  return { first, second };
+  found.lastOccurrence = previous ?? 0;
+  return found;
 }
 
-/** The semi-monthly day after `dayNumber`, on one of the two `days`. */
-function nextSemiMonthlyDay(
-  dayNumber: number,
-  days: { first: number; second: number },
-): number {
-  const { year, month, day } = calendarDay(dayNumber);
-  if (day === days.first) {
-    const target = Math.min(days.second, daysInMonth(year, month));
-    return dayNumber + (target - day);
-  }
-  return addMonthsClamped(dayNumber, 1, days.first);
+/** The semi-monthly due day after the occurrence last paid. */
+function nextSemiMonthlyDay(days: SemiMonthly): number {
+  return semiMonthlyDueDay(days.lastOccurrence + 1, days);
 }
 
 function sortedCopy(values: readonly number[]): number[] {
@@ -546,7 +598,7 @@ export function detectRecurrence(
   const months = CADENCE_MONTHS[cadence];
   const kept = months === undefined ? null : monthDayAnchor(eventDays, months);
   const nextExpectedDay = semiMonthly
-    ? nextSemiMonthlyDay(lastDay, semiMonthly)
+    ? nextSemiMonthlyDay(semiMonthly)
     : months !== undefined && kept !== null
       ? addMonthsClamped(kept.lastDue, months, kept.anchor)
       : lastDay + gapDays;

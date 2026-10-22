@@ -464,6 +464,53 @@ describe("detectRecurrence twice a month", () => {
     expect(verdict?.nextExpected).toBe("2026-10-31");
   });
 
+  // w21/458: one shifted, early or missing payment turned "Twice a month" into
+  // "Every 2 weeks", with Next two or three days early.
+  describe("with one payment off its day", () => {
+    const dates = (change: (date: string) => string | null) =>
+      months
+        .flatMap((m) => [`2026-${m}-01`, `2026-${m}-15`])
+        .map(change)
+        .filter((date): date is string => date !== null);
+    const verdictFor = (list: string[]) =>
+      detectRecurrence(pointsOn(list, 120), "2026-10-20");
+
+    it("stays twice a month with Next on the 1st, whichever one is off", () => {
+      const variants = {
+        "the 15th paid early": dates((d) =>
+          d === "2026-02-15" ? "2026-02-13" : d,
+        ),
+        "the 1st paid on the 31st": dates((d) =>
+          d === "2026-08-01" ? "2026-07-31" : d,
+        ),
+        "a payment missing": dates((d) => (d === "2026-05-15" ? null : d)),
+        "the clean series": dates((d) => d),
+      };
+      for (const [name, list] of Object.entries(variants)) {
+        const verdict = verdictFor(list);
+        expect([name, verdict?.cadence]).toEqual([name, "semimonthly"]);
+        expect([name, verdict?.nextExpected]).toEqual([name, "2026-11-01"]);
+      }
+    });
+
+    it("gives up after two missing, and for a payment far from either day", () => {
+      const twoMissing = dates((d) =>
+        d === "2026-05-15" || d === "2026-07-01" ? null : d,
+      );
+      expect(verdictFor(twoMissing)?.cadence).not.toBe("semimonthly");
+      const far = dates((d) => (d === "2026-04-15" ? "2026-04-22" : d));
+      expect(verdictFor(far)?.cadence).not.toBe("semimonthly");
+    });
+
+    it("does not read a short 14-day run as twice a month", () => {
+      const series = pointsOn(
+        ["2024-01-01", "2024-01-15", "2024-01-29", "2024-02-12", "2024-02-26"],
+        -40,
+      );
+      expect(detectRecurrence(series, "2024-02-27")?.cadence).toBe("biweekly");
+    });
+  });
+
   it("keeps a true 14-day cadence as every two weeks", () => {
     const start = parseLedgerDay("2026-06-05")!;
     const series = Array.from({ length: 10 }, (_, i) =>
