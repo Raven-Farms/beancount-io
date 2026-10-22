@@ -2,6 +2,7 @@ import fs from "fs";
 import path from "path";
 import { guestLinkVisit } from "../guest-link-visit";
 import { resolveAppLink } from "../resolve-app-link";
+import { NO_FILTERS } from "../../../screens/transactions-screen/filters/types";
 
 const HOSTED = "https://beancount.io/";
 const link = (suffix: string) =>
@@ -23,7 +24,11 @@ describe("a signed-out link to a public example (w21/345)", () => {
     });
     expect(
       guestLinkVisit(link("open_ledger/crypto-example/journal"), HOSTED),
-    ).toEqual({ ledgerId: "open_ledger/crypto-example", view: "transactions" });
+    ).toEqual({
+      ledgerId: "open_ledger/crypto-example",
+      view: "transactions",
+      filters: NO_FILTERS,
+    });
   });
 
   it("leaves other ledgers, other pages and other servers to sign-in", () => {
@@ -56,5 +61,56 @@ describe("a signed-out link to a public example (w21/345)", () => {
     expect(src.includes("router.replace(exampleRoutes[guest.view])")).toBe(
       true,
     );
+  });
+});
+
+// w21/489: the guest path never received a journal link's filters.
+describe("a signed-out journal link with filters", () => {
+  it("opens the example's Transactions with the account the link names", () => {
+    const visit = guestLinkVisit(
+      link("open_ledger/example/journal?account=Expenses:Food"),
+      HOSTED,
+    );
+    expect(visit?.ledgerId).toBe("open_ledger/example");
+    expect(visit?.view).toBe("transactions");
+    expect(visit?.filters?.account).toBe("Expenses:Food");
+  });
+
+  it("carries a time window as the custom range", () => {
+    const visit = guestLinkVisit(
+      link("open_ledger/example/journal?time=2025-03"),
+      HOSTED,
+    );
+    expect(visit?.filters?.range).toBe("custom");
+    expect(visit?.filters?.startDate).toBe("2025-03-01");
+    expect(visit?.filters?.endDate).toBe("2025-03-31");
+  });
+
+  it("carries none for the tabs that have no filters", () => {
+    const visit = guestLinkVisit(link("open_ledger/example"), HOSTED);
+    expect(visit !== null && "filters" in visit).toBe(false);
+  });
+
+  it("is kept on the visit and seeds the guest session's filters", () => {
+    const read = (file: string) =>
+      fs
+        .readFileSync(path.join(__dirname, "../../..", file), "utf8")
+        .replace(/\s+/g, "");
+    expect(
+      read("common/guest/guest-state.ts").includes(
+        'Pick<GuestVisit,"ledgerId"|"view"|"resumeFailure"|"filters">',
+      ),
+    ).toBe(true);
+    const provider = read("screens/examples/example-ledger-provider.tsx");
+    expect(
+      provider.includes(
+        "linkFilters?{ledgerId,filters:linkFilters}:NO_SCOPED_FILTERS",
+      ),
+    ).toBe(true);
+    expect(
+      provider.includes(
+        "if(linkFilters)transactionFilters({ledgerId,filters:linkFilters});",
+      ),
+    ).toBe(true);
   });
 });

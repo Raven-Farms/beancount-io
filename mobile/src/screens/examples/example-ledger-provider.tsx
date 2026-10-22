@@ -78,10 +78,21 @@ function GuestLedgerSession({
     () => makeVar<StashedTransaction | null>(null),
     [],
   );
+  // The filters a journal link named open the example's Transactions filtered
+  // (w21/489); a later link replaces them, as a signed-in one does (w21/344).
+  const linkFilters = visit.filters;
   const transactionFilters = useMemo(
-    () => makeVar<ScopedTransactionFilters>(NO_SCOPED_FILTERS),
+    () =>
+      makeVar<ScopedTransactionFilters>(
+        linkFilters ? { ledgerId, filters: linkFilters } : NO_SCOPED_FILTERS,
+      ),
+    // Seeded once per session; the effect below carries later links.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [],
   );
+  useEffect(() => {
+    if (linkFilters) transactionFilters({ ledgerId, filters: linkFilters });
+  }, [linkFilters, ledgerId, transactionFilters]);
   useEffect(
     () => () => {
       client.stop();
