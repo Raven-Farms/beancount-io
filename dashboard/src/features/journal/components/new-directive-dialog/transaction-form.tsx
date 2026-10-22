@@ -56,6 +56,7 @@ import {
   postingCurrency,
 } from "./transaction-auto-balance";
 import { parseDecimalNumber } from "@/common/lib/beancount/decimal-number";
+import { isCompositionKey } from "@/common/lib/keyboard/is-composition-key";
 import { AccountAvailabilityNotice } from "./account-availability-notice";
 import { useAccountAvailability } from "./use-account-availability";
 import { usePendingSubmit } from "@/common/hooks/use-pending-submit";
@@ -331,6 +332,9 @@ export function TransactionForm({
 
   // Handle keyboard shortcuts
   const handleKeyDown = (e: React.KeyboardEvent<HTMLFormElement>) => {
+    // An Enter the input method is consuming confirms its composition, not
+    // the transaction (w4/965).
+    if (isCompositionKey(e.nativeEvent)) return;
     // Ctrl+Enter or Cmd+Enter to submit
     if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
       e.preventDefault();
