@@ -30,7 +30,6 @@
 - [586](./blocked/586.md) — The Android build declares the advertising-ID permission (`AD_ID`) though nothing uses it — **blocked:** needs the store owner to confirm why it was added and to change Play's advertising-ID declaration (Play Console access)
 - [587](./blocked/587.md) — Deleting a file that `main.bean` includes just says "Deleted": the ledger breaks or silently loses the file's entries — **blocked:** needs an owner decision on the delete contract for REST, GraphQL and MCP (refuse, preview, or warn after)
 - [588](./blocked/588.md) — New File creates a file nothing includes, so its entries never count, and Files doesn't show which files are read — **blocked:** needs an owner product decision on including new files (app only or every surface) and on marking files the ledger does not read
-- [589](./589.md) — Files sorts names as text: "qa-10.bean" before "qa-2.bean"
 - [590](./590.md) — The file editor's title shows only the file name, so same-named files in different folders look alike
 - [591](./591.md) — On servers older than 2026-10-21, `getLedgerErrors` (now selecting `code`/`hint`) fails: Notifications breaks, the bell reads 0, the editor's checks go silent
 - [592](./592.md) — Creating a ledger fails on servers older than 2026-10-20, even Starter and Sample (ADR021's older-backend rule not followed)
@@ -94,3 +93,4 @@
 - [650](./650.md) — A `%` posting flag is accepted and committed, but the engine reads the postings as comments: the entry has 0 postings (silent loss) (ledger)
 - [508](./blocked/508.md) — Mobile guesses that an entry is a plugin copy from its first line; read the ledger's `generated_from` instead (split from 443) — **blocked:** production's GraphQL schema lacks `generated_from` until the ledger service and backend-v2 deploy; mobile's client is generated from it
 - [315](./blocked/315.md) — In-app commits signed with Gitea username and real email (no full_name, no noreply) — **blocked:** needs the owner's noreply-address and published-history decisions, and a production backfill of existing Gitea users that can't be verified here
+- [658](./658.md) — The dashboard's file browser sorts names as plain text ("qa-10.bean" before "qa-2.bean"); split from w21/589

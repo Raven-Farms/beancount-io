@@ -50,3 +50,40 @@ describe("a dot inside a new file's name", () => {
     });
   });
 });
+
+// w21/589: Files sorted names as plain text, so "qa-10.bean" listed before
+// "qa-2.bean" and month-numbered books read 1, 10, 11, 12, 2, 3.
+describe("sortEntries in natural order", () => {
+  const { sortEntries } = require("../utils");
+  const entry = (name: string, type = "file") => ({
+    name,
+    type,
+    path: name,
+  });
+  const names = (list: { name: string }[]) =>
+    sortEntries(list).map((e: { name: string }) => e.name);
+
+  it("orders numbered names numerically", () => {
+    expect(
+      names(
+        ["12.bean", "2.bean", "10.bean", "1.bean", "3.bean", "11.bean"].map(
+          (n) => entry(n),
+        ),
+      ),
+    ).toEqual(["1.bean", "2.bean", "3.bean", "10.bean", "11.bean", "12.bean"]);
+    expect(
+      names([entry("main.bean"), entry("qa-10.bean"), entry("qa-2.bean")]),
+    ).toEqual(["main.bean", "qa-2.bean", "qa-10.bean"]);
+  });
+
+  it("keeps folders first, and plain names alphabetical", () => {
+    expect(
+      names([
+        entry("b.bean"),
+        entry("2026", "dir"),
+        entry("a.bean"),
+        entry("books", "dir"),
+      ]),
+    ).toEqual(["2026", "books", "a.bean", "b.bean"]);
+  });
+});

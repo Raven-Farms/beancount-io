@@ -156,11 +156,15 @@ export function canDeleteLedgerFile(path: string): boolean {
 
 type Entry = { name: string; type: string; path: string };
 
+/**
+ * Folders first, then names in natural order: month-numbered books list 1, 2,
+ * 3 … 10, 11, 12 rather than 1, 10, 11, 12, 2 (w21/589).
+ */
 export function sortEntries<T extends Entry>(entries: T[]): T[] {
   return [...entries].sort((a, b) => {
     if (a.type === "dir" && b.type !== "dir") return -1;
     if (a.type !== "dir" && b.type === "dir") return 1;
-    return a.name.localeCompare(b.name);
+    return a.name.localeCompare(b.name, undefined, { numeric: true });
   });
 }
 
