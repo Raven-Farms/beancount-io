@@ -253,8 +253,11 @@ export function AccountEntryRow({
 
   // One name for the whole row, read from the visible text. The label also
   // keeps the type icon's glyph out of the name.
+  // The type chip (Open, Close, Pad, Note, Balance) is part of it: Open, Pad and
+  // Close rows read alike without it (w21/559).
   const accessibilityLabel = [
     title,
+    typeLabelKey ? t(typeLabelKey) : null,
     detailText,
     offByText,
     changeText,

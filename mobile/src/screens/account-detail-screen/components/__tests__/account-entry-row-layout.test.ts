@@ -212,6 +212,25 @@ describe("AccountEntryRow accessibility", () => {
     );
   });
 
+  // w21/559: Open, Pad and Close rows read alike without their chip.
+  it("says the type chip a directive row draws", () => {
+    const row = AccountEntryRow({ row: balanceDirective, currency: "USD" });
+    const label = String(row.props.accessibilityLabel).split(", ");
+    expect(label[0]).toBe(balanceDirective.title);
+    expect(label[1]).toBe("directiveBalance");
+  });
+
+  it("names no chip for a transaction", () => {
+    const row = AccountEntryRow({
+      row: transfer,
+      currency: "USD",
+      onPress() {},
+    });
+    expect(String(row.props.accessibilityLabel).includes("directive")).toBe(
+      false,
+    );
+  });
+
   it("leaves non-interactive directive rows without a button role", () => {
     const row = AccountEntryRow({ row: balanceDirective, currency: "USD" });
     expect(row.type).toBe("View");
