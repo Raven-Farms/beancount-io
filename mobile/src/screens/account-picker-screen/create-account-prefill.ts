@@ -1,3 +1,11 @@
+import type { RootNames } from "../../common/account-root";
+import {
+  composeAccountName,
+  ledgerRootName,
+  splitPrefillAccountName,
+  type AccountRootPrefix,
+} from "../open-account-screen/account-name";
+
 /**
  * Turkish dotless i: its uppercase "I" is a different letter in Turkish, so it
  * is left as typed, as the dotted capital İ is.
@@ -32,4 +40,26 @@ export function capitalizeAccountPrefill(query: string): string {
       return upper + rest.join("");
     })
     .join(":");
+}
+
+/**
+ * The full name Open Account will compose from what was typed: the query
+ * capitalized, under the picker's root when it names none. The picker checked
+ * only the text as typed, so `gym` offered Create for a closed `Expenses:Gym`,
+ * which Open Account then refused (w21/531).
+ */
+export function createdAccountName(
+  query: string,
+  fallbackRoot: AccountRootPrefix,
+  roots: RootNames = {},
+): string {
+  const seed = splitPrefillAccountName(
+    capitalizeAccountPrefill(query),
+    fallbackRoot,
+    roots,
+  );
+  return composeAccountName(
+    ledgerRootName(seed.rootPrefix, roots),
+    seed.subPath,
+  );
 }

@@ -70,7 +70,11 @@ import { FadeInView } from "@/components/crossfade";
 import { accountUsageVar, recordAccountUsage } from "@/common/vars";
 import { usageFor, type RankingContext } from "@/common/account-frecency";
 import { LEADING_TEXT_ALIGN, directionalIcon } from "@/common/rtl";
-import { capitalizeAccountPrefill } from "./create-account-prefill";
+import {
+  capitalizeAccountPrefill,
+  createdAccountName,
+} from "./create-account-prefill";
+import { useLedgerRootNames } from "@/common/hooks/use-ledger-root-names";
 import { useRouteParams } from "@/common/hooks/use-route-params";
 
 const SKELETON_ROW_WIDTHS = [200, 160, 220, 140, 180, 210, 150, 190];
@@ -492,6 +496,12 @@ function AccountPickerScreenComponent(): JSX.Element {
   // active (a no-match search yields zero sections — see `picker-sections`),
   // and only for a collaborator who may actually create the account.
   const trimmedQuery = query.trim();
+  const roots = useLedgerRootNames();
+  // Destination pickers are choosing where money went, so suggest the
+  // Expenses root for a rootless query; source pickers suggest Assets.
+  const createFallbackRoot =
+    parseCreateRoot(createRoot) ??
+    (accountOrderFor(type) === "to" ? "Expenses" : "Assets");
 
   const onCreate = useCallback(() => {
     if (!canWrite) {
@@ -501,37 +511,42 @@ function AccountPickerScreenComponent(): JSX.Element {
     }
     pushOpenAccount(router, {
       prefill: capitalizeAccountPrefill(trimmedQuery),
-      // Destination pickers are choosing where money went, so suggest the
-      // Expenses root for a rootless query; source pickers suggest Assets.
-      prefillRoot:
-        parseCreateRoot(createRoot) ??
-        (accountOrderFor(type) === "to" ? "Expenses" : "Assets"),
+      prefillRoot: createFallbackRoot,
       openDate: entryDate,
       onCreated: (account) => {
         confirmSelection(account, Date.now());
       },
     });
-  }, [canWrite, trimmedQuery, type, entryDate, router, confirmSelection]);
+  }, [
+    canWrite,
+    trimmedQuery,
+    createFallbackRoot,
+    entryDate,
+    router,
+    confirmSelection,
+  ]);
 
   // A closed account named exactly is not new: say when it closed rather than
   // offer to create it, which Open Account would refuse (w21/122).
+  // The name Create would compose counts too: `gym` is `Expenses:Gym`
+  // (w21/531).
+  const checkDate = entryDate ?? getFormatDate(new Date());
+  const createdName = createdAccountName(
+    trimmedQuery,
+    createFallbackRoot,
+    roots,
+  );
   const closedMatch =
     type === "filter"
       ? null
-      : closedAccountNamed(
-          trimmedQuery,
-          entryDate ?? getFormatDate(new Date()),
-          closeDates,
-        );
+      : (closedAccountNamed(trimmedQuery, checkDate, closeDates) ??
+        closedAccountNamed(createdName, checkDate, closeDates));
   // The same for an account the ledger opens later than the entry's date.
   const futureMatch =
     type === "filter"
       ? null
-      : notYetOpenAccountNamed(
-          trimmedQuery,
-          entryDate ?? getFormatDate(new Date()),
-          closeDates,
-        );
+      : (notYetOpenAccountNamed(trimmedQuery, checkDate, closeDates) ??
+        notYetOpenAccountNamed(createdName, checkDate, closeDates));
   const showCreateRow =
     !closedMatch &&
     !futureMatch &&

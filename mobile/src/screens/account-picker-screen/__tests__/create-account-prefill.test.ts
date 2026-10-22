@@ -64,3 +64,38 @@ describe("capitalizeAccountPrefill", () => {
     expect(capitalizeAccountPrefill("日本:食費")).toBe("日本:食費");
   });
 });
+
+// w21/531: `gym` offered Create for a closed `Expenses:Gym`, which Open Account
+// then refused.
+describe("createdAccountName", () => {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { createdAccountName } = require("../create-account-prefill");
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { closedAccountNamed } = require("../../../common/account-close-dates");
+
+  it("composes the name Open Account will, under the picker's root", () => {
+    expect(createdAccountName("gym", "Expenses")).toBe("Expenses:Gym");
+    expect(createdAccountName("my savings", "Assets")).toBe("Assets:MySavings");
+    expect(createdAccountName("liabilities:card", "Expenses")).toBe(
+      "Liabilities:Card",
+    );
+  });
+
+  it("follows a ledger's renamed roots", () => {
+    expect(createdAccountName("gym", "Expenses", { expenses: "Gastos" })).toBe(
+      "Gastos:Gym",
+    );
+  });
+
+  it("finds the closed account a short name would recreate", () => {
+    const closeDates = new Map([["Expenses:Gym", "2026-09-01"]]);
+    expect(closedAccountNamed("gym", "2026-10-22", closeDates)).toBe(null);
+    expect(
+      closedAccountNamed(
+        createdAccountName("gym", "Expenses"),
+        "2026-10-22",
+        closeDates,
+      ),
+    ).toEqual({ account: "Expenses:Gym", closedAt: "2026-09-01" });
+  });
+});
