@@ -1,6 +1,9 @@
 import { formatLedgerDate } from "../../../common/date-format";
 import { getAccountRoot, type RootNames } from "../../../common/account-root";
-import { currencyMinorUnits } from "../../../common/currency-util";
+import {
+  currencyMinorUnits,
+  isFiatCurrency,
+} from "../../../common/currency-util";
 import { amountScale } from "../../../common/number-utils";
 import {
   JournalDirectiveType,
@@ -17,6 +20,9 @@ export type JournalSection = {
 
 /** Default scale: money reads with cents, so 1.5 shows as 1.50. */
 const MIN_FRACTION_DIGITS = 2;
+/** Most recorded digits a commodity amount is padded out to. */
+const COMMODITY_RECORDED_DIGITS = 8;
+
 /** `Intl.NumberFormat` rejects anything above this. */
 const MAX_FRACTION_DIGITS = 20;
 
@@ -31,10 +37,17 @@ export const formatAmount = (
   value: number,
   currency: string,
   scale = MIN_FRACTION_DIGITS,
+  heldAtCost = false,
 ): string => {
   // The display floor is the currency's minor unit: "1,500 JPY" as account
-  // detail shows it, not "1,500.00 JPY" (w21/070).
-  const minimumFractionDigits = currencyMinorUnits(currency);
+  // detail shows it, not "1,500.00 JPY" (w21/070). Only for a national
+  // currency: a share count or a points balance keeps the digits it was
+  // recorded with, as Money flow shows it, and so do units held at a cost,
+  // whatever their ticker spells (BND, AMD, NOK) (w21/445, w21/506, w21/601).
+  const minimumFractionDigits =
+    !heldAtCost && isFiatCurrency(currency)
+      ? currencyMinorUnits(currency)
+      : Math.min(COMMODITY_RECORDED_DIGITS, scale);
   const maximumFractionDigits = Math.min(
     MAX_FRACTION_DIGITS,
     Math.max(minimumFractionDigits, scale),
@@ -151,6 +164,7 @@ const corporateActionAmount = (
       Math.abs(parseFloat(largest.units.number)),
       currency,
       amountScale(largest.units.number),
+      true,
     ),
     value: 0,
     currency,
@@ -206,6 +220,10 @@ export const selectTransactionAmount = (
   if (corporateAction) return corporateAction;
 
   const cashPostings = postings.filter((p) => isBalanceSheet(p.account, roots));
+  // Units a lot is held in, whatever the commodity's ticker looks like.
+  const heldAtCost = new Set(
+    postings.filter((p) => p.cost?.currency).map((p) => p.units.currency),
+  );
 
   if (cashPostings.length > 0) {
     // A sum is only as coarse as its finest leg, so a bucket carries the
@@ -282,7 +300,12 @@ export const selectTransactionAmount = (
               ? bucket.largestLeg
               : Math.abs(bucket.value);
           return {
-            text: formatAmount(size, currency, bucket.scale),
+            text: formatAmount(
+              size,
+              currency,
+              bucket.scale,
+              heldAtCost.has(currency),
+            ),
             value: 0,
             currency,
           };
@@ -321,12 +344,21 @@ export const selectTransactionAmount = (
       const netsToZero = Math.abs(value) < 0.5 * 10 ** -scale;
       if (netsToZero && legs > 1 && largestLeg > 0) {
         return {
-          text: formatAmount(largestLeg, currency, scale),
+          text: formatAmount(
+            largestLeg,
+            currency,
+            scale,
+            heldAtCost.has(currency),
+          ),
           value: 0,
           currency,
         };
       }
-      return { text: formatAmount(value, currency, scale), value, currency };
+      return {
+        text: formatAmount(value, currency, scale, heldAtCost.has(currency)),
+        value,
+        currency,
+      };
     }
   }
 
@@ -353,6 +385,7 @@ export const selectTransactionAmount = (
       Math.abs(parseFloat(max.units.number)),
       currency,
       amountScale(max.units.number),
+      heldAtCost.has(currency),
     ),
     value: 0,
     currency,

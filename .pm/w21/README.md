@@ -31,7 +31,6 @@
 - [587](./blocked/587.md) — Deleting a file that `main.bean` includes just says "Deleted": the ledger breaks or silently loses the file's entries — **blocked:** needs an owner decision on the delete contract for REST, GraphQL and MCP (refuse, preview, or warn after)
 - [588](./blocked/588.md) — New File creates a file nothing includes, so its entries never count, and Files doesn't show which files are read — **blocked:** needs an owner product decision on including new files (app only or every surface) and on marking files the ledger does not read
 - [600](./blocked/600.md) — Latest Updates never shows the commit you just made (not invalidated on write, and cached for 5 minutes server-side) — **blocked:** needs an owner decision on how the server drops its five-minute activity cache when the user commits (shared write hook vs shorter TTL)
-- [601](./601.md) — Transaction headline and list row pad share counts to ".00" while Money flow doesn't ("+10.00 GOOG" over "+10 GOOG")
 - [602](./602.md) — Money flow doesn't pad a real currency held at cost ("+$100.5" under "+$100.50") (w21/506 over-reach)
 - [603](./603.md) — Money flow drops a lot's date and label, so sales from different lots look identical
 - [604](./604.md) — Posting metadata on transaction detail is cut to 2 lines and can't be selected

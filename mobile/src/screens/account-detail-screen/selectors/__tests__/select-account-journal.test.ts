@@ -216,8 +216,10 @@ describe("selectAccountJournalRows", () => {
     expect(rows[1].balance).toBe(-532257);
 
     const [balanceDay] = groupAccountJournalRowsToSections([rows[0]], "MRMB");
+    // Shown at the digits the ledger recorded (none here), as the real row is
+    // (w21/601).
     const [zeroDay] = groupAccountJournalRowsToSections(
-      [row("2026-06-30", "Balance", 0, 0)],
+      [{ ...row("2026-06-30", "Balance", 0, 0), moneyScale: 0 }],
       "MRMB",
     );
     expect(balanceDay.totalChange).toBe(zeroDay.totalChange);

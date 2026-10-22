@@ -106,7 +106,8 @@ describe("formatAmount", () => {
   });
 
   it("clamps an absurd scale instead of throwing on Intl's 20-digit cap", () => {
-    expect(formatAmount(1.5, "XYZ", 99)).toBe("1.50 XYZ");
+    // Never throws on Intl's 20-digit cap, and keeps to the digits it has.
+    expect(formatAmount(1.5, "XYZ", 99)).toBe("1.50000000 XYZ");
   });
 });
 
@@ -302,7 +303,7 @@ describe("selectTransactionAmount", () => {
         ],
       });
       expect(selectTransactionAmount(tx, "USD")).toEqual({
-        text: "100.00 NVDA",
+        text: "100 NVDA",
         value: 0,
         currency: "NVDA",
       });
@@ -323,7 +324,7 @@ describe("selectTransactionAmount", () => {
       });
       const amount = selectTransactionAmount(tx, "USD");
       expect(amount && "value" in amount ? amount.value : null).toBe(0);
-      expect(amount && "text" in amount ? amount.text : "").toBe("10.00 OLDCO");
+      expect(amount && "text" in amount ? amount.text : "").toBe("10 OLDCO");
     });
 
     it("leaves a purchase and a sale with cash as they were", () => {
@@ -441,7 +442,7 @@ describe("selectTransactionAmount", () => {
       ],
     });
     expect(entryAmount(statement)).toEqual({
-      text: "6,760.00 MUSD",
+      text: "6,760 MUSD",
       value: 0,
       currency: "MUSD",
     });
@@ -523,7 +524,7 @@ describe("selectTransactionAmount", () => {
       ],
     });
     expect(selectTransactionAmount(tx)).toEqual({
-      text: "0.00 ETH",
+      text: "0.000 ETH",
       value: 0,
       currency: "ETH",
     });
@@ -854,5 +855,38 @@ describe("formatAmount at the currency's minor unit", () => {
       "12.345 KWD",
     );
     expect(formatAmount(1.5, "USD", amountScale("1.5"))).toBe("$1.50");
+  });
+});
+
+// w21/601: the headline and the list row padded shares and points to ".00"
+// ("+10.00 GOOG") while Money flow showed what the ledger recorded ("+10 GOOG").
+describe("formatAmount for a commodity that is not a currency", () => {
+  it("keeps the recorded digits", () => {
+    expect(formatAmount(10, "GOOG", 0)).toBe("10 GOOG");
+    expect(formatAmount(1500, "PTS", 0)).toBe("1,500 PTS");
+    expect(formatAmount(0.5, "VTI", 1)).toBe("0.5 VTI");
+    expect(formatAmount(0.004, "ETH", 3)).toBe("0.004 ETH");
+  });
+
+  it("still pads a national currency to its minor unit, and units held at a cost do not pad", () => {
+    expect(formatAmount(1.5, "EUR", 1)).toBe("1.50 EUR");
+    expect(formatAmount(1500, "JPY", 0)).toBe("1,500 JPY");
+    // A ticker that is also a currency code (BND, NOK) is shares when held at a cost.
+    expect(formatAmount(10, "BND", 0, true)).toBe("10 BND");
+    expect(formatAmount(10, "BND", 0)).toBe("10.00 BND");
+  });
+
+  it("reads the Google RSU as +10 GOOG, as Money flow does", () => {
+    const tx = makeTransaction({
+      postings: [
+        makePosting("Assets:QaGoog", "10", "GOOG", {
+          number: "150.00",
+          currency: "USD",
+        }),
+        makePosting("Income:QaRsu", "-1500.00"),
+      ],
+    });
+    const amount = selectTransactionAmount(tx, "USD");
+    expect(amount && "text" in amount ? amount.text : "").toBe("10 GOOG");
   });
 });
