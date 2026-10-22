@@ -31,7 +31,6 @@
 - [432](./432.md) — Error text and Entry Context source not copyable
 - [433](./433.md) — Entry Context location truncates the line number first
 - [315](./blocked/315.md) — In-app commits signed with Gitea username and real email (no full_name, no noreply) — **blocked:** needs the owner's noreply-address and published-history decisions, and a production backfill of existing Gitea users that can't be verified here
-- [323](./323.md) — BQL still returns the padded balance after 135
 - [324](./324.md) — Same-day ordering reverts when a plugin adds directives (134 follow-up)
 - [325](./325.md) — parseFile still sends HEIC to the model (108 covered receipts only)
 - [326](./326.md) — Create Ledger: hidden invalid amount under "Decide later" silently blocks Next

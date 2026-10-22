@@ -386,6 +386,18 @@ function mergeSourceDocumentSyntax(
   });
 }
 
+/**
+ * Whether any file declares a `pad`. The engine pads every non-zero difference,
+ * and the parse path drops the padding a balance's tolerance would not (w21/135),
+ * so BQL has to run over that corrected stream or it sums the padded balance the
+ * journal and trial balance do not show (w21/323).
+ */
+function sourceHasPad(files: FileMap): boolean {
+  return Object.values(files).some((source) =>
+    /^\d{4}-\d{2}-\d{2}\s+pad\s/mu.test(source),
+  );
+}
+
 function sourceHasTaggedDocument(files: FileMap): boolean {
   return Object.values(files).some((source) =>
     source
@@ -722,7 +734,9 @@ export async function queryLedgerFilesResultInProcess(
     HANDLED_PLUGIN_NAMES.has(name),
   );
   const needsMaterializedStream =
-    needsTsPluginStream || sourceHasTaggedDocument(files);
+    needsTsPluginStream ||
+    sourceHasTaggedDocument(files) ||
+    sourceHasPad(files);
   const materialized = needsMaterializedStream
     ? materializeDirectiveStreamWithSourceMap(
         (await parseLedgerFilesInProcess(files, entryPoint)).directives,
