@@ -186,6 +186,8 @@ describe("budgetPanelRowAccessibilityValue", () => {
     progressPercent: 80,
     noBudget: false,
     favorable: true,
+    status: "below",
+    income: false,
     ...overrides,
   });
 
@@ -213,7 +215,12 @@ describe("budgetPanelRowAccessibilityValue", () => {
 
   it("names the status an overspent budget shows", () => {
     const text = budgetPanelRowAccessibilityValue(
-      row({ actual: 620, progressPercent: 124, favorable: false }),
+      row({
+        actual: 620,
+        progressPercent: 124,
+        favorable: false,
+        status: "above",
+      }),
       t,
     );
 
@@ -295,5 +302,87 @@ describe("the Home panel against the Budget screen", () => {
       true,
     );
     expect(source.includes("timeWindowStart(time, today),")).toBe(true);
+  });
+});
+
+// w21/218: the panel announced a beaten income target as "Below target" and
+// ranked it as the budget most at risk.
+describe("the Home panel's status wording and ranking", () => {
+  const t = (key: string) => key;
+  const today = "2026-10-21";
+  const entry = (account: string, amount: string, actual: number) => ({
+    ...input(account, amount, actual),
+    periodEnd: "2026-10-31",
+  });
+  const speak = (
+    account: string,
+    amount: string,
+    actual: number,
+    asOf = "2026-10-31",
+  ) => {
+    const [row] = selectBudgetPanelRows(
+      [entry(account, amount, actual)],
+      3,
+      asOf,
+    );
+    return budgetPanelRowAccessibilityValue(row, (key, options) =>
+      key === "budgetPanelRowValue" && options
+        ? `${key}|${String(options.status)}`
+        : t(key),
+    );
+  };
+
+  it("says what the Budget card says for an income target", () => {
+    // Income reads negative in the ledger. Earned 1,500 against a 1,000 target: above it, which is the good side.
+    expect(
+      speak("Income:Salary", "-1000 USD", -1500).endsWith("budgetAboveTarget"),
+    ).toBe(true);
+    // Earned 400 against 1,000: below, and unfavorable.
+    expect(
+      speak("Income:Salary", "-1000 USD", -400).endsWith("budgetBelowTarget"),
+    ).toBe(true);
+  });
+
+  it("says on target when spending matches the cap exactly", () => {
+    expect(
+      speak("Expenses:Rent", "1500 USD", 1500).endsWith("budgetOnTarget"),
+    ).toBe(true);
+  });
+
+  it("ranks the budgets worth knowing about, not the highest utilization", () => {
+    // Salary beaten (150%), Fun over (120%), Rent on target (100%), Food just
+    // under its cap (96.7%) and Freelance far behind its income target (10%).
+    const rows = selectBudgetPanelRows(
+      [
+        entry("Income:Salary", "-1000 USD", -1500),
+        entry("Expenses:Fun", "100 USD", 120),
+        entry("Expenses:Rent", "1500 USD", 1500),
+        entry("Expenses:Food", "600 USD", 580),
+        entry("Income:Freelance", "-1000 USD", -100),
+      ],
+      5,
+      "2026-10-31",
+    );
+    expect(rows.map((row) => row.shortAccount)).toEqual([
+      "Freelance", // 90 points short of its target
+      "Fun", // 20 points over its cap
+      "Rent", // at its cap
+      "Food", // 96.7% of its cap
+      "Salary", // a beaten income target needs no action
+    ]);
+    expect(rows.length).toBe(5);
+  });
+
+  it("keeps a zero budget already spent past first, and a future budget last", () => {
+    const rows = selectBudgetPanelRows(
+      [
+        entry("Expenses:Fun", "100 USD", 120),
+        entry("Expenses:Zero", "0 USD", 30),
+        entry("Income:Salary", "-1000 USD", -1500),
+      ],
+      3,
+      today,
+    );
+    expect(rows[0].shortAccount).toBe("Zero");
   });
 });

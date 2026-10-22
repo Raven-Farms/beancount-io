@@ -10,7 +10,11 @@ import {
   budgetDirection,
   calculateBudgetForInterval,
 } from "../../budget-screen/selectors/budget-selectors";
-import type { BudgetGroup } from "../../budget-screen/selectors/budget-selectors";
+import type {
+  BudgetGroup,
+  VarianceStatus,
+} from "../../budget-screen/selectors/budget-selectors";
+import { STATUS_LABEL_KEYS } from "../../budget-screen/selectors/budget-labels";
 import { selectBudgetCardStats } from "../../budget-screen/selectors/select-budget-card-stats";
 
 export type BudgetPanelInput = {
@@ -40,6 +44,10 @@ export type BudgetPanelRow = {
   startsOn?: string;
   /** True when this budget is on the good side of its target. */
   favorable: boolean;
+  /** Where the actual stands against the target; null when not yet in effect. */
+  status: VarianceStatus | null;
+  /** An income target, to be reached, rather than a spending cap. */
+  income: boolean;
 };
 
 /**
@@ -83,6 +91,8 @@ export function selectBudgetPanelRows(
         progressPercent: 0,
         noBudget,
         favorable: true,
+        status: null,
+        income: direction === -1,
         startsOn: stats.startsOn,
       };
     }
@@ -100,21 +110,39 @@ export function selectBudgetPanelRows(
         : (stats.progressPercent ?? 0),
       noBudget,
       favorable: stats.favorable,
+      status: stats.status,
+      income: direction === -1,
     };
   });
 
-  // Highest utilization first, and a 0 budget already spent past it before
-  // everything else: it read "0% used" and sorted last (w21/076). Ties break on
-  // account so the order is stable between renders rather than depending on
-  // query completion order.
-  const rank = (row: BudgetPanelRow) =>
+  // Most at risk first (w21/218). Utilization alone treated an income target
+  // beaten at 150% as the biggest risk and hid a budget at 97% of its limit:
+  //  4. a zero budget already spent past (it read "0% used", w21/076);
+  //  3. anything off its target the wrong way, the bigger miss first (an
+  //     expense over its cap, an income target behind);
+  //  2. spending closest to its cap;
+  //  1. income that met or beat its target: nothing to act on;
+  //  0. a budget not yet in effect.
+  // Ties break on account so the order is stable between renders rather than
+  // depending on query completion order.
+  const rank = (row: BudgetPanelRow): [number, number] =>
     row.startsOn !== undefined
-      ? -1
-      : row.noBudget && row.actual > 0
-        ? Infinity
-        : row.progressPercent;
+      ? [0, 0]
+      : !row.favorable && row.noBudget && row.actual > 0
+        ? [4, 0]
+        : !row.favorable
+          ? [3, Math.abs(row.progressPercent - 100)]
+          : row.income
+            ? [1, 0]
+            : [2, row.progressPercent];
   return rows
-    .sort((a, b) => rank(b) - rank(a) || a.account.localeCompare(b.account))
+    .sort((a, b) => {
+      const [tierA, scoreA] = rank(a);
+      const [tierB, scoreB] = rank(b);
+      return (
+        tierB - tierA || scoreB - scoreA || a.account.localeCompare(b.account)
+      );
+    })
     .slice(0, limit);
 }
 
@@ -163,7 +191,15 @@ export function budgetPanelRowAccessibilityValue(
   const status =
     row.startsOn !== undefined
       ? t("budgetStartsOn", { date: formatLedgerDate(row.startsOn, locale) })
-      : t(row.favorable ? "budgetBelowTarget" : "budgetAboveTarget");
+      : // The card's own wording: "Below target" over an income budget that
+        // was beaten, or for a spend exactly on target, was wrong (w21/218).
+        t(
+          row.status !== null
+            ? STATUS_LABEL_KEYS[row.status]
+            : row.favorable
+              ? "budgetBelowTarget"
+              : "budgetAboveTarget",
+        );
   if (row.noBudget || row.startsOn !== undefined) {
     return t("budgetPanelRowValueNoBudget", {
       actual: formatMoneyWithCurrency(row.actual, row.currency),
