@@ -12,6 +12,7 @@ import { mapInBatches } from "@/common/map-in-batches";
 import { ledgerRevisionVar } from "@/common/apollo/invalidate-ledger";
 import { budgetTotalsVariables } from "@/screens/budget-screen/hooks/use-budget-actuals";
 import {
+  currentIntervalItem,
   currentPeriodRange,
   type BudgetGroup,
 } from "@/screens/budget-screen/selectors/budget-selectors";
@@ -168,9 +169,10 @@ export function useBudgetPanel({
               // (w21/080).
               .catch(() => null);
 
-            // The last interval in the window is the one in progress.
-            const last =
-              items && items.length > 0 ? items[items.length - 1] : null;
+            // The interval in progress, not the window's last: the month-long
+            // window ends on rows for weeks and days that have not begun
+            // (w21/364).
+            const last = items ? currentIntervalItem(items, today) : null;
             return {
               input: {
                 group,

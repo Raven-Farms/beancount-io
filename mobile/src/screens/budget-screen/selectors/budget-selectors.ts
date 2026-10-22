@@ -542,6 +542,26 @@ export function currentPeriodRange(
   return { start, end: addDaysISO(nextIntervalStartISO(date, interval), -1) };
 }
 
+/**
+ * The interval row in progress on `today`: the latest one that has begun. The
+ * ledger returns a row for every interval in the window, empty future ones
+ * included, so a window running to the end of the month ends on next week's
+ * (or tomorrow's) row, which holds nothing and read as "$0 spent" for a weekly
+ * or daily budget (w21/364). Null when no interval has begun.
+ */
+export function currentIntervalItem<T extends { date: string }>(
+  items: readonly T[],
+  today: string,
+): T | null {
+  let current: T | null = null;
+  for (const item of items) {
+    if (item.date.slice(0, 10) <= today.slice(0, 10)) {
+      if (current === null || item.date >= current.date) current = item;
+    }
+  }
+  return current;
+}
+
 export type BudgetHistoryRow = BudgetHistoryEntry & {
   /** True for the entry currently in effect. */
   isCurrent: boolean;

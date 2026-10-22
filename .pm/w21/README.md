@@ -52,7 +52,6 @@
 - [452](./452.md) — Picker hides Create for a full name that prefixes an account
 - [454](./454.md) — Welcome keeps old server's sign-in error; not announced
 - [315](./blocked/315.md) — In-app commits signed with Gitea username and real email (no full_name, no noreply) — **blocked:** needs the owner's noreply-address and published-history decisions, and a production backfill of existing Gitea users that can't be verified here
-- [364](./364.md) — Home budget panel shows weekly/daily budgets as $0 (reads future interval; 184 regression)
 - [365](./365.md) — Create Ledger "Books begin" refuses Persian/Arabic/full-width digits and years 1-99
 - [366](./366.md) — Budget history rows/Delete label/alert show raw ISO dates
 - [367](./367.md) — Narration edit refused when entry has an existing interpolation/lot error quoting it
