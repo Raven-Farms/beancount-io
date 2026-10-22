@@ -20,14 +20,24 @@
  */
 import { isolateLtr } from "./bidi";
 import { resolveCurrencyBalance } from "./balance-util";
-import { amountScale, formatUnits } from "./number-utils";
+import { amountScale, formatExactUnits, formatUnits } from "./number-utils";
 import type { Valuation } from "./valuation";
 
 /** A beancount balance map as the API returns it: currency → decimal. */
 export type BalanceMap = Record<string, number | string> | null | undefined;
 
 /** One commodity amount, with the scale the ledger recorded it at. */
-export type Holding = { currency: string; number: number; scale: number };
+export type Holding = {
+  currency: string;
+  number: number;
+  scale: number;
+  /**
+   * The exact decimal string, kept only when the amount needs more significant
+   * digits than a double holds (18 decimals of ETH), so it is shown as the
+   * ledger wrote it (w21/594).
+   */
+  exact?: string;
+};
 
 /**
  * The basis a commodity's value was read at: a market price, or its cost for
@@ -84,12 +94,17 @@ export type BalanceDisplay =
 export function amountIn(
   map: BalanceMap,
   currency: string,
-): { number: number; scale: number } {
+): { number: number; scale: number; exact?: string } {
   const raw = map?.[currency];
   const number = Number(raw);
-  return raw == null || !Number.isFinite(number)
-    ? { number: 0, scale: 0 }
-    : { number, scale: amountScale(String(raw)) };
+  if (raw == null || !Number.isFinite(number)) return { number: 0, scale: 0 };
+  const text = String(raw).trim();
+  const digits = text.replace(/\D/g, "").replace(/^0+/, "").length;
+  return {
+    number,
+    scale: amountScale(text),
+    ...(digits > 15 && /^[+-]?\d+(\.\d+)?$/.test(text) ? { exact: text } : {}),
+  };
 }
 
 /** Non-zero entries of a balance map, in the order the API returned them. */
@@ -142,6 +157,9 @@ export function selectBalanceDisplay(
 }
 
 export const formatHolding = (holding: Holding, includePlus = false): string =>
+  (holding.exact
+    ? formatExactUnits(holding.exact, holding.currency, includePlus)
+    : null) ??
   formatUnits(holding.number, holding.currency, holding.scale, includePlus);
 
 /** The note naming holdings a total leaves out, or nothing when it has none. */

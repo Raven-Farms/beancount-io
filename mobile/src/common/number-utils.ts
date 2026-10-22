@@ -165,6 +165,51 @@ export const amountScale = (number: string): number => {
   return number.length - dot - 1;
 };
 
+/** Significant decimal digits a double can be trusted for. */
+const TRUSTED_DIGITS = 15;
+
+/**
+ * `value.toFixed(digits)`, except that digits a double does not hold are shown
+ * as zeros instead of its binary noise: 1.234567890123456789 ETH printed
+ * "1.234567890123456690" at 18 places, and 0.1 "0.100000000000000006"
+ * (w21/594). A figure that needs more than 15 significant digits only reaches
+ * here as a float; an amount read from the ledger's exact string goes through
+ * `formatExactUnits`.
+ */
+const fixedDigits = (value: number, digits: number): string => {
+  const fixed = value.toFixed(digits);
+  if (fixed.replace(/\D/g, "").replace(/^0+/, "").length <= TRUSTED_DIGITS) {
+    return fixed;
+  }
+  const trusted = value.toPrecision(TRUSTED_DIGITS);
+  if (/e/i.test(trusted)) return fixed;
+  const decimals = trusted.includes(".") ? trusted.split(".")[1].length : 0;
+  if (digits <= decimals) return fixed;
+  return `${trusted.includes(".") ? trusted : `${trusted}.`}${"0".repeat(digits - decimals)}`;
+};
+
+/**
+ * An amount from its exact decimal string, grouped like `formatUnits`: no float
+ * in the way, so 18 decimals of ETH read as the ledger wrote them. Null for text
+ * that is not a plain decimal, where the caller formats the number instead.
+ */
+export const formatExactUnits = (
+  text: string,
+  currency: string,
+  includePlus = false,
+): string | null => {
+  const match = /^([+-]?)(\d+)(?:\.(\d+))?$/.exec(text.trim());
+  if (!match) return null;
+  const [, sign, whole, fraction] = match;
+  const grouped = whole
+    .replace(/^0+(?=\d)/, "")
+    .replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+  const amount = fraction === undefined ? grouped : `${grouped}.${fraction}`;
+  const shownZero = !/[1-9]/.test(amount);
+  const prefix = sign === "-" && !shownZero ? "-" : includePlus ? "+" : "";
+  return `${prefix}${amount} ${currency}`;
+};
+
 /**
  * Group the integer part of a number with thousands separators and keep
  * `digits` decimals — two by default, for money (e.g. 1234.5 → "1,234.50"); a
@@ -173,7 +218,8 @@ export const amountScale = (number: string): number => {
  */
 export const groupThousands = (value: number, digits = 2): string => {
   const safe = Number.isFinite(value) ? Math.abs(value) : 0;
-  const fixed = safe.toFixed(
+  const fixed = fixedDigits(
+    safe,
     Math.min(MAX_FRACTION_DIGITS, Math.max(0, digits)),
   );
   const [intPart, decimals] = fixed.split(".");
