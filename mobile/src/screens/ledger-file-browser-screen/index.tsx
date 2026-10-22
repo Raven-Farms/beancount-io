@@ -70,6 +70,7 @@ import {
 import { LEADING_TEXT_ALIGN, directionalIcon } from "@/common/rtl";
 import { ledgerVar } from "@/common/vars";
 import { useIsHere } from "@/common/hooks/use-is-here";
+import { iconActionSize } from "@/common/theme/spacing";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -101,8 +102,12 @@ const getStyles = (theme: ColorTheme) =>
       backgroundColor: theme.white,
       gap: space.xs,
     },
+    // A 44 pt target around the 20 pt icon, not 28 (w21/485).
     breadcrumbBack: {
-      padding: space.xs,
+      minWidth: iconActionSize,
+      minHeight: iconActionSize,
+      alignItems: "center",
+      justifyContent: "center",
     },
     breadcrumbText: {
       fontSize: 13,

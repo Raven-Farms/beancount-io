@@ -30,6 +30,7 @@ import {
 } from "@/screens/budget-screen/selectors/budget-selectors";
 import { LEADING_TEXT_ALIGN } from "@/common/rtl";
 import { InlineError } from "@/components/inline-error";
+import { iconActionSize } from "@/common/theme/spacing";
 
 const getStyles = (theme: ColorTheme) =>
   StyleSheet.create({
@@ -77,8 +78,13 @@ const getStyles = (theme: ColorTheme) =>
       color: theme.text01,
       marginEnd: space.sm,
     },
+    // A 44 pt target around the 18 pt bin: it is destructive, and was 26 pt
+    // (w21/485).
     deleteButton: {
-      padding: space.xs,
+      minWidth: iconActionSize,
+      minHeight: iconActionSize,
+      alignItems: "center",
+      justifyContent: "center",
     },
     error: {
       paddingHorizontal: gutter,
