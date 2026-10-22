@@ -1,5 +1,5 @@
 import { useMemo, useRef, useState } from "react";
-import { useParams } from "@tanstack/react-router";
+import { useHydrated, useParams } from "@tanstack/react-router";
 import { format, subYears } from "date-fns";
 import { BudgetInterval } from "@/graphql/definitions";
 import { createLedgerId } from "@/common/lib/utils/encode";
@@ -83,6 +83,7 @@ export default function LedgerBudgetPage() {
   });
   const ledgerId = createLedgerId(ledgerOwner, ledgerName);
   const { t } = useTranslations();
+  const hydrated = useHydrated();
 
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<BudgetGroup | null>(null);
@@ -198,8 +199,11 @@ export default function LedgerBudgetPage() {
           description={t("page.budget.budgetDescription")}
         />
         <LedgerWritePermission>
+          {/* Server-rendered before its click handler exists: a click then
+              opened nothing, so it waits for hydration (w4/962). */}
           <Button
             ref={headerAddRef}
+            disabled={!hydrated}
             onClick={(event) => openAddBudget(event.currentTarget)}
             className="shrink-0"
           >
