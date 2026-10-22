@@ -22,6 +22,17 @@ const balance = (date: string, account: string, number: string) =>
     meta: {},
   }) as unknown as DirectiveJson;
 
+const withTolerance = (
+  date: string,
+  account: string,
+  number: string,
+  tolerance: string,
+) =>
+  ({
+    ...balance(date, account, number),
+    tolerance,
+  }) as unknown as DirectiveJson;
+
 const failed = (
   account: string,
   expected: string,
@@ -131,6 +142,45 @@ describe("failedBalanceDiffs", () => {
       ],
     );
     expect(diffs.size).toBe(0);
+  });
+});
+
+// w21/533: an assertion with its own `~ tolerance` fails with E2002, which the
+// join ignored, so it looked like a passing one. The message is the engine's
+// own for the note's fixture.
+describe("failedBalanceDiffs for an explicit tolerance", () => {
+  const exceeded = (line: number) => ({
+    message:
+      "Balance exceeds explicit tolerance for Assets:QaTol: expected 99.995 USD ~ 0.001, got 100.00 USD (difference: 0.005)",
+    code: "E2002",
+    file: "main.bean",
+    line,
+  });
+
+  it("gives the failing assertion got − expected", () => {
+    const assertion = withTolerance(
+      "2026-01-07",
+      "Assets:QaTol",
+      "99.995",
+      "0.001",
+    );
+    const diffs = failedBalanceDiffs([assertion], [exceeded(7)]);
+    expect(serializeDirective(assertion, diffs)).toMatchObject({
+      diff_amount: { number: "0.005", currency: "USD" },
+    });
+  });
+
+  it("does not pair it with a plain assertion of the same amount", () => {
+    const plain = balance("2026-01-08", "Assets:QaTol", "99.995");
+    const assertion = withTolerance(
+      "2026-01-07",
+      "Assets:QaTol",
+      "99.995",
+      "0.001",
+    );
+    const diffs = failedBalanceDiffs([plain, assertion], [exceeded(7)]);
+    expect(diffs.has(plain)).toBe(false);
+    expect(diffs.get(assertion)).toEqual({ number: "0.005", currency: "USD" });
   });
 });
 

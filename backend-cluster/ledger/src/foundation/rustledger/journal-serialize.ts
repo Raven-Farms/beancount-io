@@ -207,6 +207,14 @@ function serializeCustomValue(
 const BALANCE_FAILED =
   /^Balance failed for (\S+): expected (-?[\d.]+) (\S+), got (-?[\d.]+) (\S+)$/;
 
+/**
+ * `Balance exceeds explicit tolerance for Assets:Cash: expected 99.995 USD ~
+ * 0.001, got 100.00 USD (difference: 0.005)` (E2002): an assertion that wrote
+ * its own `~ tolerance` fails with this, not with E2001 (w21/533).
+ */
+const TOLERANCE_FAILED =
+  /^Balance exceeds explicit tolerance for (\S+): expected (-?[\d.]+) (\S+) ~ ([\d.]+), got (-?[\d.]+) (\S+)(?: \(difference: .*\))?$/;
+
 /** `got − expected`, exactly, at the finer of the two written scales. */
 function subtractDecimal(got: string, expected: string): string {
   const scale = Math.max(
@@ -223,9 +231,19 @@ function decimalKey(number: string): string {
   return new BigNumber(number).toFixed();
 }
 
+/** What an assertion and its error share: the explicit tolerance is part of it. */
+function assertionKey(
+  account: string,
+  amount: string,
+  currency: string,
+  tolerance: string,
+): string {
+  return `${account}\u0000${decimalKey(amount)}\u0000${currency}\u0000${tolerance === "" ? "" : decimalKey(tolerance)}`;
+}
+
 /**
  * Each failing Balance directive's `diff_amount` (actual − expected), joined
- * from the validator's `E2001` errors, which name the account and both
+ * from the validator's `E2001` and `E2002` errors, which name the account and both
  * amounts but carry no date. A key (account, asserted amount) shared by more
  * assertions than errors cannot say which of them failed, so those stay null
  * rather than mark a passing assertion failed; otherwise errors pair with
@@ -246,12 +264,26 @@ export function failedBalanceDiffs(
 ): Map<DirectiveJson, JournalAmountPublic> {
   const failures = new Map<string, { diff: JournalAmountPublic }[]>();
   for (const error of errors) {
-    if (error.code !== "E2001") continue;
-    const match = BALANCE_FAILED.exec(error.message.trim());
-    if (!match) continue;
-    const [, account, expected, currency, got, gotCurrency] = match;
+    const message = error.message.trim();
+    let account: string;
+    let expected: string;
+    let currency: string;
+    let got: string;
+    let gotCurrency: string;
+    let tolerance = "";
+    if (error.code === "E2001") {
+      const match = BALANCE_FAILED.exec(message);
+      if (!match) continue;
+      [, account, expected, currency, got, gotCurrency] = match;
+    } else if (error.code === "E2002") {
+      const match = TOLERANCE_FAILED.exec(message);
+      if (!match) continue;
+      [, account, expected, currency, tolerance, got, gotCurrency] = match;
+    } else {
+      continue;
+    }
     if (gotCurrency !== currency) continue;
-    const key = `${account}\u0000${decimalKey(expected)}\u0000${currency}`;
+    const key = assertionKey(account, expected, currency, tolerance);
     const list = failures.get(key) ?? [];
     list.push({ diff: { number: subtractDecimal(got, expected), currency } });
     failures.set(key, list);
@@ -262,7 +294,12 @@ export function failedBalanceDiffs(
   const assertions = new Map<string, DirectiveJson[]>();
   for (const directive of directives) {
     if (directive.type !== "balance") continue;
-    const key = `${directive.account}\u0000${decimalKey(directive.amount.number)}\u0000${directive.amount.currency}`;
+    const key = assertionKey(
+      directive.account,
+      directive.amount.number,
+      directive.amount.currency,
+      directive.tolerance ?? "",
+    );
     if (!failures.has(key)) continue;
     const list = assertions.get(key) ?? [];
     list.push(directive);
