@@ -280,6 +280,9 @@ export function TransactionConfigForm({
                     <p className="text-xs text-muted-foreground mt-1">
                       {t("importer.configure.sourceAccountHint")}
                     </p>
+                    {/* The required error, which aria-describedby already
+                        points at, as Currency shows its own (w4/322). */}
+                    <FormMessage />
                   </FormItem>
                 )}
               />

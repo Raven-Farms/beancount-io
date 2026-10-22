@@ -23,12 +23,22 @@ vi.mock("@/common/components/ledger-comboboxes", () => ({
     value,
     onValueChange,
     placeholder,
+    id,
+    "aria-describedby": describedBy,
+    "aria-invalid": invalid,
   }: {
     value: string;
     onValueChange: (value: string) => void;
     placeholder?: string;
+    id?: string;
+    "aria-describedby"?: string;
+    "aria-invalid"?: boolean;
   }) => (
     <input
+      // The field's id and error association reach the real combobox too.
+      id={id}
+      aria-describedby={describedBy}
+      aria-invalid={invalid}
       aria-label={placeholder ?? "account"}
       value={value}
       onChange={(event) => onValueChange(event.target.value)}
@@ -311,6 +321,8 @@ describe("TransactionConfigForm draft persistence", () => {
       <TransactionConfigForm
         rows={rows}
         ledgerId="open_ledger/freelancer-invoicing"
+        configDraft={null}
+        onConfigDraftChange={vi.fn()}
         onSubmit={vi.fn()}
         onBack={vi.fn()}
       />,
@@ -340,5 +352,47 @@ describe("TransactionConfigForm draft persistence", () => {
         name: "importer.accountMapping.filterByAmount",
       }),
     ).toHaveTextContent("importer.accountMapping.negativeOnly");
+  });
+
+  it("says why an empty Source Account stops the import (w4/322)", async () => {
+    const user = userEvent.setup();
+    const onSubmit = vi.fn();
+    render(
+      <TransactionConfigForm
+        rows={rows}
+        ledgerId="open_ledger/freelancer-invoicing"
+        configDraft={null}
+        onConfigDraftChange={vi.fn()}
+        onSubmit={onSubmit}
+        onBack={vi.fn()}
+      />,
+    );
+    for (const target of screen.getAllByLabelText(
+      "importer.accountMapping.selectAccountPlaceholder",
+    )) {
+      await user.type(target, "Expenses:Food");
+    }
+    const source = screen.getByLabelText(
+      "importer.configure.sourceAccountPlaceholder",
+    );
+    await user.click(
+      screen.getByRole("button", { name: "importer.configure.importButton:2" }),
+    );
+
+    const message = await screen.findByText(
+      "importer.configure.sourceAccountRequired",
+    );
+    expect(source).toHaveAttribute("aria-invalid", "true");
+    expect(source.getAttribute("aria-describedby")?.split(" ")).toContain(
+      message.id,
+    );
+    expect(onSubmit).not.toHaveBeenCalled();
+
+    await user.type(source, "Assets:Cash");
+    await waitFor(() =>
+      expect(
+        screen.queryByText("importer.configure.sourceAccountRequired"),
+      ).toBeNull(),
+    );
   });
 });
