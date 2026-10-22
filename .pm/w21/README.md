@@ -33,7 +33,6 @@
 - [600](./blocked/600.md) — Latest Updates never shows the commit you just made (not invalidated on write, and cached for 5 minutes server-side) — **blocked:** needs an owner decision on how the server drops its five-minute activity cache when the user commits (shared write hook vs shorter TTL)
 - [602](./blocked/602.md) — Money flow doesn't pad a real currency held at cost ("+$100.5" under "+$100.50") (w21/506 over-reach) — **blocked:** a currency lot cannot be told from a fund ticker that is also an ISO code (BND) without declared-commodity data or an owner-approved heuristic
 - [608](./blocked/608.md) — Android: fields near the bottom stay under the keyboard (iOS-only keyboard avoidance under edge-to-edge) — **blocked:** needs an Android device check of the keyboard behavior
-- [622](./622.md) — Correcting a new budget the same day leaves the wrong amount in effect ("Budget $341.94" where 300/month gives $212.90)
 - [623](./623.md) — Update Budget with a date before the current entry saves but changes nothing, with no warning
 - [624](./624.md) — Update Budget is offered on a closed account's card and writes a directive that never applies
 - [625](./625.md) — At AX2, the bell badge's number outgrows its fixed 16pt pill: the count is cut off and its lower half vanishes onto the header

@@ -144,6 +144,43 @@ describe("calculateBudgetForInterval", () => {
     );
   });
 
+  // w21/622: Add then Update the same day (500, then 300) left the 500 covering
+  // the period start and the 300 only from its own date.
+  it("lets a same-day correction govern from the period start", () => {
+    const history = [
+      historyEntry("2025-01-16", "monthly", "500 USD"),
+      historyEntry("2025-01-16", "monthly", "300 USD"),
+    ];
+
+    expect(calculateBudgetForInterval("2025-01-31", "monthly", history)).toBe(
+      300,
+    );
+    // Prorated to a mid-month day, it is still the correction's rate.
+    expect(
+      calculateBudgetForInterval(
+        "2025-01-31",
+        "monthly",
+        history,
+        "2025-01-16",
+      ),
+    ).toBe(Math.round(((300 * 16) / 31) * 100) / 100);
+  });
+
+  it("still starts a later-dated directive on its own date", () => {
+    const history = [
+      historyEntry("2025-01-16", "monthly", "500 USD"),
+      historyEntry("2025-01-16", "monthly", "300 USD"),
+      historyEntry("2025-01-24", "monthly", "620 USD"),
+    ];
+
+    const expected = (300 * 23 + 620 * 8) / 31;
+    expect(
+      Math.abs(
+        calculateBudgetForInterval("2025-01-31", "monthly", history) - expected,
+      ) < 0.01,
+    ).toBe(true);
+  });
+
   it("does not apply a later directive before its effective date", () => {
     // Only the first directive back-fills; a raise still starts on its date.
     const history = [

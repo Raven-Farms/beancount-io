@@ -532,8 +532,14 @@ export function budgetForInterval(
     firstDate > periodStart &&
     firstDate <= intervalEnd &&
     firstDate <= end;
+  // Every directive dated on the first date, not only the first of them: a
+  // budget corrected the same day it was set (500, then 300) left the replaced
+  // one covering the period start and the correction governing only from its
+  // own date, so "Budget $341.94" read where 300 a month gives $212.90 (w21/622).
   const effectiveFrom = (index: number): string =>
-    index === 0 && backfilled ? periodStart : ordered[index].date;
+    backfilled && ordered[index].date === firstDate
+      ? periodStart
+      : ordered[index].date;
 
   const only = ordered.length === 1 ? ordered[0] : null;
   if (
