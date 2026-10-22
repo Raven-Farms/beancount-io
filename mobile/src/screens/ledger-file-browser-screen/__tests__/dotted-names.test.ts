@@ -11,13 +11,27 @@ describe("a dot inside a new file's name", () => {
       ["Jan. expenses", "Jan. expenses.bean"],
       ["sub/2024.q1", "sub/2024.q1.bean"],
       ["notes.", "notes.bean"],
+      // w21/429: a short word after the dot is part of the name too.
+      ["Mr.Smith", "Mr.Smith.bean"],
+      ["J.Smith", "J.Smith.bean"],
+      ["budget.march", "budget.march.bean"],
+      ["2024.Q", "2024.Q.bean"],
+      ["acme.inc", "acme.inc.bean"],
+      ["archive.old", "archive.old.bean"],
     ]) {
       expect(checkLedgerFileName(typed)).toEqual({ ok: true, filename: made });
     }
   });
 
   it("still refuses another explicit extension", () => {
-    for (const typed of ["notes.txt", "data.csv", "sub/readme.md"]) {
+    for (const typed of [
+      "notes.txt",
+      "data.csv",
+      "sub/readme.md",
+      "NOTES.TXT",
+      "export.xlsx",
+      "scan.pdf",
+    ]) {
       expect(checkLedgerFileName(typed)).toEqual({
         ok: false,
         issue: "extension",

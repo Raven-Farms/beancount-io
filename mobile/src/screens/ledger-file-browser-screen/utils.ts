@@ -11,11 +11,24 @@ export type LedgerFileNameCheck =
     };
 
 /**
+ * Extensions of files that are not ledgers: typed on a new file they are a
+ * mistake to name, not a word of the name. Any other suffix ("Mr.Smith",
+ * "acme.inc", "budget.march") is part of it.
+ */
+const OTHER_EXTENSIONS = new Set(
+  (
+    "txt text csv tsv md markdown json yaml yml toml xml html htm ini log " +
+    "py js ts sh sql pdf doc docx xls xlsx ods odt rtf zip png jpg jpeg gif " +
+    "ofx qif qfx"
+  ).split(" "),
+);
+
+/**
  * The name with `.bean` added unless it already carries an extension. Only a
- * short run of letters after the last dot reads as one ("notes.txt", which the
- * check then refuses): a dot inside a name ("2024.q1", "Jan. expenses",
- * "J.Smith accounts") is part of it, and the dialog promises `.bean` to a name
- * with no extension (w21/275).
+ * known non-ledger extension reads as one ("notes.txt", which the check then
+ * refuses): a dot inside a name ("2024.q1", "Mr.Smith", "Jan. expenses") is
+ * part of it, and the dialog promises `.bean` to a name with no extension
+ * (w21/275, w21/429).
  */
 function withBeanExtension(name: string): string {
   const dot = name.lastIndexOf(".");
@@ -23,7 +36,7 @@ function withBeanExtension(name: string): string {
   if (isBeancountFile(name)) return name;
   const suffix = name.slice(dot + 1);
   if (suffix === "") return `${name}bean`;
-  return /^[A-Za-z]{1,5}$/.test(suffix) ? name : `${name}.bean`;
+  return OTHER_EXTENSIONS.has(suffix.toLowerCase()) ? name : `${name}.bean`;
 }
 
 /**
