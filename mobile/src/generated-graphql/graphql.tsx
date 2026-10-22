@@ -25,7 +25,7 @@ export type AccountReportQueryVariables = Exact<{
 }>;
 
 
-export type AccountReportQuery = { getLedgerAccountReport: { linechartData: Array<{ date: string, balance: Record<string, number | string> }> } };
+export type AccountReportQuery = { getLedgerAccountReport: { linechartData: Array<{ date: string, balance: Record<string, number | string> }>, accountBalanceData: Array<{ date: string, balance: Record<string, number | string> }> } };
 
 export type AddEntriesMutationVariables = Exact<{
   entriesInput: Array<Types.EntryInput> | Types.EntryInput;
@@ -511,6 +511,10 @@ export const AccountReportDocument = gql`
     conversion: $conversion
   ) {
     linechartData {
+      date
+      balance
+    }
+    accountBalanceData {
       date
       balance
     }

@@ -16,5 +16,9 @@ query AccountReport(
       date
       balance
     }
+    accountBalanceData {
+      date
+      balance
+    }
   }
 }

@@ -123,11 +123,17 @@ export function selectAccountBalanceSeries(
   current?: { balance: BalanceMap; today: string },
   today?: string,
 ): SeriesPoint[] {
+  // The month-end balances, each valued at its own month-end prices. The
+  // change-only `linechartData` is valued at the date of the posting, so a
+  // holding left alone drew flat through every price move and then jumped to
+  // today's value (w21/420). It stays the fallback for a report without them.
+  const report = data?.getLedgerAccountReport;
+  const monthEnds = report?.accountBalanceData;
   // The ledger sends a point only where the balance changed (w21/164).
   const series = forwardFillMonths(
     pointsToMonthlySeries(
       currency,
-      data?.getLedgerAccountReport?.linechartData,
+      monthEnds?.length ? monthEnds : report?.linechartData,
     ),
   );
   const last = series[series.length - 1];

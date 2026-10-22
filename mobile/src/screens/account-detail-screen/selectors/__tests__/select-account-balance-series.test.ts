@@ -336,3 +336,42 @@ describe("a quiet account over the recent ranges", () => {
     expect(selectAccountUnitsSeries("VTI", undefined, today)).toEqual([]);
   });
 });
+
+// w21/420: the change-only series is valued at each posting's date, so a held
+// commodity drew flat through its price moves, then jumped to today's value.
+describe("selectAccountBalanceSeries with month-end balances", () => {
+  const monthEnds = [
+    { date: "2026-07-31", balance: { USD: 2100 } },
+    { date: "2026-08-31", balance: { USD: 2300 } },
+    { date: "2026-09-30", balance: { USD: 2600 } },
+    { date: "2026-10-31", balance: { USD: 2900 } },
+  ];
+  const report = (
+    withMonthEnds: typeof monthEnds | undefined,
+  ): AccountReportQuery =>
+    ({
+      getLedgerAccountReport: {
+        // Ten units bought in July at 210, never touched again.
+        linechartData: [{ date: "2026-07-05", balance: { USD: 2100 } }],
+        accountBalanceData: withMonthEnds,
+      },
+    }) as unknown as AccountReportQuery;
+
+  it("draws each month at its own price instead of a flat line", () => {
+    const series = selectAccountBalanceSeries("USD", report(monthEnds));
+    expect(series.map((point) => point.value)).toEqual([
+      2100, 2300, 2600, 2900,
+    ]);
+  });
+
+  it("falls back to the change-only series without them", () => {
+    expect(
+      selectAccountBalanceSeries("USD", report(undefined)).map(
+        (point) => point.value,
+      ),
+    ).toEqual([2100]);
+    expect(
+      selectAccountBalanceSeries("USD", report([])).map((point) => point.value),
+    ).toEqual([2100]);
+  });
+});
