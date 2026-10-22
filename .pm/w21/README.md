@@ -151,3 +151,7 @@
 - [378](./378.md) — File editor: save after external delete is a bodiless "Failed to save" dead end
 - [379](./379.md) — Commit detail renders all diff lines; large commits stall
 - [380](./380.md) — Files delete after external change toasts raw sha mismatch, no refresh
+- [381](./381.md) — Home budget panel shows previous ledger's rows after a switch
+- [382](./382.md) — Drawer "Couldn't load ledgers" retry text 1.01:1 contrast
+- [383](./383.md) — Browse ledgers retry shows false "Your ledgers will appear here"
+- [384](./384.md) — Accounts/Reports expand state carries over to another ledger
