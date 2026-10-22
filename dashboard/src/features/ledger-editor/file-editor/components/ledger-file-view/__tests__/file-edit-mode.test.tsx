@@ -261,3 +261,85 @@ describe("EditModeToolbar returns to the editor after Stay", () => {
     expect(input).not.toHaveFocus();
   });
 });
+
+/** A failed Save hands focus back to the control it locked (w4/970). */
+describe("EditModeToolbar focus after a failed Save", () => {
+  const editorRef = { current: null };
+  const props = {
+    editorRef,
+    editedContent: "draft body",
+    plainContent: "saved body",
+    onCancel: vi.fn(),
+    onDiscard: vi.fn(),
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    blockerState.status = "idle";
+    document.body.innerHTML = "";
+  });
+
+  function dropFocus() {
+    const away = document.createElement("button");
+    document.body.appendChild(away);
+    away.focus();
+    away.remove();
+  }
+
+  function renderToolbar() {
+    const onSave = vi.fn();
+    const view = render(
+      <EditModeToolbar {...props} onSave={onSave} isSaving={false} />,
+    );
+    const setSaving = (isSaving: boolean) =>
+      view.rerender(
+        <EditModeToolbar {...props} onSave={onSave} isSaving={isSaving} />,
+      );
+    return { onSave, setSaving };
+  }
+
+  it("returns focus to Save when the failed save unlocks it, ready for a retry", async () => {
+    const user = userEvent.setup();
+    const { onSave, setSaving } = renderToolbar();
+    screen.getByRole("button", { name: "common.save" }).focus();
+    await user.keyboard("{Enter}");
+    expect(onSave).toHaveBeenCalledWith("draft body");
+
+    setSaving(true);
+    const pending = screen.getByRole("button", { name: "common.saving" });
+    expect(pending).toBeDisabled();
+    // The browser drops focus from the control it just disabled; jsdom keeps
+    // it there, so lose it the same way a removed element does.
+    dropFocus();
+    expect(document.body).toHaveFocus();
+
+    setSaving(false);
+    const save = screen.getByRole("button", { name: "common.save" });
+    expect(save).toHaveFocus();
+    await user.keyboard("{Enter}");
+    expect(onSave).toHaveBeenCalledTimes(2);
+  });
+
+  it("leaves focus where the reader moved it during the save", async () => {
+    const user = userEvent.setup();
+    const { setSaving } = renderToolbar();
+    await user.click(screen.getByRole("button", { name: "common.save" }));
+    setSaving(true);
+    const cancel = screen.getByRole("button", { name: "common.cancel" });
+    cancel.focus();
+
+    setSaving(false);
+    expect(cancel).toHaveFocus();
+  });
+
+  it("does not take focus for a save started elsewhere, such as Cmd+S in the editor", () => {
+    const { setSaving } = renderToolbar();
+    setSaving(true);
+    dropFocus();
+
+    setSaving(false);
+    expect(
+      screen.getByRole("button", { name: "common.save" }),
+    ).not.toHaveFocus();
+  });
+});
