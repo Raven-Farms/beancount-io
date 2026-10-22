@@ -1,4 +1,6 @@
 import type { LedgerSetupPreset } from "@/generated-graphql/types";
+import { toAsciiNumerals } from "../../common/ascii-numerals";
+import { utcDate } from "../../common/calendar-date";
 import { getFormatDate } from "../../common/format-util";
 import { parseExactAmount } from "../multi-postings-transaction/postings-utils";
 import setupCurrencies from "./setup-currencies.json";
@@ -217,7 +219,7 @@ export function setupFields(values: {
 } {
   return {
     operatingCurrency: (values.currency.trim() || "USD").toUpperCase(),
-    historyStart: values.historyStart.trim() || undefined,
+    historyStart: toAsciiNumerals(values.historyStart).trim() || undefined,
   };
 }
 
@@ -227,11 +229,12 @@ export function setupFields(values: {
  * (w21/107).
  */
 export function isHistoryStart(value: string): boolean {
-  const trimmed = value.trim();
+  const trimmed = toAsciiNumerals(value).trim();
   if (!trimmed) return true;
   if (!/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) return false;
   const [year, month, day] = trimmed.split("-").map(Number);
-  const date = new Date(Date.UTC(year, month - 1, day));
+  // `utcDate`, not `Date.UTC`: a year of 0-99 would read as 1900-1999 (w21/043).
+  const date = utcDate(year, month - 1, day);
   return (
     date.getUTCFullYear() === year &&
     date.getUTCMonth() === month - 1 &&

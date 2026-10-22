@@ -64,3 +64,34 @@ describe("the setup payload", () => {
     expect(screen.includes("...setupFields(values),")).toBe(true);
   });
 });
+
+// w21/365: the date check was ASCII-only, and `Date.UTC` reads a year of 0-99
+// as 1900-1999.
+describe("Books begin with other keyboards and early years", () => {
+  it("accepts Persian, Arabic-Indic and full-width digits", () => {
+    expect(isHistoryStart("۲۰۲۶-۱۰-۲۱")).toBe(true);
+    expect(isHistoryStart("٢٠٢٦-١٠-٢١")).toBe(true);
+    expect(isHistoryStart("２０２６-１０-２１")).toBe(true);
+    expect(isHistoryStart("۲۰۲۶-۱۰-۳۲")).toBe(false);
+  });
+
+  it("submits them as ASCII", () => {
+    expect(
+      setupFields({ currency: "USD", historyStart: " ۲۰۲۶-۱۰-۲۱ " })
+        .historyStart,
+    ).toBe("2026-10-21");
+    expect(
+      setupFields({ currency: "USD", historyStart: "٢٠٢٦-١٠-٢١" }).historyStart,
+    ).toBe("2026-10-21");
+  });
+
+  it("validates years 0001-0099 as those years", () => {
+    expect(isHistoryStart("0050-03-01")).toBe(true);
+    expect(isHistoryStart("0099-12-31")).toBe(true);
+    // Not a leap year in the proleptic calendar the ledger uses: 0100 is
+    // divisible by 100 but not 400, 0004 is.
+    expect(isHistoryStart("0004-02-29")).toBe(true);
+    expect(isHistoryStart("0100-02-29")).toBe(false);
+    expect(isHistoryStart("0050-02-30")).toBe(false);
+  });
+});
