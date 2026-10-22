@@ -77,7 +77,6 @@
 - [478](./478.md) — Create Ledger preview failure shows raw English, no Retry
 - [479](./479.md) — Create Ledger errors silent to VoiceOver (354 sibling)
 - [315](./blocked/315.md) — In-app commits signed with Gitea username and real email (no full_name, no noreply) — **blocked:** needs the owner's noreply-address and published-history decisions, and a production backfill of existing Gitea users that can't be verified here
-- [405](./405.md) — Settings drops Account section silently when profile fails to load
 - [406](./406.md) — Reports/account detail use USD + English-root fallbacks before context loads (262/266 sibling)
 - [407](./407.md) — APPLE *ICLOUD etc. lost Apple logo (270 regression)
 - [408](./408.md) — Four-weekly series spanning Feb gets day anchor; Next ~5 days late (271 regression)

@@ -1,7 +1,9 @@
 import Constants from "expo-constants";
 import * as WebBrowser from "expo-web-browser";
 import { useRef, useState } from "react";
-import { Alert, Linking, Platform } from "react-native";
+import { Alert, Linking, Platform, View } from "react-native";
+import { CardLoadFailure } from "@/components/card-load-failure";
+import { LoadingTile } from "@/components/loading-tile";
 import { List as List2 } from "@/components";
 
 import { i18n, setLocale } from "@/translations";
@@ -43,7 +45,13 @@ export const MainContent = () => {
   const currentTheme = useReactiveVar(themeVar);
   const theme = useTheme().colorTheme;
   const { t } = useTranslations();
-  const { user, displayName } = useCurrentUser();
+  const {
+    user,
+    displayName,
+    loading: userLoading,
+    error: userError,
+    refetch: refetchUser,
+  } = useCurrentUser();
   const [languageModalVisible, setLanguageModalVisible] = useState(false);
   const [themeModalVisible, setThemeModalVisible] = useState(false);
   const [deleteAccountModalVisible, setDeleteAccountModalVisible] =
@@ -126,7 +134,23 @@ export const MainContent = () => {
   return (
     <>
       <List2>
-        {user && <SectionHeader title={t("accountSettings")} />}
+        {/* The Account section is the only way into Profile, so it is never
+            dropped without a word: a skeleton while the profile loads, and a
+            retry if it could not (w21/405). */}
+        {(user || userLoading || userError) && (
+          <SectionHeader title={t("accountSettings")} />
+        )}
+        {!user && userLoading && (
+          <View
+            testID="setting-profile-loading"
+            style={{ paddingHorizontal: 16, paddingVertical: 18 }}
+          >
+            <LoadingTile height={28} width={180} />
+          </View>
+        )}
+        {!user && !userLoading && userError && (
+          <CardLoadFailure onRetry={() => void refetchUser()} />
+        )}
         {user && (
           <ListItemHorizontal
             testID="setting-profile"
