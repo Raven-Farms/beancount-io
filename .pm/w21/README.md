@@ -18,7 +18,7 @@
 - [201](./blocked/201.md) — Missing file: GraphQL returns null, REST/MCP NOT_FOUND; directory path differs too — **blocked:** needs an owner decision on the file-read contract (null vs NOT_FOUND), which the dashboard's README reads and shipped mobile builds rely on
 - [206](./blocked/206.md) — Refund/return receipts are always prefilled as a purchase — **blocked:** needs an owner-approved AI-quota evaluation and a parse-contract decision (`isRefund` vs signed amount)
 - [210](./blocked/210.md) — Holdings sheet labels a user-typed price "Live price" and applies the feed's staleness rule — **blocked:** needs an owner decision on exposing the feed's effective price dates (cross-package contract) and a deploy before mobile can read it
-- [228](./228.md) — New Transaction stamps the first operating currency on every posting; no currency or price control
+- [228](./blocked/228.md) — New Transaction stamps the first operating currency on every posting; no currency or price control — **blocked:** needs account-constraint currencies on the client, a price path (legacy field or typed mutation, deploy first) and an owner-approved form design
 - [229](./229.md) — Posting picker and payee autofill offer accounts not yet open on a back-dated entry
 - [230](./230.md) — Persian / Arabic-Indic digits are refused in New Transaction amounts
 - [231](./231.md) — Zero-decimal currencies are written as "1500.00 JPY"
