@@ -61,6 +61,9 @@
 - [462](./462.md) — Deleting the last posting overwrites the typed amount above it
 - [463](./463.md) — Locale-formatted amounts (1.234,56, 1 234,56, U+2212) refused
 - [464](./464.md) — Quote hint glued to refusal without punctuation (369 follow-up)
+- [465](./465.md) — Refresh leaves 'Couldn't load more' and stops paging (353 follow-up)
+- [466](./466.md) — Transactions search literal on NFC/NFD and spacing
+- [467](./467.md) — Android search field has no clear button
 - [315](./blocked/315.md) — In-app commits signed with Gitea username and real email (no full_name, no noreply) — **blocked:** needs the owner's noreply-address and published-history decisions, and a production backfill of existing Gitea users that can't be verified here
 - [377](./377.md) — Budget panel ranks unpaid monthly salary first mid-month (218 follow-up)
 - [378](./378.md) — File editor: save after external delete is a bodiless "Failed to save" dead end
