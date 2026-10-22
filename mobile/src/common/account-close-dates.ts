@@ -138,7 +138,10 @@ export function openOn(
  * The accounts the Accounts tree lists even at zero: every opened account but
  * those closed on or before `today`. A closed, emptied account kept showing as
  * a live "$0.00" row (w21/099). One closed with a balance left still lists,
- * through the balance itself: that is a ledger problem worth seeing.
+ * through the balance itself: that is a ledger problem worth seeing. An account
+ * that opens after `today` is not listed yet either: it read as a live "$0.00"
+ * row, and a ledger with no other liabilities brought back a whole empty section
+ * (w21/614).
  */
 export function listedAccountsAsOf(
   accounts: readonly string[],
@@ -146,6 +149,8 @@ export function listedAccountsAsOf(
   closeDates: CloseDates,
 ): string[] {
   return accounts.filter((account) => {
+    const openedAt = closeDates.openedOn?.get(account);
+    if (openedAt !== undefined && openedAt > today) return false;
     const closedAt = closeDates.get(account);
     return closedAt === undefined || closedAt > today;
   });

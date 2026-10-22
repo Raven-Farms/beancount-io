@@ -698,6 +698,25 @@ describe("closed accounts in the Accounts tree", () => {
     ).toEqual(["Assets:Bank:Old"]);
   });
 
+  // w21/614: an account opening in December was a live "$0.00" row in October.
+  it("leaves out an account that opens after today", () => {
+    const { closeDatesOf } = require("../../../common/account-close-dates");
+    const dates = closeDatesOf([
+      { account: "Liabilities:NewCard", openedAt: "2026-12-01" },
+      { account: "Liabilities:Card", openedAt: "2025-01-01" },
+    ]);
+    expect(
+      listedAccountsAsOf(
+        ["Liabilities:NewCard", "Liabilities:Card"],
+        "2026-10-22",
+        dates,
+      ),
+    ).toEqual(["Liabilities:Card"]);
+    expect(
+      listedAccountsAsOf(["Liabilities:NewCard"], "2026-12-01", dates),
+    ).toEqual(["Liabilities:NewCard"]);
+  });
+
   it("is what the Accounts tab grafts", () => {
     const source = require("fs").readFileSync(
       require("path").join(

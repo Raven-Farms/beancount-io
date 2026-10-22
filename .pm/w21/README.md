@@ -33,7 +33,6 @@
 - [600](./blocked/600.md) — Latest Updates never shows the commit you just made (not invalidated on write, and cached for 5 minutes server-side) — **blocked:** needs an owner decision on how the server drops its five-minute activity cache when the user commits (shared write hook vs shorter TTL)
 - [602](./blocked/602.md) — Money flow doesn't pad a real currency held at cost ("+$100.5" under "+$100.50") (w21/506 over-reach) — **blocked:** a currency lot cannot be told from a fund ticker that is also an ISO code (BND) without declared-commodity data or an owner-approved heuristic
 - [608](./blocked/608.md) — Android: fields near the bottom stay under the keyboard (iOS-only keyboard avoidance under edge-to-edge) — **blocked:** needs an Android device check of the keyboard behavior
-- [614](./614.md) — An account that opens in the future is listed on Accounts as a live $0.00 row (mirror of w21/099)
 - [615](./615.md) — A Recurring row shows a one-off foreign charge as the usual amount ("Spotify · Monthly · ¥980" for a $10.99 bill)
 - [616](./616.md) — Merchant detail shows a range for a single day: "Feb 10, 2026 – Feb 10, 2026"
 - [617](./617.md) — Marking an older merchant Recurring says "Not enough history" under "54 transactions"
