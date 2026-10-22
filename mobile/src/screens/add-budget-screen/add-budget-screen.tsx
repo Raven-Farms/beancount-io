@@ -4,7 +4,7 @@ import {
 } from "./currency-options";
 import { TextInputModal } from "@/components/text-input-modal";
 import { typedCurrencyCode } from "@/screens/open-account-screen/account-name";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { InlineError } from "@/components/inline-error";
 import {
   Platform,
@@ -35,6 +35,7 @@ import {
   useTheme,
 } from "@/common/theme";
 import { pushAccountPicker } from "@/screens/account-picker-screen/push-account-picker";
+import { useUnsavedChangesGuard } from "@/common/hooks/use-unsaved-changes-guard";
 import { updateBudgetDates } from "./update-date";
 import { DatePickerModal } from "@/components/date-picker-modal";
 import { LedgerGuard, useLedgerGuard } from "@/components/ledger-guard";
@@ -231,6 +232,11 @@ function AddBudgetScreenImpl(): JSX.Element {
   // A committed save disables submit: a cold-link form that fails to leave
   // must never invite a duplicate resubmit (w1/032).
   const [saved, setSaved] = useState(false);
+  // Set as the save lands, before it navigates away: leaving after a save is not
+  // a discard. A typed amount asks before Back drops it, as the other write forms
+  // do (w21/631).
+  const savedOutRef = useRef(false);
+  useUnsavedChangesGuard(!saved && amount.trim().length > 0, savedOutRef);
 
   // Empty means "not chosen yet" — the picker only ever sets a non-empty value,
   // so the ledger's default fills in until then without an effect to sync it.
@@ -289,6 +295,7 @@ function AddBudgetScreenImpl(): JSX.Element {
 
     if (result.ok) {
       haptics.success();
+      savedOutRef.current = true;
       setSaved(true);
       // Left during the save: leave the screen they are on alone (w21/194).
       if (!isHere()) {

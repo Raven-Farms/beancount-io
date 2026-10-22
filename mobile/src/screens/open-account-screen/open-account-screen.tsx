@@ -1,8 +1,9 @@
 import { useAccountCloseDates } from "@/common/hooks/use-account-close-dates";
 import { formatLedgerDate } from "@/common/date-format";
 import { InlineError } from "@/components/inline-error";
+import { useUnsavedChangesGuard } from "@/common/hooks/use-unsaved-changes-guard";
 import { CardLoadFailure } from "@/components/card-load-failure";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Pressable,
   ScrollView,
@@ -275,6 +276,11 @@ export function OpenAccountScreenComponent(): JSX.Element {
   // A committed save disables submit: a cold-link form that fails to leave
   // must never invite a duplicate resubmit (w1/032).
   const [saved, setSaved] = useState(false);
+  // Set as the save lands, before it navigates away: leaving after a save is not
+  // a discard. A typed name asks before Back drops it, as the other write forms
+  // do (w21/631).
+  const savedOutRef = useRef(false);
+  useUnsavedChangesGuard(!saved && subPath !== seed.subPath, savedOutRef);
 
   // Defaults once the meta has actually arrived: a failed first read used to
   // settle it on "No currency" for good (w21/085).
@@ -361,6 +367,7 @@ export function OpenAccountScreenComponent(): JSX.Element {
     if (!result) return;
 
     if (result.ok) {
+      savedOutRef.current = true;
       setSaved(true);
       // Accounts opens its ancestors and scrolls to it (w21/175).
       revealAccountVar({ ledgerId, account });
