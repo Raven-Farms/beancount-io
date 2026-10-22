@@ -38,5 +38,7 @@
 - [523](./523.md) — Reports counts a bill pre-entered for later this month while Home's Spending stops at today (w21/337 sibling)
 - [524](./524.md) — Home's Recent Transactions and Reports' account card key twin entries by the same `entry_hash` (missed by w21/419)
 - [525](./525.md) — A guest journal link's filters follow the guest to every other example, and come back after Reset (w21/489 gap)
+- [526](./526.md) — Transactions, Account and Merchant detail drop back to the newest 20 rows after a return to the app or any write; a stale "Couldn't load more" footer stays
+- [527](./527.md) — A quick Back after deleting from a stacked detail still shows the deleted entry (w21/094 incomplete; w21/472 fixed only edit)
 - [508](./blocked/508.md) — Mobile guesses that an entry is a plugin copy from its first line; read the ledger's `generated_from` instead (split from 443) — **blocked:** production's GraphQL schema lacks `generated_from` until the ledger service and backend-v2 deploy; mobile's client is generated from it
 - [315](./blocked/315.md) — In-app commits signed with Gitea username and real email (no full_name, no noreply) — **blocked:** needs the owner's noreply-address and published-history decisions, and a production backfill of existing Gitea users that can't be verified here
