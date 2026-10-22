@@ -25,7 +25,7 @@
 - [526](./blocked/526.md) — Transactions, Account and Merchant detail drop back to the newest 20 rows after a return to the app or any write; a stale "Couldn't load more" footer stays — **blocked:** needs an owner decision on how to keep loaded pages through a refresh (field policy vs refetch to depth vs accept page 1)
 - [542](./blocked/542.md) — The balance chart's dashed start line and VoiceOver's "From" use the first point, while the change row uses the opening balance — **blocked:** needs an owner design decision on where the balance chart measures its change from (opening balance with a widened y-domain vs first plotted point)
 - [549](./blocked/549.md) — Create Ledger's "Amount owed" can't express a card in credit, and Review shows the opposite sign to the file — **blocked:** needs an owner decision on whether the setup API keeps "explicit negative = ledger sign" or changes its contract for REST, GraphQL and MCP
-- [554](./554.md) — A holding that is also another lot's cost currency drops out of the holdings sheet, so BTC's stale price is never flagged
+- [554](./blocked/554.md) — A holding that is also another lot's cost currency drops out of the holdings sheet, so BTC's stale price is never flagged — **blocked:** needs a per-commodity cost-less balance the valuation reads do not carry (cross-package read contract and deploy)
 - [555](./555.md) — A commodity bought in two currencies shows bare "1.0 BTC" on its Accounts row, with no value or note
 - [556](./556.md) — A holding priced only in an unrelated currency the account holds is labelled priced, though the ledger values it at cost
 - [557](./557.md) — VoiceOver users can't remove a posting: "Remove posting" exists only as a swipe action
