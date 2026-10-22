@@ -223,10 +223,16 @@ export const TextInputModal: React.FC<TextInputModalProps> = ({
           style={styles.avoider}
           behavior={Platform.OS === "ios" ? "padding" : "height"}
         >
-          <Animated.View style={[styles.modalContainer, modalAnimatedStyle]}>
+          <Animated.View
+            style={[styles.modalContainer, modalAnimatedStyle]}
+            // VoiceOver's two-finger scrub dismisses it as Cancel (w21/357).
+            onAccessibilityEscape={onCancel}
+          >
             <ScrollView style={styles.body} keyboardShouldPersistTaps="handled">
               <View style={styles.header}>
-                <Text style={styles.title}>{title}</Text>
+                <Text style={styles.title} accessibilityRole="header">
+                  {title}
+                </Text>
                 {message && <Text style={styles.message}>{message}</Text>}
               </View>
               <View style={styles.inputContainer}>

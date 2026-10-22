@@ -397,7 +397,11 @@ export const Picker: React.FC<PickerProps> = ({
           accessible={false}
           onPress={handleCancel}
         ></Pressable>
-        <Animated.View style={[styles.modalContainer, animatedStyle]}>
+        <Animated.View
+          style={[styles.modalContainer, animatedStyle]}
+          // VoiceOver's two-finger scrub dismisses it as Cancel (w21/357).
+          onAccessibilityEscape={handleCancel}
+        >
           <View style={styles.header}>
             <TouchableOpacity
               testID="picker-cancel"
@@ -413,7 +417,11 @@ export const Picker: React.FC<PickerProps> = ({
                 {cancelButtonText}
               </Text>
             </TouchableOpacity>
-            <Text style={styles.title} numberOfLines={1}>
+            <Text
+              style={styles.title}
+              numberOfLines={1}
+              accessibilityRole="header"
+            >
               {title}
             </Text>
             <TouchableOpacity
