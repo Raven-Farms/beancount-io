@@ -352,10 +352,10 @@ describe("bulk entries refuse tokens that would not lex as written", () => {
     expect(committed).toEqual([]);
   });
 
-  it("still writes Unicode accounts, tags, links and meta", async () => {
+  it("still writes Unicode accounts, and tags, links and meta", async () => {
     const response = await post([
       transaction({
-        tags: ["旅行", "trip-2026"],
+        tags: ["trip-2026"],
         links: ["inv/2026.03"],
         meta: { "receipt-id": "A1" },
         postings: [
@@ -371,9 +371,19 @@ describe("bulk entries refuse tokens that would not lex as written", () => {
     expect(committed).toHaveLength(1);
     const written = fromB64(committed[0]!.files[0]!.content);
     expect(written).toContain(
-      '2026-03-20 * "qa-tag" "qa" #trip-2026 #旅行 ^inv/2026.03',
+      '2026-03-20 * "qa-tag" "qa" #trip-2026 ^inv/2026.03',
     );
     expect(written).toContain("资产:现金");
+  });
+
+  // w21/653: the engines' lexers read tags as ASCII, so `#旅行` was dropped
+  // (and `#café` read as `#caf`); the validator names the field instead.
+  it("refuses a non-ASCII tag with the validator's message", async () => {
+    const response = await post([transaction({ tags: ["旅行"] })]);
+    const body = (await response.json()) as Record<string, any>;
+    expect(response.status).toBe(400);
+    expect(body.error).toContain('entry 0: tags[0] "旅行" is not a valid tag');
+    expect(committed).toEqual([]);
   });
 });
 

@@ -37,18 +37,19 @@ describe("assertEntryTokens", () => {
     ).toThrow(/entry 0: account [\s\S]* is not a valid account/);
   });
 
-  it.each(["*", "!", "txn", "P", "'X"])(
-    "accepts transaction flag %p",
+  it.each(["*", "!", "txn", "P"])("accepts transaction flag %p", (flag) => {
+    expect(() => assertEntryTokens([txn({ flag })])).not.toThrow();
+  });
+
+  // w21/653: a quoted flag is not Beancount syntax; the entry dropped.
+  it.each(["**", "x", "* ", "txn\n", "'X"])(
+    "refuses transaction flag %p",
     (flag) => {
-      expect(() => assertEntryTokens([txn({ flag })])).not.toThrow();
+      expect(() => assertEntryTokens([txn({ flag })])).toThrow(
+        /transaction flag/,
+      );
     },
   );
-
-  it.each(["**", "x", "* ", "txn\n"])("refuses transaction flag %p", (flag) => {
-    expect(() => assertEntryTokens([txn({ flag })])).toThrow(
-      /transaction flag/,
-    );
-  });
 
   it.each([
     ["USD", true],
@@ -64,6 +65,35 @@ describe("assertEntryTokens", () => {
       ]);
     if (ok) expect(call).not.toThrow();
     else expect(call).toThrow(/is not a valid currency/);
+  });
+
+  // w21/653: both engines' lexers read tags and links as ASCII only.
+  it.each(["trip-2026", "inv/2026.03", "a_b"])(
+    "accepts tag and link %p",
+    (tag) => {
+      expect(() =>
+        assertEntryTokens([txn({ tags: [tag], links: [tag] })]),
+      ).not.toThrow();
+    },
+  );
+
+  it.each(["café", "旅行", "a b", "a#b"])("refuses tag and link %p", (tag) => {
+    expect(() => assertEntryTokens([txn({ tags: [tag] })])).toThrow(
+      `entry 0: tags[0] ${JSON.stringify(tag)} is not a valid tag`,
+    );
+    expect(() => assertEntryTokens([txn({ links: [tag] })])).toThrow(
+      /is not a valid link/,
+    );
+  });
+
+  it("refuses a quoted posting flag", () => {
+    expect(() =>
+      assertEntryTokens([
+        txn({
+          postings: [{ account: "Assets:Cash", flag: "'X" }],
+        }),
+      ]),
+    ).toThrow('entry 0: postings[0].flag "\'X" is not a valid flag');
   });
 
   it("refuses a non-string token rather than rendering it", () => {

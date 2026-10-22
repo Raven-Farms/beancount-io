@@ -8,6 +8,9 @@ import { BadUserInputError } from "@/shared/errors";
  *
  * Non-ASCII is accepted wherever Beancount's lexer accepts it, so Unicode
  * account names keep working; whitespace and control characters never are.
+ * Tags and links are ASCII in both engines' lexers (`#café` read as `#caf`,
+ * `#旅行` not at all), and a quoted flag (`'X`) is not Beancount syntax, so
+ * neither is accepted (w21/653).
  */
 const NON_ASCII = "[^\\x00-\\x7F]";
 const ACCOUNT = new RegExp(
@@ -19,10 +22,10 @@ const NOT_IN_A_TOKEN = /[\s\p{C}]/u;
 
 const TOKEN_RULES = {
   date: /^\d{4}-\d{2}-\d{2}$/,
-  flag: /^(?:[*!&#?%PSTCURM]|'[A-Za-z])$/,
-  "transaction flag": /^(?:[*!&#?%PSTCURM]|'[A-Za-z]|txn)$/,
-  tag: /^[\p{L}\p{N}_/.-]+$/u,
-  link: /^[\p{L}\p{N}_/.-]+$/u,
+  flag: /^[*!&#?%PSTCURM]$/,
+  "transaction flag": /^(?:[*!&#?%PSTCURM]|txn)$/,
+  tag: /^[A-Za-z0-9_/.-]+$/,
+  link: /^[A-Za-z0-9_/.-]+$/,
   currency: /^[A-Z](?:[A-Z0-9'._-]{0,22}[A-Z0-9])?$/,
   "metadata key": /^[a-z][A-Za-z0-9_-]*$/,
   account: ACCOUNT,

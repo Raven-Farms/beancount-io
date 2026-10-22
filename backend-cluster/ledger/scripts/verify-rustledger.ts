@@ -40,6 +40,7 @@ import {
 import { stripBqlBlockComments } from "@/features/ledger/service/bql-comments";
 import { UNDECODABLE_SOURCE } from "@/foundation/rustledger/file-map-loader";
 import { filterDirectives } from "@/foundation/rustledger/directive-filter";
+import { assertEntryTokens } from "@/features/ledger/utils/entry-tokens";
 import { formatCellValue } from "@/foundation/rustledger/mappers";
 import { LedgerDataService } from "@/features/ledger/service/ledger-data-service";
 import { LedgerFinanceService } from "@/features/ledger/service/ledger-finance-service";
@@ -1863,6 +1864,53 @@ async function main(): Promise<void> {
     windowSum.errors.length === 0 && windowSum.rows.length > 0,
     "the windowed sum the lot-error hint names runs",
   );
+
+  // w21/653: the entry validator accepts a tag (or a flag) exactly when the
+  // engine reads it back as written.
+  const accepts = (item: Record<string, unknown>): boolean => {
+    try {
+      assertEntryTokens([{ type: "transaction", item }]);
+      return true;
+    } catch {
+      return false;
+    }
+  };
+  for (const tag of ["trip-2026", "inv/2026.03", "a_b", "café", "旅行"]) {
+    const tagged = await parseLedgerFiles(
+      {
+        "main.bean": `2024-01-01 open Assets:Cash\n2024-01-01 open Equity:Open\n2024-01-02 * "t" #${tag}\n  Assets:Cash 1 USD\n  Equity:Open\n`,
+      },
+      "main.bean",
+    );
+    const read = tagged.directives.find(
+      (directive) => directive.type === "transaction",
+    );
+    const intact =
+      tagged.errors.length === 0 &&
+      read?.type === "transaction" &&
+      JSON.stringify(read.tags) === JSON.stringify([tag]);
+    assert(
+      accepts({ tags: [tag] }) === intact,
+      `the validator ${intact ? "accepts" : "refuses"} tag #${tag}, as the engine reads it`,
+    );
+  }
+  for (const flag of ["*", "!", "P", "'X"]) {
+    const flagged = await parseLedgerFiles(
+      {
+        "main.bean": `2024-01-01 open Assets:Cash\n2024-01-01 open Equity:Open\n2024-01-02 ${flag} "t"\n  Assets:Cash 1 USD\n  Equity:Open\n`,
+      },
+      "main.bean",
+    );
+    const read = flagged.errors.length === 0 &&
+      flagged.directives.some(
+        (directive) =>
+          directive.type === "transaction" && directive.flag === flag,
+      );
+    assert(
+      accepts({ flag }) === read,
+      `the validator ${read ? "accepts" : "refuses"} flag ${flag}, as the engine reads it`,
+    );
+  }
 
   // w21/654: the engine still opens a string at a `"` on an org heading or a
   // `#` line and loses every entry after it; the parse comments such lines.
