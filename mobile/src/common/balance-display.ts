@@ -69,6 +69,12 @@ export type BalanceDisplay =
        * when nothing was converted, where the units already say it all.
        */
       notInTotal: Holding[];
+      /**
+       * What the value discloses about its prices, when the caller shows it: a
+       * root holding one commodity warns of a stale price as a money total
+       * does (w21/279).
+       */
+      valuation?: Valuation;
     };
 
 /**

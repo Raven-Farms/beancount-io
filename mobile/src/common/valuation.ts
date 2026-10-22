@@ -378,26 +378,36 @@ export function valuationStatus(
 ): string | null {
   const parts: string[] = [];
   if (valuation.valuesHoldings) {
-    parts.push(t("atMarketValue"));
-    const stale = stalePrices(valuation);
-    if (stale.length > 0) {
-      parts.push(
-        t("pricesNotUpdatedSince", {
-          count: stale.length,
-          date: formatLedgerDateShort(stale[0].priceDate, locale),
-        }),
-      );
-    }
-    if (valuation.atCostNoPrice.length > 0) {
-      parts.push(
-        t("atCostNoPriceCount", { count: valuation.atCostNoPrice.length }),
-      );
-    }
+    parts.push(t("atMarketValue"), ...priceAttention(valuation, t, locale));
   }
   if (valuation.notInTotal.length > 0) {
     parts.push(t("notInTotalCount", { count: valuation.notInTotal.length }));
   }
   return parts.length > 0 ? parts.join(" · ") : null;
+}
+
+/** Prices behind and holdings still at cost: what a valued figure flags. */
+function priceAttention(
+  valuation: Valuation,
+  t: Translate,
+  locale: string,
+): string[] {
+  const parts: string[] = [];
+  const stale = stalePrices(valuation);
+  if (stale.length > 0) {
+    parts.push(
+      t("pricesNotUpdatedSince", {
+        count: stale.length,
+        date: formatLedgerDateShort(stale[0].priceDate, locale),
+      }),
+    );
+  }
+  if (valuation.atCostNoPrice.length > 0) {
+    parts.push(
+      t("atCostNoPriceCount", { count: valuation.atCostNoPrice.length }),
+    );
+  }
+  return parts;
 }
 
 /**
@@ -460,5 +470,8 @@ export function balanceNotes(
       amount: isolateLtr(formatSignedMoneyWithCurrency(value.amount, currency)),
     }),
     ...notInTotalNotes(display.notInTotal, t),
+    ...(display.valuation && display.valuation.valuesHoldings
+      ? priceAttention(display.valuation, t, locale)
+      : []),
   ];
 }

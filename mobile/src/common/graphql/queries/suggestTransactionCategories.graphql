@@ -2,7 +2,10 @@ query suggestTransactionCategories(
   $ledgerId: String!
   $transactions: [TransactionToCategorizeInput!]!
 ) {
-  suggestTransactionCategories(ledgerId: $ledgerId, transactions: $transactions) {
+  suggestTransactionCategories(
+    ledgerId: $ledgerId
+    transactions: $transactions
+  ) {
     targetAccount
     confidence
     source

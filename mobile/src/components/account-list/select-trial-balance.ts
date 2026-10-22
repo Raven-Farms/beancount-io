@@ -183,7 +183,7 @@ export function selectTrialBalanceDisplays(
       );
       displays.set(
         row,
-        node === root && display.kind === "money"
+        node === root
           ? {
               ...display,
               valuation: selectValuation({

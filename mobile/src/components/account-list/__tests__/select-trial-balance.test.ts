@@ -445,6 +445,38 @@ describe("selectTrialBalanceDisplays", () => {
     expect(valuation?.cost).toBe(null);
   });
 
+  it("gives a single-commodity root the valuation Home shows (w21/279)", () => {
+    const hool = createTrialBalance({
+      assets: {
+        account: "Assets",
+        total: { USD: "1500" },
+        children: [
+          { account: "Assets:Broker", balanceChildren: { USD: "1500" } },
+        ],
+      },
+    });
+    const holdings = createTrialBalance({
+      assets: {
+        account: "Assets",
+        total: { HOOL: "10" },
+        children: [
+          { account: "Assets:Broker", balanceChildren: { HOOL: "10" } },
+        ],
+      },
+    });
+    const assets = selectTrialBalanceDisplays(
+      "USD",
+      hool,
+      holdings,
+      [{ base: "HOOL", quote: "USD", prices: [{ date: "2026-08-01" }] }],
+      "2026-10-21",
+    ).get("assets");
+    expect(assets?.kind).toBe("units");
+    const valuation = assets?.kind === "units" ? assets.valuation : undefined;
+    expect(valuation?.priced[0]?.stale).toBe(true);
+    expect(valuation?.priced[0]?.priceDate).toBe("2026-08-01");
+  });
+
   it("reads a commodity the ledger has no price for at cost", () => {
     const displays = selectTrialBalanceDisplays(
       "USD",

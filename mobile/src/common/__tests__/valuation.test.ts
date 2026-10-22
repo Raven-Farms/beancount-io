@@ -484,6 +484,33 @@ describe("balanceNotes", () => {
     ]);
   });
 
+  it("adds a stale price warning under a units root (w21/279)", () => {
+    const valuation = selectValuation({
+      market: { USD: "1500" },
+      units: { HOOL: "10" },
+      currency: "USD",
+      today: "2026-10-21",
+      prices: [
+        { base: "HOOL", quote: "USD", prices: [{ date: "2026-08-01" }] },
+      ],
+    });
+    const notes = balanceNotes(
+      {
+        kind: "units",
+        units: { currency: "HOOL", number: 10, scale: 0 },
+        value: { amount: 1500, basis: "market" },
+        notInTotal: [],
+        valuation,
+      },
+      "USD",
+      t,
+      "en",
+    );
+    expect(notes.length).toBe(2);
+    expect(notes[0]).toBe(`atMarket({"amount":"${isolateLtr("$1,500.00")}"})`);
+    expect(notes[1]!.startsWith("pricesNotUpdatedSince(")).toBe(true);
+  });
+
   it("claims no basis it does not know, and adds nothing to a figure with no value", () => {
     expect(
       balanceNotes(
