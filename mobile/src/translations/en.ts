@@ -366,6 +366,8 @@ export const en = {
   loadingMore: "Loading more...",
   noMoreEntries: "No more entries",
   loadMoreFailed: "Couldn't load more entries.",
+  a11yTapToExpand: "Double-tap to expand",
+  a11yTapToCollapse: "Double-tap to collapse",
   noEntries: "No entries",
   accountDetailUnavailable:
     "This account isn't available in the selected ledger.",

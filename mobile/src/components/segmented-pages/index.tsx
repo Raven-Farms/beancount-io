@@ -8,6 +8,7 @@ import {
   View,
   useWindowDimensions,
 } from "react-native";
+import { tabRole } from "@/common/accessibility";
 import { GestureDetector } from "react-native-gesture-handler";
 import PagerView from "react-native-pager-view";
 import { useHorizontalSwipeOwnerGesture } from "@/common/horizontal-swipe-owner";
@@ -241,7 +242,7 @@ export function SegmentedPages({
                           : { ...previous, [index]: width },
                       );
                     }}
-                    accessibilityRole="tab"
+                    accessibilityRole={tabRole}
                     accessibilityState={{ selected: active }}
                   >
                     <Text

@@ -52,7 +52,6 @@
 - [452](./452.md) — Picker hides Create for a full name that prefixes an account
 - [454](./454.md) — Welcome keeps old server's sign-in error; not announced
 - [315](./blocked/315.md) — In-app commits signed with Gitea username and real email (no full_name, no noreply) — **blocked:** needs the owner's noreply-address and published-history decisions, and a production backfill of existing Gitea users that can't be verified here
-- [356](./356.md) — iOS drops tab role; collapsed rows never say they expand
 - [357](./357.md) — Picker/text-input dialogs ignore VoiceOver escape; titles not headings
 - [358](./358.md) — Legacy keypad Delete key unnamed; guardrail misses Feather
 - [359](./359.md) — 176's iOS locale files gitignored, never committed; unit suite fails

@@ -9,6 +9,7 @@ import {
   useWindowDimensions,
   Platform,
 } from "react-native";
+import { tabRole } from "@/common/accessibility";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { useApolloClient, useReactiveVar } from "@apollo/client";
@@ -232,7 +233,7 @@ export function LedgerSelectionScreen() {
           <Pressable
             key={value}
             testID={`discovery-tab-${value}`}
-            accessibilityRole="tab"
+            accessibilityRole={tabRole}
             accessibilityState={{ selected: tab === value }}
             style={[styles.tab, tab === value && styles.selected]}
             // The query carries across tabs: moving to Explore is how a search

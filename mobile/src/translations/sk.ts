@@ -387,6 +387,8 @@ export const sk: Translations = {
   loadingMore: "Načítava sa viac...",
   noMoreEntries: "Žiadne ďalšie záznamy",
   loadMoreFailed: "Nepodarilo sa načítať ďalšie záznamy.",
+  a11yTapToExpand: "Dvojitým ťuknutím rozbalíte",
+  a11yTapToCollapse: "Dvojitým ťuknutím zbalíte",
   noEntries: "Žiadne záznamy",
   accountDetailUnavailable: "Tento účet nie je vo zvolenej knihe dostupný.",
   transactionDetailUnavailable:

@@ -387,6 +387,8 @@ export const de: Translations = {
   loadingMore: "Lädt mehr...",
   noMoreEntries: "Keine weiteren Einträge",
   loadMoreFailed: "Weitere Einträge konnten nicht geladen werden.",
+  a11yTapToExpand: "Zum Aufklappen doppeltippen",
+  a11yTapToCollapse: "Zum Zuklappen doppeltippen",
   noEntries: "Keine Einträge",
   accountDetailUnavailable:
     "Dieses Konto ist im ausgewählten Hauptbuch nicht verfügbar.",

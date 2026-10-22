@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Alert, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { disclosureAccessibility } from "@/common/accessibility";
 import { Ionicons } from "@expo/vector-icons";
 import { ColorTheme } from "@/types/theme-props";
 import {
@@ -152,7 +153,7 @@ export function BudgetHistoryRows({
         accessibilityRole="button"
         // Named by its text alone: the chevron glyph read as "U+F…" (w21/141).
         accessibilityLabel={t("budgetHistoryCount", { count: rows.length })}
-        accessibilityState={{ expanded }}
+        {...disclosureAccessibility(expanded, t)}
       >
         <Text style={styles.toggleText}>
           {t("budgetHistoryCount", { count: rows.length })}

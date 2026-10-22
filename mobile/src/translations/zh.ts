@@ -338,6 +338,8 @@ export const zh: Translations = {
   loadingMore: "加载更多...",
   noMoreEntries: "没有更多记录",
   loadMoreFailed: "无法加载更多条目。",
+  a11yTapToExpand: "双击展开",
+  a11yTapToCollapse: "双击收起",
   noEntries: "暂无记录",
   accountDetailUnavailable: "所选账本中没有这个账户。",
   transactionDetailUnavailable: "所选账本中没有这笔交易。",

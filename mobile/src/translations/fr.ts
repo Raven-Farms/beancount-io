@@ -385,6 +385,8 @@ export const fr: Translations = {
   loadingMore: "Chargement en cours...",
   noMoreEntries: "Aucune autre entrée",
   loadMoreFailed: "Impossible de charger d'autres écritures.",
+  a11yTapToExpand: "Touchez deux fois pour développer",
+  a11yTapToCollapse: "Touchez deux fois pour réduire",
   noEntries: "Aucune entrée",
   accountDetailUnavailable:
     "Ce compte n'est pas disponible dans le grand livre sélectionné.",

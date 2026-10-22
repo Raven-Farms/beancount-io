@@ -385,6 +385,8 @@ export const ca: Translations = {
   loadingMore: "Carregant més...",
   noMoreEntries: "No hi ha més entrades",
   loadMoreFailed: "No s'han pogut carregar més entrades.",
+  a11yTapToExpand: "Toqueu dos cops per expandir",
+  a11yTapToCollapse: "Toqueu dos cops per contreure",
   noEntries: "Cap entrada",
   accountDetailUnavailable:
     "Aquest compte no està disponible al llibre seleccionat.",

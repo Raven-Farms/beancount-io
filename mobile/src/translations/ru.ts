@@ -385,6 +385,8 @@ export const ru: Translations = {
   loadingMore: "Загружается ещё...",
   noMoreEntries: "Больше записей нет",
   loadMoreFailed: "Не удалось загрузить ещё записи.",
+  a11yTapToExpand: "Дважды коснитесь, чтобы развернуть",
+  a11yTapToCollapse: "Дважды коснитесь, чтобы свернуть",
   noEntries: "Нет записей",
   accountDetailUnavailable: "Этот счёт недоступен в выбранной книге.",
   transactionDetailUnavailable: "Эта транзакция недоступна в выбранной книге.",

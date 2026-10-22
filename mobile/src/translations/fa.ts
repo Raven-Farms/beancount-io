@@ -371,6 +371,8 @@ export const fa: Translations = {
   loadingMore: "در حال بارگذاری بیشتر...",
   noMoreEntries: "رکورد دیگری نیست",
   loadMoreFailed: "بارگذاری ورودی‌های بیشتر ممکن نشد.",
+  a11yTapToExpand: "برای باز کردن دو بار ضربه بزنید",
+  a11yTapToCollapse: "برای بستن دو بار ضربه بزنید",
   noEntries: "بدون رکورد",
   accountDetailUnavailable: "این حساب در دفتر کل انتخاب‌شده موجود نیست.",
   transactionDetailUnavailable: "این تراکنش در دفتر کل انتخاب‌شده موجود نیست.",

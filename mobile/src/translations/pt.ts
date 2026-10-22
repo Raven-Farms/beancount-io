@@ -385,6 +385,8 @@ export const pt: Translations = {
   loadingMore: "Carregando mais...",
   noMoreEntries: "Não há mais entradas",
   loadMoreFailed: "Não foi possível carregar mais lançamentos.",
+  a11yTapToExpand: "Toque duas vezes para expandir",
+  a11yTapToCollapse: "Toque duas vezes para recolher",
   noEntries: "Sem registros",
   accountDetailUnavailable:
     "Esta conta não está disponível no livro-razão selecionado.",

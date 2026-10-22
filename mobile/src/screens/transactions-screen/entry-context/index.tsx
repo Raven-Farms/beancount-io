@@ -1,5 +1,6 @@
 import { CardLoadFailure } from "@/components/card-load-failure";
 import React, { useState } from "react";
+import { disclosureAccessibility } from "@/common/accessibility";
 import {
   Text,
   View,
@@ -267,7 +268,7 @@ export const EntryContext: React.FC<EntryContextProps> = ({
             .filter(Boolean)
             .join(", "),
         }}
-        accessibilityState={{ expanded: isContextOpen }}
+        {...disclosureAccessibility(isContextOpen, t)}
       >
         <Ionicons name="code-slash-outline" size={20} color={theme.black80} />
         <View style={styles.contextHeaderCopy}>

@@ -6,6 +6,7 @@ import {
   View,
   useWindowDimensions,
 } from "react-native";
+import { disclosureAccessibility } from "@/common/accessibility";
 import { Ionicons } from "@expo/vector-icons";
 import { ColorTheme } from "@/types/theme-props";
 import { useThemeStyle } from "@/common/hooks/use-theme-style";
@@ -273,7 +274,7 @@ export function CategoryBreakdown({
             accessibilityValue={{
               text: breakdownRowAccessibilityValue(amountText, null, t),
             }}
-            accessibilityState={{ expanded: isExpanded }}
+            {...disclosureAccessibility(isExpanded, t)}
           >
             {rowContent}
           </TouchableOpacity>
@@ -365,7 +366,7 @@ export function CategoryBreakdown({
             accessibilityValue={{
               text: breakdownRowAccessibilityValue(amountText, pct, t),
             }}
-            accessibilityState={{ expanded: isExpanded }}
+            {...disclosureAccessibility(isExpanded, t)}
           >
             {line1}
             {line2}

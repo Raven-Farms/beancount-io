@@ -377,6 +377,8 @@ export const bg: Translations = {
   loadingMore: "Зарежда се още...",
   noMoreEntries: "Няма повече записи",
   loadMoreFailed: "Не успяхме да заредим още записи.",
+  a11yTapToExpand: "Докоснете два пъти, за да разгънете",
+  a11yTapToCollapse: "Докоснете два пъти, за да свиете",
   noEntries: "Няма записи",
   accountDetailUnavailable: "Тази сметка не е налична в избраната книга.",
   transactionDetailUnavailable:

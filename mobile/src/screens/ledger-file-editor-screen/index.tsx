@@ -3,6 +3,7 @@ import {
   ledgerWriteFailureMessage,
 } from "@/common/ledger-refusal";
 import { useGuest } from "@/common/guest/guest-context";
+import { disclosureAccessibility } from "@/common/accessibility";
 import { useLedgerAccess } from "@/common/hooks/use-ledger-access";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
@@ -233,7 +234,7 @@ function ErrorBanner({
         activeOpacity={0.7}
         accessibilityRole="button"
         accessibilityLabel={errorCountLabel}
-        accessibilityState={{ expanded }}
+        {...disclosureAccessibility(expanded, t)}
         onPress={() => setExpanded((value) => !value)}
       >
         <Ionicons name="warning-outline" size={16} color={theme.error} />
