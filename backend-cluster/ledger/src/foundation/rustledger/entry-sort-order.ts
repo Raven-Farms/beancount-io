@@ -59,9 +59,14 @@ function sourceLines(files: FileMap): Map<string, number[]> {
  * after it and running balances read "+100 → 500" (w21/134).
  *
  * The directives carry no source position, so each takes the next line of its
- * `date|type` from the source text, in the engine's order. A day whose counts
- * disagree with the source (a plugin added or dropped a directive, a block
- * failed to parse) keeps the engine's order rather than guess.
+ * `date|type` from the source text, in the engine's order. A `date|type` whose
+ * count disagrees with the source (a plugin added a directive — `auto_accounts`'
+ * opens, `implicit_prices`' prices — or a block failed to parse) cannot be
+ * mapped to lines, so its directives keep the engine's order and follow the
+ * ones that can, within their type rank. Only that key is affected: the rest of
+ * the day keeps its source order, where one generated directive used to revert
+ * the whole day to the engine's grouping and bring the wrong running balance
+ * back (w21/324).
  */
 export function restoreEntrySortOrder(
   directives: DirectiveJson[],
@@ -73,11 +78,9 @@ export function restoreEntrySortOrder(
     const key = `${directive.date}|${directive.type}`;
     counts.set(key, (counts.get(key) ?? 0) + 1);
   });
-  const unmatchedDates = new Set<string>();
+  const unmatchedKeys = new Set<string>();
   counts.forEach((count, key) => {
-    if ((lines.get(key)?.length ?? 0) !== count) {
-      unmatchedDates.add(key.slice(0, key.indexOf("|")));
-    }
+    if ((lines.get(key)?.length ?? 0) !== count) unmatchedKeys.add(key);
   });
 
   const taken = new Map<string, number>();
@@ -86,17 +89,27 @@ export function restoreEntrySortOrder(
       const key = `${directive.date}|${directive.type}`;
       const next = taken.get(key) ?? 0;
       taken.set(key, next + 1);
-      return { directive, index, lineno: lines.get(key)?.[next] ?? 0 };
+      return {
+        directive,
+        index,
+        lineno: unmatchedKeys.has(key) ? 0 : (lines.get(key)?.[next] ?? 0),
+      };
     })
     .sort((left, right) => {
       const dateOrder = left.directive.date.localeCompare(right.directive.date);
       if (dateOrder !== 0) return dateOrder;
-      if (!unmatchedDates.has(left.directive.date)) {
-        const typeOrder =
-          (DIRECTIVE_SORT_ORDER[left.directive.type] ?? 0) -
-          (DIRECTIVE_SORT_ORDER[right.directive.type] ?? 0);
-        if (typeOrder !== 0) return typeOrder;
-        if (left.lineno !== right.lineno) return left.lineno - right.lineno;
+      const typeOrder =
+        (DIRECTIVE_SORT_ORDER[left.directive.type] ?? 0) -
+        (DIRECTIVE_SORT_ORDER[right.directive.type] ?? 0);
+      if (typeOrder !== 0) return typeOrder;
+      // Within a rank, the directives with a known line come first, by line;
+      // the rest follow in the engine's order. Two groups keep the comparison
+      // transitive.
+      const leftKnown = left.lineno > 0;
+      const rightKnown = right.lineno > 0;
+      if (leftKnown !== rightKnown) return leftKnown ? -1 : 1;
+      if (leftKnown && left.lineno !== right.lineno) {
+        return left.lineno - right.lineno;
       }
       return left.index - right.index;
     })

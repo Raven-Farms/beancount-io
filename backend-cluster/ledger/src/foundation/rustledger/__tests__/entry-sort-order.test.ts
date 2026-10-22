@@ -104,13 +104,59 @@ describe("restoreEntrySortOrder", () => {
     ).toEqual([sameDay, salary, close]);
   });
 
-  it("keeps the engine's order for a day the source does not account for", () => {
+  // w21/324: one generated directive used to put the whole day back in the
+  // engine's grouping, and the running balance with it.
+  it("keeps the rest of the day in source order when a plugin adds a directive", () => {
+    // auto_accounts opens an account the source never opened, on the day of its
+    // first use: more `open`s than the source has, so only `open` is unmapped.
+    const generated = open("Expenses:Generated");
+    const withOpens = [
+      open("Assets:Pad"),
+      open("Income:Salary"),
+      {
+        ...generated,
+        date: "2026-08-05",
+      },
+      pad,
+      salary,
+      note,
+      price,
+      balance,
+    ];
+    const sorted = restoreEntrySortOrder(withOpens, { "main.bean": SOURCE });
+    // Salary → Note → Pad, as without the plugin.
+    expect(
+      sorted.filter((d) => d.date === "2026-08-05").map((d) => d.type),
+    ).toEqual(["open", "transaction", "note", "pad", "price"]);
+  });
+
+  it("does the same when implicit_prices adds a same-day price", () => {
+    const generatedPrice: DirectiveJson = {
+      ...price,
+      amount: { number: "1.1", currency: "USD" },
+    };
+    const sorted = restoreEntrySortOrder(
+      [pad, salary, note, price, generatedPrice, balance],
+      { "main.bean": SOURCE },
+    );
+    expect(sorted.map((d) => d.type)).toEqual([
+      "transaction",
+      "note",
+      "pad",
+      "price",
+      "price",
+      "balance",
+    ]);
+  });
+
+  it("puts a directive the source cannot place after the ones it can, in engine order", () => {
     // A plugin-made note has no line of its own.
     const extra = { ...note, comment: "generated" };
-    const directives = [pad, salary, note, extra, price];
-    expect(restoreEntrySortOrder(directives, { "main.bean": SOURCE })).toEqual(
-      directives,
-    );
+    expect(
+      restoreEntrySortOrder([pad, salary, note, extra, price], {
+        "main.bean": SOURCE,
+      }),
+    ).toEqual([salary, pad, price, note, extra]);
   });
 
   it("gives the account journal Beancount's running balances", () => {
