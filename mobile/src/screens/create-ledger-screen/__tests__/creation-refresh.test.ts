@@ -118,6 +118,8 @@ function screen(refreshFails: boolean) {
           };
         if (id === "expo-localization")
           return { getLocales: () => [{ regionCode: "US" }] };
+        if (id === "./revalidate-on-edit")
+          return require("../revalidate-on-edit");
         if (id === "./setup-presets")
           return {
             SETUP_PRESETS: [

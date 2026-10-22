@@ -1,3 +1,4 @@
+import { revalidateOnEdit } from "./revalidate-on-edit";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
@@ -253,6 +254,15 @@ export function CreateLedgerScreen(): JSX.Element {
       openingAmount: "",
     },
   });
+
+  // A field that shows an error re-checks itself as it is edited (w21/238).
+  const edited = (name: keyof FormValues, onChange: (text: string) => void) =>
+    revalidateOnEdit({
+      name,
+      hasError: (field) => Boolean(errors[field]),
+      trigger,
+      onChange,
+    });
 
   // Restore a draft left by leaving this screen (ADR021: resume, never
   // duplicate). The requestId is restored with it, so a retried submission
@@ -576,7 +586,7 @@ export function CreateLedgerScreen(): JSX.Element {
                 render={({ field: { onChange, onBlur, value } }) => (
                   <TextInput
                     value={value}
-                    onChangeText={onChange}
+                    onChangeText={edited("name", onChange)}
                     onBlur={onBlur}
                     autoCapitalize="none"
                     autoCorrect={false}
@@ -643,7 +653,9 @@ export function CreateLedgerScreen(): JSX.Element {
                 render={({ field: { onChange, onBlur, value } }) => (
                   <TextInput
                     value={value}
-                    onChangeText={(text) => onChange(text.toUpperCase())}
+                    onChangeText={edited("currency", (text) =>
+                      onChange(text.toUpperCase()),
+                    )}
                     onBlur={onBlur}
                     autoCapitalize="characters"
                     autoCorrect={false}
@@ -665,7 +677,7 @@ export function CreateLedgerScreen(): JSX.Element {
                 render={({ field: { onChange, onBlur, value } }) => (
                   <TextInput
                     value={value}
-                    onChangeText={onChange}
+                    onChangeText={edited("historyStart", onChange)}
                     onBlur={onBlur}
                     autoCapitalize="none"
                     autoCorrect={false}
@@ -725,7 +737,7 @@ export function CreateLedgerScreen(): JSX.Element {
                       render={({ field: { onChange, onBlur, value } }) => (
                         <TextInput
                           value={value}
-                          onChangeText={onChange}
+                          onChangeText={edited("openingAmount", onChange)}
                           onBlur={onBlur}
                           // A keypad with a minus: the decimal pad had none,
                           // so no balance could be entered as negative.

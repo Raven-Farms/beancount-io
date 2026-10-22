@@ -19,7 +19,6 @@
 - [206](./blocked/206.md) — Refund/return receipts are always prefilled as a purchase — **blocked:** needs an owner-approved AI-quota evaluation and a parse-contract decision (`isRefund` vs signed amount)
 - [210](./blocked/210.md) — Holdings sheet labels a user-typed price "Live price" and applies the feed's staleness rule — **blocked:** needs an owner decision on exposing the feed's effective price dates (cross-package contract) and a deploy before mobile can read it
 - [228](./blocked/228.md) — New Transaction stamps the first operating currency on every posting; no currency or price control — **blocked:** needs account-constraint currencies on the client, a price path (legacy field or typed mutation, deploy first) and an owner-approved form design
-- [238](./238.md) — Create Ledger keeps a field's error after it's corrected (until Next)
 - [239](./239.md) — Account detail: a failed refresh swaps the loaded chart for a permanent skeleton, no stale banner
 - [240](./240.md) — Account detail's 1M/3M/6M anchor on the account's last posting, so quiet accounts show old changes
 - [241](./241.md) — Account detail titles a bare transaction "Transaction" in English in every language
