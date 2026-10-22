@@ -103,6 +103,7 @@ import { toBeanCheckErrors } from "@/features/ledger/utils/bean-check-errors";
 import { assertKeepsEntryPoint } from "@/features/ledger/utils/ledger-entry-point";
 import { assertExplicitFileContentSize } from "@/features/ledger/utils/explicit-file-size";
 import { assertWritableText, decodeFileContent } from "@/shared/file-content";
+import { posix } from "path";
 import {
   formatIncludeLine,
   globMatches,
@@ -1159,10 +1160,17 @@ export class LedgerWorkflow implements ILedgerWorkflow {
       );
     }
 
+    const movedContent = this.movedIncludesContent(
+      oldFile,
+      input.oldPath,
+      input.newPath,
+      input.updateIncludes === true,
+    );
     const preservedContent =
-      oldFile.encoding === "base64" && oldFile.content
+      movedContent ??
+      (oldFile.encoding === "base64" && oldFile.content
         ? oldFile.content.replace(/\s/g, "")
-        : Buffer.from(oldFile.content ?? "", "utf-8").toString("base64");
+        : Buffer.from(oldFile.content ?? "", "utf-8").toString("base64"));
     const files: LedgerChangeFileOperation[] = [
       {
         operation: "create",
@@ -1175,7 +1183,7 @@ export class LedgerWorkflow implements ILedgerWorkflow {
         sha: oldFile.sha,
       },
     ];
-    const updatedIncludes: string[] = [];
+    const updatedIncludes: string[] = movedContent ? [input.newPath] : [];
     for (const including of includingFiles) {
       // A rewrite re-encodes the whole including file (w23/030).
       assertWritableText(including, "updateIncludes");
@@ -1220,6 +1228,67 @@ export class LedgerWorkflow implements ILedgerWorkflow {
       oldPath: input.oldPath,
       updatedIncludes,
     };
+  }
+
+  /**
+   * The moved file's own relative includes resolve from its new folder, so a
+   * move to another one pointed them at files that are not there (w23/056).
+   * Returns the file's content with them rewritten, as base64, or `undefined`
+   * when the move changes none of them and the bytes move as they are.
+   */
+  private movedIncludesContent(
+    file: { content?: string | null; encoding?: string | null },
+    oldPath: string,
+    newPath: string,
+    updateIncludes: boolean,
+  ): string | undefined {
+    if (
+      !/\.(bean|beancount)$/.test(oldPath) ||
+      posix.dirname(oldPath) === posix.dirname(newPath)
+    ) {
+      return undefined;
+    }
+    const decoded = decodeFileContent(file);
+    const moved: string[] = [];
+    const globs: string[] = [];
+    const rewritten = decoded.content.split("\n").map((line) => {
+      const include = parseIncludeLine(line);
+      if (!include || isUrlTarget(include.target)) return line;
+      const before = resolveIncludeTarget(oldPath, include.target);
+      if (before === resolveIncludeTarget(newPath, include.target)) return line;
+      if (isGlobPattern(before)) {
+        globs.push(include.target);
+        return line;
+      }
+      moved.push(include.target);
+      return formatIncludeLine(
+        include,
+        includeTargetFor(newPath, before, include.target),
+      );
+    });
+    if (globs.length > 0) {
+      throw new BadUserInputError(
+        `${oldPath} includes the glob "${globs[0]}" relative to its folder; in ${posix.dirname(newPath)} it would match other files, and a glob can't be rewritten`,
+        "newPath",
+        "Rename it within its folder, or change the include line first.",
+      );
+    }
+    if (moved.length === 0) return undefined;
+    if (!updateIncludes) {
+      throw new BadUserInputError(
+        `${oldPath} includes ${moved.map((target) => `"${target}"`).join(", ")} relative to its folder; pass updateIncludes: true to rewrite ${
+          moved.length === 1 ? "it" : "them"
+        } for ${newPath} in the same commit`,
+        "updateIncludes",
+        "Pass `updateIncludes: true` so the rename rewrites the `include` lines in the same commit.",
+      );
+    }
+    // A rewrite re-encodes the whole file (w23/030).
+    assertWritableText(
+      { path: oldPath, lossy: decoded.lossy },
+      "updateIncludes",
+    );
+    return Buffer.from(rewritten.join("\n"), "utf-8").toString("base64");
   }
 
   async starLedger({

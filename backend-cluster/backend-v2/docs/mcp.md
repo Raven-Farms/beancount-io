@@ -1428,8 +1428,10 @@ the file that declares it, so `include "x.bean"` in `d/inc.bean` names
 directory, keeps a leading `./` or `/`, and is escaped so it reads back as the
 same path. A glob include cannot be rewritten for one file: when `oldPath`
 matches a glob that `newPath` would not, the rename is refused even with
-`updateIncludes`. The result contains `oldPath`, `newPath` and
-`updatedIncludes`. Write capability and current content-write access are
+`updateIncludes`. The moved file's own relative includes are held to the same
+rule: a move to another folder that would point them elsewhere is refused
+without `updateIncludes` and rewritten with it, and a glob in the moved file
+is refused. The result contains `oldPath`, `newPath` and `updatedIncludes`. Write capability and current content-write access are
 required.
 
 This operation exposes GraphQL's existing contract: it has no caller-supplied

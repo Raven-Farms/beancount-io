@@ -750,3 +750,59 @@ describe.each(["rest", "gql", "mcp"])("the entry point via %s", (surface) => {
       }
     });
 });
+
+/**
+ * w23/056. A moved file's bytes moved as they were, so its own relative
+ * includes resolved from the new folder: `include "x.bean"` in `d/inc.bean`
+ * pointed at `e/x.bean` after a move to `e/`.
+ */
+describe.each(["rest", "gql", "mcp"])("moving a file that includes others via %s", (surface) => {
+  const tree = {
+    "d/x.bean": "; x\n",
+    "d/inc.bean": '; mine\ninclude "x.bean" ; sibling\ninclude "/d/x.bean"\n',
+  };
+  const updated = (result: unknown) =>
+    (result as { updatedIncludes?: string[] } | undefined)?.updatedIncludes;
+
+  it("moves the bytes unchanged within its folder", async () => {
+    const f = await fixture(identity, tree);
+    try {
+      expect((await f.call(surface, "d/inc.bean", "d/inc2.bean")).success).toBe(true);
+      expect(f.files.get("d/inc2.bean")?.content).toBe(tree["d/inc.bean"]);
+    } finally {
+      await f.close();
+    }
+  });
+
+  it("refuses a move to another folder that would break its include, then rewrites it", async () => {
+    const f = await fixture(identity, tree);
+    try {
+      const refused = await f.call(surface, "d/inc.bean", "e/inc.bean");
+      expect(refused.success).toBe(false);
+      if (surface === "rest")
+        expect(JSON.stringify(refused.result)).toContain('d/inc.bean includes \\"x.bean\\"');
+      expect(f.change).not.toHaveBeenCalled();
+
+      const moved = await f.call(surface, "d/inc.bean", "e/inc.bean", { updateIncludes: true });
+      expect(moved.success).toBe(true);
+      expect(updated(moved.result)).toEqual(["e/inc.bean"]);
+      // Relative to its new folder; the root-anchored include needs nothing.
+      expect(f.files.get("e/inc.bean")?.content).toBe(
+        '; mine\ninclude "../d/x.bean" ; sibling\ninclude "/d/x.bean"\n',
+      );
+    } finally {
+      await f.close();
+    }
+  });
+
+  it("refuses to move a glob include to another folder", async () => {
+    const f = await fixture(identity, { "d/x.bean": "; x\n", "d/all.bean": 'include "*.bean"\n' });
+    try {
+      const outcome = await f.call(surface, "d/all.bean", "e/all.bean", { updateIncludes: true });
+      expect(outcome.success).toBe(false);
+      expect(f.change).not.toHaveBeenCalled();
+    } finally {
+      await f.close();
+    }
+  });
+});

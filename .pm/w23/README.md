@@ -18,6 +18,5 @@
 - [059](./059.md) — every product-created ledger (STARTER, signup default, guided setup) ships `auto_accounts`, so a misspelt account is silently opened and writes report "No new bean-check errors" — owner picks drop-plugin vs report-new-accounts
 - [058](./058.md) — `insertReceiptTransaction` stores the receipt before validating the entry: a refused (e.g. `UNBALANCED`) insert still commits an orphan `documents/…` file under git storage, or an orphan permanent copy under S3
 - [057](./057.md) — nested tool-argument objects still drop unknown keys: `readLedgerFiles` `startLine` returns the whole file; a misspelt `sourceAccount` imports against the default account
-- [056](./056.md) — `renameLedgerFile` moves a file without rewriting its own relative includes: `include "x.bean"` in `d/inc.bean` resolves to `e/x.bean` after a move to `e/`
 - [022](./blocked/022.md) — report rustledger BQL gaps upstream (`cost(sum(position))`, `neg`/`filter_currency`, `meta('lineno')`, `AT value`, `BALANCES FROM`) — **blocked:** filing in an external tracker needs the user's approval
 - [026](./blocked/026.md) — streaming archive route for MCP OAuth clients over 8 MiB (option 1 from 023) — **blocked:** an ADR 0007 trust-boundary decision for the owner
