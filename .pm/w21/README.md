@@ -73,6 +73,9 @@
 - [474](./474.md) — Editor tells a FORBIDDEN save to try again (378 follow-up)
 - [475](./475.md) — Dashboard budget chart takes an income target's direction from today's amount; zeroed income runs on expense rules (394 dashboard half)
 - [476](./476.md) — Custom/budget hash ignores account and amount; stale delete removes another budget
+- [477](./477.md) — Create Ledger Review shows MyBook but creates mybook; no visibility line
+- [478](./478.md) — Create Ledger preview failure shows raw English, no Retry
+- [479](./479.md) — Create Ledger errors silent to VoiceOver (354 sibling)
 - [315](./blocked/315.md) — In-app commits signed with Gitea username and real email (no full_name, no noreply) — **blocked:** needs the owner's noreply-address and published-history decisions, and a production backfill of existing Gitea users that can't be verified here
 - [398](./398.md) — Budget on a closed account runs forever and outranks real overspends
 - [399](./399.md) — Income budget history/alert/placeholder show raw negative amount
