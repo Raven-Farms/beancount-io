@@ -21,7 +21,9 @@ import { selectSectionsPending } from "./section-state";
 import {
   appendCommitPage,
   COMMITS_PAGE_SIZE,
+  endRowsFor,
   historyEnded,
+  type HistoryEnd,
   isLastCommitPage,
   shownCommitPages,
 } from "./commit-pages";
@@ -288,11 +290,12 @@ function NotificationsScreenImpl(): JSX.Element {
   // an empty page after a whole number of pages ends the list (w21/498).
   const shownRows = commitsData?.listCommits.length ?? 0;
   const shownPages = shownCommitPages(shownRows);
-  const [endRows, setEndRows] = useState<number | null>(null);
-  const noOlder = historyEnded(shownRows, endRows);
+  const headSha = commitsData?.listCommits[0]?.sha;
+  const [historyEnd, setHistoryEnd] = useState<HistoryEnd | null>(null);
+  const noOlder = historyEnded(shownRows, endRowsFor(historyEnd, headSha));
   const [loadingOlder, setLoadingOlder] = useState(false);
   useEffect(() => {
-    setEndRows(null);
+    setHistoryEnd(null);
   }, [ledgerId]);
   const showOlder = async () => {
     if (loadingOlder) return;
@@ -311,7 +314,8 @@ function NotificationsScreenImpl(): JSX.Element {
           return { listCommits };
         },
       });
-      if (isLastCommitPage(result.data.listCommits)) setEndRows(mergedRows);
+      if (isLastCommitPage(result.data.listCommits))
+        setHistoryEnd({ rows: mergedRows, head: headSha });
     } catch {
       // The rows already shown stay; the button is there to try again.
     } finally {
@@ -336,7 +340,7 @@ function NotificationsScreenImpl(): JSX.Element {
     setRefreshing(true);
     try {
       // Both halves: an error fixed outside the app clears on a pull too.
-      setEndRows(null);
+      setHistoryEnd(null);
       await Promise.all([refetchCommits(), refetchErrors()]);
     } finally {
       setRefreshing(false);

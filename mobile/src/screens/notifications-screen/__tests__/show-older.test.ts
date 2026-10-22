@@ -4,6 +4,7 @@ import { en } from "../../../translations/en";
 import {
   appendCommitPage,
   COMMITS_PAGE_SIZE,
+  endRowsFor,
   historyEnded,
   isLastCommitPage,
   shownCommitPages,
@@ -69,7 +70,9 @@ describe("the page the list is at", () => {
       )
       .replace(/\s+/g, "");
     expect(
-      source.includes("constnoOlder=historyEnded(shownRows,endRows);"),
+      source.includes(
+        "constnoOlder=historyEnded(shownRows,endRowsFor(historyEnd,headSha));",
+      ),
     ).toBe(true);
     expect(source.includes("pagesLoaded")).toBe(false);
   });
@@ -101,9 +104,30 @@ describe("the end of the history", () => {
     expect(source.includes("mergedRows=listCommits.length;")).toBe(true);
     expect(source.includes("lastPage")).toBe(false);
     // A refetch back to one page has fewer rows than the end: button returns.
-    expect(source.includes("noOlder=historyEnded(shownRows,endRows);")).toBe(
-      true,
-    );
+    expect(
+      source.includes(
+        "noOlder=historyEnded(shownRows,endRowsFor(historyEnd,headSha));",
+      ),
+    ).toBe(true);
+  });
+});
+
+// w21/512: an end found before a new commit landed no longer held after the
+// foreground refetch, and the oldest commit sat one row past the button.
+describe("the end of the history after a new commit", () => {
+  it("is forgotten once the newest commit changes", () => {
+    const end = { rows: 60, head: "sha-60" };
+    expect(endRowsFor(end, "sha-60")).toBe(60);
+    expect(endRowsFor(end, "sha-61")).toBe(null);
+    expect(endRowsFor(null, "sha-61")).toBe(null);
+  });
+
+  it("brings Show older back for the 61-commit ledger", () => {
+    const end = { rows: 60, head: "sha-60" };
+    // 30 rows shown again, then 60 after Show older: the 61st is still to come.
+    expect(historyEnded(60, endRowsFor(end, "sha-61"))).toBe(false);
+    // Unchanged history still ends at 60.
+    expect(historyEnded(60, endRowsFor(end, "sha-60"))).toBe(true);
   });
 });
 
@@ -124,7 +148,7 @@ describe("the Notifications screen's Show older", () => {
     ).toBe(true);
     expect(
       source.includes(
-        "if(isLastCommitPage(result.data.listCommits))setEndRows(mergedRows);",
+        "if(isLastCommitPage(result.data.listCommits))setHistoryEnd({rows:mergedRows,head:headSha});",
       ),
     ).toBe(true);
   });
@@ -143,7 +167,7 @@ describe("the Notifications screen's Show older", () => {
     expect(
       refresh
         .slice(0, refresh.indexOf("finally"))
-        .includes("setEndRows(null);"),
+        .includes("setHistoryEnd(null);"),
     ).toBe(true);
   });
 });

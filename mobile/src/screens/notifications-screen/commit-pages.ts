@@ -44,3 +44,21 @@ export function historyEnded(
 ): boolean {
   return endRows !== null && shownRows >= endRows;
 }
+
+/** Where the history was found to end: the rows then, and the newest commit. */
+export interface HistoryEnd {
+  rows: number;
+  head: string | undefined;
+}
+
+/**
+ * The end still standing for the list now. A new commit changes the newest sha
+ * and moves every page by one, so an end found before it no longer holds: the
+ * oldest commit sits one row past it (w21/512).
+ */
+export function endRowsFor(
+  end: HistoryEnd | null,
+  head: string | undefined,
+): number | null {
+  return end !== null && end.head === head ? end.rows : null;
+}
