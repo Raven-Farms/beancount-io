@@ -47,5 +47,9 @@
 - [532](./532.md) — Account detail's "Off by" amounts land on the wrong balance assertion when the file isn't in date order (ledger)
 - [533](./533.md) — A balance assertion failing its explicit `~` tolerance shows as passing: `diff_amount` is null for E2002 (ledger)
 - [534](./534.md) — Booking and interpolation (`BOOK`) errors have no file or line, so the app can't open them (ledger)
+- [535](./535.md) — Every dollar currency shows as "$" (¥ for CNY/JPY, kr for SEK/NOK), so a USD+CAD merchant shows two identical "$42.50" totals
+- [536](./536.md) — In Persian, Money flow's cost/price line and the budget Delete alert put the currency on the wrong side (missed by w21/095 and w21/249)
+- [537](./537.md) — The pending badge is a literal English "P" in all 13 languages
+- [538](./538.md) — Scan Receipt's "Receipt read" shows a raw ISO date and an ungrouped total with no currency
 - [508](./blocked/508.md) — Mobile guesses that an entry is a plugin copy from its first line; read the ledger's `generated_from` instead (split from 443) — **blocked:** production's GraphQL schema lacks `generated_from` until the ledger service and backend-v2 deploy; mobile's client is generated from it
 - [315](./blocked/315.md) — In-app commits signed with Gitea username and real email (no full_name, no noreply) — **blocked:** needs the owner's noreply-address and published-history decisions, and a production backfill of existing Gitea users that can't be verified here
