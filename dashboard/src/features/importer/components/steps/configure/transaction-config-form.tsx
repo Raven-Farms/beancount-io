@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useId, useMemo, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -62,6 +62,7 @@ export function TransactionConfigForm({
   isSubmitting,
 }: TransactionConfigFormProps) {
   const { t, i18n } = useTranslations();
+  const targetsHeadingId = useId();
   const { primaryCurrency } = useLedger();
   const validRows = useMemo(() => getValidImportRows(rows), [rows]);
 
@@ -330,10 +331,11 @@ export function TransactionConfigForm({
             )}
 
             <div>
-              <h3 className="text-sm font-medium mb-3">
+              <h3 id={targetsHeadingId} className="text-sm font-medium mb-3">
                 {t("importer.configure.assignTargetAccounts")}
               </h3>
               <AccountMappingTable
+                labelledBy={targetsHeadingId}
                 control={form.control}
                 ledgerId={ledgerId}
                 onAICategorize={handleAICategorize}

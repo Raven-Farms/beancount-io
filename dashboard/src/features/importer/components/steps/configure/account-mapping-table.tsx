@@ -69,6 +69,8 @@ interface AccountMappingTableProps {
   onDraftChange?: () => void;
   /** Freezes selection, targets and AI Fill while the import is pending. */
   disabled?: boolean;
+  /** The id of the visible heading that names the table (w4/319). */
+  labelledBy?: string;
 }
 
 type AmountFilter = "all" | "positive" | "negative";
@@ -81,6 +83,7 @@ export function AccountMappingTable({
   transactionCount = 0,
   onDraftChange,
   disabled = false,
+  labelledBy,
 }: AccountMappingTableProps) {
   const { t, i18n } = useTranslations();
   const formatError = useErrorMessage();
@@ -211,7 +214,11 @@ export function AccountMappingTable({
           value={amountFilter}
           onValueChange={(value) => setAmountFilter(value as AmountFilter)}
         >
-          <SelectTrigger className="w-45">
+          {/* The selected value is not the control's purpose (w4/319). */}
+          <SelectTrigger
+            className="w-45"
+            aria-label={t("importer.accountMapping.filterByAmount")}
+          >
             <Filter className="h-4 w-4 mr-2" />
             <SelectValue
               placeholder={t("importer.accountMapping.filterByAmount")}
@@ -233,7 +240,7 @@ export function AccountMappingTable({
 
       {/* Table */}
       <div className="rounded-md border">
-        <Table className="min-w-[960px]">
+        <Table className="min-w-[960px]" aria-labelledby={labelledBy}>
           <TableHeader>
             <TableRow>
               <TableHead className="w-12.5">

@@ -302,4 +302,43 @@ describe("TransactionConfigForm draft persistence", () => {
       }),
     ).toBeInTheDocument();
   });
+
+  // The amount filter and the mapping table carry stable names, not their
+  // current value or nothing at all (w4/319).
+  it("names the amount filter and the mapping table by their purpose", async () => {
+    const user = userEvent.setup();
+    render(
+      <TransactionConfigForm
+        rows={rows}
+        ledgerId="open_ledger/freelancer-invoicing"
+        onSubmit={vi.fn()}
+        onBack={vi.fn()}
+      />,
+    );
+    const table = screen.getByRole("table", {
+      name: "importer.configure.assignTargetAccounts",
+    });
+    const filter = screen.getByRole("combobox", {
+      name: "importer.accountMapping.filterByAmount",
+    });
+    expect(filter).toHaveTextContent("importer.accountMapping.allAmounts");
+    expect(table.querySelectorAll("tbody tr")).toHaveLength(2);
+
+    filter.focus();
+    await user.keyboard("{Enter}");
+    await user.click(
+      await screen.findByRole("option", {
+        name: "importer.accountMapping.negativeOnly",
+      }),
+    );
+    // The name stays put while the value and the rows change.
+    await waitFor(() =>
+      expect(table.querySelectorAll("tbody tr")).toHaveLength(1),
+    );
+    expect(
+      screen.getByRole("combobox", {
+        name: "importer.accountMapping.filterByAmount",
+      }),
+    ).toHaveTextContent("importer.accountMapping.negativeOnly");
+  });
 });
