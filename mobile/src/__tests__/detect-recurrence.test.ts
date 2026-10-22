@@ -482,3 +482,31 @@ describe("detectRecurrence after a price change", () => {
     expect(verdict?.isApproximate).toBe(false);
   });
 });
+
+// w21/335: detectRecurrence ignores pre-entered events, but hasEnoughHistory
+// still counted them, so a manual Recurring mark read "Irregular" for a series
+// too short to analyse.
+describe("hasEnoughHistory with a pre-entered event", () => {
+  const point = (date: string) => ({ date, currency: "USD", amount: -10 });
+
+  it("does not count a future event as history", () => {
+    const series = [
+      point("2026-09-05"),
+      point("2026-10-05"),
+      point("2026-11-05"),
+    ];
+    expect(hasEnoughHistory(series)).toBe(true);
+    expect(hasEnoughHistory(series, "2026-10-21")).toBe(false);
+    // Agrees with the detector on what it analysed.
+    expect(detectRecurrence(series, "2026-10-21")).toBe(null);
+  });
+
+  it("counts everything up to and including today", () => {
+    const series = [
+      point("2026-08-05"),
+      point("2026-09-05"),
+      point("2026-10-21"),
+    ];
+    expect(hasEnoughHistory(series, "2026-10-21")).toBe(true);
+  });
+});

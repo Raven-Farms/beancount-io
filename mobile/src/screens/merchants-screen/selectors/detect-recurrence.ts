@@ -346,13 +346,20 @@ function amountSpreadIsApproximate(amounts: readonly number[]): boolean {
  * false and "analysed, no steady pattern" when it is true; a manual Recurring
  * mark reads the difference (w0/039).
  */
-export function hasEnoughHistory(series: readonly SeriesPoint[]): boolean {
+export function hasEnoughHistory(
+  series: readonly SeriesPoint[],
+  today?: string,
+): boolean {
+  // Only what has happened counts, as in `detectRecurrence`: a pre-entered
+  // payment is the next event, not history (w21/335). Without `today` nothing
+  // is future.
+  const todayDay = today === undefined ? null : parseLedgerDay(today);
   const days = new Set<number>();
   for (const point of withoutCounterSign(series)) {
     const day = parseLedgerDay(point.date);
-    if (day !== null && Number.isFinite(point.amount)) {
-      days.add(day);
-    }
+    if (day === null || !Number.isFinite(point.amount)) continue;
+    if (todayDay !== null && day > todayDay) continue;
+    days.add(day);
   }
   return days.size >= MIN_EVENT_DATES;
 }

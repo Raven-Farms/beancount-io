@@ -20,6 +20,7 @@ import {
 } from "@/common/theme";
 import { useThemeStyle } from "@/common/hooks";
 import { useTranslations } from "@/common/hooks/use-translations";
+import { useToday } from "@/common/hooks/use-today";
 import { formatLedgerDateShort } from "@/common/date-format";
 import { LEADING_TEXT_ALIGN } from "@/common/rtl";
 import { ColorTheme } from "@/types/theme-props";
@@ -257,6 +258,7 @@ function MerchantDetailBody({
   const styles = useThemeStyle(getStyles);
   const theme = useTheme().colorTheme;
   const { t, locale } = useTranslations();
+  const today = useToday();
   const overrides = useReactiveVar(merchantRecurringOverridesVar);
   const { detections, enoughHistory } = usePayeeRecurrence(ledgerId);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -523,7 +525,14 @@ function MerchantDetailBody({
         <Text style={styles.dateRange}>
           {t("merchantDetailDateRange", {
             first: formatLedgerDateShort(stats.firstDate, locale),
-            last: formatLedgerDateShort(stats.lastDate, locale),
+            // The last date may be a pre-entered payment, not one made: say so
+            // (w21/335).
+            last:
+              stats.lastDate > today
+                ? t("merchantsScheduled", {
+                    date: formatLedgerDateShort(stats.lastDate, locale),
+                  })
+                : formatLedgerDateShort(stats.lastDate, locale),
           })}
         </Text>
       ) : null}

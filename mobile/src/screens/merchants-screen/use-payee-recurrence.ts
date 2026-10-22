@@ -53,7 +53,7 @@ export function usePayeeRecurrence(ledgerId: string | null | undefined) {
     const enough = new Set<string>();
     for (const [payee, series] of seriesByPayee) {
       map.set(payee, detectRecurrence(series, today));
-      if (hasEnoughHistory(series)) enough.add(payee);
+      if (hasEnoughHistory(series, today)) enough.add(payee);
     }
     return { detections: map, enoughHistory: enough };
   }, [query.data?.queryShell?.table, today, expenses, income]);

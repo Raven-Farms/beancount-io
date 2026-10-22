@@ -40,7 +40,6 @@
 - [441](./441.md) — Home charts announced without curve name; iOS-only hint
 - [442](./442.md) — Android reinstall never sets account-choice mark (318 sibling)
 - [315](./blocked/315.md) — In-app commits signed with Gitea username and real email (no full_name, no noreply) — **blocked:** needs the owner's noreply-address and published-history decisions, and a production backfill of existing Gitea users that can't be verified here
-- [335](./335.md) — Future events still count as history: manual mark reads "Irregular" (167 follow-up)
 - [336](./336.md) — Float-exact "~" on steady prices (171) and uncancelled budget batches (165)
 - [337](./337.md) — After 184, Home's budget panel/Spending count this month's pre-entered entries (panel "Above target" vs Budget $0)
 - [338](./338.md) — File editor: Enter twice after a posting indents the next transaction ("unexpected INDENT")
