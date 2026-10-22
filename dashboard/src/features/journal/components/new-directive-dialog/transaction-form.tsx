@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { useForm, useFieldArray, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -94,6 +94,7 @@ export function TransactionForm({
   const formatError = useErrorMessage();
   const [addTransaction] = useMutation(BulkEntriesDocument);
   const [error, setError] = useState<string | null>(null);
+  const postingRowsRef = useRef<HTMLDivElement>(null);
   const { primaryCurrency } = useLedger();
 
   // Zod validation schema for posting with translations
@@ -342,15 +343,27 @@ export function TransactionForm({
     }
   };
 
+  // An explicit Add moves on to the row it made. Its own button becomes that
+  // row's neighbour's Remove once there are three rows, so leaving focus
+  // there let the next Enter delete a posting (w4/967). The automatic blank
+  // row above stays unfocused.
   const addPosting = () => {
+    const added = fields.length;
     append(
       {
         account: "",
         amount: "",
         currency: primaryCurrency,
       },
-      { shouldFocus: false }, // Don't auto-focus the new row to prevent scroll
+      { shouldFocus: false }, // Focus moves below, without RHF's scroll.
     );
+    requestAnimationFrame(() => {
+      postingRowsRef.current
+        ?.querySelector<HTMLElement>(
+          `[data-posting-row="${added}"] input`, // its account, first in the row
+        )
+        ?.focus();
+    });
   };
 
   const removePosting = (index: number) => {
@@ -476,13 +489,17 @@ export function TransactionForm({
             </div>
 
             <ScrollArea className="h-[220px]">
-              <div className="space-y-2 pr-4 pt-1 pl-1">
+              <div ref={postingRowsRef} className="space-y-2 pr-4 pt-1 pl-1">
                 {fields.map((field, index) => {
                   const autoBalance = autoBalanceInfo.balances.get(index);
                   const isLastRow = index === fields.length - 1;
 
                   return (
-                    <div key={field.id} className="space-y-1">
+                    <div
+                      key={field.id}
+                      data-posting-row={index}
+                      className="space-y-1"
+                    >
                       <div className="grid grid-cols-1 gap-2 md:flex md:items-start md:gap-2">
                         <div className="flex items-center justify-center w-6 h-9 text-xs text-muted-foreground font-medium shrink-0">
                           {index + 1}
