@@ -22,8 +22,8 @@ import {
   routeIncomingAppLink,
   takePendingAppLink,
 } from "./pending-app-link";
-import { resolveAppLink, type AppLinkTarget } from "./resolve-app-link";
-import { canonicalizeIncomingAppLinkUrl } from "./rewrite-system-path";
+import type { AppLinkTarget } from "./resolve-app-link";
+import { resolveServerLink } from "./server-link";
 
 /**
  * Mount once under Providers. Routes https ledger URLs through the resolver,
@@ -94,9 +94,15 @@ export function useAppLinkHandler(): void {
       if (!url || cancelled) return;
       if (isOAuthCallbackUrl(url)) return;
 
-      const candidate = canonicalizeIncomingAppLinkUrl(url) ?? url;
-      const target = resolveAppLink(candidate, { serverUrl: getServerUrl() });
-      if (!target) return;
+      const link = resolveServerLink(url, getServerUrl());
+      // Another server's link goes to the browser; nothing to replay either.
+      if (link.kind === "browser") {
+        clearPendingAppLink();
+        await RnLinking.openURL(link.url).catch(() => undefined);
+        return;
+      }
+      if (link.kind === "ignore") return;
+      const { target, url: candidate } = link;
 
       if (routeIncomingAppLink(target, candidate, !!sessionRef.current)) {
         await open(target, candidate);

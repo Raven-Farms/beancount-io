@@ -16,7 +16,7 @@ export type AppLinkTarget = {
 export type ResolveAppLinkOptions = {
   /** Selected server origin (with or without trailing slash). */
   serverUrl?: string;
-  /** Always-accepted hosted origin. Defaults to beancount.io. */
+  /** The hosted origin, accepted when no server is selected. Defaults to beancount.io. */
   hostedOrigin?: string;
 };
 
@@ -32,14 +32,24 @@ function hostFromOrigin(origin: string): string | null {
   }
 }
 
+/**
+ * The hosts whose links are this server's. With a self-hosted server selected,
+ * a beancount.io link names the hosted service's ledger, not the same-named
+ * one on this server, so only the server's own host counts (w21/348); the
+ * hosted origin is accepted when it is the server, or none is given.
+ */
 function allowedHosts(options: ResolveAppLinkOptions): Set<string> {
   const hosts = new Set<string>();
-  const hosted = normalizeOrigin(options.hostedOrigin ?? HOSTED_APP_ORIGIN);
-  const hostedHost = hostFromOrigin(hosted);
-  if (hostedHost) hosts.add(hostedHost);
-  if (options.serverUrl) {
-    const serverHost = hostFromOrigin(normalizeOrigin(options.serverUrl));
-    if (serverHost) hosts.add(serverHost);
+  const serverHost = options.serverUrl
+    ? hostFromOrigin(normalizeOrigin(options.serverUrl))
+    : null;
+  if (serverHost) {
+    hosts.add(serverHost);
+  } else {
+    const hostedHost = hostFromOrigin(
+      normalizeOrigin(options.hostedOrigin ?? HOSTED_APP_ORIGIN),
+    );
+    if (hostedHost) hosts.add(hostedHost);
   }
   return hosts;
 }

@@ -133,7 +133,7 @@ describe("resolveAppLink", () => {
     expect(resolveAppLink("not-a-url")).toBe(null);
   });
 
-  it("accepts the selected server host in addition to the hosted domain", () => {
+  it("accepts the selected server's host, and the hosted domain only when it is the server", () => {
     const selfHost = "https://books.example.test";
     expect(
       resolveAppLink(`${selfHost}/ledger/${LEDGER}/journal`, {
@@ -144,12 +144,15 @@ describe("resolveAppLink", () => {
       href: "/transactions",
       filters: { statuses: [], range: "all" },
     });
-    // Hosted domain still works even when a self-host is selected.
+    // A beancount.io link is the hosted service's ledger, not the same-named
+    // one on the selected self-hosted server (w21/348).
     expect(
-      resolveAppLink(`${ORIGIN}/ledger/${LEDGER}`, {
-        serverUrl: selfHost,
-      }),
-    ).toEqual({ ledgerFullName: LEDGER, href: "/" });
+      resolveAppLink(`${ORIGIN}/ledger/${LEDGER}`, { serverUrl: selfHost }),
+    ).toBe(null);
+    expect(resolveAppLink(`${ORIGIN}/ledger/${LEDGER}`)).toEqual({
+      ledgerFullName: LEDGER,
+      href: "/",
+    });
   });
 });
 

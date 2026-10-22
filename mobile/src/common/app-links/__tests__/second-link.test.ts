@@ -84,13 +84,13 @@ function mount() {
     },
     "@/screens/examples/example-routes": { exampleRoutes: {} },
     "./guest-link-visit": { guestLinkVisit: () => null },
-    "./resolve-app-link": {
-      resolveAppLink: (url: string): Target => ({
-        ledgerFullName: url,
-        href: "/transactions",
+    "./server-link": {
+      resolveServerLink: (url: string) => ({
+        kind: "open",
+        target: { ledgerFullName: url, href: "/transactions" } as Target,
+        url,
       }),
     },
-    "./rewrite-system-path": { canonicalizeIncomingAppLinkUrl: () => null },
   };
   const source = ts.transpileModule(
     fs.readFileSync(

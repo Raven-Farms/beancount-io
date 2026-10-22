@@ -46,7 +46,6 @@
 - [447](./447.md) — Editor error banner matches a longer file name
 - [448](./448.md) — Back during a last-file delete lands one folder too high
 - [315](./blocked/315.md) — In-app commits signed with Gitea username and real email (no full_name, no noreply) — **blocked:** needs the owner's noreply-address and published-history decisions, and a production backfill of existing Gitea users that can't be verified here
-- [348](./348.md) — beancount.io link opens same-named ledger on self-hosted server
 - [349](./349.md) — Accounts/Files-tree/new-entry links open Home or Transactions
 - [350](./350.md) — Failed post-write refresh erases the persisted offline cache
 - [351](./351.md) — Mid-save connection drop says "Nothing was saved"; retry duplicates
