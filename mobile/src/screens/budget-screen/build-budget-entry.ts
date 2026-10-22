@@ -1,3 +1,4 @@
+import { toAsciiNumerals } from "../../common/ascii-numerals";
 import { getFormatDate } from "../../common/format-util";
 import type {
   AddEntryInput,
@@ -39,7 +40,8 @@ export type BudgetEntryInput = {
  * are refused rather than rewritten: the user types the plain number.
  */
 export function isBudgetAmount(text: string): boolean {
-  return /^[+-]?\d+(\.\d+)?$/u.test(text.trim());
+  // Digits from any keyboard count; they are written as ASCII (w21/392).
+  return /^[+-]?\d+(\.\d+)?$/u.test(toAsciiNumerals(text).trim());
 }
 
 function isIncomeAccount(account: string, incomeRoot?: string): boolean {
@@ -75,7 +77,7 @@ export function buildBudgetEntry({
   incomeRoot,
 }: BudgetEntryInput): AddEntryInput {
   const trimmedAccount = account.trim();
-  const amount = number.trim();
+  const amount = toAsciiNumerals(number).trim();
   return {
     type: "BUDGET" as LedgerEntryType,
     budget: {

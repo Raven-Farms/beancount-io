@@ -69,7 +69,6 @@
 - [470](./470.md) — Pull to refresh skips Spending's to-today read (337 follow-up)
 - [471](./471.md) — Upcoming entries can fill all of Recent Transactions
 - [315](./blocked/315.md) — In-app commits signed with Gitea username and real email (no full_name, no noreply) — **blocked:** needs the owner's noreply-address and published-history decisions, and a production backfill of existing Gitea users that can't be verified here
-- [392](./392.md) — Add Budget refuses Persian/Arabic digits (230 sibling)
 - [393](./393.md) — Budget history delete after external change is a dead end (250 sibling)
 - [394](./394.md) — Zeroed income budget flips card to expense rules; missed month green
 - [395](./395.md) — Add Budget offers only operating currencies (USD fallback)

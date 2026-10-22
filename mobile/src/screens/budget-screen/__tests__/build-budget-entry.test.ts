@@ -175,3 +175,35 @@ describe("isBudgetAmount", () => {
     expect(source.includes('{t("budgetAmountInvalid")}')).toBe(true);
   });
 });
+
+// w21/392: Add Budget's amount check was ASCII-only, so ۵۰۰ was refused although
+// New Transaction accepts it.
+describe("a budget amount typed with other keyboards' digits", () => {
+  it("is accepted as an amount", () => {
+    for (const text of ["۵۰۰", "٥٠٠", "５００", "۵۰۰٫۵۰", "-۵۰۰", " ۱۲۳ "]) {
+      expect(isBudgetAmount(text)).toBe(true);
+    }
+  });
+
+  it("still refuses what is not a number", () => {
+    for (const text of ["۵۰۰٬۰۰۰", "۵۰۰abc", "۵۰۰٫", "1 000", "12..3"]) {
+      expect(isBudgetAmount(text)).toBe(false);
+    }
+  });
+
+  it("is written to the ledger as ASCII, with the sign rules unchanged", () => {
+    const entry = (number: string, account: string) =>
+      buildBudgetEntry({
+        account,
+        interval: "monthly",
+        number,
+        currency: "usd",
+        date: new Date(2026, 9, 21),
+        incomeRoot: "Income",
+      }).budget?.amount.number;
+    expect(entry("۵۰۰", "Expenses:Food")).toBe("500");
+    expect(entry("٥٠٠٫٥", "Expenses:Food")).toBe("500.5");
+    expect(entry("-۵۰۰", "Expenses:Food")).toBe("500");
+    expect(entry("۵۰۰", "Income:Salary")).toBe("-500");
+  });
+});
