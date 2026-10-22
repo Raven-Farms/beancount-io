@@ -29,6 +29,7 @@ import { LoadingTile } from "@/components/loading-tile";
 import { useDiscovery } from "./use-discovery";
 import { filterLedgers, type DiscoveryTab } from "./discovery-store";
 import { ledgerRowDescription } from "./ledger-row-description";
+import { ledgerRowAccessibilityLabel } from "./ledger-row-label";
 
 const tabs = ["yours", "starred", "explore"] as const;
 const widths = [180, 140, 220, 160, 200];
@@ -284,7 +285,16 @@ export function LedgerSelectionScreen() {
               testID={`discovery-open-${item.fullName}`}
               style={styles.content}
               accessibilityRole="button"
-              accessibilityLabel={t("discoveryOpen", { name: item.fullName })}
+              // The whole row, as it reads on screen (w21/243).
+              accessibilityLabel={ledgerRowAccessibilityLabel({
+                open: t("discoveryOpen", { name: item.fullName }),
+                visibility: t(
+                  item.private ? "discoveryPrivate" : "discoveryPublic",
+                ),
+                description: item.description,
+                current:
+                  item.id === selected ? t("discoveryCurrent") : undefined,
+              })}
               accessibilityState={{
                 selected: item.id === selected,
                 disabled: opening !== null,
