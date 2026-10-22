@@ -109,3 +109,43 @@ describe("feedDateIsCalendarDay", () => {
     );
   });
 });
+
+// w21/417: an empty feed (any RSS outage) drew a "Latest Updates" header over a
+// blank card.
+describe("feedCardIsEmpty", () => {
+  const { feedCardIsEmpty } = require("../feed-logic");
+
+  it("hides the card when the feed came back empty", () => {
+    expect(
+      feedCardIsEmpty({ failed: false, loading: false, itemCount: 0 }),
+    ).toBe(true);
+  });
+
+  it("keeps it for updates, a load in flight and a failure", () => {
+    expect(
+      feedCardIsEmpty({ failed: false, loading: false, itemCount: 3 }),
+    ).toBe(false);
+    expect(
+      feedCardIsEmpty({ failed: false, loading: true, itemCount: 0 }),
+    ).toBe(false);
+    expect(
+      feedCardIsEmpty({ failed: true, loading: false, itemCount: 0 }),
+    ).toBe(false);
+  });
+
+  it("is what the card renders, ahead of its header", () => {
+    const src = require("fs")
+      .readFileSync(
+        require("path").join(__dirname, "..", "feed-card.tsx"),
+        "utf8",
+      )
+      .replace(/\s+/g, "");
+    const hidden = src.indexOf("returnnull;");
+    expect(
+      hidden > -1 && hidden < src.indexOf('title={t("latestUpdates")}'),
+    ).toBe(true);
+    expect(src.includes('feedCardIsEmpty({failed:loadState==="failed",')).toBe(
+      true,
+    );
+  });
+});

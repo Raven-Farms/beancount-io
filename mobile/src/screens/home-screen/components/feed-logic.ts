@@ -64,3 +64,21 @@ export function feedRowAction(
 export function feedDateIsCalendarDay(source: FeedSource): boolean {
   return source !== FeedSource.LedgerRss;
 }
+
+/**
+ * Whether the Latest Updates card has nothing to show and leaves the screen. An
+ * empty feed (the server answers `[]` for any RSS outage) used to be a header
+ * over a blank card (w21/417). A failed first load keeps its retry card, and a
+ * load in flight its skeleton.
+ */
+export function feedCardIsEmpty({
+  failed,
+  loading,
+  itemCount,
+}: {
+  failed: boolean;
+  loading: boolean;
+  itemCount: number;
+}): boolean {
+  return !failed && !loading && itemCount === 0;
+}

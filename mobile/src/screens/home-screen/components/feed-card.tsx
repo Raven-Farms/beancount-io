@@ -22,6 +22,7 @@ import {
   feedDateIsCalendarDay,
   feedRowAction,
   feedSourceLabelKey,
+  feedCardIsEmpty,
 } from "./feed-logic";
 import { useApolloClient } from "@apollo/client";
 import { getServerUrl } from "@/common/vars/server-url";
@@ -116,7 +117,9 @@ type FeedCardProps = {
   refreshSignal?: number;
 };
 
-export function FeedCard({ refreshSignal = 0 }: FeedCardProps): JSX.Element {
+export function FeedCard({
+  refreshSignal = 0,
+}: FeedCardProps): JSX.Element | null {
   const { t, locale } = useTranslations();
 
   const { data, loading, error, refetch } = useGetFeedQuery({
@@ -131,14 +134,24 @@ export function FeedCard({ refreshSignal = 0 }: FeedCardProps): JSX.Element {
   }, [refreshSignal, refetch]);
 
   const items = data?.getFeed?.items ?? [];
+  const loadState = selectCardLoadState({
+    loading: loading,
+    hasData: data !== undefined,
+    error: error,
+  });
+  if (
+    feedCardIsEmpty({
+      failed: loadState === "failed",
+      loading,
+      itemCount: items.length,
+    })
+  ) {
+    return null;
+  }
 
   return (
     <DashboardCard title={t("latestUpdates")} bleed>
-      {selectCardLoadState({
-        loading: loading,
-        hasData: data !== undefined,
-        error: error,
-      }) === "failed" ? (
+      {loadState === "failed" ? (
         <CardLoadFailure onRetry={() => void refetch()} />
       ) : loading && items.length === 0 ? (
         <FeedSkeleton />
