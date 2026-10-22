@@ -1,5 +1,7 @@
+import { COMMIT_READS } from "../../api/commit-reads";
 import {
   CommitsService,
+  MAX_COMMITS_PAGE_SIZE,
   isMissingCommitLookupError,
   stripCommitMetadata,
   parseFileStatsFromDiff,
@@ -796,5 +798,69 @@ describe("per-file counts the old parser missed", () => {
       status: "renamed",
       previousFilename: "web/b/old.bean",
     });
+  });
+});
+
+// w21/314: Gitea silently caps a commit page at 50, so a larger `limit` returned
+// 50 and a client treating a short page as the end stopped early; the list call
+// also asked Gitea for stats, verification and file lists it threw away.
+describe("CommitsService.listCommits page size", () => {
+  const identity = { userId: "usr_1", method: "session", scopes: new Set() };
+  const serviceWith = (history: jest.Mock) =>
+    new CommitsService(
+      {
+        getUserApiClient: jest.fn().mockResolvedValue({
+          repos: { repoGetAllCommits: history },
+        }),
+        getAnonymousApiClient: jest.fn(),
+      } as never,
+      { authorizeOrThrow: jest.fn().mockResolvedValue(undefined) } as never,
+    );
+
+  it.each([51, 100, 1000])(
+    "refuses limit=%d with the documented maximum, before any Gitea call",
+    async (limit) => {
+      const history = jest.fn();
+      await expect(
+        serviceWith(history).listCommits({
+          identity: identity as never,
+          ledgerId: "alice/main",
+          limit,
+        }),
+      ).rejects.toMatchObject({
+        category: "BAD_USER_INPUT",
+        message: "limit must be at most 50",
+      });
+      expect(history).not.toHaveBeenCalled();
+    },
+  );
+
+  it("accepts exactly 50 and asks Gitea only for what it reads", async () => {
+    const history = jest.fn().mockResolvedValue({ data: [] });
+    await serviceWith(history).listCommits({
+      identity: identity as never,
+      ledgerId: "alice/main",
+      limit: 50,
+    });
+    expect(history).toHaveBeenCalledWith(
+      "alice",
+      "main",
+      expect.objectContaining({
+        limit: 50,
+        stat: false,
+        verification: false,
+        files: false,
+      }),
+      expect.anything(),
+    );
+  });
+});
+
+describe("the commit list's published maximum (w21/314)", () => {
+  it("is enforced by the REST query schema and shown to GraphQL", () => {
+    const read = COMMIT_READS.find((entry) => entry.name === "ledgerCommits")!;
+    expect(read.query.safeParse({ limit: "50" }).success).toBe(true);
+    expect(read.query.safeParse({ limit: "51" }).success).toBe(false);
+    expect(MAX_COMMITS_PAGE_SIZE).toBe(50);
   });
 });

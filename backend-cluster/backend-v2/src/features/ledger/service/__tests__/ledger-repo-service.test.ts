@@ -61,6 +61,29 @@ describe("LedgerRepoService", () => {
       expect(result).toBeNull();
     });
 
+    // w21/314: only the commit's own fields are read.
+    it("asks Gitea for one commit without stats, verification or files", async () => {
+      mockRepoGetAllCommits.mockResolvedValue({
+        data: { success: true, data: [] },
+      });
+
+      await service.getLatestCommit({
+        ledgerId: LEDGER_ID,
+        identity: IDENTITY,
+      });
+
+      expect(mockRepoGetAllCommits).toHaveBeenCalledWith(
+        expect.any(String),
+        expect.any(String),
+        expect.objectContaining({
+          limit: 1,
+          stat: false,
+          verification: false,
+          files: false,
+        }),
+      );
+    });
+
     it("maps commit fields to LatestCommitResult", async () => {
       mockRepoGetAllCommits.mockResolvedValue({
         data: {
@@ -150,7 +173,13 @@ describe("LedgerRepoService", () => {
       expect(mockRepoGetAllCommits).toHaveBeenCalledWith(
         "testowner",
         "testledger",
-        { sha: "main", limit: 1 },
+        {
+          sha: "main",
+          limit: 1,
+          stat: false,
+          verification: false,
+          files: false,
+        },
       );
     });
 
@@ -168,7 +197,13 @@ describe("LedgerRepoService", () => {
       expect(mockRepoGetAllCommits).toHaveBeenCalledWith(
         "testowner",
         "testledger",
-        { sha: "develop", limit: 1 },
+        {
+          sha: "develop",
+          limit: 1,
+          stat: false,
+          verification: false,
+          files: false,
+        },
       );
     });
 
@@ -208,7 +243,13 @@ describe("LedgerRepoService", () => {
         data: {
           success: true,
           data: [
-            { path: "z.bean", name: "z.bean", type: "file", size: 9, sha: "sz" },
+            {
+              path: "z.bean",
+              name: "z.bean",
+              type: "file",
+              size: 9,
+              sha: "sz",
+            },
             { path: "sub", name: "sub", type: "dir", size: 0, sha: "ss" },
             {
               path: "a.bean",

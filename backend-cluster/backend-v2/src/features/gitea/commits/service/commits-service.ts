@@ -215,6 +215,14 @@ export interface ICommitsService {
   getCommitDetails(input: GetCommitDetailsInput): Promise<CommitDetails>;
 }
 
+/**
+ * The most commits one page may hold. Gitea caps its commit pages at 50 without
+ * saying so, so a larger `limit` was answered with 50 and a client treating a
+ * short page as the end stopped early (w21/314). It is refused here instead, on
+ * REST, GraphQL and MCP alike, and published in each surface's schema.
+ */
+export const MAX_COMMITS_PAGE_SIZE = 50;
+
 export class CommitsService implements ICommitsService {
   constructor(
     private readonly giteaClientFactory: IGiteaClientFactory,
@@ -239,6 +247,12 @@ export class CommitsService implements ICommitsService {
         throw new BadUserInputError(`${name} must be a positive integer`, name);
       }
     }
+    if (limit > MAX_COMMITS_PAGE_SIZE) {
+      throw new BadUserInputError(
+        `limit must be at most ${MAX_COMMITS_PAGE_SIZE}`,
+        "limit",
+      );
+    }
     await this.authorization.authorizeOrThrow({
       principal: identity ?? anonymousPrincipal(),
       action: AUTHORIZATION_ACTIONS.LEDGER_REPOSITORY_READ,
@@ -258,6 +272,11 @@ export class CommitsService implements ICommitsService {
           sha: branch,
           page,
           limit,
+          // Only sha, message, author and committer are read: Gitea's stat,
+          // verification and file lists are extra work per commit.
+          stat: false,
+          verification: false,
+          files: false,
         },
         { format: "json" },
       );

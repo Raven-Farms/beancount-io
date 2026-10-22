@@ -5830,6 +5830,7 @@
             "schema": {
               "type": "integer",
               "minimum": 1,
+              "maximum": 50,
               "default": 30
             },
             "required": false,

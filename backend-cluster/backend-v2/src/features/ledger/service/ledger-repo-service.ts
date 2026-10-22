@@ -133,6 +133,10 @@ export class LedgerRepoService
       favaApiClient.repo.repoGetAllCommits(ledgerOwner, ledgerName, {
         sha: branchName,
         limit: 1,
+        // Only the commit's own fields are read, not its stats or files.
+        stat: false,
+        verification: false,
+        files: false,
       }),
       "get latest commit",
     );

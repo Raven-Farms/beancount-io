@@ -201,6 +201,10 @@ const cases = [
     },
   },
 ];
+// Only a commit's own fields are read, so Gitea is not asked for its stats,
+// verification or file lists (w21/314).
+const SPEED_FLAGS = { stat: false, verification: false, files: false };
+
 describe("commit reads through actual REST, GraphQL, and MCP adapters", () => {
   it.each(cases)("preserves results and arguments: $path", async (row) => {
     const f = await fixture();
@@ -221,7 +225,11 @@ describe("commit reads through actual REST, GraphQL, and MCP adapters", () => {
           expect(call).toEqual([
             "alice",
             "main",
-            { sha: custom ? "feature/café" : "main", limit: 1 },
+            {
+              sha: custom ? "feature/café" : "main",
+              limit: 1,
+              ...SPEED_FLAGS,
+            },
           ]);
       }
       if (row.field === "listCommits") {
@@ -234,6 +242,7 @@ describe("commit reads through actual REST, GraphQL, and MCP adapters", () => {
               sha: custom ? "feature/café" : "main",
               page: custom ? 2 : 1,
               limit: custom ? 7 : 30,
+              ...SPEED_FLAGS,
             },
             { format: "json" },
           ]);

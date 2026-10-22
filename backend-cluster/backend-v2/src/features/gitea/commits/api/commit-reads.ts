@@ -1,5 +1,8 @@
 import { z } from "@/shared/zod-openapi-setup";
-import type { ICommitsService } from "../service/commits-service";
+import {
+  MAX_COMMITS_PAGE_SIZE,
+  type ICommitsService,
+} from "../service/commits-service";
 import type { ILedgerRepoService } from "@/features/ledger/service/ledger-repo-service";
 import type { Identity } from "@/server/api/identity";
 import { v1Route } from "@/server/rest/v1-route";
@@ -42,7 +45,12 @@ export const COMMIT_READS = [
     query: z.object({
       branch: z.string().default("main"),
       page: z.coerce.number().int().min(1).default(1),
-      limit: z.coerce.number().int().min(1).default(30),
+      limit: z.coerce
+        .number()
+        .int()
+        .min(1)
+        .max(MAX_COMMITS_PAGE_SIZE)
+        .default(30),
     }),
     fetch: (services: Services, { identity, ledgerId, query }: Params) =>
       services.commits.listCommits({

@@ -27,7 +27,6 @@
 - [428](./428.md) — Line-less editor error rows read as "dimmed" (276 regression)
 - [429](./429.md) — New File refuses Mr.Smith/2024.Q/budget.march (275 follow-up)
 - [430](./430.md) — Gravatar caption says "Add a photo" on any load failure (289 follow-up)
-- [314](./314.md) — Commit listing silently caps limit at 50 (REST/GraphQL/MCP) and fetches unused stats/files
 - [315](./315.md) — In-app commits signed with Gitea username and real email (no full_name, no noreply)
 - [316](./316.md) — VoiceOver can't read or step through Home/account balance charts
 - [317](./317.md) — Balance chart's end dot and cursor jump ahead of the animating line on range change
