@@ -20,7 +20,6 @@
 - [210](./blocked/210.md) — Holdings sheet labels a user-typed price "Live price" and applies the feed's staleness rule — **blocked:** needs an owner decision on exposing the feed's effective price dates (cross-package contract) and a deploy before mobile can read it
 - [228](./blocked/228.md) — New Transaction stamps the first operating currency on every posting; no currency or price control — **blocked:** needs account-constraint currencies on the client, a price path (legacy field or typed mutation, deploy first) and an owner-approved form design
 - [304](./blocked/304.md) — Budgets on Liabilities/Assets get favourability backwards (owner decision) — **blocked:** needs an owner decision between deriving direction from the account root and limiting the picker to Income and Expenses, which reverses w1/023's "every root" rule
-- [311](./311.md) — GraphQL getLedgerErrors drops code and hint that REST/MCP return
 - [312](./312.md) — Editor error banner cuts long messages at two lines
 - [313](./313.md) — Notifications' Recent changes shows only the last 30 commits; no way to older history
 - [314](./314.md) — Commit listing silently caps limit at 50 (REST/GraphQL/MCP) and fetches unused stats/files

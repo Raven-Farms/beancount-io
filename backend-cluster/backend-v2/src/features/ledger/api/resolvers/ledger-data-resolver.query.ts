@@ -124,6 +124,20 @@ class BeancountError {
       "`error` for what bean-check fails on; the engine's `warning`s are not returned by getLedgerErrors.",
   })
   severity: string;
+
+  @Field(() => String, {
+    nullable: true,
+    description:
+      "Stable engine error code, e.g. E3001 for a transaction that does not balance. Classify on this, not on the message. The same value REST and MCP return.",
+  })
+  code?: string;
+
+  @Field(() => String, {
+    nullable: true,
+    description:
+      "The engine's own remediation hint for this error, when it has one. The same value REST and MCP return.",
+  })
+  hint?: string;
 }
 
 @ObjectType({
@@ -475,6 +489,8 @@ export class LedgerDataQueryResolver {
       lineno: error.source?.lineno || undefined,
       message: error.message,
       severity: error.severity === "warning" ? "warning" : "error",
+      code: error.code || undefined,
+      hint: error.hint || undefined,
     }));
   }
 

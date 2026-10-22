@@ -305,6 +305,32 @@ describe("LedgerDataQueryResolver", () => {
       expect(result[0].severity).toBe("error");
     });
 
+    // w21/311: REST and MCP return the engine's code and hint; GraphQL dropped them.
+    it("carries the engine's code and hint, as REST and MCP return them", async () => {
+      mockDataService.getErrors.mockResolvedValue([
+        {
+          message: "Transaction does not balance",
+          code: "E3001",
+          hint: "Add the missing posting.",
+          severity: "error",
+        },
+        { message: "plain", code: null, hint: null },
+        { message: "empty", code: "", hint: "" },
+      ]);
+
+      const result = await resolver.getLedgerErrors(ledgerId, mockContext);
+
+      expect(result[0]).toMatchObject({
+        code: "E3001",
+        hint: "Add the missing posting.",
+      });
+      // Absent stays null in GraphQL, not an empty string.
+      expect(result[1].code).toBeUndefined();
+      expect(result[1].hint).toBeUndefined();
+      expect(result[2].code).toBeUndefined();
+      expect(result[2].hint).toBeUndefined();
+    });
+
     // w21/188: a warning must not pass for an error.
     it("carries a warning's severity through", async () => {
       mockDataService.getErrors.mockResolvedValue([
