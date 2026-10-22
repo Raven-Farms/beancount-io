@@ -4,6 +4,8 @@
 
 ## Inbox
 
+- [338 — Retry a failed Statistics section without reloading its healthy siblings](./338.md) — minor; public dashboard QA with injected reads,2026-10-21; all three section errors omit retry, healthy siblings stay usable, both-width Postings repeats and settled reload controls recorded.
+
 - [337 — Offer a retry after a Holdings read fails](./337.md) — minor; public dashboard QA with injected reads,2026-10-21; Currency view gives connection guidance without an action at both widths; reload/grouping recovery passes, matching source traced.
 
 - [336 — Preserve collection filters through the profile header’s Followers link](./336.md) — minor; public dashboard QA,2026-10-21; header link drops settled q=gov at both widths, while the repaired tab-trigger path preserves it.
