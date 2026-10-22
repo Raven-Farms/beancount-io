@@ -1,6 +1,7 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { afterEach, describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { DirectionProvider } from "@radix-ui/react-direction";
 import { UserProfileTabs } from "../user-profile-tabs";
 import type {
   UserActivityFeedItem,
@@ -1113,5 +1114,167 @@ describe("UserProfileTabs", () => {
       // Navigate should not be called on mount, only on tab clicks
       expect(mockNavigate).not.toHaveBeenCalled();
     });
+  });
+});
+
+/**
+ * A narrow profile's tab strip scrolls sideways (w4/335). jsdom has no layout,
+ * so this models it: a 382px strip at x4–386 holding 16px of padding either
+ * side and the four tabs' widths, whose scroll range runs 0…132 left-to-right
+ * and −132…0 right-to-left, as Chromium's does.
+ */
+describe("UserProfileTabs keeps the selected tab inside its strip", () => {
+  const WIDTHS = [100, 110, 120, 152]; // Ledgers, Starred, Following, Followers
+  const PAD = 16;
+  const VIEW = { left: 4, right: 386 };
+  const MAX =
+    PAD * 2 + WIDTHS.reduce((a, b) => a + b) - (VIEW.right - VIEW.left);
+  const isStrip = (element: Element) =>
+    element.firstElementChild?.getAttribute("role") === "tablist";
+  const scrolled = new WeakMap<Element, number>();
+  const rect = (left: number, right: number) =>
+    ({
+      left,
+      right,
+      x: left,
+      width: right - left,
+      top: 0,
+      bottom: 40,
+      y: 0,
+      height: 40,
+    }) as DOMRect;
+
+  beforeEach(() => {
+    vi.spyOn(Element.prototype, "scrollLeft", "get").mockImplementation(
+      function (this: Element) {
+        return scrolled.get(this) ?? 0;
+      },
+    );
+    vi.spyOn(Element.prototype, "scrollLeft", "set").mockImplementation(
+      function (this: Element, value: number) {
+        const rtl = this.closest("[dir]")?.getAttribute("dir") === "rtl";
+        const [min, max] = rtl ? [-MAX, 0] : [0, MAX];
+        scrolled.set(this, Math.min(max, Math.max(min, value)));
+      },
+    );
+    // Tailwind's px-4 on the strip, which jsdom does not compute.
+    const computed = window.getComputedStyle;
+    vi.spyOn(window, "getComputedStyle").mockImplementation(
+      (element, pseudo) => {
+        const style = computed(element, pseudo);
+        if (!isStrip(element)) return style;
+        return new Proxy(style, {
+          get: (target, key) =>
+            key === "paddingLeft" || key === "paddingRight"
+              ? `${PAD}px`
+              : typeof Reflect.get(target, key) === "function"
+                ? Reflect.get(target, key).bind(target)
+                : Reflect.get(target, key),
+        });
+      },
+    );
+    vi.spyOn(Element.prototype, "getBoundingClientRect").mockImplementation(
+      function (this: Element) {
+        if (isStrip(this)) return rect(VIEW.left, VIEW.right);
+        if (this.getAttribute("role") !== "tab") return rect(0, 0);
+        const strip = this.closest("[role=tablist]")!.parentElement!;
+        const tabs = [...strip.querySelectorAll("[role=tab]")];
+        const index = tabs.indexOf(this);
+        const before = WIDTHS.slice(0, index).reduce((a, b) => a + b, 0);
+        const shift = strip.scrollLeft;
+        if (this.closest("[dir]")?.getAttribute("dir") === "rtl") {
+          const right = VIEW.right - PAD - before - shift;
+          return rect(right - WIDTHS[index]!, right);
+        }
+        const left = VIEW.left + PAD + before - shift;
+        return rect(left, left + WIDTHS[index]!);
+      },
+    );
+  });
+  afterEach(() => vi.restoreAllMocks());
+
+  // Direction reaches Radix the way LocalizationProvider passes it.
+  const renderTabs = (initialTab: string, dir: "ltr" | "rtl" = "ltr") =>
+    render(
+      <DirectionProvider dir={dir}>
+        <UserProfileTabs
+          username="testuser"
+          activities={[]}
+          repositories={[]}
+          followersCount={456}
+          followingCount={20}
+          starredReposCount={5}
+          initialTab={initialTab}
+        />
+      </DirectionProvider>,
+    );
+  const selected = () => screen.getByRole("tab", { selected: true });
+  const expectInsideStrip = (tab: HTMLElement) => {
+    const { left, right } = tab.getBoundingClientRect();
+    expect(left).toBeGreaterThanOrEqual(VIEW.left);
+    expect(right).toBeLessThanOrEqual(VIEW.right);
+  };
+  const strip = () => screen.getByRole("tablist").parentElement!;
+
+  it.each(["ltr", "rtl"] as const)(
+    "brings a deep-linked Followers tab fully into view (%s)",
+    (dir) => {
+      renderTabs("followers", dir);
+      expect(selected()).toHaveTextContent("Followers (456)");
+      expectInsideStrip(selected());
+      // The strip's far end, past its padding: what scrolling there by hand
+      // shows.
+      expect(strip().scrollLeft).toBe(dir === "rtl" ? -MAX : MAX);
+    },
+  );
+
+  it.each(["ltr", "rtl"] as const)(
+    "keeps the focused tab inside the strip at both ends of keyboard navigation (%s)",
+    async (dir) => {
+      const user = userEvent.setup();
+      renderTabs("overview", dir);
+      screen.getByRole("tab", { name: "Ledgers" }).focus();
+      expect(strip().scrollLeft).toBe(0);
+
+      await user.keyboard("{End}");
+      expect(selected()).toHaveTextContent("Followers (456)");
+      expect(selected()).toHaveFocus();
+      expectInsideStrip(selected());
+
+      await user.keyboard("{Home}");
+      expect(selected()).toHaveTextContent("Ledgers");
+      expect(selected()).toHaveFocus();
+      expectInsideStrip(selected());
+      expect(strip().scrollLeft).toBe(0);
+
+      // From the first tab the arrow away from the others wraps to the last.
+      await user.keyboard(dir === "rtl" ? "{ArrowRight}" : "{ArrowLeft}");
+      expect(selected()).toHaveTextContent("Followers (456)");
+      expectInsideStrip(selected());
+    },
+  );
+
+  it("leaves the reader's own scrolling alone", async () => {
+    const user = userEvent.setup();
+    const { rerender } = renderTabs("overview");
+    strip().scrollLeft = 60;
+    rerender(
+      <DirectionProvider dir="ltr">
+        <UserProfileTabs
+          username="testuser"
+          activities={[]}
+          repositories={[]}
+          followersCount={457}
+          followingCount={20}
+          starredReposCount={5}
+          initialTab="overview"
+        />
+      </DirectionProvider>,
+    );
+    expect(strip().scrollLeft).toBe(60);
+    // A tab already in view is selected without moving the strip.
+    await user.click(screen.getByRole("tab", { name: /Starred/ }));
+    expect(selected()).toHaveTextContent("Starred (5)");
+    expect(strip().scrollLeft).toBe(60);
   });
 });
