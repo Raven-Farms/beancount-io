@@ -75,6 +75,15 @@ export function fileBannerErrors(
 }
 
 /**
+ * The line that says where a nested file lives, or null at the root. The
+ * header shows the file name only, so `books/2025/jan.bean` and
+ * `books/2026/jan.bean` looked the same before saving (w21/590).
+ */
+export function editorPathLine(path: string): string | null {
+  return path.includes("/") ? path : null;
+}
+
+/**
  * Colors for the read-only notice. It is an explanatory sentence, not a
  * disabled control, so it uses the secondary-text role (`black80`) rather than
  * the placeholder/disabled ramp: light `black60` on the `black10` inset band

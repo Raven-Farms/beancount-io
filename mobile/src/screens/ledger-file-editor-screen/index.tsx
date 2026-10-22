@@ -82,7 +82,11 @@ import {
   errorMessageWithHint,
   firstNewLedgerError,
 } from "@/common/new-ledger-error";
-import { fileBannerErrors, readOnlyNoticeColors } from "./utils";
+import {
+  editorPathLine,
+  fileBannerErrors,
+  readOnlyNoticeColors,
+} from "./utils";
 import { selectLedgerFileEditorState } from "./select-editor-state";
 import { LEADING_TEXT_ALIGN, directionalIcon } from "@/common/rtl";
 import { useRouteParams } from "@/common/hooks/use-route-params";
@@ -195,6 +199,13 @@ const getStyles = (theme: ColorTheme) =>
     },
     saveBtnTextDisabled: {
       color: theme.black40,
+    },
+    pathLine: {
+      paddingHorizontal: 16,
+      paddingVertical: 4,
+      fontFamily: fonts.mono,
+      fontSize: 12,
+      color: theme.black60,
     },
     savingText: {
       fontSize: 14,
@@ -1161,6 +1172,17 @@ function LedgerFileEditorSession({
           onJump={(line) => setJumpToLine(line)}
         />
       )}
+
+      {editorPathLine(path) ? (
+        <Text
+          testID="ledger-editor-path"
+          style={styles.pathLine}
+          numberOfLines={1}
+          ellipsizeMode="middle"
+        >
+          {editorPathLine(path)}
+        </Text>
+      ) : null}
 
       <View style={styles.editorWrapper}>
         {editorState === "loading" ? (
