@@ -90,5 +90,9 @@
 - [575](./575.md) — A failed pull on merchant detail replaces cached rows with "Failed to load" (missed by w21/081)
 - [576](./576.md) — A failed refresh on Budget replaces cached charts with "Failed to load budgets" and hides Actual and Variance
 - [577](./577.md) — Account detail's chart "Try again" leaves the journal stuck on "Failed to load journal", with no retry of its own
+- [578](./578.md) — The file editor's Recreate and Overwrite skip the save guard: a Save tapped meanwhile brings back a false "File Deleted" or drops the Overwrite
+- [579](./579.md) — Create Ledger finishing after the user left still switches the ledger and pops every screen (missed by w21/194)
+- [580](./580.md) — A link to another ledger during a dirty New Transaction switches the ledger under the draft (sibling of w21/090)
+- [581](./581.md) — Open Account: Back during "Saving…" drops the picker's callback, so the posting isn't filled
 - [508](./blocked/508.md) — Mobile guesses that an entry is a plugin copy from its first line; read the ledger's `generated_from` instead (split from 443) — **blocked:** production's GraphQL schema lacks `generated_from` until the ledger service and backend-v2 deploy; mobile's client is generated from it
 - [315](./blocked/315.md) — In-app commits signed with Gitea username and real email (no full_name, no noreply) — **blocked:** needs the owner's noreply-address and published-history decisions, and a production backfill of existing Gitea users that can't be verified here
