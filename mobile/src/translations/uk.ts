@@ -607,8 +607,8 @@ export const uk: Translations = {
   ledgerEditorFileUnavailable: "Цього файлу більше немає в книзі.",
   ledgerEditorBackToFiles: "Назад до файлів",
   ledgerEditorUnsavedTitle: "Незбережені зміни",
-  ledgerEditorUnsavedMessage: "Скасувати ваші зміни?",
-  ledgerEditorDiscardChanges: "Скасувати",
+  ledgerEditorUnsavedMessage: "Відкинути ваші зміни?",
+  ledgerEditorDiscardChanges: "Відкинути",
   ledgerEditorConflictTitle: "Файл змінено",
   ledgerEditorConflictMessage:
     "Цей файл було змінено віддалено. Зберегти ваш текст поверх нього чи скопіювати його та завантажити нову версію?",

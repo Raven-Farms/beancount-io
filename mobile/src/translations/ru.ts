@@ -608,8 +608,8 @@ export const ru: Translations = {
   ledgerEditorFileUnavailable: "Этого файла больше нет в книге.",
   ledgerEditorBackToFiles: "Назад к файлам",
   ledgerEditorUnsavedTitle: "Несохранённые изменения",
-  ledgerEditorUnsavedMessage: "Отменить изменения?",
-  ledgerEditorDiscardChanges: "Отменить",
+  ledgerEditorUnsavedMessage: "Отбросить изменения?",
+  ledgerEditorDiscardChanges: "Отбросить",
   ledgerEditorConflictTitle: "Файл изменён",
   ledgerEditorConflictMessage:
     "Этот файл был изменён удалённо. Сохранить ваш текст поверх него или скопировать его и загрузить новую версию?",
