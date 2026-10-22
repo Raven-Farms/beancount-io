@@ -37,9 +37,6 @@ describe("a signed-out link to a public example (w21/345)", () => {
     expect(guestLinkVisit(link("open_ledger/example/budget"), HOSTED)).toBe(
       null,
     );
-    expect(
-      guestLinkVisit(link("open_ledger/example/account/Assets:Cash"), HOSTED),
-    ).toBe(null);
     // Guests exist only on the official server.
     expect(
       guestLinkVisit(
@@ -55,7 +52,7 @@ describe("a signed-out link to a public example (w21/345)", () => {
       .replace(/\s+/g, "");
     expect(
       src.includes(
-        "guestLinkVisit(target,serverUrl);if(!guest)return;clearPendingAppLink();startGuestVisit(serverUrl);updateGuestVisit(guest);awaitafterNavigatorReady();",
+        "guestLinkVisit(target,serverUrl);if(!guest)return;clearPendingAppLink();startGuestVisit(serverUrl);const{detail,...visit}=guest;updateGuestVisit(visit);awaitafterNavigatorReady();",
       ),
     ).toBe(true);
     expect(src.includes("router.replace(exampleRoutes[guest.view])")).toBe(
@@ -148,5 +145,56 @@ describe("a signed-out link to an example's Accounts or Files tab", () => {
         "https://beancount.io/ledger/open_ledger/example/files/tree/dev",
       ),
     ).toBe(null);
+  });
+});
+
+// w21/632: an example's entry or account link (one the guest's own Share or Copy
+// link made) went to Welcome and was replayed after a later sign-in.
+describe("a signed-out entry or account link on an example", () => {
+  it("opens the entry in the example over Transactions", () => {
+    expect(
+      guestLinkVisit(link("open_ledger/example/entry/abc123"), HOSTED),
+    ).toEqual({
+      ledgerId: "open_ledger/example",
+      view: "transactions",
+      detail: {
+        pathname: "/examples/transaction-detail",
+        params: { entry_hash: "abc123", ledger: "open_ledger/example" },
+      },
+    });
+  });
+
+  it("opens the account in the example over Accounts", () => {
+    expect(
+      guestLinkVisit(link("open_ledger/nvidia/account/Assets:Cash"), HOSTED),
+    ).toEqual({
+      ledgerId: "open_ledger/nvidia",
+      view: "accounts",
+      detail: {
+        pathname: "/examples/account-detail",
+        params: { account: "Assets:Cash", ledger: "open_ledger/nvidia" },
+      },
+    });
+  });
+
+  it("still leaves other ledgers, servers and detail pages to sign-in", () => {
+    expect(guestLinkVisit(link("alice/books/entry/abc"), HOSTED)).toBe(null);
+    expect(
+      guestLinkVisit(
+        link("open_ledger/example/entry/abc"),
+        "https://books.example.test/",
+      ),
+    ).toBe(null);
+    // A commit page is not a guest screen.
+    expect(guestLinkVisit(link("open_ledger/example/commit/abc"), HOSTED)).toBe(
+      null,
+    );
+  });
+
+  it("the handler opens the page over the tab", () => {
+    const src = fs
+      .readFileSync(path.join(__dirname, "../use-app-link-handler.ts"), "utf8")
+      .replace(/\s+/g, "");
+    expect(src.includes("if(detail)router.push(detailasHref);")).toBe(true);
   });
 });

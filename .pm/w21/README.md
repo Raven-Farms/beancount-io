@@ -33,7 +33,6 @@
 - [600](./blocked/600.md) — Latest Updates never shows the commit you just made (not invalidated on write, and cached for 5 minutes server-side) — **blocked:** needs an owner decision on how the server drops its five-minute activity cache when the user commits (shared write hook vs shorter TTL)
 - [602](./blocked/602.md) — Money flow doesn't pad a real currency held at cost ("+$100.5" under "+$100.50") (w21/506 over-reach) — **blocked:** a currency lot cannot be told from a fund ticker that is also an ISO code (BND) without declared-commodity data or an owner-approved heuristic
 - [608](./blocked/608.md) — Android: fields near the bottom stay under the keyboard (iOS-only keyboard avoidance under edge-to-edge) — **blocked:** needs an Android device check of the keyboard behavior
-- [632](./632.md) — A guest opening an example entry or account link (from the app's own Copy link) is sent back to Welcome; the link is replayed after sign-in
 - [633](./633.md) — The example holdings sheet offers guests "Sign In" where owners see "Update prices", which sign-in doesn't grant
 - [634](./634.md) — Signing in from the example drawer says "Could not complete sign-in" for every failure, including offline
 - [635](./635.md) — Latent: the guest client blocks `LedgerAccountCloseDates` and `QueryShell`, so w21/099 and w21/337 are off for guests

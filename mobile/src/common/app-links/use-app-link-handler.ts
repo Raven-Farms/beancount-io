@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 import { Linking as RnLinking } from "react-native";
-import { router } from "expo-router";
+import { router, type Href } from "expo-router";
 import * as ExpoLinking from "expo-linking";
 import { useApolloClient, useReactiveVar } from "@apollo/client";
 import { sessionVar } from "@/common/vars";
@@ -115,7 +115,8 @@ export function useAppLinkHandler(): void {
       if (!guest) return;
       clearPendingAppLink();
       startGuestVisit(serverUrl);
-      updateGuestVisit(guest);
+      const { detail, ...visit } = guest;
+      updateGuestVisit(visit);
       await afterNavigatorReady();
       if (cancelled || sessionRef.current) {
         // Signed in while waiting: the visit is stale.
@@ -123,6 +124,8 @@ export function useAppLinkHandler(): void {
         return;
       }
       router.replace(exampleRoutes[guest.view]);
+      // An entry or account link opens its page over the tab it came from.
+      if (detail) router.push(detail as Href);
     };
 
     void handleUrl(ExpoLinking.getLinkingURL());
