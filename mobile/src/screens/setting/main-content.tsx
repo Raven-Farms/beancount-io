@@ -6,6 +6,7 @@ import { List as List2 } from "@/components";
 
 import { i18n, setLocale } from "@/translations";
 import { useTranslations } from "@/common/hooks/use-translations";
+import { helpCenterUrl } from "@/common/site-url";
 import { useDeleteAccountMutation } from "@/generated-graphql/graphql";
 import { useSession } from "@/common/hooks/use-session";
 import { actionLogout } from "./logout";
@@ -171,8 +172,7 @@ export const MainContent = () => {
           icon={<Ionicons name="help-circle" size={22} color={theme.black80} />}
           title={t("helpCenter")}
           onPress={async () => {
-            const helpCenterUrl = "https://beancount.io/docs/help-center";
-            await WebBrowser.openBrowserAsync(helpCenterUrl);
+            await WebBrowser.openBrowserAsync(helpCenterUrl(locale));
           }}
         />
         {session && (
