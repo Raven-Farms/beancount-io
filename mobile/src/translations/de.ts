@@ -546,6 +546,7 @@ export const de: Translations = {
   commitFileDeleted: "Gelöscht",
   commitFileRenamedFrom: "Umbenannt von {{name}}",
   commitDetailDiff: "Diff",
+  commitDetailShowMore: "{{count}} weitere Zeilen anzeigen",
   commitDetailNoDiff: "Kein Diff verfügbar.",
   commitDetailAdditions: {
     one: "+{{count}} Zeile",

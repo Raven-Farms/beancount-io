@@ -537,6 +537,7 @@ export const uk: Translations = {
   commitFileDeleted: "Видалено",
   commitFileRenamedFrom: "Перейменовано з {{name}}",
   commitDetailDiff: "Зміни",
+  commitDetailShowMore: "Показати ще {{count}} рядків",
   commitDetailNoDiff: "Змін немає.",
   commitDetailAdditions: {
     one: "+{{count}} рядок",

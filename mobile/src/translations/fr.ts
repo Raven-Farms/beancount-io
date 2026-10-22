@@ -543,6 +543,7 @@ export const fr: Translations = {
   commitFileDeleted: "Supprimé",
   commitFileRenamedFrom: "Renommé depuis {{name}}",
   commitDetailDiff: "Différences",
+  commitDetailShowMore: "Afficher {{count}} lignes de plus",
   commitDetailNoDiff: "Aucune différence disponible.",
   commitDetailAdditions: {
     one: "+{{count}} ligne",

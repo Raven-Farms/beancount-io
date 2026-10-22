@@ -482,6 +482,7 @@ export const zh: Translations = {
   commitFileDeleted: "已删除",
   commitFileRenamedFrom: "重命名自 {{name}}",
   commitDetailDiff: "差异",
+  commitDetailShowMore: "再显示 {{count}} 行",
   commitDetailNoDiff: "没有可显示的差异。",
   commitDetailAdditions: {
     other: "新增 {{count}} 行",

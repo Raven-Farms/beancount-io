@@ -124,3 +124,16 @@ export function commitFileRows(
     ];
   });
 }
+
+/**
+ * Diff lines drawn at first, and added by each "show more". The diff sits in a
+ * panel as tall as its content inside the screen's own scroll, so the list
+ * could not virtualize: a commit adding 20,000 lines built 20,000 rows before
+ * the screen answered a touch (w21/379). The rest waits behind a button.
+ */
+export const DIFF_PAGE_LINES = 500;
+
+/** How many lines the next "show more" adds. */
+export function nextDiffChunk(shown: number, total: number): number {
+  return Math.max(0, Math.min(DIFF_PAGE_LINES, total - shown));
+}

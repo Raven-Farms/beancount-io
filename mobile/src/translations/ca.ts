@@ -543,6 +543,7 @@ export const ca: Translations = {
   commitFileDeleted: "Suprimit",
   commitFileRenamedFrom: "Canviat de nom des de {{name}}",
   commitDetailDiff: "Diferències",
+  commitDetailShowMore: "Mostra {{count}} línies més",
   commitDetailNoDiff: "No hi ha diferències disponibles.",
   commitDetailAdditions: {
     one: "+{{count}} línia",

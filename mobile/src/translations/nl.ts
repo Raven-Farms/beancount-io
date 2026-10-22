@@ -533,6 +533,7 @@ export const nl: Translations = {
   commitFileDeleted: "Verwijderd",
   commitFileRenamedFrom: "Hernoemd van {{name}}",
   commitDetailDiff: "Verschillen",
+  commitDetailShowMore: "{{count}} regels meer tonen",
   commitDetailNoDiff: "Geen verschillen beschikbaar.",
   commitDetailAdditions: {
     one: "+{{count}} regel",

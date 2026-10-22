@@ -530,6 +530,7 @@ export const bg: Translations = {
   commitFileDeleted: "Изтрит",
   commitFileRenamedFrom: "Преименуван от {{name}}",
   commitDetailDiff: "Разлики",
+  commitDetailShowMore: "Покажи още {{count}} реда",
   commitDetailNoDiff: "Няма налични разлики.",
   commitDetailAdditions: {
     one: "+{{count}} ред",

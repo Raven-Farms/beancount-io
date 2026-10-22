@@ -1,4 +1,12 @@
-import { FlatList, ScrollView, StyleSheet, Text, View } from "react-native";
+import { useMemo, useState } from "react";
+import {
+  FlatList,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Redirect, Stack } from "expo-router";
 import { ColorTheme } from "@/types/theme-props";
@@ -13,6 +21,8 @@ import { RouteLedgerUnavailable } from "@/components/route-ledger-unavailable";
 import { bindRouteLedger, firstRouteParam } from "@/common/route-ledger";
 import {
   commitFileRows,
+  DIFF_PAGE_LINES,
+  nextDiffChunk,
   parseDiff,
   type CommitFileRow,
   DiffLine,
@@ -157,6 +167,16 @@ const getStyles = (theme: ColorTheme) =>
       lineHeight: 18,
       color: theme.black,
     },
+    showMore: {
+      paddingHorizontal: 16,
+      paddingVertical: 14,
+    },
+    showMoreText: {
+      fontSize: 14,
+      fontWeight: "600",
+      color: theme.primary,
+      textAlign: LEADING_TEXT_ALIGN,
+    },
     emptyText: {
       fontSize: 14,
       color: theme.black80,
@@ -217,7 +237,11 @@ function CommitDetailScreenImpl({
   });
 
   const commit = data?.getCommitDetails;
-  const diffLines = commit?.diff ? parseDiff(commit.diff) : null;
+  const diff = commit?.diff;
+  // Parsed once per diff, not on every render.
+  const diffLines = useMemo(() => (diff ? parseDiff(diff) : null), [diff]);
+  // How much of a large diff is drawn (w21/379).
+  const [shown, setShown] = useState(DIFF_PAGE_LINES);
   const fileRows = commit ? commitFileRows(commit.files, commit.diff) : [];
   // The subject heads the summary; the body reflows below it rather than
   // keeping git's ~72-column hard wraps (w0/032).
@@ -348,21 +372,39 @@ function CommitDetailScreenImpl({
                 </Text>
               </View>
               {diffLines && diffLines.length > 0 ? (
-                <ScrollView
-                  horizontal
-                  showsHorizontalScrollIndicator
-                  style={LTR_SOURCE}
-                  contentContainerStyle={LTR_SOURCE}
-                >
-                  <View style={styles.diffContainer}>
-                    <FlatList
-                      data={diffLines}
-                      keyExtractor={(_, i) => String(i)}
-                      renderItem={({ item }) => <DiffLineView line={item} />}
-                      scrollEnabled={false}
-                    />
-                  </View>
-                </ScrollView>
+                <>
+                  <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator
+                    style={LTR_SOURCE}
+                    contentContainerStyle={LTR_SOURCE}
+                  >
+                    <View style={styles.diffContainer}>
+                      <FlatList
+                        data={diffLines.slice(0, shown)}
+                        keyExtractor={(_, i) => String(i)}
+                        renderItem={({ item }) => <DiffLineView line={item} />}
+                        scrollEnabled={false}
+                      />
+                    </View>
+                  </ScrollView>
+                  {shown < diffLines.length ? (
+                    <Pressable
+                      testID="commit-diff-show-more"
+                      style={styles.showMore}
+                      onPress={() =>
+                        setShown((count) => count + DIFF_PAGE_LINES)
+                      }
+                      accessibilityRole="button"
+                    >
+                      <Text style={styles.showMoreText}>
+                        {t("commitDetailShowMore", {
+                          count: nextDiffChunk(shown, diffLines.length),
+                        })}
+                      </Text>
+                    </Pressable>
+                  ) : null}
+                </>
               ) : (
                 // Outside the horizontal scroller, which sized the panel to
                 // its text: the empty state spans the row (w0/032).

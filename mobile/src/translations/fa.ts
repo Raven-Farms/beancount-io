@@ -524,6 +524,7 @@ export const fa: Translations = {
   commitFileDeleted: "حذف شد",
   commitFileRenamedFrom: "تغییر نام از {{name}}",
   commitDetailDiff: "تفاوت‌ها",
+  commitDetailShowMore: "نمایش {{count}} خط بیشتر",
   commitDetailNoDiff: "تفاوتی در دسترس نیست.",
   commitDetailAdditions: {
     one: "+{{count}} خط",

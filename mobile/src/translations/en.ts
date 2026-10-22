@@ -537,6 +537,7 @@ export const en = {
   commitFileDeleted: "Deleted",
   commitFileRenamedFrom: "Renamed from {{name}}",
   commitDetailDiff: "Diff",
+  commitDetailShowMore: "Show {{count}} more lines",
   commitDetailNoDiff: "No diff available.",
   commitDetailAdditions: {
     one: "+{{count}} addition",
