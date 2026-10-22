@@ -4,6 +4,8 @@
 
 ## Inbox
 
+- [972 — Preserve the remaining CSV row-shape guard after cell edits](./972.md) — minor; W3/m19 residual follow-up,2026-10-22; unrelated Payee/Description edits clear a five-field record's refusal and admit a truncated prepared import; date/source repair controls pass, one write preblocked, no new historical group.
+
 - [971 — Restore BQL syntax feedback for the current parser](./971.md) — minor; public dashboard QA,2026-10-22; current found-token diagnostics fall back to generic advice at both widths/reload; exact Unicode/ASCII offsets constrain repair, unknown-column/correction/history controls pass, no writes.
 
 - [970 — Restore useful focus after a file Save fails](./970.md) — minor; dashboard QA with pre-transport failures,2026-10-22; button Save unlocks with exact draft but BODY focus/ignored typing at both widths; editor-origin shortcut and refocus controls pass, three writes preblocked.
