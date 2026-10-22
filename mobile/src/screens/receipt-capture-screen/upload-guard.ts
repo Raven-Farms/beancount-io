@@ -31,3 +31,24 @@ export const uploadPercent = (progress: {
     Math.max(0, Math.floor((totalBytesSent / totalBytesExpectedToSend) * 100)),
   );
 };
+
+/** One run of the receipt workflow. */
+export type ReceiptAttempt = {
+  cancelled: boolean;
+  abort: AbortController;
+  upload: { cancelAsync: () => Promise<void> } | null;
+};
+
+/**
+ * Abandon an attempt: its late results and errors are ignored, and the request
+ * and the transfer in flight are aborted. The busy overlay's Cancel does it
+ * (w21/205), and so does leaving the screen: on Android, hardware Back popped
+ * the modal while the upload and the AI parse ran on, spending receipt quota
+ * on a scan no form opened for (w21/638).
+ */
+export function abandonAttempt(run: ReceiptAttempt | null): void {
+  if (!run) return;
+  run.cancelled = true;
+  run.abort.abort();
+  void run.upload?.cancelAsync().catch(() => undefined);
+}

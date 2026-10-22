@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import * as FileSystem from "expo-file-system/legacy";
 import {
   useGenerateTempAssetUploadUrlMutation,
@@ -6,7 +6,12 @@ import {
 } from "@/generated-graphql/graphql";
 import { receiptDate, parseErrorCode } from "./receipt-utils";
 import { captureError } from "@/common/sentry/capture";
-import { createIdleGuard, uploadPercent } from "./upload-guard";
+import {
+  abandonAttempt,
+  createIdleGuard,
+  uploadPercent,
+  type ReceiptAttempt,
+} from "./upload-guard";
 
 /** An upload may stall this long between progress events before it fails. */
 const UPLOAD_IDLE_MS = 30_000;
@@ -41,16 +46,20 @@ export type ReceiptWorkflow = {
 };
 
 /** One run of the workflow; `cancel` flips it and aborts what is in flight. */
-type Attempt = {
-  cancelled: boolean;
-  abort: AbortController;
-  upload: { cancelAsync: () => Promise<void> } | null;
-};
+type Attempt = ReceiptAttempt;
 
 export const useReceiptWorkflow = (): ReceiptWorkflow => {
   const [phase, setPhase] = useState<ReceiptPhase>({ kind: "idle" });
 
   const attempt = useRef<Attempt | null>(null);
+  // Leaving the screen abandons the attempt in flight, as Cancel does: Android's
+  // hardware Back pops the modal mid-upload (w21/638).
+  useEffect(
+    () => () => {
+      abandonAttempt(attempt.current);
+    },
+    [],
+  );
 
   const [generateUploadUrl] = useGenerateTempAssetUploadUrlMutation();
   const [parseReceipt] = useParseReceiptMutation();
@@ -183,12 +192,7 @@ export const useReceiptWorkflow = (): ReceiptWorkflow => {
   );
 
   const cancel = useCallback(() => {
-    const run = attempt.current;
-    if (run) {
-      run.cancelled = true;
-      run.abort.abort();
-      void run.upload?.cancelAsync().catch(() => undefined);
-    }
+    abandonAttempt(attempt.current);
     setPhase({ kind: "idle" });
   }, []);
 

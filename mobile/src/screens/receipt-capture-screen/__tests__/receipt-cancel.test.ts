@@ -1,6 +1,10 @@
 import fs from "fs";
 import path from "path";
-import { createIdleGuard, uploadPercent } from "../upload-guard";
+import {
+  abandonAttempt,
+  createIdleGuard,
+  uploadPercent,
+} from "../upload-guard";
 
 const read = (file: string) =>
   fs.readFileSync(path.join(__dirname, "..", file), "utf8").replace(/\s+/g, "");
@@ -61,8 +65,7 @@ describe("cancelling a receipt upload", () => {
   it("aborts the request and the transfer, and ignores late results", () => {
     const source = read("use-receipt-workflow.ts");
     for (const piece of [
-      "run.abort.abort();",
-      "run.upload?.cancelAsync()",
+      'abandonAttempt(attempt.current);setPhase({kind:"idle"});',
       "if(!live())return;",
       "FileSystem.createUploadTask(",
     ]) {
@@ -70,5 +73,35 @@ describe("cancelling a receipt upload", () => {
     }
     // The whole-transfer race is gone.
     expect(source.includes("60_000")).toBe(false);
+  });
+
+  it("marks the attempt cancelled and aborts the request and the transfer", async () => {
+    let transferCancelled = 0;
+    const run = {
+      cancelled: false,
+      abort: new AbortController(),
+      upload: {
+        cancelAsync: async () => {
+          transferCancelled += 1;
+        },
+      },
+    };
+    abandonAttempt(run);
+    await sleep(0);
+    expect(run.cancelled).toBe(true);
+    expect(run.abort.signal.aborted).toBe(true);
+    expect(transferCancelled).toBe(1);
+    // Nothing in flight is nothing to abandon.
+    expect(() => abandonAttempt(null)).not.toThrow();
+  });
+
+  // w21/638: on Android, hardware Back popped the modal while the upload and
+  // the AI parse ran on, spending receipt quota on an abandoned scan.
+  it("abandons the attempt in flight when the screen goes away", () => {
+    expect(
+      read("use-receipt-workflow.ts").includes(
+        "useEffect(()=>()=>{abandonAttempt(attempt.current);},[],);",
+      ),
+    ).toBe(true);
   });
 });
