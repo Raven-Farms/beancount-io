@@ -194,3 +194,137 @@ describe("bulk entries refuse amounts that are not decimals (w3/641)", () => {
     expect(committed).toHaveLength(1);
   });
 });
+
+// w23/033: tags, links, flags, accounts, currencies, meta keys and dates were
+// written raw, so a newline in one smuggled whole directives into the ledger.
+describe("bulk entries refuse tokens that would not lex as written", () => {
+  let server: http.Server;
+  let url: string;
+
+  beforeAll(async () => {
+    const app = new Koa();
+    const router = new Router();
+    setEntriesHandler(router);
+    app.use(restErrorMiddleware());
+    app.use(bodyParser());
+    app.use(router.routes());
+    server = http.createServer(app.callback());
+    url = await listen(server);
+  });
+
+  afterAll(() => new Promise<void>((resolve) => server.close(() => resolve())));
+
+  beforeEach(() => {
+    baselineErrors = [];
+    committed.length = 0;
+    reads.length = 0;
+  });
+
+  const post = (entries: unknown[]) =>
+    fetch(`${url}/entries/alice/books/bulk`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ entries }),
+    });
+  const transaction = (overrides: Record<string, unknown> = {}) => ({
+    type: "transaction",
+    item: {
+      date: "2026-03-20",
+      flag: "*",
+      payee: "qa-tag",
+      narration: "qa",
+      postings: [
+        { account: "Assets:Cash", units: { number: "-0.01", currency: "USD" } },
+        {
+          account: "Equity:Opening",
+          units: { number: "0.01", currency: "USD" },
+        },
+      ],
+      ...overrides,
+    },
+  });
+  const posting = (overrides: Record<string, unknown>) => ({
+    postings: [
+      {
+        account: "Assets:Cash",
+        units: { number: "-0.01", currency: "USD" },
+        ...overrides,
+      },
+      { account: "Equity:Opening", units: { number: "0.01", currency: "USD" } },
+    ],
+  });
+  const INJECTED = '\n2026-03-20 note Assets:Cash "qa-injected"\n2026-03-20 *';
+
+  it.each([
+    ["tags[0]", { tags: [`qa${INJECTED}`] }],
+    ["links[0]", { links: ["two words"] }],
+    ["flag", { flag: `*${INJECTED}` }],
+    ["date", { date: "2026-03-20 open Assets:Evil\n2026-03-20" }],
+    ["meta.bad key", { meta: { "bad key": "x" } }],
+    ["postings[0].account", posting({ account: `Assets:Cash${INJECTED}` })],
+    ["postings[0].flag", posting({ flag: "! x" })],
+    [
+      "postings[0].units.currency",
+      posting({ units: { number: "-0.01", currency: "USD\n2026" } }),
+    ],
+  ])("refuses %s before reading anything", async (field, overrides) => {
+    const response = await post([transaction(overrides)]);
+    const body = (await response.json()) as Record<string, any>;
+    expect(response.status).toBe(400);
+    expect(body.error).toMatch(
+      new RegExp(
+        `^entry 0: ${field.replace(/[[\].]/g, "\\$&")} .* is not a valid `,
+      ),
+    );
+    expect(reads).toEqual([]);
+    expect(committed).toEqual([]);
+  });
+
+  it.each([
+    [
+      "open",
+      {
+        date: "2026-03-20",
+        account: "Assets:Cash",
+        currencies: ["USD", "EUR GBP"],
+      },
+      "currencies[1]",
+    ],
+    [
+      "note",
+      { date: "2026-03-20", account: "Assets:Cash\nx", comment: "c" },
+      "account",
+    ],
+    ["commodity", { date: "2026-03-20", currency: "usd" }, "currency"],
+  ])("refuses a bad token in a %s", async (type, item, field) => {
+    const response = await post([{ type, item }]);
+    const body = (await response.json()) as Record<string, any>;
+    expect(response.status).toBe(400);
+    expect(body.error).toContain(`entry 0: ${field} `);
+    expect(committed).toEqual([]);
+  });
+
+  it("still writes Unicode accounts, tags, links and meta", async () => {
+    const response = await post([
+      transaction({
+        tags: ["旅行", "trip-2026"],
+        links: ["inv/2026.03"],
+        meta: { "receipt-id": "A1" },
+        postings: [
+          {
+            account: "Assets:Café",
+            units: { number: "-0.01", currency: "USD" },
+          },
+          { account: "资产:现金", units: { number: "0.01", currency: "USD" } },
+        ],
+      }),
+    ]);
+    expect(response.status).toBe(200);
+    expect(committed).toHaveLength(1);
+    const written = fromB64(committed[0]!.files[0]!.content);
+    expect(written).toContain(
+      '2026-03-20 * "qa-tag" "qa" #trip-2026 #旅行 ^inv/2026.03',
+    );
+    expect(written).toContain("资产:现金");
+  });
+});

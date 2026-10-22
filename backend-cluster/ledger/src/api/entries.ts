@@ -20,6 +20,10 @@ import { NotFoundDetailError } from "@/server/py-errors";
 import type { ContentsResponse } from "@/features/gitea/client/gitea-api";
 import { assertSafeRepoPath, toSafeRepoUrlPath } from "@/shared/safe-repo-path";
 import { addEntriesCommitMessage } from "@/features/ledger/utils/commit-message";
+import {
+  assertEntryTokens,
+  isSingleDirective,
+} from "@/features/ledger/utils/entry-tokens";
 
 /**
  * Wire shape (Python `EntryAddBulkEntriesRequest`): a discriminated union of
@@ -115,6 +119,7 @@ export function setEntriesHandler(router: Router): void {
       const allowInvalid = body.allowInvalid === true;
       const rows = body.entries ?? [];
       assertDecimalAmounts(rows);
+      assertEntryTokens(rows);
 
       const client = giteaClientForRequest(ctx);
 
@@ -191,6 +196,12 @@ export function setEntriesHandler(router: Router): void {
         } catch (err) {
           throw new BadUserInputError(
             `entry ${idx}: ${(err as Error).message}`,
+          );
+        }
+        // One entry in, one directive out — whatever the token rules miss.
+        if (!isSingleDirective(text)) {
+          throw new BadUserInputError(
+            `entry ${idx}: renders as more than one directive`,
           );
         }
         const target = row.filename || defaultFilename;

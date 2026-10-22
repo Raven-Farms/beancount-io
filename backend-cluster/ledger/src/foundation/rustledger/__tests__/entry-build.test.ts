@@ -301,6 +301,22 @@ describe("entryInputToText — Fava-exact serialization parity", () => {
     );
   });
 
+  // w23/033: the type and text values were quoted without escaping, so a
+  // quote in either ended the string and the rest was written as source.
+  it("escapes quotes and backslashes in a custom type and text value", () => {
+    const out = entryInputToText({
+      type: "custom",
+      entry: {
+        date: "2024-03-04",
+        type: 'say "hi"',
+        values: [{ kind: "text", value: 'a\\b"\n2024-03-04 open Assets:Evil' }],
+      },
+    });
+    expect(out).toBe(
+      '2024-03-04 custom "say \\"hi\\"" "a\\\\b\\"\n2024-03-04 open Assets:Evil"\n\n',
+    );
+  });
+
   it("renders a custom directive that carries no values", () => {
     expect(
       entryInputToText({

@@ -788,7 +788,7 @@ export function directiveToText(directive: DirectiveJson): string {
     case "custom": {
       const values = (directive.values ?? []).map(renderCustomValueText);
       raw =
-        `${directive.date} custom "${directive.custom_type}" ${values.join(" ")}\n`.replace(
+        `${directive.date} custom "${escapeString(directive.custom_type)}" ${values.join(" ")}\n`.replace(
           / \n$/,
           "\n",
         ) + renderMetadata(directive.meta, INDENT);
@@ -811,7 +811,7 @@ function renderCustomValueText(value: TypedValueJson): string {
     case "string":
     case "tag":
     case "link":
-      return `"${value.value}"`;
+      return `"${escapeString(value.value)}"`;
     case "number":
       return value.value;
     case "date":
