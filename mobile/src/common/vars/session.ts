@@ -2,6 +2,7 @@ import * as SecureStore from "expo-secure-store";
 import { createPersistentVar } from "@/common/apollo/persistent-var";
 import { secureSessionStorage } from "@/common/apollo/secure-session-storage";
 import { OAuthAuthorizationError } from "@/common/oauth/authorization-result";
+import { markAccountChoiceNeeded } from "@/common/oauth/account-choice";
 import { revokeOAuthSession } from "@/common/oauth/token-manager";
 import {
   deserializeSession,
@@ -38,11 +39,16 @@ export async function persistSession(
 /**
  * Drop a session the Keychain kept from before the app was deleted, before
  * anything restores it (w21/154). The refresh token is revoked best effort,
- * without holding up launch; the Keychain copy is gone either way.
+ * without holding up launch; the Keychain copy is gone either way. The next
+ * Sign In asks for an account choice.
  */
 export async function forgetSessionFromPreviousInstall(): Promise<void> {
   const stored = await SecureStore.getItemAsync("session").catch(() => null);
   if (stored === null) return;
+  // The system browser's cookies survive an uninstall too, so the consent page
+  // would still offer the previous account's one-tap Approve: the next Sign In
+  // has to ask for an account choice, as after a sign-out (w21/318).
+  await markAccountChoiceNeeded().catch(() => undefined);
   try {
     const session = deserializeSession(stored);
     if (session?.kind === "oauth") {

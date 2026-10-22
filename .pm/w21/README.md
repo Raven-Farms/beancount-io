@@ -28,7 +28,6 @@
 - [429](./429.md) — New File refuses Mr.Smith/2024.Q/budget.march (275 follow-up)
 - [430](./430.md) — Gravatar caption says "Add a photo" on any load failure (289 follow-up)
 - [315](./blocked/315.md) — In-app commits signed with Gitea username and real email (no full_name, no noreply) — **blocked:** needs the owner's noreply-address and published-history decisions, and a production backfill of existing Gitea users that can't be verified here
-- [318](./318.md) — After a reinstall Sign In still offers one-tap Approve for the old account (154 doesn't set the account-choice mark)
 - [319](./319.md) — Narration suggestions get the keyboard inset twice on iOS after 145
 - [320](./320.md) — More section titles still aren't VoiceOver headings (143 follow-up)
 - [321](./321.md) — Zero-total receipt prefill and the auto leg still seed a real "0.00" (159 follow-up)
