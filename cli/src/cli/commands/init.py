@@ -143,13 +143,35 @@ def _opening_amount(value: str) -> Decimal:
         raise typer.BadParameter(str(exc)) from exc
 
 
+_ANY_CONTROL = re.compile(r"[\x00-\x1f\x7f-\x9f\u202a-\u202e\u2066-\u2069]")
+
+
+def _quoted(path: str) -> str:
+    """One shell word for `path`; a control byte is rebuilt by `printf` from its octal escape.
+
+    The hint is replayed from a pipe, where Click strips ANSI sequences from
+    what it prints, and on a terminal a raw control would repaint the screen
+    (w5/887). `shlex.quote` alone keeps the byte, so the line named another
+    path or acted on the terminal. The spelling is plain ASCII.
+    """
+    if not _ANY_CONTROL.search(path):
+        return shlex.quote(path)
+    spelled = "".join(
+        "".join(f"\\{byte:03o}" for byte in char.encode())
+        if _ANY_CONTROL.fullmatch(char)
+        else {"\\": "\\\\", "%": "%%"}.get(char, char)
+        for char in path
+    )
+    return f'"$(printf {shlex.quote(spelled)})"'
+
+
 def _shell_path(shown: str) -> str:
     """Quote a path for a copy-pasteable command, leaving a leading `~` for the shell to expand."""
     if shown == "~":
         return shown
     if shown.startswith("~/"):
-        return "~/" + shlex.quote(shown[2:])
-    return shlex.quote(shown)
+        return "~/" + _quoted(shown[2:])
+    return _quoted(shown)
 
 
 def _in_working_directory(file: Path) -> bool:

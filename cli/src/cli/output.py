@@ -60,7 +60,8 @@ def flush_warnings() -> None:
 def success(message: str | None = None) -> None:
     """Print a human-readable confirmation. Silent in JSON mode — the envelope says it."""
     if message and not _json_mode():
-        print(message)
+        # Messages carry the user's own paths, which may hold terminal controls (w5/887).
+        print(inert_text(message))
 
 
 #: `--output` spellings that name this process's own stdout.
