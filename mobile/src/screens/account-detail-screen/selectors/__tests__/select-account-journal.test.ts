@@ -45,9 +45,49 @@ function item(
 }
 
 describe("accountJournalItemKey", () => {
-  it("prefers the beancount entry hash", () => {
+  it("is built on the beancount entry hash", () => {
     const a = item({ entry_hash: "abc", date: "2025-01-01" });
-    expect(accountJournalItemKey(a)).toBe("abc");
+    expect(JSON.parse(accountJournalItemKey(a))[0]).toBe("abc");
+  });
+
+  // w21/419: two identical entries share a hash; their running balances differ.
+  it("tells identical twins apart by their running balance", () => {
+    const first = item(
+      { entry_hash: "twin", date: "2025-01-01" },
+      { USD: -4.5 },
+      { USD: 95.5 },
+    );
+    const second = item(
+      { entry_hash: "twin", date: "2025-01-01" },
+      { USD: -4.5 },
+      { USD: 91 },
+    );
+    expect(accountJournalItemKey(first)).not.toBe(
+      accountJournalItemKey(second),
+    );
+    // A page that repeats a row (a shifted offset) still carries its own pair.
+    const repeat = item(
+      { entry_hash: "twin", date: "2025-01-01" },
+      { USD: -4.5 },
+      { USD: 95.5 },
+    );
+    expect(accountJournalItemKey(first)).toBe(accountJournalItemKey(repeat));
+  });
+
+  it("merges a page holding the second twin without calling it an overlap", () => {
+    const first = item(
+      { entry_hash: "twin", date: "2025-01-01" },
+      { USD: -4.5 },
+      { USD: 95.5 },
+    );
+    const second = item(
+      { entry_hash: "twin", date: "2025-01-01" },
+      { USD: -4.5 },
+      { USD: 91 },
+    );
+    const merged = mergeAccountJournalItems([first], [second]);
+    expect(merged.length).toBe(2);
+    expect(accountJournalPageOverlapped({ incoming: 1, added: 1 })).toBe(false);
   });
 
   it("falls back to a date+change+balance signature without a hash", () => {
@@ -115,16 +155,15 @@ describe("hasMoreAccountJournal", () => {
 
 describe("selectAccountJournalRows", () => {
   it("maps description, date, change and running balance in the active currency", () => {
-    const rows = selectAccountJournalRows("USD", [
-      item(
-        { entry_hash: "a", date: "2025-01-02", payee: "Blue Bottle" },
-        { USD: -4.5 },
-        { USD: 120.5 },
-      ),
-    ]);
+    const rowItem = item(
+      { entry_hash: "a", date: "2025-01-02", payee: "Blue Bottle" },
+      { USD: -4.5 },
+      { USD: 120.5 },
+    );
+    const rows = selectAccountJournalRows("USD", [rowItem]);
     expect(rows).toEqual([
       {
-        key: "a",
+        key: accountJournalItemKey(rowItem),
         title: "Blue Bottle",
         date: "2025-01-02",
         flag: undefined,

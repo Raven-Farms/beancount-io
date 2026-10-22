@@ -46,6 +46,7 @@ import { usePayeeRecurrence } from "@/screens/merchants-screen/use-payee-recurre
 import { EntryRow } from "@/screens/transactions-screen/entry-row";
 import {
   journalListKey,
+  journalRowKeys,
   mergeJournalPage,
 } from "@/screens/transactions-screen/utils/merge-journal-page";
 import { DateSectionHeader } from "@/screens/transactions-screen/date-section-header";
@@ -336,6 +337,8 @@ function MerchantDetailBody({
     [journalData?.getLedgerJournal.data],
   );
 
+  const rowKeys = useMemo(() => journalRowKeys(rawEntries), [rawEntries]);
+
   const transactions = useMemo(
     () => filterExactPayee(rawEntries.filter(isJournalTransaction), spellings),
     [rawEntries, spellings],
@@ -397,6 +400,10 @@ function MerchantDetailBody({
           const { data, overlapped } = mergeJournalPage(
             prev.getLedgerJournal.data || [],
             fetchMoreResult.getLedgerJournal.data,
+            {
+              loaded: prev.getLedgerJournal.total,
+              page: fetchMoreResult.getLedgerJournal.total,
+            },
           );
           listMoved = overlapped;
           return {
@@ -620,8 +627,10 @@ function MerchantDetailBody({
         contentContainerStyle={styles.listContent}
         sections={listError ? [] : sections}
         keyExtractor={(item, index) =>
-          // Transactions are unique by hash once pages merge (w21/035).
-          isJournalTransaction(item) ? item.entry_hash : `row:${index}`
+          // Unique per row: identical twins share a hash (w21/419).
+          isJournalTransaction(item)
+            ? (rowKeys.get(item) ?? item.entry_hash)
+            : `row:${index}`
         }
         renderItem={({ item }) => (
           <EntryRow entry={item} onPress={() => handleEntryPress(item)} />

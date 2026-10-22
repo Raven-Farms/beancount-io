@@ -152,14 +152,20 @@ function entryPostings(entry: AccountJournalItem["entry"]): PostingLite[] {
 }
 
 /**
- * Stable identity for a journal entry, used to dedup across pages. Prefers the
- * beancount entry hash; falls back to a signature of date + change + balance so
- * hash-less directives still dedup deterministically.
+ * Stable identity for a journal entry, used to dedup across pages. The beancount
+ * entry hash leaves out the source position, so two identical entries (two $4.50
+ * coffees, same payee, same day) share one: dropped as a repeat, the twin on a
+ * later page read as "the list moved" and reloaded from the top on every page,
+ * forever (w21/419). The row's change and the running balance after it tell the
+ * twins apart (the second one's balance is a coffee lower) while an entry
+ * genuinely repeated by a shifted page still carries the same pair, since a new
+ * entry at the head does not alter the balances after older ones. Hash-less
+ * directives fall back to date + change + balance.
  */
 export function accountJournalItemKey(item: AccountJournalItem): string {
   const hash = item.entry.entry_hash;
   if (typeof hash === "string" && hash) {
-    return hash;
+    return JSON.stringify([hash, item.change, item.balance]);
   }
   return JSON.stringify([item.entry.date, item.change, item.balance]);
 }

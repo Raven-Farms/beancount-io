@@ -42,7 +42,11 @@ import {
 } from "./utils/transaction-display-utils";
 import { toPlainSearchFilter } from "./utils/plain-search-filter";
 import { searchForLedger, type ScopedSearch } from "./filters/scoped-search";
-import { journalListKey, mergeJournalPage } from "./utils/merge-journal-page";
+import {
+  journalListKey,
+  journalRowKeys,
+  mergeJournalPage,
+} from "./utils/merge-journal-page";
 import {
   countActiveFilters,
   selectFiltersForLedger,
@@ -180,6 +184,7 @@ const TransactionList = () => {
     () => groupToSections(transactions, "", locale),
     [transactions, locale],
   );
+  const rowKeys = useMemo(() => journalRowKeys(transactions), [transactions]);
 
   // The list the query shows now, read when a page lands (w21/116).
   const listKeyRef = useRef("");
@@ -222,6 +227,10 @@ const TransactionList = () => {
             const { data, overlapped } = mergeJournalPage(
               prev.getLedgerJournal.data || [],
               fetchMoreResult.getLedgerJournal.data,
+              {
+                loaded: prev.getLedgerJournal.total,
+                page: fetchMoreResult.getLedgerJournal.total,
+              },
             );
             listMoved = overlapped;
             return {
@@ -340,8 +349,8 @@ const TransactionList = () => {
         sections={isInitialLoading ? [] : sections}
         renderSectionHeader={renderSectionHeader}
         renderItem={renderItem}
-        // Unique once pages are merged by hash (w21/035).
-        keyExtractor={(item) => item.entry_hash}
+        // Unique per row: identical twins share a hash (w21/419).
+        keyExtractor={(item) => rowKeys.get(item) ?? item.entry_hash}
         stickySectionHeadersEnabled={false}
         keyboardDismissMode="on-drag"
         keyboardShouldPersistTaps="handled"
