@@ -293,7 +293,10 @@ const AccountTableRow = memo(function AccountTableRow({
   // When rows navigate, the chevron owns the toggle so a nested tap collapses
   // without triggering the row's drill-down. Category rows included: they carry a
   // real root account, so tapping one opens the whole category's detail.
-  const navigates = Boolean(onPressAccount) && row.account !== "";
+  // The own row is not one: it carries the parent's account, and account detail
+  // reads that account with its children, so it opened the parent's page ($28,100
+  // for a $10,000 own row) (w21/612).
+  const navigates = Boolean(onPressAccount) && row.account !== "" && !row.own;
   const chevron =
     navigates && row.hasChildren ? (
       <TouchableOpacity
@@ -411,13 +414,7 @@ const AccountTableRow = memo(function AccountTableRow({
         // iOS, the name concatenated the children and began with the nested
         // chevron's "Expand"/"Collapse" command.
         accessibilityLabel={[
-          isCategory
-            ? label
-            : row.own
-              ? // The parent's own postings share its account name: say so, or
-                // two rows read as the same account (w21/449).
-                t("accountOwnPostings", { name: row.account })
-              : row.account,
+          isCategory ? label : row.account,
           amountText,
           ...notes,
         ].join(", ")}
