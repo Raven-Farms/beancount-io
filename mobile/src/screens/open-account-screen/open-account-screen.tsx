@@ -48,6 +48,7 @@ import {
   openAccountCurrencyChoices,
   typedCurrencyCode,
   peelTypedRoot,
+  rootButtonLabel,
   splitPrefillAccountName,
   type AccountNameValidationReason,
   type AccountRootPrefix,
@@ -432,7 +433,11 @@ export function OpenAccountScreenComponent(): JSX.Element {
                 activeOpacity={0.7}
                 onPress={() => setPicker("root")}
                 accessibilityRole="button"
-                accessibilityLabel={`${t("accountType")}: ${t(rootKey)}`}
+                accessibilityLabel={rootButtonLabel(
+                  t("accountType"),
+                  rootPrefix,
+                  roots,
+                )}
               >
                 <View
                   style={[

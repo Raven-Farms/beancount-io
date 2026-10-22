@@ -7,6 +7,7 @@ import {
   openAccountCurrencyChoices,
   openAccountSubmitState,
   peelTypedRoot,
+  rootButtonLabel,
   splitPrefillAccountName,
   typedCurrencyCode,
   typedSubPathIssue,
@@ -708,5 +709,20 @@ describe("peelTypedRoot joins words with or without a root", () => {
   it("leaves a single word, and a word with a trailing space, as typed", () => {
     expect(peelTypedRoot("Credit", "Assets").subPath).toBe("Credit");
     expect(peelTypedRoot("Credit ", "Assets").subPath).toBe("Credit ");
+  });
+});
+
+// w21/629: VoiceOver read the canonical root beside a visible renamed one.
+describe("rootButtonLabel", () => {
+  it("reads the ledger's name for the root", () => {
+    expect(
+      rootButtonLabel("Account type", "Assets", { assets: "Activos" }),
+    ).toBe("Account type: Activos");
+  });
+
+  it("reads the canonical root when the ledger keeps it", () => {
+    expect(rootButtonLabel("Account type", "Expenses")).toBe(
+      "Account type: Expenses",
+    );
   });
 });

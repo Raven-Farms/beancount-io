@@ -86,6 +86,19 @@ function joinPrefillWords(subPath: string): string {
 }
 
 /**
+ * What the root button reads aloud: the ledger's own name for the root, as the
+ * visible prefix shows it. It said the canonical "Assets" beside a visible
+ * "Activos:" on a ledger with `option "name_assets" "Activos"` (w21/629).
+ */
+export function rootButtonLabel(
+  accountTypeLabel: string,
+  rootPrefix: AccountRootPrefix,
+  roots: RootNames = {},
+): string {
+  return `${accountTypeLabel}: ${ledgerRootName(rootPrefix, roots)}`;
+}
+
+/**
  * Words with a space between them join into one component as they are typed or
  * pasted, as they do after a root (w21/255): "Credit Card" and
  * "Assets:Credit Card" gave different results, the first refused (w21/628). A
