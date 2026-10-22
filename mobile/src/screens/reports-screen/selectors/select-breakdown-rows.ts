@@ -11,7 +11,7 @@ export const OTHER_ACCOUNT = "__other__";
  *
  * Passthrough when there would be at most one extra row (`items.length <= n + 1`):
  * bucketing a single leftover into "Other" only hides a row behind a tap for no
- * gain. `otherLabel` is injected (kept i18n-free so this stays a pure function).
+ * gain. The same holds when only one non-negative row is left to fold. `otherLabel` is injected (kept i18n-free so this stays a pure function).
  * `otherAccount` defaults to `OTHER_ACCOUNT`; the Sankey passes distinct ids so
  * the income and expense tails do not collide as one node.
  *
@@ -29,10 +29,20 @@ export function topNWithOther(
   }
   const head = items.slice(0, n);
   const rest = items.slice(n);
-  const value = rest.reduce((sum, row) => sum + row.value, 0);
+  // Only spending folds: a net-refunded row netted against the tail made
+  // "Other" read $10 while hiding $500 of travel behind a -$490 return, and the
+  // cash-flow chart keeps refunds as their own flow (w21/371). Those rows stay
+  // visible after it.
+  const folded = rest.filter((row) => row.value >= 0);
+  const refunded = rest.filter((row) => row.value < 0);
+  if (folded.length <= 1) {
+    return items;
+  }
+  const value = folded.reduce((sum, row) => sum + row.value, 0);
   return [
     ...head,
-    { account: otherAccount, name: otherLabel, value, children: rest },
+    { account: otherAccount, name: otherLabel, value, children: folded },
+    ...refunded,
   ];
 }
 

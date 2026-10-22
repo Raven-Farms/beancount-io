@@ -38,6 +38,40 @@ describe("topNWithOther", () => {
     expect(other.children).toEqual(items.slice(2)); // tail preserved for drill-down
   });
 
+  // w21/371: Travel +500 and Electronics -490 folded to "Other 10.00 · 0%".
+  it("folds only spending and keeps a refunded row visible", () => {
+    const items = [
+      node("A", 100),
+      node("B", 90),
+      node("Travel", 500),
+      node("Meals", 20),
+      node("Electronics", -490),
+    ];
+    const result = topNWithOther(items, 2, "Other");
+    expect(result.map((row) => row.name)).toEqual([
+      "A",
+      "B",
+      "Other",
+      "Electronics",
+    ]);
+    expect(result[2].value).toBe(520);
+    expect(result[2].children.map((row) => row.name)).toEqual([
+      "Travel",
+      "Meals",
+    ]);
+    expect(result[3].value).toBe(-490);
+  });
+
+  it("does not bucket a single spending row left beside refunds", () => {
+    const items = [
+      node("A", 100),
+      node("B", 90),
+      node("Meals", 20),
+      node("Electronics", -490),
+    ];
+    expect(topNWithOther(items, 2, "Other")).toEqual(items);
+  });
+
   it("returns an empty array unchanged", () => {
     expect(topNWithOther([], 7, "Other")).toEqual([]);
   });
