@@ -47,7 +47,11 @@ def _ingest_script(supplied: Path | None) -> Path:
     must stay the link, not become the shared script it points to.
     """
     if supplied is not None:
-        return expand_path(supplied, "--config").absolute()
+        script = expand_path(supplied, "--config").absolute()
+        # Before anything opens it: reading a pipe nobody feeds waits forever (w5/885).
+        if script.exists() and not script.is_file():
+            raise UsageError(f"--config {script} is not a regular file. Save the ingest script as a Python file.")
+        return script
     try:
         ledger = context.current().entry_file()
     except UsageError:

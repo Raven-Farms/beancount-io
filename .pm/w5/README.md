@@ -57,7 +57,6 @@
 - [959 — Treat repeated allowed currencies as one during transaction inference](./959.md) — minor CLI existing-ledger/native-import inference finding; USD/EUR and split-file controls reproduced 2026-10-21.
 - [958 — Keep unused unopened accounts out of remembered CSV settings](./958.md) — minor CLI memory-guard follow-up to 452/714; empty, skipped and fully categorized exports reproduced 2026-10-21.
 - [957 — Allow instrument units in the portfolio preset's holdings account](./957.md) — minor CLI first-purchase setup finding; reproduced twice in USD/EUR on 2026-10-21.
-- [885 — Refuse non-regular ingest configs before reading them in AST preflight](./885.md) — minor CLI unattended-hang follow-up to 582 and 851; reproduced 2026-10-20.
 - [886 — Merge per-file import sign changes under the memory lock](./886.md) — major CLI opposite-sign booking race after parallel previews; reproduced 2026-10-20.
 - [887 — Render control-bearing success paths inertly and keep init hints replayable](./887.md) — minor CLI human-output/path-hint finding; reproduced 2026-10-20.
 - [888 — Keep the funded-close guard when check_drained omits a zero assertion](./888.md) — minor CLI close-policy gap after w2/092; same-day assertions and uncovered flow accounts reproduced 2026-10-20–21.
