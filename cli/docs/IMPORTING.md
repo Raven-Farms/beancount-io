@@ -183,10 +183,15 @@ it is refused naming the file, line and field counts instead of being
 truncated to fit, which silently shifted the remaining cells. Surplus cells
 that are *empty* are tolerated: a trailing separator loses no data. Misuse exits **2**.
 
-Rows — transactions, and a Python importer's balance, note, document, pad or
-close alike — that would use an account the ledger never opened, an account that
-is not active on the row's date (closed before it, or opened after it), or in a
-currency the open directive disallows are shown `blocked`, not ready. An
+Rows — transactions, and a Python importer's balance, pad or close alike — that
+would use an account the ledger never opened, an account that is not active on
+the row's date (closed before it, or opened after it), or in a currency the open
+directive disallows are shown `blocked`, not ready. A note or document is held
+to less, as Beancount holds it: it may follow the account's `close` (a final
+statement or attachment dated after it imports normally), still needs an account
+the ledger opened (a never-opened account is `blocked` with the `bea add open`
+line), and one dated before the account's opening is refused as `invalid`, naming
+the opening date and its location, with `--apply` exiting **1**. An
 inactive account's row names the `close` or `open` and its line, and says to
 re-date it or to point the rule, category or `--default-account` at an open
 account. Each row names all its missing and inactive accounts together, so
