@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import {
   RouterProvider,
@@ -11,6 +11,7 @@ import { LanguageSelector } from "../language-selector";
 import { createLocalization } from "@/i18n/init";
 import { LocalizationProvider } from "@/i18n/provider";
 import { LANGUAGE_NAMES } from "@/i18n/config";
+import de from "@/features/user-settings/locales/de";
 import en from "@/features/user-settings/locales/en";
 import fr from "@/features/user-settings/locales/fr";
 import zh from "@/features/user-settings/locales/zh";
@@ -95,6 +96,47 @@ describe("LanguageSelector", () => {
     await user.click(trigger);
     expect(row("Français")).toHaveAttribute("aria-current", "true");
     expect(row("English")).not.toHaveAttribute("aria-current");
+  });
+
+  it("names the language popup as well as its trigger, in the language it is shown in (w4/333)", async () => {
+    await import("@/i18n/locales/de");
+    await setup();
+    const user = userEvent.setup();
+    const english = en["userSettings.currentLanguage"].message;
+    const german = de["userSettings.currentLanguage"].message;
+    const trigger = screen.getByRole("combobox", {
+      name: english,
+      exact: true,
+    });
+
+    trigger.focus();
+    await user.keyboard("{Enter}");
+    const popup = screen.getByRole("dialog", { name: english, exact: true });
+    expect(
+      within(popup).getByRole("button", { name: "English", exact: true }),
+    ).toHaveAttribute("aria-current", "true");
+    await user.click(
+      within(popup).getByRole("button", { name: "Deutsch", exact: true }),
+    );
+    await waitFor(() =>
+      expect(screen.getByRole("combobox", { name: german, exact: true })).toBe(
+        trigger,
+      ),
+    );
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+
+    trigger.focus();
+    await user.keyboard("{Enter}");
+    const reopened = screen.getByRole("dialog", { name: german, exact: true });
+    expect(
+      within(reopened).getByRole("button", { name: "Deutsch", exact: true }),
+    ).toHaveAttribute("aria-current", "true");
+    expect(within(reopened).getAllByRole("button")).toHaveLength(
+      Object.keys(LANGUAGE_NAMES).length,
+    );
+    await user.keyboard("{Escape}");
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    expect(trigger).toHaveFocus();
   });
 
   it("loads a selected locale before updating and persisting the selection", async () => {
