@@ -31,6 +31,7 @@ import {
   type DirectiveSourceLocation,
 } from "./plugins";
 import { reconcileDocumentErrors } from "./document-validation";
+import { reconcileOptionErrors } from "./option-validation";
 import { isDocumentValidationError } from "./document-validation";
 import { reportUrlIncludes } from "./url-include-errors";
 import {
@@ -631,6 +632,7 @@ async function parseLedgerFilesUncached(
   // existence checks always fail. Reconcile them against the real repo file
   // inventory (`repoPaths`), then recompute validity from the resulting errors.
   errors = reconcileDocumentErrors(errors, options.repoPaths);
+  errors = reconcileOptionErrors(errors);
   errors = reportUrlIncludes(errors, files);
   errors = reportUndecodableSources(errors, files, entryPoint);
 
