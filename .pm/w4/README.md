@@ -72,7 +72,6 @@
 
 - [969 — Keep Align Amounts in its own Undo step](./969.md) — minor; dashboard QA,2026-10-22; native formatting and Undo also remove preceding exact comment text at both widths; Redo recovers, standalone formatting and Toggle Comment controls pass, no writes.
 
-- [968 — Leave file-editor Escape to Monaco's active widgets](./968.md) — minor; dashboard QA,2026-10-22; completion and Go to Line plus ordinary Escape open Unsaved Changes at both widths; widget acceptance, Find dismissal and normal cancellation controls pass, sources match, no writes.
 
 
 
