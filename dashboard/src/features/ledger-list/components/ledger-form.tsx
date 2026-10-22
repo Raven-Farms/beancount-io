@@ -29,6 +29,22 @@ import { useQuery, useLazyQuery } from "@apollo/client/react";
 import { ListLedgersDocument } from "@/graphql/definitions";
 import { slugifyLedgerName } from "@/common/lib/beancount/ledger-name";
 import { SETUP_PRESETS, suggestCurrency } from "../lib/setup-presets";
+import { cn } from "@/common/lib/utils/utils";
+
+/**
+ * A radio choice drawn as a card around its sr-only input. Forced colors drops
+ * the ring and maps every border alike, so the checked card claims the system
+ * highlight there, and focus gets its own outline (w4/m43).
+ */
+function choiceCardClass(checked: boolean) {
+  return cn(
+    "flex cursor-pointer gap-3 rounded-lg border p-3 transition-colors has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring has-[:checked]:forced-selected",
+    "forced-colors:has-[:focus-visible]:outline-2 forced-colors:has-[:focus-visible]:outline-offset-2 forced-colors:has-[:focus-visible]:outline-[CanvasText]",
+    checked
+      ? "border-primary bg-primary/5 ring-1 ring-primary"
+      : "border-input hover:bg-muted/50",
+  );
+}
 
 /**
  * Generate a default ledger name that doesn't conflict with existing ledgers.
@@ -358,11 +374,10 @@ export function LedgerForm({
                 {startOptions.map(({ value, title, description, Icon }) => (
                   <label
                     key={value}
-                    className={`flex cursor-pointer gap-3 rounded-lg border p-3 transition-colors has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring ${
-                      startKind === value
-                        ? "border-primary bg-primary/5 ring-1 ring-primary"
-                        : "border-input hover:bg-muted/50"
-                    } ${isLoading ? "cursor-not-allowed opacity-60" : ""}`}
+                    className={cn(
+                      choiceCardClass(startKind === value),
+                      isLoading && "cursor-not-allowed opacity-60",
+                    )}
                   >
                     <input
                       type="radio"
@@ -389,11 +404,10 @@ export function LedgerForm({
               </div>
               <div className="border-t border-border pt-3">
                 <label
-                  className={`flex cursor-pointer gap-3 rounded-lg border p-3 transition-colors has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring ${
-                    startKind === demoOption.value
-                      ? "border-primary bg-primary/5 ring-1 ring-primary"
-                      : "border-input hover:bg-muted/50"
-                  } ${isLoading ? "cursor-not-allowed opacity-60" : ""}`}
+                  className={cn(
+                    choiceCardClass(startKind === demoOption.value),
+                    isLoading && "cursor-not-allowed opacity-60",
+                  )}
                   data-testid="setup-demo-option"
                 >
                   <input
@@ -428,11 +442,7 @@ export function LedgerForm({
                   {SETUP_PRESETS.map((entry) => (
                     <label
                       key={entry.id}
-                      className={`flex cursor-pointer gap-3 rounded-lg border p-3 transition-colors ${
-                        presetId === entry.id
-                          ? "border-primary bg-primary/5 ring-1 ring-primary"
-                          : "border-input hover:bg-muted/50"
-                      }`}
+                      className={choiceCardClass(presetId === entry.id)}
                     >
                       <input
                         type="radio"

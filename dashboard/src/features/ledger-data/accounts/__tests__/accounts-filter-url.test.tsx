@@ -388,6 +388,21 @@ describe("accounts list filters in the URL", () => {
     },
   );
 
+  it("gates the forced-colors highlight on the chosen type chip (w4/m43)", async () => {
+    // Forced colors draws every chip's border, so only the selected chip's
+    // system highlight tells the chosen type apart.
+    await mountAt("/ledger/alice/books/accounts?type=Assets");
+
+    for (const name of ["Assets", "page.accounts.allTypes"]) {
+      expect(typeChip(name)).toHaveClass("aria-pressed:forced-selected");
+    }
+    expect(typeChip("Assets")).toHaveAttribute("aria-pressed", "true");
+    expect(typeChip("page.accounts.allTypes")).toHaveAttribute(
+      "aria-pressed",
+      "false",
+    );
+  });
+
   it("restores search and type after opening an account and pressing Back, then Forward", async () => {
     const user = userEvent.setup();
     const router = await mountAt(

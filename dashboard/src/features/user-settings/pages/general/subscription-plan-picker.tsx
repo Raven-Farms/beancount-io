@@ -125,7 +125,7 @@ export function PlanPicker({
                 });
               }}
               className={cn(
-                "rounded px-3 py-1 font-medium transition-colors",
+                "rounded px-3 py-1 font-medium transition-colors aria-pressed:forced-selected",
                 cycle === option
                   ? "bg-primary text-primary-foreground"
                   : "text-muted-foreground hover:text-foreground",

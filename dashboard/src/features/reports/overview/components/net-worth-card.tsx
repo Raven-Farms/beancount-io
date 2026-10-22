@@ -386,7 +386,7 @@ export function NetWorthCard({
             type="button"
             variant={view === "chart" ? "secondary" : "ghost"}
             size="icon"
-            className="size-8"
+            className="size-8 aria-pressed:forced-selected"
             disabled={!hydrated}
             onClick={() => setView("chart")}
             aria-label={t("page.overview.chartView")}
@@ -398,7 +398,7 @@ export function NetWorthCard({
             type="button"
             variant={view === "table" ? "secondary" : "ghost"}
             size="icon"
-            className="size-8"
+            className="size-8 aria-pressed:forced-selected"
             disabled={!hydrated}
             onClick={() => setView("table")}
             aria-label={t("page.overview.tableView")}

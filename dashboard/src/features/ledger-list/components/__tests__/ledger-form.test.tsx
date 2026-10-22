@@ -239,6 +239,19 @@ describe("LedgerForm", () => {
     });
   });
 
+  it("gates the forced-colors highlight on each card's checked radio (w4/m43)", () => {
+    // The checked card's ring and faint fill vanish in forced colors; it
+    // claims the system highlight instead, and focus keeps its own outline.
+    render(<LedgerForm onSubmit={mockOnSubmit} onCancel={mockOnCancel} />);
+
+    for (const radio of screen.getAllByRole("radio")) {
+      expect(radio.closest("label")).toHaveClass(
+        "has-[:checked]:forced-selected",
+        "forced-colors:has-[:focus-visible]:outline-[CanvasText]",
+      );
+    }
+  });
+
   it("draws keyboard focus on the template card whose hidden radio has it (w3/561)", async () => {
     const user = userEvent.setup();
     render(<LedgerForm onSubmit={mockOnSubmit} onCancel={mockOnCancel} />);

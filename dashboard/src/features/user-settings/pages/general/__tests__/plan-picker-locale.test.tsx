@@ -1,4 +1,5 @@
 import { render, screen, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { PlanPicker } from "../subscription-plan-picker";
 import { MOCK_TIER_QUOTAS } from "./subscription-test-utils";
@@ -46,5 +47,32 @@ describe("PlanPicker in a language with its own digits", () => {
     expect(
       card("ENTERPRISE").queryByText("userSettings.unlimited"),
     ).not.toBeInTheDocument();
+  });
+});
+
+/**
+ * The selected cycle's primary fill disappears in forced colors, so Yearly
+ * and Monthly painted alike (w4/m43). Each cycle carries `forced-selected`
+ * behind its own pressed state; the paint was measured in a real browser.
+ */
+describe("PlanPicker billing cycle under forced colors", () => {
+  const pressed = () =>
+    within(screen.getByRole("group", { name: "userSettings.billingCycle" }))
+      .getAllByRole("button")
+      .filter((cycle) => {
+        expect(cycle).toHaveClass("aria-pressed:forced-selected");
+        return cycle.getAttribute("aria-pressed") === "true";
+      })
+      .map((cycle) => cycle.textContent);
+
+  it("gates the highlight on the chosen cycle, which follows a new choice", async () => {
+    const user = userEvent.setup();
+    renderPicker();
+    expect(pressed()).toEqual(["userSettings.yearly"]);
+
+    await user.click(
+      screen.getByRole("button", { name: "userSettings.monthly" }),
+    );
+    expect(pressed()).toEqual(["userSettings.monthly"]);
   });
 });

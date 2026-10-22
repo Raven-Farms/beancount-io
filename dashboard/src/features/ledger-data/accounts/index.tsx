@@ -541,7 +541,7 @@ export default function LedgerAccountsPage() {
                     variant={isActive ? "secondary" : "ghost"}
                     size="sm"
                     className={cn(
-                      "h-8 shrink-0 rounded-full border px-3 text-xs",
+                      "h-8 shrink-0 rounded-full border px-3 text-xs aria-pressed:forced-selected",
                       isActive
                         ? "border-border shadow-xs"
                         : "border-transparent text-muted-foreground",

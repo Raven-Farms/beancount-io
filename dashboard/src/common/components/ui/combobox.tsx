@@ -345,12 +345,12 @@ export function Combobox({
                   onMouseEnter={() => setHighlightedIndex(index)}
                   data-combobox-item-index={`${instanceId}-${index}`}
                   className={cn(
-                    "relative flex cursor-pointer items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-hidden select-none",
                     // The accent palette disappears in forced colors; the
-                    // option Enter will apply keeps a system highlight
-                    // (w4/273).
+                    // option Enter will apply keeps a system highlight and a
+                    // readable label (w4/273, w4/m43).
+                    "relative flex cursor-pointer items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-hidden select-none aria-selected:forced-selected",
                     highlightedIndex === index &&
-                      "bg-accent text-accent-foreground forced-colors:bg-[Highlight] forced-colors:text-[HighlightText]",
+                      "bg-accent text-accent-foreground",
                   )}
                   style={
                     option.indent
