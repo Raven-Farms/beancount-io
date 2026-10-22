@@ -37,6 +37,26 @@ export function parseBudgetAmount(amount: string): ParsedBudgetAmount {
   return { value: Number.isNaN(value) ? 0 : value, currency };
 }
 
+/**
+ * The direction of a budget, from its history rather than from the amount in
+ * effect today: `-1` for an income target (written as a negative amount), `1`
+ * for an expense cap. Zeroing an income target (Delete rewrites history, so
+ * "0" is the natural way to stop tracking one) stores a sign-less "0", and the
+ * chart then ran on expense rules: income drawn as negative bars and a missed
+ * month on the favourable side (w21/475, as mobile's `groupDirection`). The
+ * newest entry that has a sign decides; a budget that was only ever zero is an
+ * expense cap.
+ */
+export function budgetGroupDirection(
+  group: Pick<BudgetGroup, "amount" | "budgetHistory">,
+): 1 | -1 {
+  for (let i = group.budgetHistory.length - 1; i >= 0; i -= 1) {
+    const { value } = parseBudgetAmount(group.budgetHistory[i]!.amount);
+    if (value !== 0) return value < 0 ? -1 : 1;
+  }
+  return parseBudgetAmount(group.amount).value < 0 ? -1 : 1;
+}
+
 function getBudgetFields(entry: BudgetEntry): BudgetFields | null {
   const account = typeof entry.values[0] === "string" ? entry.values[0] : "";
   const interval = typeof entry.values[1] === "string" ? entry.values[1] : "";

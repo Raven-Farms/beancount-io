@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  budgetGroupDirection,
   calculateBudgetForInterval,
   groupBudgetEntries,
   readSparseBalanceAmount,
@@ -219,5 +220,40 @@ describe("readSparseBalanceAmount", () => {
 
   it("keeps malformed amounts distinct from sparse zeros", () => {
     expect(readSparseBalanceAmount({ USD: "not-a-number" }, "USD")).toBeNull();
+  });
+});
+
+// w21/475: a zeroed income target stores "0", whose sign says nothing, and the
+// chart ran on expense rules.
+describe("budgetGroupDirection", () => {
+  const group = (amounts: string[]) => ({
+    amount: amounts[amounts.length - 1]!,
+    budgetHistory: amounts.map((amount, index) =>
+      historyEntry(`2026-0${index + 1}-01`, "monthly", amount),
+    ),
+  });
+
+  it("is income for a negative target and expense for a positive one", () => {
+    expect(budgetGroupDirection(group(["-3000 USD"]))).toBe(-1);
+    expect(budgetGroupDirection(group(["300 USD"]))).toBe(1);
+  });
+
+  it("keeps an income target's direction after it is zeroed", () => {
+    expect(budgetGroupDirection(group(["-3000 USD", "0 USD"]))).toBe(-1);
+    expect(
+      budgetGroupDirection(group(["-3000 USD", "-3500 USD", "0 USD", "0 USD"])),
+    ).toBe(-1);
+  });
+
+  it("lets the newest entry with a sign decide", () => {
+    expect(budgetGroupDirection(group(["-3000 USD", "200 USD"]))).toBe(1);
+    expect(budgetGroupDirection(group(["200 USD", "-3000 USD", "0 USD"]))).toBe(
+      -1,
+    );
+  });
+
+  it("reads a budget that was only ever zero as an expense cap", () => {
+    expect(budgetGroupDirection(group(["0 USD"]))).toBe(1);
+    expect(budgetGroupDirection(group(["0 USD", "0 USD"]))).toBe(1);
   });
 });

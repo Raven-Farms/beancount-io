@@ -45,6 +45,7 @@ import {
 import { AddBudgetDialog } from "./add-budget-dialog";
 import { BudgetHistoryTable } from "./budget-history-table";
 import {
+  budgetGroupDirection,
   budgetHeadlinePeriod,
   calculateBudgetForInterval,
   parseBudgetAmount,
@@ -104,7 +105,7 @@ export function BudgetChartCard({
     [group.amount],
   );
   const displayCurrency = budgetCurrency || group.currency || primaryCurrency;
-  const displayDirection = currentBudgetValue < 0 ? -1 : 1;
+  const displayDirection = budgetGroupDirection(group);
   const displayBudgetValue = Math.abs(currentBudgetValue);
 
   const { data, loading, error } = useQuery(GetLedgerIntervalTotalsDocument, {
