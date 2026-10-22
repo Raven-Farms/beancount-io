@@ -239,6 +239,58 @@ describe("PullRequestService", () => {
       expect(mockClient.repos.repoCreatePullRequest).not.toHaveBeenCalled();
     });
 
+    // w21/567: the portable-name rule is for files a change creates; one
+    // committed before it stays editable.
+    describe("a legacy file name (w21/567)", () => {
+      const legacy = { ...input, changes: [{ path: "aux.bean", content: "x" }] };
+
+      it("opens a pull request that updates an existing aux.bean", async () => {
+        mockSuccessfulCreate();
+        mockClient.repos.repoGetContents.mockResolvedValue({
+          data: { sha: "old-sha", path: "aux.bean" },
+        });
+        mockClient.repos.repoUpdateFile.mockResolvedValue({
+          data: { commit: { sha: "def456" } },
+        });
+
+        const result = await service.createPRFromPatch(
+          identity,
+          owner,
+          repo,
+          legacy,
+        );
+
+        expect(result.prNumber).toBe(42);
+        expect(mockClient.repos.repoUpdateFile).toHaveBeenCalled();
+        expect(mockClient.repos.repoCreateFile).not.toHaveBeenCalled();
+      });
+
+      it("refuses one that would create aux.bean, and deletes its branch", async () => {
+        mockSuccessfulCreate();
+
+        await expect(
+          service.createPRFromPatch(identity, owner, repo, legacy),
+        ).rejects.toMatchObject({
+          category: "BAD_USER_INPUT",
+          message: expect.stringContaining("Windows device name"),
+        });
+        expect(mockClient.repos.repoCreateFile).not.toHaveBeenCalled();
+        expect(mockClient.repos.repoDeleteBranch).toHaveBeenCalledTimes(1);
+      });
+
+      it("still refuses an unsafe path before creating a branch", async () => {
+        mockSuccessfulCreate();
+
+        await expect(
+          service.createPRFromPatch(identity, owner, repo, {
+            ...input,
+            changes: [{ path: "../x.bean", content: "x" }],
+          }),
+        ).rejects.toMatchObject({ category: "BAD_USER_INPUT" });
+        expect(mockClient.repos.repoCreateBranch).not.toHaveBeenCalled();
+      });
+    });
+
     it("refuses empty changes before creating a branch", async () => {
       mockSuccessfulCreate();
 

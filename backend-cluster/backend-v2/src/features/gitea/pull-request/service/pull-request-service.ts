@@ -1,4 +1,7 @@
-import { assertPortableRepoPath } from "@/features/ledger/utils/safe-repo-path";
+import {
+  assertPortableRepoPath,
+  assertSafeRepoPath,
+} from "@/features/ledger/utils/safe-repo-path";
 import { logger } from "@/shared/logger";
 import {
   BadUserInputError,
@@ -267,8 +270,10 @@ export class PullRequestService implements IPullRequestService {
         "changes",
       );
     }
-    // A change may create its file, so its name has to be portable (w23/054).
-    for (const change of input.changes) assertPortableRepoPath(change.path);
+    // Every path has to be safe up front. Portability (w23/054) is held only to
+    // a path the change creates, once it is known to be new: a file committed
+    // before the rule, such as `aux.bean`, stays editable (w21/567).
+    for (const change of input.changes) assertSafeRepoPath(change.path);
     const userId = identity.userId;
     const client = await this.giteaClientFactory.getUserApiClient(userId);
 
@@ -371,6 +376,8 @@ export class PullRequestService implements IPullRequestService {
 
         // Update or create file
         const content = Buffer.from(change.content).toString("base64");
+        // A new file's name has to be portable; the branch is deleted if not.
+        if (!fileSha) assertPortableRepoPath(change.path);
 
         await step(`writing ${change.path}`, () =>
           fileSha

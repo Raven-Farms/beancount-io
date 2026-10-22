@@ -27,7 +27,6 @@
 - [549](./blocked/549.md) — Create Ledger's "Amount owed" can't express a card in credit, and Review shows the opposite sign to the file — **blocked:** needs an owner decision on whether the setup API keeps "explicit negative = ledger sign" or changes its contract for REST, GraphQL and MCP
 - [554](./blocked/554.md) — A holding that is also another lot's cost currency drops out of the holdings sheet, so BTC's stale price is never flagged — **blocked:** needs a per-commodity cost-less balance the valuation reads do not carry (cross-package read contract and deploy)
 - [556](./blocked/556.md) — A holding priced only in an unrelated currency the account holds is labelled priced, though the ledger values it at cost — **blocked:** shares w21/554's blocker — a cost currency cannot be told from a cost-less holding of the same currency with the current reads
-- [567](./567.md) — Server: pull requests refuse edits to existing legacy-named files, against w23/054's new-paths-only rule (backend-v2)
 - [568](./568.md) — A transaction whose payee is only spaces shows as a blank row (and a blank detail title)
 - [569](./569.md) — Searching Transactions or Merchants for "iş" misses payees with a Turkish "İ" (sibling of w21/060 and w21/257)
 - [570](./570.md) — A currency exchange with a fee reads as "−$110.00" spent, though only the $1.00 fee left
