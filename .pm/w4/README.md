@@ -24,7 +24,7 @@
 
 - [320 — Preserve the creation draft after a failed request](./320.md) — minor; dashboard QA, 2026-10-21; caught creation failure clears the saved draft, so closing/reopening loses details and requestId at both widths; normal close/resume passes, every attempt preblocked.
 
-- [319 — Name the import configuration's amount filter](./319.md) — minor; dashboard QA, 2026-10-21; native AX exposes an empty control name at both widths; value/filtering/keyboard and adjacent named controls pass.
+- [319 — Name the import configuration's amount filter and mapping table](./319.md) — minor; dashboard QA, 2026-10-21; native AX exposes both empty identities at both widths; filtering/selection/focus and named Preview controls pass.
 
 - [318 — Keep composing Escape inside searchable popovers](./318.md) — minor; dashboard QA, 2026-10-21; trusted composing Escape dismisses the ledger switcher and clears its search at both widths; ordinary Escape, composing Enter and read-retry controls pass.
 
