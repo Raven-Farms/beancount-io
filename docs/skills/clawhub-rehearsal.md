@@ -355,3 +355,42 @@ ordinary unchanged skip. This preflight creates no submission or public release;
 check actual protected receipts, promotion, authored bytes and supported native
 installs independently before closeout. Do not re-upload byte-identical pending
 content or request duplicate scan jobs.
+
+
+## Protected 0.3.8 release — 2026-10-22 UTC
+
+Source repair [1de39be41](https://github.com/bex-co/beancount-io/commit/1de39be4134da3b7a6e1098ca057b74f6635ff3f)
+passes [complete skills CI39708859243](https://github.com/bex-co/beancount-io/actions/runs/39708859243):
+37 checker tests,142 installer/recipe tests and38 published-minimum tests. Guidance
+39708859025 and secret scan39708859059 also pass. The actual native boundary,
+reconcile and init controls remain in the [dated repair record](scope-contract-controls-20261022.md).
+
+Protected [run39708894097](https://github.com/bex-co/beancount-io/actions/runs/39708894097)
+uses main 95851b631, whose skills/tooling/workflow bytes match the repair commit.
+The existing authorized reviewer approves the unchanged main-only environment
+with MIT-0 true and publisher puncsky verified. Every changed bundle submits
+as 1.0.4; all 13 receipts are pending-publication, all 119 authored-file fingerprints
+match the final local plans, and publisher-credential cleanup succeeds. No
+byte-identical pending content or verdict override is submitted.
+
+By 02:25 UTC, nine versions are independently public-exact: add, ask, close, import,
+init, migrate, options, roll-forward, trade. Downloads match90 authored files and license
+against the final119-file map. OpenClaw 2026.10.5 installs all nine with exact 90/90
+files; eight audits are Safe and options is Review, permitted under normal policy
+without force or acknowledgement. Hermes v0.22.4 installs seven with 72/72 files;
+init 1.0.4 is refused Dangerous/18 findings, and import's first native fetch fails
+before scanner output despite public exact-version ZIP HTTP 200. Its cause remains
+under diagnosis. Separate standalone ask-only installs match 8/8 files per host;
+current model-backed first-query follow-through is in progress. These outcomes
+are not full-suite Hermes support or m6 closeout.
+
+Accruals, importer-author, property, reconcile remain pending at that observation.
+Their exact 1.0.4 owner report archives return HTTP 200 at 02:26 UTC, with clean static
+v2.4.26/empty findings and null primary/supporting verdicts. The stored report's
+synthesized succeeded manifest is not a completed primary scan or promotion.
+The automatic publication service is making observable progress; continue each
+newly eligible version without resubmission, duplicate scan jobs or force.
+
+The PM milestone is live again for those actionable current-version checks.
+Retained receipts, complete run logs, public ZIPs/file maps and actual host
+outputs are in ignored `scripts/skills/tmp/w6-scope-contract-20261022/`.

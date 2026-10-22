@@ -168,8 +168,14 @@ Suite 0.3.8 repairs local/hosted scope conflicts and requires a working validato
 before an existing-ledger write. Its [native before/after controls](scope-contract-controls-20261022.md)
 preserve the explicitly unvalidated init scaffold, approved developer-tool
 writes and supported broker/migration flows. Descriptions and routing requests
-are unchanged. All thirteen changed bundles pass anonymous 1.0.4 release plans;
-that preflight does not establish registry promotion or current host installs.
+are unchanged. Protected [run39708894097](https://github.com/bex-co/beancount-io/actions/runs/39708894097)
+accepts all thirteen changed 1.0.4 submissions with exact fingerprints and clean
+credential removal. At 02:25 UTC nine current versions/90 authored files are public
+and install exactly in OpenClaw. Accruals, importer-author, property, reconcile
+still await promotion. Hermes current-version controls and standalone first
+queries continue; the [release record](clawhub-rehearsal.md#protected-038-release--2026-10-22-utc)
+retains the init policy refusal and import download discrepancy separately.
+An upload receipt does not establish public availability or complete support.
 
 Hermes's default search now finds all eleven published suite listings:
 
