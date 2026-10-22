@@ -16,6 +16,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { fontSizes, fontWeights } from "@/common/theme";
 import { useTranslations } from "@/common/hooks/use-translations";
 import { CHROME, CONTROL_SIZE, SHUTTER_SIZE } from "./chrome";
+import { cameraPromptPending } from "./receipt-utils";
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: CHROME.background },
@@ -104,11 +105,19 @@ export const CameraView = ({
   const [flash, setFlash] = useState<"off" | "on">("off");
   const [capturing, setCapturing] = useState(false);
   const asked = useRef(false);
+  // The one automatic request has come back, so a refusal is on record.
+  const [prompted, setPrompted] = useState(false);
 
   useEffect(() => {
     if (!asked.current && permission && !permission.granted) {
       asked.current = true;
-      if (permission.canAskAgain) requestPermission();
+      if (permission.canAskAgain) {
+        void requestPermission()
+          .catch(() => undefined)
+          .finally(() => setPrompted(true));
+      } else {
+        setPrompted(true);
+      }
     }
   }, [permission, requestPermission]);
 
@@ -143,9 +152,9 @@ export const CameraView = ({
     }
   };
 
-  // Still resolving the permission on first mount — show the letterbox rather
-  // than flashing the denied copy.
-  if (!permission) {
+  // Still resolving the permission on first mount, or the system prompt is up
+  // over it — show the letterbox rather than the denied copy (w21/637).
+  if (!permission || cameraPromptPending(permission, prompted)) {
     return <View style={styles.container} />;
   }
 

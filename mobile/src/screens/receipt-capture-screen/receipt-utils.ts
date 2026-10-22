@@ -179,3 +179,17 @@ export const receiptRevealFields = (
   amount: formatMoneyWithCurrency(Math.abs(receipt.amount), currency),
   date: formatLedgerDate(receipt.date, locale),
 });
+
+/**
+ * Whether the camera screen is still waiting on the system camera prompt: not
+ * granted, the app may still ask, and the one automatic request has not come
+ * back. An undetermined permission is `granted: false`, so the first visit drew
+ * "Camera access is needed… Enable it in Settings" behind the prompt, where
+ * VoiceOver could land once it closed (w21/637). The plain letterbox shows
+ * instead; a refusal on record (`canAskAgain: false`) shows the denied copy at
+ * once.
+ */
+export const cameraPromptPending = (
+  permission: { granted: boolean; canAskAgain: boolean },
+  prompted: boolean,
+): boolean => !permission.granted && permission.canAskAgain && !prompted;
