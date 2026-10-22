@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useApolloClient } from "@apollo/client";
+import { useApolloClient, useReactiveVar } from "@apollo/client";
 import {
   GetLedgerJournalDocument,
   useGetLedgerJournalQuery,
   type GetLedgerJournalQuery,
 } from "@/generated-graphql/graphql";
 import { useToday } from "@/common/hooks/use-today";
+import { ledgerRevisionVar } from "@/common/apollo/invalidate-ledger";
 import { readBudgetPages } from "./read-budget-pages";
 import { DirectiveType } from "@/screens/transactions-screen/types";
 import {
@@ -49,18 +50,24 @@ export function useBudgetGroups(ledgerId?: string, refreshSignal = 0) {
     // app must not linger on Home from the persisted cache (w21/006).
   });
 
-  useEffect(() => {
-    if (refreshSignal > 0 && ledgerId) {
-      void refetch().catch(() => undefined);
-    }
-  }, [refreshSignal, ledgerId, refetch]);
-
   const firstPage = data?.getLedgerJournal as Page | undefined;
   const needsMore = !!firstPage && firstPage.data.length < firstPage.total;
 
   // The pages after the first, read once `total` says more exist, tied to the
-  // first page they follow so a refetched first page reads them again.
+  // first page they follow. A refetched first page that came back identical
+  // keeps its identity, so the later pages are read again on a pull to refresh
+  // (`attempt`) and on every ledger revision, which a return to the app and
+  // every write bump (`revision`) (w21/480).
   const [attempt, setAttempt] = useState(0);
+  const revision = useReactiveVar(ledgerRevisionVar);
+
+  useEffect(() => {
+    if (refreshSignal > 0 && ledgerId) {
+      setAttempt((current) => current + 1);
+      void refetch().catch(() => undefined);
+    }
+  }, [refreshSignal, ledgerId, refetch]);
+
   const [rest, setRest] = useState<{
     after: Page;
     data: unknown[];
@@ -94,7 +101,7 @@ export function useBudgetGroups(ledgerId?: string, refreshSignal = 0) {
     return () => {
       cancelled = true;
     };
-  }, [client, ledgerId, firstPage, needsMore, attempt]);
+  }, [client, ledgerId, firstPage, needsMore, attempt, revision]);
 
   const restForPage = rest?.after === firstPage ? rest : null;
   const complete =
