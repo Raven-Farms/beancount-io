@@ -1,5 +1,6 @@
 import {
   act,
+  cleanup,
   render,
   screen,
   fireEvent,
@@ -172,5 +173,69 @@ describe("CreateFilePage while creating", () => {
     await waitFor(() => expect(create.navigate).toHaveBeenCalledTimes(1));
     expect(create.mutate).toHaveBeenCalledTimes(1);
     expect(vi.mocked(toast.error)).not.toHaveBeenCalled();
+  });
+
+  /**
+   * Leave Without Saving during a pending create reached Journal, then the
+   * old success navigated to Files anyway, taking the reader back (w4/304).
+   * Leaving unmounts the page, as the route change does.
+   */
+  describe("after the reader leaves", () => {
+    it("lets a held create finish without taking the reader away", async () => {
+      let finish!: () => void;
+      create.mutate.mockImplementation(
+        () => new Promise<void>((resolve) => (finish = resolve)),
+      );
+      render(<CreateFilePage />);
+      fireEvent.change(name(), { target: { value: "qa-create.txt" } });
+      fireEvent.change(text(), { target: { value: "saved revision\n" } });
+      fireEvent.click(screen.getByRole("button", { name: "common.save" }));
+      await waitFor(() => expect(create.mutate).toHaveBeenCalledTimes(1));
+      cleanup();
+
+      await act(async () => finish());
+      expect(create.refresh).toHaveBeenCalled();
+      expect(create.navigate).not.toHaveBeenCalled();
+      expect(create.mutate).toHaveBeenCalledTimes(1);
+    });
+
+    it("does not navigate when the folder refresh lands after leaving", async () => {
+      create.mutate.mockResolvedValue({ data: {} });
+      let refreshed!: () => void;
+      create.refresh.mockImplementationOnce(
+        () =>
+          new Promise(
+            (resolve) => (refreshed = () => resolve({ data: undefined })),
+          ),
+      );
+      await draftAndSave();
+      await waitFor(() => expect(create.refresh).toHaveBeenCalled());
+      cleanup();
+
+      await act(async () => refreshed());
+      expect(create.navigate).not.toHaveBeenCalled();
+    });
+
+    it("keeps an older create from redirecting a later draft", async () => {
+      let finishOld!: () => void;
+      create.mutate.mockImplementationOnce(
+        () => new Promise<void>((resolve) => (finishOld = resolve)),
+      );
+      await draftAndSave();
+      cleanup();
+
+      // The reader comes back and starts again before the old save lands.
+      render(<CreateFilePage />);
+      fireEvent.change(name(), { target: { value: "qa-later.txt" } });
+      await act(async () => finishOld());
+      expect(create.navigate).not.toHaveBeenCalled();
+      expect(name()).toHaveValue("qa-later.txt");
+      expect(name()).not.toHaveAttribute("readonly");
+
+      // The later journey's own save still leaves once.
+      create.mutate.mockResolvedValueOnce({ data: {} });
+      fireEvent.click(screen.getByRole("button", { name: "common.save" }));
+      await waitFor(() => expect(create.navigate).toHaveBeenCalledTimes(1));
+    });
   });
 });

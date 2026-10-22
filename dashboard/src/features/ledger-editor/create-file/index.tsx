@@ -1,7 +1,7 @@
 import { PageHeader } from "@/common/components/page-header";
 import { RelatedLinks } from "@/common/components/related-links";
 import { getLedgerFilesRootPath } from "@/common/hooks/use-file-navigate";
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useNavigate, useBlocker } from "@tanstack/react-router";
 import { useMutation, useQuery } from "@apollo/client/react";
 import { useRefreshDirectory } from "@/features/ledger-editor/shared/hooks/use-refresh-directory";
@@ -61,6 +61,16 @@ const CreateFilePage = () => {
   // Allow the post-create navigate without prompting; cleared after each leave.
   const allowNavigationRef = useRef(false);
   const savingRef = useRef(false);
+  // Leaving this page or its folder ends the creation journey, so an older
+  // save's late success cannot take the reader away from where they went
+  // (w4/304). The write itself still lands.
+  const journeyRef = useRef(0);
+  useEffect(
+    () => () => {
+      journeyRef.current += 1;
+    },
+    [ledgerId, dirPath],
+  );
 
   const refreshDirectory = useRefreshDirectory(ledgerId, dirPath);
   const [createFileMutation] = useMutation(CreateLedgerFileDocument);
@@ -152,6 +162,7 @@ const CreateFilePage = () => {
     // must not accept a newer name or text it would discard (w4/247).
     savingRef.current = true;
     setIsSaving(true);
+    const journey = journeyRef.current;
     try {
       await createFileMutation({
         variables: {
@@ -165,6 +176,7 @@ const CreateFilePage = () => {
       // The file is written; refreshing its folder is a separate read that
       // cannot turn this into a failed create (w4/248).
       await refreshDirectory();
+      if (journey !== journeyRef.current) return;
       // Navigate back to files view after successful creation
       allowNavigationRef.current = true;
       navigateToTree();
