@@ -557,10 +557,21 @@ function escapeString(value: string): string {
 const NUMBER_LITERAL_RE = /^-?\d+(\.\d+)?$/;
 const DATE_LITERAL_RE = /^\d{4}-\d{2}-\d{2}$/;
 
+/**
+ * How `directiveToText` treats string metadata. Re-serializing a parsed entry
+ * must guess (see above); a caller's own entry states its values as strings,
+ * and guessing turned `"00123"` into the number `123` (w23/053).
+ */
+export interface DirectiveTextOptions {
+  /** Quote every string meta value, never reading it as a number or date. */
+  readonly literalStringMeta?: boolean;
+}
+
 /** Port of beancount `EntryPrinter.write_metadata` (excluding filename/lineno/dunder). */
 function renderMetadata(
   meta: Record<string, MetaValueJson> | undefined,
   prefix: string,
+  options: DirectiveTextOptions = {},
 ): string {
   if (!meta) return "";
   let out = "";
@@ -570,7 +581,8 @@ function renderMetadata(
     let valueStr: string;
     if (typeof value === "string") {
       valueStr =
-        NUMBER_LITERAL_RE.test(value) || DATE_LITERAL_RE.test(value)
+        !options.literalStringMeta &&
+        (NUMBER_LITERAL_RE.test(value) || DATE_LITERAL_RE.test(value))
           ? value
           : `"${escapeString(value)}"`;
     } else if (typeof value === "boolean") {
@@ -658,6 +670,7 @@ function tagsLinksSuffix(tags: string[], links: string[]): string {
 
 function renderTransaction(
   directive: Extract<DirectiveJson, { type: "transaction" }>,
+  options: DirectiveTextOptions,
 ): string {
   const header: string[] = [];
   if (directive.payee) header.push(`"${escapeString(directive.payee)}"`);
@@ -670,7 +683,7 @@ function renderTransaction(
   [...directive.links].sort().forEach((link) => header.push(`^${link}`));
 
   let out = `${directive.date} ${directive.flag} ${header.join(" ")}\n`;
-  out += renderMetadata(directive.meta, INDENT);
+  out += renderMetadata(directive.meta, INDENT, options);
 
   const accounts = directive.postings.map((posting) => {
     const flag = posting.flag ? `${posting.flag} ` : "";
@@ -690,7 +703,7 @@ function renderTransaction(
       widthPosition,
     )}`;
     out += `${line.replace(/\s+$/, "")}\n`;
-    out += renderMetadata(posting.meta, "    ");
+    out += renderMetadata(posting.meta, "    ", options);
   });
   return out;
 }
@@ -700,18 +713,21 @@ function renderTransaction(
  * (a beancount `EntryPrinter` render + `fava.core.misc.align` to column 61, with
  * trailing whitespace stripped per line). See PARITY NOTES on number formatting.
  */
-export function directiveToText(directive: DirectiveJson): string {
+export function directiveToText(
+  directive: DirectiveJson,
+  options: DirectiveTextOptions = {},
+): string {
   let raw: string;
   switch (directive.type) {
     case "transaction":
-      raw = renderTransaction(directive);
+      raw = renderTransaction(directive, options);
       break;
     case "balance": {
       const account = padEnd(directive.account, 47);
       const tolerance = directive.tolerance ? `~ ${directive.tolerance} ` : "";
       raw =
         `${directive.date} balance ${account} ${directive.amount.number} ${tolerance}${directive.amount.currency}\n` +
-        renderMetadata(directive.meta, INDENT);
+        renderMetadata(directive.meta, INDENT, options);
       break;
     }
     case "open": {
@@ -724,23 +740,23 @@ export function directiveToText(directive: DirectiveJson): string {
           "",
         ) +
         "\n" +
-        renderMetadata(directive.meta, INDENT);
+        renderMetadata(directive.meta, INDENT, options);
       break;
     }
     case "close":
       raw =
         `${directive.date} close ${directive.account}\n` +
-        renderMetadata(directive.meta, INDENT);
+        renderMetadata(directive.meta, INDENT, options);
       break;
     case "commodity":
       raw =
         `${directive.date} commodity ${directive.currency}\n` +
-        renderMetadata(directive.meta, INDENT);
+        renderMetadata(directive.meta, INDENT, options);
       break;
     case "pad":
       raw =
         `${directive.date} pad ${directive.account} ${directive.source_account}\n` +
-        renderMetadata(directive.meta, INDENT);
+        renderMetadata(directive.meta, INDENT, options);
       break;
     case "note": {
       const suffix = tagsLinksSuffix([], []);
@@ -748,7 +764,7 @@ export function directiveToText(directive: DirectiveJson): string {
         `${directive.date} note ${directive.account} "${escapeString(
           directive.comment,
         )}"${suffix ? ` ${suffix}` : ""}\n` +
-        renderMetadata(directive.meta, INDENT);
+        renderMetadata(directive.meta, INDENT, options);
       break;
     }
     case "document": {
@@ -759,7 +775,7 @@ export function directiveToText(directive: DirectiveJson): string {
         `${directive.date} document ${directive.account} "${escapeString(
           directive.path,
         )}"${suffix ? ` ${suffix}` : ""}\n` +
-        renderMetadata(directive.meta, INDENT);
+        renderMetadata(directive.meta, INDENT, options);
       break;
     }
     case "price": {
@@ -768,7 +784,7 @@ export function directiveToText(directive: DirectiveJson): string {
       const paddedAmount = amount.length >= 22 ? amount : amount.padStart(22);
       raw =
         `${directive.date} price ${currency} ${paddedAmount}\n` +
-        renderMetadata(directive.meta, INDENT);
+        renderMetadata(directive.meta, INDENT, options);
       break;
     }
     case "event":
@@ -776,14 +792,14 @@ export function directiveToText(directive: DirectiveJson): string {
         `${directive.date} event "${escapeString(
           directive.event_type,
         )}" "${escapeString(directive.value)}"\n` +
-        renderMetadata(directive.meta, INDENT);
+        renderMetadata(directive.meta, INDENT, options);
       break;
     case "query":
       raw =
         `${directive.date} query "${escapeString(
           directive.name,
         )}" "${escapeString(directive.query_string)}"\n` +
-        renderMetadata(directive.meta, INDENT);
+        renderMetadata(directive.meta, INDENT, options);
       break;
     case "custom": {
       const values = (directive.values ?? []).map(renderCustomValueText);
@@ -791,7 +807,7 @@ export function directiveToText(directive: DirectiveJson): string {
         `${directive.date} custom "${escapeString(directive.custom_type)}" ${values.join(" ")}\n`.replace(
           / \n$/,
           "\n",
-        ) + renderMetadata(directive.meta, INDENT);
+        ) + renderMetadata(directive.meta, INDENT, options);
       break;
     }
     default:

@@ -254,5 +254,6 @@ function toDirective(input: LedgerEntryInput): DirectiveJson {
  * `entryInputToText` outputs onto the file's existing contents.
  */
 export function entryInputToText(input: LedgerEntryInput): string {
-  return `${directiveToText(toDirective(input))}\n`;
+  // The caller's meta values are strings by contract: written as given.
+  return `${directiveToText(toDirective(input), { literalStringMeta: true })}\n`;
 }

@@ -317,6 +317,38 @@ describe("entryInputToText — Fava-exact serialization parity", () => {
     );
   });
 
+  // w23/053: the caller's meta values are strings; read as numbers or dates
+  // they lost leading zeros and changed type.
+  it("quotes every caller meta value, number- and date-shaped ones included", () => {
+    const out = entryInputToText({
+      type: "transaction",
+      entry: {
+        date: "2026-03-22",
+        flag: "*",
+        narration: "meta probe",
+        postings: [
+          { account: "Assets:Cash", units: { number: "-1", currency: "USD" } },
+          { account: "Expenses:Food" },
+        ],
+        meta: {
+          invoice: "00123",
+          zip: "02134",
+          ref: "1.50",
+          due: "2026-01-31",
+          neg: "-0",
+        },
+      },
+    });
+    for (const line of [
+      '  invoice: "00123"',
+      '  zip: "02134"',
+      '  ref: "1.50"',
+      '  due: "2026-01-31"',
+      '  neg: "-0"',
+    ])
+      expect(out).toContain(line);
+  });
+
   it("renders a custom directive that carries no values", () => {
     expect(
       entryInputToText({
