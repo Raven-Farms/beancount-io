@@ -1,3 +1,4 @@
+import { matchSuggestions } from "./match-suggestions";
 import React, { useMemo, useState } from "react";
 import {
   View,
@@ -157,28 +158,10 @@ export const TextInputScreen: React.FC<TextInputScreenProps> = ({
   const keyboardVerticalOffset = useStackKeyboardOffset();
   const [value, setValue] = useState<string>(initialValue);
 
-  const query = value.trim().toLowerCase();
-  const matches = useMemo(() => {
-    if (!suggestions?.length) {
-      return [];
-    }
-    const seen = new Set<string>();
-    const out: string[] = [];
-    for (const suggestion of suggestions) {
-      const item = suggestion.trim();
-      if (!item || seen.has(item)) {
-        continue;
-      }
-      seen.add(item);
-      if (!query || item.toLowerCase().includes(query)) {
-        out.push(item);
-        if (out.length >= MAX_SUGGESTIONS) {
-          break;
-        }
-      }
-    }
-    return out;
-  }, [suggestions, query]);
+  const matches = useMemo(
+    () => matchSuggestions(suggestions, value, MAX_SUGGESTIONS),
+    [suggestions, value],
+  );
 
   const showSkeleton = !!suggestionsLoading && matches.length === 0;
 

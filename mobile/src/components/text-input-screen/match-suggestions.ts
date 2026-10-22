@@ -1,0 +1,41 @@
+/**
+ * A suggestion in the form text is compared in: NFC, lower-cased, with the dot
+ * a lower-cased Turkish "İ" leaves behind (`i` + U+0307) taken off. Plain
+ * `toLowerCase().includes()` found nothing for "iş" in "İşBank ATM" and nothing
+ * for a composed "café" in a ledger that stores "Cafe" + U+0301 (w21/257).
+ */
+function fold(text: string): string {
+  return text
+    .normalize("NFC")
+    .toLowerCase()
+    .replace(/i\u0307/gu, "i");
+}
+
+/**
+ * The suggestions to offer for what is typed: trimmed, the empty ones dropped,
+ * those that contain the query (an empty query keeps all), at most `max`. The
+ * NFC and NFD spellings of one payee are one row, shown as the ledger first
+ * spelled it.
+ */
+export function matchSuggestions(
+  suggestions: readonly string[] | undefined,
+  typed: string,
+  max: number,
+): string[] {
+  if (!suggestions?.length) return [];
+  const query = fold(typed.trim());
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const suggestion of suggestions) {
+    const item = suggestion.trim();
+    if (!item) continue;
+    const key = item.normalize("NFC");
+    if (seen.has(key)) continue;
+    seen.add(key);
+    if (!query || fold(item).includes(query)) {
+      out.push(item);
+      if (out.length >= max) break;
+    }
+  }
+  return out;
+}

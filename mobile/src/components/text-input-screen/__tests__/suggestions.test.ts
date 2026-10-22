@@ -72,6 +72,7 @@ function load() {
     "@/common/hooks/use-stack-keyboard-offset": {
       useStackKeyboardOffset: () => 0,
     },
+    "./match-suggestions": require("../match-suggestions"),
   };
   vm.runInNewContext(source, {
     exports,

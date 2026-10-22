@@ -19,7 +19,6 @@
 - [206](./blocked/206.md) — Refund/return receipts are always prefilled as a purchase — **blocked:** needs an owner-approved AI-quota evaluation and a parse-contract decision (`isRefund` vs signed amount)
 - [210](./blocked/210.md) — Holdings sheet labels a user-typed price "Live price" and applies the feed's staleness rule — **blocked:** needs an owner decision on exposing the feed's effective price dates (cross-package contract) and a deploy before mobile can read it
 - [228](./blocked/228.md) — New Transaction stamps the first operating currency on every posting; no currency or price control — **blocked:** needs account-constraint currencies on the client, a price path (legacy field or typed mutation, deploy first) and an owner-approved form design
-- [257](./257.md) — Payee/narration suggestions miss Turkish İ and NFD text; duplicate-looking rows
 - [258](./258.md) — Loose fuzzy matches hide Create for new names ("uber", "fuel", "pets")
 - [259](./259.md) — Create from an expense posting's picker prefills the Assets root
 - [260](./260.md) — Create's auto-capitalisation skips Cyrillic/Greek, landing on a refused name
