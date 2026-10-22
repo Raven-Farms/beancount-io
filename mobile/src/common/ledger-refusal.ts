@@ -113,11 +113,17 @@ export function describeLedgerRefusal(
   if (!raw) return null;
   const detail = tidyRefusalDetail(raw, i18n, context.where);
   const message = i18n.t("ledgerWouldBreak", { detail });
-  return context.draft !== undefined &&
-    /parse error/i.test(detail) &&
-    headerQuotesUnbalanced(context.draft)
-    ? `${message} ${i18n.t("ledgerRefusalQuoteHint")}`
-    : message;
+  if (
+    context.draft === undefined ||
+    !/parse error/i.test(detail) ||
+    !headerQuotesUnbalanced(context.draft)
+  ) {
+    return message;
+  }
+  // The ledger's text usually has no closing full stop, so the hint ran on as
+  // "…parse errors in main.bean To put a quote…" (w21/464).
+  const stop = /[.!?:;。！？؟]$/.test(message) ? "" : ".";
+  return `${message}${stop} ${i18n.t("ledgerRefusalQuoteHint")}`;
 }
 
 /** Codes whose message is the ledger's own text about the write. */

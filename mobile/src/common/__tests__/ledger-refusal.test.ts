@@ -286,6 +286,24 @@ describe("a refusal read in the editor's terms", () => {
     ).toBe("Would break: Transaction does not balance (line 3)");
   });
 
+  // w21/464: the hint was glued on with a bare space.
+  it("ends the refusal before the quote hint", () => {
+    const draft = '2024-03-05 * "Shop" "Dinner at "Joe\'s""\n';
+    const refusal = describeLedgerRefusal(
+      wouldBreak("parse errors in main.bean"),
+      words,
+      { draft },
+    );
+    expect(refusal).toBe("Would break: parse errors in main.bean. HINT");
+    // A message that already ends a sentence is not given a second stop.
+    const stopped = describeLedgerRefusal(
+      wouldBreak("parse error: bad quote."),
+      words,
+      { draft },
+    );
+    expect(stopped).toBe("Would break: parse error: bad quote. HINT");
+  });
+
   it("says near this entry for a line outside it or in another file", () => {
     expect(
       describeLedgerRefusal(
