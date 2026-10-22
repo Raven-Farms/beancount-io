@@ -81,4 +81,3 @@
 - [648](./648.md) — The entries precheck ignores `inferred_tolerance_default` in Beancount syntax and gives integer postings a 0.5 tolerance (ledger)
 - [508](./blocked/508.md) — Mobile guesses that an entry is a plugin copy from its first line; read the ledger's `generated_from` instead (split from 443) — **blocked:** production's GraphQL schema lacks `generated_from` until the ledger service and backend-v2 deploy; mobile's client is generated from it
 - [315](./blocked/315.md) — In-app commits signed with Gitea username and real email (no full_name, no noreply) — **blocked:** needs the owner's noreply-address and published-history decisions, and a production backfill of existing Gitea users that can't be verified here
-- [658](./658.md) — The dashboard's file browser sorts names as plain text ("qa-10.bean" before "qa-2.bean"); split from w21/589

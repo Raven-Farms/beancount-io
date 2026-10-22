@@ -257,8 +257,11 @@ export default function LedgerDirectoryView({
               if (a.type !== b.type) {
                 return a.type === "dir" ? -1 : 1;
               }
-              // Then sort alphabetically by name within each type
-              return a.name.localeCompare(b.name);
+              // Then by name within each type, numbers by value, so
+              // "qa-2.bean" lists before "qa-10.bean" (w21/658)
+              return a.name.localeCompare(b.name, undefined, {
+                numeric: true,
+              });
             })
             .map((item, index) => (
               <Link
