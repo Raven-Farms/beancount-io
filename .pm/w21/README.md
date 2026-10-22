@@ -144,3 +144,8 @@
 - [403](./403.md) — Android status bar icons stay white after Scan Receipt
 - [404](./404.md) — "Give it a review" opens a web listing that can't take a review
 - [405](./405.md) — Settings drops Account section silently when profile fails to load
+- [406](./406.md) — Reports/account detail use USD + English-root fallbacks before context loads (262/266 sibling)
+- [407](./407.md) — APPLE *ICLOUD etc. lost Apple logo (270 regression)
+- [408](./408.md) — Four-weekly series spanning Feb gets day anchor; Next ~5 days late (271 regression)
+- [409](./409.md) — Cancelled semiannual bill stays Overdue ~17 months (267/269 follow-up)
+- [410](./410.md) — Merchants splits NFC/NFD spellings of one payee
