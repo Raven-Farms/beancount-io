@@ -1,10 +1,12 @@
 import {
+  budgetDisplayScale,
   budgetScale,
   calculateBudgetForInterval,
   varianceStatus,
   type BudgetGroup,
 } from "../budget-selectors";
 import { selectBudgetCardStats } from "../select-budget-card-stats";
+import { formatMoneyWithCurrency } from "../../../../common/number-utils";
 import { selectBudgetPanelRows } from "../../../home-screen/selectors/select-budget-panel";
 
 // w21/290: a 0.003 BTC budget was rounded to cents and judged with a half-cent
@@ -81,5 +83,41 @@ describe("a budget in a fractional commodity", () => {
     expect(row!.noBudget).toBe(false);
     expect(row!.status).toBe("below");
     expect(row!.scale).toBe(3);
+  });
+});
+
+// w21/425: the cents floor, passed on to the formatter, overrode JPY's none.
+describe("a budget in a zero-decimal currency", () => {
+  const yen = (): BudgetGroup => ({
+    ...group("1500 JPY"),
+    account: "Expenses:Ramen",
+    currency: "JPY",
+  });
+
+  it("displays at the recorded scale, but still judges at cents", () => {
+    expect(budgetDisplayScale(btc("1500 JPY"))).toBe(0);
+    expect(budgetDisplayScale(btc("0.003 BTC"))).toBe(3);
+    expect(budgetDisplayScale(undefined)).toBe(0);
+    expect(budgetScale(btc("1500 JPY"))).toBe(2);
+  });
+
+  it("gives Home whole yen", () => {
+    const [row] = selectBudgetPanelRows(
+      [{ group: yen(), actual: 1200, periodEnd: "2026-10-31" }],
+      3,
+      "2026-10-21",
+    );
+    expect(formatMoneyWithCurrency(1200, "JPY", row!.scale)).toBe("¥1,200");
+    expect(formatMoneyWithCurrency(1016.13, "JPY", row!.scale)).toBe("¥1,016");
+  });
+
+  it("keeps cents for a dollar budget recorded without them", () => {
+    expect(
+      formatMoneyWithCurrency(
+        1016.13,
+        "USD",
+        budgetDisplayScale(btc("1500 USD")),
+      ),
+    ).toBe("$1,016.13");
   });
 });

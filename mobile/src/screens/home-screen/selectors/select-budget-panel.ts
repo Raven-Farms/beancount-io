@@ -8,7 +8,7 @@ import { formatLedgerDate } from "../../../common/date-format";
 import { formatMoneyWithCurrency } from "../../../common/number-utils";
 import {
   groupDirection,
-  budgetScale,
+  budgetDisplayScale,
   calculateBudgetForInterval,
 } from "../../budget-screen/selectors/budget-selectors";
 import type {
@@ -68,7 +68,7 @@ export function selectBudgetPanelRows(
     // favorability rules. It reads a series, so hand it the single period the
     // panel cares about, sign-corrected the way the card's series already is.
     const direction = groupDirection(group);
-    const scale = budgetScale(group.budgetHistory);
+    const scale = budgetDisplayScale(group.budgetHistory);
     const stats = selectBudgetCardStats(
       group,
       [

@@ -33,7 +33,7 @@ import { useAccountCloseDates } from "@/common/hooks/use-account-close-dates";
 import { useBudgetActuals } from "@/screens/budget-screen/hooks/use-budget-actuals";
 import {
   groupDirection,
-  budgetScale,
+  budgetDisplayScale,
   type BudgetGroup,
 } from "@/screens/budget-screen/selectors/budget-selectors";
 import {
@@ -221,7 +221,7 @@ export function BudgetGroupCard({
     currency,
   };
 
-  const scale = budgetScale(group.budgetHistory);
+  const scale = budgetDisplayScale(group.budgetHistory);
   const formatAmount = (value: number) =>
     formatMoneyWithCurrency(value, currency, scale);
 

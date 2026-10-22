@@ -342,19 +342,30 @@ export function periodsThrough(
 }
 
 /**
- * The fraction digits a budget's amounts are recorded at, never below cents:
- * 3 for `0.003 BTC`. Money is judged and shown at least to the cent, and a
- * fractional commodity at the precision its budget was written in (w21/290).
+ * The fraction digits a budget's amounts are recorded at: 3 for `0.003 BTC`,
+ * 0 for `1500 JPY`. For display, where the currency's own minor units already
+ * set the floor — a floor of cents here printed "¥1,016.13" (w21/425).
  */
-export function budgetScale(
+export function budgetDisplayScale(
   history: readonly { amount?: string }[] | null | undefined,
 ): number {
   return Math.max(
-    2,
+    0,
     ...(history ?? []).map((entry) =>
       amountScale(entry.amount?.trim().split(/\s+/)[0] ?? ""),
     ),
   );
+}
+
+/**
+ * The same, never below cents: money is judged — prorated and compared for a
+ * variance — at least to the cent, and a fractional commodity at the precision
+ * its budget was written in (w21/290).
+ */
+export function budgetScale(
+  history: readonly { amount?: string }[] | null | undefined,
+): number {
+  return Math.max(2, budgetDisplayScale(history));
 }
 
 /**
