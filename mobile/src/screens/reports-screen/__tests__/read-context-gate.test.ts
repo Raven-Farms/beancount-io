@@ -25,7 +25,7 @@ describe("the read context gate", () => {
     const src = read("screens/reports-screen/reports-screen.tsx");
     expect(
       src.includes(
-        'constisLoading=statementState==="loading"||contextState==="loading";',
+        'constisLoading=statementState==="loading"||contextState==="loading"||toTodayPending;',
       ),
     ).toBe(true);
     expect(

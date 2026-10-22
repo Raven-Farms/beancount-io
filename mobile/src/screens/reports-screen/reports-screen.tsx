@@ -9,6 +9,7 @@ import { ColorTheme } from "@/types/theme-props";
 import { useThemeStyle } from "@/common/hooks";
 import { useTranslations } from "@/common/hooks/use-translations";
 import { useToday } from "@/common/hooks/use-today";
+import { useGuest } from "@/common/guest/guest-context";
 import { gutter } from "@/common/theme";
 import { LedgerDrawerHeader } from "@/components/ledger-drawer/ledger-drawer-header";
 import { StaleDataBanner } from "@/components/stale-data-banner";
@@ -27,6 +28,9 @@ import { RANGE_LABEL_KEYS, TIME_RANGES, TimeRange } from "@/common/series-util";
 import { useLedgerReadContext } from "@/common/hooks/use-ledger-read-context";
 import { isShowingStaleDataFromQueries } from "@/common/apollo/stale-data";
 import { useIncomeStatement } from "./hooks/use-income-statement";
+import { useScheduledThisMonth } from "@/screens/home-screen/hooks/use-scheduled-this-month";
+import { monthToDateWindow } from "@/screens/home-screen/selectors/scheduled-this-month";
+import { withMonthToDateStatement } from "./selectors/month-to-date-statement";
 import {
   emptyFlowLabel,
   notInTotalNote,
@@ -88,18 +92,45 @@ const ReportsScreenImpl = (): JSX.Element => {
     refetch: incomeRefetch,
     error: incomeError,
   } = useIncomeStatement(ledgerId);
-  const stmt = incomeData?.getLedgerIncomeStatement;
+  // Entries pre-entered for later this month are not part of the month yet:
+  // when there are any, this month is read to today, as Home's Spending does
+  // (w21/523).
+  const today = useToday();
+  const guest = useGuest();
+  const { scheduled, refetch: scheduledRefetch } = useScheduledThisMonth(
+    ledgerId,
+    today,
+    Boolean(guest),
+  );
+  const {
+    data: toTodayData,
+    error: toTodayError,
+    refetch: toTodayRefetch,
+  } = useIncomeStatement(scheduled ? ledgerId : "", monthToDateWindow(today));
+  const toTodayPending =
+    scheduled && toTodayData === undefined && !toTodayError;
+  const stmt = withMonthToDateStatement(
+    incomeData?.getLedgerIncomeStatement,
+    scheduled ? toTodayData?.getLedgerIncomeStatement : undefined,
+    today,
+  );
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
     try {
-      await incomeRefetch();
+      // The scheduled-entry check is cached too: an entry pre-entered
+      // elsewhere is not in it (w21/470).
+      await Promise.all([
+        incomeRefetch(),
+        scheduledRefetch(),
+        scheduled ? toTodayRefetch() : undefined,
+      ]);
     } catch {
       // Query errors render in the screen or the guest access boundary.
     } finally {
       setRefreshing(false);
     }
-  }, [incomeRefetch]);
+  }, [incomeRefetch, scheduledRefetch, scheduled, toTodayRefetch]);
 
   const rangeOptions = TIME_RANGES.map((key) => ({
     key,
@@ -108,7 +139,7 @@ const ReportsScreenImpl = (): JSX.Element => {
 
   // The current month caps every flow range (w21/166); `useToday` rolls it
   // over at midnight.
-  const currentMonth = useToday().slice(0, 7);
+  const currentMonth = today.slice(0, 7);
 
   // Combined chart: income and net profit are credit-normal in the API, so
   // negate both at the presentation boundary; expenses stay as debits.
@@ -180,7 +211,10 @@ const ReportsScreenImpl = (): JSX.Element => {
   // ledger read "No transactions yet". Held like the statement, and a failed
   // context is a failure, not a quiet fallback (w21/406).
   const contextState = selectReadContextState(ledgerMeta, ledgerMetaError);
-  const isLoading = statementState === "loading" || contextState === "loading";
+  const isLoading =
+    statementState === "loading" ||
+    contextState === "loading" ||
+    toTodayPending;
   const failed = statementState === "failed" || contextState === "failed";
   const showStale = isShowingStaleDataFromQueries([
     { data: incomeData, error: incomeError },
