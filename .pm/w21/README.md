@@ -50,6 +50,7 @@
 - [450](./450.md) — (own) row drops the parent's own EUR/commodity holdings
 - [451](./451.md) — Fixed 0.005 tolerance folds BTC balances away
 - [452](./452.md) — Picker hides Create for a full name that prefixes an account
+- [454](./454.md) — Welcome keeps old server's sign-in error; not announced
 - [315](./blocked/315.md) — In-app commits signed with Gitea username and real email (no full_name, no noreply) — **blocked:** needs the owner's noreply-address and published-history decisions, and a production backfill of existing Gitea users that can't be verified here
 - [355](./355.md) — Text fields named only by placeholder/example value
 - [356](./356.md) — iOS drops tab role; collapsed rows never say they expand
