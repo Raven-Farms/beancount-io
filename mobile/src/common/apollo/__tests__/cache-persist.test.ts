@@ -17,6 +17,22 @@ describe("apollo cache persist wiring", () => {
     expect(src.includes("CachePersistor")).toBe(true);
   });
 
+  // w21/227: past the cap the library deletes the stored cache and pauses for
+  // the rest of the session; the snapshot is trimmed to fit instead.
+  it("trims an oversized snapshot to the cap instead of letting it pause", () => {
+    const src = fs.readFileSync(
+      path.join(__dirname, "../cache-persist.ts"),
+      "utf8",
+    );
+    expect(
+      src
+        .replace(/\s+/g, "")
+        .includes(
+          "persistenceMapper:async(snapshot:string)=>fitCacheSnapshot(snapshot,APOLLO_CACHE_MAX_SIZE)",
+        ),
+    ).toBe(true);
+  });
+
   it("gates splash ready on restoreApolloCache", () => {
     const src = fs.readFileSync(
       path.join(

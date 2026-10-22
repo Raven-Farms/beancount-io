@@ -2,6 +2,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { CachePersistor, AsyncStorageWrapper } from "apollo3-cache-persist";
 
 import { cache } from "@/common/apollo/cache";
+import { fitCacheSnapshot } from "./cache-snapshot";
 import { getServerUrl } from "@/common/vars/server-url";
 
 /** Storage key — exported so purge tests can assert the key is gone. */
@@ -57,6 +58,10 @@ const cachePersistor = new CachePersistor({
   storage: new ServerScopedAsyncStorage(AsyncStorage),
   key: APOLLO_CACHE_PERSIST_KEY,
   maxSize: APOLLO_CACHE_MAX_SIZE,
+  // Over the cap the library deletes the stored cache and stops saving until
+  // the app restarts; trim the snapshot to fit instead (w21/227).
+  persistenceMapper: async (snapshot: string) =>
+    fitCacheSnapshot(snapshot, APOLLO_CACHE_MAX_SIZE),
   trigger: "write",
 });
 
