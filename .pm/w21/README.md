@@ -152,3 +152,4 @@
 - [382](./382.md) — Drawer "Couldn't load ledgers" retry text 1.01:1 contrast
 - [383](./383.md) — Browse ledgers retry shows false "Your ledgers will appear here"
 - [384](./384.md) — Accounts/Reports expand state carries over to another ledger
+- [385](./385.md) — Stale delete still toasts "Failed to delete" over the gone state (250 follow-up)
