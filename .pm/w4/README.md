@@ -4,6 +4,8 @@
 
 ## Inbox
 
+- [990 — Keep newer filter drafts when earlier changes finish](./990.md) — minor; live QA,2026-10-22; new Time text is replaced by the previous navigation at both widths; Account repeats at390; genuine reads held unchanged, zero hosted writes.
+
 - [990 — Keep a newer Time draft when an earlier filter change finishes](./990.md) — minor; live QA,2026-10-22; focused September text is replaced by the previous August navigation at both widths; genuine reads held unchanged, zero hosted writes.
 
 - [989 — Keep a newer BQL draft when its earlier submission finishes URL navigation](./989.md) — minor residual of W3/m12; live QA,2026-10-22; genuine delayed navigation replaces a later unexecuted draft at both widths; no hosted writes.
