@@ -74,4 +74,6 @@
 - [493](./493.md) — Regression (418): 'No spending yet' above a Not in total note
 - [494](./494.md) — Regression (418): Spending caption drops refund sign
 - [495](./495.md) — 427 getLedgerFile guard never fires; AGENTS.md dangling ref (413)
+- [496](./496.md) — Reports chart draws all-zero range as 2pt bars on $0–$1 axis
+- [497](./497.md) — Bar-chart month labels lack year: Budget 1Y has two OCT
 - [315](./blocked/315.md) — In-app commits signed with Gitea username and real email (no full_name, no noreply) — **blocked:** needs the owner's noreply-address and published-history decisions, and a production backfill of existing Gitea users that can't be verified here
