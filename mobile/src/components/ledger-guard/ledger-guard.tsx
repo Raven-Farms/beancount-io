@@ -110,7 +110,9 @@ const LedgerGuardProviderComponent = ({
 
   // Self-heal an empty selection (fresh install, or splash-time validation
   // cleared a stale id) by defaulting to the user's first ledger.
-  const { data, loading } = useListLedgersQuery({ skip: !!ledgerId });
+  const { data, loading, error, refetch } = useListLedgersQuery({
+    skip: !!ledgerId,
+  });
   const firstLedgerId = data?.listLedgers?.[0]?.id;
 
   useEffect(() => {
@@ -137,6 +139,37 @@ const LedgerGuardProviderComponent = ({
       return (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={theme.primary} />
+        </View>
+      );
+    }
+    // A list that failed to load is not an empty account: "No ledger selected"
+    // with Create invited a duplicate ledger, and the only way out was leaving
+    // the app (w21/295).
+    if (error && !data) {
+      return (
+        <View style={styles.container} testID="ledger-guard-load-error">
+          <View style={styles.content}>
+            <Ionicons
+              name="cloud-offline-outline"
+              size={64}
+              color={theme.black40}
+              style={styles.icon}
+            />
+            <Text style={styles.message} accessibilityRole="alert">
+              {t("discoveryLoadError")}
+            </Text>
+            <View style={styles.actions}>
+              <TouchableOpacity
+                style={styles.button}
+                onPress={() => void refetch().catch(() => undefined)}
+                activeOpacity={0.7}
+                accessibilityRole="button"
+                accessibilityLabel={t("discoveryRetry")}
+              >
+                <Text style={styles.buttonText}>{t("discoveryRetry")}</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
         </View>
       );
     }
