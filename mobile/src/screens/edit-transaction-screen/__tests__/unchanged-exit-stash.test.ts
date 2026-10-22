@@ -54,3 +54,34 @@ describe("an edit that keeps the entry's hash", () => {
     expect(here > -1).toBe(true);
   });
 });
+
+// w21/472: clearing the stash was not enough on the device. The write's
+// invalidation bumps the ledger revision after the refetches settle, so the
+// detail screen's focus check saw no change, and its entry context, which is
+// never evicted, still held the pre-edit entry the edit screen had read.
+describe("an unchanged-hash exit reads the entry again before going back", () => {
+  const src = fs
+    .readFileSync(
+      path.join(__dirname, "..", "edit-transaction-screen.tsx"),
+      "utf8",
+    )
+    .replace(/\s+/g, "");
+  const branch = src.slice(
+    src.indexOf('}elseif(here&&exit.kind==="unchanged"){'),
+  );
+
+  it("refetches the entry context from the network, then goes back", () => {
+    const read = branch.indexOf(
+      'awaitclient.query({query:GetLedgerEntryContextDocument,variables:{entryHash:targetEntryHash,ledgerId},fetchPolicy:"network-only",}).catch(()=>undefined);',
+    );
+    const back = branch.indexOf("router.back()");
+    expect(read > -1 && back > read).toBe(true);
+  });
+
+  it("goes back only if the user is still on the screen after the read", () => {
+    const afterRead = branch.slice(branch.indexOf(".catch(()=>undefined);"));
+    expect(afterRead.startsWith(".catch(()=>undefined);if(isHere()){")).toBe(
+      true,
+    );
+  });
+});

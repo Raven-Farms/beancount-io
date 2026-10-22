@@ -29,6 +29,7 @@ import { useLedgerMeta } from "@/common/hooks/use-ledger-meta";
 import { useSession } from "@/common/hooks/use-session";
 import { ColorTheme } from "@/types/theme-props";
 import {
+  GetLedgerEntryContextDocument,
   useGetLedgerEntryContextQuery,
   useUpdateLedgerEntrySourceSliceMutation,
 } from "@/generated-graphql/graphql";
@@ -389,9 +390,22 @@ export const EditTransactionScreen = (): JSX.Element => {
           } else if (here && exit.kind === "unchanged") {
             // The entry kept its identity (a metadata edit, a comment, a
             // reordered posting): the detail screen behind is still the right
-            // one, and refetches on focus after this write (w21/251).
-            if (router.canGoBack()) router.back();
-            else router.dismiss(2);
+            // one. Its focus refetch can run before the write's invalidation
+            // has bumped the revision it checks, and its context was never
+            // evicted, so the entry is read again here first: the detail
+            // screen watches this cache entry and paints what was saved
+            // (w21/251, w21/472).
+            await client
+              .query({
+                query: GetLedgerEntryContextDocument,
+                variables: { entryHash: targetEntryHash, ledgerId },
+                fetchPolicy: "network-only",
+              })
+              .catch(() => undefined);
+            if (isHere()) {
+              if (router.canGoBack()) router.back();
+              else router.dismiss(2);
+            }
           } else if (here) {
             // The server reported no new identity: land on the journal, which
             // the entries invalidation just refetched, rather than on a detail
