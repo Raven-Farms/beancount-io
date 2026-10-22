@@ -1,4 +1,7 @@
-import { currencyMinorUnits } from "@/common/currency-util";
+import {
+  currencyMinorUnits,
+  ledgerPrimaryCurrency,
+} from "@/common/currency-util";
 import { routeText } from "@/common/route-text";
 import { InlineError } from "@/components/inline-error";
 import { memo, useEffect, useRef, useState } from "react";
@@ -450,6 +453,7 @@ const MultiPostingsTransactionScreenComponent = () => {
   const ledgerId = useLedgerGuard();
   const { userId } = useSession();
   const {
+    data: ledgerMeta,
     assets,
     expenses,
     currencies,
@@ -475,7 +479,12 @@ const MultiPostingsTransactionScreenComponent = () => {
     prefillAmount?: string;
   }>();
 
-  const currency = currencies.length > 0 ? currencies[0] : "USD";
+  // A ledger without an operating currency is in the currency it holds, not
+  // in USD (w21/415, w21/520).
+  const currency = ledgerPrimaryCurrency(
+    currencies,
+    ledgerMeta?.currencies ?? [],
+  );
   // Amounts are written at the currency's own minor unit (w21/231).
   const minorUnits = currencyMinorUnits(currency);
 

@@ -22,7 +22,6 @@
 - [304](./blocked/304.md) — Budgets on Liabilities/Assets get favourability backwards (owner decision) — **blocked:** needs an owner decision between deriving direction from the account root and limiting the picker to Income and Expenses, which reverses w1/023's "every root" rule
 - [453](./blocked/453.md) — addEntries/bulkEntries have no idempotency key: a retry after a lost response can duplicate the entry (split from 351) — **blocked:** needs an owner-approved contract (field, bounds, retention) across REST/GraphQL/MCP and a backend-v2 deploy
 - [518](./blocked/518.md) — New Transaction books a plain first-row amount as money *into* the bank (Checking +4.50, Groceries −4.50) — **blocked:** needs an owner product decision on the default row signs (negative source row vs From/To labels)
-- [520](./520.md) — New Transaction writes USD into a ledger without `operating_currency` (missed by w21/415 and w21/395)
 - [521](./521.md) — The file editor's error banner drops the fix hint Notifications shows (w21/424 incomplete)
 - [522](./522.md) — After Overwrite or Recreate, the editor keeps the first-loaded text as its baseline, so a revert is never saved and Back loses it silently
 - [523](./523.md) — Reports counts a bill pre-entered for later this month while Home's Spending stops at today (w21/337 sibling)
