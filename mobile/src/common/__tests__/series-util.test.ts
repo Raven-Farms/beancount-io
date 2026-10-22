@@ -346,6 +346,34 @@ describe("Home's series carried to today (w21/414)", () => {
     expect(carryBalanceToToday(active, "2026-10-21")).toBe(active);
   });
 
+  // w21/641: an entry pre-entered for next month put the last point in
+  // November, and 1M read November's rent instead of October's salary.
+  it("windows on today when an entry or price is dated after it", () => {
+    const series = [
+      { date: "2026-09-30", value: 17108.51 },
+      { date: "2026-10-31", value: 22108.51 },
+      { date: "2026-11-30", value: 20608.51 },
+    ];
+    const carried = carryBalanceToToday(series, "2026-10-22");
+    expect(carried).toEqual([
+      { date: "2026-09-30", value: 17108.51 },
+      { date: "2026-10-22", value: 22108.51 },
+    ]);
+    const window = filterSeriesByRange(carried, "1M", 2026);
+    expect(window.map((p: { value: number }) => p.value)).toEqual([22108.51]);
+    // A quiet October: September's close holds until today.
+    const quietOctober = carryBalanceToToday(
+      [series[0], series[2]],
+      "2026-10-22",
+    );
+    expect(quietOctober[quietOctober.length - 1]).toEqual({
+      date: "2026-10-22",
+      value: 17108.51,
+    });
+    // Only future points: nothing has happened yet.
+    expect(carryBalanceToToday([series[2]], "2026-10-22")).toEqual([]);
+  });
+
   it("is what Home does for its net worth, assets and liabilities curves", () => {
     const home = require("fs")
       .readFileSync(

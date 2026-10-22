@@ -130,20 +130,33 @@ export function forwardFillMonths(
 }
 
 /**
- * A balance series carried to `today`'s month with its last balance. A series
- * has a point only where the balance changed, so one account's last point is
- * that account's last posting; windows counted back from it showed a quiet
- * account's old changes as recent: on 21 October, a Savings account last moved
- * in March read "+$500.00" over 1M (w21/240). Balances only. A series already
- * in or past the current month is returned as it is.
+ * A balance series as of `today`, carried to its month with its last balance.
+ * A series has a point only where the balance changed, so one account's last
+ * point is that account's last posting; windows counted back from it showed a
+ * quiet account's old changes as recent: on 21 October, a Savings account last
+ * moved in March read "+$500.00" over 1M (w21/240). Points after today go the
+ * other way: one entry pre-entered for next month (or a price dated then) put
+ * the last point in November, and Home's 1M read November's rent, not
+ * October's salary (w21/641). Rows after the current month go, and a point
+ * later this month is dated today, as account detail's are (w21/491).
+ * Balances only. A series with nothing after today and a point this month is
+ * returned as it is.
  */
 export function carryBalanceToToday(
   series: SeriesPoint[],
   today: string,
 ): SeriesPoint[] {
-  const last = series[series.length - 1];
-  if (!last || last.date.slice(0, 7) >= today.slice(0, 7)) return series;
-  return forwardFillMonths([...series, { date: today, value: last.value }]);
+  const thisMonth = today.slice(0, 7);
+  const upToToday = series.some((point) => point.date > today)
+    ? series
+        .filter((point) => point.date.slice(0, 7) <= thisMonth)
+        .map((point) =>
+          point.date > today ? { ...point, date: today } : point,
+        )
+    : series;
+  const last = upToToday[upToToday.length - 1];
+  if (!last || last.date.slice(0, 7) >= thisMonth) return upToToday;
+  return forwardFillMonths([...upToToday, { date: today, value: last.value }]);
 }
 
 /** The balance map of a series' latest point (series are chronological). */
