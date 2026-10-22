@@ -461,6 +461,8 @@ export const ca: Translations = {
   reportsNoIncome: "Cap ingrés en aquest període",
   recentTransactions: "Transaccions recents",
   recentTransactionsEmpty: "Encara no hi ha transaccions",
+  recentTransactionsUpcoming:
+    "Res fins avui. Els moviments futurs surten a Transaccions.",
   recentTransactionsEmptyRange: "Sense transaccions en aquest període",
   spending: "Despeses",
   spendingSubtitle: "Aquest mes en comparació amb l'anterior",

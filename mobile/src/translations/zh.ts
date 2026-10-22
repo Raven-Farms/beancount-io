@@ -406,6 +406,7 @@ export const zh: Translations = {
   reportsNoIncome: "此期间没有收入",
   recentTransactions: "最近交易",
   recentTransactionsEmpty: "还没有交易记录",
+  recentTransactionsUpcoming: "截至今天暂无记录。即将发生的记录列在“交易”中。",
   recentTransactionsEmptyRange: "此区间没有交易记录",
   spending: "支出",
   spendingSubtitle: "本月与上月对比",

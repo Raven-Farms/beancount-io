@@ -460,6 +460,8 @@ export const pt: Translations = {
   reportsNoIncome: "Sem receitas neste período",
   recentTransactions: "Transações recentes",
   recentTransactionsEmpty: "Ainda não há transações",
+  recentTransactionsUpcoming:
+    "Nada até hoje. Os lançamentos futuros aparecem em Transações.",
   recentTransactionsEmptyRange: "Sem transações neste período",
   spending: "Gastos",
   spendingSubtitle: "Este mês em relação ao anterior",

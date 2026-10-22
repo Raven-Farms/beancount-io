@@ -459,6 +459,8 @@ export const sk: Translations = {
   reportsNoIncome: "V tomto období nie sú žiadne príjmy",
   recentTransactions: "Nedávne transakcie",
   recentTransactionsEmpty: "Zatiaľ žiadne transakcie",
+  recentTransactionsUpcoming:
+    "Do dnešného dňa nič. Pripravované záznamy nájdete v Transakciách.",
   recentTransactionsEmptyRange: "V tomto období nie sú žiadne transakcie",
   spending: "Výdavky",
   spendingSubtitle: "Tento mesiac oproti minulému",

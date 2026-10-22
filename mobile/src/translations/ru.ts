@@ -456,6 +456,8 @@ export const ru: Translations = {
   reportsNoIncome: "Нет доходов за этот период",
   recentTransactions: "Последние транзакции",
   recentTransactionsEmpty: "Транзакций пока нет",
+  recentTransactionsUpcoming:
+    "До сегодняшнего дня ничего нет. Предстоящие записи — в разделе «Транзакции».",
   recentTransactionsEmptyRange: "Нет транзакций за этот период",
   spending: "Расходы",
   spendingSubtitle: "Этот месяц и прошлый",

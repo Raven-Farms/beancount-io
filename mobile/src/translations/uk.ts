@@ -455,6 +455,8 @@ export const uk: Translations = {
   reportsNoIncome: "Немає доходів за цей період",
   recentTransactions: "Останні транзакції",
   recentTransactionsEmpty: "Транзакцій поки немає",
+  recentTransactionsUpcoming:
+    "До сьогодні нічого немає. Майбутні записи — у розділі «Транзакції».",
   recentTransactionsEmptyRange: "Немає транзакцій за цей період",
   spending: "Витрати",
   spendingSubtitle: "Цей місяць проти минулого",

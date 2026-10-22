@@ -442,6 +442,8 @@ export const fa: Translations = {
   reportsNoIncome: "در این بازه درآمدی نیست",
   recentTransactions: "تراکنش‌های اخیر",
   recentTransactionsEmpty: "هنوز تراکنشی نیست",
+  recentTransactionsUpcoming:
+    "تا امروز چیزی ثبت نشده است. ثبت‌های آینده در بخش تراکنش‌ها فهرست شده‌اند.",
   recentTransactionsEmptyRange: "در این بازه تراکنشی نیست",
   spending: "هزینه‌ها",
   spendingSubtitle: "این ماه در برابر ماه گذشته",

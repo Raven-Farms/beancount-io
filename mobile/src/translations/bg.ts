@@ -449,6 +449,8 @@ export const bg: Translations = {
   reportsNoIncome: "Няма приходи през този период",
   recentTransactions: "Последни транзакции",
   recentTransactionsEmpty: "Още няма транзакции",
+  recentTransactionsUpcoming:
+    "Досега няма нищо. Предстоящите записи са в «Транзакции».",
   recentTransactionsEmptyRange: "Няма транзакции за този период",
   spending: "Разходи",
   spendingSubtitle: "Този месец спрямо миналия",

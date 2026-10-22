@@ -89,6 +89,25 @@ export function RecentTransactionsCard({
     RECENT_LIMIT,
   );
 
+  // Nothing up to today may still be a ledger with entries booked for later (the
+  // rent of the next months), not a new one: the newest entry says which
+  // (w21/573). Read only when the card would otherwise show the first-run copy.
+  const emptyUpToToday = data !== undefined && !error && entries.length === 0;
+  const { data: newestData } = useGetLedgerJournalQuery({
+    variables: {
+      ledgerId: ledgerId!,
+      query: {
+        offset: 0,
+        limit: 1,
+        directiveTypes: [DirectiveType.TRANSACTION],
+      },
+    },
+    skip: !ledgerId || !emptyUpToToday,
+    fetchPolicy: "cache-and-network",
+  });
+  const newest = newestData?.getLedgerJournal.data?.[0]?.date;
+  const upcomingOnly = emptyUpToToday && newest !== undefined && newest > today;
+
   // Twin entries share a hash: their keys carry the ordinal (w21/419, w21/524).
   const rowKeys = journalRowKeys(entries);
 
@@ -117,9 +136,15 @@ export function RecentTransactionsCard({
           {entries.length === 0 ? (
             <View style={styles.empty}>
               <Text style={styles.emptyText}>
-                {t("recentTransactionsEmpty")}
+                {upcomingOnly
+                  ? t("recentTransactionsUpcoming")
+                  : t("recentTransactionsEmpty")}
               </Text>
-              {ledgerId && data && !error && onAddTransaction ? (
+              {!upcomingOnly &&
+              ledgerId &&
+              data &&
+              !error &&
+              onAddTransaction ? (
                 <Button
                   testID="home-empty-add-transaction"
                   onPress={onAddTransaction}

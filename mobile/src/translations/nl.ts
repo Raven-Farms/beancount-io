@@ -451,6 +451,8 @@ export const nl: Translations = {
   reportsNoIncome: "Geen inkomsten in deze periode",
   recentTransactions: "Recente transacties",
   recentTransactionsEmpty: "Nog geen transacties",
+  recentTransactionsUpcoming:
+    "Tot vandaag niets. Geplande boekingen staan onder Transacties.",
   recentTransactionsEmptyRange: "Geen transacties in deze periode",
   spending: "Uitgaven",
   spendingSubtitle: "Deze maand vergeleken met vorige maand",

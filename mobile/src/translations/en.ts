@@ -459,6 +459,8 @@ export const en = {
   reportsNoIncome: "No income in this period",
   recentTransactions: "Recent Transactions",
   recentTransactionsEmpty: "No transactions yet",
+  recentTransactionsUpcoming:
+    "Nothing up to today. Upcoming entries are listed under Transactions.",
   recentTransactionsEmptyRange: "No transactions in this range",
   spending: "Spending",
   spendingSubtitle: "This month vs. last month",

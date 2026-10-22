@@ -464,6 +464,8 @@ export const de: Translations = {
   reportsNoIncome: "Keine Einnahmen in diesem Zeitraum",
   recentTransactions: "Letzte Transaktionen",
   recentTransactionsEmpty: "Noch keine Transaktionen",
+  recentTransactionsUpcoming:
+    "Bis heute noch nichts. Anstehende Buchungen stehen unter Transaktionen.",
   recentTransactionsEmptyRange: "Keine Transaktionen in diesem Zeitraum",
   spending: "Ausgaben",
   spendingSubtitle: "Dieser Monat vs. Vormonat",
