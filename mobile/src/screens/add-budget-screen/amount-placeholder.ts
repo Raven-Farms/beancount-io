@@ -12,5 +12,10 @@ export function budgetAmountPlaceholder(
   currentAmount: string | undefined,
 ): string {
   const number = currentAmount?.trim().split(/\s+/)[0] ?? "";
-  return isUpdate && /^-?\d+(\.\d+)?$/.test(number) ? number : EXAMPLE_AMOUNT;
+  // An income target is stored negative, but the form asks for the positive
+  // amount: the placeholder is the magnitude, plain (a grouped one would invite
+  // text the amount field refuses) (w21/399).
+  return isUpdate && /^-?\d+(\.\d+)?$/.test(number)
+    ? number.replace(/^-/, "")
+    : EXAMPLE_AMOUNT;
 }

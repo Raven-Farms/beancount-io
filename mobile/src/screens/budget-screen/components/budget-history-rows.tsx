@@ -23,6 +23,7 @@ import {
   intervalLabelKey,
 } from "@/screens/budget-screen/selectors/budget-labels";
 import {
+  formatBudgetEntryAmount,
   selectHistoryRows,
   type BudgetGroup,
   type BudgetHistoryRow,
@@ -124,7 +125,7 @@ export function BudgetHistoryRows({
       t("budgetDeleteTitle"),
       t("budgetDeleteMessage", {
         interval: t(intervalAdjectiveKey(interval)),
-        amount,
+        amount: formatBudgetEntryAmount(amount, group.currency),
         account: group.account,
         // In the reader's language, not ISO (w21/366).
         date: formatLedgerDate(date, locale),
@@ -179,7 +180,9 @@ export function BudgetHistoryRows({
             <Text style={styles.interval}>
               {t(intervalLabelKey(row.interval))}
             </Text>
-            <AmountText style={styles.amount}>{row.amount}</AmountText>
+            <AmountText style={styles.amount}>
+              {formatBudgetEntryAmount(row.amount, group.currency)}
+            </AmountText>
             {showDelete && (
               <TouchableOpacity
                 style={styles.deleteButton}
@@ -189,7 +192,7 @@ export function BudgetHistoryRows({
                 // Which entry: every row's button read "Delete" (w21/142).
                 accessibilityLabel={t("budgetDeleteNamed", {
                   date: formatLedgerDate(row.date, locale),
-                  amount: row.amount,
+                  amount: formatBudgetEntryAmount(row.amount, group.currency),
                 })}
               >
                 <Ionicons

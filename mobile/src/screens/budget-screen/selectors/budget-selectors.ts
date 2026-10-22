@@ -21,7 +21,10 @@ import type {
   JournalCustom,
 } from "../../transactions-screen/types";
 import { utcTime } from "../../../common/calendar-date";
-import { amountScale } from "../../../common/number-utils";
+import {
+  amountScale,
+  formatMoneyWithCurrency,
+} from "../../../common/number-utils";
 
 /**
  * A `custom "budget"` directive as the journal serializes it: the positional
@@ -351,6 +354,27 @@ export function budgetScale(
     ...(history ?? []).map((entry) =>
       amountScale(entry.amount?.trim().split(/\s+/)[0] ?? ""),
     ),
+  );
+}
+
+/**
+ * A history entry's "300 USD" amount as the card shows its budget: the
+ * magnitude, grouped and annotated with its currency. An income target is
+ * stored negative; printing the stored text showed `-4250.50 USD` ungrouped
+ * beside a card that reads $4,250.50 (w21/399). `fallbackCurrency` stands in
+ * for an amount that names none.
+ */
+export function formatBudgetEntryAmount(
+  amount: string,
+  fallbackCurrency: string,
+): string {
+  const [number = "", code] = amount.trim().split(/\s+/);
+  const value = Number.parseFloat(number);
+  if (!Number.isFinite(value)) return amount;
+  return formatMoneyWithCurrency(
+    Math.abs(value),
+    code || fallbackCurrency,
+    amountScale(number),
   );
 }
 

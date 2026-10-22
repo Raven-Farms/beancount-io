@@ -87,3 +87,32 @@ describe("a budget on an account that closed", () => {
     expect(home.includes("groups:liveGroups,")).toBe(true);
   });
 });
+
+// w21/399: an income target's stored negative text printed unformatted in the
+// history rows, the Delete alert and the Update placeholder.
+describe("a budget entry's amount in history", () => {
+  const { formatBudgetEntryAmount } = require("../budget-selectors");
+
+  it("reads as the magnitude, grouped, with its currency", () => {
+    expect(formatBudgetEntryAmount("-4250.50 USD", "USD")).toBe("$4,250.50");
+    expect(formatBudgetEntryAmount("4250.50 USD", "USD")).toBe("$4,250.50");
+    expect(formatBudgetEntryAmount("-300 USD", "USD")).toBe("$300.00");
+  });
+
+  it("keeps a fractional commodity's own precision and a missing currency", () => {
+    expect(formatBudgetEntryAmount("-0.003 BTC", "BTC")).toBe("0.003 BTC");
+    expect(formatBudgetEntryAmount("-500", "USD")).toBe("$500.00");
+    expect(formatBudgetEntryAmount("lots", "USD")).toBe("lots");
+  });
+
+  it("is what the row, the alert and the Delete label print", () => {
+    const src = fs
+      .readFileSync(
+        path.join(__dirname, "../../components/budget-history-rows.tsx"),
+        "utf8",
+      )
+      .replace(/\s+/g, "");
+    expect(src.split("formatBudgetEntryAmount(").length - 1).toBe(3);
+    expect(/\{row\.amount\}|amount:row\.amount/.test(src)).toBe(false);
+  });
+});

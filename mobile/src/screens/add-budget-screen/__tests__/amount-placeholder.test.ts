@@ -7,7 +7,8 @@ import { budgetAmountPlaceholder } from "../amount-placeholder";
 describe("budgetAmountPlaceholder", () => {
   it("shows the budget's current amount when updating", () => {
     expect(budgetAmountPlaceholder(true, "900.50 USD")).toBe("900.50");
-    expect(budgetAmountPlaceholder(true, "-1200 USD")).toBe("-1200");
+    // An income target is stored negative; the form asks for it positive (w21/399).
+    expect(budgetAmountPlaceholder(true, "-1200 USD")).toBe("1200");
   });
 
   it("keeps the example when adding, or when the amount is unreadable", () => {
