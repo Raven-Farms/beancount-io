@@ -1370,6 +1370,9 @@ class CsvImporter:
         # rather than a column the file has.
         self._constant_currency: str | None = None
         self._decimal_comma = False
+        # Each amount column's own convention when it is inferred: a debit
+        # column's `1,234` is thousands whatever the credit column's `0,50` is (w5/895).
+        self._decimal_by_column: dict[str, bool] = {}
         # A `--csv decimal=` choice: skips the column vote, and an explicit
         # choice is never second-guessed with an ambiguity note.
         self._forced_decimal_comma = forced_decimal_comma
@@ -1411,8 +1414,6 @@ class CsvImporter:
         the dots as groups. A mapped currency column posts each row in its own
         commodity, so no one currency can indict the column.
         """
-        if self._decimal_comma:
-            return None
         if columns.get("currency") and not self._constant_currency:
             return None
         currency = self._constant_currency or self._currency
@@ -1421,7 +1422,8 @@ class CsvImporter:
         examples = [
             (header, example)
             for header in amount_columns
-            if (example := _dot_ambiguous_example([row.get(header, "") for _, _, row in numbered])) is not None
+            if not self._comma_for(header)
+            and (example := _dot_ambiguous_example([row.get(header, "") for _, _, row in numbered])) is not None
         ]
         if not examples:
             return None
@@ -1496,8 +1498,11 @@ class CsvImporter:
                     "is ambiguous. Rename the duplicates so each mapped column is unique. Nothing was written."
                 )
 
+    def _comma_for(self, column: str) -> bool:
+        return self._decimal_by_column.get(column, self._decimal_comma)
+
     def _parse_decimal(self, where: str, column: str, value: str) -> Decimal:
-        return _parse_amount_cell(where, column, value, decimal_comma=self._decimal_comma)
+        return _parse_amount_cell(where, column, value, decimal_comma=self._comma_for(column))
 
     def _names_account(self, category: str) -> bool:
         """Whether a category cell names an account the way the loader reads one, under the ledger's roots.
@@ -1674,9 +1679,10 @@ class CsvImporter:
             if self._forced_decimal_comma is not None:
                 self._decimal_comma = self._forced_decimal_comma
             else:
-                self._decimal_comma = _resolve_decimal_comma(
-                    [(number, row.get(header, "")) for number, _line, row in numbered for header in amount_columns]
-                )
+                self._decimal_by_column = {
+                    header: _resolve_decimal_comma([(number, row.get(header, "")) for number, _line, row in numbered])
+                    for header in dict.fromkeys(amount_columns)
+                }
                 self.ambiguous_dot_amounts = self._dot_ambiguity(numbered, amount_columns, columns)
             if "amount" not in columns:
                 self._check_pair_signs(numbered)
