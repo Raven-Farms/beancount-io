@@ -163,3 +163,7 @@
 - [367](./367.md) — Narration edit refused when entry has an existing interpolation/lot error quoting it
 - [368](./368.md) — BOM-prefixed include: first entry can't be saved or deleted
 - [369](./369.md) — Edit refusal cites off-screen file lines and repeats parse errors
+- [370](./370.md) — Reports category shares divide by net total; refunds push sum over 100%
+- [371](./371.md) — Reports "Other" nets refunds against spending, hiding real amounts
+- [372](./372.md) — Reports empty period says "No accounts" beside foreign-currency spending
+- [373](./373.md) — Reports rounded percentages don't sum to 100%
