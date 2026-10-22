@@ -6,7 +6,7 @@ import { fontSizes } from "@/common/theme";
 import { useThemeStyle } from "@/common/hooks/use-theme-style";
 import { useTranslations } from "@/common/hooks/use-translations";
 import { useToday } from "@/common/hooks/use-today";
-import { LoadingTile } from "@/components/loading-tile";
+import { RecentTransactionsSkeleton } from "./home-skeletons";
 import { FadeInView } from "@/components/crossfade";
 import { DashboardCard } from "@/components";
 import { useGetLedgerJournalQuery } from "@/generated-graphql/graphql";
@@ -95,7 +95,7 @@ export function RecentTransactionsCard({
           onRetry={() => void refetch().catch(() => undefined)}
         />
       ) : loading && entries.length === 0 ? (
-        <LoadingTile height={160} mx={16} />
+        <RecentTransactionsSkeleton />
       ) : (
         <FadeInView>
           {entries.length === 0 ? (

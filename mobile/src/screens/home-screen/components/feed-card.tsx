@@ -11,7 +11,7 @@ import { ColorTheme } from "@/types/theme-props";
 import { fontSizes, fontWeights } from "@/common/theme";
 import { useThemeStyle } from "@/common/hooks/use-theme-style";
 import { useTranslations } from "@/common/hooks/use-translations";
-import { LoadingTile } from "@/components/loading-tile";
+import { FeedSkeleton } from "./home-skeletons";
 import { FadeInView } from "@/components/crossfade";
 import { DashboardCard } from "@/components/dashboard-card";
 import { useGetFeedQuery } from "@/generated-graphql/graphql";
@@ -141,23 +141,7 @@ export function FeedCard({ refreshSignal = 0 }: FeedCardProps): JSX.Element {
       }) === "failed" ? (
         <CardLoadFailure onRetry={() => void refetch()} />
       ) : loading && items.length === 0 ? (
-        <>
-          <LoadingTile
-            height={18}
-            mx={16}
-            style={{ marginBottom: 10, width: "90%" }}
-          />
-          <LoadingTile
-            height={18}
-            mx={16}
-            style={{ marginBottom: 10, width: "75%" }}
-          />
-          <LoadingTile
-            height={18}
-            mx={16}
-            style={{ marginBottom: 10, width: "85%" }}
-          />
-        </>
+        <FeedSkeleton />
       ) : (
         <FadeInView style={{ paddingHorizontal: 16 }}>
           {items.map((item, index) => (

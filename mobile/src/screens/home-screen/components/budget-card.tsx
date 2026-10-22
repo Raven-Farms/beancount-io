@@ -1,3 +1,4 @@
+import { BudgetSkeleton } from "./home-skeletons";
 import { selectCardLoadState } from "@/common/apollo/card-load-state";
 import { CardLoadFailure } from "@/components/card-load-failure";
 import {
@@ -14,7 +15,6 @@ import { useThemeStyle } from "@/common/hooks/use-theme-style";
 import { useTranslations } from "@/common/hooks/use-translations";
 import { formatMoneyWithCurrency } from "@/common/number-utils";
 import { AmountText, DashboardCard } from "@/components";
-import { LoadingTile } from "@/components/loading-tile";
 import { FadeInView } from "@/components/crossfade";
 import { BudgetMeter } from "@/screens/budget-screen/components/budget-meter";
 import { useBudgetGroups } from "@/screens/budget-screen/hooks/use-budget-groups";
@@ -151,12 +151,7 @@ export function BudgetCard({
 
   const renderBody = () => {
     if (showSkeleton) {
-      return (
-        <>
-          <LoadingTile height={34} />
-          <LoadingTile height={34} />
-        </>
-      );
+      return <BudgetSkeleton />;
     }
     if (groupsFailed) {
       return <CardLoadFailure onRetry={() => void refetchGroups()} />;
