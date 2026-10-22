@@ -4,6 +4,8 @@
 
 ## Inbox
 
+- [334 — Validate required New Entry text after trimming](./334.md) — minor; dashboard QA,2026-10-21; whitespace-only Account/Currency/Note content prepare empty required values; fresh desktop/narrow controls, eight requests preblocked, no hosted writes.
+
 - [333 — Name the Settings language popup as well as its trigger](./333.md) — minor; dashboard QA,2026-10-21; native English/German dialog names are empty while trigger/current-option/selection/focus controls pass.
 
 - [332 — Separate an acknowledged managed-price refresh from a failed chart read](./332.md) — minor; controlled dashboard QA,2026-10-21; Up to date acknowledgement is followed by a generic action-failure message when only the chart read fails; success/pre-ack controls retained, no hosted mutation.
