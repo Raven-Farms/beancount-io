@@ -374,13 +374,16 @@ export function groupAccountJournalRowsToSections(
 
 /**
  * What an entry's postings to `account`, or beneath it, cost in `currency` —
- * units × per-unit cost, as the at-cost journal would have summed them. Null
- * when no such posting carries a cost in that currency (vacation hours).
+ * units × per-unit cost, as the at-cost journal would have summed them. Only
+ * the postings of the one `commodity` count: an exchange of one fund for another
+ * costed the leg it gave up too, and read "$0.00" (w21/422). Null when no such
+ * posting carries a cost in that currency (vacation hours).
  */
 function postingsCost(
   entry: AccountJournalItem["entry"],
   account: string,
   currency: string,
+  commodity: string,
 ): number | null {
   let total = 0;
   let costed = false;
@@ -389,6 +392,7 @@ function postingsCost(
     if (
       typeof target !== "string" ||
       (target !== account && !target.startsWith(`${account}:`)) ||
+      posting.units?.currency !== commodity ||
       posting.cost?.currency !== currency ||
       posting.cost.number == null ||
       posting.units?.number == null
@@ -457,7 +461,7 @@ export function selectAccountJournalRows(
       units: {
         currency: units.currency,
         scale: Math.max(change.scale, balance.scale),
-        cost: postingsCost(item.entry, units.account, currency),
+        cost: postingsCost(item.entry, units.account, currency, units.currency),
       },
     };
   });

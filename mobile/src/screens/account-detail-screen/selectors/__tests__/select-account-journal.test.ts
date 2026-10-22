@@ -601,6 +601,38 @@ describe("account-journal rows in a commodity's units", () => {
     expect(near(row.units?.cost, -250)).toBe(true);
   });
 
+  // w21/422: -10 VTI {200} for +5 VOO {400} summed to $0.00.
+  it("costs only the shown commodity's leg of an exchange", () => {
+    const exchange = (shown: string) =>
+      selectAccountJournalRows(
+        "USD",
+        [
+          item(
+            {
+              entry_hash: "x",
+              postings: [
+                {
+                  account: "Assets:Brokerage",
+                  units: { number: "-10", currency: "VTI" },
+                  cost: { number: "200", currency: "USD" },
+                },
+                {
+                  account: "Assets:Brokerage",
+                  units: { number: "5", currency: "VOO" },
+                  cost: { number: "400", currency: "USD" },
+                },
+              ],
+            },
+            { VTI: "-10", VOO: "5" },
+            { VTI: "0", VOO: "5" },
+          ),
+        ],
+        { account: "Assets:Brokerage", currency: shown },
+      )[0];
+    expect(near(exchange("VOO").units?.cost, 2000)).toBe(true);
+    expect(near(exchange("VTI").units?.cost, -2000)).toBe(true);
+  });
+
   it("gives no cost to a commodity whose postings carry none", () => {
     const [row] = selectAccountJournalRows(
       "USD",
