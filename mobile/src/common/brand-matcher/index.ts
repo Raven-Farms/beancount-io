@@ -219,7 +219,7 @@ const AGGREGATORS = new Set([
  */
 function resolveStarMerchant(
   normalized: string,
-): { text: string } | { brand: string | null } | null {
+): { text: string; fallback: string | null } | { brand: string | null } | null {
   const star = normalized.indexOf("*");
   if (star <= 0) return null;
   const head = normalized.slice(0, star).trim();
@@ -228,7 +228,12 @@ function resolveStarMerchant(
   if (!tail || (!isProcessor && !AGGREGATORS.has(head))) return null;
   const byMerchant = matchBrand(tail);
   if (byMerchant) return { brand: byMerchant };
-  return isProcessor ? { brand: null } : { text: `${head} ${tail}` };
+  // Read as "head tail" for a more specific key ("uber eats"); if nothing
+  // matches, the head's own brand stands. "apple" is a common word that matches
+  // only alone, so "APPLE *ICLOUD" (read "apple icloud") lost its logo (w21/407).
+  return isProcessor
+    ? { brand: null }
+    : { text: `${head} ${tail}`, fallback: BRAND_MAP[head] ?? null };
 }
 
 /** Drop what card processors add around a merchant name. */
@@ -273,7 +278,11 @@ export function matchBrand(text: string): string | null {
 
   const starred = resolveStarMerchant(normalized);
   if (starred && "brand" in starred) return starred.brand;
-  if (starred) normalized = starred.text;
+  let fallback: string | null = null;
+  if (starred) {
+    normalized = starred.text;
+    fallback = starred.fallback;
+  }
 
   // Exact match is cheapest — try first, then without processor noise.
   if (BRAND_MAP[normalized]) return BRAND_MAP[normalized];
@@ -297,7 +306,7 @@ export function matchBrand(text: string): string | null {
     if (boundaryBefore && boundaryAfter) return BRAND_MAP[key];
   }
 
-  return null;
+  return fallback;
 }
 
 /**

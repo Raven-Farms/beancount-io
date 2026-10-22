@@ -22,6 +22,25 @@ describe("processor and aggregator prefixes", () => {
     expect(matchBrand("UBER *TRIP")).toBe("uber.com");
     expect(matchBrand("AMAZON *MKTPLACE")).toBe("amazon.com");
   });
+
+  // w21/407: "apple" is a common word that matches only alone, so a tail we do
+  // not know lost the Apple logo along with the rest of the name.
+  it("falls back to an aggregator's own brand for a tail it does not know", () => {
+    expect(matchBrand("APPLE *ICLOUD")).toBe("apple.com");
+    expect(matchBrand("APPLE *SUBSCRIPTION")).toBe("apple.com");
+    expect(matchBrand("Apple *Apple Music")).toBe("apple.com");
+    expect(matchBrand("APPLE* BILL")).toBe("apple.com");
+    expect(matchBrand("APPLE *ITUNES")).toBe("apple.com");
+    expect(matchBrand("UBER *SOMETHING")).toBe("uber.com");
+    // A processor's unknown merchant still has no logo, and a specific tail wins.
+    expect(matchBrand("PAYPAL *NETFLIX")).toBe("netflix.com");
+    expect(matchBrand("PAYPAL *LOCALBAKERY")).toBe(null);
+    expect(matchBrand("UBER *EATS")).toBe("ubereats.com");
+  });
+
+  it("does not give Apple's logo to a longer name that merely starts with apple", () => {
+    expect(matchBrand("Apple Valley Dental")).toBe(null);
+  });
 });
 
 describe("# store numbers", () => {
