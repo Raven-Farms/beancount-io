@@ -127,3 +127,23 @@ def test_a_package_entry_that_cannot_travel_as_a_file_is_refused(tmp_path: Path,
     assert code == 2, stderr
     assert "plugin package 'pkgplug'" in stderr and expected in stderr
     assert files == set()
+
+
+@pytest.mark.skipif(sys.platform == "win32" or os.geteuid() == 0, reason="needs POSIX modes a non-root user obeys")
+def test_a_package_directory_that_cannot_be_listed_is_refused(tmp_path: Path) -> None:
+    """A searchable but unlistable directory was skipped, so its resources never travelled (w5/879)."""
+    books = _package_books(tmp_path)
+    data = books / "pkgplug" / "data"
+    data.mkdir()
+    (data / "extra.json").write_text("{}\n")
+    data.chmod(0o111)
+    try:
+        code, stderr, files = _export(tmp_path, books)
+    finally:
+        data.chmod(0o755)
+
+    assert code == 2, stderr
+    assert "plugin package 'pkgplug'" in stderr
+    assert f"{data}, a directory this user cannot list" in stderr
+    assert files == set()
+    assert not (tmp_path / "exp").exists()

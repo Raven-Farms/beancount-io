@@ -2168,8 +2168,13 @@ def _package_files(package: Path, top: str) -> list[Path]:
             "package would be incomplete. Replace or remove it. Nothing was written."
         )
 
+    def unlistable(error: OSError) -> None:
+        # `os.walk` skipped a directory it could not list, so its resources
+        # were left out of a snapshot reported as complete (w5/879).
+        raise refuse(Path(str(error.filename)), "a directory this user cannot list")
+
     files: list[Path] = []
-    for directory, subdirectories, names in os.walk(package):
+    for directory, subdirectories, names in os.walk(package, onerror=unlistable):
         subdirectories[:] = sorted(name for name in subdirectories if name != "__pycache__")
         for name in subdirectories:
             if os.path.islink(os.path.join(directory, name)):

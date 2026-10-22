@@ -44,7 +44,6 @@
 - [959 — Treat repeated allowed currencies as one during transaction inference](./959.md) — minor CLI existing-ledger/native-import inference finding; USD/EUR and split-file controls reproduced 2026-10-21.
 - [958 — Keep unused unopened accounts out of remembered CSV settings](./958.md) — minor CLI memory-guard follow-up to 452/714; empty, skipped and fully categorized exports reproduced 2026-10-21.
 - [957 — Allow instrument units in the portfolio preset's holdings account](./957.md) — minor CLI first-purchase setup finding; reproduced twice in USD/EUR on 2026-10-21.
-- [879 — Refuse portable exports that cannot enumerate required plugin resource directories](./879.md) — minor CLI snapshot-integrity follow-up to 868; reproduced 2026-10-20.
 - [880 — Include cached runtime helpers and namespace-package resources in plugin exports](./880.md) — minor CLI dependency-inventory follow-up to 327; reproduced 2026-10-20.
 - [881 — Anchor stable import IDs to written source facts](./881.md) — major CLI source-identity gap; filtered rows, `currency_accounts`, wide numbers and a bundled amortization template's native-ID conflict reproduced 2026-10-20/21.
 - [882 — Pair transfer counterparts one-to-one across ID and date matchers](./882.md) — major CLI duplicate-booking / skipped-deposit follow-up to 821; reproduced 2026-10-20.
