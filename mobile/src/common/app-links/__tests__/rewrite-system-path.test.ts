@@ -1,5 +1,11 @@
+import fs from "fs";
+import path from "path";
 import { resolveAppLink } from "../resolve-app-link";
-import { hrefToPath, rewriteSystemPath } from "../rewrite-system-path";
+import {
+  browserFallbackUrl,
+  hrefToPath,
+  rewriteSystemPath,
+} from "../rewrite-system-path";
 import { clearPendingAppLink, takePendingAppLink } from "../pending-app-link";
 
 describe("rewriteSystemPath", () => {
@@ -39,5 +45,51 @@ describe("rewriteSystemPath", () => {
     expect(hrefToPath(target!.href)).toBe(
       "/account-detail?account=Assets%3ACash&ledger=open_ledger%2Fexample",
     );
+  });
+});
+
+// w21/346: the AASA claims /ledger/*, so profile links reached the app and
+// were rewritten to Home; Android's /ledger prefix also claimed the ledger
+// list, the gallery and the assets.
+describe("browserFallbackUrl", () => {
+  it("names the browser URL for a ledger link the app has no screen for", () => {
+    for (const path of [
+      "https://beancount.io/ledger/open_ledger",
+      "/ledger/open_ledger",
+      "beancount:///ledger/open_ledger",
+    ]) {
+      expect(browserFallbackUrl(path)).toBe(
+        "https://beancount.io/ledger/open_ledger",
+      );
+    }
+  });
+
+  it("leaves mapped links, other paths and foreign hosts alone", () => {
+    expect(
+      browserFallbackUrl("/ledger/open_ledger/example/balance-sheet"),
+    ).toBe(null);
+    expect(browserFallbackUrl("/ledger/alice/books")).toBe(null);
+    expect(browserFallbackUrl("/auth/welcome")).toBe(null);
+    expect(browserFallbackUrl("https://evil.example/ledger/x")).toBe(null);
+  });
+
+  it("is what the native intent opens, and Android claims only owner/name paths", () => {
+    const intent = fs
+      .readFileSync(
+        path.join(__dirname, "../../../../app/+native-intent.tsx"),
+        "utf8",
+      )
+      .replace(/\s+/g, "");
+    expect(
+      intent.includes(
+        "constbrowserUrl=browserFallbackUrl(path);if(browserUrl){voidLinking.openURL(browserUrl).catch(()=>undefined);returnnull;}",
+      ),
+    ).toBe(true);
+    const config = JSON.parse(
+      fs.readFileSync(path.join(__dirname, "../../../../app.json"), "utf8"),
+    );
+    const data = config.expo.android.intentFilters[0].data[0];
+    expect(data.pathPattern).toBe("/ledger/..*/..*");
+    expect(data.pathPrefix).toBe(undefined);
   });
 });

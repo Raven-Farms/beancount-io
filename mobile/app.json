@@ -80,7 +80,7 @@
             {
               "scheme": "https",
               "host": "beancount.io",
-              "pathPrefix": "/ledger"
+              "pathPattern": "/ledger/..*/..*"
             }
           ],
           "category": ["BROWSABLE", "DEFAULT"]

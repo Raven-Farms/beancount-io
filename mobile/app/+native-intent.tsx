@@ -1,4 +1,8 @@
-import { rewriteSystemPath } from "@/common/app-links/rewrite-system-path";
+import { Linking } from "react-native";
+import {
+  browserFallbackUrl,
+  rewriteSystemPath,
+} from "@/common/app-links/rewrite-system-path";
 import { HOSTED_APP_ORIGIN } from "@/common/app-links/resolve-app-link";
 
 /**
@@ -18,6 +22,14 @@ export function redirectSystemPath({
   initial: boolean;
 }): string | null {
   try {
+    // A ledger link with no screen here goes to the browser, and the app stays
+    // where it is (a null path is ignored; a cold start shows the default
+    // route) (w21/346).
+    const browserUrl = browserFallbackUrl(path);
+    if (browserUrl) {
+      void Linking.openURL(browserUrl).catch(() => undefined);
+      return null;
+    }
     // Prefer the URL's own origin when the system hands us an absolute link so
     // self-hosted hosts resolve; otherwise fall back to the hosted origin.
     let serverUrl = HOSTED_APP_ORIGIN;
