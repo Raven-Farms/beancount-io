@@ -465,7 +465,9 @@ def answer(
     if source.read_bytes() != source_bytes:
         raise ConflictError("The export changed during extraction; nothing was written. Retry.")
     source_hash = hashlib.sha256(source_bytes).hexdigest()
-    other_entries = {_directive_key(entry) for entry in written if not isinstance(entry, Transaction | Price)}
+    other_entries = {
+        _directive_key(entry, target.parent) for entry in written if not isinstance(entry, Transaction | Price)
+    }
     quotes = _written_quotes(existing)
     price_conflicts = False
     rows: list[dict[str, Any]] = []
@@ -718,7 +720,7 @@ def answer(
                     recorded.append(entry)
                     batch_rows[id(entry)] = index + 1
         elif not isinstance(entry, Transaction):
-            directive_key = _directive_key(entry)
+            directive_key = _directive_key(entry, target.parent)
             if directive_key in other_entries:
                 status, reason = "duplicate", "Identical directive already exists."
             other_entries.add(directive_key)
@@ -1642,21 +1644,31 @@ def _directive_text(entry: Any) -> str:
     return unicodedata.normalize("NFC", format_entry(entry))
 
 
-def _directive_key(entry: Any) -> str:
+def _directive_key(entry: Any, base: Path | None = None) -> str:
     """What "identical directive" compares: the printed text with order made irrelevant.
 
     Metadata is a mapping, so reordering its keys does not change the directive,
     and an opening's allowed currencies are a set, so their order and repeats do
     not either; the text appended keeps the order it was given (w5/916). Values,
     types, booking, balance precision and tolerance all still count.
+
+    A document's relative filename becomes absolute, against the file that holds
+    the directive, when the ledger loads, so a loaded document is compared with
+    the importer's spelling resolved against the destination file (`base`) the
+    same lexical way (w5/917).
     """
-    from beancount.core.data import Open
+    from beancount.core.data import Document, Open
 
     meta = getattr(entry, "meta", None)
     if meta:
         entry = entry._replace(meta={key: meta[key] for key in sorted(meta)})
     if isinstance(entry, Open) and entry.currencies:
         entry = entry._replace(currencies=sorted(set(entry.currencies)))
+    if isinstance(entry, Document) and base is not None:
+        joined = (
+            entry.filename if os.path.isabs(entry.filename) else os.path.join(os.path.abspath(base), entry.filename)
+        )
+        entry = entry._replace(filename=os.path.normpath(joined))
     return _directive_text(entry)
 
 
