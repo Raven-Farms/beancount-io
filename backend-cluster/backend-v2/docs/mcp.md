@@ -613,7 +613,10 @@ authority and apply changes immediately. Creation can be previewed first with
   error, and omitting both selects starter files. `setup` takes a `preset` and
   optional `title`, `operatingCurrency`, `historyStart`, `capabilities`, and
   `accounts`. Names use lowercase
-  letters, numbers, hyphens, and underscores, up to 100 characters. Creation
+  letters, numbers, and underscores joined by single hyphens, up to 100
+  characters — the name the ledger is stored under. A name the service would
+  store differently (`x-`, `-x`, `a--b`) is refused, naming the form to use
+  (w23/064); the same rule applies to `updateLedger`'s `name`. Creation
   uses the authenticated account and accepts no `ledger` selector; the existing
   account policy also permits creation with a ledger-pinned admin credential.
 - `createLedger` also accepts `requestId` (1–200 characters) for safe retries.

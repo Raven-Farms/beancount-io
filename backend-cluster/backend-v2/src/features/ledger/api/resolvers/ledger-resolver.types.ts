@@ -5,7 +5,17 @@ import {
   ObjectType,
   registerEnumType,
 } from "type-graphql";
-import { IsEnum, IsOptional, MaxLength, Matches } from "class-validator";
+import {
+  IsEnum,
+  IsOptional,
+  MaxLength,
+  Matches,
+  type ValidationArguments,
+} from "class-validator";
+import {
+  NEW_LEDGER_NAME_PATTERN,
+  newLedgerNameRule,
+} from "@/shared/ledger-slug";
 import { GraphQLJSONObject } from "graphql-scalars";
 import {
   LEDGER_DESCRIPTION_MAX,
@@ -222,9 +232,9 @@ export class CreateLedgerInput {
   @MaxLength(100, {
     message: "Name must be at most 100 characters long",
   })
-  @Matches(/^[a-z0-9_-]+$/, {
-    message:
-      "Name can only contain lowercase letters, numbers, hyphens, and underscores. The name should already be slugified before submission.",
+  @Matches(NEW_LEDGER_NAME_PATTERN, {
+    message: ({ value }: ValidationArguments) =>
+      newLedgerNameRule(String(value)),
   })
   name: string;
 
@@ -271,9 +281,9 @@ export class UpdateLedgerInput {
   @MaxLength(100, {
     message: "Name must be at most 100 characters long",
   })
-  @Matches(/^[a-z0-9_-]+$/, {
-    message:
-      "Name can only contain lowercase letters, numbers, hyphens, and underscores. The name should already be slugified before submission.",
+  @Matches(NEW_LEDGER_NAME_PATTERN, {
+    message: ({ value }: ValidationArguments) =>
+      newLedgerNameRule(String(value)),
   })
   name?: string;
 

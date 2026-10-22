@@ -961,6 +961,39 @@ describe("ledger lifecycle through actual adapters and workflow", () => {
       }
     },
   );
+  // w23/064: the service slugified `x-` into `x` and `a--b` into `a-b`, so
+  // the next call by the name sent found nothing.
+  it.each(surfaces)(
+    "refuses a name the service would store differently via %s",
+    async (surface) => {
+      const f = await fixture();
+      try {
+        for (const [name, use] of [
+          ["qa-x-", "use 'qa-x'"],
+          ["-qa-x", "use 'qa-x'"],
+          ["qa--x", "use 'qa-x'"],
+          ["_", "at least one letter or number"],
+        ] as const) {
+          for (const operation of ["create", "update"] as const) {
+            const r = await f.call(surface, operation, { name });
+            expect(r.failed).toBe(true);
+            expect(r.error?.message).toContain("joined by single hyphens");
+            expect(r.error?.message).toContain(use);
+          }
+        }
+        expect(f.create).not.toHaveBeenCalled();
+        expect(f.update).not.toHaveBeenCalled();
+        expect(f.records.has("alice/main")).toBe(true);
+        for (const name of ["qa-x", "qa_x"]) {
+          const created = await f.call(surface, "create", { name });
+          expect(created.failed).toBe(false);
+          expect(f.records.has(`alice/${name}`)).toBe(true);
+        }
+      } finally {
+        await f.close();
+      }
+    },
+  );
   it.each(surfaces)(
     "deletes repository and linked-bank metadata in the existing order via %s",
     async (surface) => {

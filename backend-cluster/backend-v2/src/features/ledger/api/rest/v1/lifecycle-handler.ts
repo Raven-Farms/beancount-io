@@ -12,12 +12,19 @@ import {
 import { v1Route } from "@/server/rest/v1-route";
 import { json } from "@/server/rest/v1-schemas";
 import { ledgerPathSchema, ledgerIdOf } from "./schemas";
+import {
+  NEW_LEDGER_NAME_PATTERN,
+  newLedgerNameRule,
+} from "@/shared/ledger-slug";
 const name = z
   .string()
   .max(100)
-  .regex(/^[a-z0-9_-]+$/)
+  .regex(NEW_LEDGER_NAME_PATTERN, {
+    error: (issue) => newLedgerNameRule(String(issue.input)),
+  })
+  // The schema carries the length; the pattern, the exact rule (w23/064).
   .describe(
-    "The ledger's name: lowercase letters, numbers, hyphens, and underscores, up to 100 characters.",
+    "Lowercase letters, numbers, and underscores, joined by single hyphens.",
   );
 const description = z
   .string()

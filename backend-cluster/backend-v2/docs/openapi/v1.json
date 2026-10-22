@@ -1322,8 +1322,8 @@
                   "name": {
                     "type": "string",
                     "maxLength": 100,
-                    "pattern": "^[a-z0-9_-]+$",
-                    "description": "The ledger's name: lowercase letters, numbers, hyphens, and underscores, up to 100 characters."
+                    "pattern": "^(?=[a-z0-9_-]*[a-z0-9])[a-z0-9_]+(?:-[a-z0-9_]+)*$",
+                    "description": "Lowercase letters, numbers, and underscores, joined by single hyphens."
                   },
                   "description": {
                     "type": "string",
@@ -2468,8 +2468,8 @@
                     "type": "string",
                     "nullable": true,
                     "maxLength": 100,
-                    "pattern": "^[a-z0-9_-]+$",
-                    "description": "The ledger's name: lowercase letters, numbers, hyphens, and underscores, up to 100 characters."
+                    "pattern": "^(?=[a-z0-9_-]*[a-z0-9])[a-z0-9_]+(?:-[a-z0-9_]+)*$",
+                    "description": "Lowercase letters, numbers, and underscores, joined by single hyphens."
                   },
                   "description": {
                     "type": "string",
