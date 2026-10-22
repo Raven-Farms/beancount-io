@@ -2,9 +2,9 @@
   "organizationName": "Beancount.io",
   "organizationHandle": "beancount",
   "logotypeUrl": "https://beancount.io/lgasset/logo.png",
-  "description": "Hosted Beancount accounting through one Streamable HTTP MCP endpoint with OAuth: BQL, reports, files, reconciliation and bank imports. MCP-only package: backend-cluster/backend-v2/docs/marketplace-submissions/cursor/official.",
+  "description": "Hosted Beancount accounting through one Streamable HTTP MCP endpoint with OAuth: BQL, reports, files, reconciliation and bank imports. Connect your selected ledger directly from Cursor.",
   "repository": "https://github.com/bex-co/beancount-io",
   "website": "https://beancount.io",
   "contact": "Use the publisher account contact privately; not supplied in this public payload",
-  "state": "Prepared with a validated repository-root multi-plugin index and native Agent query/preview evidence; not submitted; IDE journey and final publisher-terms approval remain"
+  "state": "Concrete official form prepared; repository-root index validated; community installation and native desktop OAuth/query/dry-run verified; final Publisher Terms approval and submission remain"
 }

@@ -2,7 +2,7 @@
 
 This verifies local native-Agent compatibility with the hosted connector. It is
 not a marketplace install, accepted submission or completed Cursor IDE agent
-journey. Both publisher submissions remain unsent.
+journey. At this earlier run both publisher submissions were unsent. Later community publication, native desktop OAuth/query/preview and retained authorization are recorded in the [2026-10-22 follow-through](./native-desktop-rehearsal-20261022.md).
 
 ## Package and client provenance
 
