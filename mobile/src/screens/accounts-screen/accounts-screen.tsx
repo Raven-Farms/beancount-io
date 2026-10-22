@@ -225,6 +225,8 @@ const AccountsScreenImpl = (): JSX.Element => {
       ) : (
         <FadeInView fill>
           <AccountTable
+            // Expand and collapse choices belong to one ledger's tree (w21/384).
+            key={ledgerId}
             categories={categories}
             currency={currency}
             displays={displays}

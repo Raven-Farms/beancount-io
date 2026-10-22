@@ -231,6 +231,8 @@ const ReportsScreenImpl = (): JSX.Element => {
               <FadeInView>
                 <DashboardCard bleed>
                   <CategoryBreakdown
+                    // Expand and collapse choices belong to one ledger (w21/384).
+                    key={ledgerId}
                     label={t("expenses")}
                     total={expense.total}
                     items={topNWithOther(
@@ -253,6 +255,8 @@ const ReportsScreenImpl = (): JSX.Element => {
               <FadeInView>
                 <DashboardCard bleed>
                   <CategoryBreakdown
+                    // Expand and collapse choices belong to one ledger (w21/384).
+                    key={ledgerId}
                     label={t("income")}
                     total={income.total}
                     items={topNWithOther(
