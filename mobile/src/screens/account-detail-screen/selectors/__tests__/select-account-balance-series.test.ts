@@ -476,3 +476,40 @@ describe("selectAccountBalanceSeries with the ledger's span of month-end rows", 
     expect(series[0]!.date.slice(0, 7)).toBe("2026-03");
   });
 });
+
+// w21/516: a loan whose only posting is dated next month showed $0.00 and "Not
+// enough data" while its Accounts row and journal read -$20,000.00.
+describe("selectAccountBalanceSeries for an account whose only posting is still to come", () => {
+  const today = "2026-10-22";
+  const loan = {
+    getLedgerAccountReport: {
+      linechartData: [{ date: "2026-11-01", balance: { USD: -20000 } }],
+      accountBalanceData: [
+        { date: "2026-01-31", balance: { USD: 0 } },
+        { date: "2026-11-30", balance: { USD: -20000 } },
+      ],
+    },
+  } as unknown as AccountReportQuery;
+
+  it("ends on the figure the Accounts row reads", () => {
+    expect(
+      selectAccountBalanceSeries(
+        "USD",
+        loan,
+        { balance: { USD: -20000 }, today },
+        today,
+      ),
+    ).toEqual([{ date: today, value: -20000 }]);
+  });
+
+  it("stays empty for an account with nothing in it", () => {
+    expect(
+      selectAccountBalanceSeries(
+        "USD",
+        createReport([]),
+        { balance: { USD: 0 }, today },
+        today,
+      ),
+    ).toEqual([]);
+  });
+});

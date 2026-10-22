@@ -181,7 +181,7 @@ export function selectAccountBalanceSeries(
   // last balance still holds until today (w21/240).
   if (!current)
     return today === undefined ? series : carryBalanceToToday(series, today);
-  if (!last || last.date > current.today) return series;
+  if (last && last.date > current.today) return series;
   // The chart's headline is its last point, priced on the account's last
   // change; end it on today's value, as the Accounts row reads (w21/179).
   const now = {
@@ -189,6 +189,10 @@ export function selectAccountBalanceSeries(
     // Read like every other point of the series.
     value: resolveCurrencyBalance(current.balance, currency),
   };
+  // An account whose only postings are still to come has no point up to today,
+  // yet the row lists its balance: the header ends on that figure rather than
+  // falling back to $0.00 (w21/516).
+  if (!last) return now.value === 0 ? series : [now];
   return last.date.slice(0, 7) === current.today.slice(0, 7)
     ? [...series.slice(0, -1), now]
     : forwardFillMonths([...series, now]);
