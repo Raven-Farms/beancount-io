@@ -7,6 +7,7 @@ import { formatShortMoneyWithCurrency } from "@/common/number-utils";
 import { useTheme } from "@/common/theme";
 import { useTranslations } from "@/common/hooks/use-translations";
 import { AnimatedBar } from "./animated-bar";
+import { barChartValueDomain } from "./bar-chart-domain";
 import { useEntranceProgress } from "./use-entrance-progress";
 import { restingBarRect } from "./bar-geometry";
 import { ScrollableAxisChart } from "./scrollable-axis-chart";
@@ -89,8 +90,9 @@ function BudgetBarChart({
     return <ChartPlaceholder height={chartHeight} />;
   }
 
-  const yMax = Math.max(1, ...actuals, ...budgets);
-  const yMin = Math.min(0, ...actuals, ...budgets);
+  // The series' own extent, as Spending's and Reports' charts take it: a floor
+  // of 1 left a BTC budget's bars as slivers on a 0 to 1 axis (w21/456).
+  const [yMin, yMax] = barChartValueDomain([...actuals, ...budgets]);
   const yScale = scaleLinear()
     .domain([yMin, yMax])
     .range([chartHeight - BOTTOM_PADDING, TOP_PADDING])

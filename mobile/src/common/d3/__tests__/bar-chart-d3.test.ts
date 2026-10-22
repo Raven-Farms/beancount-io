@@ -61,3 +61,33 @@ describe("barChartValueDomain", () => {
     expect(barChartValueDomain([420, 310])).toEqual([0, 420]);
   });
 });
+
+// w21/456: the Budget chart kept its own floor of 1, so a BTC budget's bars were
+// slivers on a 0 to 1 axis.
+describe("the Budget chart's value domain", () => {
+  it("takes the real extent of fractional actuals and budgets", () => {
+    expect(barChartValueDomain([0.0021, 0.0042, 0.0035, 0.003, 0.003])).toEqual(
+      [0, 0.0042],
+    );
+  });
+
+  it("leaves a dollar budget's axis as it was", () => {
+    expect(barChartValueDomain([120, 340, 90, 300, 300])).toEqual([0, 340]);
+    expect(barChartValueDomain([0, 0])).toEqual([0, 1]);
+  });
+
+  it("is what the chart draws with", () => {
+    const source = require("fs")
+      .readFileSync(
+        require("path").join(__dirname, "..", "budget-bar-chart-d3.tsx"),
+        "utf8",
+      )
+      .replace(/\s+/g, "") as string;
+    expect(
+      source.includes(
+        "const[yMin,yMax]=barChartValueDomain([...actuals,...budgets]);",
+      ),
+    ).toBe(true);
+    expect(source.includes("Math.max(1,")).toBe(false);
+  });
+});
