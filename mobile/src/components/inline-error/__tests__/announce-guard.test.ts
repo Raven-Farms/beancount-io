@@ -1,0 +1,70 @@
+import fs from "fs";
+import path from "path";
+
+/**
+ * w21/354: `accessibilityLiveRegion` is Android-only, so a message that relied
+ * on it alone was never spoken to a VoiceOver user. Anything that declares a
+ * live region must also announce on iOS.
+ */
+const srcDir = path.join(__dirname, "../../..");
+
+const collect = (dir: string): string[] => {
+  const out: string[] = [];
+  for (const name of fs.readdirSync(dir)) {
+    const full = path.join(dir, name);
+    if (fs.statSync(full).isDirectory()) {
+      if (name !== "__tests__" && name !== "generated-graphql") {
+        out.push(...collect(full));
+      }
+    } else if (/\.tsx?$/.test(name)) {
+      out.push(full);
+    }
+  }
+  return out;
+};
+
+const read = (file: string) => fs.readFileSync(file, "utf8");
+
+describe("live regions and VoiceOver", () => {
+  it("every file with a live region also announces on iOS", () => {
+    const offenders = collect(srcDir)
+      .filter((file) => /accessibilityLiveRegion/.test(read(file)))
+      .filter((file) => !/announceForAccessibility/.test(read(file)))
+      .map((file) => path.relative(srcDir, file));
+    expect(offenders.join(", ")).toBe("");
+  });
+
+  it("toasts are announced on iOS, except the loading spinner", () => {
+    const src = read(
+      path.join(srcDir, "common/providers/toast-provider/index.tsx"),
+    ).replace(/\s+/g, "");
+    expect(
+      src.includes(
+        'if(Platform.OS==="ios"&&message.type!=="loading"){AccessibilityInfo.announceForAccessibility(message.message);}',
+      ),
+    ).toBe(true);
+  });
+
+  it("inline errors announce when their message changes", () => {
+    const src = read(
+      path.join(srcDir, "components/inline-error/index.tsx"),
+    ).replace(/\s+/g, "");
+    expect(
+      src.includes(
+        'if(Platform.OS==="ios")AccessibilityInfo.announceForAccessibility(message);},[message]',
+      ),
+    ).toBe(true);
+  });
+
+  it("the forms use InlineError rather than a bare Text", () => {
+    for (const file of [
+      "screens/multi-postings-transaction/multi-postings-transaction-screen.tsx",
+      "screens/open-account-screen/open-account-screen.tsx",
+      "screens/add-budget-screen/add-budget-screen.tsx",
+      "screens/edit-transaction-screen/edit-transaction-screen.tsx",
+      "components/text-input-modal/index.tsx",
+    ]) {
+      expect(read(path.join(srcDir, file)).includes("<InlineError")).toBe(true);
+    }
+  });
+});

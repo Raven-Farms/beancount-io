@@ -7,6 +7,7 @@ import {
   useWindowDimensions,
   View,
 } from "react-native";
+import { InlineError } from "@/components/inline-error";
 import {
   SafeAreaView,
   useSafeAreaInsets,
@@ -503,7 +504,9 @@ export const EditTransactionScreen = (): JSX.Element => {
       />
 
       <Text style={styles.hint}>{t("editTransactionSource")}</Text>
-      {saveError ? <Text style={styles.errorText}>{saveError}</Text> : null}
+      {saveError ? (
+        <InlineError style={styles.errorText} message={saveError} />
+      ) : null}
 
       <View style={styles.editorWrapper}>
         {isFirstLoad ? (

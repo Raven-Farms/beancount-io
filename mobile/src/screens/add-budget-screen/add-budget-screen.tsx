@@ -1,5 +1,6 @@
 import { budgetCurrencyOptions } from "./currency-options";
 import { useState } from "react";
+import { InlineError } from "@/components/inline-error";
 import {
   Pressable,
   ScrollView,
@@ -387,16 +388,15 @@ function AddBudgetScreenImpl(): JSX.Element {
         </View>
 
         {amountInvalid ? (
-          <Text
+          <InlineError
             style={styles.error}
-            accessibilityRole="alert"
-            accessibilityLiveRegion="polite"
-          >
-            {t("budgetAmountInvalid")}
-          </Text>
+            message={t("budgetAmountInvalid")}
+          />
         ) : null}
         <Text style={styles.help}>{t("budgetAccountHelp")}</Text>
-        {submitError && <Text style={styles.error}>{submitError}</Text>}
+        {submitError && (
+          <InlineError style={styles.error} message={submitError} />
+        )}
       </ScrollView>
 
       <DatePickerModal

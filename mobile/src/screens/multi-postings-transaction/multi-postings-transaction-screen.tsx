@@ -1,5 +1,6 @@
 import { currencyMinorUnits } from "@/common/currency-util";
 import { routeText } from "@/common/route-text";
+import { InlineError } from "@/components/inline-error";
 import { memo, useEffect, useRef, useState } from "react";
 import { createSingleFlight, type SingleFlight } from "@/common/single-flight";
 import { useAccountCloseDatesState } from "@/common/hooks/use-account-close-dates";
@@ -853,22 +854,18 @@ const MultiPostingsTransactionScreenComponent = () => {
           </AmountText>
         </View>
         {amountUnreadable ? (
-          <Text
+          <InlineError
             style={styles.saveError}
-            accessibilityLiveRegion="polite"
             testID="new-transaction-amount-format"
-          >
-            {t("multiPostingsAmountFormat")}
-          </Text>
+            message={t("multiPostingsAmountFormat")}
+          />
         ) : null}
         {saveError ? (
-          <Text
+          <InlineError
             style={styles.saveError}
-            accessibilityLiveRegion="polite"
             testID="new-transaction-save-error"
-          >
-            {saveError}
-          </Text>
+            message={saveError}
+          />
         ) : null}
       </ScrollView>
 

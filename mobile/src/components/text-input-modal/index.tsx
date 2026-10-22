@@ -11,6 +11,7 @@ import {
   Platform,
   ScrollView,
 } from "react-native";
+import { InlineError } from "@/components/inline-error";
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -240,13 +241,11 @@ export const TextInputModal: React.FC<TextInputModalProps> = ({
                   autoCorrect={false}
                 />
                 {inputError ? (
-                  <Text
+                  <InlineError
                     style={styles.inputError}
-                    accessibilityLiveRegion="polite"
                     testID="text-input-modal-error"
-                  >
-                    {inputError}
-                  </Text>
+                    message={inputError}
+                  />
                 ) : null}
               </View>
             </ScrollView>

@@ -5,7 +5,14 @@ import {
   useCallback,
   ReactNode,
 } from "react";
-import { Text, StyleSheet, View, ActivityIndicator } from "react-native";
+import {
+  AccessibilityInfo,
+  ActivityIndicator,
+  Platform,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 import Animated, { FadeIn, FadeOut } from "react-native-reanimated";
 import { Ionicons } from "@expo/vector-icons";
 
@@ -80,6 +87,11 @@ export const ToastProvider: React.FC<ToastProviderProps> = ({ children }) => {
     (message: Omit<ToastMessage, "id">) => {
       const id = getMessageId();
       setMessages((prev) => withToast(prev, { id, ...message }));
+      // iOS ignores the toast's live region, so a save's outcome was never
+      // spoken to a VoiceOver user (w21/354). A loading toast is a spinner.
+      if (Platform.OS === "ios" && message.type !== "loading") {
+        AccessibilityInfo.announceForAccessibility(message.message);
+      }
       setTimeout(() => {
         removeToast(id);
       }, toastDuration(message));

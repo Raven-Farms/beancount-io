@@ -1,5 +1,6 @@
 import { useAccountCloseDates } from "@/common/hooks/use-account-close-dates";
 import { formatLedgerDate } from "@/common/date-format";
+import { InlineError } from "@/components/inline-error";
 import { useEffect, useState } from "react";
 import {
   Pressable,
@@ -468,25 +469,22 @@ export function OpenAccountScreenComponent(): JSX.Element {
               />
             </View>
             {validationMessage ? (
-              <Text style={styles.error} accessibilityLiveRegion="polite">
-                {validationMessage}
-              </Text>
+              <InlineError style={styles.error} message={validationMessage} />
             ) : null}
             {alreadyOpen ? (
-              <Text
+              <InlineError
                 style={styles.error}
-                accessibilityRole="alert"
-                accessibilityLiveRegion="polite"
-              >
-                {/* A closed account can't be reopened; "already open"
-                    contradicted the picker that hid it (w21/122). */}
-                {closedAt
-                  ? t("openAccountClosed", {
-                      account,
-                      date: formatLedgerDate(closedAt, locale),
-                    })
-                  : t("openAccountAlreadyOpen", { account })}
-              </Text>
+                // A closed account can't be reopened; "already open"
+                // contradicted the picker that hid it (w21/122).
+                message={
+                  closedAt
+                    ? t("openAccountClosed", {
+                        account,
+                        date: formatLedgerDate(closedAt, locale),
+                      })
+                    : t("openAccountAlreadyOpen", { account })
+                }
+              />
             ) : null}
             {namePreview ? (
               <Text style={styles.preview}>{namePreview}</Text>
@@ -536,9 +534,7 @@ export function OpenAccountScreenComponent(): JSX.Element {
         </View>
 
         {submitError ? (
-          <Text style={styles.error} accessibilityLiveRegion="polite">
-            {submitError}
-          </Text>
+          <InlineError style={styles.error} message={submitError} />
         ) : null}
       </ScrollView>
 
