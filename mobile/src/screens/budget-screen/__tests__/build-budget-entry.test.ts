@@ -141,17 +141,36 @@ describe("isBudgetAmount", () => {
     for (const text of [
       "12..3",
       "abc",
-      "1 000",
-      "1,000",
+      "1,23,4",
       "$500",
       "1e3",
-      ".5",
       "12.",
+      "1.2.3,4",
       "-",
       "",
       "   ",
     ]) {
       expect(isBudgetAmount(text)).toBe(false);
+    }
+  });
+
+  // w21/514: a German "49,99" was refused although New Transaction accepts it.
+  it("reads the decimal comma and the grouping New Transaction reads", () => {
+    const written = (number: string) =>
+      buildBudgetEntry({
+        account: "Expenses:Food",
+        interval: "MONTHLY",
+        number,
+        currency: "EUR",
+        date: new Date(2026, 9, 22),
+      }).budget?.amount.number;
+    expect(written("49,99")).toBe("49.99");
+    expect(written("1,234.56")).toBe("1234.56");
+    expect(written("1.234,56")).toBe("1234.56");
+    expect(written("1 234,56")).toBe("1234.56");
+    expect(written(".5")).toBe("0.5");
+    for (const text of ["49,99", "1,234.56", "1.234,56", ".5"]) {
+      expect(isBudgetAmount(text)).toBe(true);
     }
   });
 
@@ -186,7 +205,7 @@ describe("a budget amount typed with other keyboards' digits", () => {
   });
 
   it("still refuses what is not a number", () => {
-    for (const text of ["۵۰۰٬۰۰۰", "۵۰۰abc", "۵۰۰٫", "1 000", "12..3"]) {
+    for (const text of ["۵۰۰abc", "۵۰۰٫", "12..3"]) {
       expect(isBudgetAmount(text)).toBe(false);
     }
   });

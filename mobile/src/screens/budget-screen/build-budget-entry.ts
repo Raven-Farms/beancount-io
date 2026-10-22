@@ -1,5 +1,5 @@
-import { toAsciiNumerals } from "../../common/ascii-numerals";
 import { getFormatDate } from "../../common/format-util";
+import { parseExactAmount } from "../multi-postings-transaction/postings-utils";
 import type {
   AddEntryInput,
   BudgetInterval,
@@ -33,15 +33,21 @@ export type BudgetEntryInput = {
 };
 
 /**
- * Whether typed text is an amount the ledger can parse: an optional sign,
- * digits, and an optional decimal part with digits after the point. The text
- * is otherwise written verbatim, so `12..3`, `abc` or `1 000` used to commit
- * an unparsable `custom "budget"` line (w0/038). Grouping commas and exponents
- * are refused rather than rewritten: the user types the plain number.
+ * The amount typed, as the plain decimal the ledger parses, or null when it is
+ * not a number. It reads what New Transaction reads (`parseExactAmount`): digits
+ * from any keyboard, a decimal comma ("49,99"), and grouping where it is
+ * unambiguous ("1,234.56", "1.234,56"), all written as `49.99`-style ASCII
+ * (w21/514). The text is otherwise written verbatim, so `12..3`, `abc` or
+ * `1e3` used to commit an unparsable `custom "budget"` line (w0/038): those
+ * stay refused, as does a lone sign or a trailing point.
  */
+function parseBudgetAmount(text: string): string | null {
+  return parseExactAmount(text.trim().replace(/^\+/u, ""));
+}
+
+/** Whether typed text is an amount the ledger can parse. */
 export function isBudgetAmount(text: string): boolean {
-  // Digits from any keyboard count; they are written as ASCII (w21/392).
-  return /^[+-]?\d+(\.\d+)?$/u.test(toAsciiNumerals(text).trim());
+  return parseBudgetAmount(text) !== null;
 }
 
 function isIncomeAccount(account: string, incomeRoot?: string): boolean {
@@ -77,7 +83,7 @@ export function buildBudgetEntry({
   incomeRoot,
 }: BudgetEntryInput): AddEntryInput {
   const trimmedAccount = account.trim();
-  const amount = toAsciiNumerals(number).trim();
+  const amount = parseBudgetAmount(number) ?? number.trim();
   return {
     type: "BUDGET" as LedgerEntryType,
     budget: {
