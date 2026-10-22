@@ -77,7 +77,7 @@ Prioritize the major correctness findings (PRINT/FROM/JOURNAL, authored location
 - [042](./blocked/042.md) — PulseMCP publication — **blocked:** new listings and changes remain paused; needs supported reopened intake.
 
 - [039](./blocked/039.md) — Recheck Hermes support for consent-gated ledger instruction scaffolding — **blocked:** needs a compatible Hermes host policy; retain the approved workflow and do not force installation.
-- [040](./blocked/040.md) — Recheck Hermes source-filtered ClawHub discovery — **blocked:** default search finds all eleven, but `--source clawhub` still returns none; needs a host/catalog correction.
+- [040](./blocked/040.md) — Recheck Hermes source-filtered ClawHub discovery — **blocked:** fresh changed-catalog cohort finds the original eleven via default/all, omits newly public roll-forward, and returns none with `--source clawhub`; needs a relevant host/index correction or changed catalog candidate.
 
 
 
