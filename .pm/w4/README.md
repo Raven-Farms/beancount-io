@@ -86,7 +86,6 @@
 
 - [313 — Let an unlimited ledger allowance advance the creation wizard](./313.md) — minor; dashboard QA simulation, 2026-10-21; documented-1 allowance produces0/-1 reached-limit warning and disabled Next; finite controls pass, no real Enterprise account/write claimed.
 
-- [312 — Show unavailable AI usage when Billing's read fails](./312.md) — minor; dashboard QA, 2026-10-21; failed usage reads render invented0/0 counts and a full red gauge at both widths; loading and reload controls pass.
 
 
 - [265 — Keep financial text and private paths out of GA4 automatic events](./blocked/265.md) — major; dashboard QA, 2026-10-20; stream-editor completion dependency. — **blocked:** checklist shipped in `181e7a996`; needs a GA4 Editor to turn off Site search / history page views
