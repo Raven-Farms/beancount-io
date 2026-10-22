@@ -23,7 +23,6 @@
 - [424](./blocked/424.md) — Mobile does not show the ledger service's fix hints (split from 311) — **blocked:** production's GraphQL schema lacks `code`/`hint` until backend-v2 deploys; mobile's client is generated from it
 - [453](./blocked/453.md) — addEntries/bulkEntries have no idempotency key: a retry after a lost response can duplicate the entry (split from 351) — **blocked:** needs an owner-approved contract (field, bounds, retention) across REST/GraphQL/MCP and a backend-v2 deploy
 - [508](./blocked/508.md) — Mobile guesses that an entry is a plugin copy from its first line; read the ledger's `generated_from` instead (split from 443) — **blocked:** production's GraphQL schema lacks `generated_from` until the ledger service and backend-v2 deploy; mobile's client is generated from it
-- [499](./499.md) — Home charts show duplicate title under the tab (441 regression)
 - [500](./500.md) — 435 incomplete: resumed draft still creates without balance
 - [501](./501.md) — Stored draft fingerprint reveals opening amount (434 vs 053)
 - [502](./502.md) — Create retry across midnight mints new requestId (436+434)

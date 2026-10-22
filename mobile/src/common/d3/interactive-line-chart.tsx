@@ -80,6 +80,11 @@ type InteractiveLineChartProps = {
    */
   label?: string;
   /**
+   * Names the curve to a screen reader without drawing a heading, for a card
+   * whose tab already names the page (Home). `label` wins when both are set.
+   */
+  a11yLabel?: string;
+  /**
    * Static line under the change row about the resting figure (e.g. Home's
    * "Cost $106,826.05 · Unrealized +$10,823.44"). Hidden, not removed, while
    * scrubbing: it describes the latest value, not the month under the finger,
@@ -503,6 +508,7 @@ function ScrubHeader({
 
 function InteractiveLineChart({
   label,
+  a11yLabel,
   footnote,
   labels,
   periods,
@@ -796,7 +802,9 @@ function InteractiveLineChart({
     }
     setStepIndex(null);
   }, [numbers, scrub]);
-  const plotLabel = hasSeries ? chartSummaryLabel(label, a11ySeries) : null;
+  const plotLabel = hasSeries
+    ? chartSummaryLabel(label ?? a11yLabel, a11ySeries)
+    : null;
 
   // The dot and the cursor read the new series' coordinates at once, while the
   // line and area morph through transition frames: on a range change they floated
