@@ -1,3 +1,4 @@
+import { useLedgerRootNames } from "@/common/hooks/use-ledger-root-names";
 import { useMemo, useState } from "react";
 import { LayoutChangeEvent, StyleSheet, View } from "react-native";
 import Svg, { Path, Rect, Text as SvgText } from "react-native-svg";
@@ -230,6 +231,9 @@ function CashFlowSankeyPlot({
   const theme = useTheme().colorTheme;
   const styles = useThemeStyle(getStyles);
   const { t, locale } = useTranslations();
+  // A ledger that renames its roots has Ingresos/Gastos, not Income/Expenses
+  // (w21/235).
+  const roots = useLedgerRootNames();
   const [width, setWidth] = useState(ScreenWidth - gutter * 2);
   const [pressed, setPressed] = useState<string | null>(null);
 
@@ -245,8 +249,9 @@ function CashFlowSankeyPlot({
         clawbacksLabel: t("cashFlowClawbacks"),
         incomeNodeLabel: (name) => t("sankeyIncomeNodeLabel", { name }),
         expensesNodeLabel: (name) => t("sankeyExpensesNodeLabel", { name }),
+        roots,
       }),
-    [income, expenses, t],
+    [income, expenses, roots, t],
   );
 
   const ready = data.links.length > 0;

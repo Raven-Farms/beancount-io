@@ -14,6 +14,13 @@ import { selectTransactionAmount } from "../screens/transactions-screen/utils/tr
 import type { JournalTransaction } from "../screens/transactions-screen/types";
 import { buildPayeeSeriesBql } from "../screens/merchants-screen/selectors/payee-series";
 import { buildMerchantCurrencyTotalsBql } from "../screens/merchant-detail-screen/selectors/merchant-stats";
+import {
+  categorizeAccount,
+  isExcludedAccount,
+  sankeyRoleForId,
+  transformToSankeyData,
+} from "../screens/reports-screen/selectors/sankey-data";
+import type { AccountNode } from "../components/account-list/select-account-list";
 
 /**
  * w21/073: a ledger may rename its roots (`option "name_assets" "Activos"`).
@@ -173,5 +180,109 @@ describe("Reports and Merchants on a renamed-roots ledger", () => {
     expect(source.includes('accountPrefix={["Income", "Expenses"]}')).toBe(
       false,
     );
+  });
+});
+
+// w21/235: the Cash flow card classified accounts by the English root names,
+// so a ledger that renames its roots drew "No cash flow in this range" under a
+// chart full of income and spending.
+describe("Reports' Cash flow on a renamed-roots ledger", () => {
+  const node = (account: string, value: number): AccountNode => ({
+    account,
+    name: account.split(":").pop() as string,
+    value,
+    children: [],
+  });
+  const labels = {
+    otherLabel: "Other",
+    cashFlowLabel: "Cash flow",
+    savingsLabel: "Savings",
+    refundsLabel: "Refunds",
+    clawbacksLabel: "Clawbacks",
+  };
+  const flows = (
+    income: AccountNode[],
+    expenses: AccountNode[],
+    ledgerRoots?: typeof roots | Partial<typeof roots>,
+  ) =>
+    transformToSankeyData({
+      income,
+      expenses,
+      ...labels,
+      ...(ledgerRoots ? { roots: ledgerRoots } : {}),
+    });
+
+  it("draws the same flow as the English ledger", () => {
+    const english = flows(
+      [node("Income:Salario", 3000)],
+      [node("Expenses:Vivienda", 1200), node("Expenses:Comida", 800)],
+    );
+    const renamed = flows(
+      [node("Ingresos:Salario", 3000)],
+      [node("Gastos:Vivienda", 1200), node("Gastos:Comida", 800)],
+      roots,
+    );
+    expect(renamed.links.length > 0).toBe(true);
+    expect(renamed.nodes.map((n) => n.label)).toEqual(
+      english.nodes.map((n) => n.label),
+    );
+    expect(renamed.links.map((l) => l.value)).toEqual(
+      english.links.map((l) => l.value),
+    );
+    expect(renamed.nodes.map((n) => n.role)).toEqual(
+      english.nodes.map((n) => n.role),
+    );
+    expect(renamed.nodes.some((n) => n.label === "Savings")).toBe(true);
+  });
+
+  it("is empty without the roots, which is the bug", () => {
+    const hidden = flows(
+      [node("Ingresos:Salario", 3000)],
+      [node("Gastos:Vivienda", 1200)],
+    );
+    expect(hidden.links).toEqual([]);
+  });
+
+  it("does not claim all income was saved when only expenses are renamed", () => {
+    const partial = { expenses: "Gastos" };
+    const data = flows(
+      [node("Income:Salary", 3000)],
+      [node("Gastos:Vivienda", 1200)],
+      partial,
+    );
+    const toSavings = data.links.find((l) => l.target === "savings");
+    expect(toSavings?.value).toBe(1800);
+    expect(data.links.some((l) => l.target === "Gastos:Vivienda")).toBe(true);
+  });
+
+  it("classifies and colours accounts by the ledger's root names", () => {
+    expect(categorizeAccount("Ingresos:Salario", roots)).toBe("source");
+    expect(categorizeAccount("Gastos:Comida", roots)).toBe("operating");
+    expect(categorizeAccount("Activos:Banco", roots)).toBe("investing");
+    expect(categorizeAccount("Pasivos:Tarjeta", roots)).toBe("financing");
+    expect(categorizeAccount("Patrimonio:Apertura", roots)).toBe("exclude");
+    expect(categorizeAccount("Income:Salary", roots)).toBe("exclude");
+    expect(sankeyRoleForId("Ingresos:Salario", roots)).toBe("source");
+    expect(sankeyRoleForId("Gastos:Comida", roots)).toBe("operating");
+    expect(isExcludedAccount("Activos:US:BofA:Checking", roots)).toBe(true);
+    expect(isExcludedAccount("Assets:Bank:Checking", roots)).toBe(false);
+  });
+
+  it("is given the ledger's roots by the card", () => {
+    const card = fs
+      .readFileSync(
+        path.join(
+          __dirname,
+          "..",
+          "screens",
+          "reports-screen",
+          "components",
+          "cash-flow-sankey.tsx",
+        ),
+        "utf8",
+      )
+      .replace(/\s+/g, "");
+    expect(card.includes("constroots=useLedgerRootNames();")).toBe(true);
+    expect(card.includes("roots,}),[income,expenses,roots,t]")).toBe(true);
   });
 });

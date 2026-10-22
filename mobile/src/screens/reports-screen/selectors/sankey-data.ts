@@ -2,6 +2,7 @@ import type { AccountNode } from "../../../components/account-list/select-accoun
 import { leafName } from "../../../common/account-util";
 import { topNWithOther } from "./select-breakdown-rows";
 import { formatShortMoneyWithCurrency } from "../../../common/number-utils";
+import { getAccountRoot, type RootNames } from "../../../common/account-root";
 
 /**
  * Below half a cent a flow is float residue, not money: a month whose income
@@ -69,20 +70,27 @@ export type AccountCategory =
 /**
  * Categorize a Beancount account by its type prefix.
  * Port of the web `account-categorizer` — typed copy, no cross-package import.
+ *
+ * `roots` are the ledger's own names for the five roots: a ledger with
+ * `option "name_income" "Ingresos"` has `Ingresos:Salario`, which read as
+ * excluded here, so every node of a fully renamed ledger was dropped and the
+ * card said "No cash flow" under a chart full of money (w21/235).
  */
-export function categorizeAccount(accountName: string): AccountCategory {
+export function categorizeAccount(
+  accountName: string,
+  roots: RootNames = {},
+): AccountCategory {
   if (!accountName) {
     return "exclude";
   }
-  const prefix = accountName.split(":")[0];
-  switch (prefix) {
-    case "Income":
+  switch (getAccountRoot(accountName, roots)) {
+    case "income":
       return "source";
-    case "Expenses":
+    case "expenses":
       return "operating";
-    case "Assets":
+    case "assets":
       return "investing";
-    case "Liabilities":
+    case "liabilities":
       return "financing";
     default:
       return "exclude";
@@ -94,15 +102,22 @@ export function categorizeAccount(accountName: string): AccountCategory {
  * Port of the web helper; income/expense trees rarely hit it, but the
  * transformer still consults it so a stray asset path cannot leak through.
  */
-export function isExcludedAccount(accountName: string): boolean {
+export function isExcludedAccount(
+  accountName: string,
+  roots: RootNames = {},
+): boolean {
   if (!accountName) {
     return false;
   }
+  const assets = (roots.assets ?? "Assets").replace(
+    /[.*+?^${}()|[\]\\]/g,
+    "\\$&",
+  );
   const exclusionPatterns = [
-    /^Assets:.*Cash$/i,
-    /^Assets:.*Checking$/i,
-    /^Assets:.*Savings$/i,
-    /^Assets:.*Bank/i,
+    new RegExp(`^${assets}:.*Cash$`, "i"),
+    new RegExp(`^${assets}:.*Checking$`, "i"),
+    new RegExp(`^${assets}:.*Savings$`, "i"),
+    new RegExp(`^${assets}:.*Bank`, "i"),
   ];
   return exclusionPatterns.some((pattern) => pattern.test(accountName));
 }
@@ -161,7 +176,7 @@ export function truncateSankeyLabel(
   return `${label.slice(0, maxChars - 1)}…`;
 }
 
-export function sankeyRoleForId(id: string): SankeyRole {
+export function sankeyRoleForId(id: string, roots: RootNames = {}): SankeyRole {
   if (id === CASH_FLOW_ID) {
     return "hub";
   }
@@ -174,7 +189,7 @@ export function sankeyRoleForId(id: string): SankeyRole {
   if (id === OTHER_EXPENSES_ACCOUNT || id === CLAWBACKS_ID) {
     return "operating";
   }
-  const category = categorizeAccount(id);
+  const category = categorizeAccount(id, roots);
   switch (category) {
     case "source":
       return "source";
@@ -223,6 +238,8 @@ type TransformOptions = {
    */
   incomeNodeLabel?: (name: string) => string;
   expensesNodeLabel?: (name: string) => string;
+  /** The ledger's names for its roots; Beancount's own when left out. */
+  roots?: RootNames;
   depth?: number;
   topN?: number;
 };
@@ -235,14 +252,15 @@ function extractAtDepth(
   nodes: AccountNode[],
   targetDepth: number,
   out: Map<string, number>,
+  roots: RootNames,
 ): void {
   for (const node of nodes) {
     if (!node || !node.account) {
       continue;
     }
     if (
-      categorizeAccount(node.account) === "exclude" ||
-      isExcludedAccount(node.account)
+      categorizeAccount(node.account, roots) === "exclude" ||
+      isExcludedAccount(node.account, roots)
     ) {
       continue;
     }
@@ -256,7 +274,7 @@ function extractAtDepth(
         out.set(key, (out.get(key) ?? 0) + node.value);
       }
     } else {
-      extractAtDepth(node.children, targetDepth, out);
+      extractAtDepth(node.children, targetDepth, out, roots);
     }
   }
 }
@@ -310,6 +328,7 @@ export function transformToSankeyData(options: TransformOptions): SankeyData {
     clawbacksLabel,
     incomeNodeLabel = (name: string) => name,
     expensesNodeLabel = (name: string) => name,
+    roots = {},
     depth = SANKEY_DEPTH,
     topN = SANKEY_TOP_N,
   } = options;
@@ -319,8 +338,8 @@ export function transformToSankeyData(options: TransformOptions): SankeyData {
 
   const incomeValues = new Map<string, number>();
   const expenseValues = new Map<string, number>();
-  extractAtDepth(income, depth, incomeValues);
-  extractAtDepth(expenses, depth, expenseValues);
+  extractAtDepth(income, depth, incomeValues, roots);
+  extractAtDepth(expenses, depth, expenseValues, roots);
 
   const incomeRows = topNWithOther(
     toRankedNodes(incomeValues, leafName),
@@ -383,7 +402,7 @@ export function transformToSankeyData(options: TransformOptions): SankeyData {
       row.account === OTHER_INCOME_ACCOUNT
         ? row.name
         : sideLabel(row, expenseNames, incomeNodeLabel),
-      sankeyRoleForId(row.account),
+      sankeyRoleForId(row.account, roots),
     );
     links.push({
       source: row.account,
@@ -403,7 +422,7 @@ export function transformToSankeyData(options: TransformOptions): SankeyData {
       row.account === OTHER_EXPENSES_ACCOUNT
         ? row.name
         : sideLabel(row, incomeNames, expensesNodeLabel),
-      sankeyRoleForId(row.account),
+      sankeyRoleForId(row.account, roots),
     );
     links.push({
       source: CASH_FLOW_ID,
