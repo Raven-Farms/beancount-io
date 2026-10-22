@@ -81,6 +81,14 @@ const OVERDUE_GRACE_FRACTION = 0.25;
 /** Periods past the expected date after which a series counts as stopped. */
 const LAPSE_PERIODS = 3;
 
+/**
+ * ...but never more than this many days: three periods of a six-monthly bill
+ * is eighteen months, and a cancelled one stayed red above the live bills
+ * until then (w21/409). A quarter and a half-year lapse after about four
+ * months; weekly to bimonthly bills are as before.
+ */
+const MAX_LAPSE_DAYS = 120;
+
 const MS_PER_DAY = 86_400_000;
 
 /**
@@ -548,7 +556,8 @@ export function detectRecurrence(
   const isLapsed =
     isLate &&
     scheduledDay === null &&
-    todayDay > nextExpectedDay + LAPSE_PERIODS * gapDays;
+    todayDay >
+      nextExpectedDay + Math.min(LAPSE_PERIODS * gapDays, MAX_LAPSE_DAYS);
   const isOverdue = isLate && !isLapsed;
 
   return {

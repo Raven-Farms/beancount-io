@@ -97,3 +97,48 @@ describe("a stopped series is lapsed, not overdue", () => {
     expect(en.merchantsLastPaid).toBe("Last paid {{date}}");
   });
 });
+
+// w21/409: the lapse threshold scaled with the cadence, so a cancelled
+// six-monthly bill stayed red for about seventeen months.
+describe("a stopped long-cadence series lapses within about four months", () => {
+  const SEMIANNUAL = monthly([
+    "2023-01-10",
+    "2023-07-10",
+    "2024-01-10",
+    "2024-07-10",
+    "2025-01-10",
+  ]);
+  const QUARTERLY = monthly([
+    "2024-01-15",
+    "2024-04-15",
+    "2024-07-15",
+    "2024-10-15",
+    "2025-01-15",
+  ]);
+
+  it("reads a semi-annual bill last paid 2025-01-10 as Last paid by November", () => {
+    const early = detectRecurrence(SEMIANNUAL, "2025-10-01")!;
+    expect(early.nextExpected).toBe("2025-07-10");
+    expect(early.isOverdue).toBe(true);
+    expect(early.isLapsed).toBe(false);
+    const stopped = detectRecurrence(SEMIANNUAL, "2025-11-15")!;
+    expect(stopped.isLapsed).toBe(true);
+    expect(stopped.isOverdue).toBe(false);
+    expect(stopped.lastPaid).toBe("2025-01-10");
+    // Still stopped long after, not live again.
+    expect(detectRecurrence(SEMIANNUAL, "2026-10-21")!.isLapsed).toBe(true);
+  });
+
+  it("lapses a quarterly bill after the same bound, not after nine months", () => {
+    const missed = detectRecurrence(QUARTERLY, "2025-06-15")!;
+    expect(missed.isOverdue).toBe(true);
+    const stopped = detectRecurrence(QUARTERLY, "2025-09-01")!;
+    expect(stopped.isLapsed).toBe(true);
+  });
+
+  it("leaves monthly and shorter bills at three periods", () => {
+    const miss = detectRecurrence(NETFLIX, "2027-01-10")!;
+    expect(miss.isOverdue).toBe(true);
+    expect(detectRecurrence(NETFLIX, "2027-02-20")!.isLapsed).toBe(true);
+  });
+});
