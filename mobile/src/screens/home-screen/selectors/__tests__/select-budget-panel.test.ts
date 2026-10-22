@@ -429,3 +429,34 @@ describe("an income target behind mid-period", () => {
     expect(names).toEqual(["Salary", "Bonus"]);
   });
 });
+
+// w21/381: after a ledger switch the panel kept the previous ledger's rows until
+// the new reads landed. The hook needs the native runtime; its source is checked.
+describe("the panel's rows belong to a ledger", () => {
+  const hook = require("fs")
+    .readFileSync(
+      require("path").join(__dirname, "../../hooks/use-budget-panel.ts"),
+      "utf8",
+    )
+    .replace(/\s+/g, "");
+
+  it("records which ledger each result was read for", () => {
+    expect(
+      hook.includes("setRows(settled.rows);setRowsLedger(ledgerId);"),
+    ).toBe(true);
+    expect(hook.includes("setRows([]);setRowsLedger(ledgerId??null);")).toBe(
+      true,
+    );
+  });
+
+  it("shows another ledger's rows as none, still loading", () => {
+    expect(hook.includes("constcurrent=rowsLedger===(ledgerId??null);")).toBe(
+      true,
+    );
+    expect(
+      hook.includes(
+        "rows:current?rows:[],loading:loading||!current,failed:current&&failed,",
+      ),
+    ).toBe(true);
+  });
+});

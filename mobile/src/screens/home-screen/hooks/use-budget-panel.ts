@@ -78,6 +78,11 @@ export function useBudgetPanel({
   // Re-run on every ledger write so the actuals track spending.
   const ledgerRevision = useReactiveVar(ledgerRevisionVar);
   const [rows, setRows] = useState<BudgetPanelRow[]>([]);
+  // The ledger `rows` were read for. The tabs stay mounted, so a switch to a
+  // ledger with cached budgets rendered the previous ledger's rows until the
+  // new reads landed; rows of another ledger read as none, still loading
+  // (w21/381).
+  const [rowsLedger, setRowsLedger] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [failed, setFailed] = useState(false);
   const [attempt, setAttempt] = useState(0);
@@ -100,6 +105,7 @@ export function useBudgetPanel({
 
     if (!ledgerId || groups.length === 0) {
       setRows([]);
+      setRowsLedger(ledgerId ?? null);
       setFailed(false);
       setLoading(false);
       return;
@@ -202,6 +208,7 @@ export function useBudgetPanel({
           timeWindowStart(time, today),
         );
         setRows(settled.rows);
+        setRowsLedger(ledgerId);
         setFailed(settled.failed);
         setLoading(false);
       });
@@ -221,5 +228,11 @@ export function useBudgetPanel({
   ]);
 
   const retry = useCallback(() => setAttempt((n) => n + 1), []);
-  return { rows, loading, failed, retry };
+  const current = rowsLedger === (ledgerId ?? null);
+  return {
+    rows: current ? rows : [],
+    loading: loading || !current,
+    failed: current && failed,
+    retry,
+  };
 }
