@@ -22,7 +22,6 @@
 - [304](./blocked/304.md) — Budgets on Liabilities/Assets get favourability backwards (owner decision) — **blocked:** needs an owner decision between deriving direction from the account root and limiting the picker to Income and Expenses, which reverses w1/023's "every root" rule
 - [453](./blocked/453.md) — addEntries/bulkEntries have no idempotency key: a retry after a lost response can duplicate the entry (split from 351) — **blocked:** needs an owner-approved contract (field, bounds, retention) across REST/GraphQL/MCP and a backend-v2 deploy
 - [518](./blocked/518.md) — New Transaction books a plain first-row amount as money *into* the bank (Checking +4.50, Groceries −4.50) — **blocked:** needs an owner product decision on the default row signs (negative source row vs From/To labels)
-- [524](./524.md) — Home's Recent Transactions and Reports' account card key twin entries by the same `entry_hash` (missed by w21/419)
 - [525](./525.md) — A guest journal link's filters follow the guest to every other example, and come back after Reset (w21/489 gap)
 - [526](./526.md) — Transactions, Account and Merchant detail drop back to the newest 20 rows after a return to the app or any write; a stale "Couldn't load more" footer stays
 - [527](./527.md) — A quick Back after deleting from a stacked detail still shows the deleted entry (w21/094 incomplete; w21/472 fixed only edit)

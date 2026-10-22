@@ -7,6 +7,7 @@ import { useThemeStyle } from "@/common/hooks/use-theme-style";
 import { useTranslations } from "@/common/hooks/use-translations";
 import { useToday } from "@/common/hooks/use-today";
 import { RecentTransactionsSkeleton } from "./home-skeletons";
+import { journalRowKeys } from "@/screens/transactions-screen/utils/merge-journal-page";
 import {
   RECENT_FUTURE_BUFFER,
   recentTransactionsUpTo,
@@ -88,6 +89,9 @@ export function RecentTransactionsCard({
     RECENT_LIMIT,
   );
 
+  // Twin entries share a hash: their keys carry the ordinal (w21/419, w21/524).
+  const rowKeys = journalRowKeys(entries);
+
   const onSeeAll = () => {
     if (guest) {
       guest.navigate("transactions");
@@ -127,7 +131,7 @@ export function RecentTransactionsCard({
           ) : (
             entries.map((entry, index) => (
               <EntryRow
-                key={entry.entry_hash || index}
+                key={rowKeys.get(entry) ?? index}
                 entry={entry}
                 dateToday={today}
                 onPress={

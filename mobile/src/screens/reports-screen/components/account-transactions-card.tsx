@@ -1,4 +1,5 @@
 import { useEffect, useMemo } from "react";
+import { journalRowKeys } from "@/screens/transactions-screen/utils/merge-journal-page";
 import { StyleSheet, Text } from "react-native";
 import { useRouter } from "expo-router";
 import { ColorTheme } from "@/types/theme-props";
@@ -125,6 +126,8 @@ export function AccountTransactionsCard({
       selectAccountTransactions(journal, accountPrefix, timeRange, listAnchor),
     [journal, accountPrefix, timeRange, listAnchor],
   );
+  // Twin entries share a hash: their keys carry the ordinal (w21/419, w21/524).
+  const rowKeys = useMemo(() => journalRowKeys(entries), [entries]);
   // Rows exist, just not in this range: say so instead of "No transactions yet".
   const emptyText = hasAnyAccountTransaction(journal, accountPrefix)
     ? t("recentTransactionsEmptyRange")
@@ -149,7 +152,7 @@ export function AccountTransactionsCard({
           ) : (
             entries.map((entry, index) => (
               <EntryRow
-                key={entry.entry_hash || index}
+                key={rowKeys.get(entry) ?? index}
                 entry={entry}
                 dateToday={today}
                 onPress={
