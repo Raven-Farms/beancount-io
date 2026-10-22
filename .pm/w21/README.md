@@ -19,7 +19,6 @@
 - [206](./blocked/206.md) — Refund/return receipts are always prefilled as a purchase — **blocked:** needs an owner-approved AI-quota evaluation and a parse-contract decision (`isRefund` vs signed amount)
 - [210](./blocked/210.md) — Holdings sheet labels a user-typed price "Live price" and applies the feed's staleness rule — **blocked:** needs an owner decision on exposing the feed's effective price dates (cross-package contract) and a deploy before mobile can read it
 - [228](./blocked/228.md) — New Transaction stamps the first operating currency on every posting; no currency or price control — **blocked:** needs account-constraint currencies on the client, a price path (legacy field or typed mutation, deploy first) and an owner-approved form design
-- [247](./247.md) — Regression from 111: drawer line heights double-scaled at AX2 (rows ~2× tall, names split far apart)
 - [248](./248.md) — Hermes has no Intl.PluralRules: on device ru/uk/sk counts use the English rule ("5 ошибки")
 - [249](./249.md) — Persian: at-market/at-cost note and "Not in total" list still flip the minus sign
 - [250](./250.md) — Delete after the entry changed elsewhere: bare failure, stale entry stays, retries all fail

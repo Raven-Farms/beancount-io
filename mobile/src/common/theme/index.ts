@@ -24,7 +24,7 @@ export {
 
 // Dynamic Type layout policy. Import-free like ./typography, so the re-export
 // keeps component imports on the one theme barrel.
-export { prefersStackedLayout, scaleLineHeights } from "./dynamic-type";
+export { prefersStackedLayout, relaxLineHeights } from "./dynamic-type";
 
 export { withAlpha } from "./color-utils";
 

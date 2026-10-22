@@ -33,7 +33,7 @@ import {
   fontWeights,
   gutter,
   prefersStackedLayout,
-  scaleLineHeights,
+  relaxLineHeights,
   space,
   useTheme,
 } from "@/common/theme";
@@ -325,15 +325,17 @@ const getStyles = (theme: ColorTheme) =>
   });
 
 /**
- * The drawer's styles, their line heights grown with the text size: fixed
- * point line heights clipped "Ledgers", "+ New" and every ledger name to
- * their top half at AX2 (w21/111).
+ * The drawer's styles, their fixed line heights dropped once text is enlarged.
+ * Pinned point line heights clipped "Ledgers", "+ New" and every ledger name
+ * at AX2 (w21/111), but growing them as well double-scaled what React Native
+ * already scales (w21/247): at large sizes the platform's natural line height
+ * applies instead.
  */
 function useDrawerStyles() {
   const styles = useThemeStyle(getStyles);
   const { fontScale } = useWindowDimensions();
   return useMemo(
-    () => scaleLineHeights(styles, fontScale),
+    () => relaxLineHeights(styles, fontScale),
     [styles, fontScale],
   );
 }
