@@ -582,6 +582,8 @@ export const sk: Translations = {
   ledgerDeleteFileConfirm: "Odstrániť",
   ledgerDeleteFileSuccess: "{{name}} odstránený",
   ledgerDeleteFileFailed: "Súbor sa nepodarilo odstrániť",
+  ledgerDeleteFileChanged:
+    "Tento súbor bol inde zmenený. Zoznam sa obnovil; skúste to znova.",
   ledgerMainFileProtected: "main.bean nemožno odstrániť",
   // ledger file editor
   ledgerEditorSave: "Uložiť",

@@ -560,6 +560,8 @@ export const fa: Translations = {
   ledgerDeleteFileConfirm: "حذف",
   ledgerDeleteFileSuccess: "{{name}} حذف شد",
   ledgerDeleteFileFailed: "حذف فایل ناموفق بود",
+  ledgerDeleteFileChanged:
+    "این فایل جای دیگری تغییر کرده است. فهرست به‌روز شد؛ دوباره تلاش کنید.",
   ledgerMainFileProtected: "main.bean را نمی‌توان حذف کرد",
   // ledger file editor
   ledgerEditorSave: "ذخیره",

@@ -514,6 +514,7 @@ export const zh: Translations = {
   ledgerDeleteFileConfirm: "删除",
   ledgerDeleteFileSuccess: "已删除 {{name}}",
   ledgerDeleteFileFailed: "删除文件失败",
+  ledgerDeleteFileChanged: "此文件已在别处被更改。列表已刷新，请重试。",
   ledgerMainFileProtected: "main.bean 不可删除",
   // ledger file editor
   ledgerEditorSave: "保存",

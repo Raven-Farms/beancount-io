@@ -580,6 +580,8 @@ export const es: Translations = {
   ledgerDeleteFileConfirm: "Eliminar",
   ledgerDeleteFileSuccess: "{{name}} eliminado",
   ledgerDeleteFileFailed: "Error al eliminar el archivo",
+  ledgerDeleteFileChanged:
+    "Este archivo cambió en otro lugar. Se actualizó la lista; inténtalo de nuevo.",
   ledgerMainFileProtected: "main.bean no se puede eliminar",
   // ledger file editor
   ledgerEditorSave: "Guardar",

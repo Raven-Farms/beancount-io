@@ -574,6 +574,8 @@ export const en = {
   ledgerDeleteFileConfirm: "Delete",
   ledgerDeleteFileSuccess: "Deleted {{name}}",
   ledgerDeleteFileFailed: "Failed to delete file",
+  ledgerDeleteFileChanged:
+    "This file changed elsewhere. The list was refreshed; try again.",
   ledgerMainFileProtected: "main.bean cannot be deleted",
   // ledger file editor
   ledgerEditorSave: "Save",

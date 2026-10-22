@@ -579,6 +579,8 @@ export const pt: Translations = {
   ledgerDeleteFileConfirm: "Excluir",
   ledgerDeleteFileSuccess: "{{name}} excluído",
   ledgerDeleteFileFailed: "Falha ao excluir o arquivo",
+  ledgerDeleteFileChanged:
+    "Este arquivo mudou em outro lugar. A lista foi atualizada; tente de novo.",
   ledgerMainFileProtected: "main.bean não pode ser excluído",
   // ledger file editor
   ledgerEditorSave: "Salvar",

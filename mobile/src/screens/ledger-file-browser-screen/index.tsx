@@ -1,4 +1,5 @@
 import { routeText } from "@/common/route-text";
+import { isConflictFailure } from "@/common/ledger-conflict";
 import { ledgerWriteFailureMessage } from "@/common/ledger-refusal";
 import { useGuest } from "@/common/guest/guest-context";
 import { useLedgerAccess } from "@/common/hooks/use-ledger-access";
@@ -612,9 +613,15 @@ export function LedgerFileBrowserScreen(): JSX.Element {
         await invalidateLedgerData(client, "file");
       } catch (deleteError: unknown) {
         haptics.error();
-        const message =
-          ledgerWriteFailureMessage(deleteError, { t }) ??
-          t("ledgerDeleteFileFailed");
+        // The file changed elsewhere, so the sha in hand is spent and every
+        // retry would send it again: refresh the list and say so, instead of
+        // the server's "sha does not match [given: …]" (w21/380).
+        const changed = isConflictFailure(deleteError);
+        if (changed) await invalidateLedgerData(client, "file");
+        const message = changed
+          ? t("ledgerDeleteFileChanged")
+          : (ledgerWriteFailureMessage(deleteError, { t }) ??
+            t("ledgerDeleteFileFailed"));
         toast.showToast({ message, type: "error" });
       } finally {
         deleteInFlightRef.current = false;

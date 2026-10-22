@@ -65,7 +65,6 @@
 - [466](./466.md) — Transactions search literal on NFC/NFD and spacing
 - [467](./467.md) — Android search field has no clear button
 - [315](./blocked/315.md) — In-app commits signed with Gitea username and real email (no full_name, no noreply) — **blocked:** needs the owner's noreply-address and published-history decisions, and a production backfill of existing Gitea users that can't be verified here
-- [380](./380.md) — Files delete after external change toasts raw sha mismatch, no refresh
 - [381](./381.md) — Home budget panel shows previous ledger's rows after a switch
 - [382](./382.md) — Drawer "Couldn't load ledgers" retry text 1.01:1 contrast
 - [383](./383.md) — Browse ledgers retry shows false "Your ledgers will appear here"

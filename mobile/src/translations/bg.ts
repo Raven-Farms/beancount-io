@@ -566,6 +566,8 @@ export const bg: Translations = {
   ledgerDeleteFileConfirm: "Изтрий",
   ledgerDeleteFileSuccess: "{{name}} е изтрит",
   ledgerDeleteFileFailed: "Файлът не беше изтрит",
+  ledgerDeleteFileChanged:
+    "Този файл е променен другаде. Списъкът е опреснен; опитайте отново.",
   ledgerMainFileProtected: "main.bean не може да бъде изтрит",
   // ledger file editor
   ledgerEditorSave: "Запази",

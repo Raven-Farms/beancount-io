@@ -581,6 +581,8 @@ export const ca: Translations = {
   ledgerDeleteFileConfirm: "Elimina",
   ledgerDeleteFileSuccess: "S'ha eliminat {{name}}",
   ledgerDeleteFileFailed: "No s'ha pogut eliminar el fitxer",
+  ledgerDeleteFileChanged:
+    "Aquest fitxer ha canviat en un altre lloc. S'ha actualitzat la llista; torneu-ho a provar.",
   ledgerMainFileProtected: "main.bean no es pot eliminar",
   // ledger file editor
   ledgerEditorSave: "Desa",

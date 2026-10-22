@@ -576,6 +576,8 @@ export const uk: Translations = {
   ledgerDeleteFileConfirm: "Видалити",
   ledgerDeleteFileSuccess: "Видалено {{name}}",
   ledgerDeleteFileFailed: "Не вдалося видалити файл",
+  ledgerDeleteFileChanged:
+    "Цей файл змінено деінде. Список оновлено; спробуйте ще раз.",
   ledgerMainFileProtected: "main.bean видалити не можна",
   // ledger file editor
   ledgerEditorSave: "Зберегти",

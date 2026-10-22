@@ -569,6 +569,8 @@ export const nl: Translations = {
   ledgerDeleteFileConfirm: "Verwijderen",
   ledgerDeleteFileSuccess: "{{name}} verwijderd",
   ledgerDeleteFileFailed: "Verwijderen van bestand mislukt",
+  ledgerDeleteFileChanged:
+    "Dit bestand is elders gewijzigd. De lijst is vernieuwd; probeer het opnieuw.",
   ledgerMainFileProtected: "main.bean kan niet worden verwijderd",
   // ledger file editor
   ledgerEditorSave: "Opslaan",
