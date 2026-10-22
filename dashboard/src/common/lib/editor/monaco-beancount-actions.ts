@@ -41,14 +41,19 @@ export function alignAmounts(
   }
 
   const newContent = lines.join("\n");
+  if (newContent === model.getValue()) return;
 
-  // Use executeEdits for proper undo/redo support
+  // executeEdits records the edit but pushes no Undo stop, so it joined the
+  // typing before it and one Undo took both (w4/969). Stops on both sides
+  // make the alignment its own step.
+  editor.pushUndoStop();
   editor.executeEdits("align-amounts", [
     {
       range: model.getFullModelRange(),
       text: newContent,
     },
   ]);
+  editor.pushUndoStop();
 }
 
 /**

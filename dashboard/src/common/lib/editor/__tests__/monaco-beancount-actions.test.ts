@@ -13,6 +13,12 @@ const createMockEditor = () => {
   const model = {
     getLineCount: vi.fn(),
     getLineContent: vi.fn(),
+    // The whole buffer, as the line mocks describe it.
+    getValue: vi.fn((): string =>
+      Array.from({ length: model.getLineCount() ?? 0 }, (_, i) =>
+        model.getLineContent(i + 1),
+      ).join("\n"),
+    ),
     getFullModelRange: vi.fn(() => ({
       startLineNumber: 1,
       startColumn: 1,
@@ -24,6 +30,7 @@ const createMockEditor = () => {
   const editor = {
     getModel: vi.fn(() => model),
     executeEdits: vi.fn(),
+    pushUndoStop: vi.fn(),
     trigger: vi.fn(),
     addCommand: vi.fn(),
   };
@@ -81,7 +88,7 @@ describe("Monaco Beancount Actions", () => {
       expect(lines[2]).toMatch(/Expenses:Food\s+-100\.00 USD/);
     });
 
-    it("should handle lines without amounts", () => {
+    it("leaves a file with nothing to align untouched, without an Undo step", () => {
       const { editor, model } = createMockEditor();
 
       model.getLineCount.mockReturnValue(2);
@@ -93,13 +100,8 @@ describe("Monaco Beancount Actions", () => {
 
       alignAmounts(editor as unknown as monaco.editor.IStandaloneCodeEditor);
 
-      expect(editor.executeEdits).toHaveBeenCalled();
-      const editCall = editor.executeEdits.mock.calls[0][1][0];
-      const lines = editCall.text.split("\n");
-
-      // Lines without amounts should remain unchanged
-      expect(lines[0]).toBe('2024-01-01 * "Test"');
-      expect(lines[1]).toBe("  ; This is a comment");
+      expect(editor.executeEdits).not.toHaveBeenCalled();
+      expect(editor.pushUndoStop).not.toHaveBeenCalled();
     });
 
     it("should handle empty editor", () => {
@@ -109,12 +111,7 @@ describe("Monaco Beancount Actions", () => {
 
       alignAmounts(editor as unknown as monaco.editor.IStandaloneCodeEditor);
 
-      expect(editor.executeEdits).toHaveBeenCalledWith("align-amounts", [
-        {
-          range: model.getFullModelRange(),
-          text: "",
-        },
-      ]);
+      expect(editor.executeEdits).not.toHaveBeenCalled();
     });
 
     it("should handle null model", () => {
