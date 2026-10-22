@@ -196,15 +196,54 @@ const COMMON_WORD_KEYS = new Set([
   "zoom",
 ]);
 
+/**
+ * Names a statement puts before `*` when the merchant follows it: payment
+ * processors, which are never the merchant, and marketplaces that also sell
+ * under their own name. "PAYPAL *NETFLIX" is Netflix, not PayPal (w21/270).
+ */
+const PAYMENT_PROCESSORS = new Set(["paypal", "square", "venmo", "stripe"]);
+const AGGREGATORS = new Set([
+  "google",
+  "uber",
+  "amazon",
+  "doordash",
+  "grubhub",
+  "apple",
+]);
+
+/**
+ * "PAYPAL *NETFLIX" → the merchant after the star. A processor with a merchant
+ * we do not recognise has no logo (its own would be the wrong company); an
+ * aggregator falls back to its own brand, read with the star as a space so
+ * "UBER *EATS" is "uber eats". Null when the text is not that shape.
+ */
+function resolveStarMerchant(
+  normalized: string,
+): { text: string } | { brand: string | null } | null {
+  const star = normalized.indexOf("*");
+  if (star <= 0) return null;
+  const head = normalized.slice(0, star).trim();
+  const tail = normalized.slice(star + 1).trim();
+  const isProcessor = PAYMENT_PROCESSORS.has(head);
+  if (!tail || (!isProcessor && !AGGREGATORS.has(head))) return null;
+  const byMerchant = matchBrand(tail);
+  if (byMerchant) return { brand: byMerchant };
+  return isProcessor ? { brand: null } : { text: `${head} ${tail}` };
+}
+
 /** Drop what card processors add around a merchant name. */
 function stripTransactionNoise(lowered: string): string {
-  return lowered
-    .replace(/^(?:sq|tst|sp|pp)\s*\*\s*/u, "") // "SQ *", "TST*" prefixes
-    .split(/[*#]/u)[0] // "#1234" store numbers, "*AB12345" references
-    .split(/\s+/u)
-    .filter((word) => !/\d/u.test(word)) // store and terminal numbers
-    .join(" ")
-    .replace(/[\s.,;:!-]+$/u, "");
+  return (
+    lowered
+      .replace(/^(?:sq|tst|sp|pp)\s*\*\s*/u, "") // "SQ *", "TST*" prefixes
+      // "#1234" store numbers (three or more digits; "United #1 Plumbing" names
+      // a business) and "*AB12345" references.
+      .split(/\*|#(?=\s*\d{3})/u)[0]
+      .split(/\s+/u)
+      .filter((word) => !/\d/u.test(word)) // store and terminal numbers
+      .join(" ")
+      .replace(/[\s.,;:!-]+$/u, "")
+  );
 }
 
 /**
@@ -223,7 +262,11 @@ const WORD_CHAR = /[\p{L}\p{N}\p{M}]/u;
 
 export function matchBrand(text: string): string | null {
   if (!text) return null;
-  const normalized = text.toLowerCase().trim();
+  let normalized = text.toLowerCase().trim();
+
+  const starred = resolveStarMerchant(normalized);
+  if (starred && "brand" in starred) return starred.brand;
+  if (starred) normalized = starred.text;
 
   // Exact match is cheapest — try first, then without processor noise.
   if (BRAND_MAP[normalized]) return BRAND_MAP[normalized];

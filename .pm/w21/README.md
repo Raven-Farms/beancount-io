@@ -19,7 +19,6 @@
 - [206](./blocked/206.md) — Refund/return receipts are always prefilled as a purchase — **blocked:** needs an owner-approved AI-quota evaluation and a parse-contract decision (`isRefund` vs signed amount)
 - [210](./blocked/210.md) — Holdings sheet labels a user-typed price "Live price" and applies the feed's staleness rule — **blocked:** needs an owner decision on exposing the feed's effective price dates (cross-package contract) and a deploy before mobile can read it
 - [228](./blocked/228.md) — New Transaction stamps the first operating currency on every posting; no currency or price control — **blocked:** needs account-constraint currencies on the client, a price path (legacy field or typed mutation, deploy first) and an owner-approved form design
-- [270](./270.md) — Merchant logos show the processor ("PAYPAL *NETFLIX" → PayPal); "#" bypasses common-word guard
 - [271](./271.md) — One weekend-shifted payment disables the day-of-month anchor; Next drifts a day
 - [272](./272.md) — CRLF commit diffs render double-spaced; every diff ends with a blank row
 - [273](./273.md) — File-editor save conflict is a dead end: Keep Editing never saves, Reload discards the text
