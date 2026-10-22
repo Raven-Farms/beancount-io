@@ -113,5 +113,10 @@
 - [598](./598.md) — Latest Updates puts an evening (Pacific) commit above the next day's blog posts, so the dates read out of order
 - [599](./599.md) — Latest Updates shows every save as an identical "Committed to books" row (message and author dropped)
 - [600](./600.md) — Latest Updates never shows the commit you just made (not invalidated on write, and cached for 5 minutes server-side)
+- [601](./601.md) — Transaction headline and list row pad share counts to ".00" while Money flow doesn't ("+10.00 GOOG" over "+10 GOOG")
+- [602](./602.md) — Money flow doesn't pad a real currency held at cost ("+$100.5" under "+$100.50") (w21/506 over-reach)
+- [603](./603.md) — Money flow drops a lot's date and label, so sales from different lots look identical
+- [604](./604.md) — Posting metadata on transaction detail is cut to 2 lines and can't be selected
+- [605](./605.md) — Transaction detail's decorative icon glyphs are their own VoiceOver stops (w21/141 fixed only account rows)
 - [508](./blocked/508.md) — Mobile guesses that an entry is a plugin copy from its first line; read the ledger's `generated_from` instead (split from 443) — **blocked:** production's GraphQL schema lacks `generated_from` until the ledger service and backend-v2 deploy; mobile's client is generated from it
 - [315](./blocked/315.md) — In-app commits signed with Gitea username and real email (no full_name, no noreply) — **blocked:** needs the owner's noreply-address and published-history decisions, and a production backfill of existing Gitea users that can't be verified here
