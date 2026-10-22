@@ -177,11 +177,23 @@ export function TransactionConfigForm({
   const conflictAlertRef = useRef<HTMLDivElement>(null);
 
   const handleAICategorize = async () => {
+    // Targets as AI Fill found them. A target the reader changes while the
+    // suggestions are pending is theirs: a late suggestion fills only a row
+    // still holding what it held when the request started (w4/323).
+    const requested = new Map(
+      form
+        .getValues("transactions")
+        .map((txn) => [txn.id, txn.targetAccount] as const),
+    );
     const suggestions = await categorizeTransactions(validRows);
     const currentTransactions = form.getValues("transactions");
     const updatedTransactions = currentTransactions.map((txn) => {
       const suggestion = suggestions.get(txn.rowIndex);
-      if (suggestion && suggestion.confidence >= 0.5) {
+      if (
+        suggestion &&
+        suggestion.confidence >= 0.5 &&
+        requested.get(txn.id) === txn.targetAccount
+      ) {
         return {
           ...txn,
           targetAccount: suggestion.targetAccount,
