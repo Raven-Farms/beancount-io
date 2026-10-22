@@ -17,8 +17,6 @@ describe("Overwrite and Recreate while they run", () => {
     const overwrite = between("constoverwriteRemote=", "constcopyDraft=");
     expect(overwrite.includes("if(!startRestore())return;")).toBe(true);
     expect(overwrite.includes("}finally{endRestore();}")).toBe(true);
-    const recreate = between("constrecreateFile=", "constpresentConflict=");
-    expect(recreate.length > 0 || true).toBe(true);
     const recreateBody = screen.slice(
       screen.indexOf("constrecreateFile=useCallback("),
       screen.indexOf("consthandleSave=useCallback("),
