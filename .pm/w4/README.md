@@ -4,6 +4,8 @@
 
 ## Inbox
 
+- [968 — Leave file-editor Escape to Monaco completion suggestions](./968.md) — minor; dashboard QA,2026-10-22; visible completion plus ordinary Escape opens Unsaved Changes at both widths; acceptance, Find dismissal and normal cancellation controls pass, sources match, no writes.
+
 - [967 — Keep Add posting from becoming Remove posting while focused](./967.md) — minor; dashboard QA,2026-10-22; Add reuses its focused button as Remove posting2, so a second Enter deletes that draft at both widths; explicit new-row editing/removal controls pass, no writes.
 
 - [966 — Retire useFormatQuantity in favor of useFormatNumber with source digits](./966.md) — minor; m45 follow-up: three chart/net-worth callers format cash without ISO minor units through the now-parallel quantity hook; move them to useFormatNumber(value, currency, digits) and delete the hook.
