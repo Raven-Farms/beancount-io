@@ -251,3 +251,29 @@ it("reproduces the Apia skipped day the civil contract guards against", () => {
     process.env.TZ = originalTz;
   }
 });
+
+/** Gregorian dates typed with Persian or Arabic-Indic digits (w4/325). */
+describe("parseStrictCalendarDate with localized digits", () => {
+  it.each([
+    ["Persian", "۲۰۲۶/۱۰/۲۲"],
+    ["Arabic-Indic", "٢٠٢٦/١٠/٢٢"],
+    ["mixed", "۲۰26/١٠/22"],
+  ])("reads %s digits as the same Gregorian day", (_name, typed) => {
+    expect(parseStrictCalendarDate(typed, "yyyy/MM/dd")).toBe("2026-10-22");
+  });
+
+  it("reads the ISO fallback in Persian digits", () => {
+    expect(parseStrictCalendarDate("۲۰۲۶-۱۰-۲۲", "yyyy/MM/dd")).toBe(
+      "2026-10-22",
+    );
+  });
+
+  it.each([
+    ["an impossible month", "۲۰۲۶/۱۳/۲۲"],
+    ["a February 30", "٢٠٢٦/٠٢/٣٠"],
+    ["a partial date", "۲۰۲۶/۱۰"],
+    ["a two-digit year", "۲۶/۱۰/۲۲"],
+  ])("still refuses %s", (_name, typed) => {
+    expect(parseStrictCalendarDate(typed, "yyyy/MM/dd")).toBeUndefined();
+  });
+});

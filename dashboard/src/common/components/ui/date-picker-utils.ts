@@ -199,6 +199,18 @@ function widenYearToken(pattern: string): string {
 }
 
 /**
+ * Arabic-Indic (U+0660–0669) and Persian (U+06F0–06F9) decimal digits as
+ * ASCII, so a Gregorian date typed in a Persian or Arabic layout reads the
+ * same as its ASCII writing (w4/325). Each block's low nibble is its value;
+ * nothing else is treated as a digit.
+ */
+function asciiDigits(text: string): string {
+  return text.replace(/[\u0660-\u0669\u06F0-\u06F9]/g, (digit) =>
+    String(digit.charCodeAt(0) & 0xf),
+  );
+}
+
+/**
  * Strict calendar-date parse under exactly one locale pattern plus the ISO
  * fallback; rejects partial text and month-length rollover. Never tries
  * several orderings: input matching neither pattern is invalid, so a
@@ -210,7 +222,7 @@ export function parseStrictCalendarDate(
   input: string,
   displayPattern: string,
 ): string | undefined {
-  const trimmed = input.trim();
+  const trimmed = asciiDigits(input.trim());
   if (!trimmed) return undefined;
 
   for (const pattern of [displayPattern, ISO_PATTERN]) {

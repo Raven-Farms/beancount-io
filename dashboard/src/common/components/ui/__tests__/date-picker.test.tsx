@@ -41,6 +41,16 @@ function ControlledDatePicker({
 }
 
 describe("DatePicker typing contract", () => {
+  it("publishes the canonical day for Persian digits and keeps the typed text (w4/325)", () => {
+    const onValue = vi.fn();
+    render(<ControlledDatePicker onValue={onValue} />);
+    const input = screen.getByRole("textbox");
+
+    fireEvent.change(input, { target: { value: "۰۶/۱۵/۲۰۲۵" } });
+    expect(input).toHaveValue("۰۶/۱۵/۲۰۲۵");
+    expect(onValue).toHaveBeenLastCalledWith("2025-06-15");
+  });
+
   it("keeps a typed MM/dd/yyyy draft and publishes only the complete date", async () => {
     const user = userEvent.setup();
     const onValue = vi.fn();
