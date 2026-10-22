@@ -3,6 +3,7 @@ import path from "path";
 import {
   DEFAULT_TOAST_DURATION,
   MAX_ERROR_TOAST_DURATION,
+  MAX_LOADING_TOAST_DURATION,
   requireToastContext,
   toastDuration,
   withToast,
@@ -30,6 +31,22 @@ describe("toast queue", () => {
     expect(toastDuration({ message: "x", type: "text", duration: 0 })).toBe(
       DEFAULT_TOAST_DURATION,
     );
+  });
+
+  it("keeps a loading toast up until its work settles (w21/299)", () => {
+    // "Saving…" showed for two seconds and nothing for the rest of a 6 s write.
+    expect(toastDuration({ message: "Saving…", type: "loading" })).toBe(
+      MAX_LOADING_TOAST_DURATION,
+    );
+    expect(MAX_LOADING_TOAST_DURATION > 6000).toBe(true);
+    // Only a loading toast: the others keep their durations.
+    expect(toastDuration({ message: "Saved", type: "success" })).toBe(
+      DEFAULT_TOAST_DURATION,
+    );
+    // A caller that names a duration still gets it.
+    expect(
+      toastDuration({ message: "x", type: "loading", duration: 3000 }),
+    ).toBe(3000);
   });
 
   it("gives an error toast time to be read, within a cap", () => {

@@ -14,6 +14,15 @@ export const DEFAULT_TOAST_DURATION = 2000;
 export const MAX_ERROR_TOAST_DURATION = 8000;
 
 /**
+ * How long a "loading" toast may stay up if nothing dismisses it. It says work
+ * is in progress, so it lasts until the caller's dismiss (`runLedgerWrite`
+ * returns one) rather than the default two seconds, which hid "Saving…" while
+ * a slow write was still running (w21/299). The cap only keeps a toast whose
+ * caller never settled from staying forever.
+ */
+export const MAX_LOADING_TOAST_DURATION = 60_000;
+
+/**
  * A missing (or zero) duration falls back to the default, and an error toast
  * gets reading time on top — about 60 ms a character, capped — so a
  * sentence-long refusal is still up when the user gets to its end (w21/001).
@@ -25,7 +34,9 @@ export const toastDuration = (message: Omit<ToastMessage, "id">): number =>
         MAX_ERROR_TOAST_DURATION,
         DEFAULT_TOAST_DURATION + 60 * message.message.length,
       )
-    : DEFAULT_TOAST_DURATION);
+    : message.type === "loading"
+      ? MAX_LOADING_TOAST_DURATION
+      : DEFAULT_TOAST_DURATION);
 
 /** Queue a toast after the ones already showing. */
 export const withToast = (
