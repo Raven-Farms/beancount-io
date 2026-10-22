@@ -29,8 +29,12 @@ const stub: any = new Proxy(function () {}, {
   get: (_target, key) => (key === "__esModule" ? true : stub),
   apply: () => stub,
 });
-const t = (key: string, params?: { account?: string }) =>
-  params?.account ? `${key} ${params.account}` : key;
+const t = (key: string, params?: { account?: string; name?: string }) =>
+  params?.account
+    ? `${key} ${params.account}`
+    : params?.name
+      ? `${key} ${params.name}`
+      : key;
 
 function loadRow(): (props: Record<string, unknown>) => Node {
   const exports: Record<string, any> = {};
@@ -112,6 +116,35 @@ const render = (rowOverrides: Record<string, unknown>, extra = {}) =>
   });
 let toggles: string[] = [];
 let opened: string[] = [];
+
+// w21/449: a parent's "(own)" row carries its parent's account name, so VoiceOver
+// read two rows of the same account.
+describe("AccountTable own-postings row name", () => {
+  it("says it is the parent's own postings, not the parent again", () => {
+    const parent = render({
+      key: "Assets:Bank",
+      account: "Assets:Bank",
+      depth: 1,
+      value: 28100,
+    });
+    const own = render({
+      key: "Assets:Bank#own",
+      account: "Assets:Bank",
+      depth: 2,
+      own: true,
+      hasChildren: false,
+      expanded: false,
+      value: 10000,
+    });
+    expect(parent.props.accessibilityLabel).toBe("Assets:Bank, $28100");
+    expect(own.props.accessibilityLabel).toBe(
+      "accountOwnPostings Assets:Bank, $10000",
+    );
+    expect(
+      own.props.accessibilityLabel === parent.props.accessibilityLabel,
+    ).toBe(false);
+  });
+});
 
 describe("AccountTable navigating row names", () => {
   beforeEach(() => {

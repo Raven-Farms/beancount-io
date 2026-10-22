@@ -411,7 +411,13 @@ const AccountTableRow = memo(function AccountTableRow({
         // iOS, the name concatenated the children and began with the nested
         // chevron's "Expand"/"Collapse" command.
         accessibilityLabel={[
-          isCategory ? label : row.account,
+          isCategory
+            ? label
+            : row.own
+              ? // The parent's own postings share its account name: say so, or
+                // two rows read as the same account (w21/449).
+                t("accountOwnPostings", { name: row.account })
+              : row.account,
           amountText,
           ...notes,
         ].join(", ")}
