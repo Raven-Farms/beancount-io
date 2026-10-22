@@ -49,7 +49,7 @@
 
 ## Blocked
 
-- **t003:** w2/088 is already blocked on operator Glama admin access and a private QA test profile. Its unauthenticated 401/discovery check is complete on origin/main; this milestone does not repeat that repair. **Unblock:** the operator claims the existing connector, configures the dedicated QA synthetic-ledger test profile privately, records a full day of successful checks, and resolves w2/088; then t003 aligns the remaining listing metadata. **Owner:** the publisher/operator. t001 and t002 can proceed independently.
+- **t003:** w2/088 owns operator Glama admin access and the private QA test profile. Browser control is restored; the existing-connector claim now reaches the publisher's free-account profile completion, with the final Terms/Privacy acceptance prepared and awaiting action-time confirmation. No account or claim is completed. Its unauthenticated 401/discovery check is already complete on origin/main; this milestone does not repeat that repair. **Unblock:** the operator approves that concrete agreement, claims the existing connector, configures the dedicated QA synthetic-ledger test profile privately, records a full day of successful checks, and resolves w2/088; then t003 aligns the remaining listing metadata. **Owners:** publisher/operator and Glama, then repository worker. This does not gate independent Smithery preparation.
 
 - **t002:** the signed-in legacy Smithery wizard returns 403 “Updating servers has been removed”; the candidate listing remains not found. **Unblock:** a working supported direct-directory intake/claim route, followed by ownership/scan and fresh connection proof. **Owner:** Smithery/Arcade and publisher. Details and preserved packet: t002; d9c3490f0.
 
