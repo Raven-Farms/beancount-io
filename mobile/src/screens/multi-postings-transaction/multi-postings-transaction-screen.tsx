@@ -3,7 +3,7 @@ import { routeText } from "@/common/route-text";
 import { memo, useEffect, useRef, useState } from "react";
 import { createSingleFlight, type SingleFlight } from "@/common/single-flight";
 import { useAccountCloseDatesState } from "@/common/hooks/use-account-close-dates";
-import { isOpenOn } from "@/common/account-close-dates";
+import { isOpenOn, isSeedableOn } from "@/common/account-close-dates";
 import {
   AccessibilityInfo,
   Platform,
@@ -546,19 +546,22 @@ const MultiPostingsTransactionScreenComponent = () => {
     // account (w21/103).
     if (!metaLoading && closeDatesSettled && assets.length > 0) {
       const isOpen = (account: string) => isOpenOn(account, date, closeDates);
+      const isSeedable = (account: string) =>
+        isSeedableOn(account, date, closeDates);
       const { source, target } = defaultPostingAccounts(
         assets,
         expenses,
         isOpen,
       );
-      // The parser may return no account at all, or a closed one; fall back
+      // The parser may return no account at all, a closed one or one the
+      // ledger never opened; fall back
       // to the same defaults a blank transaction would get.
       const seededPostings = prefillAmount
         ? createPrefilledPostings(
-            prefillSourceAccount && isOpen(prefillSourceAccount)
+            prefillSourceAccount && isSeedable(prefillSourceAccount)
               ? prefillSourceAccount
               : source,
-            prefillTargetAccount && isOpen(prefillTargetAccount)
+            prefillTargetAccount && isSeedable(prefillTargetAccount)
               ? prefillTargetAccount
               : target,
             prefillAmount,

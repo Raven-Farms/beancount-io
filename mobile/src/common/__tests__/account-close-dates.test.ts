@@ -2,6 +2,7 @@ import {
   closeDatesOf,
   closedAccountNamed,
   isOpenOn,
+  isSeedableOn,
   openOn,
 } from "../account-close-dates";
 
@@ -188,5 +189,44 @@ describe("closedAccountNamed against decomposed Unicode", () => {
       account: "Expenses:Cafe\u0301",
       closedAt: "2026-01-31",
     });
+  });
+});
+
+// w21/281: a receipt parse could prefill an account the ledger never opened,
+// and the save wrote it.
+describe("isSeedableOn", () => {
+  const directives = [
+    { account: "Assets:Bank:Checking", openedAt: "2020-01-01" },
+    { account: "Expenses:Dining", openedAt: "2020-01-01" },
+    {
+      account: "Assets:OldCard",
+      openedAt: "2020-01-01",
+      closedAt: "2024-01-01",
+    },
+  ];
+  const dates = closeDatesOf(directives);
+
+  it("takes a declared, open account", () => {
+    expect(isSeedableOn("Expenses:Dining", "2026-10-01", dates)).toBe(true);
+  });
+
+  it("refuses an account the ledger never declared", () => {
+    expect(isSeedableOn("Expenses:Food:Groceries", "2026-10-01", dates)).toBe(
+      false,
+    );
+    expect(isSeedableOn("Assets:Cash", "2026-10-01", dates)).toBe(false);
+  });
+
+  it("still refuses a closed one", () => {
+    expect(isSeedableOn("Assets:OldCard", "2026-10-01", dates)).toBe(false);
+  });
+
+  it("claims nothing when no accounts were read", () => {
+    expect(isSeedableOn("Assets:Cash", "2026-10-01", closeDatesOf([]))).toBe(
+      true,
+    );
+    expect(isSeedableOn("Assets:Cash", "2026-10-01", closeDatesOf(null))).toBe(
+      true,
+    );
   });
 });

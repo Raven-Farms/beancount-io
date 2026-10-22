@@ -60,10 +60,30 @@ export async function recommendAccounts(
     reasoning: "LLM returned no output.",
   };
   return {
-    recommendation,
+    recommendation: restrictToAccounts(recommendation, accounts),
     tokenUsage: {
       inputTokens: result.usage.inputTokens || 0,
       outputTokens: result.usage.outputTokens || 0,
     },
+  };
+}
+
+/**
+ * Drop a suggestion that is not one of the ledger's accounts. The prompt only
+ * asks the model to use them "when possible", and its examples invite made-up
+ * names (`Expenses:Food:Groceries`) that a client would write as an account the
+ * ledger never opened (w21/281).
+ */
+function restrictToAccounts(
+  recommendation: AccountRecommendation,
+  accounts: readonly string[],
+): AccountRecommendation {
+  const known = new Set(accounts);
+  const keep = (account: string | null | undefined) =>
+    account != null && known.has(account) ? account : null;
+  return {
+    ...recommendation,
+    sourceAccount: keep(recommendation.sourceAccount),
+    targetAccount: keep(recommendation.targetAccount),
   };
 }

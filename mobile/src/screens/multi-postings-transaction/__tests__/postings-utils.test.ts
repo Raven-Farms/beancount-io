@@ -622,7 +622,9 @@ describe("the accounts a new entry opens with", () => {
       source.includes("const { source, target } = defaultPostingAccounts("),
     ).toBe(true);
     expect(
-      source.includes("prefillSourceAccount && isOpen(prefillSourceAccount)"),
+      source.includes(
+        "prefillSourceAccount && isSeedable(prefillSourceAccount)",
+      ),
     ).toBe(true);
     expect(source.includes("closeDatesSettled && assets.length > 0")).toBe(
       true,

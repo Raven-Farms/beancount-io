@@ -56,6 +56,32 @@ export function isOpenOn(
   return closedAt === undefined || entryDate <= closedAt;
 }
 
+/**
+ * Whether the ledger declares `account` (an `open` directive). Not claimed
+ * when the read carried no declared accounts at all, so a failed or old read
+ * never turns every account unknown.
+ */
+function isDeclared(account: string, closeDates: CloseDates): boolean {
+  const opened = closeDates.openedOn;
+  if (!opened || (opened.size === 0 && closeDates.size === 0)) return true;
+  return opened.has(account) || closeDates.has(account);
+}
+
+/**
+ * Whether a suggested account can be seeded into a posting: declared by the
+ * ledger and open on the date. A receipt parse used to prefill an account the
+ * ledger never opened, and the save then wrote it (w21/281).
+ */
+export function isSeedableOn(
+  account: string,
+  entryDate: string,
+  closeDates: CloseDates,
+): boolean {
+  return (
+    isDeclared(account, closeDates) && isOpenOn(account, entryDate, closeDates)
+  );
+}
+
 /** The accounts a posting dated `entryDate` can use, in their order. */
 export function openOn(
   accounts: readonly string[],
