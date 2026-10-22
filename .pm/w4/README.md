@@ -4,6 +4,8 @@
 
 ## Inbox
 
+- [1005 — Preserve amount order in Persian Account period tables](./1005.md) — minor residual of W3/479; genuine both-view/both-width tables show unit/number/minus under RTL;96exact API records and English/Journal controls pass, source exact, no writes.
+
 - [1004 — Execute the current BQL model from the toolbar](./1004.md) — minor residual of W3/m12; fresh both-width native Enter runs previous text despite current model and settled prior URL; six shortcut/six pointer controls pass, source exact, no writes.
 
 - [1003 — Keep tiny commodity price labels accurate](./1003.md) — minor residual of former W3/012; valid tiny quotes render zero ticks and exponent tooltips multiply two prices by1e9 at both widths; exact history/ordinary/zero controls pass, no writes.
