@@ -320,7 +320,8 @@ test("removePosting removes a middle posting and keeps auto-fill correct", () =>
   expect(updated[1].amount).toBe("100.00");
 });
 
-test("removing last posting makes new last auto and recomputes", () => {
+// w21/462: deleting the last row used to overwrite the amount typed above it.
+test("removing the last posting keeps the amount typed in the new last one", () => {
   const postings = [
     posting("Assets:Bank", "-100.00", "-100.00", false),
     posting("Expenses:Food", "40.00", "40.00", false),
@@ -328,8 +329,40 @@ test("removing last posting makes new last auto and recomputes", () => {
   ];
   const updated = removePosting(postings, 2);
   expect(updated.length).toBe(2);
-  expect(updated[1].isAuto).toBe(true);
-  expect(updated[1].amount).toBe("100.00");
+  expect(updated[1].isAuto).toBe(false);
+  expect(updated[1].amountInput).toBe("40.00");
+  expect(updated[1].amount).toBe("40.00");
+  // The form reports the imbalance rather than quietly balancing it.
+  expect(validatePostings(updated)).toBe("unbalanced");
+});
+
+test("removing the last posting after Add posting leaves row 2 as typed", () => {
+  // Card -30, then Add posting, type 10 on row 2, auto row 3 holds 20.00.
+  const postings = [
+    posting("Assets:Card", "-30.00", "-30.00", false),
+    posting("Expenses:Groceries", "10", "10", false),
+    posting("Expenses:Household", "20.00", "20.00", true),
+  ];
+  const updated = removePosting(postings, 2);
+  expect(updated[1].amountInput).toBe("10");
+  expect(updated[1].amount).toBe("10");
+  expect(validatePostings(updated)).toBe("unbalanced");
+});
+
+test("removing the last posting makes an empty or zero new last one auto", () => {
+  for (const [input, amount] of [
+    ["", null],
+    ["0", "0"],
+  ] as const) {
+    const postings = [
+      posting("Assets:Bank", "-100.00", "-100.00", false),
+      posting("Expenses:Food", input, amount, false),
+      posting("Expenses:Transport", "60.00", "60.00", false),
+    ];
+    const updated = removePosting(postings, 2);
+    expect(updated[1].isAuto).toBe(true);
+    expect(updated[1].amount).toBe("100.00");
+  }
 });
 
 // ──────────────────────────────────────────────────────────────────────────────

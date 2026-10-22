@@ -387,9 +387,16 @@ export function removePosting(
   if (postings.length <= 2) return postings;
   const newPostings = postings.filter((_, i) => i !== index);
   if (index >= newPostings.length) {
-    const withAuto = newPostings.map((p, i) =>
-      i === newPostings.length - 1 ? { ...p, isAuto: true } : p,
-    );
+    // The row that is now last balances the others only if it holds nothing of
+    // the user's: a typed amount stays, and the form shows the remainder as
+    // unbalanced, instead of being overwritten without a word (w21/462).
+    const last = newPostings[newPostings.length - 1]!;
+    const typed = last.amountInput.trim() !== "" && !isZeroExact(last.amount);
+    const withAuto = typed
+      ? newPostings
+      : newPostings.map((p, i) =>
+          i === newPostings.length - 1 ? { ...p, isAuto: true } : p,
+        );
     return applyAutoFill(withAuto, minorUnits);
   }
   return applyAutoFill(newPostings, minorUnits);
