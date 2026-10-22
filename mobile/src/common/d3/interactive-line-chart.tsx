@@ -767,6 +767,7 @@ function InteractiveLineChart({
       scrub.value = next;
       if (stepRest.current) clearTimeout(stepRest.current);
       stepRest.current = setTimeout(() => {
+        stepRest.current = null;
         setStepIndex(null);
         scrub.value = SCRUB_IDLE;
       }, CHART_STEP_REST_MS);
@@ -779,10 +780,22 @@ function InteractiveLineChart({
     },
     [],
   );
-  // A new series (another range, another account) starts at rest.
+  // A new series (another range, another account) starts at rest. Callers hand
+  // back equal-but-new arrays on any re-render, which is no new series: stepping
+  // keeps its place, and the cursor, the header and the value text keep
+  // agreeing (w21/439).
+  const stepSeriesRef = useRef(numbers);
   useEffect(() => {
+    const previous = stepSeriesRef.current;
+    stepSeriesRef.current = numbers;
+    if (sameSeries(previous, numbers)) return;
+    if (stepRest.current) {
+      clearTimeout(stepRest.current);
+      stepRest.current = null;
+      scrub.value = SCRUB_IDLE;
+    }
     setStepIndex(null);
-  }, [numbers]);
+  }, [numbers, scrub]);
   const plotLabel = hasSeries ? chartSummaryLabel(label, a11ySeries) : null;
 
   // The dot and the cursor read the new series' coordinates at once, while the

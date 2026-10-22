@@ -136,3 +136,35 @@ describe("the end dot and cursor during a range change", () => {
     ).toBe(2);
   });
 });
+
+// w21/439: the reset on every new `numbers` array cleared the step but left the
+// cursor and the rest timer, so VoiceOver read the latest point under a header
+// showing another.
+describe("stepping through a re-render", () => {
+  const source = fs
+    .readFileSync(
+      path.join(__dirname, "..", "interactive-line-chart.tsx"),
+      "utf8",
+    )
+    .replace(/\s+/g, "");
+
+  it("resets only for a different series, and clears the cursor and timer with it", () => {
+    expect(
+      source.includes(
+        "if(sameSeries(previous,numbers))return;if(stepRest.current){clearTimeout(stepRest.current);stepRest.current=null;scrub.value=SCRUB_IDLE;}setStepIndex(null);",
+      ),
+    ).toBe(true);
+    // Not on every equal-but-new array.
+    expect(
+      source.includes("useEffect(()=>{setStepIndex(null);},[numbers]);"),
+    ).toBe(false);
+  });
+
+  it("forgets its timer once it has rested", () => {
+    expect(
+      source.includes(
+        "stepRest.current=setTimeout(()=>{stepRest.current=null;setStepIndex(null);",
+      ),
+    ).toBe(true);
+  });
+});
