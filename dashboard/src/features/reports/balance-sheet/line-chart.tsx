@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { ReactECharts } from "@/common/components/react-echarts";
-import { useFormatQuantity } from "@/common/hooks/use-format-quantity";
+import { useFormatNumber } from "@/common/hooks/use-format-number";
 import { fractionDigitsOf } from "@/common/lib/format/format-number";
 import { defaultSplitLine } from "@/common/components/react-echarts/utils";
 import type {
@@ -42,7 +42,7 @@ export function LineChart({
   inverted,
   labelledBy,
 }: LineChartProps) {
-  const formatQty = useFormatQuantity();
+  const formatNum = useFormatNumber();
   const { chartOption, periodSeries } = useMemo((): {
     chartOption: EChartsOption;
     periodSeries: ChartPeriodSeries[];
@@ -137,7 +137,7 @@ export function LineChart({
                     ) ?? 0;
                   tooltip += `<div style="margin: 4px 0;">
                   <span style="display: inline-block; width: 10px; height: 10px; background-color: ${param.color || "#000"}; margin-right: 8px; border-radius: 50%;"></span>
-                  ${param.seriesName || "Unknown"}: ${formatQty(value, digits)}
+                  ${param.seriesName || "Unknown"}: ${formatNum(value, param.seriesName, digits)}
                 </div>`;
                 }
               });
@@ -193,7 +193,7 @@ export function LineChart({
         animationEasing: "cubicOut",
       },
     };
-  }, [data, interval, primarySeries, inverted, formatQty]);
+  }, [data, interval, primarySeries, inverted, formatNum]);
 
   return (
     <div className={className}>

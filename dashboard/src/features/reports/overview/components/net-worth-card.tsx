@@ -28,7 +28,6 @@ import { ReactECharts } from "@/common/components/react-echarts";
 import { defaultSplitLine } from "@/common/components/react-echarts/utils";
 import { useTranslations } from "@/common/hooks/use-translations";
 import { useFormatNumber } from "@/common/hooks/use-format-number";
-import { useFormatQuantity } from "@/common/hooks/use-format-quantity";
 import { fractionDigitsOf } from "@/common/lib/format/format-number";
 import { getChartColors } from "@/common/lib/chart/color";
 import { formatDateAxis, formatYAxisNumber } from "@/common/lib/chart/chart";
@@ -107,7 +106,6 @@ function NetWorthValuationNote({
   const formatNumber = useFormatNumber();
   // Units keep every digit the ledger recorded: rounding 0.00012 BTC to 0
   // would name a holding the reader cannot see.
-  const formatQuantity = useFormatQuantity();
   const { holdings, staleSince, costBasis, unrealized } = valuation;
   const staleCount = holdings.filter((holding) => holding.stale).length;
   const atCostCount = holdings.filter((h) => h.basis === "cost").length;
@@ -177,8 +175,9 @@ function NetWorthValuationNote({
                 <div className="min-w-0">
                   <p className="font-medium">{holding.currency}</p>
                   <p className="text-xs text-muted-foreground tabular-nums">
-                    {formatQuantity(
+                    {formatNumber(
                       holding.units,
+                      holding.currency,
                       fractionDigitsOf(String(holding.units)),
                     )}{" "}
                     {holding.currency}
