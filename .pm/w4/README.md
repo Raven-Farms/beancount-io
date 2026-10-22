@@ -90,7 +90,6 @@
 
 - [324 — Count applied AI account suggestions in the completion message](./324.md) — minor; dashboard QA with client-only responses, 2026-10-21; zero and one applied targets both announce two categorized; full-result/threshold controls pass and no AI request is forwarded.
 
-- [323 — Preserve manual target-account edits made while AI Fill is pending](./323.md) — minor; dashboard QA with client-only suggestions, 2026-10-21; late success replaces a newer manual target at both widths; untouched-row filling, failure/retry and draft controls pass; no AI request forwarded.
 
 
 
