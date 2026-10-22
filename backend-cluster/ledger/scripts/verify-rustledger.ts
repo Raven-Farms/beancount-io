@@ -1884,6 +1884,37 @@ async function main(): Promise<void> {
     ['option "inferred_tolerance_default" "*:1"', ["10", "-9"]],
     ['option "inferred_tolerance_default" "0.01"', ["-10.00", "3.33", "3.33", "3.33"]],
   ];
+  // w21/647: and weighs a priced posting (`EUR @ USD`) the engine's way.
+  const pricedCases: Array<[string, string, string]> = [
+    ["-110.00", "100.00", "1.10"],
+    ["-110.00", "100.00", "1.11"],
+    ["-33.33", "10", "3.3333"],
+    ["-33.33", "10", "3.334"],
+    ["-110", "100", "1.1"],
+  ];
+  for (const [cash, euros, rate] of pricedCases) {
+    const priced = await parseLedgerFiles(
+      {
+        "main.bean": `2024-01-01 open Assets:Cash\n2024-01-01 open Assets:Bank\n2024-01-02 * "t"\n  Assets:Cash ${cash} USD\n  Assets:Bank ${euros} EUR @ ${rate} USD\n`,
+      },
+      "main.bean",
+    );
+    const engineBalances = !priced.errors.some((error) =>
+      error.message.startsWith("Transaction does not balance"),
+    );
+    const precheck = checkTransactionBalance([
+      { account: "Assets:Cash", units: { number: cash, currency: "USD" } },
+      {
+        account: "Assets:Bank",
+        units: { number: euros, currency: "EUR" },
+        price: { number: rate, currency: "USD" },
+      },
+    ]).ok;
+    assert(
+      precheck === engineBalances,
+      `the precheck ${precheck ? "accepts" : "refuses"} ${cash} USD / ${euros} EUR @ ${rate} USD, as the engine does`,
+    );
+  }
   for (const [option, numbers] of toleranceCases) {
     const accounts = numbers.map((_number, index) => `Assets:A${index}`);
     const balanced = await parseLedgerFiles(

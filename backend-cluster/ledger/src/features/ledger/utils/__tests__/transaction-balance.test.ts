@@ -106,6 +106,44 @@ describe("checkTransactionBalance", () => {
     ).toBe(false);
   });
 
+  // w21/647: a priced posting was summed in its own currency, so a balanced
+  // exchange read as "residual 110.00 USD, 100.00 EUR".
+  it("weighs a priced posting as units × price, in the price's currency", () => {
+    const exchange = (price: string) => [
+      posting("Assets:Cash", "-110.00"),
+      {
+        account: "Assets:Bank",
+        units: { number: "100.00", currency: "EUR" },
+        price: usd(price),
+      },
+    ];
+    expect(checkTransactionBalance(exchange("1.10")).ok).toBe(true);
+    const check = checkTransactionBalance(exchange("1.11"));
+    expect(check).toMatchObject({
+      ok: false,
+      value: {
+        kind: "unbalanced",
+        message: "Transaction does not balance: residual 1.0000 USD",
+      },
+    });
+    // The weight interpolates an elided posting like any other amount.
+    expect(
+      checkTransactionBalance([exchange("1.10")[1]!, posting("Assets:Cash")])
+        .ok,
+    ).toBe(true);
+  });
+
+  it("names a residual with its sign, as the engines do", () => {
+    const check = checkTransactionBalance([
+      posting("Expenses:Food", "5.00"),
+      posting("Assets:Cash", "-10.00"),
+    ]);
+    expect(check).toMatchObject({
+      ok: false,
+      value: { residuals: ["-5.00 USD"] },
+    });
+  });
+
   it("rejects two or more elided postings", () => {
     const check = checkTransactionBalance([
       posting("Expenses:Food"),

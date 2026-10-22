@@ -462,6 +462,37 @@ describe("bulk entries dry run", () => {
     expect(committed).toEqual([]);
   });
 
+  // w21/647: a balanced exchange at a price was refused as UNBALANCED.
+  it("balances a priced posting by its weight", async () => {
+    const exchange = (price: string) => ({
+      type: "transaction",
+      item: {
+        date: "2026-08-30",
+        flag: "*",
+        narration: "exchange",
+        postings: [
+          {
+            account: "Assets:Cash",
+            units: { number: "-110.00", currency: "USD" },
+          },
+          {
+            account: "Equity:Opening",
+            units: { number: "100.00", currency: "EUR" },
+            price: { number: price, currency: "USD" },
+          },
+        ],
+      },
+    });
+    expect(
+      (await post({ entries: [exchange("1.10")], dryRun: true })).status,
+    ).toBe(200);
+    const refused = await post({ entries: [exchange("1.20")], dryRun: true });
+    expect(refused.status).toBe(400);
+    expect(((await refused.json()) as { code: string }).code).toBe(
+      "UNBALANCED",
+    );
+  });
+
   it("checks against an empty file when the routed target does not exist yet", async () => {
     const response = await post({
       entries: [{ ...txn("2.00"), filename: "txns/2026.bean" }],

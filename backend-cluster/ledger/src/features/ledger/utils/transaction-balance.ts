@@ -22,6 +22,8 @@ const NO_TOLERANCE_DEFAULTS: ToleranceDefaults = new Map();
 export type BalancePosting = {
   account: string;
   units?: { number: string; currency: string } | null;
+  /** A per-unit price (`@`): the posting weighs units × price, in its currency. */
+  price?: { number: string; currency: string } | null;
 };
 
 export type BalanceFailure =
@@ -69,10 +71,21 @@ function toleranceFor(
 /**
  * Format a residual with the precision of the postings that produced it, so
  * `10 USD`/`-5 USD` reads `5 USD` while `10.00 USD`/`-5.00 USD` reads
- * `5.00 USD`.
+ * `5.00 USD`. Signed, as both engines print it.
  */
 function formatResidual(value: BigNumber, decimals: number): string {
-  return value.abs().toFixed(decimals);
+  return value.toFixed(decimals);
+}
+
+/** A decimal string as a number; NaN for anything else (never a throw). */
+function decimal(number: string): BigNumber {
+  // bignumber.js 11 throws on a malformed string where earlier versions
+  // returned NaN; either way it is the caller's input, never an outage.
+  try {
+    return new BigNumber(number);
+  } catch {
+    return new BigNumber(NaN);
+  }
 }
 
 /**
@@ -138,27 +151,35 @@ export function checkTransactionBalance(
   for (const posting of postings) {
     if (posting.units === undefined || posting.units === null) continue;
     const { number, currency } = posting.units;
-    // bignumber.js 11 throws on a malformed string where earlier versions
-    // returned NaN; either way it is the caller's input, never an outage.
-    let amount: BigNumber;
-    try {
-      amount = new BigNumber(number);
-    } catch {
-      amount = new BigNumber(NaN);
-    }
-    if (!amount.isFinite()) {
+    const amount = decimal(number);
+    const price = posting.price ? decimal(posting.price.number) : undefined;
+    if (!amount.isFinite() || (price !== undefined && !price.isFinite())) {
+      const bad = amount.isFinite() ? posting.price! : posting.units;
       return {
         ok: false,
         value: {
           kind: "unbalanced",
-          message: `posting amount "${number} ${currency}" is not a number`,
-          residuals: [`${number} ${currency}`],
+          message: `posting amount "${bad.number} ${bad.currency}" is not a number`,
+          residuals: [`${bad.number} ${bad.currency}`],
         },
       };
     }
-    sums.set(currency, (sums.get(currency) ?? new BigNumber(0)).plus(amount));
     const places = impliedDecimals(number);
-    decimals.set(currency, Math.max(decimals.get(currency) ?? 0, places));
+    // A priced posting weighs units × price, in the price's currency, as
+    // Beancount balances it (w21/647); it was summed in its own currency.
+    const weightCurrency = posting.price ? posting.price.currency : currency;
+    const weight = price === undefined ? amount : amount.times(price);
+    const weightPlaces = posting.price
+      ? places + impliedDecimals(posting.price.number)
+      : places;
+    sums.set(
+      weightCurrency,
+      (sums.get(weightCurrency) ?? new BigNumber(0)).plus(weight),
+    );
+    decimals.set(
+      weightCurrency,
+      Math.max(decimals.get(weightCurrency) ?? 0, weightPlaces),
+    );
     // A whole number implies no tolerance at all.
     if (places === 0) continue;
     const candidate = halfUnit(places);
