@@ -111,7 +111,7 @@
 
 ## Milestones
 
-- [ ] **m46** — [Preserve editor drafts through ledger refresh](./m46/README.md) (6 tasks) ← continuous dashboard QA,2026-10-21; both-width native Refresh loses file and unexecuted BQL drafts, removing original editor/main nodes; fixtures cleaned and responsible current/served sources match.
+- [x] **m46** — [Preserve editor drafts through ledger refresh](./done/m46/README.md) (6 tasks) ← continuous dashboard QA, 2026-10-21; major. Done 2026-10-22: Out of date → Refresh keeps an already shown ledger page, unsaved file draft (bound to its original SHA) and unexecuted BQL query; failed refreshes keep content and offer Try Again.
 
 - [x] **m45** — [Keep commodity quantities precise in Budget and statements](./done/m45/README.md) (6 tasks) ← promoted 331 and actual public statement QA, 2026-10-21; minor. Done 2026-10-22: statement cells and Budget readouts keep source commodity digits (4.00995 ETH, 0.0004 BTC) through one opt-in digit count on the shared formatter; ISO cash unchanged.
 

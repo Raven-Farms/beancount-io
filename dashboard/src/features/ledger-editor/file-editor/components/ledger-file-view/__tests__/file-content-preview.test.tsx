@@ -109,7 +109,9 @@ vi.mock("@/common/components/monaco-editor", async () => {
 
 type FileContent = NonNullable<GetLedgerFileQuery["getLedgerFile"]>;
 type Callbacks = {
-  save: ReturnType<typeof vi.fn<(content: string) => Promise<void>>>;
+  save: ReturnType<
+    typeof vi.fn<(content: string, base: FileContent) => Promise<void>>
+  >;
   enter: ReturnType<typeof vi.fn>;
   exit: ReturnType<typeof vi.fn>;
   delete: ReturnType<typeof vi.fn>;
@@ -380,9 +382,11 @@ describe("file content preview through the actual editor and actions", () => {
   it.each(["toolbar", "keyboard"] as const)(
     "lets a writer edit known CSV and save exact content through the real %s action",
     async (method) => {
-      const { calls, router } = await setup(
-        fileContent("statement.csv", "date,amount\n2026-01-01,-33.71\n"),
+      const file = fileContent(
+        "statement.csv",
+        "date,amount\n2026-01-01,-33.71\n",
       );
+      const { calls, router } = await setup(file);
       const user = userEvent.setup();
       await user.click(screen.getByRole("button", { name: /^Edit/ }));
       const editor = screen.getByRole("textbox", { name: "File source" });
@@ -395,7 +399,8 @@ describe("file content preview through the actual editor and actions", () => {
         await user.click(screen.getByRole("button", { name: "Save" }));
       else fireEvent.keyDown(document, { key: "s", metaKey: true });
       await waitFor(() =>
-        expect(calls.save).toHaveBeenCalledExactlyOnceWith(draft),
+        // Saved against the revision the draft was edited from (w4/m46).
+        expect(calls.save).toHaveBeenCalledExactlyOnceWith(draft, file),
       );
       expect(calls.enter).toHaveBeenCalledTimes(1);
       expect(calls.delete).not.toHaveBeenCalled();

@@ -14,7 +14,10 @@ vi.mock("@/common/hooks/use-write-outcome", () => ({
 const state = vi.hoisted(() => ({
   content: "",
   mutate: vi.fn(),
-  onSave: undefined as undefined | ((content: string) => Promise<void>),
+  onSave: undefined as
+    | undefined
+    | ((content: string, base: unknown) => Promise<void>),
+  file: undefined as unknown,
 }));
 vi.mock("@apollo/client/react", () => ({
   useQuery: () => ({
@@ -41,8 +44,12 @@ vi.mock("@/common/hooks/use-apollo-cache", () => ({
   useApolloCacheClear: () => vi.fn(),
 }));
 vi.mock("../file-content-view", () => ({
-  FileContentView: (props: { onSave: (content: string) => Promise<void> }) => {
+  FileContentView: (props: {
+    fileContent: unknown;
+    onSave: (content: string, base: unknown) => Promise<void>;
+  }) => {
     state.onSave = props.onSave;
+    state.file = props.fileContent;
     return null;
   },
 }));
@@ -61,7 +68,7 @@ async function editAndSave(stored: number[]) {
   render(<LedgerFileView ledgerId="qa/books" filePath="qa.csv" />);
   // What the editor holds: the decoded text, then a prefix edit.
   const edited = `qa-20261020 ${base64Decode(state.content)}`;
-  await act(async () => state.onSave!(edited));
+  await act(async () => state.onSave!(edited, state.file));
   return edited;
 }
 

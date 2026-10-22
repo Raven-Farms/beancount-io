@@ -117,7 +117,10 @@ describe("TextFileView save lifecycle", () => {
     expect(screen.queryByText("ledgerEditor.unsavedChanges")).toBeNull();
     expect(screen.queryByRole("dialog")).toBeNull();
     expect(onSave).toHaveBeenCalledTimes(1);
-    expect(onSave).toHaveBeenCalledWith("first revision\n");
+    expect(onSave).toHaveBeenCalledWith(
+      "first revision\n",
+      expect.objectContaining({ sha: "s" }),
+    );
   });
 
   it("keeps the draft and the dirty guard after a failed save", async () => {

@@ -9,6 +9,7 @@ import {
   GetLedgerErrorsDocument,
 } from "@/graphql/definitions";
 import type {
+  GetLedgerFileQuery,
   DeleteLedgerFileMutation,
   DeleteLedgerFileMutationVariables,
   UpdateLedgerFileMutation,
@@ -17,6 +18,7 @@ import type {
 import { base64Encode, hasUtf8Bom } from "@/common/lib/utils/encode";
 import { track } from "@/common/analytics";
 import { useApolloCacheClear } from "@/common/hooks/use-apollo-cache";
+import { useRefreshFailedToast } from "@/common/hooks/use-refresh-failed-toast";
 import { toast } from "sonner";
 import { useTranslations } from "@/common/hooks/use-translations";
 import { useErrorMessage } from "@/common/lib/errors/error-message";
@@ -29,6 +31,8 @@ import {
   FileNotFoundView,
 } from "./file-loading-error-views";
 import { FileContentView } from "./file-content-view";
+
+type FileRevision = NonNullable<GetLedgerFileQuery["getLedgerFile"]>;
 
 interface LedgerFileViewProps {
   ledgerId: string;
@@ -73,7 +77,7 @@ export default function LedgerFileView({
   const params = useParams({
     from: "/ledger/$ledgerOwner/$ledgerName/files/blob/$branch/$",
   });
-  const { data, error } = useQuery(GetLedgerFileDocument, {
+  const { data, error, refetch } = useQuery(GetLedgerFileDocument, {
     variables: {
       ledgerId: ledgerId,
       path: filePath,
@@ -104,6 +108,14 @@ export default function LedgerFileView({
 
   const fileContent = data?.getLedgerFile;
 
+  // A failed refetch (Out of date → Refresh, or after a write) keeps the file
+  // this view already shows, with any unsaved draft, instead of an error page;
+  // Apollo keeps that same file's last result in `data` (w4/m46). A refused
+  // path is still not found.
+  const failedRefresh =
+    fileContent && error && !isRefusedPath(error) ? error : undefined;
+  useRefreshFailedToast(failedRefresh, () => void refetch());
+
   // Filter errors for the current file
   // Use useMemo to prevent unnecessary re-renders and ensure stable reference
   const fileErrors = useMemo(() => {
@@ -129,9 +141,10 @@ export default function LedgerFileView({
     });
   }, [navigate, params, lineNumber]);
 
-  const handleSaveFile = async (content: string) => {
-    if (!fileContent) return;
-
+  // `base` is the revision the draft was edited against, which a refresh may
+  // have moved past: saving against it lets the server refuse a stale write
+  // instead of overwriting the newer file (w4/m46).
+  const handleSaveFile = async (content: string, base: FileRevision) => {
     setIsSaving(true);
     const before = writeOutcome.snapshot();
     try {
@@ -142,11 +155,11 @@ export default function LedgerFileView({
           // Keep the file's UTF-8 byte-order mark: the editor buffer never
           // sees it, and an ordinary edit is not an encoding change (w4/268).
           content: base64Encode(
-            hasUtf8Bom(fileContent.content) && !content.startsWith("\uFEFF")
+            hasUtf8Bom(base.content) && !content.startsWith("\uFEFF")
               ? `\uFEFF${content}`
               : content,
           ),
-          sha: fileContent.sha,
+          sha: base.sha,
           message: t("ledgerEditor.updateFileCommit", { path: filePath }),
         },
         onError: (error) => {
@@ -197,7 +210,7 @@ export default function LedgerFileView({
 
   // A path the server refuses is not a file that failed to load: Try Again
   // could never succeed, so show it as not found.
-  if (error && !isRefusedPath(error)) {
+  if (error && !fileContent && !isRefusedPath(error)) {
     return <FileErrorView filename={getFilename(filePath)} />;
   }
 
@@ -207,7 +220,7 @@ export default function LedgerFileView({
     return <FileLoadingView filename={getFilename(filePath)} />;
   }
 
-  if (error || !fileContent) {
+  if ((error && !failedRefresh) || !fileContent) {
     return (
       <FileNotFoundView
         filePath={filePath}

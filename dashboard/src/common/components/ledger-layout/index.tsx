@@ -28,6 +28,8 @@ import { cn } from "@/common/lib/utils/utils.ts";
 import { useIsMobile } from "@/common/hooks/use-mobile.ts";
 import { LayoutHeader } from "./layout-header";
 import { isReactNative } from "@/common/providers/react-native-bridge-provider/react-native-bridge";
+import { useRefreshFailedToast } from "@/common/hooks/use-refresh-failed-toast";
+import { useState } from "react";
 
 const COMMIT_DETAIL_PATH = /\/commit\/[^/]+\/?$/;
 
@@ -87,16 +89,23 @@ export function LedgerLayout() {
     },
   );
 
-  // A write's cache clear evicts this query and it reloads. Keep showing the
-  // same ledger meanwhile instead of replacing the whole subtree with the
-  // loading shell, which unmounted the page and dropped keyboard focus
-  // (w4/238). Apollo's previousData is only reused for this same ledger.
+  // A cache clear (a write, or Out of date → Refresh) refetches this query
+  // with the old ledger still in `data`, and keeps it there if the refetch
+  // fails. A page this layout already showed for the same ledger stays
+  // mounted through both, so an unsaved file or BQL draft and the reader's
+  // focus survive (w4/238, w4/m46); a failure is reported with Try again. A
+  // first mount still waits for the access read (Smart Import / Upload
+  // Receipt access), and a failed one still shows the error page. Apollo's
+  // previousData is only reused for this same ledger.
+  const ledgerKey = ledgerId.toLowerCase();
   const previousLedger = previousData?.getLedger;
   const currentLedger =
     data?.getLedger ??
-    (previousLedger?.fullName.toLowerCase() === ledgerId.toLowerCase()
+    (previousLedger?.fullName.toLowerCase() === ledgerKey
       ? previousLedger
       : undefined);
+  const [shownLedger, setShownLedger] = useState<string | null>(null);
+  const keepShown = shownLedger === ledgerKey && currentLedger !== undefined;
 
   const handleBackToDashboard = () => {
     void navigate({ to: "/ledger" });
@@ -105,13 +114,14 @@ export function LedgerLayout() {
   const handleRetry = () => {
     void refetch();
   };
+  useRefreshFailedToast(keepShown ? error : undefined, handleRetry);
 
   const isMobile = useIsMobile();
   const isCommitWorkspace = /\/(?:commits|commit\/[^/]+)\/?$/.test(
     location.pathname,
   );
 
-  if (error) {
+  if (error && !keepShown) {
     return (
       <LedgerLayoutError
         onBackToDashboard={handleBackToDashboard}
@@ -123,12 +133,10 @@ export function LedgerLayout() {
 
   // If no data yet, show loading skeleton
   // This ensures server and client render the same thing during initial load
-  // Cached data under a pending access read still never mounts the route
-  // (Smart Import / Upload Receipt access); only the evicted-and-reloading
-  // case above keeps the page this session already showed.
-  if (!currentLedger || (loading && data?.getLedger)) {
+  if (!currentLedger || (loading && data?.getLedger && !keepShown)) {
     return <LedgerLayoutLoading />;
   }
+  if (shownLedger !== ledgerKey) setShownLedger(ledgerKey);
 
   return (
     <LedgerProvider

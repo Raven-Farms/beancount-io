@@ -13,10 +13,13 @@ import {
 import { TextFileView } from "./text-file-view";
 import { isStrictUtf8 } from "@/common/lib/utils/encode";
 
+type FileRevision = NonNullable<GetLedgerFileQuery["getLedgerFile"]>;
+
 export interface FileContentViewProps {
   filePath: string;
-  fileContent: NonNullable<GetLedgerFileQuery["getLedgerFile"]>;
-  onSave: (content: string) => Promise<void>;
+  fileContent: FileRevision;
+  /** Saves `content` against `base`, the revision it was edited from. */
+  onSave: (content: string, base: FileRevision) => Promise<void>;
   /** Absent when the file cannot be deleted (the ledger's root main.bean). */
   onDelete?: () => void;
   isSaving: boolean;
