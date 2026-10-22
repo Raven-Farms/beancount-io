@@ -137,3 +137,8 @@
 - [416](./416.md) — Zero change from zero baseline reads "+$0.00" in gain colour
 - [417](./417.md) — Latest Updates renders blank card on empty feed
 - [418](./418.md) — Spending card never shows its two totals; empty ledger $0–$1 axis
+- [419](./419.md) — Identical entries share entry_hash; Load more loops to page 1 forever
+- [420](./420.md) — Account detail chart ignores price moves between postings, then jumps
+- [421](./421.md) — FX conversion row shows only operating-currency leg
+- [422](./422.md) — Units view sums cost of every commodity (+5 VOO at cost $0)
+- [423](./423.md) — Closed accounts with balances vanish when siblings net to zero
