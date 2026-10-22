@@ -53,6 +53,7 @@ import {
   findUnbalancedResiduals,
   findUnresolvedEligibleAmount,
   isEligiblePosting,
+  postingCurrency,
 } from "./transaction-auto-balance";
 import { parseDecimalNumber } from "@/common/lib/beancount/decimal-number";
 import { AccountAvailabilityNotice } from "./account-availability-notice";
@@ -258,7 +259,7 @@ export function TransactionForm({
           account: posting.account,
           units: {
             number: parseDecimalNumber(posting.amount) ?? posting.amount,
-            currency: posting.currency,
+            currency: postingCurrency(posting, primaryCurrency),
           },
         }));
 

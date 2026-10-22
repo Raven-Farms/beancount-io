@@ -28,6 +28,19 @@ export function isEligiblePosting(posting: TransactionPostingDraft): boolean {
 }
 
 /**
+ * The unit a posting is balanced and submitted in: its own, or the ledger's
+ * primary currency when left blank. Inference, the balance check and the
+ * request all read it here, so a blank currency is never balanced as USD
+ * and then sent as "" (w4/339).
+ */
+export function postingCurrency(
+  posting: TransactionPostingDraft,
+  primaryCurrency: string,
+): string {
+  return posting.currency.trim() || primaryCurrency;
+}
+
+/**
  * Infer at most one missing amount per currency among postings that will be
  * written (non-empty account). Unused trailing/blank-account rows are ignored.
  * The residual is summed in decimal, so `0.1` and `0.2` balance to `-0.3`
@@ -45,7 +58,7 @@ export function computeAutoBalance(
   postings.forEach((posting, index) => {
     if (!isEligiblePosting(posting)) return;
 
-    const currency = posting.currency.trim() || primaryCurrency;
+    const currency = postingCurrency(posting, primaryCurrency);
     let group = currencyGroups.get(currency);
     if (!group) {
       group = { filled: [], emptyIndexes: [] };
@@ -130,7 +143,7 @@ export function findUnbalancedResiduals(
     if (!isEligiblePosting(posting)) continue;
     const amount = parseDecimalNumber(posting.amount);
     if (amount === null) continue;
-    const currency = posting.currency.trim() || primaryCurrency;
+    const currency = postingCurrency(posting, primaryCurrency);
     groups.set(currency, [...(groups.get(currency) ?? []), amount]);
   }
 
