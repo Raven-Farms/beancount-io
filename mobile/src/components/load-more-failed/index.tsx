@@ -13,7 +13,7 @@ const getStyles = (theme: ColorTheme) =>
     },
     message: {
       fontSize: fontSizes.md,
-      color: theme.black60,
+      color: theme.black80,
     },
     retry: {
       fontSize: fontSizes.md,

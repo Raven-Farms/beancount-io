@@ -72,7 +72,7 @@ const getStyles = (theme: ColorTheme) =>
       borderColor: theme.error,
     },
     helper: {
-      color: theme.black60,
+      color: theme.black80,
       fontSize: 13,
       lineHeight: 19,
     },

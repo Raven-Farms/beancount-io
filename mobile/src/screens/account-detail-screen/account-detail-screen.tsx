@@ -106,7 +106,7 @@ const getStyles = (theme: ColorTheme) =>
     },
     footerText: {
       fontSize: fontSizes.md,
-      color: theme.black60,
+      color: theme.black80,
     },
     chartContainer: {
       // The chart is `ScreenWidth - contentPadding * 2` wide: padded by 10 it

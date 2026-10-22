@@ -63,7 +63,7 @@ const getStyles = (theme: ColorTheme) =>
     detail: {
       marginTop: 2,
       fontSize: fontSizes.sm,
-      color: theme.black60,
+      color: theme.black80,
       textAlign: LEADING_TEXT_ALIGN,
     },
     title: {

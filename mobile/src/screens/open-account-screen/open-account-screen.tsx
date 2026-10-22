@@ -194,7 +194,7 @@ const getStyles = (theme: ColorTheme) =>
     // The composed name, once it is valid: what will actually be written.
     preview: {
       marginTop: space.sm,
-      color: theme.black60,
+      color: theme.black80,
       fontSize: fontSizes.sm,
       lineHeight: 20,
     },

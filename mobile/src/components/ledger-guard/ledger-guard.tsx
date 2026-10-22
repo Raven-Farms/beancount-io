@@ -55,7 +55,7 @@ const getStyles = (theme: ColorTheme) =>
     },
     message: {
       fontSize: 16,
-      color: theme.black60,
+      color: theme.black80,
       marginBottom: 24,
       textAlign: "center",
       lineHeight: 24,

@@ -165,7 +165,7 @@ const getStyles = (theme: ColorTheme) =>
     },
     emptyText: {
       fontSize: 15,
-      color: theme.black60,
+      color: theme.black80,
     },
     errorText: {
       fontSize: 14,
@@ -180,7 +180,7 @@ const getStyles = (theme: ColorTheme) =>
       fontSize: 13,
       lineHeight: 18,
       textAlign: "center",
-      color: theme.black60,
+      color: theme.black80,
     },
     emptyAction: {
       flexDirection: "row",

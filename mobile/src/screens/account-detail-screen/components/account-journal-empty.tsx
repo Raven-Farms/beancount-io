@@ -84,7 +84,7 @@ const getStyles = (theme: ColorTheme) =>
     },
     stateText: {
       fontSize: fontSizes.md,
-      color: theme.black60,
+      color: theme.black80,
       textAlign: "center",
     },
   });

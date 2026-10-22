@@ -151,7 +151,7 @@ const getStyles = (theme: ColorTheme) =>
     },
     emptyStateText: {
       fontSize: fontSizes.md,
-      color: theme.black60,
+      color: theme.black80,
       textAlign: "center",
     },
   });

@@ -198,7 +198,7 @@ const getStyles = (theme: ColorTheme) =>
     },
     amountNote: {
       fontSize: fontSizes.xs,
-      color: theme.black60,
+      color: theme.black80,
     },
     // Magnitude bar, aligned under the row's own label. Short and fixed-width by
     // design: given the full row to grow into, the widest sibling's bar spans the

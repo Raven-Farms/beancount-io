@@ -200,13 +200,17 @@ function loadGetStyles(file: string): (theme: unknown) => any {
       },
     },
   ).outputText;
-  vm.runInNewContext(`${source}\nexports.__getStyles = getStyles;`, {
-    exports,
-    require: (id: string) =>
-      id === "react-native"
-        ? { StyleSheet: { create: (styles: unknown) => styles } }
-        : stub,
-  });
+  // The chart chrome names its factory differently.
+  vm.runInNewContext(
+    `${source}\nexports.__getStyles = typeof getStyles !== "undefined" ? getStyles : getChromeStyles;`,
+    {
+      exports,
+      require: (id: string) =>
+        id === "react-native"
+          ? { StyleSheet: { create: (styles: unknown) => styles } }
+          : stub,
+    },
+  );
   return exports.__getStyles as (theme: unknown) => any;
 }
 
@@ -229,6 +233,93 @@ describe("informative text contrast", () => {
       });
     }
   }
+});
+
+// w21/481: load errors, empty states and row captions still took the placeholder
+// grey (black60, 1.78:1 on white). Each runs against the page and the card fill,
+// the two surfaces informative text sits on, in both themes.
+const SECONDARY_TEXT: Array<[file: string, texts: string[]]> = [
+  ["components/card-load-failure/index.tsx", ["message"]],
+  ["components/load-more-failed/index.tsx", ["message"]],
+  ["components/ledger-guard/ledger-guard.tsx", ["message"]],
+  ["common/d3/chart-chrome.tsx", ["placeholderText"]],
+  ["common/d3/interactive-line-chart.tsx", ["placeholderText"]],
+  ["components/account-table/account-table.tsx", ["amountNote"]],
+  ["screens/account-detail-screen/account-detail-screen.tsx", ["footerText"]],
+  [
+    "screens/account-detail-screen/components/account-entry-row.tsx",
+    ["detail"],
+  ],
+  [
+    "screens/account-detail-screen/components/account-journal-empty.tsx",
+    ["stateText"],
+  ],
+  ["screens/budget-screen/budget-screen.tsx", ["stateText"]],
+  [
+    "screens/edit-transaction-screen/edit-transaction-screen.tsx",
+    ["hint", "cancelButton"],
+  ],
+  ["screens/home-screen/components/feed-card.tsx", ["metaText"]],
+  [
+    "screens/ledger-file-editor-screen/index.tsx",
+    ["errorLocation", "savingText"],
+  ],
+  [
+    "screens/multi-postings-transaction/multi-postings-transaction-screen.tsx",
+    ["balanceLabel"],
+  ],
+  ["screens/open-account-screen/open-account-screen.tsx", ["preview"]],
+  ["screens/transactions-screen/entry-context/index.tsx", ["emptyStateText"]],
+  ["screens/transactions-screen/entry-row/index.tsx", ["typeLabel"]],
+  [
+    "screens/transactions-screen/transactions-empty-state.tsx",
+    ["message", "finalMessage"],
+  ],
+  [
+    "screens/transactions-screen/transactions-screen.tsx",
+    ["errorText", "loadingFooterText"],
+  ],
+  ["screens/welcome/server-settings-screen.tsx", ["helper"]],
+];
+
+describe("secondary text is no longer the placeholder grey", () => {
+  for (const [file, texts] of SECONDARY_TEXT) {
+    const getStyles = loadGetStyles(file);
+    for (const themeName of ["light", "dark"] as ThemeName[]) {
+      for (const text of texts) {
+        for (const surface of ["white", "controlFill"]) {
+          it(`keeps ${file} ${text} readable on ${surface} in ${themeName}`, () => {
+            const theme = themes[themeName].colorTheme as unknown as Record<
+              string,
+              string
+            >;
+            const color = getStyles(theme)[text].color;
+            expect(color === theme.black60).toBe(false);
+            expect(contrastRatio(color, theme[surface]) >= TEXT_BAR).toBe(true);
+          });
+        }
+      }
+    }
+  }
+});
+
+// The Files browser's styles read layout constants getStyles cannot evaluate
+// here, so its two captions are checked on the source.
+describe("the Files browser's empty and hint text", () => {
+  it("take the secondary text colour, not the placeholder grey", () => {
+    const source = fs
+      .readFileSync(
+        path.join(__dirname, "../screens/ledger-file-browser-screen/index.tsx"),
+        "utf8",
+      )
+      .replace(/\s+/g, "");
+    expect(
+      source.includes("emptyText:{fontSize:15,color:theme.black80,}"),
+    ).toBe(true);
+    expect(
+      source.includes('lineHeight:18,textAlign:"center",color:theme.black80,}'),
+    ).toBe(true);
+  });
 });
 
 // w21/128: placeholders take the input placeholder token, never the hairline.

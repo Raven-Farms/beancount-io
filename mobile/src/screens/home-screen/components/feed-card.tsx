@@ -53,7 +53,7 @@ const getStyles = (theme: ColorTheme) =>
     },
     metaText: {
       fontSize: fontSizes.xs,
-      color: theme.black60,
+      color: theme.black80,
     },
   });
 

@@ -83,7 +83,7 @@ const getStyles = (theme: ColorTheme) =>
     errorText: {
       fontSize: fontSizes.lg,
       fontWeight: fontWeights.medium,
-      color: theme.black60,
+      color: theme.black80,
       textAlign: "center",
       lineHeight: 24,
     },
@@ -96,7 +96,7 @@ const getStyles = (theme: ColorTheme) =>
     },
     loadingFooterText: {
       fontSize: fontSizes.md,
-      color: theme.black60,
+      color: theme.black80,
     },
   });
 

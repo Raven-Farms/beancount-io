@@ -162,7 +162,7 @@ const getStyles = (theme: ColorTheme) =>
     errorLocation: {
       fontSize: 11,
       fontFamily: fonts.mono,
-      color: theme.black60,
+      color: theme.black80,
     },
     errorDivider: {
       height: StyleSheet.hairlineWidth,
@@ -188,7 +188,7 @@ const getStyles = (theme: ColorTheme) =>
     },
     savingText: {
       fontSize: 14,
-      color: theme.black60,
+      color: theme.black80,
       paddingHorizontal: 12,
     },
     loadErrorText: {

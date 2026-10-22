@@ -349,7 +349,7 @@ const getStyles = (theme: ColorTheme) =>
     },
     placeholderText: {
       fontSize: fontSizes.md,
-      color: theme.black60,
+      color: theme.black80,
       textAlign: "center",
     },
   });
@@ -399,7 +399,7 @@ function ScrubHeader({
   const styles = useThemeStyle(getStyles);
   const { t } = useTranslations();
   // A change that rounds to nothing is neither good nor bad (w21/237).
-  const neutralColor = useTheme().colorTheme.black60;
+  const neutralColor = useTheme().colorTheme.black80;
 
   const [{ index, motion }, setHeadline] = useState<{
     index: number;

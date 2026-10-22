@@ -230,7 +230,7 @@ const getStyles = (theme: ColorTheme) =>
     },
     balanceLabel: {
       fontSize: fontSizes.sm,
-      color: theme.black60,
+      color: theme.black80,
     },
     balanceAmount: {
       fontSize: fontSizes.sm,

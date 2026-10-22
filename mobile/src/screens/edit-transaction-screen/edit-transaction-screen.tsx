@@ -72,7 +72,7 @@ const getStyles = (theme: ColorTheme) =>
     },
     hint: {
       fontSize: fontSizes.sm,
-      color: theme.black60,
+      color: theme.black80,
       paddingHorizontal: 16,
       paddingTop: 12,
       paddingBottom: 8,
@@ -113,7 +113,7 @@ const getStyles = (theme: ColorTheme) =>
     },
     cancelButton: {
       fontSize: fontSizes.lg,
-      color: theme.black60,
+      color: theme.black80,
     },
   });
 

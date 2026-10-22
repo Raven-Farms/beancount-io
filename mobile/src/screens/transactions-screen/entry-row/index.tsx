@@ -95,7 +95,7 @@ const getStyles = (theme: ColorTheme) =>
     },
     typeLabel: {
       fontSize: fontSizes.xs,
-      color: theme.black60,
+      color: theme.black80,
       flexShrink: 1,
     },
     amount: {
@@ -250,7 +250,7 @@ export const EntryRow: React.FC<EntryRowProps> = ({
           style={[
             styles.amount,
             stacked && styles.amountStacked,
-            { color: theme.black60 },
+            { color: theme.black80 },
           ]}
         >
           {isJournalTransaction(entry)
