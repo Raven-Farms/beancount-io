@@ -488,14 +488,15 @@ def answer(
     claimed, owners = _claim_payeeless_ids(hashed, identities, account)
     batch_rows: dict[int, int] = {}
     first_uses = _first_uses(entries, Transaction)
-    # Each transfer another account's import wrote has one other side here:
-    # the row of this import dated nearest it (w5/821).
-    pairs: dict[int, int | None] = {}
+    # Each transfer another account's import wrote has one other side here, and
+    # each row is the other side of at most one transfer (w5/821, w5/882).
+    pairs: dict[int, int] | None = None
 
     def paired(found: Any) -> int | None:
-        if id(found) not in pairs:
-            pairs[id(found)] = _counterpart_row(found, entries, account)
-        return pairs[id(found)]
+        nonlocal pairs
+        if pairs is None:
+            pairs = _assign_counterparts(counterparts, transfer_ids, entries, account, keys)
+        return pairs.get(id(found))
 
     stage_opens = reports_unused_accounts(options)
     # Blocked rows with what they were before the block, for the second look below.
@@ -1717,28 +1718,56 @@ def _transfer_counterpart(
     return next((found for found in near if paired(found) == index), None)
 
 
-def _counterpart_row(found: Any, rows: Sequence[Any], account: str) -> int | None:
-    """The index of the row of this import a transfer's other side is: the one dated nearest it.
+def _assign_counterparts(
+    counterparts: dict[tuple[str, ...], list[Any]],
+    transfer_ids: dict[tuple[str, str, str], Any],
+    rows: Sequence[Any],
+    account: str,
+    keys: list[str],
+) -> dict[int, int]:
+    """Which row of this import is each transfer's other side, one to one: `id(transfer)` to row index.
 
-    Same-day before a day apart, and the earlier row when two are as near.
+    A transfer sharing its issuer's reference with a row is that row's other
+    side whatever else sits nearer, so those pairs are fixed first. The rest
+    pair by date, nearest first, and the earlier row and transfer when two
+    are as near; a transfer and a row are each used once. Picking each
+    transfer's nearest row alone sent two transfers to one row and left the
+    other row booked as a third transfer, and a same-day deposit took the
+    transfer its shared reference already named (w5/882).
     """
     from beancount.core.data import Transaction
 
-    legs = _fingerprint(found, account)
-    nearest: tuple[int, int] | None = None
+    prints: dict[int, tuple[Any, ...]] = {}
     for index, row in enumerate(rows):
-        if not isinstance(row, Transaction) or not _source_legs(row, account):
+        if isinstance(row, Transaction) and _source_legs(row, account):
+            try:
+                prints[index] = _fingerprint(row, account)
+            except LedgerError:
+                continue
+    assigned: dict[int, int] = {}
+    taken: set[int] = set()
+    for index, printed in prints.items():
+        side = _transfer_side(_identities(rows[index], account, keys), transfer_ids, rows[index], account, printed)
+        if side is not None and id(side[1]) not in assigned:
+            assigned[id(side[1])] = index
+            taken.add(index)
+    candidates: list[tuple[int, int, int, Any]] = []
+    transfers = {id(found): found for found_list in counterparts.values() for found in found_list}
+    for order, found in enumerate(transfers.values()):
+        if id(found) in assigned:
             continue
-        try:
-            printed = _fingerprint(row, account)
-        except LedgerError:
-            continue
-        days = abs((found.date - row.date).days)
-        if days > _COUNTERPART_DAYS or _amounts_key(printed) != _amounts_key(legs):
-            continue
-        if _legs_agree(printed[3], legs[3]) and (nearest is None or days < nearest[0]):
-            nearest = (days, index)
-    return None if nearest is None else nearest[1]
+        legs = _fingerprint(found, account)
+        for index, printed in prints.items():
+            days = abs((found.date - rows[index].date).days)
+            if index in taken or days > _COUNTERPART_DAYS or _amounts_key(printed) != _amounts_key(legs):
+                continue
+            if _legs_agree(printed[3], legs[3]):
+                candidates.append((days, index, order, found))
+    for _days, index, _order, found in sorted(candidates, key=lambda item: item[:3]):
+        if index not in taken and id(found) not in assigned:
+            assigned[id(found)] = index
+            taken.add(index)
+    return assigned
 
 
 def _relative_days(written: Any, row: Any) -> str:
