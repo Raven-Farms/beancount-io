@@ -759,6 +759,9 @@ export const fr: Translations = {
   ledgerGuardMessage: "Créez un grand livre ou découvrez-en un pour continuer.",
   removePosting: "Supprimer l'écriture",
   toggleAmountSign: "Inverser le signe du montant",
+  postingSignToggle: "Signe pour {{account}}",
+  signPlus: "Plus",
+  signMinus: "Moins",
   incomeExpenseChartSummary: {
     one: "Revenus et dépenses sur {{count}} mois. Revenus {{income}}, dépenses {{expense}}, net {{net}}.",
     many: "Revenus et dépenses sur {{count}} mois. Revenus {{income}}, dépenses {{expense}}, net {{net}}.",

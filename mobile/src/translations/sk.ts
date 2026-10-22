@@ -761,6 +761,9 @@ export const sk: Translations = {
     "Vytvorte knihu alebo objavte jednu, aby ste mohli pokračovať.",
   removePosting: "Odstrániť zápis",
   toggleAmountSign: "Prepnúť znamienko sumy",
+  postingSignToggle: "Znamienko pre {{account}}",
+  signPlus: "Plus",
+  signMinus: "Mínus",
   incomeExpenseChartSummary: {
     one: "Príjmy a výdavky za {{count}} mesiac. Príjmy {{income}}, výdavky {{expense}}, čisté {{net}}.",
     few: "Príjmy a výdavky za {{count}} mesiace. Príjmy {{income}}, výdavky {{expense}}, čisté {{net}}.",

@@ -755,6 +755,9 @@ export const ru: Translations = {
   ledgerGuardMessage: "Создайте книгу или найдите её, чтобы продолжить.",
   removePosting: "Удалить проводку",
   toggleAmountSign: "Сменить знак суммы",
+  postingSignToggle: "Знак для {{account}}",
+  signPlus: "Плюс",
+  signMinus: "Минус",
   incomeExpenseChartSummary: {
     one: "Доходы и расходы за {{count}} мес. Доходы {{income}}, расходы {{expense}}, чистыми {{net}}.",
     few: "Доходы и расходы за {{count}} мес. Доходы {{income}}, расходы {{expense}}, чистыми {{net}}.",

@@ -754,6 +754,9 @@ export const uk: Translations = {
   ledgerGuardMessage: "Створіть книгу або знайдіть її, щоб продовжити.",
   removePosting: "Видалити проведення",
   toggleAmountSign: "Змінити знак суми",
+  postingSignToggle: "Знак для {{account}}",
+  signPlus: "Плюс",
+  signMinus: "Мінус",
   incomeExpenseChartSummary: {
     one: "Доходи й витрати за {{count}} міс. Доходи {{income}}, витрати {{expense}}, чистими {{net}}.",
     few: "Доходи й витрати за {{count}} міс. Доходи {{income}}, витрати {{expense}}, чистими {{net}}.",

@@ -728,6 +728,9 @@ export const fa: Translations = {
   ledgerGuardMessage: "برای ادامه یک دفترکل بسازید یا کشف کنید.",
   removePosting: "حذف ثبت",
   toggleAmountSign: "تغییر علامت مبلغ",
+  postingSignToggle: "علامت برای {{account}}",
+  signPlus: "مثبت",
+  signMinus: "منفی",
   incomeExpenseChartSummary: {
     one: "درآمد و هزینه در {{count}} ماه. درآمد {{income}}، هزینه {{expense}}، خالص {{net}}.",
     other:

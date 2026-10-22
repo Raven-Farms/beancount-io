@@ -739,6 +739,9 @@ export const bg: Translations = {
   ledgerGuardMessage: "Създайте книга или открийте такава, за да продължите.",
   removePosting: "Премахни запис",
   toggleAmountSign: "Превключи знака на сумата",
+  postingSignToggle: "Знак за {{account}}",
+  signPlus: "Плюс",
+  signMinus: "Минус",
   incomeExpenseChartSummary: {
     one: "Приходи и разходи за {{count}} месец. Приходи {{income}}, разходи {{expense}}, нето {{net}}.",
     other:

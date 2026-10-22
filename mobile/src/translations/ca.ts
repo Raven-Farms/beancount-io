@@ -759,6 +759,9 @@ export const ca: Translations = {
   ledgerGuardMessage: "Creeu un llibre o descubriu-ne un per continuar.",
   removePosting: "Elimina l'assentament",
   toggleAmountSign: "Canvia el signe de l'import",
+  postingSignToggle: "Signe de {{account}}",
+  signPlus: "Més",
+  signMinus: "Menys",
   incomeExpenseChartSummary: {
     one: "Ingressos i despeses durant {{count}} mes. Ingressos {{income}}, despeses {{expense}}, net {{net}}.",
     many: "Ingressos i despeses durant {{count}} mesos. Ingressos {{income}}, despeses {{expense}}, net {{net}}.",

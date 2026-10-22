@@ -744,6 +744,9 @@ export const nl: Translations = {
   ledgerGuardMessage: "Maak een grootboek of ontdek er een om door te gaan.",
   removePosting: "Boeking verwijderen",
   toggleAmountSign: "Teken van bedrag wisselen",
+  postingSignToggle: "Teken voor {{account}}",
+  signPlus: "Plus",
+  signMinus: "Min",
   incomeExpenseChartSummary: {
     one: "Inkomsten en uitgaven over {{count}} maand. Inkomsten {{income}}, uitgaven {{expense}}, netto {{net}}.",
     other:

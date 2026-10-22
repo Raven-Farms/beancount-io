@@ -755,6 +755,9 @@ export const pt: Translations = {
   ledgerGuardMessage: "Crie um livro ou descubra um para continuar.",
   removePosting: "Remover lançamento",
   toggleAmountSign: "Alternar sinal do valor",
+  postingSignToggle: "Sinal de {{account}}",
+  signPlus: "Mais",
+  signMinus: "Menos",
   incomeExpenseChartSummary: {
     one: "Receitas e despesas em {{count}} mês. Receitas {{income}}, despesas {{expense}}, líquido {{net}}.",
     many: "Receitas e despesas em {{count}} meses. Receitas {{income}}, despesas {{expense}}, líquido {{net}}.",

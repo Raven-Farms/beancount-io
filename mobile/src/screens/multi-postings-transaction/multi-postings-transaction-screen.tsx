@@ -399,8 +399,17 @@ const PostingRow = ({
               onPress={handleToggleSign}
               hitSlop={8}
               accessibilityRole="button"
-              accessibilityLabel={t("toggleAmountSign")}
-              accessibilityState={{ selected: isNegative }}
+              // Which posting, and the sign it has now as a value: every toggle
+              // sounded alike, and "Selected" was the only clue that the sign
+              // was negative (w21/561).
+              accessibilityLabel={
+                posting.account
+                  ? t("postingSignToggle", { account: posting.account })
+                  : t("toggleAmountSign")
+              }
+              accessibilityValue={{
+                text: isNegative ? t("signMinus") : t("signPlus"),
+              }}
             >
               <Text style={[styles.signToggleText, { color: amountColor }]}>
                 {isNegative ? "−" : "+"}

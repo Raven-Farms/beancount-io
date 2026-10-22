@@ -759,6 +759,9 @@ export const de: Translations = {
     "Erstellen oder entdecken Sie ein Hauptbuch, um fortzufahren.",
   removePosting: "Buchung entfernen",
   toggleAmountSign: "Vorzeichen des Betrags umschalten",
+  postingSignToggle: "Vorzeichen für {{account}}",
+  signPlus: "Plus",
+  signMinus: "Minus",
   incomeExpenseChartSummary: {
     one: "Einnahmen und Ausgaben über {{count}} Monat. Einnahmen {{income}}, Ausgaben {{expense}}, Netto {{net}}.",
     other:
