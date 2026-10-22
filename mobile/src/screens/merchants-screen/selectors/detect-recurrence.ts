@@ -9,7 +9,14 @@
 import { utcDate, utcTime } from "../../../common/calendar-date";
 
 export type Cadence =
-  "weekly" | "biweekly" | "semimonthly" | "monthly" | "quarterly" | "yearly";
+  | "weekly"
+  | "biweekly"
+  | "semimonthly"
+  | "monthly"
+  | "bimonthly"
+  | "quarterly"
+  | "semiannual"
+  | "yearly";
 
 /** One posting event feeding detection. Dates are ledger `YYYY-MM-DD`. */
 export interface SeriesPoint {
@@ -83,7 +90,11 @@ const CADENCE_BANDS: ReadonlyArray<{
   { cadence: "weekly", min: 6, max: 8 },
   { cadence: "biweekly", min: 13, max: 16 },
   { cadence: "monthly", min: 27, max: 32 },
+  // Every two months (59–62 days) and every six (181–184): water and
+  // utility bills, car insurance (w21/269).
+  { cadence: "bimonthly", min: 56, max: 66 },
   { cadence: "quarterly", min: 84, max: 98 },
+  { cadence: "semiannual", min: 175, max: 190 },
   { cadence: "yearly", min: 350, max: 380 },
 ];
 
@@ -125,10 +136,12 @@ export function formatLedgerDay(dayNumber: number): string {
   return `${year}-${month}-${day}`;
 }
 
-/** Calendar months a monthly, quarterly or yearly bill advances by. */
+/** Calendar months a monthly-or-longer bill advances by. */
 const CADENCE_MONTHS: Partial<Record<Cadence, number>> = {
   monthly: 1,
+  bimonthly: 2,
   quarterly: 3,
+  semiannual: 6,
   yearly: 12,
 };
 

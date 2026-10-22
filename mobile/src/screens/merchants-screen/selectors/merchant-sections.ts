@@ -143,8 +143,12 @@ export function cadenceLabelKey(
       return "merchantsCadenceSemimonthly";
     case "monthly":
       return "merchantsCadenceMonthly";
+    case "bimonthly":
+      return "merchantsCadenceBimonthly";
     case "quarterly":
       return "merchantsCadenceQuarterly";
+    case "semiannual":
+      return "merchantsCadenceSemiannual";
     case "yearly":
       return "merchantsCadenceYearly";
     case "irregular":
