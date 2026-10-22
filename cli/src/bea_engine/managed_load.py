@@ -2126,7 +2126,7 @@ def _export_plugin_modules(loaded: LoadedLedger, snapshot: LedgerSnapshot, targe
     home = snapshot.root.parent.resolve()
     modules: dict[Path, Path] = {}
     plugins = [str(name) for name, _config in loaded.options.get("plugin") or []]
-    wanted = {name.split(".", 1)[0] for name in plugins} | _sibling_imports(homes, plugins)
+    wanted = {name.split(".", 1)[0] for name in plugins} | _sibling_imports(homes, loaded)
     for top in sorted(wanted):
         holder = next(
             (directory for directory in homes if (directory / f"{top}.py").is_file() or (directory / top).is_dir()),
@@ -2195,7 +2195,7 @@ def _package_files(package: Path, top: str) -> list[Path]:
     return files
 
 
-def _sibling_imports(homes: list[Path], plugins: list[str]) -> set[str]:
+def _sibling_imports(homes: list[Path], loaded: LoadedLedger) -> set[str]:
     """Top-level modules under the ledger's module path that the local plugins import.
 
     A plugin importing `helper.py` from its own directory exported without
@@ -2204,40 +2204,81 @@ def _sibling_imports(homes: list[Path], plugins: list[str]) -> set[str]:
     with every `insert_pythonpath` directory on the path in load order)
     leaves its imports in `sys.modules`; those whose file sits at the top of
     one of those directories travel too.
+
+    An import inside the plugin function, or a resource opened by package
+    name, happens only when the function runs, which a cached load skipped.
+    So each local plugin function runs once more here on a copy of the
+    entries. A package without `__init__.py` has no `__file__`; its `__path__`
+    locations say where it lives (w5/880).
     """
     import importlib
 
+    bases = [directory.resolve() for directory in homes]
+
+    def local(module: Any) -> bool:
+        return any(_below_any(location, bases) for location in _module_locations(module))
+
+    plugins = [(str(name), config) for name, config in loaded.options.get("plugin") or []]
     saved = list(sys.path)
     for directory in reversed(homes):
         sys.path.insert(0, str(directory))
     try:
-        for name in plugins:
+        for name, config in plugins:
             try:
-                importlib.import_module(name)
+                module = importlib.import_module(name)
             except Exception:  # noqa: BLE001 - the load reports a plugin that cannot import
                 continue
+            if not local(module):
+                continue
+            for function_name in getattr(module, "__plugins__", ()):
+                function = getattr(module, function_name, None)
+                if not callable(function):
+                    continue
+                try:
+                    arguments = (list(loaded.entries), dict(loaded.options))
+                    function(*arguments) if config is None else function(*arguments, config)
+                except Exception:  # noqa: BLE001 - a plugin that fails is the load's to report
+                    continue
     finally:
         sys.path[:] = saved
-    bases = [directory.resolve() for directory in homes]
     tops: set[str] = set()
     for name, module in list(sys.modules.items()):
-        location = getattr(module, "__file__", None)
-        if not location:
-            continue
-        try:
-            absolute = Path(location).resolve()
-        except OSError:
-            continue
         top = name.split(".", 1)[0]
-        for base in bases:
-            try:
-                relative = absolute.relative_to(base)
-            except ValueError:
-                continue
-            if relative.parts and relative.parts[0] in (f"{top}.py", top):
-                tops.add(top)
-            break
+        for location in _module_locations(module):
+            relative = _relative_to_any(location, bases)
+            if relative is not None:
+                if relative.parts and relative.parts[0] in (f"{top}.py", top):
+                    tops.add(top)
+                break
     return tops
+
+
+def _module_locations(module: Any) -> list[str]:
+    """Where a module lives: its file, or every directory of a namespace package."""
+    location = getattr(module, "__file__", None)
+    if location:
+        return [str(location)]
+    try:
+        return [str(path) for path in getattr(module, "__path__", ())]
+    except TypeError:
+        return []
+
+
+def _relative_to_any(location: str, bases: list[Path]) -> Path | None:
+    try:
+        absolute = Path(location).resolve()
+    except OSError:
+        return None
+    for base in bases:
+        try:
+            return absolute.relative_to(base)
+        except ValueError:
+            continue
+    return None
+
+
+def _below_any(location: str, bases: list[Path]) -> bool:
+    return _relative_to_any(location, bases) is not None
 
 
 def _free_feed_directory(target: Path, taken: set[Path]) -> Path:
