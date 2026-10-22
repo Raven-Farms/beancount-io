@@ -1,7 +1,7 @@
 import Constants from "expo-constants";
 import * as WebBrowser from "expo-web-browser";
 import { useRef, useState } from "react";
-import { Alert, Platform } from "react-native";
+import { Alert, Linking, Platform } from "react-native";
 import { List as List2 } from "@/components";
 
 import { i18n, setLocale } from "@/translations";
@@ -34,6 +34,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useCurrentUser } from "@/common/hooks/use-current-user";
 import { UserAvatar } from "@/components/user-avatar";
 import { deleteConfirmationCheck } from "./delete-confirmation";
+import { openReviewPage } from "./review-app";
 
 export const MainContent = () => {
   const session = useSession();
@@ -161,15 +162,13 @@ export const MainContent = () => {
           icon={<Ionicons name="star" size={22} color={theme.black80} />}
           title={t("reviewApp")}
           content={Platform.OS === "ios" ? "App Store" : "Google Play"}
-          onPress={async () => {
-            const storeUrl =
-              Platform.OS === "ios"
-                ? "https://apps.apple.com/us/app/id1527950512"
-                : "https://play.google.com/store/apps/details?id=io.beancount.android";
-            if (storeUrl) {
-              await WebBrowser.openBrowserAsync(storeUrl);
-            }
-          }}
+          onPress={() =>
+            void openReviewPage(
+              Platform.OS,
+              (url) => Linking.openURL(url),
+              (url) => WebBrowser.openBrowserAsync(url),
+            )
+          }
         />
         <ListItemHorizontal
           icon={<Ionicons name="help-circle" size={22} color={theme.black80} />}
