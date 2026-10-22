@@ -23,6 +23,7 @@ const netflix = (inRecurringSection: boolean, isOverdue: boolean) =>
       detection: {
         cadence: "monthly",
         typicalAmountByCurrency: { USD: 15.99 },
+        primaryCurrency: "USD",
         isApproximate: true,
         nextExpected: "2026-09-01",
         isOverdue,
@@ -131,5 +132,25 @@ describe("the typical amount on a recurring row", () => {
   it("leaves a bill unsigned", () => {
     expect(typical(15.99)).toBe("$15.99");
     expect(typical(15.99, true)).toBe("~$15.99");
+  });
+});
+
+// w21/615: the row showed the currency with the largest number, so one ¥980
+// charge abroad replaced a $10.99 bill's amount.
+describe("merchantRowText amount currency", () => {
+  it("shows the bill's usual currency, not the largest number", () => {
+    const item = netflix(true, false) as unknown as {
+      resolved: { detection: Record<string, unknown> };
+    };
+    item.resolved.detection.typicalAmountByCurrency = { USD: 10.99, JPY: 980 };
+    item.resolved.detection.primaryCurrency = "USD";
+    const text = merchantRowText(
+      item as unknown as MerchantListItem,
+      t,
+      "en",
+      "2026-10-21",
+    );
+    expect(text.trailingAmount?.includes("10.99")).toBe(true);
+    expect(text.trailingAmount?.includes("980")).toBe(false);
   });
 });

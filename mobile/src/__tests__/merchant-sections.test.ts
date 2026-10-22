@@ -27,6 +27,7 @@ const RENT: MerchantAggregate = {
 const MONTHLY: RecurrenceVerdict = {
   cadence: "monthly",
   typicalAmountByCurrency: { USD: -15.99 },
+  primaryCurrency: "USD",
   isApproximate: false,
   nextExpected: "2025-07-01",
   isOverdue: false,

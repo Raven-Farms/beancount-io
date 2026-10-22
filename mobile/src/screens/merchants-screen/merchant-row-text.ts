@@ -8,16 +8,14 @@ import {
 
 type Translate = ReturnType<typeof useTranslations>["t"];
 
-function primaryTypical(
-  amounts: Record<string, number>,
-): { currency: string; amount: number } | null {
-  const entries = Object.entries(amounts);
-  if (entries.length === 0) {
-    return null;
-  }
-  entries.sort((a, b) => Math.abs(b[1]!) - Math.abs(a[1]!));
-  const [currency, amount] = entries[0]!;
-  return { currency, amount };
+function primaryTypical(detection: {
+  typicalAmountByCurrency: Record<string, number>;
+  primaryCurrency: string;
+}): { currency: string; amount: number } | null {
+  const { typicalAmountByCurrency: amounts, primaryCurrency: currency } =
+    detection;
+  const amount = amounts[currency];
+  return amount === undefined ? null : { currency, amount };
 }
 
 /**
@@ -59,9 +57,7 @@ export function merchantRowText(
   if (inRecurringSection && resolved.isRecurring) {
     const cadenceKey = cadenceLabelKey(resolved.cadence);
     cadenceLabel = cadenceKey ? t(cadenceKey) : "";
-    const typical = detection
-      ? primaryTypical(detection.typicalAmountByCurrency)
-      : null;
+    const typical = detection ? primaryTypical(detection) : null;
     // Signed as the detail's header is: a paycheck is -$5,000.00, not a bill
     // of $5,000.00 (w21/461).
     trailingAmount = typical

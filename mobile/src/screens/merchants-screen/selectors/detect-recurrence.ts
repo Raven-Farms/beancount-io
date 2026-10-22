@@ -29,6 +29,12 @@ export interface RecurrenceVerdict {
   cadence: Cadence;
   /** Median amount per currency (signed as in the series). */
   typicalAmountByCurrency: Record<string, number>;
+  /**
+   * The currency the bill is usually paid in: the one with the most charges, the
+   * latest charge's on a tie. A single charge abroad (¥980 against a monthly
+   * $10.99) is in the amounts above but is not what the bill costs (w21/615).
+   */
+  primaryCurrency: string;
   /** True when any currency's amount spread exceeds ~10% of its median. */
   isApproximate: boolean;
   /**
@@ -568,12 +574,14 @@ export function detectRecurrence(
 
   // In date order, so the latest charges can be told from the old ones.
   const amountsByCurrency = new Map<string, number[]>();
+  let latestCurrency = "";
   for (const day of eventDays) {
     for (const point of byDay.get(day)!) {
       const currency = point.currency.trim();
       if (!currency) {
         continue;
       }
+      latestCurrency = currency;
       const list = amountsByCurrency.get(currency);
       if (list) {
         list.push(point.amount);
@@ -589,7 +597,16 @@ export function detectRecurrence(
 
   const typicalAmountByCurrency: Record<string, number> = {};
   let isApproximate = false;
+  let primaryCurrency = latestCurrency;
+  let primaryCount = 0;
   for (const [currency, amounts] of amountsByCurrency) {
+    if (
+      amounts.length > primaryCount ||
+      (amounts.length === primaryCount && currency === latestCurrency)
+    ) {
+      primaryCurrency = currency;
+      primaryCount = amounts.length;
+    }
     // Steady latest charges are what it costs now: over the whole window the
     // old price held until half the history was at the new one, so a rise
     // read as last year's price, without the "~" (w21/171). A bill that
@@ -641,6 +658,7 @@ export function detectRecurrence(
   return {
     cadence,
     typicalAmountByCurrency,
+    primaryCurrency,
     isApproximate,
     nextExpected: formatLedgerDay(nextExpectedDay),
     isOverdue,

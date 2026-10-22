@@ -613,3 +613,25 @@ describe("hasEnoughHistory with a pre-entered event", () => {
     expect(hasEnoughHistory(series, "2026-10-21")).toBe(true);
   });
 });
+
+// w21/615: a monthly $10.99 bill with one ¥980 charge abroad is paid in dollars.
+describe("detectRecurrence primary currency", () => {
+  it("is the currency with the most charges, not the largest amount", () => {
+    const series = [
+      ...monthlySeries("2026-01-05", 8, 10.99),
+      { date: "2026-04-20", currency: "JPY", amount: 980 },
+    ];
+    const verdict = detectRecurrence(series, "2026-09-01");
+    expect(verdict?.primaryCurrency).toBe("USD");
+    expect(verdict?.typicalAmountByCurrency.JPY).toBe(980);
+  });
+
+  it("follows the latest charge when the counts tie", () => {
+    const series = [
+      ...monthlySeries("2026-01-05", 4, 2000, "JPY"),
+      ...monthlySeries("2026-05-05", 4, 18, "USD"),
+    ];
+    const verdict = detectRecurrence(series, "2026-09-01");
+    expect(verdict?.primaryCurrency).toBe("USD");
+  });
+});

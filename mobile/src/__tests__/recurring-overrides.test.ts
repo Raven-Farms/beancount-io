@@ -4,6 +4,7 @@ import { resolveRecurringVerdict } from "../screens/merchants-screen/selectors/r
 const DETECTION: RecurrenceVerdict = {
   cadence: "monthly",
   typicalAmountByCurrency: { USD: -10 },
+  primaryCurrency: "USD",
   isApproximate: false,
   nextExpected: "2024-07-01",
   isOverdue: false,
