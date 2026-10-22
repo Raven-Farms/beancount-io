@@ -36,6 +36,8 @@
 
 ## Inbox
 
+- [968 — Discover export helpers before plugin processing suppresses their import](./968.md) — minor CLI follow-up to 880; a cached idempotent plugin produces a successful snapshot missing its helper, reproduced 2026-10-22.
+
 - [967 — Preserve literal quotes in CSV column mappings](./967.md) — trivial CLI mapping gap; valid quoted headers cannot be named losslessly, reproduced 2026-10-22.
 
 - [966 — Keep leap day in February's current fiscal year](./966.md) — minor CLI period-selection finding; clock-controlled Feb29 reports select the next fiscal year, reproduced 2026-10-22.
