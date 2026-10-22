@@ -30,6 +30,7 @@ from typing import Any
 from bea_engine.ledger import write as ledger_write
 from bea_engine.ledger.prices import reciprocal_agrees
 from bea_engine.ledger.text import (
+    OPENED_ACCOUNTS,
     bea_command,
     checked_operating_currencies,
     ledger_roots,
@@ -154,14 +155,20 @@ def _effective_id_keys(id_keys: list[str] | None, *, csv_id_mapped: bool = False
 
 
 def _with_short_lots[**P, R](function: Callable[P, R]) -> Callable[P, R]:
-    """Run an import with no short-lot labels known until its ledger is loaded, then forget them."""
+    """Run an import knowing nothing of its ledger until it is loaded, then forget what it learned.
+
+    Short-lot labels and opened accounts are both read from the ledger the
+    import loads; neither may leak into the next call in this process.
+    """
 
     @functools.wraps(function)
     def wrapped(*args: P.args, **kwargs: P.kwargs) -> R:
         token = _SHORT_LOT_LABELS.set(lambda: frozenset())
+        opened = OPENED_ACCOUNTS.set(frozenset())
         try:
             return function(*args, **kwargs)
         finally:
+            OPENED_ACCOUNTS.reset(opened)
             _SHORT_LOT_LABELS.reset(token)
 
     return wrapped
@@ -232,6 +239,11 @@ def answer(
     # an importer returns as well (w5/925).
     short_labels = held_short_lot_labels(existing)
     _SHORT_LOT_LABELS.set(lambda: short_labels)
+    # An account the ledger already opens stays usable by name even where its
+    # root is one the main file renamed and an include kept (w5/928).
+    OPENED_ACCOUNTS.set(
+        frozenset(unicodedata.normalize("NFC", entry.account) for entry in existing if isinstance(entry, Open))
+    )
     # Appended rows cannot repair unreadable existing text. Refuse it before
     # extracting rows or calling any ready, even under --allow-errors.
     # An account staged under nounused can still be cleared by this import.

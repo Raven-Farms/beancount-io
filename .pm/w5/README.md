@@ -76,7 +76,6 @@
 - [959 — Treat repeated allowed currencies as one during transaction inference](./959.md) — minor CLI existing-ledger/native-import inference finding; USD/EUR and split-file controls reproduced 2026-10-21.
 - [958 — Keep unused unopened accounts out of remembered CSV settings](./958.md) — minor CLI memory-guard follow-up to 452/714; empty, skipped and fully categorized exports reproduced 2026-10-21.
 - [957 — Allow instrument units in the portfolio preset's holdings account](./957.md) — minor CLI first-purchase setup finding; reproduced twice in USD/EUR on 2026-10-21.
-- [928 — Recognize opened legacy-include accounts in CSV validation](./928.md) — minor CLI root-scope gap; valid source/fallback/rule names refuse and full-account categories route to suspense despite a compatible include, reproduced 2026-10-21.
 - [929 — Keep missing dependencies from using old snapshot files](./929.md) — major CLI snapshot mismatch; a refresh loads old transactions or plugin code absent from the current source and the copy passes check, reproduced 2026-10-21.
 - [930 — Explain rejected locale date shorthand accurately](./930.md) — trivial CLI diagnostic follow-up to 783; `%x`/`%c` include the year but the guard claims they would read every row as 1900, reproduced 2026-10-21.
 - [931 — Match FX transfer counterparts with plain bank amounts](./931.md) — major CLI double-booking gap; a price or cost on a cash leg hides the other bank's plain statement row, changing balances and net worth at exit 0, reproduced 2026-10-21.

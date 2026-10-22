@@ -7,6 +7,7 @@ import re
 import unicodedata
 import warnings
 from collections.abc import Collection, Iterator, Mapping
+from contextvars import ContextVar
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -517,6 +518,10 @@ def new_account_format_problem(name: str) -> str | None:
     return None
 
 
+#: Accounts the ledger being written already opens, set around an import (w5/928).
+OPENED_ACCOUNTS: ContextVar[frozenset[str]] = ContextVar("opened_accounts", default=frozenset())
+
+
 def parse_account(name: str, roots: Collection[str] | None = None, *, creating: bool = False) -> str:
     """Validate an account name the way the loader will, or explain the rules.
 
@@ -533,6 +538,12 @@ def parse_account(name: str, roots: Collection[str] | None = None, *, creating: 
     `open` for it fails to load. With the ledger's ``roots`` the root is
     checked too, so a caller can refuse the name instead of suggesting an
     `add open` that can never succeed.
+
+    The roots are the root file's: Beancount applies `name_*` per file as it
+    parses, so an included file may keep roots the main file renamed. An
+    account the ledger already opens is still usable under its own spelling
+    (`OPENED_ACCOUNTS`), though its root is not among the main file's; a name
+    it never opens keeps the root check (w5/928).
     """
     from beancount.core.account import is_valid
 
@@ -552,7 +563,7 @@ def parse_account(name: str, roots: Collection[str] | None = None, *, creating: 
             "Assets, Liabilities, Equity, Income and Expenses; configured root names are also supported."
             + _refused_character(name)
         )
-    if roots is not None and name.split(":", 1)[0] not in roots:
+    if roots is not None and name.split(":", 1)[0] not in roots and name not in OPENED_ACCOUNTS.get():
         raise protocol.UsageError(unknown_root_message(name, roots))
     return name
 
