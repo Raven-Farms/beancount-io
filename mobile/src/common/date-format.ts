@@ -145,3 +145,31 @@ export function formatFeedDate(
     return "";
   }
 }
+
+/**
+ * An instant as its day and time, "Sep 13, 2026, 12:00 PM", in the device's
+ * zone (or `timeZone`, for a test): what a commit was made, told apart from
+ * another the same day (w21/487). Empty when unparseable, like
+ * {@link formatFeedDate}.
+ */
+export function formatMoment(
+  value: unknown,
+  locale: string,
+  timeZone?: string,
+): string {
+  try {
+    if (typeof value !== "string" && typeof value !== "number") return "";
+    const date = new Date(value);
+    if (isNaN(date.getTime())) return "";
+    return date.toLocaleString(gregorian(locale), {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+      ...(timeZone ? { timeZone } : {}),
+    });
+  } catch {
+    return "";
+  }
+}

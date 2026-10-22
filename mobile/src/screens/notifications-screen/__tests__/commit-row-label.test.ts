@@ -12,14 +12,18 @@ describe("commitRowAccessibilityLabel", () => {
     author: { name: "QA Bot", date: `${day}T12:00:00Z` },
   });
 
-  it("reads the subject, then the author and day, then the short SHA", () => {
+  it("reads the subject, then the author and when, then the short SHA", () => {
+    const label = commitRowAccessibilityLabel(
+      commit("0530ce7aaaaaaaa", "2026-10-21"),
+      "(no message)",
+      "en",
+    );
+    // The time is in the device's zone, so only its shape is pinned (w21/487).
     expect(
-      commitRowAccessibilityLabel(
-        commit("0530ce7aaaaaaaa", "2026-10-21"),
-        "(no message)",
-        "en",
+      /^qa: mobile remove\/append, QA Bot · Oct 2[12], 2026, \d{1,2}:\d{2}\s?(AM|PM), 0530ce7$/.test(
+        label,
       ),
-    ).toBe("qa: mobile remove/append, QA Bot · Oct 21, 2026, 0530ce7");
+    ).toBe(true);
   });
 
   it("tells commits with one subject apart", () => {

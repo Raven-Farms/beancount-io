@@ -1,4 +1,4 @@
-import { formatFeedDate } from "../../common/date-format";
+import { formatMoment } from "../../common/date-format";
 export type LedgerError = {
   filename?: string | null;
   lineno?: number | null;
@@ -52,16 +52,18 @@ export function commitRowAccessibilityLabel(
 
 /**
  * The muted line under a commit: its author and, when the commit carries a
- * usable timestamp, the day it was made in the reader's locale. A missing or
+ * usable timestamp, the day and time it was made in the reader's locale and
+ * zone, so same-day commits differ by more than their SHA (w21/487). A missing or
  * unparseable date shows the author alone, never "Invalid Date" or 1970.
  */
 export function formatCommitAuthorLine(
   name: string,
   date: unknown,
   locale: string,
+  timeZone?: string,
 ): string {
-  const day = formatFeedDate(date, locale);
-  return day ? `${name} · ${day}` : name;
+  const moment = formatMoment(date, locale, timeZone);
+  return moment ? `${name} · ${moment}` : name;
 }
 
 const LIST_ITEM = /^\s*([-*+•] |\d+[.)] )/;
