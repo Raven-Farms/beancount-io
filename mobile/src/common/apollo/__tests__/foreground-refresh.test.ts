@@ -13,6 +13,7 @@ import {
 } from "@apollo/client";
 import { APOLLO_DEFAULT_OPTIONS } from "../default-options";
 import { createForegroundRefresher } from "../foreground-refresh";
+import { refreshOnForeground } from "../refresh-on-foreground";
 
 describe("createForegroundRefresher", () => {
   const harness = (start = 0) => {
@@ -136,5 +137,98 @@ describe("signed-in app", () => {
     expect(layout.includes("useForegroundRefresh(Boolean(session));")).toBe(
       true,
     );
+  });
+});
+
+// w21/225: returning to the app moved Net Worth and Recent Transactions but not
+// the Home budget panel, whose actuals are one-off reads no refetch reaches.
+describe("refreshOnForeground", () => {
+  it("refetches what is on screen, then wakes the unwatched readers", async () => {
+    const order: string[] = [];
+    await refreshOnForeground(
+      {
+        refetchQueries: async (options) => {
+          order.push(`refetch:${options.include}`);
+          return [];
+        },
+      },
+      () => order.push("revision"),
+    );
+    expect(order).toEqual(["refetch:active", "revision"]);
+  });
+
+  it("still wakes them when the network is down, and never rejects", async () => {
+    let revision = 0;
+    await refreshOnForeground(
+      {
+        refetchQueries: async () => {
+          throw new Error("offline");
+        },
+      },
+      () => {
+        revision += 1;
+      },
+    );
+    expect(revision).toBe(1);
+  });
+
+  it("bumps the signal once per throttled return to the app", async () => {
+    let revision = 0;
+    let clock = 0;
+    const pending: Promise<void>[] = [];
+    const onChange = createForegroundRefresher({
+      refresh: () => {
+        pending.push(
+          refreshOnForeground({ refetchQueries: async () => [] }, () => {
+            revision += 1;
+          }),
+        );
+      },
+      now: () => clock,
+      minIntervalMs: 30_000,
+    });
+    onChange("background");
+    onChange("active");
+    clock += 10_000;
+    onChange("background");
+    onChange("active"); // inside the 30 s throttle
+    clock += 31_000;
+    onChange("background");
+    onChange("active");
+    await Promise.all(pending);
+    expect(revision).toBe(2);
+  });
+});
+
+describe("what wakes on a return to the app", () => {
+  const read = (...parts: string[]) =>
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    (require("fs") as typeof import("fs"))
+      .readFileSync(
+        (require("path") as typeof import("path")).join(
+          __dirname,
+          "..",
+          "..",
+          ...parts,
+        ),
+        "utf8",
+      )
+      .replace(/\s+/g, "");
+
+  it("bumps the ledger revision the budget panel listens to", () => {
+    const hook = read("hooks", "use-foreground-refresh.ts");
+    expect(hook.includes("refreshOnForeground(client,")).toBe(true);
+    expect(hook.includes("ledgerRevisionVar(ledgerRevisionVar()+1)")).toBe(
+      true,
+    );
+  });
+
+  it("revalidates the drawer's ledger list from inside its provider", () => {
+    const provider = read("ledger-directory", "ledger-directory-provider.tsx");
+    expect(provider.includes("createForegroundRefresher({")).toBe(true);
+    expect(provider.includes("directory.revalidate()")).toBe(true);
+    expect(
+      provider.includes('AppState.addEventListener("change",onChange)'),
+    ).toBe(true);
   });
 });
