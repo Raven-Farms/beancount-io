@@ -23,6 +23,5 @@
 - [045](./045.md) — activity feed accepts negative/fractional `offset`/`limit`: `limit=-1` returns 97 of 98 items, `offset=-3` the oldest two (REST, GraphQL, MCP)
 - [044](./044.md) — `plaintext-journal` has no limit/paging: 276 KB in one read on `open_ledger/example`, unbounded for premium (010 class)
 - [043](./043.md) — structured amount `.5` passes the decimal check but is written raw: opaque "parse errors in main.bean"
-- [042](./042.md) — entry-source write tools hard-code `wrote: []` (documented as files touched); `deleteEntrySources` echoes duplicate hashes
 - [022](./blocked/022.md) — report rustledger BQL gaps upstream (`cost(sum(position))`, `neg`/`filter_currency`, `meta('lineno')`, `AT value`, `BALANCES FROM`) — **blocked:** filing in an external tracker needs the user's approval
 - [026](./blocked/026.md) — streaming archive route for MCP OAuth clients over 8 MiB (option 1 from 023) — **blocked:** an ADR 0007 trust-boundary decision for the owner

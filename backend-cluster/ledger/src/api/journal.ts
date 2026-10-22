@@ -112,7 +112,7 @@ export function setJournalHandler(router: Router): void {
     );
   });
 
-  // operationId: updateSourceSlice — wire {message, entry_hash, new_entry_hash, new_sha256sum};
+  // operationId: updateSourceSlice — wire {message, entry_hash, new_entry_hash, new_sha256sum, files};
   // entry_hash is the entry's NEW content-derived identity after the edit;
   // new_entry_hash repeats it explicitly for clients keying off a named field.
   router.put(`${base}/source-slice`, authMiddleware, async (ctx) => {
@@ -137,10 +137,11 @@ export function setJournalHandler(router: Router): void {
       entry_hash: result.entryHash,
       new_entry_hash: result.newEntryHash,
       new_sha256sum: result.newSha256sum,
+      files: result.files,
     });
   });
 
-  // operationId: deleteSourceSlice — wire {message, entry_hash}
+  // operationId: deleteSourceSlice — wire {message, entry_hash, files}
   router.delete(`${base}/source-slice`, authMiddleware, async (ctx) => {
     const { journal } = servicesForRequest(ctx);
     const body = (ctx.request.body ?? {}) as {
@@ -159,10 +160,12 @@ export function setJournalHandler(router: Router): void {
       // Python fava-slim template: f"Deleted entry {entry_hash}"
       message: `Deleted entry ${body.entry_hash}`,
       entry_hash: result.entryHash,
+      files: result.files,
     });
   });
 
-  // operationId: deleteMultiSourceSlices — wire {message, deleted_hashes}
+  // operationId: deleteMultiSourceSlices — wire {message, deleted_hashes, files}
+  // `files` names each file the write rewrote, once (w23/042).
   router.delete(`${base}/source-slices`, authMiddleware, async (ctx) => {
     const { journal } = servicesForRequest(ctx);
     const body = (ctx.request.body ?? {}) as {
@@ -182,6 +185,7 @@ export function setJournalHandler(router: Router): void {
       // Python: f"Deleted {n} entries: {', '.join(deleted_hashes)}"
       message: `Deleted ${result.deletedHashes.length} entries: ${result.deletedHashes.join(", ")}`,
       deleted_hashes: result.deletedHashes,
+      files: result.files,
     });
   });
 }

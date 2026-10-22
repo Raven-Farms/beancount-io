@@ -321,14 +321,20 @@ export type AccountJournalResult = {
   with_children: boolean;
 };
 
-export type DeleteSliceResult = { message: string; entryHash: string };
+/** The files a slice write rewrote, each once (w23/042). */
+type TouchedFiles = { files: string[] };
+
+export type DeleteSliceResult = {
+  message: string;
+  entryHash: string;
+} & TouchedFiles;
 
 export type DeleteMultiSlicesResult = {
   message: string;
   deletedHashes: string[];
-};
+} & TouchedFiles;
 
-export type UpdateSliceResult = {
+export type UpdateSliceResult = TouchedFiles & {
   message: string;
   entryHash: string;
   newSha256sum: string;
@@ -911,7 +917,11 @@ export class LedgerJournalService implements ILedgerJournalService {
     ]);
     await this.assertNoNewErrors(loaded, transforms, "delete", allowInvalid);
     await this.commitTransforms(ledgerId, userId, transforms, "Delete entry");
-    return { message: "Entry deleted successfully", entryHash };
+    return {
+      message: "Entry deleted successfully",
+      entryHash,
+      files: [found.file],
+    };
   }
 
   async deleteMultiSourceSlices(params: {
@@ -983,6 +993,7 @@ export class LedgerJournalService implements ILedgerJournalService {
     return {
       message: `Deleted ${deletedHashes.length} entries successfully`,
       deletedHashes,
+      files: [...byFile.keys()],
     };
   }
 
@@ -1058,6 +1069,7 @@ export class LedgerJournalService implements ILedgerJournalService {
     return {
       message: "Entry updated successfully",
       entryHash: newEntryHash,
+      files: [found.file],
       // The block as stored, served as a fresh read serves it: the checksum
       // the entry's next edit presents (w21/252).
       newSha256sum: sliceSha256(

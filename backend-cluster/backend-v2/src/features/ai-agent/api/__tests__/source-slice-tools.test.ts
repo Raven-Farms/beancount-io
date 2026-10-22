@@ -73,4 +73,30 @@ describe("SOURCE_SLICE_EXECUTORS", () => {
     );
     expect(String(result.result.summary)).toContain("2 entries");
   });
+
+  // w23/042: a hash sent twice deletes one entry and is reported once, and
+  // the rewritten files are reported once each.
+  it("delete_many reports each hash and each file once", async () => {
+    const deleteMultiSourceSlices = jest.fn().mockResolvedValue({
+      message: "Deleted",
+      deletedCount: 1,
+      files: ["2026/a.bean", "2026/a.bean"],
+    });
+    const result = await SOURCE_SLICE_EXECUTORS.delete_many(
+      context({ deleteMultiSourceSlices }),
+      {
+        ledger: LEDGER_ID,
+        entries: [
+          { entryHash: "h1", sha256sum: "s1" },
+          { entryHash: "h1", sha256sum: "s1" },
+        ],
+      },
+    );
+    if (!result.ok) throw new Error("expected ok");
+    expect(result.result).toMatchObject({
+      entryHashes: ["h1"],
+      wrote: [{ path: "2026/a.bean" }],
+    });
+    expect(result.result).not.toHaveProperty("files");
+  });
 });

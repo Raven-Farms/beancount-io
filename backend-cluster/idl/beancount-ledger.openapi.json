@@ -7823,6 +7823,22 @@
             ],
             "title": "Hint",
             "description": "The engine's own remediation hint for this error, when it has one."
+          },
+          "severity": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "error",
+                  "warning"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Severity",
+            "description": "`error` for what bean-check fails on; `warning` for what the engine only remarks on. Count only errors. Absent means error."
           }
         },
         "type": "object",
@@ -9012,6 +9028,14 @@
             "type": "array",
             "title": "Deleted Hashes",
             "description": "Hashes of the deleted entries"
+          },
+          "files": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Files",
+            "description": "Each ledger file the write rewrote, once."
           }
         },
         "type": "object",
@@ -9058,6 +9082,14 @@
             "type": "string",
             "title": "Entry Hash",
             "description": "Hash of the deleted entry"
+          },
+          "files": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Files",
+            "description": "Each ledger file the write rewrote, once."
           }
         },
         "type": "object",
@@ -13934,6 +13966,14 @@
             "type": "string",
             "title": "New Entry Hash",
             "description": "The entry's public ID after the commit, re-read from the fresh post-commit parse."
+          },
+          "files": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Files",
+            "description": "Each ledger file the write rewrote, once."
           }
         },
         "type": "object",

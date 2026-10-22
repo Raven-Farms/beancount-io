@@ -18,6 +18,11 @@ export const deleteSlicesInput = z
 export const updateSliceInput = deleteSliceInput.extend({
   newContent: z.string(),
 });
+/** `files` is MCP's write outcome (`wrote`); REST keeps its documented shape. */
+const withoutFiles = <T extends { files: string[] }>({
+  files: _files,
+  ...result
+}: T) => result;
 export const deleteSliceResult = z.object({
   message: z.string(),
   entryHash: z.string(),
@@ -47,11 +52,9 @@ export const SOURCE_SLICE_ROUTES = [
     body: deleteSliceInput,
     responses: { 200: json("Deleted entry", deleteSliceResult) },
     handler: ({ layers }, { identity, params, body }) =>
-      layers.services.ledgerJournal.deleteSourceSlice({
-        identity,
-        ledgerId: ledgerIdOf(params),
-        ...body,
-      }),
+      layers.services.ledgerJournal
+        .deleteSourceSlice({ identity, ledgerId: ledgerIdOf(params), ...body })
+        .then(withoutFiles),
   }),
   v1Route({
     method: "post",
@@ -63,11 +66,13 @@ export const SOURCE_SLICE_ROUTES = [
     body: deleteSlicesInput,
     responses: { 200: json("Deleted entries", deleteSlicesResult) },
     handler: ({ layers }, { identity, params, body }) =>
-      layers.services.ledgerJournal.deleteMultiSourceSlices({
-        identity,
-        ledgerId: ledgerIdOf(params),
-        ...body,
-      }),
+      layers.services.ledgerJournal
+        .deleteMultiSourceSlices({
+          identity,
+          ledgerId: ledgerIdOf(params),
+          ...body,
+        })
+        .then(withoutFiles),
   }),
   v1Route({
     method: "put",
@@ -81,10 +86,8 @@ export const SOURCE_SLICE_ROUTES = [
       200: json("Updated entry and source hash", updateSliceResult),
     },
     handler: ({ layers }, { identity, params, body }) =>
-      layers.services.ledgerJournal.updateSourceSlice({
-        identity,
-        ledgerId: ledgerIdOf(params),
-        ...body,
-      }),
+      layers.services.ledgerJournal
+        .updateSourceSlice({ identity, ledgerId: ledgerIdOf(params), ...body })
+        .then(withoutFiles),
   }),
 ];

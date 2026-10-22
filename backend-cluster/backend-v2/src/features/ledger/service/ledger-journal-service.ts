@@ -84,15 +84,24 @@ export type AccountJournalResult = {
   with_children: boolean;
 };
 
-export type DeleteSliceResult = { message: string; entryHash: string };
+/**
+ * The files a slice write rewrote, each once, as the ledger reports them; an
+ * older ledger service sends none. MCP reports them as `wrote` (w23/042).
+ */
+type TouchedFiles = { files: string[] };
+
+export type DeleteSliceResult = {
+  message: string;
+  entryHash: string;
+} & TouchedFiles;
 
 export type DeleteMultiSlicesResult = {
   message: string;
   /** How many entries were deleted — hashes are stale the moment they are. */
   deletedCount: number;
-};
+} & TouchedFiles;
 
-export type UpdateSliceResult = {
+export type UpdateSliceResult = TouchedFiles & {
   message: string;
   entryHash: string;
   newSha256sum: string;
@@ -350,7 +359,11 @@ export class LedgerJournalService
       }),
       "delete source slice",
     );
-    return { message: data.message, entryHash: data.entry_hash };
+    return {
+      message: data.message,
+      entryHash: data.entry_hash,
+      files: data.files ?? [],
+    };
   }
 
   async deleteMultiSourceSlices(params: {
@@ -376,7 +389,11 @@ export class LedgerJournalService
       }),
       "delete source slices",
     );
-    return { message: data.message, deletedCount: data.deleted_hashes.length };
+    return {
+      message: data.message,
+      deletedCount: data.deleted_hashes.length,
+      files: data.files ?? [],
+    };
   }
 
   async updateSourceSlice(params: {
@@ -432,6 +449,7 @@ export class LedgerJournalService
       entryHash: data.entry_hash,
       newSha256sum: data.new_sha256sum,
       newEntryHash: data.new_entry_hash,
+      files: data.files ?? [],
     };
   }
 }

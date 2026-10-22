@@ -44,7 +44,7 @@ export const SOURCE_SLICE_OPERATION_OUTPUTS = {
  * Runs one entry-source write, then reports it the way every write tool does:
  * a summary, the result, the touched entry hashes, and bean-check's verdict.
  */
-function validated<T extends object>(
+function validated<T extends { files: string[] }>(
   context: McpRequestContext,
   ledgerId: string,
   write: () => Promise<T>,
@@ -56,16 +56,20 @@ function validated<T extends object>(
     context.identity,
     ledgerId,
     write,
-  ).then(({ written, validation }) => ({
-    ok: true as const,
-    result: {
-      summary: summarizeWrite(summarize(written), validation),
-      ...written,
-      wrote: [],
-      entryHashes: hashes(written),
-      validation,
-    },
-  }));
+  ).then(({ written, validation }) => {
+    const { files, ...result } = written;
+    return {
+      ok: true as const,
+      result: {
+        summary: summarizeWrite(summarize(written), validation),
+        ...result,
+        // The files the ledger rewrote; this was always empty (w23/042).
+        wrote: [...new Set(files)].map((path) => ({ path })),
+        entryHashes: hashes(written),
+        validation,
+      },
+    };
+  });
 }
 
 /** Each tool's handler, parsing the schema that tool publishes. */
@@ -123,7 +127,8 @@ export const SOURCE_SLICE_EXECUTORS = {
         }),
       (written) =>
         `Deleted ${written.deletedCount} ${written.deletedCount === 1 ? "entry" : "entries"}`,
-      () => entries.map((entry) => entry.entryHash),
+      // A hash sent twice deletes one entry; it is reported once (w23/042).
+      () => [...new Set(entries.map((entry) => entry.entryHash))],
     );
   },
 };

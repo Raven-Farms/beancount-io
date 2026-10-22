@@ -929,6 +929,11 @@ export interface DeleteMultiSourceSlicesResponse {
    * Hashes of the deleted entries
    */
   deleted_hashes: string[];
+  /**
+   * Files
+   * Each ledger file the write rewrote, once.
+   */
+  files?: string[];
 }
 
 /**
@@ -965,6 +970,11 @@ export interface DeleteSourceSliceResponse {
    * Hash of the deleted entry
    */
   entry_hash: string;
+  /**
+   * Files
+   * Each ledger file the write rewrote, once.
+   */
+  files?: string[];
 }
 
 /**
@@ -3198,6 +3208,11 @@ export interface UpdateSourceSliceResponse {
    * The entry's public ID after the commit, re-read from the fresh post-commit parse.
    */
   new_entry_hash: string;
+  /**
+   * Files
+   * Each ledger file the write rewrote, once.
+   */
+  files?: string[];
 }
 
 /**

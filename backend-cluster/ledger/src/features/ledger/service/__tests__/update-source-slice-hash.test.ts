@@ -186,6 +186,8 @@ describe("updateSourceSlice newEntryHash", () => {
 
     expect(updated.newEntryHash).toBe(NEW_ID);
     expect(files["main.bean"]).toContain('"Tea edit"');
+    // w23/042: the file the edit rewrote, for MCP's `wrote`.
+    expect(updated.files).toEqual(["main.bean"]);
   });
 
   it("requests source details on the post-commit parse", async () => {

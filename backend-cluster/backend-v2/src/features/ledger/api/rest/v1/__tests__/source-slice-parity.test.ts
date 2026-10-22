@@ -106,7 +106,11 @@ async function fixture(caller = identity) {
     validate(ref);
     refuseBreaking(ref, "delete");
     slices.delete(ref.entry_hash);
-    return envelope({ message: "Deleted", entry_hash: ref.entry_hash });
+    return envelope({
+      message: "Deleted",
+      entry_hash: ref.entry_hash,
+      files: ["main.bean"],
+    });
   });
   const deleteMultiSourceSlices = jest.fn(
     async (_owner, _name, body: { entries: Ref[]; allowInvalid?: boolean }) => {
@@ -116,6 +120,8 @@ async function fixture(caller = identity) {
       return envelope({
         message: "Deleted",
         deleted_hashes: body.entries.map((ref) => ref.entry_hash),
+        // Each rewritten file once, as the ledger service reports them.
+        files: ["main.bean", "2026/imports.bean"],
       });
     },
   );
@@ -143,6 +149,7 @@ async function fixture(caller = identity) {
         entry_hash: "entry1-updated",
         new_sha256sum: hash(body.new_content),
         new_entry_hash: "entry1-updated",
+        files: ["2026/imports.bean"],
       });
     },
   );
@@ -312,7 +319,8 @@ describe.each(["rest", "gql", "mcp"])("source edits via %s", (surface) => {
                     ...updated,
                     summary:
                       "Updated entry entry1 (new hash entry1-updated). No new bean-check errors.",
-                    wrote: [],
+                    // w23/042: the file the ledger rewrote, not always [].
+                    wrote: [{ path: "2026/imports.bean" }],
                     entryHashes: ["entry1-updated"],
                     validation: emptyValidation,
                   }
@@ -326,7 +334,10 @@ describe.each(["rest", "gql", "mcp"])("source edits via %s", (surface) => {
                 ? {
                     ...deleted,
                     summary: "Deleted 2 entries. No new bean-check errors.",
-                    wrote: [],
+                    wrote: [
+                      { path: "main.bean" },
+                      { path: "2026/imports.bean" },
+                    ],
                     entryHashes: ["entry1", "entry2"],
                     validation: emptyValidation,
                   }
@@ -340,7 +351,7 @@ describe.each(["rest", "gql", "mcp"])("source edits via %s", (surface) => {
                 ? {
                     ...deleted,
                     summary: "Deleted entry entry1. No new bean-check errors.",
-                    wrote: [],
+                    wrote: [{ path: "main.bean" }],
                     entryHashes: ["entry1"],
                     validation: emptyValidation,
                   }

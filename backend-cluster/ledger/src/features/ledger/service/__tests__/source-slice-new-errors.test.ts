@@ -238,7 +238,7 @@ describe("source-slice writes on a ledger that already has errors", () => {
     // Deleting COFFEE shifts the duplicate open three lines up.
     files = { "main.bean": ledger(FARMERS, BALANCE, COFFEE, DUPLICATE_OPEN) };
 
-    await service().deleteSourceSlice({
+    const deleted = await service().deleteSourceSlice({
       ledgerId: LEDGER_ID,
       userId: "user-1",
       entryHash: "coffee",
@@ -246,6 +246,8 @@ describe("source-slice writes on a ledger that already has errors", () => {
     });
 
     expect(files["main.bean"]).not.toContain("COFFEE");
+    // w23/042: the file the delete rewrote, for MCP's `wrote`.
+    expect(deleted.files).toEqual(["main.bean"]);
   });
 
   it("commits an edit that fixes the existing error", async () => {
