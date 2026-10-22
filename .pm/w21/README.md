@@ -122,5 +122,7 @@
 - [607](./607.md) — Android: the keyboard accessory bar hides behind the keyboard (navigation bar inset subtracted twice)
 - [608](./608.md) — Android: fields near the bottom stay under the keyboard (iOS-only keyboard avoidance under edge-to-edge)
 - [609](./609.md) — Android: Add Budget's amount opens a full letter keyboard (`numbers-and-punctuation` is iOS-only)
+- [610](./610.md) — Cash flow merges a whole category into one node when all its accounts share one sub-account (`Income:US:*`), unlike the cards; Refunds ribbon lost
+- [611](./611.md) — Home Spending's "See all" opens Reports on 6M (or the last range), not the window the card compared
 - [508](./blocked/508.md) — Mobile guesses that an entry is a plugin copy from its first line; read the ledger's `generated_from` instead (split from 443) — **blocked:** production's GraphQL schema lacks `generated_from` until the ledger service and backend-v2 deploy; mobile's client is generated from it
 - [315](./blocked/315.md) — In-app commits signed with Gitea username and real email (no full_name, no noreply) — **blocked:** needs the owner's noreply-address and published-history decisions, and a production backfill of existing Gitea users that can't be verified here
