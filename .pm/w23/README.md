@@ -10,6 +10,7 @@
 
 ## Inbox
 
+- [074](./074.md) — a file batch within both documented caps (2 × 0.9 MB) fails with `SERVICE_UNAVAILABLE`: the ledger service's 2 MB body limit is hit internally
 - [073](./073.md) — an MCP request over the 2 MiB cap gets 413 "could not be read as a JSON-RPC request", not a size message
 - [072](./072.md) — concurrent writes (append, add entries, exact-text edits) still lose with `SERVICE_UNAVAILABLE` on production after w23/017; the production lost-race signature differs
 - [071](./071.md) — a structured `budget` for an account the ledger doesn't have (not opened, no opened children) is accepted and never applies
