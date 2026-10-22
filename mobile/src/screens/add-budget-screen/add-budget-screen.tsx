@@ -185,6 +185,7 @@ function AddBudgetScreenImpl(): JSX.Element {
     data: ledgerMeta,
     currencies,
     loading: metaLoading,
+    error: metaError,
   } = useLedgerMeta(userId, ledgerId);
   const { saveBudget, loading } = useSaveBudget(ledgerId);
   const isHere = useIsHere();
@@ -223,10 +224,16 @@ function AddBudgetScreenImpl(): JSX.Element {
   // Written verbatim into the directive, so only a number may pass (w0/038).
   const amountOk = isBudgetAmount(amount);
   const amountInvalid = amount.trim().length > 0 && !amountOk;
+  // The income sign comes from the ledger's options, which an update from a
+  // card does not otherwise wait for: saved before they landed, an income
+  // target went out positive and read as a spending cap (w21/303). A failed
+  // read stops the wait; the amount then goes as typed.
+  const metaSettled = ledgerMeta !== undefined || Boolean(metaError);
   const canSubmit =
     account.trim().length > 0 &&
     amountOk &&
     currency.trim().length > 0 &&
+    metaSettled &&
     !loading &&
     !saved;
 
