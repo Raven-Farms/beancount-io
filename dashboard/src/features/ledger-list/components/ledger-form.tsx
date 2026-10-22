@@ -355,7 +355,8 @@ export function LedgerForm({
     {
       value: "preset" as StartKind,
       title: t("page.dashboard.ledgerTemplate"),
-      description: t("page.dashboard.setupReviewDescription"),
+      // A first-step hint; setupReviewDescription belongs to Review (w4/321).
+      description: t("page.dashboard.ledgerTemplateDescription"),
       Icon: Layers,
     },
   ];

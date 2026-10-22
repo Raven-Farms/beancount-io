@@ -5,6 +5,7 @@ interface TranslationEntry {
 
 type LedgerFormTranslationKey =
   | "page.dashboard.ledgerTemplate"
+  | "page.dashboard.ledgerTemplateDescription"
   | "page.dashboard.starterTemplate"
   | "page.dashboard.starterTemplateDescription"
   | "page.dashboard.sampleTemplate"
@@ -29,6 +30,8 @@ type LedgerFormLanguage =
 
 const descriptions: Record<LedgerFormTranslationKey, string> = {
   "page.dashboard.ledgerTemplate": "Label for the ledger template picker",
+  "page.dashboard.ledgerTemplateDescription":
+    "First-step description of the ready-made (preset) template choice",
   "page.dashboard.starterTemplate": "Name of the starter ledger template",
   "page.dashboard.starterTemplateDescription":
     "Description of the starter ledger template",
@@ -43,6 +46,8 @@ const messages: Record<
 > = {
   en: {
     "page.dashboard.ledgerTemplate": "Template",
+    "page.dashboard.ledgerTemplateDescription":
+      "A ready-made chart of accounts for a common situation.",
     "page.dashboard.starterTemplate": "Starter template",
     "page.dashboard.starterTemplateDescription":
       "Empty books with a standard chart of accounts.",
@@ -52,6 +57,8 @@ const messages: Record<
   },
   bg: {
     "page.dashboard.ledgerTemplate": "Шаблон",
+    "page.dashboard.ledgerTemplateDescription":
+      "Готов сметкоплан за често срещана ситуация.",
     "page.dashboard.starterTemplate": "Начален шаблон",
     "page.dashboard.starterTemplateDescription":
       "Празни книги със стандартен сметкоплан.",
@@ -61,6 +68,8 @@ const messages: Record<
   },
   ca: {
     "page.dashboard.ledgerTemplate": "Plantilla",
+    "page.dashboard.ledgerTemplateDescription":
+      "Un pla de comptes predefinit per a una situació habitual.",
     "page.dashboard.starterTemplate": "Plantilla inicial",
     "page.dashboard.starterTemplateDescription":
       "Llibres buits amb un pla de comptes estàndard.",
@@ -70,6 +79,8 @@ const messages: Record<
   },
   de: {
     "page.dashboard.ledgerTemplate": "Vorlage",
+    "page.dashboard.ledgerTemplateDescription":
+      "Ein fertiger Kontenrahmen für eine typische Situation.",
     "page.dashboard.starterTemplate": "Startvorlage",
     "page.dashboard.starterTemplateDescription":
       "Leere Bücher mit einem Standardkontenrahmen.",
@@ -79,6 +90,8 @@ const messages: Record<
   },
   es: {
     "page.dashboard.ledgerTemplate": "Plantilla",
+    "page.dashboard.ledgerTemplateDescription":
+      "Un plan de cuentas listo para una situación habitual.",
     "page.dashboard.starterTemplate": "Plantilla inicial",
     "page.dashboard.starterTemplateDescription":
       "Libros vacíos con un plan de cuentas estándar.",
@@ -88,6 +101,8 @@ const messages: Record<
   },
   fa: {
     "page.dashboard.ledgerTemplate": "الگو",
+    "page.dashboard.ledgerTemplateDescription":
+      "یک نمودار حساب آماده برای یک وضعیت رایج.",
     "page.dashboard.starterTemplate": "الگوی شروع",
     "page.dashboard.starterTemplateDescription":
       "دفترهای خالی با یک نمودار حساب استاندارد.",
@@ -97,6 +112,8 @@ const messages: Record<
   },
   fr: {
     "page.dashboard.ledgerTemplate": "Modèle",
+    "page.dashboard.ledgerTemplateDescription":
+      "Un plan comptable prêt à l'emploi pour une situation courante.",
     "page.dashboard.starterTemplate": "Modèle de démarrage",
     "page.dashboard.starterTemplateDescription":
       "Livres vides avec un plan comptable standard.",
@@ -106,6 +123,8 @@ const messages: Record<
   },
   ja: {
     "page.dashboard.ledgerTemplate": "テンプレート",
+    "page.dashboard.ledgerTemplateDescription":
+      "よくある用途に合わせて用意された勘定科目表です。",
     "page.dashboard.starterTemplate": "スターターテンプレート",
     "page.dashboard.starterTemplateDescription":
       "標準の勘定科目表を持つ空の帳簿です。",
@@ -115,6 +134,8 @@ const messages: Record<
   },
   ko: {
     "page.dashboard.ledgerTemplate": "템플릿",
+    "page.dashboard.ledgerTemplateDescription":
+      "일반적인 상황에 맞게 준비된 계정과목표입니다.",
     "page.dashboard.starterTemplate": "시작 템플릿",
     "page.dashboard.starterTemplateDescription":
       "표준 계정과목표를 갖춘 빈 장부입니다.",
@@ -124,6 +145,8 @@ const messages: Record<
   },
   nl: {
     "page.dashboard.ledgerTemplate": "Sjabloon",
+    "page.dashboard.ledgerTemplateDescription":
+      "Een kant-en-klaar rekeningschema voor een veelvoorkomende situatie.",
     "page.dashboard.starterTemplate": "Startsjabloon",
     "page.dashboard.starterTemplateDescription":
       "Lege boeken met een standaard rekeningschema.",
@@ -133,6 +156,8 @@ const messages: Record<
   },
   pt: {
     "page.dashboard.ledgerTemplate": "Modelo",
+    "page.dashboard.ledgerTemplateDescription":
+      "Um plano de contas pronto para uma situação comum.",
     "page.dashboard.starterTemplate": "Modelo inicial",
     "page.dashboard.starterTemplateDescription":
       "Livros vazios com um plano de contas padrão.",
@@ -142,6 +167,8 @@ const messages: Record<
   },
   ru: {
     "page.dashboard.ledgerTemplate": "Шаблон",
+    "page.dashboard.ledgerTemplateDescription":
+      "Готовый план счетов для типичной ситуации.",
     "page.dashboard.starterTemplate": "Начальный шаблон",
     "page.dashboard.starterTemplateDescription":
       "Пустые книги со стандартным планом счетов.",
@@ -151,6 +178,8 @@ const messages: Record<
   },
   sk: {
     "page.dashboard.ledgerTemplate": "Šablóna",
+    "page.dashboard.ledgerTemplateDescription":
+      "Pripravená účtová osnova pre bežnú situáciu.",
     "page.dashboard.starterTemplate": "Úvodná šablóna",
     "page.dashboard.starterTemplateDescription":
       "Prázdne knihy so štandardnou účtovnou osnovou.",
@@ -160,6 +189,8 @@ const messages: Record<
   },
   uk: {
     "page.dashboard.ledgerTemplate": "Шаблон",
+    "page.dashboard.ledgerTemplateDescription":
+      "Готовий план рахунків для типової ситуації.",
     "page.dashboard.starterTemplate": "Початковий шаблон",
     "page.dashboard.starterTemplateDescription":
       "Порожні книги зі стандартним планом рахунків.",
@@ -169,6 +200,7 @@ const messages: Record<
   },
   zh: {
     "page.dashboard.ledgerTemplate": "模板",
+    "page.dashboard.ledgerTemplateDescription": "为常见情况准备好的科目表。",
     "page.dashboard.starterTemplate": "入门模板",
     "page.dashboard.starterTemplateDescription": "带有标准科目表的空白账簿。",
     "page.dashboard.sampleTemplate": "示例账本",
