@@ -363,6 +363,10 @@ export const uk: Translations = {
   openAccountSaving: "Відкриваємо...",
   openAccountFailed: "Не вдалося відкрити рахунок. Спробуйте ще раз.",
   ledgerWouldBreak: "Це додасть помилку до вашої книги: {{detail}}",
+  ledgerRefusalLine: "рядок {{line}}",
+  ledgerRefusalNearEntry: "поруч із цим записом",
+  ledgerRefusalQuoteHint:
+    'Щоб поставити лапку всередині тексту, напишіть її як \\".',
   ledgerWriteOffline: "Немає підключення до мережі. Нічого не збережено.",
   ledgerWriteUnconfirmed:
     "Сервер не підтвердив збереження. Перевірте, перш ніж повторювати спробу.",

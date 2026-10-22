@@ -116,7 +116,7 @@ describe("Edit Transaction save-failure wiring", () => {
   );
 
   it("reports a conflict with editConflict and offers Reload", () => {
-    expect(source.includes("selectOutcomeFailure(outcome, i18n)")).toBe(true);
+    expect(source.includes("selectOutcomeFailure(outcome, i18n, {")).toBe(true);
     expect(source.includes('setSaveError(t("editConflict"))')).toBe(true);
     expect(source.includes("onPress: () => void handleReload()")).toBe(true);
   });

@@ -363,6 +363,10 @@ export const es: Translations = {
   openAccountSaving: "Abriendo...",
   openAccountFailed: "No se pudo abrir la cuenta. Inténtalo de nuevo.",
   ledgerWouldBreak: "Esto añadiría un error a tu libro: {{detail}}",
+  ledgerRefusalLine: "línea {{line}}",
+  ledgerRefusalNearEntry: "cerca de esta entrada",
+  ledgerRefusalQuoteHint:
+    'Para poner unas comillas dentro de un texto, escríbelas como \\".',
   ledgerWriteOffline: "Estás sin conexión. No se guardó nada.",
   ledgerWriteUnconfirmed:
     "El servidor no confirmó el guardado. Comprueba antes de volver a intentarlo.",

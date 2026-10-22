@@ -365,6 +365,10 @@ export const ru: Translations = {
   openAccountSaving: "Открываем...",
   openAccountFailed: "Не удалось открыть счёт. Попробуйте ещё раз.",
   ledgerWouldBreak: "Это добавит ошибку в вашу книгу: {{detail}}",
+  ledgerRefusalLine: "строка {{line}}",
+  ledgerRefusalNearEntry: "рядом с этой записью",
+  ledgerRefusalQuoteHint:
+    'Чтобы поставить кавычку внутри текста, напишите её как \\".',
   ledgerWriteOffline: "Нет подключения к сети. Ничего не сохранено.",
   ledgerWriteUnconfirmed:
     "Сервер не подтвердил сохранение. Проверьте, прежде чем повторять попытку.",

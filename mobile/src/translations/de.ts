@@ -365,6 +365,10 @@ export const de: Translations = {
     "Konto konnte nicht eröffnet werden. Bitte erneut versuchen.",
   ledgerWouldBreak:
     "Das würde Ihrem Hauptbuch einen Fehler hinzufügen: {{detail}}",
+  ledgerRefusalLine: "Zeile {{line}}",
+  ledgerRefusalNearEntry: "in der Nähe dieses Eintrags",
+  ledgerRefusalQuoteHint:
+    'Ein Anführungszeichen im Text schreiben Sie als \\".',
   ledgerWriteOffline: "Sie sind offline. Es wurde nichts gespeichert.",
   ledgerWriteUnconfirmed:
     "Der Server hat das Speichern nicht bestätigt. Prüfen Sie nach, bevor Sie es erneut versuchen.",

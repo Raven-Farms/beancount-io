@@ -366,6 +366,9 @@ export const sk: Translations = {
   openAccountSaving: "Otvára sa...",
   openAccountFailed: "Účet sa nepodarilo otvoriť. Skúste to znova.",
   ledgerWouldBreak: "Toto by pridalo chybu do vašej knihy: {{detail}}",
+  ledgerRefusalLine: "riadok {{line}}",
+  ledgerRefusalNearEntry: "blízko tohto záznamu",
+  ledgerRefusalQuoteHint: 'Úvodzovku v texte zapíšte ako \\".',
   ledgerWriteOffline: "Ste offline. Nič sa neuložilo.",
   ledgerWriteUnconfirmed:
     "Server neprijal potvrdenie o uložení. Skontrolujte to skôr, než to skúsite znova.",

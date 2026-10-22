@@ -364,6 +364,10 @@ export const ca: Translations = {
   openAccountSaving: "S'està obrint...",
   openAccountFailed: "No s'ha pogut obrir el compte. Torna-ho a provar.",
   ledgerWouldBreak: "Això afegiria un error al teu llibre: {{detail}}",
+  ledgerRefusalLine: "línia {{line}}",
+  ledgerRefusalNearEntry: "a prop d'aquesta entrada",
+  ledgerRefusalQuoteHint:
+    "Per posar unes cometes dins d'un text, escriviu-les com \\\".",
   ledgerWriteOffline: "No tens connexió. No s'ha desat res.",
   ledgerWriteUnconfirmed:
     "El servidor no ha confirmat el desat. Comproveu-ho abans de tornar-ho a provar.",

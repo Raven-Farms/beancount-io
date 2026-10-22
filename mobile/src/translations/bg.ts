@@ -355,6 +355,9 @@ export const bg: Translations = {
   openAccountSaving: "Открива се...",
   openAccountFailed: "Сметката не беше открита. Опитайте отново.",
   ledgerWouldBreak: "Това ще добави грешка в книгата ви: {{detail}}",
+  ledgerRefusalLine: "ред {{line}}",
+  ledgerRefusalNearEntry: "близо до този запис",
+  ledgerRefusalQuoteHint: 'За кавичка в текста я напишете като \\".',
   ledgerWriteOffline: "Няма връзка с мрежата. Нищо не е запазено.",
   ledgerWriteUnconfirmed:
     "Сървърът не потвърди запазването. Проверете, преди да опитате отново.",

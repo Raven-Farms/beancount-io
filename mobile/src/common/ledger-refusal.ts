@@ -27,6 +27,79 @@ type Translate = {
 };
 
 /**
+ * Where an edited entry sits, for turning the server's file lines into the
+ * editor's. `lineCount` is the edited text's length.
+ */
+type EntryLocation = {
+  filename: string;
+  lineno: number;
+  lineCount: number;
+};
+
+/** What the screen knows about the edit that was refused. */
+export type RefusalContext = {
+  where?: EntryLocation;
+  /** The text that was submitted. */
+  draft?: string;
+};
+
+const sameFile = (cited: string, own: string) => {
+  const a = cited.replace(/^\.?\//, "");
+  const b = own.replace(/^\.?\//, "");
+  return a === b || a.endsWith(`/${b}`) || b.endsWith(`/${a}`);
+};
+
+/**
+ * The refusal's detail as a person can use it (w21/369). The server joins its
+ * errors with `message (file:line)` and a parse error often repeats, so the
+ * same message appears several times; each is shown once. The citation is a
+ * line of the file, which the editor does not show (it numbers the entry from
+ * 1): it becomes the editor's line when it falls inside the entry, and "near
+ * this entry" when it does not, as it does when a stray quote runs the parser
+ * into the next entry.
+ */
+function tidyRefusalDetail(
+  detail: string,
+  i18n: Translate,
+  where?: EntryLocation,
+): string {
+  const seen = new Set<string>();
+  const parts: string[] = [];
+  for (const part of detail.split("; ")) {
+    const text = where
+      ? part.replace(/ \(([^()]+):(\d+)\)$/, (_all, file: string, line) => {
+          const editorLine = Number(line) - where.lineno + 1;
+          const inside =
+            sameFile(file, where.filename) &&
+            editorLine >= 1 &&
+            editorLine <= where.lineCount;
+          return ` (${
+            inside
+              ? i18n.t("ledgerRefusalLine", { line: String(editorLine) })
+              : i18n.t("ledgerRefusalNearEntry")
+          })`;
+        })
+      : part;
+    if (seen.has(text)) continue;
+    seen.add(text);
+    parts.push(text);
+  }
+  return parts.join("; ");
+}
+
+/**
+ * Whether the first line of an entry has more or fewer quotes than a header can
+ * hold once escapes are set aside: a payee and a narration make at most four,
+ * always in pairs. A bare quote inside the narration, or a trailing backslash
+ * that escapes the closing one, ends the string early.
+ */
+function headerQuotesUnbalanced(draft: string): boolean {
+  const header = draft.split("\n", 1)[0] ?? "";
+  const quotes = (header.replace(/\\./g, "").match(/"/g) ?? []).length;
+  return quotes % 2 === 1 || quotes > 4;
+}
+
+/**
  * The refusal in the app's words — "This would add an error to your ledger:
  * …" — or null, so the caller keeps its own failure copy. Takes the
  * translator rather than importing it, so jest-lite can require this file.
@@ -34,9 +107,17 @@ type Translate = {
 export function describeLedgerRefusal(
   error: unknown,
   i18n: Translate,
+  context: RefusalContext = {},
 ): string | null {
-  const detail = newLedgerErrorDetail(error);
-  return detail ? i18n.t("ledgerWouldBreak", { detail }) : null;
+  const raw = newLedgerErrorDetail(error);
+  if (!raw) return null;
+  const detail = tidyRefusalDetail(raw, i18n, context.where);
+  const message = i18n.t("ledgerWouldBreak", { detail });
+  return context.draft !== undefined &&
+    /parse error/i.test(detail) &&
+    headerQuotesUnbalanced(context.draft)
+    ? `${message} ${i18n.t("ledgerRefusalQuoteHint")}`
+    : message;
 }
 
 /** Codes whose message is the ledger's own text about the write. */
@@ -114,8 +195,9 @@ function isTransportFailure(error: unknown): boolean {
 export function ledgerWriteFailureMessage(
   error: unknown,
   i18n: Translate,
+  context?: RefusalContext,
 ): string | null {
-  const refusal = describeLedgerRefusal(error, i18n);
+  const refusal = describeLedgerRefusal(error, i18n, context);
   if (refusal) return refusal;
   const codes = graphQLErrorCodes(error);
   if (codes.some((code) => LEDGER_TEXT_CODES.has(code))) {

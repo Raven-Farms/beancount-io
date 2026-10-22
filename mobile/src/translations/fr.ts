@@ -364,6 +364,10 @@ export const fr: Translations = {
   openAccountFailed: "Impossible d'ouvrir le compte. Veuillez réessayer.",
   ledgerWouldBreak:
     "Cela ajouterait une erreur à votre grand livre : {{detail}}",
+  ledgerRefusalLine: "ligne {{line}}",
+  ledgerRefusalNearEntry: "près de cette écriture",
+  ledgerRefusalQuoteHint:
+    'Pour mettre un guillemet dans un texte, écrivez-le \\".',
   ledgerWriteOffline: "Vous êtes hors ligne. Rien n'a été enregistré.",
   ledgerWriteUnconfirmed:
     "Le serveur n'a pas confirmé l'enregistrement. Vérifiez avant de réessayer.",

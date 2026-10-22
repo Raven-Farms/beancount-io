@@ -363,6 +363,10 @@ export const pt: Translations = {
   openAccountSaving: "Abrindo...",
   openAccountFailed: "Não foi possível abrir a conta. Tente novamente.",
   ledgerWouldBreak: "Isso adicionaria um erro ao seu livro: {{detail}}",
+  ledgerRefusalLine: "linha {{line}}",
+  ledgerRefusalNearEntry: "perto deste lançamento",
+  ledgerRefusalQuoteHint:
+    'Para pôr aspas dentro de um texto, escreva-as como \\".',
   ledgerWriteOffline: "Você está offline. Nada foi salvo.",
   ledgerWriteUnconfirmed:
     "O servidor não confirmou o salvamento. Verifique antes de tentar novamente.",

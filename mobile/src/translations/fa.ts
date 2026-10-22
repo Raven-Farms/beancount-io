@@ -351,6 +351,10 @@ export const fa: Translations = {
   openAccountSaving: "در حال افتتاح...",
   openAccountFailed: "افتتاح حساب ناموفق بود. دوباره تلاش کنید.",
   ledgerWouldBreak: "این کار یک خطا به دفتر شما اضافه می‌کند: {{detail}}",
+  ledgerRefusalLine: "خط {{line}}",
+  ledgerRefusalNearEntry: "نزدیک این ورودی",
+  ledgerRefusalQuoteHint:
+    'برای گذاشتن گیومه درون متن، آن را به شکل \\" بنویسید.',
   ledgerWriteOffline: "آفلاین هستید. چیزی ذخیره نشد.",
   ledgerWriteUnconfirmed:
     "سرور ذخیره‌سازی را تأیید نکرد. پیش از تلاش دوباره بررسی کنید.",

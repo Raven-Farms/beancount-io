@@ -1,6 +1,9 @@
 import { isConflictError } from "../../common/ledger-conflict";
 import { isEntryGone } from "../transaction-detail-screen/selectors/select-entry-gone";
-import { ledgerWriteFailureMessage } from "../../common/ledger-refusal";
+import {
+  ledgerWriteFailureMessage,
+  type RefusalContext,
+} from "../../common/ledger-refusal";
 import type { LedgerWriteOutcome } from "../../common/ledger-write";
 
 export type SaveFailure =
@@ -30,6 +33,7 @@ export function selectSaveFailure(
 export function selectOutcomeFailure(
   outcome: Extract<LedgerWriteOutcome, { ok: false }>,
   i18n: Parameters<typeof ledgerWriteFailureMessage>[1],
+  context?: RefusalContext,
 ): SaveFailure {
   // An entry is addressed by a hash of its content, so one changed elsewhere
   // is answered NOT_FOUND before any checksum is compared — the same stale
@@ -40,6 +44,6 @@ export function selectOutcomeFailure(
   const raw = outcome.error instanceof Error ? outcome.error.message : "";
   if (isConflictError(raw)) return { kind: "conflict" };
   return selectSaveFailure(
-    ledgerWriteFailureMessage(outcome.error, i18n) ?? outcome.message,
+    ledgerWriteFailureMessage(outcome.error, i18n, context) ?? outcome.message,
   );
 }

@@ -313,7 +313,23 @@ export const EditTransactionScreen = (): JSX.Element => {
         });
 
         if (!outcome.ok) {
-          const failure = selectOutcomeFailure(outcome, i18n);
+          // The refusal cites lines of the file; the editor shows the entry
+          // from line 1 (w21/369).
+          const meta = (
+            data?.getLedgerEntryContext?.entry as unknown as
+              { meta?: { filename?: string; lineno?: number } } | undefined
+          )?.meta;
+          const failure = selectOutcomeFailure(outcome, i18n, {
+            draft: content,
+            where:
+              meta?.filename && typeof meta.lineno === "number"
+                ? {
+                    filename: meta.filename,
+                    lineno: meta.lineno,
+                    lineCount: content.split("\n").length,
+                  }
+                : undefined,
+          });
           if (failure.kind === "conflict") {
             // A draft is never discarded without asking: reload is a choice.
             setSaveError(t("editConflict"));
@@ -389,6 +405,7 @@ export const EditTransactionScreen = (): JSX.Element => {
       client,
       confirmWrite,
       ledgerId,
+      data,
       originAccount,
       router,
       t,

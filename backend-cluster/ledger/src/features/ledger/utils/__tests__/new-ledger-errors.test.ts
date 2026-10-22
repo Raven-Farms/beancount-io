@@ -142,6 +142,23 @@ describe("refuseNewLedgerErrors", () => {
     });
   });
 
+  // w21/369: a parse error repeats; naming it once says the same thing.
+  it("names an error that repeats at one place once", async () => {
+    const parse = (lineno: number) =>
+      at("parse error: unexpected input", "2024.bean", lineno);
+    await expect(
+      refuseNewLedgerErrors(
+        [parse(7), parse(7), parse(7), parse(9)],
+        async () => [],
+        "update",
+      ),
+    ).rejects.toMatchObject({
+      message:
+        "this edit would introduce 2 new bean-check errors: parse error: unexpected input (2024.bean:7); parse error: unexpected input (2024.bean:9)",
+      metadata: { details: { count: 2 } },
+    });
+  });
+
   it("lets a write through that leaves only errors the ledger had", async () => {
     await expect(
       refuseNewLedgerErrors([balance], async () => [balance], "update"),

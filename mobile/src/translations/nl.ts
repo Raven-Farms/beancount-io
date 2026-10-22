@@ -355,6 +355,9 @@ export const nl: Translations = {
   openAccountSaving: "Openen...",
   openAccountFailed: "Account openen is mislukt. Probeer het opnieuw.",
   ledgerWouldBreak: "Dit zou een fout aan je grootboek toevoegen: {{detail}}",
+  ledgerRefusalLine: "regel {{line}}",
+  ledgerRefusalNearEntry: "in de buurt van deze boeking",
+  ledgerRefusalQuoteHint: 'Een aanhalingsteken in tekst schrijf je als \\".',
   ledgerWriteOffline: "Je bent offline. Er is niets opgeslagen.",
   ledgerWriteUnconfirmed:
     "De server heeft het opslaan niet bevestigd. Controleer het voordat je het opnieuw probeert.",

@@ -244,3 +244,101 @@ describe("useLedgerWrite", () => {
     ).toBe(true);
   });
 });
+
+// w21/369: the refusal cited lines of the file (often the next entry's) that the
+// editor does not show, and repeated the same parse error.
+describe("a refusal read in the editor's terms", () => {
+  const words = {
+    t: (key: string, params?: Record<string, string>) =>
+      key === "ledgerWouldBreak"
+        ? `Would break: ${params?.detail}`
+        : key === "ledgerRefusalLine"
+          ? `line ${params?.line}`
+          : key === "ledgerRefusalQuoteHint"
+            ? "HINT"
+            : key === "ledgerRefusalNearEntry"
+              ? "near this entry"
+              : key,
+  };
+  const parse =
+    'parse error: unexpected "J" in transaction header (2024.bean:7); ' +
+    "parse error: unexpected input (2024.bean:7); " +
+    "parse error: unexpected input (2024.bean:7); " +
+    "parse error: unexpected input (2024.bean:7)";
+  const where = { filename: "2024.bean", lineno: 7, lineCount: 3 };
+
+  it("shows each message once", () => {
+    expect(describeLedgerRefusal(wouldBreak(parse), words)).toBe(
+      'Would break: parse error: unexpected "J" in transaction header (2024.bean:7); parse error: unexpected input (2024.bean:7)',
+    );
+  });
+
+  it("names the editor's line for a line inside the entry", () => {
+    expect(describeLedgerRefusal(wouldBreak(parse), words, { where })).toBe(
+      'Would break: parse error: unexpected "J" in transaction header (line 1); parse error: unexpected input (line 1)',
+    );
+    expect(
+      describeLedgerRefusal(
+        wouldBreak("Transaction does not balance (2024.bean:9)"),
+        words,
+        { where },
+      ),
+    ).toBe("Would break: Transaction does not balance (line 3)");
+  });
+
+  it("says near this entry for a line outside it or in another file", () => {
+    expect(
+      describeLedgerRefusal(
+        wouldBreak("parse error: unexpected input (2024.bean:11)"),
+        words,
+        { where },
+      ),
+    ).toBe("Would break: parse error: unexpected input (near this entry)");
+    expect(
+      describeLedgerRefusal(
+        wouldBreak("Duplicate open directive (main.bean:7)"),
+        words,
+        { where },
+      ),
+    ).toBe("Would break: Duplicate open directive (near this entry)");
+  });
+
+  it("suggests escaping a quote when the header's quotes do not pair up", () => {
+    const hinted = (draft: string) =>
+      describeLedgerRefusal(wouldBreak(parse), words, { where, draft }) ?? "";
+    expect(
+      hinted('2024-03-05 * "Shop" "Dinner at "Joe\'s""\n').endsWith(" HINT"),
+    ).toBe(true);
+    expect(hinted('2024-03-05 * "Shop" "Dinner\\"\n').endsWith(" HINT")).toBe(
+      true,
+    );
+    expect(
+      hinted('2024-03-05 * "Shop" "Dinner at \\"Joe\\""\n').endsWith(" HINT"),
+    ).toBe(false);
+    // Not for an error that is not a parse error.
+    expect(
+      describeLedgerRefusal(
+        wouldBreak("Transaction does not balance (2024.bean:9)"),
+        words,
+        { where, draft: '2024-03-05 * "Shop" "x' },
+      )!.endsWith("HINT"),
+    ).toBe(false);
+  });
+
+  it("is what Edit Transaction reports", () => {
+    const fs = require("fs");
+    const path = require("path");
+    const src = fs
+      .readFileSync(
+        path.join(
+          __dirname,
+          "../../screens/edit-transaction-screen/edit-transaction-screen.tsx",
+        ),
+        "utf8",
+      )
+      .replace(/\s+/g, "");
+    expect(
+      src.includes("selectOutcomeFailure(outcome,i18n,{draft:content,"),
+    ).toBe(true);
+  });
+});

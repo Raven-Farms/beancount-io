@@ -345,6 +345,9 @@ export const en = {
   openAccountSaving: "Opening...",
   openAccountFailed: "Couldn't open the account. Please try again.",
   ledgerWouldBreak: "This would add an error to your ledger: {{detail}}",
+  ledgerRefusalLine: "line {{line}}",
+  ledgerRefusalNearEntry: "near this entry",
+  ledgerRefusalQuoteHint: 'To put a quote inside text, write it as \\".',
   ledgerWriteOffline: "You're offline. Nothing was saved.",
   ledgerWriteUnconfirmed:
     "The server didn't confirm the save. Check before trying again.",

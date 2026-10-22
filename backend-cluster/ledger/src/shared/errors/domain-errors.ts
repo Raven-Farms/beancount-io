@@ -147,20 +147,25 @@ export class NewLedgerErrorsError extends DomainError {
     }[],
     action: LedgerWriteAction = "add",
   ) {
-    const detail = newErrors
-      .map((error) =>
-        error.source
-          ? `${error.message} (${error.source.filename}:${error.source.lineno})`
-          : error.message,
-      )
-      .join("; ");
-    const noun = newErrors.length === 1 ? "error" : "errors";
+    // A parse error can repeat the same message at the same place several
+    // times; naming it once says the same thing (w21/369).
+    const named = [
+      ...new Set(
+        newErrors.map((error) =>
+          error.source
+            ? `${error.message} (${error.source.filename}:${error.source.lineno})`
+            : error.message,
+        ),
+      ),
+    ];
+    const detail = named.join("; ");
+    const noun = named.length === 1 ? "error" : "errors";
     super(
       ErrorCategory.BAD_USER_INPUT,
-      `${LEDGER_WRITE_SUBJECT[action]} would introduce ${newErrors.length} new bean-check ${noun}: ${detail}`,
+      `${LEDGER_WRITE_SUBJECT[action]} would introduce ${named.length} new bean-check ${noun}: ${detail}`,
       {
         code: "NEW_LEDGER_ERRORS",
-        details: { count: newErrors.length, detail, action },
+        details: { count: named.length, detail, action },
       },
     );
   }
