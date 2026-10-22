@@ -29,6 +29,7 @@ import {
   LEGEND_HEIGHT,
 } from "@/common/d3/budget-bar-chart-d3";
 import { useToday } from "@/common/hooks/use-today";
+import { useAccountCloseDates } from "@/common/hooks/use-account-close-dates";
 import { useBudgetActuals } from "@/screens/budget-screen/hooks/use-budget-actuals";
 import {
   groupDirection,
@@ -189,12 +190,15 @@ export function BudgetGroupCard({
   // The day a budget dated after it has not started on (w21/301).
   const today = useToday();
 
+  // A budget on a closed account ends with it (w21/398).
+  const closeDates = useAccountCloseDates(ledgerId);
   const { series, loading, error } = useBudgetActuals({
     ledgerId,
     group,
     currency,
     time,
     direction,
+    endsOn: closeDates.get(group.account),
   });
 
   const stats = selectBudgetCardStats(group, series, today);

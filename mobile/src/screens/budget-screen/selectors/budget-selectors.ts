@@ -388,6 +388,7 @@ export function calculateBudgetForInterval(
   history: BudgetHistoryEntry[],
   asOf?: string,
   windowStart?: string,
+  endsOn?: string,
 ): number {
   return budgetForInterval(
     intervalEnd,
@@ -395,6 +396,7 @@ export function calculateBudgetForInterval(
     prepareBudgetHistory(history),
     asOf,
     windowStart,
+    endsOn,
   );
 }
 
@@ -405,6 +407,7 @@ export function budgetForInterval(
   ordered: PreparedBudgetHistory,
   asOf?: string,
   windowStart?: string,
+  endsOn?: string,
 ): number {
   // The server starts a window's series on its first day, so a 1Y window's
   // first month (or a YTD's first week) holds only part of a period; budget it
@@ -418,7 +421,10 @@ export function budgetForInterval(
   // still in progress is budgeted only up to `asOf`, and one not yet begun has
   // no budget. Otherwise a window without an end (all time) set a full month's
   // target against a partial month's spending.
-  const end = asOf !== undefined && asOf < intervalEnd ? asOf : intervalEnd;
+  let end = asOf !== undefined && asOf < intervalEnd ? asOf : intervalEnd;
+  // A budget on a closed account ends with it: nothing after its close date is
+  // budgeted (w21/398).
+  if (endsOn !== undefined && endsOn < end) end = endsOn;
   if (end < start) {
     return 0;
   }

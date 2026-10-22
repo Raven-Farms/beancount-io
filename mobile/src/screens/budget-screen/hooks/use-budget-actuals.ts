@@ -56,12 +56,15 @@ export function useBudgetActuals({
   currency,
   time,
   direction,
+  endsOn,
 }: {
   ledgerId: string;
   group: BudgetGroup;
   currency: string;
   time?: string;
   direction: 1 | -1;
+  /** The last day the budget applies: the close date of its account. */
+  endsOn?: string;
 }) {
   // Actuals stop at today, so the budget they are measured against does too.
   const today = getFormatDate(new Date());
@@ -105,8 +108,14 @@ export function useBudgetActuals({
       date,
       actual: actual * direction,
       budget:
-        budgetForInterval(date, group.interval, history, today, windowStart) *
-        direction,
+        budgetForInterval(
+          date,
+          group.interval,
+          history,
+          today,
+          windowStart,
+          endsOn,
+        ) * direction,
     });
     const points = items.map((item) =>
       point(item.date, resolveCurrencyBalance(item.balance, currency)),
@@ -128,6 +137,7 @@ export function useBudgetActuals({
     direction,
     group.interval,
     group.budgetHistory,
+    endsOn,
     time,
     today,
   ]);

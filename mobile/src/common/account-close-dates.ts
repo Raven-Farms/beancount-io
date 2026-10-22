@@ -41,6 +41,20 @@ export function closeDatesOf(
 }
 
 /**
+ * Whether `account` closed before `day`. A budget on it has nothing left to
+ * track: a former job's income target went red every month after the account
+ * closed and outranked real overspends on Home (w21/398).
+ */
+export function closedBefore(
+  account: string,
+  day: string,
+  closeDates: CloseDates,
+): boolean {
+  const closedAt = closeDates.get(account);
+  return closedAt !== undefined && closedAt < day;
+}
+
+/**
  * Whether `account` takes an entry dated `entryDate` (YYYY-MM-DD): opened on
  * or before it and not closed before it. An account opened later was offered
  * for a back-dated entry, and Done was refused with "not opened until".

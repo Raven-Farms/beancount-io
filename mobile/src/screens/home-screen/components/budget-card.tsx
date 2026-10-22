@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { BudgetSkeleton } from "./home-skeletons";
 import { selectCardLoadState } from "@/common/apollo/card-load-state";
 import { CardLoadFailure } from "@/components/card-load-failure";
@@ -17,6 +18,9 @@ import { formatMoneyWithCurrency } from "@/common/number-utils";
 import { AmountText, DashboardCard } from "@/components";
 import { FadeInView } from "@/components/crossfade";
 import { BudgetMeter } from "@/screens/budget-screen/components/budget-meter";
+import { useAccountCloseDates } from "@/common/hooks/use-account-close-dates";
+import { closedBefore } from "@/common/account-close-dates";
+import { useToday } from "@/common/hooks/use-today";
 import { useBudgetGroups } from "@/screens/budget-screen/hooks/use-budget-groups";
 import { useBudgetPanel } from "@/screens/home-screen/hooks/use-budget-panel";
 import {
@@ -88,6 +92,15 @@ export function BudgetCard({
     error: groupsError,
     refetch: refetchGroups,
   } = useBudgetGroups(ledgerId, refreshSignal);
+  // A budget on an account that closed before today has nothing left to track:
+  // a former job's income target read "Below target" every month and outranked
+  // real overspends (w21/398).
+  const closeDates = useAccountCloseDates(ledgerId);
+  const today = useToday();
+  const liveGroups = useMemo(
+    () => groups.filter((g) => !closedBefore(g.account, today, closeDates)),
+    [groups, today, closeDates],
+  );
   const {
     rows,
     loading: rowsLoading,
@@ -95,7 +108,7 @@ export function BudgetCard({
     retry: retryRows,
   } = useBudgetPanel({
     ledgerId,
-    groups,
+    groups: liveGroups,
     refreshSignal,
   });
   // A failed read is not "no budgets" and not "$0.00 spent" (w21/080).

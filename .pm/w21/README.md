@@ -77,7 +77,6 @@
 - [478](./478.md) — Create Ledger preview failure shows raw English, no Retry
 - [479](./479.md) — Create Ledger errors silent to VoiceOver (354 sibling)
 - [315](./blocked/315.md) — In-app commits signed with Gitea username and real email (no full_name, no noreply) — **blocked:** needs the owner's noreply-address and published-history decisions, and a production backfill of existing Gitea users that can't be verified here
-- [398](./398.md) — Budget on a closed account runs forever and outranks real overspends
 - [399](./399.md) — Income budget history/alert/placeholder show raw negative amount
 - [400](./400.md) — Search "#1042" finds nothing (lone #-token only a tag filter; 025 regression)
 - [401](./401.md) — iOS smart quotes break apostrophe searches (Trader Joe’s)
