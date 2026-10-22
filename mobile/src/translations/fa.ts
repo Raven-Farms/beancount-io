@@ -820,7 +820,7 @@ export const fa: Translations = {
   createLedgerAccounts: "حساب‌ها",
   createLedgerAmountInvalid: "مبلغی مانند 100 یا -30.50 وارد کنید",
   createLedgerAmountReenter:
-    "مانده اولیه را دوباره وارد کنید یا «بعداً تصمیم می‌گیرم» را انتخاب کنید. این مقدار در پیش‌نویس ذخیره‌شده نگه داشته نمی‌شود.",
+    "مانده اولیه را دوباره وارد کنید یا «تصمیم‌گیری در آینده» را انتخاب کنید. این مقدار در پیش‌نویس ذخیره‌شده نگه داشته نمی‌شود.",
   createLedgerCurrencyInvalid: "یک کد ارز مانند USD یا EUR انتخاب کنید.",
   createLedgerHistoryStartInvalid: "یک تاریخ معتبر مانند 2026-01-01 وارد کنید.",
   createLedgerPresetPersonal: "دفتر شخصی",

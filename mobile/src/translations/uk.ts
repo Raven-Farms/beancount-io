@@ -868,7 +868,7 @@ export const uk: Translations = {
     "Запишіть покупку та перевірте одиниці, записи про придбання і рух грошей.",
   createLedgerPresetRental: "Книга оренди",
   createLedgerPresetRentalOutcome:
-    "Запишіть надходження та відрізняйте оренду від поверненої застави.",
+    "Запишіть надходження та відрізняйте оренду від зворотної застави.",
   createLedgerPresetShared: "Книга спільних витрат",
   createLedgerPresetSharedOutcome:
     "Запишіть аванс і подивіться, хто кому винен.",

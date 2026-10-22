@@ -371,7 +371,7 @@ export const sk: Translations = {
   ledgerRefusalQuoteHint: 'Úvodzovku v texte zapíšte ako \\".',
   ledgerWriteOffline: "Ste offline. Nič sa neuložilo.",
   ledgerWriteUnconfirmed:
-    "Server neprijal potvrdenie o uložení. Skontrolujte to skôr, než to skúsite znova.",
+    "Server nepotvrdil uloženie. Skontrolujte to skôr, než to skúsite znova.",
   ledgerWriteRateLimited:
     "Príliš veľa zmien naraz. Chvíľu počkajte a skúste to znova.",
   openAccountInvalidRoot: "Vyberte platný typ účtu.",

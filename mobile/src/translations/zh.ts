@@ -709,7 +709,7 @@ export const zh: Translations = {
   back: "返回",
   postingAmountLabel: "{{account}} 的金额",
   postingNumber: "第 {{number}} 条分录",
-  postingAmountHint: "输入金额。使用正负号按钮切换收支方向。",
+  postingAmountHint: "输入金额。使用正负号按钮在正数和负数之间切换。",
   expandAccount: "展开 {{account}}",
   collapseAccount: "收起 {{account}}",
   breakdownRowShare: "{{amount}}，占总额 {{percent}}%",
