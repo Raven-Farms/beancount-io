@@ -169,7 +169,7 @@ const getStyles = (theme: ColorTheme) =>
     statusText: {
       fontSize: fontSizes.xs,
       fontWeight: fontWeights.medium,
-      color: theme.warning,
+      color: theme.warningText,
     },
     sectionTitle: {
       fontSize: fontSizes.md,

@@ -102,7 +102,7 @@ const getStyles = (theme: ColorTheme) =>
     },
     staleText: {
       fontSize: 14,
-      color: theme.warning,
+      color: theme.warningText,
     },
     footer: {
       padding: 16,

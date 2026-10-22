@@ -194,6 +194,7 @@ const lightTheme: ColorTheme = {
   success: "#0a8748", //    Success
   warning: "#e08a1e", //    Warning
   onWarning: "#1b1e16", //    text on Warning (= black): white was 2.7:1
+  warningText: "#935300", //    Warning as text: 6.0 on white, 5.3 on its 14% tint
   information: "#4c8dd6", //    Information
 
   nav01: CHARCOAL, //    Global top bar
@@ -244,6 +245,7 @@ const darkTheme: ColorTheme = {
   success: "#37c07c", //    Success
   warning: "#f0b24e", //    Warning
   onWarning: CHARCOAL, //    text on Warning: white was 1.9:1
+  warningText: "#f0b24e", //    = warning: 9.4 on the surface
   information: "#6fb0e8", //    Information
 
   nav01: "#0f110c", //    Global top bar

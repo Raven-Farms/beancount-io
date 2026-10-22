@@ -123,6 +123,41 @@ describe("OAuthTokenManager", () => {
     expect(terminalCalls).toBe(1);
   });
 
+  // w21/329: a Log out that races an in-flight refresh invalidates it, but the
+  // server's invalid_grant for it still ran the terminal callback and showed
+  // "Your session ended" over a deliberate sign-out.
+  it("does not report a terminal failure for a refresh a sign-out superseded", async () => {
+    let current: Session | null = oauth();
+    let terminalCalls = 0;
+    let finishBody!: () => void;
+    const manager = new OAuthTokenManager({
+      getSession: () => current,
+      getServerUrl: () => serverUrl,
+      now: () => 10_000,
+      // The response has arrived; its body is still being read when the user
+      // logs out.
+      fetcher: (async () => ({
+        ok: false,
+        json: () =>
+          new Promise<object>((resolve) => {
+            finishBody = () => resolve({ error: "invalid_grant" });
+          }),
+      })) as unknown as typeof fetch,
+      persistSession: async () => {},
+      onTerminalFailure: async () => {
+        terminalCalls += 1;
+      },
+    });
+    const pending = captureFailure(manager.getAccessToken());
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    manager.invalidatePendingRefreshes();
+    current = null;
+    finishBody();
+    const error = await pending;
+    expect(error instanceof OAuthRefreshError).toBe(true);
+    expect(terminalCalls).toBe(0);
+  });
+
   it("never sends a credential to another selected server or resource", async () => {
     let fetches = 0;
     const manager = new OAuthTokenManager({
