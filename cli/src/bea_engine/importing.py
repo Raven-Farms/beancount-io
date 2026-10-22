@@ -17,9 +17,10 @@ import runpy
 import shlex
 import sys
 import unicodedata
-from collections.abc import Callable, Iterable, Sequence
+from collections.abc import Callable, Iterable, Iterator, Sequence
 from dataclasses import dataclass
 from decimal import Context, Decimal
+from itertools import combinations
 from pathlib import Path
 from typing import Any
 
@@ -1427,17 +1428,52 @@ def _legs_agree(ours: Sequence[_Leg], theirs: Sequence[_Leg]) -> bool:
     `-4 HOOL {150 USD}` once booked, and comparing the two as text made a
     hand-entered twin new and bea's own write a conflict (w5/467). Lots both
     sides state at 100 and 120 USD still differ (w5/349).
+
+    Each booked leg answers for one incoming leg. A greedy pass handed the
+    first compatible booked leg to whichever incoming leg came first, so two
+    `{}` fills over three lots, or a `{"X"}` and a `{100 USD}` selector that
+    both fit one lot, failed though an assignment exists (w5/896); the
+    assignment is searched, the more specific incoming legs first.
     """
-    left = list(theirs)
-    # A stated lot picks first, so an open one cannot take the leg it needs.
-    for text, lot in sorted(ours, key=lambda leg: 0 if leg[1] is None else leg[1].count(None)):
-        match = next((i for i, (other, found) in enumerate(left) if other == text and _lots_agree(lot, found)), None)
-        picked = [match] if match is not None else _split_booking(text, lot, left)
-        if not picked:
-            return False
-        for index in sorted(picked, reverse=True):
-            del left[index]
-    return not left
+    order = sorted(ours, key=lambda leg: 0 if leg[1] is None else leg[1].count(None))
+
+    def assign(position: int, left: list[_Leg]) -> bool:
+        if position == len(order):
+            return not left
+        text, lot = order[position]
+        for chosen in _booked_for(text, lot, left):
+            remaining = [leg for index, leg in enumerate(left) if index not in chosen]
+            if assign(position + 1, remaining):
+                return True
+        return False
+
+    return assign(0, list(theirs))
+
+
+def _booked_for(text: str, lot: _Lot | None, left: list[_Leg]) -> Iterator[set[int]]:
+    """Each way the booked legs can stand for one incoming leg: one leg of its own, or the lots it spans."""
+    for index, (other, found) in enumerate(left):
+        if other == text and _lots_agree(lot, found):
+            yield {index}
+    if lot is None or lot[0] is not None:
+        return
+    number, currency, price = _units_of(text)
+    compatible = [
+        index
+        for index, (other, found) in enumerate(left)
+        if found is not None and _units_of(other)[1:] == (currency, price) and _lots_agree(lot, found)
+    ]
+    # A sale booked across lots takes them in order, so these are the larger
+    # candidate sets first; a long run of lots keeps the all-or-nothing reading.
+    sizes = range(len(compatible), 1, -1) if len(compatible) <= _SPLIT_SEARCH_LEGS else [len(compatible)]
+    for size in sizes:
+        for subset in combinations(compatible, size):
+            if sum(_units_of(left[index][0])[0] for index in subset) == number:
+                yield set(subset)
+
+
+#: How many compatible booked legs are searched for subsets before only the whole set is tried.
+_SPLIT_SEARCH_LEGS = 12
 
 
 def _units_of(text: str) -> tuple[Decimal, str, str]:
@@ -1445,29 +1481,6 @@ def _units_of(text: str) -> tuple[Decimal, str, str]:
     units, _, price = text.partition(" @ ")
     number, currency = units.split(" ", 1)
     return Decimal(number), currency, price
-
-
-def _split_booking(text: str, lot: _Lot | None, left: list[_Leg]) -> list[int]:
-    """The legs an open-cost leg was booked into, or none.
-
-    Booking reduces as many lots as a `{}` sale spans, so the ledger holds one
-    posting per lot where the importer has one: `-20 HOOL {}` was booked as
-    `-10 HOOL {150 USD}` and `-10 HOOL {155 USD}`, re-importing bea's own
-    write was a conflict, and a hand-entered FIFO twin was written again
-    (w5/603). They are the legs of its currency and price whose lots agree
-    with what it states, and their units must add up to its own.
-    """
-    if lot is None or lot[0] is not None:
-        return []
-    number, currency, price = _units_of(text)
-    picked = [
-        index
-        for index, (other, found) in enumerate(left)
-        if found is not None and _units_of(other)[1:] == (currency, price) and _lots_agree(lot, found)
-    ]
-    if len(picked) < 2 or sum(_units_of(left[index][0])[0] for index in picked) != number:
-        return []
-    return picked
 
 
 def _fingerprint(entry: Any, account: str) -> tuple[Any, ...]:
