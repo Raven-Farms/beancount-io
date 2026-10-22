@@ -526,6 +526,7 @@ export const en = {
   ledgerEmptyHint: "Create a ledger file here, or pull down to refresh.",
   ledgerRefreshHint: "Pull down to try loading this folder again.",
   ledgerNavigateUp: "Go up one folder",
+  ledgerNavigateUpTo: "Go up to {{folder}}",
   openLedgerDrawer: "Open menu",
   ledgerCreateFile: "Create file",
   ledgerCreateFileTitle: "New Ledger File",

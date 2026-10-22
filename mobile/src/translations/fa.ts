@@ -690,6 +690,7 @@ export const fa: Translations = {
   sankeyIncomeNodeLabel: "{{name}} (درآمد)",
   sankeyExpensesNodeLabel: "{{name}} (هزینه)",
   ledgerNavigateUp: "رفتن به پوشه بالاتر",
+  ledgerNavigateUpTo: "بازگشت به {{folder}}",
   openLedgerDrawer: "باز کردن منو",
   back: "بازگشت",
   postingAmountLabel: "مبلغ {{account}}",

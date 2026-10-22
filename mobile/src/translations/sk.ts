@@ -723,6 +723,7 @@ export const sk: Translations = {
   sankeyIncomeNodeLabel: "{{name}} (príjmy)",
   sankeyExpensesNodeLabel: "{{name}} (výdavky)",
   ledgerNavigateUp: "O úroveň vyššie",
+  ledgerNavigateUpTo: "Hore do {{folder}}",
   openLedgerDrawer: "Otvoriť menu",
   back: "Späť",
   postingAmountLabel: "Suma pre {{account}}",

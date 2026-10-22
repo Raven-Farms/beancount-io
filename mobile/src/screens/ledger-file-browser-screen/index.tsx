@@ -644,6 +644,9 @@ export function LedgerFileBrowserScreen(): JSX.Element {
   };
 
   const breadcrumbLabel = inSubDir ? currentPath : "";
+  // The up button names the folder it goes to; the root has no folder name
+  // (w21/277).
+  const parentFolder = parentDirectory(currentPath).split("/").pop() ?? "";
 
   return (
     <View style={styles.container}>
@@ -672,7 +675,11 @@ export function LedgerFileBrowserScreen(): JSX.Element {
             onPress={handleBack}
             activeOpacity={0.7}
             accessibilityRole="button"
-            accessibilityLabel={t("ledgerNavigateUp")}
+            accessibilityLabel={
+              parentFolder
+                ? t("ledgerNavigateUpTo", { folder: parentFolder })
+                : t("ledgerNavigateUp")
+            }
           >
             <Ionicons
               name={directionalIcon("chevron-back")}
@@ -680,7 +687,11 @@ export function LedgerFileBrowserScreen(): JSX.Element {
               color={theme.primary}
             />
           </TouchableOpacity>
-          <Text style={styles.breadcrumbText} numberOfLines={1}>
+          <Text
+            style={styles.breadcrumbText}
+            numberOfLines={1}
+            ellipsizeMode="head"
+          >
             {breadcrumbLabel}
           </Text>
         </View>

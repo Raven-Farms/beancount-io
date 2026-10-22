@@ -715,6 +715,7 @@ export const uk: Translations = {
   sankeyIncomeNodeLabel: "{{name}} (доходи)",
   sankeyExpensesNodeLabel: "{{name}} (витрати)",
   ledgerNavigateUp: "На рівень вище",
+  ledgerNavigateUpTo: "Вгору, до {{folder}}",
   openLedgerDrawer: "Відкрити меню",
   back: "Назад",
   postingAmountLabel: "Сума для {{account}}",

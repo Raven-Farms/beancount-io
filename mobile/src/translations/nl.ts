@@ -705,6 +705,7 @@ export const nl: Translations = {
   sankeyIncomeNodeLabel: "{{name}} (inkomsten)",
   sankeyExpensesNodeLabel: "{{name}} (uitgaven)",
   ledgerNavigateUp: "Eén map omhoog",
+  ledgerNavigateUpTo: "Omhoog naar {{folder}}",
   openLedgerDrawer: "Menu openen",
   back: "Terug",
   postingAmountLabel: "Bedrag voor {{account}}",

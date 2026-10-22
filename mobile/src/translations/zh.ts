@@ -641,6 +641,7 @@ export const zh: Translations = {
   sankeyIncomeNodeLabel: "{{name}}（收入）",
   sankeyExpensesNodeLabel: "{{name}}（支出）",
   ledgerNavigateUp: "返回上级文件夹",
+  ledgerNavigateUpTo: "返回上级文件夹 {{folder}}",
   openLedgerDrawer: "打开菜单",
   back: "返回",
   postingAmountLabel: "{{account}} 的金额",

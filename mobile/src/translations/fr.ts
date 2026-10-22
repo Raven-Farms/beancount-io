@@ -719,6 +719,7 @@ export const fr: Translations = {
   sankeyIncomeNodeLabel: "{{name}} (revenus)",
   sankeyExpensesNodeLabel: "{{name}} (dépenses)",
   ledgerNavigateUp: "Remonter d'un dossier",
+  ledgerNavigateUpTo: "Remonter à {{folder}}",
   openLedgerDrawer: "Ouvrir le menu",
   back: "Retour",
   postingAmountLabel: "Montant de {{account}}",

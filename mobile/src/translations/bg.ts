@@ -699,6 +699,7 @@ export const bg: Translations = {
   sankeyIncomeNodeLabel: "{{name}} (приходи)",
   sankeyExpensesNodeLabel: "{{name}} (разходи)",
   ledgerNavigateUp: "Нагоре една папка",
+  ledgerNavigateUpTo: "Нагоре към {{folder}}",
   openLedgerDrawer: "Отвори менюто",
   back: "Назад",
   postingAmountLabel: "Сума за {{account}}",

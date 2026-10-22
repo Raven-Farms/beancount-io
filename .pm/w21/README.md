@@ -19,7 +19,6 @@
 - [206](./blocked/206.md) — Refund/return receipts are always prefilled as a purchase — **blocked:** needs an owner-approved AI-quota evaluation and a parse-contract decision (`isRefund` vs signed amount)
 - [210](./blocked/210.md) — Holdings sheet labels a user-typed price "Live price" and applies the feed's staleness rule — **blocked:** needs an owner decision on exposing the feed's effective price dates (cross-package contract) and a deploy before mobile can read it
 - [228](./blocked/228.md) — New Transaction stamps the first operating currency on every posting; no currency or price control — **blocked:** needs account-constraint currencies on the client, a price path (legacy field or typed mutation, deploy first) and an owner-approved form design
-- [277](./277.md) — Deep Files breadcrumb truncates the current folder's name
 - [278](./278.md) — A commodity with cost and cost-less lots hides its market value on Accounts; root loses "At market value"
 - [279](./279.md) — Single-commodity Accounts root reads in units and drops the stale-price warning Home shows
 - [280](./280.md) — An open $0 account vanishes when its only sub-account is closed and emptied
