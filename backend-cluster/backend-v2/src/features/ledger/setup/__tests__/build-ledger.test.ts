@@ -314,3 +314,67 @@ describe("known openings and the opening-balances account", () => {
     ).toThrow("cannot have a known opening of its own");
   });
 });
+
+// w23/049: account names and the title were interpolated raw, so a blank@1
+// name with a newline injected directives and a title ending in `\` broke
+// the file.
+describe("names and titles written into main.bean", () => {
+  it.each([
+    "Assets:Bank USD\n2020-01-01 open Assets:Evil",
+    "Assets:Bank\noption \"operating_currency\" \"EUR\"",
+    "assets:lower",
+    "Foo:Bar",
+    "Assets",
+    "Assets:bank",
+    "Assets:Bank Account",
+  ])("refuses the account name %j", (name) => {
+    expect(() =>
+      previewLedgerSetup({ preset: "blank@1", accounts: [{ name }] }),
+    ).toThrow("is not a Beancount account name");
+  });
+
+  it.each(["Assets:Bank-2", "Liabilities:Card:2026", "Assets:Café", "Assets:现金"])(
+    "accepts the account name %j",
+    (name) => {
+      const { files } = previewLedgerSetup(
+        { preset: "blank@1", accounts: [{ name }] },
+        "2026-10-21",
+      );
+      expect(files["main.bean"]).toContain(`2026-10-21 open ${name} USD`);
+    },
+  );
+
+  it("accepts every account the catalog offers", () => {
+    for (const preset of setupCatalog.presets) {
+      const capabilities = Object.fromEntries(
+        preset.optionalQuestions.map((question) => [question.id, "enabled"]),
+      ) as Record<string, "enabled">;
+      const presetId = preset.id as LedgerSetup["preset"];
+      const { accounts } = previewLedgerSetup(
+        { preset: presetId, capabilities },
+        "2026-10-21",
+      );
+      expect(() =>
+        previewLedgerSetup({
+          preset: presetId,
+          capabilities,
+          accounts: accounts.map((name) => ({ name })),
+        }),
+      ).not.toThrow();
+    }
+  });
+
+  it.each([
+    ["Books\\", 'option "title" "Books\\\\"'],
+    ['A "quoted" title', 'option "title" "A \\"quoted\\" title"'],
+  ])("escapes the title %j", (title, line) => {
+    const { files } = previewLedgerSetup({ preset: "personal@1", title });
+    expect(files["main.bean"]!.split("\n")[0]).toBe(line);
+  });
+
+  it("refuses a title with a line break", () => {
+    expect(() =>
+      previewLedgerSetup({ preset: "personal@1", title: "Books\noption" }),
+    ).toThrow("must not contain line breaks");
+  });
+});

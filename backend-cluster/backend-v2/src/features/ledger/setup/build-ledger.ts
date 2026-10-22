@@ -33,6 +33,15 @@ export const CREATE_REQUEST_ID_MAX = 200;
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 const AMOUNT_PATTERN = /^-?\d+(\.\d+)?$/;
 const OPENING_EQUITY = "Equity:OpeningBalances";
+/**
+ * An account a new ledger can open: one of Beancount's five default roots,
+ * then components that start with an uppercase letter, a digit, or a
+ * non-ASCII letter. Interpolated unchecked, a `blank@1` name carrying a
+ * newline wrote whole directives into `main.bean` (w23/049).
+ */
+const ACCOUNT_PATTERN =
+  /^(?:Assets|Liabilities|Equity|Income|Expenses)(?::[\p{Lu}\p{N}\P{ASCII}][\p{L}\p{N}\P{ASCII}-]*)+$/u;
+const NOT_IN_A_NAME = /[\s\p{C}]/u;
 
 const fail = (message: string): never => {
   throw new ValidationError("setup", message);
@@ -111,6 +120,11 @@ export function previewLedgerSetup(
   if (setup.title !== undefined && setup.title.length > SETUP_TITLE_MAX) {
     fail(`Title must be at most ${SETUP_TITLE_MAX} characters`);
   }
+  // A line break or other control character in a Beancount string is never
+  // what a title meant (w23/049).
+  if (setup.title !== undefined && /\p{Cc}/u.test(setup.title)) {
+    fail("Title must not contain line breaks or other control characters");
+  }
 
   const operatingCurrency = setup.operatingCurrency ?? "USD";
   if (!setupCurrencies.supportedCurrencies.includes(operatingCurrency)) {
@@ -156,6 +170,15 @@ export function previewLedgerSetup(
     if (!selected.has(name)) selected.set(name, { name });
   }
   for (const selection of setup.accounts ?? []) {
+    if (
+      typeof selection.name !== "string" ||
+      NOT_IN_A_NAME.test(selection.name) ||
+      !ACCOUNT_PATTERN.test(selection.name)
+    ) {
+      fail(
+        `Account ${JSON.stringify(selection.name)} is not a Beancount account name: it starts with Assets, Liabilities, Equity, Income or Expenses, each further part starts with a capital letter or a digit, and it holds no spaces`,
+      );
+    }
     if (!isBlank && !allowed.has(selection.name)) {
       fail(
         `Account "${selection.name}" is not part of preset "${preset.id}" or an enabled capability`,
@@ -206,7 +229,9 @@ export function previewLedgerSetup(
 
   const openingStatusKey = setupCatalog.metadataKeys.openingBalanceStatus;
   const lines: string[] = [
-    `option "title" "${(setup.title ?? preset.title).replace(/"/g, "")}"`,
+    // Escaped, not stripped: quotes vanished from the title, and a trailing
+    // backslash escaped the closing quote and broke the file (w23/049).
+    `option "title" "${(setup.title ?? preset.title).replace(/[\\"]/g, "\\$&")}"`,
     `option "operating_currency" "${operatingCurrency}"`,
     `option "inferred_tolerance_default" "*:0.001"`,
     "",
