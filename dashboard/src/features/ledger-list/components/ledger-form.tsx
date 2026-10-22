@@ -30,6 +30,7 @@ import { ListLedgersDocument } from "@/graphql/definitions";
 import { slugifyLedgerName } from "@/common/lib/beancount/ledger-name";
 import { SETUP_PRESETS, suggestCurrency } from "../lib/setup-presets";
 import { cn } from "@/common/lib/utils/utils";
+import { todayIsoDate } from "@/common/components/ui/date-picker-utils";
 
 /**
  * A radio choice drawn as a card around its sr-only input. Forced colors drops
@@ -190,9 +191,9 @@ export function LedgerForm({
         suggestCurrency(
           typeof navigator !== "undefined" ? navigator.language : i18n.language,
         ),
-      historyStart:
-        (draft?.values?.historyStart as string) ||
-        new Date().toISOString().slice(0, 10),
+      // The browser's own calendar day: a UTC day opens every account
+      // tomorrow in a western evening (w4/317).
+      historyStart: (draft?.values?.historyStart as string) || todayIsoDate(),
       openingAccount: (draft?.values?.openingAccount as string) || "",
       openingAmount: (draft?.values?.openingAmount as string) || "",
     },
