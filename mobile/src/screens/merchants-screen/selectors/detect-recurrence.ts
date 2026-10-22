@@ -250,7 +250,12 @@ function monthDayAnchor(
       }
     }
     if (distance > ANCHOR_TOLERANCE_DAYS) return null;
-    if (previous !== null && nominal - previous !== months) return null;
+    // The next period or, after a paused or combined one, a later whole number
+    // of them; two payments in one period still end the anchor (w21/459).
+    if (previous !== null) {
+      const step = nominal - previous;
+      if (step <= 0 || step % months !== 0) return null;
+    }
     previous = nominal;
     lastDue = dueOn(nominal);
   }

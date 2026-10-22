@@ -511,6 +511,42 @@ describe("detectRecurrence twice a month", () => {
     });
   });
 
+  it("keeps a monthly bill's day through a skipped month (w21/459)", () => {
+    const onThe = (day: string, list: string[]) =>
+      detectRecurrence(
+        pointsOn(
+          list.map((m) => `${m}-${day}`),
+          50,
+        ),
+        "2026-02-20",
+      );
+    expect(
+      onThe("01", ["2025-09", "2025-10", "2025-11", "2026-01", "2026-02"])
+        ?.nextExpected,
+    ).toBe("2026-03-01");
+    expect(
+      onThe("15", [
+        "2025-08",
+        "2025-09",
+        "2025-11",
+        "2025-12",
+        "2026-01",
+        "2026-02",
+      ])?.nextExpected,
+    ).toBe("2026-03-15");
+    // The same series without the gap, for comparison.
+    expect(
+      onThe("01", [
+        "2025-09",
+        "2025-10",
+        "2025-11",
+        "2025-12",
+        "2026-01",
+        "2026-02",
+      ])?.nextExpected,
+    ).toBe("2026-03-01");
+  });
+
   it("keeps a true 14-day cadence as every two weeks", () => {
     const start = parseLedgerDay("2026-06-05")!;
     const series = Array.from({ length: 10 }, (_, i) =>
