@@ -1034,17 +1034,26 @@ export function LedgerDrawer({
             ListFooterComponent={
               <>
                 {error && drawerLedgers.length > 0 ? (
-                  <TouchableOpacity
-                    testID="drawer-directory-retry"
-                    style={styles.emptyAction}
-                    onPress={handleRefresh}
-                    accessibilityRole="button"
-                    accessibilityLabel={t("discoveryLoadError")}
-                  >
+                  // The message is a caption on the drawer; the filled button
+                  // carries its own label in white. Gray text on the green fill
+                  // was 1.01:1 (w21/382).
+                  <View style={styles.stateContainer}>
                     <Text style={styles.stateText}>
                       {t("discoveryLoadError")}
                     </Text>
-                  </TouchableOpacity>
+                    <TouchableOpacity
+                      testID="drawer-directory-retry"
+                      style={styles.emptyAction}
+                      onPress={handleRefresh}
+                      accessibilityRole="button"
+                      accessibilityLabel={t("discoveryRetry")}
+                      accessibilityHint={t("discoveryLoadError")}
+                    >
+                      <Text style={styles.emptyActionText}>
+                        {t("discoveryRetry")}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
                 ) : null}
                 {stacked ? navigation : null}
               </>
