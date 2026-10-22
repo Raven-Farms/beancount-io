@@ -645,6 +645,19 @@ function LedgerFileEditorSession({
     | null
   >(null);
 
+  // A save that bypassed the editor's own (Overwrite, Recreate) leaves its
+  // saved-text baseline at the text first loaded, so reverting the edit read
+  // as no change: Save stayed grey and Back left without asking (w21/522). The
+  // editor is handed the text it had, against the text just saved.
+  const rebaseOnSaved = useCallback((latest: string, saved: string) => {
+    const epoch = documentEpochRef.current + 1;
+    documentEpochRef.current = epoch;
+    resetRevisionTracker(revisionTrackerRef.current);
+    setDocumentSpec({ value: latest, epoch, savedValue: saved });
+    setHasUnsavedChanges(latest !== saved);
+    setInsertSpec(null);
+  }, []);
+
   // Take the sha of the version on the server, not its text, and save over it.
   const overwriteRemote = useCallback(
     async (content: string, epoch: number, revision: number) => {
@@ -657,9 +670,12 @@ function LedgerFileEditorSession({
         Alert.alert(t("ledgerEditorSaveFailed"));
         return;
       }
-      await handleSaveRef.current?.(content, epoch, revision);
+      const latest = recoveryRef.current.latest();
+      if (await handleSaveRef.current?.(content, epoch, revision)) {
+        rebaseOnSaved(latest, content);
+      }
     },
-    [refetch, t],
+    [rebaseOnSaved, refetch, t],
   );
 
   // The file was deleted or moved elsewhere (w21/378): the text goes back as a
@@ -680,6 +696,7 @@ function LedgerFileEditorSession({
 
   const recreateFile = useCallback(
     async (content: string, epoch: number, revision: number) => {
+      const latest = recoveryRef.current.latest();
       try {
         const result = await createLedgerFile({
           variables: {
@@ -702,6 +719,7 @@ function LedgerFileEditorSession({
         }
         haptics.success();
         savedThisSessionRef.current = true;
+        if (epoch === documentEpochRef.current) rebaseOnSaved(latest, content);
         void invalidateLedgerData(client, "file");
       } catch (err: unknown) {
         if (isAuthTeardownError(err)) return;
@@ -712,7 +730,7 @@ function LedgerFileEditorSession({
         );
       }
     },
-    [client, createLedgerFile, ledgerId, path, t],
+    [client, createLedgerFile, ledgerId, path, rebaseOnSaved, t],
   );
 
   const handleSave = useCallback(

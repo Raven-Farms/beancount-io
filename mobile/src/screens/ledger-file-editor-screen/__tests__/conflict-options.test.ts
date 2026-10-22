@@ -30,7 +30,10 @@ describe("the file editor's conflict alert", () => {
   });
 
   it("offers to save the text over the remote version after a confirmation", () => {
-    const overwrite = body("constoverwriteRemote=useCallback(", "[refetch,t],");
+    const overwrite = body(
+      "constoverwriteRemote=useCallback(",
+      "[rebaseOnSaved,refetch,t],",
+    );
     // Takes the current sha, then saves the same buffer with it.
     const sha = overwrite.indexOf("shaRef.current=current");
     const save = overwrite.indexOf(

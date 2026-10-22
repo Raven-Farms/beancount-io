@@ -19,6 +19,8 @@ export type EditorRecovery = {
   saved(text: string): void;
   /** The latest text reported by the editor. */
   draft(text: string): void;
+  /** The latest text the editor reported, saved or not. */
+  latest(): string;
   /**
    * The page says it is ready. Null for the first time; afterwards the page is
    * a reload, and this is the text to put back with the saved text it differs
@@ -42,6 +44,9 @@ export function createEditorRecovery(): EditorRecovery {
     },
     draft(text) {
       latest = text;
+    },
+    latest() {
+      return latest;
     },
     ready() {
       if (!readyBefore) {
