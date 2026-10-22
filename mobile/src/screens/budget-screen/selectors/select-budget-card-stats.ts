@@ -5,6 +5,7 @@
  */
 import {
   budgetDirection,
+  budgetScale,
   isFavorableVariance,
   varianceStatus,
   type BudgetGroup,
@@ -72,14 +73,15 @@ function beforeFirstBudget(
 export function selectPointFavorability(
   series: BudgetSeriesPoint[],
   direction: 1 | -1,
-  budgetHistory: readonly { date: string }[] = [],
+  budgetHistory: readonly { date: string; amount?: string }[] = [],
 ): (boolean | null)[] {
   const firstBudget = firstBudgetDate(budgetHistory);
+  const scale = budgetScale(budgetHistory);
   return series.map((point) =>
     beforeFirstBudget(point, firstBudget)
       ? null
       : isFavorableVariance(
-          varianceStatus(point.actual - Math.abs(point.budget)),
+          varianceStatus(point.actual - Math.abs(point.budget), scale),
           direction,
         ),
   );
@@ -117,7 +119,10 @@ export function selectBudgetCardStats(
   }
 
   const variance = actual === null ? null : actual - budget;
-  const status = variance === null ? null : varianceStatus(variance);
+  const status =
+    variance === null
+      ? null
+      : varianceStatus(variance, budgetScale(group.budgetHistory));
   const favorable =
     status === null ? true : isFavorableVariance(status, direction);
   const progressPercent =

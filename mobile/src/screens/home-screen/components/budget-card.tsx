@@ -142,7 +142,7 @@ export function BudgetCard({
           {row.shortAccount}
         </Text>
         <AmountText style={styles.amounts}>
-          {`${formatMoneyWithCurrency(row.actual, row.currency)} / ${formatMoneyWithCurrency(row.budget, row.currency)}`}
+          {`${formatMoneyWithCurrency(row.actual, row.currency, row.scale)} / ${formatMoneyWithCurrency(row.budget, row.currency, row.scale)}`}
         </AmountText>
       </View>
       <BudgetMeter percent={row.progressPercent} favorable={row.favorable} />

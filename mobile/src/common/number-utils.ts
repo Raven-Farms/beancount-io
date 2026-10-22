@@ -245,17 +245,19 @@ const annotateCurrency = (
 
 /**
  * An unsigned money string annotated with its currency (e.g. "$1,234.50",
- * "¥1,500" or "1,234.50 MUSD"), at the currency's minor unit. Use for absolute figures where the sign is not shown — a
+ * "¥1,500" or "1,234.50 MUSD"), at the currency's minor unit or `minScale`
+ * decimals when that is more. Use for absolute figures where the sign is not shown — a
  * running balance, a category total, an account row. Resolves the symbol from
  * the currency code and falls back to appending the code.
  */
 export const formatMoneyWithCurrency = (
   value: number,
   currency: string,
+  minScale = 0,
 ): string =>
   annotateCurrency(
     "",
-    groupThousands(value, currencyMinorUnits(currency)),
+    groupThousands(value, Math.max(currencyMinorUnits(currency), minScale)),
     currency,
   );
 

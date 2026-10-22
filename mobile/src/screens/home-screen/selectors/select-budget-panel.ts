@@ -8,6 +8,7 @@ import { formatLedgerDate } from "../../../common/date-format";
 import { formatMoneyWithCurrency } from "../../../common/number-utils";
 import {
   budgetDirection,
+  budgetScale,
   calculateBudgetForInterval,
 } from "../../budget-screen/selectors/budget-selectors";
 import type {
@@ -29,6 +30,8 @@ export type BudgetPanelRow = {
   account: string;
   shortAccount: string;
   currency: string;
+  /** Fraction digits the budget is recorded at (cents at least), for display. */
+  scale: number;
   /** Budget for the current period, as a magnitude. */
   budget: number;
   /** Actual for the same period, sign-corrected to match. */
@@ -65,6 +68,7 @@ export function selectBudgetPanelRows(
     // favorability rules. It reads a series, so hand it the single period the
     // panel cares about, sign-corrected the way the card's series already is.
     const direction = budgetDirection(group.value);
+    const scale = budgetScale(group.budgetHistory);
     const stats = selectBudgetCardStats(group, [
       {
         date: periodEnd,
@@ -86,6 +90,7 @@ export function selectBudgetPanelRows(
         account: group.account,
         shortAccount: dropRoot(group.account),
         currency: group.currency,
+        scale,
         budget: stats.budget,
         actual: spent,
         progressPercent: 0,
@@ -101,6 +106,7 @@ export function selectBudgetPanelRows(
       account: group.account,
       shortAccount: dropRoot(group.account),
       currency: group.currency,
+      scale,
       budget: stats.budget,
       actual: spent,
       progressPercent: noBudget
@@ -202,14 +208,14 @@ export function budgetPanelRowAccessibilityValue(
         );
   if (row.noBudget || row.startsOn !== undefined) {
     return t("budgetPanelRowValueNoBudget", {
-      actual: formatMoneyWithCurrency(row.actual, row.currency),
-      budget: formatMoneyWithCurrency(row.budget, row.currency),
+      actual: formatMoneyWithCurrency(row.actual, row.currency, row.scale),
+      budget: formatMoneyWithCurrency(row.budget, row.currency, row.scale),
       status,
     });
   }
   return t("budgetPanelRowValue", {
-    actual: formatMoneyWithCurrency(row.actual, row.currency),
-    budget: formatMoneyWithCurrency(row.budget, row.currency),
+    actual: formatMoneyWithCurrency(row.actual, row.currency, row.scale),
+    budget: formatMoneyWithCurrency(row.budget, row.currency, row.scale),
     // Whole percent: a spoken "73.4166 percent" is noise, and the meter it
     // describes is a bar, not a readout.
     percent: Math.round(row.progressPercent),

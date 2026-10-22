@@ -21,6 +21,7 @@ import type {
   JournalCustom,
 } from "../../transactions-screen/types";
 import { utcTime } from "../../../common/calendar-date";
+import { amountScale } from "../../../common/number-utils";
 
 /**
  * A `custom "budget"` directive as the journal serializes it: the positional
@@ -330,6 +331,22 @@ export function periodsThrough(
   return ends;
 }
 
+/**
+ * The fraction digits a budget's amounts are recorded at, never below cents:
+ * 3 for `0.003 BTC`. Money is judged and shown at least to the cent, and a
+ * fractional commodity at the precision its budget was written in (w21/290).
+ */
+export function budgetScale(
+  history: readonly { amount?: string }[] | null | undefined,
+): number {
+  return Math.max(
+    2,
+    ...(history ?? []).map((entry) =>
+      amountScale(entry.amount?.trim().split(/\s+/)[0] ?? ""),
+    ),
+  );
+}
+
 /** A history entry with its "300 USD" amount already split into value+currency. */
 export type PreparedBudgetHistory = ReadonlyArray<
   BudgetHistoryEntry & ParsedBudgetAmount
@@ -447,8 +464,13 @@ export function budgetForInterval(
   // Summing daily equivalents accumulates binary-float error — a 5000/month
   // budget over 31 days lands on 5000.000000000001. A budget is money, so
   // settle it at money precision rather than carrying the noise into every
-  // variance and progress figure downstream.
-  return Math.round(total * 100) / 100;
+  // variance and progress figure downstream. A fractional commodity keeps its
+  // recorded scale and a few guard digits: cents turned 0.003 BTC prorated to
+  // today into 0, a budget that read as none (w21/290).
+  const scale = budgetScale(ordered);
+  const decimals = scale <= 2 ? 2 : scale + 4;
+  const factor = 10 ** decimals;
+  return Math.round(total * factor) / factor;
 }
 
 /**
@@ -463,18 +485,20 @@ export function budgetDirection(budgetValue: number): 1 | -1 {
 export type VarianceStatus = "above" | "below" | "on";
 
 /**
- * Half a cent. Actuals and prorated budgets are both floating point, so an
- * exact-zero variance never occurs in practice; without a tolerance "on target"
- * would be unreachable and a matched budget would render as a phantom
- * fraction-of-a-cent overage.
+ * Half a unit of the budget's last recorded digit — half a cent for money.
+ * Actuals and prorated budgets are both floating point, so an exact-zero
+ * variance never occurs in practice; without a tolerance "on target" would be
+ * unreachable and a matched budget would render as a phantom fraction-of-a-cent
+ * overage. A fixed half cent was also the tolerance for a 0.003 BTC budget, so
+ * a 33% overspend read "On target"; it scales with the budget's own precision
+ * (w21/290).
  */
-const VARIANCE_EPSILON = 0.005;
-
-export function varianceStatus(variance: number): VarianceStatus {
-  if (variance > VARIANCE_EPSILON) {
+export function varianceStatus(variance: number, scale = 2): VarianceStatus {
+  const epsilon = 5 * 10 ** -(Math.max(2, scale) + 1);
+  if (variance > epsilon) {
     return "above";
   }
-  return variance < -VARIANCE_EPSILON ? "below" : "on";
+  return variance < -epsilon ? "below" : "on";
 }
 
 /** Under target is favorable for expenses; over target is favorable for income. */

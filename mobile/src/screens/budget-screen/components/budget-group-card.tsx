@@ -31,6 +31,7 @@ import {
 import { useBudgetActuals } from "@/screens/budget-screen/hooks/use-budget-actuals";
 import {
   budgetDirection,
+  budgetScale,
   type BudgetGroup,
 } from "@/screens/budget-screen/selectors/budget-selectors";
 import {
@@ -212,8 +213,9 @@ export function BudgetGroupCard({
     currency,
   };
 
+  const scale = budgetScale(group.budgetHistory);
   const formatAmount = (value: number) =>
-    formatMoneyWithCurrency(value, currency);
+    formatMoneyWithCurrency(value, currency, scale);
 
   const statusColor = stats.favorable ? theme.success : theme.error;
 
@@ -309,7 +311,12 @@ export function BudgetGroupCard({
           <View style={styles.stat}>
             <Text style={styles.statLabel}>{t("budgetVariance")}</Text>
             <AmountText style={[styles.statValue, { color: statusColor }]}>
-              {formatSignedMoneyWithCurrency(stats.variance, currency, true)}
+              {formatSignedMoneyWithCurrency(
+                stats.variance,
+                currency,
+                true,
+                scale,
+              )}
             </AmountText>
           </View>
         )}

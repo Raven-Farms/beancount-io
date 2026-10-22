@@ -181,6 +181,7 @@ describe("budgetPanelRowAccessibilityValue", () => {
     account: "Expenses:Food",
     shortAccount: "Food",
     currency: "USD",
+    scale: 2,
     budget: 500,
     actual: 400,
     progressPercent: 80,
