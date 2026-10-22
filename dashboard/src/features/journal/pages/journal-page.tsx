@@ -35,6 +35,7 @@ import { NewDirectiveDialog } from "@/features/journal/components/new-directive-
 import { EntryContextDialog } from "@/features/journal/components/entry-context-dialog";
 import { ExportJournalButton } from "@/features/journal/components/export-journal-button";
 import { JournalFilters } from "@/features/journal/components/journal-filters";
+import { JOURNAL_SUBTYPES } from "@/features/journal/components/journal-filter-buttons";
 import { JournalPagination } from "@/features/journal/components/journal-pagination";
 import {
   JournalLoadingState,
@@ -58,18 +59,23 @@ import { normalizeListSearchOffset } from "@/common/lib/list-search-params";
 const DEFAULT_DIRECTIVE_TYPES: DirectiveType[] = [DirectiveType.TRANSACTION];
 const DEFAULT_STRING_FILTER: string[] = [];
 
-// Saved filters are decoded before they reach the filters or the query's
-// enum variables; a wrong-shaped value falls back to the default (w4/m39).
-const DIRECTIVE_TYPES = new Set<string>(Object.values(DirectiveType));
-const directiveTypesStorage = {
+// Saved filters are decoded before they reach the filters or the query: a
+// wrong-shaped list falls back to the default, and only values the filter
+// offers survive, since the API rejects any other kind (w4/m39).
+const allowedListStorage = <T extends string>(
+  allowed: ReadonlySet<string>,
+) => ({
   deserializer: (raw: string) =>
-    decodeStringList(raw, (value): value is DirectiveType =>
-      DIRECTIVE_TYPES.has(value),
-    ),
-};
-const subtypesStorage = {
-  deserializer: (raw: string) => decodeStringList(raw),
-};
+    decodeStringList(raw, (value): value is T => allowed.has(value)),
+});
+const directiveTypesStorage = allowedListStorage<DirectiveType>(
+  new Set(Object.values(DirectiveType)),
+);
+const transactionSubtypesStorage = allowedListStorage(
+  JOURNAL_SUBTYPES.transaction,
+);
+const documentSubtypesStorage = allowedListStorage(JOURNAL_SUBTYPES.document);
+const customSubtypesStorage = allowedListStorage(JOURNAL_SUBTYPES.custom);
 
 const JournalContent = () => {
   const { t } = useTranslations();
@@ -100,19 +106,19 @@ const JournalContent = () => {
     useLocalStorageState<string[]>(
       `journal.${ledgerId}.transactionSubtypes`,
       DEFAULT_STRING_FILTER,
-      subtypesStorage,
+      transactionSubtypesStorage,
     );
   const [selectedDocumentSubtypes, setSelectedDocumentSubtypes] =
     useLocalStorageState<string[]>(
       `journal.${ledgerId}.documentSubtypes`,
       DEFAULT_STRING_FILTER,
-      subtypesStorage,
+      documentSubtypesStorage,
     );
   const [selectedCustomSubtypes, setSelectedCustomSubtypes] =
     useLocalStorageState<string[]>(
       `journal.${ledgerId}.customSubtypes`,
       DEFAULT_STRING_FILTER,
-      subtypesStorage,
+      customSubtypesStorage,
     );
   const [showMetadata, setShowMetadata] = useLocalStorageState(
     `journal.${ledgerId}.showMetadata`,

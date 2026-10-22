@@ -88,7 +88,7 @@ vi.mock("@/features/journal/components/journal-filters", () => ({
         {selectedTransactionSubtypes.join(",")}
       </output>
       <output data-testid="postings">{String(showPostings)}</output>
-      <button onClick={() => onTransactionSubtypesChange(["!"])}>
+      <button onClick={() => onTransactionSubtypesChange(["pending"])}>
         Pending
       </button>
       <button onClick={() => onShowPostingsChange(true)}>Postings</button>
@@ -171,7 +171,7 @@ describe("journal filter persistence", () => {
     const { rerender } = render(<LedgerJournalPage />);
     fireEvent.click(screen.getByRole("button", { name: "Pending" }));
     fireEvent.click(screen.getByRole("button", { name: "Postings" }));
-    expect(screen.getByTestId("subtypes")).toHaveTextContent("!");
+    expect(screen.getByTestId("subtypes")).toHaveTextContent("pending");
 
     // Same mounted page, different ledger — as a client-side ledger switch.
     params = { ledgerOwner: "bob", ledgerName: "shop" };
@@ -181,7 +181,7 @@ describe("journal filter persistence", () => {
 
     params = { ledgerOwner: "alice", ledgerName: "books" };
     rerender(<LedgerJournalPage />);
-    expect(screen.getByTestId("subtypes")).toHaveTextContent("!");
+    expect(screen.getByTestId("subtypes")).toHaveTextContent("pending");
     expect(screen.getByTestId("postings")).toHaveTextContent("true");
   });
 
@@ -191,6 +191,6 @@ describe("journal filter persistence", () => {
     unmount();
 
     render(<LedgerJournalPage />);
-    expect(screen.getByTestId("subtypes")).toHaveTextContent("!");
+    expect(screen.getByTestId("subtypes")).toHaveTextContent("pending");
   });
 });

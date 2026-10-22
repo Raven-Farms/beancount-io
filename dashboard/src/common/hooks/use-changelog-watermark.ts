@@ -26,6 +26,8 @@ const READ_IDS_STORAGE = {
   syncAcrossTabs: true,
   deserializer: (raw: string) => decodeStringList(raw),
 };
+// Module-level so the storage hook's listener effect keeps one default.
+const NO_READ_IDS: string[] = [];
 const SITE_URL = "https://beancount.io";
 
 function parseTime(value: unknown): number | null {
@@ -125,7 +127,7 @@ export function useChangelogWatermark(): ChangelogWatermark {
   // Locale-independent identities, not transport ids — see releaseIdentity.
   const [readIds, setReadIds] = useLocalStorageState<string[]>(
     READ_IDS_KEY,
-    [],
+    NO_READ_IDS,
     READ_IDS_STORAGE,
   );
   // Releases published before this instant never count as new. Recorded once,

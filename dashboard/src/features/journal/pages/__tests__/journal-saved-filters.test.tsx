@@ -181,17 +181,33 @@ describe("malformed saved Journal filters", () => {
 
   it("keeps valid saved members and drops invalid ones before the query", () => {
     save("directiveTypes", ["Note", "NotADirective", 3, null, "Open"]);
-    save("transactionSubtypes", ["!", { flag: "*" }, "*"]);
-    save("customSubtypes", ["", "budget"]);
+    save("transactionSubtypes", ["pending", { flag: "*" }, 3, "cleared"]);
+    save("customSubtypes", ["budget"]);
     save("showPostings", true);
     render(<LedgerJournalPage />);
 
     expect(lastQuery()).toMatchObject({
       directiveTypes: ["Note", "Open"],
-      transactionSubtypes: ["!", "*"],
-      customSubtypes: ["", "budget"],
+      transactionSubtypes: ["pending", "cleared"],
+      customSubtypes: ["budget"],
       documentSubtypes: undefined,
     });
+  });
+
+  // The API accepts only the kinds the filter buttons offer, so a saved
+  // `*`, `attached` or empty string failed the read on every reload.
+  it.each([
+    ["transactionSubtypes", ["*", "!", "Cleared", "cleared"], ["cleared"]],
+    ["documentSubtypes", ["attached", "linked"], ["linked"]],
+    ["customSubtypes", ["", "budget"], ["budget"]],
+    ["transactionSubtypes", ["*"], undefined],
+    ["documentSubtypes", ["attached"], undefined],
+    ["customSubtypes", [""], undefined],
+  ])("sends %s %j to the query as %j", (name, saved, sent) => {
+    save(name, saved);
+    render(<LedgerJournalPage />);
+    expect(screen.getByText("Empty")).toBeInTheDocument();
+    expect(lastQuery()[name]).toEqual(sent);
   });
 
   it("keeps a saved empty directive list", () => {
