@@ -43,12 +43,15 @@ export async function persistSession(
  * Sign In asks for an account choice.
  */
 export async function forgetSessionFromPreviousInstall(): Promise<void> {
-  const stored = await SecureStore.getItemAsync("session").catch(() => null);
-  if (stored === null) return;
   // The system browser's cookies survive an uninstall too, so the consent page
   // would still offer the previous account's one-tap Approve: the next Sign In
-  // has to ask for an account choice, as after a sign-out (w21/318).
+  // has to ask for an account choice, as after a sign-out (w21/318). On every
+  // fresh install, found session or not: Android's Keystore data does not
+  // outlive an uninstall, so the session is gone and the cookies are not
+  // (w21/442).
   await markAccountChoiceNeeded().catch(() => undefined);
+  const stored = await SecureStore.getItemAsync("session").catch(() => null);
+  if (stored === null) return;
   try {
     const session = deserializeSession(stored);
     if (session?.kind === "oauth") {

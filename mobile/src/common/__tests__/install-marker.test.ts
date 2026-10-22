@@ -58,7 +58,7 @@ describe("claimInstallMarker", () => {
 
   // w21/318: a reinstall that found a stored session left the browser's cookies
   // for it, so the first Sign In still offered its one-tap Approve.
-  it("asks for an account choice at the next Sign In when it found a session", () => {
+  it("asks for an account choice at the next Sign In after any fresh install", () => {
     const session = fs
       .readFileSync(path.join(__dirname, "..", "vars", "session.ts"), "utf8")
       .replace(/\s+/gu, "");
@@ -72,8 +72,9 @@ describe("claimInstallMarker", () => {
     const deleted = forget.indexOf(
       'awaitSecureStore.deleteItemAsync("session")',
     );
-    expect(found > -1 && mark > found).toBe(true);
-    // Marked before the session is dropped, and only when there was one.
+    // w21/442: marked whether or not a session was found, as Android finds
+    // none after an uninstall yet keeps the browser's cookies.
+    expect(found > -1 && mark > -1 && mark < found).toBe(true);
     expect(mark < deleted).toBe(true);
   });
 });
