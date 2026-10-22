@@ -55,6 +55,7 @@ import {
 import { applySavedIdentity, resolveSaveExit } from "./save-exit";
 import { selectOutcomeFailure } from "./save-failure";
 import { isEntryGone } from "@/screens/transaction-detail-screen/selectors/select-entry-gone";
+import { selectedTransactionVar } from "@/screens/transaction-detail-screen/open-transaction-detail";
 import { RouteLedgerUnavailable } from "@/components/route-ledger-unavailable";
 import { i18n } from "@/translations";
 import { useIsHere } from "@/common/hooks/use-is-here";
@@ -360,6 +361,11 @@ export const EditTransactionScreen = (): JSX.Element => {
         if (!stillDirty) {
           savedOutRef.current = true;
           const exit = resolveSaveExit(targetEntryHash, saved.entryHash);
+          // An edit that kept the entry's hash leaves the detail screen behind
+          // with the copy stashed when its row was opened. It predates the
+          // edit, and the screen preferred it to the refetched entry, so the
+          // save looked lost: drop it, here or not (w21/388).
+          if (exit.kind === "unchanged") selectedTransactionVar(null);
           // `dismiss(2)` pops two screens from wherever the user is now; left
           // during "Saving…", they stay where they are (w21/194).
           const here = isHere();
