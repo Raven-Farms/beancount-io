@@ -225,12 +225,24 @@ function applyAccountFilter(
   value: string,
 ): DirectiveJson[] {
   if (!value) return directives;
-  const matches = REGEX_SYNTAX.test(value)
-    ? makeMatcher(value)
-    : makeComponentRunMatcher(value);
+  const matches = makeAccountNameMatcher(value);
   return directives.filter((directive) =>
     getEntryAccounts(directive).some((name) => matches(name)),
   );
+}
+
+/**
+ * Whether an account name satisfies an account filter: the one rule behind the
+ * main journal and the legacy journal endpoint (REST, GraphQL and MCP), so
+ * `Assets:Cash` returns the same accounts from both (w21/328).
+ */
+export function makeAccountNameMatcher(
+  value: string,
+): (accountName: string) => boolean {
+  const matches = REGEX_SYNTAX.test(value)
+    ? makeMatcher(value)
+    : makeComponentRunMatcher(value);
+  return (accountName) => matches(accountName);
 }
 
 /** A whole run of `:`-delimited components, case-insensitively. */

@@ -13,6 +13,7 @@ import type { DirectiveJson } from "@rustledger/wasm";
 import type { JournalAmountPublic } from "@/foundation/ledger-api-types";
 import {
   getDirectiveSourceId,
+  makeAccountNameMatcher,
   type EntrySourceLocation,
 } from "@/foundation/rustledger";
 import type { PostingCostJson, PostingJson } from "@rustledger/wasm";
@@ -280,6 +281,10 @@ export function runLegacyJournal(
   }
 
   const searchLower = searchQuery ? searchQuery.toLowerCase() : "";
+  // Compiled once for the whole list, not per entry.
+  const accountMatcher = accountFilter
+    ? makeAccountNameMatcher(accountFilter)
+    : null;
   if (
     searchQuery ||
     accountFilter ||
@@ -309,18 +314,11 @@ export function runLegacyJournal(
         if (!searchableText.includes(searchLower)) return false;
       }
 
-      if (accountFilter) {
+      if (accountMatcher) {
         let accountMatch = false;
-        let regex: RegExp | null = null;
-        try {
-          regex = new RegExp(accountFilter, "i");
-        } catch {
-          regex = null;
-        }
-        const test = (account: string): boolean =>
-          regex
-            ? regex.test(account)
-            : account.toLowerCase().includes(accountFilter.toLowerCase());
+        // The main journal's rule (w21/328): a plain name is a whole run of
+        // components, not a substring; regex syntax keeps Fava's search.
+        const test = accountMatcher;
         if (entry.type === "transaction") {
           for (const posting of entry.postings) {
             if (test(posting.account)) {
