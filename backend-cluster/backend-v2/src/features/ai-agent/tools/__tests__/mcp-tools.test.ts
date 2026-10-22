@@ -493,6 +493,102 @@ describe("executeEditLedgerFiles", () => {
     });
   });
 
+  // w23/028: the in-product agent's combined tool can mix kinds of change to
+  // one path; each path still reaches the commit as a single operation.
+  describe("several changes to one path", () => {
+    const run = (existing: Record<string, string>, files: unknown[]) => {
+      const ledgerRepo = {
+        getFilesContent: jest.fn(async ({ paths }: { paths: string[] }) =>
+          paths
+            .filter((path) => path in existing)
+            .map((path) => ({
+              path,
+              content: existing[path]!,
+              sha: `sha-${path}`,
+            })),
+        ),
+        changeFiles: jest.fn().mockResolvedValue(undefined),
+      };
+      const result = executeEditLedgerFiles(
+        {
+          services: { ledgerRepo } as any,
+          identity: IDENTITY,
+          ledgerId: LEDGER_ID,
+        },
+        { description: "edit", files: files as any, dry_run: false },
+      );
+      return { ledgerRepo, result };
+    };
+    const committed = (ledgerRepo: { changeFiles: jest.Mock }) =>
+      ledgerRepo.changeFiles.mock.calls[0]![0].operations;
+
+    it("creates a new file with the edits that follow its creation", async () => {
+      const { ledgerRepo, result } = run({}, [
+        { operation: "create", path: "new.bean", content: "; a\n; b\n" },
+        {
+          operation: "update",
+          path: "new.bean",
+          old_string: "; b",
+          new_string: "; c",
+        },
+      ]);
+      expect(await result).toMatchObject({ ok: true, result: { count: 1 } });
+      expect(committed(ledgerRepo)).toEqual([
+        { operation: "create", path: "new.bean", content: "; a\n; c\n" },
+      ]);
+    });
+
+    it("overwrites an existing file that is deleted and created again", async () => {
+      const { ledgerRepo, result } = run({ "main.bean": "; old\n" }, [
+        { operation: "delete", path: "main.bean" },
+        { operation: "create", path: "main.bean", content: "; new\n" },
+      ]);
+      expect(await result).toMatchObject({ ok: true });
+      expect(committed(ledgerRepo)).toEqual([
+        {
+          operation: "update",
+          path: "main.bean",
+          content: "; new\n",
+          sha: "sha-main.bean",
+        },
+      ]);
+    });
+
+    it.each([
+      [
+        [
+          { operation: "delete", path: "main.bean" },
+          {
+            operation: "update",
+            path: "main.bean",
+            old_string: "a",
+            new_string: "b",
+          },
+        ],
+        "changed after it is deleted",
+      ],
+      [
+        [
+          { operation: "create", path: "n.bean", content: "x" },
+          { operation: "delete", path: "n.bean" },
+        ],
+        "created and deleted",
+      ],
+    ])(
+      "refuses a sequence that cannot fold, before any request",
+      async (files, problem) => {
+        const { ledgerRepo, result } = run({ "main.bean": "a" }, files);
+        expect(await result).toMatchObject({
+          ok: false,
+          errorCode: "BAD_USER_INPUT",
+          error: expect.stringContaining(problem),
+        });
+        expect(ledgerRepo.getFilesContent).not.toHaveBeenCalled();
+        expect(ledgerRepo.changeFiles).not.toHaveBeenCalled();
+      },
+    );
+  });
+
   it("create: base64-encodes content and never fetches existing content", async () => {
     const ledgerRepo = {
       getFilesContent: jest.fn(),

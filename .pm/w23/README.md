@@ -36,6 +36,5 @@
 - [031](./031.md) — deleting `main.bean` commits with "No new bean-check errors" (post-write check fails open) and breaks every read; its dry run says `SERVICE_UNAVAILABLE`
 - [030](./030.md) — `updateLedgerFiles`, append and include rewrites decode non-UTF-8 files leniently and commit U+FFFD over untouched bytes
 - [029](./029.md) — `renameLedgerFile` matches include lines literally: misses relative includes in subdirectories, falsely refuses, and with `updateIncludes` rewrites an unrelated include to a missing file
-- [028](./028.md) — two `old_string` edits to one file in one `updateLedgerFiles` call: preview shows both, commit silently keeps only the last
 - [022](./blocked/022.md) — report rustledger BQL gaps upstream (`cost(sum(position))`, `neg`/`filter_currency`, `meta('lineno')`, `AT value`, `BALANCES FROM`) — **blocked:** filing in an external tracker needs the user's approval
 - [026](./blocked/026.md) — streaming archive route for MCP OAuth clients over 8 MiB (option 1 from 023) — **blocked:** an ADR 0007 trust-boundary decision for the owner

@@ -388,6 +388,13 @@ One tool per kind of change, each batching its files into one commit:
 | `updateLedgerFiles` | `path` with either `old_string`, `new_string` (an exact replacement; the old text must occur once) or `content` (the complete replacement text). |
 | `deleteLedgerFiles` | `path`.                                                                                                            |
 
+Several items may name the same file. They apply in order, each exact-text
+replacement matching the text the items before it produced, and the file is
+committed once with the result, so the preview's diff is what lands. A path
+may not be created twice, created and then deleted, or changed after it is
+deleted in one call; those are refused as `BAD_USER_INPUT` before anything is
+read.
+
 Send plain UTF-8 text, not base64. For example, these are arguments to
 `updateLedgerFiles` for a preview; use an existing path and exact text from your
 own ledger:

@@ -29,6 +29,7 @@ const description =
   "Create, update, replace, or delete files in a single atomic commit.\n" +
   "  create: new text file — provide plain UTF-8 text content (NOT base64).\n" +
   "  update: str_replace on a text file — old_string must appear exactly once.\n" +
+  "  Several operations on one path apply in order, each to the text the previous one produced.\n" +
   "  replace: overwrite entire text file — provide plain UTF-8 text content (NOT base64).\n" +
   "  delete: remove a file.\n" +
   "  Each new/resulting file is limited to 1 MiB of UTF-8 bytes, including dry runs.\n" +
@@ -119,41 +120,119 @@ type EditLedgerFilesResult = {
 };
 
 /**
- * The post-change contents for every touched path — the same transformation
- * the commit applies — so a dry run can diff and check the projection
- * without committing. `null` projects a deletion. Later ops chain onto
- * earlier ones for the same path.
+ * Refuses a batch whose changes to one path cannot fold into the single
+ * operation the commit sends for that path — before any request (w23/028).
  */
-function projectContents(
-  fileCache: Map<string, { content: string; sha: string }>,
-  files: {
-    operation: string;
-    path: string;
-    content?: string;
-    old_string?: string;
-    new_string?: string;
-  }[],
-): Map<string, string | null> {
-  const projected = new Map<string, string | null>();
+function assertFoldable(files: FileOperation[]): void {
+  const seen = new Map<string, FileOperation["operation"][]>();
   for (const file of files) {
-    if (file.operation === "create" || file.operation === "replace") {
-      projected.set(file.path, file.content ?? "");
-      continue;
-    }
-    if (file.operation === "delete") {
-      projected.set(file.path, null);
-      continue;
-    }
-    const base = projected.has(file.path)
-      ? projected.get(file.path)
-      : fileCache.get(file.path)?.content;
-    if (base === undefined || base === null) continue;
-    projected.set(
-      file.path,
-      base.split(file.old_string ?? "").join(file.new_string ?? ""),
-    );
+    const prior = seen.get(file.path) ?? [];
+    const refuse = (problem: string) => {
+      throw new BadUserInputError(
+        `${file.path}: ${problem} in one call`,
+        "files",
+        "Send each file once with its final change: chain several `old_string` edits to it, or give its whole new content.",
+      );
+    };
+    if (file.operation === "create" && prior.includes("create"))
+      refuse("is created twice");
+    if (file.operation === "delete" && prior.includes("create"))
+      refuse("is created and deleted");
+    if (prior.at(-1) === "delete" && file.operation !== "create")
+      refuse(
+        file.operation === "delete"
+          ? "is deleted twice"
+          : "is changed after it is deleted",
+      );
+    seen.set(file.path, [...prior, file.operation]);
   }
-  return projected;
+}
+
+/**
+ * Folds every change to one path into the one operation the commit sends for
+ * it, and returns the post-change contents (`null` projects a deletion) that a
+ * dry run diffs and checks. Later changes chain onto earlier ones, so the
+ * preview and the commit apply the same edits and refuse the same inputs.
+ * One operation per path was a correctness requirement, not a nicety: each
+ * Gitea operation writes the whole file, so two edits built from the original
+ * text committed only the last (w23/028).
+ */
+function foldOperations(
+  fileCache: Map<string, { content: string; sha: string }>,
+  files: FileOperation[],
+): {
+  operations: LedgerChangeFileOperation[];
+  projected: Map<string, string | null>;
+} {
+  // `create` marks a new file; one created again after this call deleted it
+  // is an overwrite of the existing file.
+  const touched = new Map<
+    string,
+    { content: string | null; create: boolean }
+  >();
+  for (const f of files) {
+    const state = touched.get(f.path);
+    const current = state ? state.content : fileCache.get(f.path)?.content;
+    if (f.operation === "create") {
+      touched.set(f.path, {
+        content: f.content,
+        create: !(current === null && fileCache.has(f.path)),
+      });
+      continue;
+    }
+    // Categorized rather than left to the boundary's message sniffing,
+    // which made this NOT_FOUND only because of its wording (w5/051).
+    if (current === undefined || current === null)
+      throw new NotFoundError("File", f.path);
+    const create = state?.create ?? false;
+    if (f.operation === "replace") {
+      touched.set(f.path, { content: f.content, create });
+      continue;
+    }
+    if (f.operation === "delete") {
+      touched.set(f.path, { content: null, create });
+      continue;
+    }
+    // update (str_replace), matched against the text earlier edits produced
+    const count = current.split(f.old_string).length - 1;
+    if (count === 0)
+      // The file exists; it is the argument that does not match it. The
+      // same wording used to read as NOT_FOUND, as if the file were gone.
+      throw new BadUserInputError(
+        `${f.path}: old_string does not occur in the file`,
+        "old_string",
+        "Read the file's current text with `readLedgerFiles` and copy `old_string` from it exactly, whitespace included.",
+      );
+    if (count > 1)
+      // The caller's to fix by sending more context. As a plain Error it
+      // read as a server fault with a hint to retry (w5/036).
+      throw new BadUserInputError(
+        `${f.path}: old_string matches ${count} times (must match exactly once — add more context lines)`,
+        "old_string",
+        "Extend `old_string` with neighbouring lines until it is unique in the file, or use `replace` to overwrite the whole file.",
+      );
+    const at = current.indexOf(f.old_string);
+    touched.set(f.path, {
+      content:
+        current.slice(0, at) +
+        f.new_string +
+        current.slice(at + f.old_string.length),
+      create,
+    });
+  }
+
+  const operations: LedgerChangeFileOperation[] = [];
+  const projected = new Map<string, string | null>();
+  for (const [path, { content, create }] of touched) {
+    projected.set(path, content);
+    const sha = fileCache.get(path)?.sha;
+    if (content === null) operations.push({ operation: "delete", path, sha });
+    // A create over a file that exists stays a create, so the preview and
+    // the commit refuse it as they always have.
+    else if (create) operations.push({ operation: "create", path, content });
+    else operations.push({ operation: "update", path, content, sha });
+  }
+  return { operations, projected };
 }
 
 export async function executeEditLedgerFiles(
@@ -181,6 +260,7 @@ export async function executeEditLedgerFiles(
         ...file,
         path: normalizeAgentRepoPath(file.path),
       }));
+      assertFoldable(normalizedFiles);
       const pathsToFetch = [
         ...new Set(
           normalizedFiles
@@ -209,69 +289,9 @@ export async function executeEditLedgerFiles(
           }
         }
 
-        const operations: LedgerChangeFileOperation[] = [];
-        for (const f of normalizedFiles) {
-          if (f.operation === "create") {
-            operations.push({
-              operation: "create",
-              path: f.path,
-              content: f.content,
-            });
-            continue;
-          }
-
-          const cached = fileCache.get(f.path);
-          // Categorized rather than left to the boundary's message sniffing,
-          // which made this NOT_FOUND only because of its wording (w5/051).
-          if (!cached) throw new NotFoundError("File", f.path);
-
-          if (f.operation === "replace") {
-            operations.push({
-              operation: "update",
-              path: f.path,
-              content: f.content,
-              sha: cached.sha,
-            });
-            continue;
-          }
-
-          if (f.operation === "delete") {
-            operations.push({
-              operation: "delete",
-              path: f.path,
-              sha: cached.sha,
-            });
-            continue;
-          }
-
-          // update (str_replace)
-          const count = cached.content.split(f.old_string).length - 1;
-          if (count === 0)
-            // The file exists; it is the argument that does not match it. The
-            // same wording used to read as NOT_FOUND, as if the file were gone.
-            throw new BadUserInputError(
-              `${f.path}: old_string does not occur in the file`,
-              "old_string",
-              "Read the file's current text with `readLedgerFiles` and copy `old_string` from it exactly, whitespace included.",
-            );
-          if (count > 1)
-            // The caller's to fix by sending more context. As a plain Error it
-            // read as a server fault with a hint to retry (w5/036).
-            throw new BadUserInputError(
-              `${f.path}: old_string matches ${count} times (must match exactly once — add more context lines)`,
-              "old_string",
-              "Extend `old_string` with neighbouring lines until it is unique in the file, or use `replace` to overwrite the whole file.",
-            );
-          operations.push({
-            operation: "update",
-            path: f.path,
-            content: cached.content.replace(f.old_string, f.new_string),
-            sha: cached.sha,
-          });
-        }
-        return { fileCache, operations };
+        return { fileCache, ...foldOperations(fileCache, normalizedFiles) };
       };
-      const { fileCache, operations } = await prepare();
+      const { fileCache, operations, projected } = await prepare();
       // Only exact-text edits and creations are re-applied after a lost race:
       // a whole-file `replace` or a `delete` would silently overwrite or drop
       // the change that won, so those surface the conflict instead.
@@ -296,10 +316,8 @@ export async function executeEditLedgerFiles(
           message: description,
           dryRun: true,
         });
-        // Build the post-change contents in memory — the same transformation
-        // the commit below applies — and check THAT ledger: no commit, no
-        // branch, just bean-check over the projection.
-        const projected = projectContents(fileCache, normalizedFiles);
+        // Check the post-change contents the commit below would write: no
+        // commit, no branch, just bean-check over the projection.
         const diff = [...projected].map(([path, after]) => ({
           path,
           diff: unifiedDiff(path, fileCache.get(path)?.content ?? null, after),
@@ -462,7 +480,7 @@ export const LEDGER_FILE_OPERATIONS = {
         .strict(),
       z.object({ path: filePath, content: fullContent }).strict(),
     ]),
-    "Change existing text files in one atomic commit: per file, either replace an exact text (old_string must appear exactly once) with new_string, or overwrite the whole file with content.",
+    "Change existing text files in one atomic commit: per file, either replace an exact text (old_string must appear exactly once) with new_string, or overwrite the whole file with content. Several items for one file apply in order, each to the text the previous one produced.",
     (file) =>
       "content" in file
         ? { operation: "replace", ...file }

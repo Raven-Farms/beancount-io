@@ -43,6 +43,9 @@ async function fixture() {
     }),
   );
   const changeLedgerFiles = jest.fn();
+  const checkProjectedErrors = jest.fn(async () => ({
+    data: { success: true, data: [] },
+  }));
   const authorization = new AuthorizationService(
     { check: jest.fn().mockResolvedValue(true) },
     jest.fn(),
@@ -52,6 +55,7 @@ async function fixture() {
       {
         getPublicApiClient: async () => ({
           ledgers: { getLedgerFilesContent, changeLedgerFiles },
+          reports: { checkProjectedErrors },
         }),
       } as never,
       authorization,
@@ -66,6 +70,7 @@ async function fixture() {
   await Promise.all([client.connect(a), server.connect(b)]);
   return {
     changeLedgerFiles,
+    checkProjectedErrors,
     getLedgerFilesContent,
     preview: (path: string) =>
       client.callTool({
@@ -227,6 +232,164 @@ describe("one call to a file tool", () => {
             text: decode(content),
           })),
         ).toEqual(expected);
+      } finally {
+        await f.close();
+      }
+    },
+  );
+});
+
+/**
+ * w23/028. The preview chained edits to one file, but the commit built each
+ * from the original text and sent one whole-file write per edit, so only the
+ * last landed — under a success that named the file twice.
+ */
+describe("several changes to one file in one call", () => {
+  type Committed = {
+    files: {
+      operation: string;
+      path: string;
+      content?: string;
+      sha?: string;
+    }[];
+  };
+  const edits = (
+    f: Awaited<ReturnType<typeof fixture>>,
+    name: string,
+    files: Record<string, string>[],
+    dry_run: boolean,
+  ) =>
+    f.client.callTool({
+      name,
+      arguments: { ledger: "alice/main", description: "edit", dry_run, files },
+    });
+  const outcome = (result: Awaited<ReturnType<typeof edits>>) =>
+    result.structuredContent as {
+      result?: {
+        summary: string;
+        count: number;
+        diff: { path: string; diff: string }[];
+      };
+      error?: { code: string; message: string };
+    };
+
+  it("commits every old_string edit to the file, as the preview showed", async () => {
+    const f = await fixture();
+    f.changeLedgerFiles.mockResolvedValue({
+      data: { success: true, data: {} },
+    });
+    const files = [
+      {
+        path: "main.bean",
+        old_string: '01-05 * "Cafe"',
+        new_string: '01-05 * "Bakery"',
+      },
+      // Matches only the text the first edit produced.
+      { path: "main.bean", old_string: '"Bakery"', new_string: '"Bakery Two"' },
+      {
+        path: "main.bean",
+        old_string: '02-05 * "Cafe"',
+        new_string: '02-05 * "Diner"',
+      },
+    ];
+    const final = '2026-01-05 * "Bakery Two"\n2026-02-05 * "Diner"\n';
+    try {
+      const preview = outcome(await edits(f, "updateLedgerFiles", files, true));
+      expect(preview.error).toBeUndefined();
+      expect(preview.result!.count).toBe(1);
+      expect(preview.result!.diff).toHaveLength(1);
+      expect(preview.result!.diff[0]!.diff).toContain(
+        '+2026-01-05 * "Bakery Two"',
+      );
+      expect(preview.result!.diff[0]!.diff).toContain('+2026-02-05 * "Diner"');
+      // bean-check ran over the text the commit will write.
+      expect(f.checkProjectedErrors).toHaveBeenCalledWith("alice", "main", {
+        files: [
+          { path: "main.bean", content: Buffer.from(final).toString("base64") },
+        ],
+      });
+
+      const commit = outcome(await edits(f, "updateLedgerFiles", files, false));
+      expect(commit.error).toBeUndefined();
+      expect(commit.result!.summary).toMatch(
+        /^Committed 1 change\(s\) to main\.bean\./,
+      );
+      const [, , body] = f.changeLedgerFiles.mock.calls[0] as [
+        string,
+        string,
+        Committed,
+      ];
+      expect(body.files).toHaveLength(1);
+      expect(body.files[0]).toMatchObject({
+        operation: "update",
+        path: "main.bean",
+        sha: "s1",
+      });
+      expect(Buffer.from(body.files[0]!.content!, "base64").toString()).toBe(
+        final,
+      );
+    } finally {
+      await f.close();
+    }
+  });
+
+  it("refuses alike in the preview and the commit an edit that an earlier one made ambiguous", async () => {
+    const f = await fixture();
+    // The first edit gives `01-05` a second occurrence.
+    const files = [
+      {
+        path: "main.bean",
+        old_string: '02-05 * "Cafe"',
+        new_string: '01-05 * "Cafe"',
+      },
+      { path: "main.bean", old_string: "01-05", new_string: "01-06" },
+    ];
+    try {
+      for (const dryRun of [true, false]) {
+        expect(
+          outcome(await edits(f, "updateLedgerFiles", files, dryRun)).error,
+        ).toMatchObject({
+          code: "BAD_USER_INPUT",
+          message: expect.stringContaining(
+            "main.bean: old_string matches 2 times",
+          ),
+        });
+      }
+      expect(f.changeLedgerFiles).not.toHaveBeenCalled();
+    } finally {
+      await f.close();
+    }
+  });
+
+  it.each([
+    [
+      "createLedgerFiles",
+      [
+        { path: "new.bean", content: "; a\n" },
+        { path: "new.bean", content: "; b\n" },
+      ],
+      "created twice",
+    ],
+    [
+      "deleteLedgerFiles",
+      [{ path: "main.bean" }, { path: "main.bean" }],
+      "deleted twice",
+    ],
+  ])(
+    "%s refuses one path named twice before any request",
+    async (name, files, problem) => {
+      const f = await fixture();
+      try {
+        for (const dryRun of [true, false]) {
+          expect(
+            outcome(await edits(f, name, files, dryRun)).error,
+          ).toMatchObject({
+            code: "BAD_USER_INPUT",
+            message: expect.stringContaining(problem),
+          });
+        }
+        expect(f.getLedgerFilesContent).not.toHaveBeenCalled();
+        expect(f.changeLedgerFiles).not.toHaveBeenCalled();
       } finally {
         await f.close();
       }
