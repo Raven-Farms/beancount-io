@@ -140,3 +140,8 @@
 - [411](./411.md) — New Transaction: changing payee keeps first payee's accounts
 - [412](./412.md) — Payee fill ranks FROM/TO independently; can fill same account twice
 - [413](./413.md) — Parked keypad flow: overwrite, JPY ×100, double submit, closed accounts
+- [414](./414.md) — Home 1M/3M count back from last entry, not today (240 sibling)
+- [415](./415.md) — No operating_currency: Home shows $0.00 USD, all "Not in total"
+- [416](./416.md) — Zero change from zero baseline reads "+$0.00" in gain colour
+- [417](./417.md) — Latest Updates renders blank card on empty feed
+- [418](./418.md) — Spending card never shows its two totals; empty ledger $0–$1 axis
