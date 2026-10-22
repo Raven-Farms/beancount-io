@@ -1,3 +1,4 @@
+import { currencyMinorUnits } from "@/common/currency-util";
 import { routeText } from "@/common/route-text";
 import { memo, useEffect, useRef, useState } from "react";
 import { createSingleFlight, type SingleFlight } from "@/common/single-flight";
@@ -471,6 +472,8 @@ const MultiPostingsTransactionScreenComponent = () => {
   }>();
 
   const currency = currencies.length > 0 ? currencies[0] : "USD";
+  // Amounts are written at the currency's own minor unit (w21/231).
+  const minorUnits = currencyMinorUnits(currency);
 
   const [postings, setPostings] = useState<Posting[]>(() => [
     makePosting({ isAuto: false }),
@@ -556,8 +559,9 @@ const MultiPostingsTransactionScreenComponent = () => {
               ? prefillTargetAccount
               : target,
             prefillAmount,
+            minorUnits,
           )
-        : createInitialPostings(source, target);
+        : createInitialPostings(source, target, minorUnits);
       // Seeded once, then again only while untouched: the first seed can come
       // from last session's persisted ranking (w21/110).
       if (
@@ -584,6 +588,7 @@ const MultiPostingsTransactionScreenComponent = () => {
     prefillAmount,
     prefillSourceAccount,
     prefillTargetAccount,
+    minorUnits,
   ]);
 
   const rem = remainder(postings);
@@ -784,12 +789,18 @@ const MultiPostingsTransactionScreenComponent = () => {
                   currency={currency}
                   onPickAccount={() => pickAccountForPosting(i)}
                   onChangeAmount={(input) =>
-                    setPostings((prev) => updatePostingAmount(prev, i, input))
+                    setPostings((prev) =>
+                      updatePostingAmount(prev, i, input, minorUnits),
+                    )
                   }
                   onToggleAuto={() =>
-                    setPostings((prev) => toggleLastPostingAuto(prev))
+                    setPostings((prev) =>
+                      toggleLastPostingAuto(prev, minorUnits),
+                    )
                   }
-                  onRemove={() => setPostings((prev) => removePosting(prev, i))}
+                  onRemove={() =>
+                    setPostings((prev) => removePosting(prev, i, minorUnits))
+                  }
                 />
               ))}
             </FadeInView>
@@ -797,7 +808,7 @@ const MultiPostingsTransactionScreenComponent = () => {
           <TouchableOpacity
             style={styles.addPostingRow}
             activeOpacity={0.6}
-            onPress={() => setPostings((prev) => addPosting(prev))}
+            onPress={() => setPostings((prev) => addPosting(prev, minorUnits))}
             accessibilityRole="button"
             accessibilityLabel={t("addPosting")}
           >

@@ -739,3 +739,72 @@ test("parseExactAmount still refuses what is not a number in any script", () => 
   expect(parseExactAmount("۱٫")).toBe(null);
   expect(parseExactAmount("١٢٫٥٫٠")).toBe(null);
 });
+
+// w21/231: every amount was padded to two decimals, so a typed 1500 JPY was
+// written to the ledger as "1500.00 JPY".
+describe("amounts at the currency's own minor unit", () => {
+  const entry = (
+    postings: ReturnType<typeof makePosting>[],
+    currency: string,
+  ) =>
+    buildEntryInput(postings, {
+      date: "2026-10-21",
+      payee: "",
+      narration: "",
+      currency,
+    }).postings;
+
+  it("writes a zero-decimal currency without decimals", () => {
+    let postings = createInitialPostings("Assets:Cash", "Expenses:Food", 0);
+    postings = updatePostingAmount(postings, 0, "-1500", 0);
+    expect(postings[1].amountInput).toBe("1500");
+    expect(entry(postings, "JPY")).toEqual([
+      { account: "Assets:Cash", amount: "-1500 JPY" },
+      { account: "Expenses:Food", amount: "1500 JPY" },
+    ]);
+  });
+
+  it("writes a three-decimal currency to three places", () => {
+    expect(formatExactAmount("12.5", 3)).toBe("12.500");
+    let postings = createInitialPostings("Assets:Cash", "Expenses:Food", 3);
+    postings = updatePostingAmount(postings, 0, "-12.5", 3);
+    expect(entry(postings, "KWD")[1].amount).toBe("12.500 KWD");
+  });
+
+  it("leaves two-decimal currencies exactly as they were", () => {
+    expect(formatExactAmount("12.5")).toBe("12.50");
+    expect(formatExactAmount("12")).toBe("12.00");
+    let postings = createInitialPostings("Assets:Cash", "Expenses:Food");
+    postings = updatePostingAmount(postings, 0, "-1500");
+    expect(entry(postings, "USD")).toEqual([
+      { account: "Assets:Cash", amount: "-1500.00 USD" },
+      { account: "Expenses:Food", amount: "1500.00 USD" },
+    ]);
+  });
+
+  it("never truncates a longer typed value", () => {
+    expect(formatExactAmount("1500.5", 0)).toBe("1500.5");
+    expect(formatExactAmount("1.005", 2)).toBe("1.005");
+  });
+
+  it("zero follows the minor unit too", () => {
+    expect(formatExactAmount("0", 0)).toBe("0");
+    expect(formatExactAmount("0", 2)).toBe("0.00");
+    expect(formatExactAmount("0.000", 0)).toBe("0.000");
+  });
+
+  it("reads the remainder of a JPY draft without cents", () => {
+    expect(formatRemainderAmount("-500", "JPY")).toBe("-¥500");
+    expect(formatRemainderAmount("-500", "USD")).toBe("-$500.00");
+  });
+
+  it("opens a receipt's prefilled legs at the currency's minor unit", () => {
+    const legs = createPrefilledPostings(
+      "Assets:Cash",
+      "Expenses:Food",
+      "1500",
+      0,
+    );
+    expect(legs.map((leg) => leg.amountInput)).toEqual(["-1500", "1500"]);
+  });
+});

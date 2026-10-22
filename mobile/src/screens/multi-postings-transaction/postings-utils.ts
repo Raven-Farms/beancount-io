@@ -2,6 +2,7 @@ import {
   amountScale,
   formatSignedMoneyWithCurrency,
 } from "../../common/number-utils";
+import { currencyMinorUnits } from "../../common/currency-util";
 
 let _postingIdCounter = 0;
 const nextId = () => `posting-${++_postingIdCounter}`;
@@ -156,26 +157,33 @@ function isZeroExact(a: string | null): boolean {
   return a === "0" || /^0\.0+$/.test(a) || /^-0(\.0+)?$/.test(a);
 }
 
-/** Format an exact amount for the amount field / auto-fill display. */
-export function formatExactAmount(amount: string): string {
+/**
+ * Format an exact amount for the amount field / auto-fill display and the
+ * entry payload, padded to the currency's minor unit (`minorUnits`: 2 for USD,
+ * 0 for JPY, 3 for KWD) but never truncating a longer exact value (1.005 stays
+ * 1.005). Padded to two for every currency, a typed 1500 JPY was written to
+ * the ledger as "1500.00 JPY" (w21/231).
+ */
+export function formatExactAmount(amount: string, minorUnits = 2): string {
   if (isZeroExact(amount)) {
-    const scale = amount.includes(".") ? amount.split(".")[1].length : 2;
-    return scale > 0 ? `0.${"0".repeat(scale)}` : "0.00";
+    const scale = amount.includes(".")
+      ? amount.split(".")[1].length
+      : minorUnits;
+    return scale > 0 ? `0.${"0".repeat(scale)}` : "0";
   }
-  // Prefer at least two fractional digits for ordinary two-decimal ledgers,
-  // but never truncate a longer exact value (1.005 stays 1.005).
   const neg = amount.startsWith("-");
   const body = neg ? amount.slice(1) : amount;
   const [whole, frac = ""] = body.split(".");
-  const padded = frac.length >= 2 ? frac : frac.padEnd(2, "0");
-  return `${neg ? "-" : ""}${whole}.${padded}`;
+  const padded =
+    frac.length >= minorUnits ? frac : frac.padEnd(minorUnits, "0");
+  return `${neg ? "-" : ""}${whole}${padded ? `.${padded}` : ""}`;
 }
 
 function amountOrZero(amount: string | null): string {
   return amount === null || isZeroExact(amount) ? "0" : amount;
 }
 
-function applyAutoFill(postings: Posting[]): Posting[] {
+function applyAutoFill(postings: Posting[], minorUnits = 2): Posting[] {
   const lastIdx = postings.length - 1;
   if (lastIdx < 1) return postings;
   const last = postings[lastIdx];
@@ -186,8 +194,8 @@ function applyAutoFill(postings: Posting[]): Posting[] {
     sumOfOthers = addExact(sumOfOthers, amountOrZero(p.amount));
   }
   const autoAmount = isZeroExact(sumOfOthers)
-    ? "0.00"
-    : formatExactAmount(negateExact(sumOfOthers));
+    ? formatExactAmount("0", minorUnits)
+    : formatExactAmount(negateExact(sumOfOthers), minorUnits);
   const parsed = parseExactAmount(autoAmount);
 
   return postings.map((p, i) =>
@@ -219,11 +227,15 @@ export function makePosting(partial?: Partial<Posting>): Posting {
 export function createInitialPostings(
   firstAsset: string,
   firstExpense: string,
+  minorUnits = 2,
 ): Posting[] {
-  return applyAutoFill([
-    makePosting({ account: firstAsset, isAuto: false }),
-    makePosting({ account: firstExpense, isAuto: true }),
-  ]);
+  return applyAutoFill(
+    [
+      makePosting({ account: firstAsset, isAuto: false }),
+      makePosting({ account: firstExpense, isAuto: true }),
+    ],
+    minorUnits,
+  );
 }
 
 /**
@@ -240,22 +252,26 @@ export function createPrefilledPostings(
   sourceAccount: string,
   targetAccount: string,
   amountInput: string,
+  minorUnits = 2,
 ): Posting[] {
   const parsed = parseExactAmount(amountInput);
   const paidAmount =
     parsed === null || isZeroExact(parsed)
-      ? parseExactAmount("0.00")
-      : parseExactAmount(formatExactAmount(negateExact(parsed)));
-  const paidInput = formatExactAmount(paidAmount ?? "0");
-  return applyAutoFill([
-    makePosting({
-      account: sourceAccount,
-      amount: paidAmount,
-      amountInput: paidInput,
-      isAuto: false,
-    }),
-    makePosting({ account: targetAccount, isAuto: true }),
-  ]);
+      ? parseExactAmount(formatExactAmount("0", minorUnits))
+      : parseExactAmount(formatExactAmount(negateExact(parsed), minorUnits));
+  const paidInput = formatExactAmount(paidAmount ?? "0", minorUnits);
+  return applyAutoFill(
+    [
+      makePosting({
+        account: sourceAccount,
+        amount: paidAmount,
+        amountInput: paidInput,
+        isAuto: false,
+      }),
+      makePosting({ account: targetAccount, isAuto: true }),
+    ],
+    minorUnits,
+  );
 }
 
 /**
@@ -336,6 +352,7 @@ export function updatePostingAmount(
   postings: Posting[],
   index: number,
   input: string,
+  minorUnits = 2,
 ): Posting[] {
   const amount = parseExactAmount(input);
   const isLast = index === postings.length - 1;
@@ -349,7 +366,7 @@ export function updatePostingAmount(
         }
       : p,
   );
-  return applyAutoFill(updated);
+  return applyAutoFill(updated, minorUnits);
 }
 
 /**
@@ -363,31 +380,41 @@ function asTyped(posting: Posting): Posting {
     : { ...posting, isAuto: false };
 }
 
-export function toggleLastPostingAuto(postings: Posting[]): Posting[] {
+export function toggleLastPostingAuto(
+  postings: Posting[],
+  minorUnits = 2,
+): Posting[] {
   const lastIdx = postings.length - 1;
   const updated = postings.map((p, i) =>
     i !== lastIdx ? p : p.isAuto ? asTyped(p) : { ...p, isAuto: true },
   );
-  return applyAutoFill(updated);
+  return applyAutoFill(updated, minorUnits);
 }
 
-export function addPosting(postings: Posting[]): Posting[] {
+export function addPosting(postings: Posting[], minorUnits = 2): Posting[] {
   const withNoAuto = postings.map((p, i) =>
     i === postings.length - 1 ? asTyped(p) : p,
   );
-  return applyAutoFill([...withNoAuto, makePosting({ isAuto: true })]);
+  return applyAutoFill(
+    [...withNoAuto, makePosting({ isAuto: true })],
+    minorUnits,
+  );
 }
 
-export function removePosting(postings: Posting[], index: number): Posting[] {
+export function removePosting(
+  postings: Posting[],
+  index: number,
+  minorUnits = 2,
+): Posting[] {
   if (postings.length <= 2) return postings;
   const newPostings = postings.filter((_, i) => i !== index);
   if (index >= newPostings.length) {
     const withAuto = newPostings.map((p, i) =>
       i === newPostings.length - 1 ? { ...p, isAuto: true } : p,
     );
-    return applyAutoFill(withAuto);
+    return applyAutoFill(withAuto, minorUnits);
   }
-  return applyAutoFill(newPostings);
+  return applyAutoFill(newPostings, minorUnits);
 }
 
 export function validatePostings(postings: Posting[]): ValidationError | null {
@@ -419,7 +446,10 @@ export function buildEntryInput(
     meta: {},
     postings: postings.map((posting) => ({
       account: posting.account,
-      amount: `${formatExactAmount(posting.amount ?? "0")} ${opts.currency}`,
+      amount: `${formatExactAmount(
+        posting.amount ?? "0",
+        currencyMinorUnits(opts.currency),
+      )} ${opts.currency}`,
     })),
   };
 }
@@ -447,7 +477,7 @@ export function isRemainderBalanced(rem: string): boolean {
  * refused the entry as unbalanced (w21/075).
  */
 export function formatRemainderAmount(rem: string, currency: string): string {
-  const exact = formatExactAmount(rem);
+  const exact = formatExactAmount(rem, currencyMinorUnits(currency));
   return formatSignedMoneyWithCurrency(
     Number(exact),
     currency,
