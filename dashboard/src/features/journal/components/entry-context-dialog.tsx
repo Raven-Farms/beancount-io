@@ -170,8 +170,12 @@ export function EntryContextDialog({
   // dialog's report counts.
   const [dirty, setDirty] = useState(false);
   const [pendingLeave, setPendingLeave] = useState<(() => void) | null>(null);
+  // A save or delete in flight holds the dialog: its completion closes the
+  // draft it was sent from, never one opened after it (w4/m49).
+  const [writing, setWriting] = useState(false);
 
   const requestLeave = (leave: () => void) => {
+    if (writing) return;
     if (open && dirty) setPendingLeave(() => leave);
     else leave();
   };
@@ -224,6 +228,7 @@ export function EntryContextDialog({
                 skipFocusRestoreRef.current = true;
               }}
               onDirtyChange={setDirty}
+              onPendingChange={setWriting}
               confirmLeave={requestLeave}
               onSuccess={() => {
                 onOpenChange(false);

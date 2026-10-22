@@ -100,7 +100,7 @@
 
 - [ ] **m50** — [Retry failed statement, Account Journal and commodity reads](./m50/README.md) (6 tasks) ← dashboard QA,2026-10-21/22; minor, promoted from328 with a sixth equivalent observer; current variables and read-only recovery preserved.
 
-- [ ] **m49** — [Keep entry-source saves within their pending draft session](./m49/README.md) (6 tasks) ← dashboard QA,2026-10-22; major client draft loss, pending source edits and a different newly opened entry draft disappear at an older modeled acknowledgement; failure/retry controls pass, no hosted writes.
+- [x] **m49** — [Keep entry-source saves within their pending draft session](./done/m49/README.md) (6 tasks) ← dashboard QA,2026-10-22; major client draft loss, pending source edits and a different newly opened entry draft disappear at an older modeled acknowledgement; failure/retry controls pass, no hosted writes.
 
 - [x] **m48** — [Preserve receipt review through recording and failure](./done/m48/README.md) (6 tasks) ← dashboard QA,2026-10-22; minor, pending corrections disappear at success and failed Record drops the corrected review; promoted from973, local responses only.
 

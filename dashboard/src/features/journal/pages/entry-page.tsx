@@ -40,8 +40,16 @@ export default function EntryPage() {
   // (w4/250). A completed delete leaves without asking.
   const [dirty, setDirty] = useState(false);
   const leavingRef = useRef(false);
+  // A save or delete in flight holds the page without asking: its own exit
+  // (the saved entry's address, or the Journal after a delete) is the one
+  // that leaves, so it never lands on a page or draft opened after it (w4/m49).
+  const [writing, setWriting] = useState(false);
+  useBlocker({
+    shouldBlockFn: () => writing && !leavingRef.current,
+    enableBeforeUnload: () => writing,
+  });
   const blocker = useBlocker({
-    shouldBlockFn: () => dirty && !leavingRef.current,
+    shouldBlockFn: () => dirty && !writing && !leavingRef.current,
     enableBeforeUnload: () => dirty,
     withResolver: true,
   });
@@ -74,6 +82,7 @@ export default function EntryPage() {
           entryHash={entryHash}
           ledgerId={ledgerId}
           onDirtyChange={setDirty}
+          onPendingChange={setWriting}
           // The saved source has a new hash; the old address no longer
           // names it. Move there as the save's own exit (w4/251).
           onSaved={async (savedHash) => {

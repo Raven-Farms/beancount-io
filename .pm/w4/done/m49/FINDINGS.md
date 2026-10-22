@@ -36,7 +36,7 @@ Protect pending source changes and completion ownership together. A real Monaco 
 
 ## Dedupe, callers and source match
 
-All board states searched for EntryContext/UpdateLedgerEntrySourceSlice, pending source saves, uncovered edits and obsolete completion. [W3/565](../../w3/done/565.md) owns intentional dismissal; [251](../done/251.md) follows a successful standalone save's identity; [307](../done/307.md) reports failed stale-draft copying. The different file, New Entry, settings and receipt lifecycles linked in the milestone do not guard this editor/dialog. No newer pending-source/session repair was found in targeted history.
+All board states searched for EntryContext/UpdateLedgerEntrySourceSlice, pending source saves, uncovered edits and obsolete completion. [W3/565](../../../w3/done/565.md) owns intentional dismissal; [251](../251.md) follows a successful standalone save's identity; [307](../307.md) reports failed stale-draft copying. The different file, New Entry, settings and receipt lifecycles linked in the milestone do not guard this editor/dialog. No newer pending-source/session repair was found in targeted history.
 
 EntryContextDialog's three production callers are JournalPage, Account report and Overview RecentActivityCard; EntryContextPanel is also rendered by standalone EntryPage. Journal is independently exercised here; the other callers, pending deletion, navigation and standalone completion are regression/audit scope.
 

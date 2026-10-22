@@ -17,14 +17,19 @@ vi.mock("@/common/hooks/use-ledger", () => ({
 vi.mock("@/features/journal/components/entry-context-panel", () => ({
   EntryContextPanel: ({
     onDirtyChange,
+    onPendingChange,
     onSaved,
   }: {
     onDirtyChange?: (dirty: boolean) => void;
+    onPendingChange?: (pending: boolean) => void;
     onSaved?: (hash: string) => void | Promise<void>;
   }) => (
     <>
       <button type="button" onClick={() => onDirtyChange?.(true)}>
         edit source
+      </button>
+      <button type="button" onClick={() => onPendingChange?.(true)}>
+        start saving
       </button>
       <button type="button" onClick={() => void onSaved?.("def456")}>
         save as new hash
@@ -107,5 +112,27 @@ describe("EntryPage unsaved source guard", () => {
       ),
     );
     expect(screen.queryByText("Discard your edit?")).toBeNull();
+  });
+
+  it("holds the page while a save is pending, then leaves by the save's own exit (w4/m49)", async () => {
+    const { router, user } = await mount();
+    await user.click(
+      await screen.findByRole("button", { name: "edit source" }),
+    );
+    await user.click(screen.getByRole("button", { name: "start saving" }));
+
+    // Discarding cannot stop a write already sent, so nothing is offered.
+    await user.click(back());
+    expect(screen.queryByText("Discard your edit?")).toBeNull();
+    expect(router.state.location.pathname).toBe(
+      "/ledger/qa/books/entry/abc123",
+    );
+
+    await user.click(screen.getByRole("button", { name: "save as new hash" }));
+    await waitFor(() =>
+      expect(router.state.location.pathname).toBe(
+        "/ledger/qa/books/entry/def456",
+      ),
+    );
   });
 });
