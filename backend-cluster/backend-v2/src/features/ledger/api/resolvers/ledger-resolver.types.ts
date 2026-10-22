@@ -7,7 +7,10 @@ import {
 } from "type-graphql";
 import { IsEnum, IsOptional, MaxLength, Matches } from "class-validator";
 import { GraphQLJSONObject } from "graphql-scalars";
-import { LedgerTemplate } from "@/features/ledger/workflow/ledger-workflow.types";
+import {
+  LEDGER_DESCRIPTION_MAX,
+  LedgerTemplate,
+} from "@/features/ledger/workflow/ledger-workflow.types";
 
 registerEnumType(LedgerTemplate, {
   name: "LedgerTemplate",
@@ -202,6 +205,10 @@ export class CreateLedgerInput {
   name: string;
 
   @Field(() => String, { nullable: true })
+  @IsOptional()
+  @MaxLength(LEDGER_DESCRIPTION_MAX, {
+    message: `A ledger description can be at most ${LEDGER_DESCRIPTION_MAX} characters`,
+  })
   description?: string;
 
   @Field(() => Boolean, {
@@ -247,6 +254,10 @@ export class UpdateLedgerInput {
   name?: string;
 
   @Field(() => String, { nullable: true })
+  @IsOptional()
+  @MaxLength(LEDGER_DESCRIPTION_MAX, {
+    message: `A ledger description can be at most ${LEDGER_DESCRIPTION_MAX} characters`,
+  })
   description?: string;
 
   @Field(() => Boolean, {

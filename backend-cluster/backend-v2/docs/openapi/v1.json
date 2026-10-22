@@ -1328,7 +1328,8 @@
                   "description": {
                     "type": "string",
                     "nullable": true,
-                    "description": "A short description shown with the ledger."
+                    "maxLength": 2048,
+                    "description": "A short description shown with the ledger, up to 2048 characters."
                   },
                   "private": {
                     "type": "boolean",
@@ -2473,7 +2474,8 @@
                   "description": {
                     "type": "string",
                     "nullable": true,
-                    "description": "A short description shown with the ledger."
+                    "maxLength": 2048,
+                    "description": "A short description shown with the ledger, up to 2048 characters."
                   },
                   "private": {
                     "type": "boolean",

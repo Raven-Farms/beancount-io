@@ -933,6 +933,34 @@ describe("ledger lifecycle through actual adapters and workflow", () => {
       }
     },
   );
+  // w23/037: the repository host's limit came back as a bare
+  // "[Description]: MaxSize", and no schema declared it.
+  it.each(surfaces)(
+    "refuses a description over 2048 characters before the host via %s",
+    async (surface) => {
+      const f = await fixture();
+      const before = f.records.get("alice/main")!.description;
+      try {
+        for (const [operation, input] of [
+          ["create", { name: "long", description: "x".repeat(2049) }],
+          ["update", { description: "x".repeat(2049) }],
+        ] as const) {
+          const r = await f.call(surface, operation, input);
+          expect(r.failed).toBe(true);
+          expect(r.error?.message).toContain("at most 2048");
+        }
+        expect(f.records.has("alice/long")).toBe(false);
+        expect(f.records.get("alice/main")!.description).toBe(before);
+        const atLimit = await f.call(surface, "update", {
+          description: "x".repeat(2048),
+        });
+        expect(atLimit.failed).toBe(false);
+        expect(f.records.get("alice/main")!.description).toHaveLength(2048);
+      } finally {
+        await f.close();
+      }
+    },
+  );
   it.each(surfaces)(
     "deletes repository and linked-bank metadata in the existing order via %s",
     async (surface) => {

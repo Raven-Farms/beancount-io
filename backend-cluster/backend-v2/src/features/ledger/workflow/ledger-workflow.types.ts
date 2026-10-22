@@ -11,6 +11,12 @@ import type { LedgerSetup } from "@/features/ledger/setup/build-ledger";
 
 // --- Inputs (commands / queries) --------------------------------------------
 
+/**
+ * The repository host's limit on a ledger description (Gitea 1.24's
+ * `MaxSize(2048)` on create and edit), declared on every surface (w23/037).
+ */
+export const LEDGER_DESCRIPTION_MAX = 2048;
+
 export enum LedgerTemplate {
   STARTER = "STARTER",
   SAMPLE = "SAMPLE",

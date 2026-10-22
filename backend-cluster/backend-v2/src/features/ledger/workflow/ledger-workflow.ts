@@ -59,6 +59,7 @@ import {
   LedgerOptionsData,
   FavaOptionsData,
   BcioOptionsData,
+  LEDGER_DESCRIPTION_MAX,
   LedgerTemplate,
 } from "./ledger-workflow.types";
 import { createLedger as createLedgerOperation } from "@/features/ledger/operations/create-ledger";
@@ -112,6 +113,20 @@ const workflowLogger = logger.child({ module: "ledger-workflow" });
 // Each miss is a real git clone + beancount parse (see beancount-ledger-v2's
 // load-cached-ledger-file-map.ts), so directive-count fan-out stays deliberately narrow.
 const DIRECTIVE_COUNT_CONCURRENCY = 3;
+
+/**
+ * Refuses a description the repository host would reject as a bare
+ * "[Description]: MaxSize". Gitea counts characters, not UTF-16 units.
+ */
+function assertDescriptionLength(description: string | null | undefined) {
+  const length = description == null ? 0 : [...description].length;
+  if (length > LEDGER_DESCRIPTION_MAX) {
+    throw new BadUserInputError(
+      `description is ${length} characters; a ledger description can be at most ${LEDGER_DESCRIPTION_MAX}`,
+      "description",
+    );
+  }
+}
 
 /**
  * Orchestration for the ledger feature. Owns the cross-service coordination the
@@ -529,6 +544,7 @@ export class LedgerWorkflow implements ILedgerWorkflow {
       resource: userResource(identity.userId),
     });
     const userId = identity.userId;
+    assertDescriptionLength(input.description);
     if (input.setup && input.template) {
       throw new ValidationError(
         "setup",
@@ -694,6 +710,7 @@ export class LedgerWorkflow implements ILedgerWorkflow {
       resource: ledgerResource(ledgerId),
     });
     const userId = identity.userId;
+    assertDescriptionLength(input.description);
     const ledgerUpdate: LedgerUpdate = {
       name: input.name,
       description: input.description,

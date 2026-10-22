@@ -1,6 +1,9 @@
 import { requestPlatform } from "@/server/api/request-platform";
 import { z } from "@/shared/zod-openapi-setup";
-import { LedgerTemplate } from "@/features/ledger/workflow/ledger-workflow.types";
+import {
+  LEDGER_DESCRIPTION_MAX,
+  LedgerTemplate,
+} from "@/features/ledger/workflow/ledger-workflow.types";
 import { setupCatalog, type PresetId } from "@/features/ledger/setup";
 import {
   CREATE_REQUEST_ID_MAX,
@@ -18,8 +21,14 @@ const name = z
   );
 const description = z
   .string()
+  .max(
+    LEDGER_DESCRIPTION_MAX,
+    `A ledger description can be at most ${LEDGER_DESCRIPTION_MAX} characters`,
+  )
   .nullish()
-  .describe("A short description shown with the ledger.");
+  .describe(
+    `A short description shown with the ledger, up to ${LEDGER_DESCRIPTION_MAX} characters.`,
+  );
 const ledgerSetupInput = z
   .object({
     preset: z
