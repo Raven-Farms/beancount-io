@@ -221,4 +221,42 @@ describe("buildLedgerUrl round trip", () => {
       }
     });
   }
+
+  // w21/223: the dashboard's ledger-errors table links to the error's line.
+  describe("a file link with a line number", () => {
+    const file = `${ORIGIN}/ledger/${LEDGER}/files/blob/main/main.bean`;
+    const params = (url: string) =>
+      (
+        resolveAppLink(url, { serverUrl: ORIGIN })?.href as {
+          params: Record<string, string>;
+        }
+      ).params;
+
+    it("opens the editor at that line", () => {
+      expect(params(`${file}?lineNumber=42`)).toEqual({
+        path: "main.bean",
+        ledger: LEDGER,
+        initialLine: "42",
+      });
+    });
+
+    it("ignores a line that is not a positive whole number", () => {
+      for (const bad of [
+        "0",
+        "-3",
+        "4.5",
+        "abc",
+        "",
+        "1e3",
+        "07x",
+        "9999999999",
+      ]) {
+        expect(params(`${file}?lineNumber=${bad}`)).toEqual({
+          path: "main.bean",
+          ledger: LEDGER,
+        });
+      }
+      expect(params(file)).toEqual({ path: "main.bean", ledger: LEDGER });
+    });
+  });
 });

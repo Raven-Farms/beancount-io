@@ -138,6 +138,11 @@ export function resolveAppLink(
       if (!path) {
         return { ledgerFullName, href: "/" };
       }
+      // A positive whole number only; anything else opens at the top.
+      const lineNumber = parsed.searchParams.get("lineNumber") ?? "";
+      const initialLine = /^[1-9]\d{0,8}$/.test(lineNumber)
+        ? lineNumber
+        : undefined;
       return {
         ledgerFullName,
         href: {
@@ -145,7 +150,12 @@ export function resolveAppLink(
           // `ledger` binds the file to the link's ledger: without it the
           // editor opened the *selected* ledger's same-named file, editable,
           // for a link to a ledger the user cannot read (w21/199).
-          params: { path: routeText(path), ledger: ledgerFullName },
+          params: {
+            path: routeText(path),
+            ledger: ledgerFullName,
+            // The dashboard's ledger-errors table links to the error's line.
+            ...(initialLine ? { initialLine } : {}),
+          },
         },
       };
     }
