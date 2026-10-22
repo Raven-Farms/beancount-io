@@ -743,6 +743,8 @@ export const de: Translations = {
   createLedgerNameInvalid:
     "Der Name muss mindestens einen Buchstaben oder eine Ziffer enthalten.",
   createLedgerNameConflict: "Ein Hauptbuch mit diesem Namen existiert bereits.",
+  createLedgerNameReserved:
+    "Dieser Name gehörte zu einem umbenannten Hauptbuch und leitet noch dorthin weiter. Wählen Sie einen anderen Namen.",
   createLedgerSlugPreview: "Wird als {{slug}} erstellt",
   createLedgerDescription: "Beschreibung",
   createLedgerDescriptionPlaceholder: "Optional (leer lassen)",

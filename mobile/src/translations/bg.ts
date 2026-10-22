@@ -724,6 +724,8 @@ export const bg: Translations = {
   createLedgerNameMaxLength: "Името трябва да е до 100 знака.",
   createLedgerNameInvalid: "Името трябва да съдържа поне една буква или цифра.",
   createLedgerNameConflict: "Вече съществува книга с това име.",
+  createLedgerNameReserved:
+    "Това име е принадлежало на преименувана книга и все още пренасочва към нея. Изберете друго име.",
   createLedgerSlugPreview: "Ще бъде създадена като {{slug}}",
   createLedgerDescription: "Описание",
   createLedgerDescriptionPlaceholder: "По избор",

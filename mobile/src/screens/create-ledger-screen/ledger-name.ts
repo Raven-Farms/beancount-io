@@ -55,7 +55,22 @@ export function generateDefaultLedgerName(existingNames: string[]): string {
   return `${baseName}-${counter}`;
 }
 
-export type CreateLedgerErrorKind = "conflict" | "creating" | "tier" | "other";
+export type CreateLedgerErrorKind =
+  "conflict" | "reserved" | "creating" | "tier" | "other";
+
+function isReservedName(error: unknown): boolean {
+  const gqlErrors = (
+    error as {
+      graphQLErrors?: Array<{ extensions?: { reasonCode?: string } }>;
+    }
+  )?.graphQLErrors;
+  return (
+    Array.isArray(gqlErrors) &&
+    gqlErrors.some(
+      (err) => err.extensions?.reasonCode === "LEDGER_NAME_RESERVED",
+    )
+  );
+}
 
 /** Map backend createLedger failures to field/form error kinds. */
 export function classifyCreateLedgerError(
@@ -68,6 +83,10 @@ export function classifyCreateLedgerError(
         ? error
         : "";
   const lower = message.toLowerCase();
+  // A renamed ledger's former name: no ledger has it, so "already exists" would
+  // be false. Its message also says "choose a different name", so the reason is
+  // read before any text (w21/566).
+  if (isReservedName(error)) return "reserved";
   if (lower.includes("still in progress")) return "creating";
   if (
     lower.includes("already exists") ||

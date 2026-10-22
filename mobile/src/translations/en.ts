@@ -736,6 +736,8 @@ export const en = {
   createLedgerNameMaxLength: "Name must be 100 characters or fewer.",
   createLedgerNameInvalid: "Name must include at least one letter or number.",
   createLedgerNameConflict: "A ledger with this name already exists.",
+  createLedgerNameReserved:
+    "That name belonged to a ledger that was renamed, and still redirects to it. Choose a different name.",
   createLedgerSlugPreview: "Will be created as {{slug}}",
   createLedgerDescription: "Description",
   createLedgerDescriptionPlaceholder: "Optional",

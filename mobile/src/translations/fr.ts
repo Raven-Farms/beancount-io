@@ -743,6 +743,8 @@ export const fr: Translations = {
   createLedgerNameInvalid:
     "Le nom doit inclure au moins une lettre ou un chiffre.",
   createLedgerNameConflict: "Un grand livre portant ce nom existe déjà.",
+  createLedgerNameReserved:
+    "Ce nom appartenait à un registre renommé et y redirige encore. Choisissez un autre nom.",
   createLedgerSlugPreview: "Sera créé sous le nom {{slug}}",
   createLedgerDescription: "Description du grand livre",
   createLedgerDescriptionPlaceholder: "Facultatif (laisser vide)",

@@ -742,6 +742,8 @@ export const es: Translations = {
   createLedgerNameInvalid:
     "El nombre debe incluir al menos una letra o un número.",
   createLedgerNameConflict: "Ya existe un libro con este nombre.",
+  createLedgerNameReserved:
+    "Ese nombre era de un libro renombrado y todavía redirige a él. Elige otro nombre.",
   createLedgerSlugPreview: "Se creará como {{slug}}",
   createLedgerDescription: "Descripción",
   createLedgerDescriptionPlaceholder: "Opcional",

@@ -661,6 +661,8 @@ export const zh: Translations = {
   createLedgerNameMaxLength: "名称不能超过 100 个字符。",
   createLedgerNameInvalid: "名称至少包含一个字母或数字。",
   createLedgerNameConflict: "已存在同名账本。",
+  createLedgerNameReserved:
+    "该名称曾属于一个已改名的账本，目前仍会跳转到它。请换一个名称。",
   createLedgerSlugPreview: "将创建为 {{slug}}",
   createLedgerDescription: "描述",
   createLedgerDescriptionPlaceholder: "可选",

@@ -739,6 +739,8 @@ export const uk: Translations = {
   createLedgerNameInvalid:
     "Назва повинна містити принаймні одну літеру або цифру.",
   createLedgerNameConflict: "Книга з такою назвою вже існує.",
+  createLedgerNameReserved:
+    "Ця назва належала перейменованій книзі й досі перенаправляє на неї. Виберіть іншу назву.",
   createLedgerSlugPreview: "Буде створено як {{slug}}",
   createLedgerDescription: "Опис",
   createLedgerDescriptionPlaceholder: "Необовʼязково",

@@ -743,6 +743,8 @@ export const ca: Translations = {
   createLedgerNameInvalid:
     "El nom ha d'incloure almenys una lletra o un número.",
   createLedgerNameConflict: "Ja existeix un llibre amb aquest nom.",
+  createLedgerNameReserved:
+    "Aquest nom era d'un llibre reanomenat i encara hi redirigeix. Tria un altre nom.",
   createLedgerSlugPreview: "Es crearà com a {{slug}}",
   createLedgerDescription: "Descripció",
   createLedgerDescriptionPlaceholder: "Opcional",

@@ -728,6 +728,8 @@ export const nl: Translations = {
   createLedgerNameInvalid:
     "De naam moet minstens één letter of cijfer bevatten.",
   createLedgerNameConflict: "Er bestaat al een grootboek met deze naam.",
+  createLedgerNameReserved:
+    "Die naam hoorde bij een hernoemd grootboek en verwijst er nog naar door. Kies een andere naam.",
   createLedgerSlugPreview: "Wordt aangemaakt als {{slug}}",
   createLedgerDescription: "Beschrijving",
   createLedgerDescriptionPlaceholder: "Optioneel",

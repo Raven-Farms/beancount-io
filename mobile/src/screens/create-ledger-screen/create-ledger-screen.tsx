@@ -506,6 +506,11 @@ export function CreateLedgerScreen(): JSX.Element {
           setStep(FORM_STEP);
           return;
         }
+        if (kind === "reserved") {
+          setError("name", { message: t("createLedgerNameReserved") });
+          setStep(FORM_STEP);
+          return;
+        }
         if (kind === "creating") {
           // The first attempt is still running under this requestId: the same
           // request, tapped again, returns its ledger (w21/437).

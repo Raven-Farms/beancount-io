@@ -745,6 +745,8 @@ export const sk: Translations = {
   createLedgerNameInvalid:
     "Názov musí obsahovať aspoň jedno písmeno alebo číslicu.",
   createLedgerNameConflict: "Kniha s týmto názvom už existuje.",
+  createLedgerNameReserved:
+    "Tento názov patril premenovanej knihe a stále na ňu presmerúva. Vyberte iný názov.",
   createLedgerSlugPreview: "Vytvorí sa ako {{slug}}",
   createLedgerDescription: "Popis",
   createLedgerDescriptionPlaceholder: "Voliteľné",

@@ -1,3 +1,4 @@
+import { translationLocales } from "../../../translations/__tests__/locale-parity";
 import {
   classifyCreateLedgerError,
   createRequestFingerprint,
@@ -237,6 +238,50 @@ describe("isNewLedgerName", () => {
     const server = /^(?=[a-z0-9_-]*[a-z0-9])[a-z0-9_]+(?:-[a-z0-9_]+)*$/;
     for (const name of ["x-", "a--b", "a-b", "__", "_x_", "---", "9"]) {
       expect(isNewLedgerName(name)).toBe(server.test(slugifyLedgerName(name)));
+    }
+  });
+});
+
+// w21/566: a renamed ledger's former name is reserved, not taken by a ledger the
+// list does not show.
+describe("classifyCreateLedgerError for a reserved name", () => {
+  const failure = (reasonCode: string, message: string) =>
+    Object.assign(new Error(message), {
+      graphQLErrors: [
+        {
+          message,
+          extensions: { code: "CONFLICT", reasonCode, field: "name" },
+        },
+      ],
+    });
+
+  it("is its own kind, whatever the message says", () => {
+    expect(
+      classifyCreateLedgerError(
+        failure(
+          "LEDGER_NAME_RESERVED",
+          "Ledger resource conflict: 'books-a' is the former name of alice/books-b. Choose a different name.",
+        ),
+      ),
+    ).toBe("reserved");
+  });
+
+  it("leaves a name that exists a conflict", () => {
+    expect(
+      classifyCreateLedgerError(
+        failure("LEDGER_NAME_ALREADY_EXISTS", "Choose a different name."),
+      ),
+    ).toBe("conflict");
+  });
+
+  it("is worded in every language", () => {
+    for (const locale of translationLocales()) {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const catalog = require(`../../../translations/${locale}`)[locale];
+      expect(typeof catalog.createLedgerNameReserved).toBe("string");
+      expect(catalog.createLedgerNameReserved).not.toBe(
+        catalog.createLedgerNameConflict,
+      );
     }
   });
 });

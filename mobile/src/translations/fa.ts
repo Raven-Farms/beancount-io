@@ -715,6 +715,8 @@ export const fa: Translations = {
   createLedgerNameMaxLength: "نام باید حداکثر ۱۰۰ نویسه باشد.",
   createLedgerNameInvalid: "نام باید حداقل یک حرف یا عدد داشته باشد.",
   createLedgerNameConflict: "دفترکلی با این نام از قبل وجود دارد.",
+  createLedgerNameReserved:
+    "این نام متعلق به دفتری بود که تغییر نام داده و هنوز به آن هدایت می‌شود. نام دیگری انتخاب کنید.",
   createLedgerSlugPreview: "با نام {{slug}} ایجاد می‌شود",
   createLedgerDescription: "توضیح",
   createLedgerDescriptionPlaceholder: "اختیاری",
