@@ -8,6 +8,7 @@ import {
 import { successResponse } from "@/server/envelope";
 import { checkDirectiveLimitForFileChanges } from "@/core/directive-limit";
 import { NotFoundDetailError } from "@/server/py-errors";
+import { readGiteaRawBuffer } from "@/features/gitea/utils/gitea-file-content";
 import { assertSafeRepoPath, toSafeRepoUrlPath } from "@/shared/safe-repo-path";
 
 /** Python `LedgerFileContentPublic` — fixed projection, nulls included. */
@@ -41,6 +42,43 @@ export function toFileContentPublic(
     last_author_date:
       (item as { last_author_date?: string }).last_author_date ?? null,
   };
+}
+
+/** Largest blob served inline once Gitea's own contents limit is passed. */
+export const MAX_LARGE_FILE_BYTES = 32 * 1024 * 1024;
+
+type GiteaClient = ReturnType<typeof giteaClientForRequest>;
+
+/**
+ * Gitea answers a file past its inline limit (~10 MiB) with `content: null`
+ * and a valid sha. Served as is, a client reads it as an empty document and a
+ * save on that sha replaces the whole file (w21/343). Fetch the blob through
+ * the raw endpoint and return it in the usual base64 form; past
+ * `MAX_LARGE_FILE_BYTES` the read fails with a size error rather than null.
+ */
+export async function withLargeContent(
+  client: GiteaClient,
+  owner: string,
+  repo: string,
+  item: ContentsResponse,
+): Promise<ContentsResponse> {
+  if (
+    item.type !== "file" ||
+    (item.content !== null && item.content !== undefined) ||
+    !(typeof item.size === "number" && item.size > 0)
+  ) {
+    return item;
+  }
+  const bytes = await readGiteaRawBuffer(
+    client.repos,
+    owner,
+    repo,
+    item.path as string,
+    item,
+    undefined,
+    MAX_LARGE_FILE_BYTES,
+  );
+  return { ...item, content: bytes.toString("base64"), encoding: "base64" };
 }
 
 interface CreateFileBody {
@@ -93,7 +131,16 @@ export function setFilesHandler(router: Router): void {
           ctx.body = successResponse(null);
           return;
         }
-        ctx.body = successResponse(toFileContentPublic(data));
+        ctx.body = successResponse(
+          toFileContentPublic(
+            await withLargeContent(
+              client,
+              ctx.params.owner,
+              ctx.params.repo_name,
+              data,
+            ),
+          ),
+        );
       } catch (err) {
         if (is404(err)) {
           ctx.body = successResponse(null);
@@ -121,11 +168,21 @@ export function setFilesHandler(router: Router): void {
         { files },
       );
       const items = (res.data ?? []) as Array<ContentsResponse | null>;
-      ctx.body = successResponse(
-        items
-          .filter((item): item is ContentsResponse => item !== null)
-          .map(toFileContentPublic),
+      const present = items.filter(
+        (item): item is ContentsResponse => item !== null,
       );
+      const filled: ContentsResponse[] = [];
+      for (const item of present) {
+        filled.push(
+          await withLargeContent(
+            client,
+            ctx.params.owner,
+            ctx.params.repo_name,
+            item,
+          ),
+        );
+      }
+      ctx.body = successResponse(filled.map(toFileContentPublic));
     },
   );
 
