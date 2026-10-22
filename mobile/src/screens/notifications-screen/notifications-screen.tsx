@@ -1,3 +1,4 @@
+import { routeText } from "@/common/route-text";
 import {
   ScrollView,
   StyleSheet,
@@ -163,7 +164,7 @@ function ErrorRow({
     router.push({
       pathname: "/(app)/ledger-file-editor",
       params: {
-        path: err.filename!,
+        path: routeText(err.filename!),
         ledger: ledgerId,
         ...(err.lineno != null ? { initialLine: String(err.lineno) } : {}),
       },

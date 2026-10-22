@@ -1,3 +1,4 @@
+import { routeText } from "@/common/route-text";
 import { ledgerWriteFailureMessage } from "@/common/ledger-refusal";
 import { useGuest } from "@/common/guest/guest-context";
 import { useLedgerAccess } from "@/common/hooks/use-ledger-access";
@@ -448,7 +449,7 @@ export function LedgerFileBrowserScreen(): JSX.Element {
           pathname: guest
             ? "/examples/ledger-file-editor"
             : "/(app)/ledger-file-editor",
-          params: { path: createdPath, ledger: ledgerId },
+          params: { path: routeText(createdPath), ledger: ledgerId },
         });
       } catch (createError: unknown) {
         haptics.error();
@@ -559,7 +560,7 @@ export function LedgerFileBrowserScreen(): JSX.Element {
         pathname: guest
           ? "/examples/ledger-file-editor"
           : "/(app)/ledger-file-editor",
-        params: { path: entry.path, ledger: ledgerId },
+        params: { path: routeText(entry.path), ledger: ledgerId },
       });
     }
   };

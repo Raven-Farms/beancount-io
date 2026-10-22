@@ -1,3 +1,4 @@
+import { routeText } from "@/common/route-text";
 import { memo, useEffect, useRef, useState } from "react";
 import { createSingleFlight, type SingleFlight } from "@/common/single-flight";
 import { useAccountCloseDatesState } from "@/common/hooks/use-account-close-dates";
@@ -736,7 +737,7 @@ const MultiPostingsTransactionScreenComponent = () => {
               });
               router.navigate({
                 pathname: "/(app)/payee-input",
-                params: { payee },
+                params: { payee: routeText(payee) },
               });
             }}
           />
@@ -748,7 +749,7 @@ const MultiPostingsTransactionScreenComponent = () => {
               SelectedNarration.setFn((v: string) => setNarration(v));
               router.navigate({
                 pathname: "/(app)/narration-input",
-                params: { narration },
+                params: { narration: routeText(narration) },
               });
             }}
           />

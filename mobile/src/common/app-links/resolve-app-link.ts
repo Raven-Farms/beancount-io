@@ -1,3 +1,4 @@
+import { routeText } from "../route-text";
 import { Href } from "expo-router";
 
 /** Hosted production origin — always accepted by the resolver. */
@@ -144,7 +145,7 @@ export function resolveAppLink(
           // `ledger` binds the file to the link's ledger: without it the
           // editor opened the *selected* ledger's same-named file, editable,
           // for a link to a ledger the user cannot read (w21/199).
-          params: { path, ledger: ledgerFullName },
+          params: { path: routeText(path), ledger: ledgerFullName },
         },
       };
     }

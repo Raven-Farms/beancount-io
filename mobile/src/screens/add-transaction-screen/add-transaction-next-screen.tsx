@@ -1,3 +1,4 @@
+import { routeText } from "@/common/route-text";
 import { memo, useEffect, useMemo, useState } from "react";
 import { ScrollView, StyleSheet, Text, View, Pressable } from "react-native";
 import {
@@ -335,7 +336,7 @@ const AddTransactionNextScreenComponent = () => {
               router.navigate({
                 pathname: "/(app)/payee-input",
                 params: {
-                  payee,
+                  payee: routeText(payee),
                 },
               });
             }}
@@ -351,7 +352,7 @@ const AddTransactionNextScreenComponent = () => {
               router.navigate({
                 pathname: "/(app)/narration-input",
                 params: {
-                  narration,
+                  narration: routeText(narration),
                 },
               });
             }}

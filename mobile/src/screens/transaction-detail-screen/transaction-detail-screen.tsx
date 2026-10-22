@@ -1,3 +1,4 @@
+import { routeText } from "@/common/route-text";
 import { useGuest } from "@/common/guest/guest-context";
 import { useLedgerAccess } from "@/common/hooks/use-ledger-access";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -453,7 +454,7 @@ const TransactionDetailImpl = ({
           ? "/examples/ledger-file-editor"
           : "/(app)/ledger-file-editor",
         params: {
-          path: error.filename ?? "",
+          path: routeText(error.filename ?? ""),
           ledger: ledgerId,
           ...(error.lineno != null
             ? { initialLine: String(error.lineno) }

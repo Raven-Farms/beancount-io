@@ -1,3 +1,4 @@
+import { routeText } from "@/common/route-text";
 import { CardLoadFailure } from "@/components/card-load-failure";
 import { useCallback, useMemo, useState } from "react";
 import {
@@ -237,12 +238,12 @@ function MerchantsDirectory() {
         // `ledger` binds the entry to this ledger, so a later ledger switch
         // cannot revive the merchant under a different one.
         params: {
-          payee: item.merchant.payee,
+          payee: routeText(item.merchant.payee),
           ledger: ledgerId,
           // The spellings this row merged, so the detail counts what the row
           // did (w21/046).
           otherSpellings: item.merchant.otherSpellings
-            ? JSON.stringify(item.merchant.otherSpellings)
+            ? routeText(JSON.stringify(item.merchant.otherSpellings))
             : undefined,
         },
       });

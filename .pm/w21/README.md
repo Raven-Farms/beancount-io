@@ -18,7 +18,6 @@
 - [201](./blocked/201.md) — Missing file: GraphQL returns null, REST/MCP NOT_FOUND; directory path differs too — **blocked:** needs an owner decision on the file-read contract (null vs NOT_FOUND), which the dashboard's README reads and shipped mobile builds rely on
 - [206](./blocked/206.md) — Refund/return receipts are always prefilled as a purchase — **blocked:** needs an owner-approved AI-quota evaluation and a parse-contract decision (`isRefund` vs signed amount)
 - [210](./blocked/210.md) — Holdings sheet labels a user-typed price "Live price" and applies the feed's staleness rule — **blocked:** needs an owner decision on exposing the feed's effective price dates (cross-package contract) and a deploy before mobile can read it
-- [221](./221.md) — "%XX" in free text is decoded twice between screens: narration "50%50" comes back "50P"
 - [222](./222.md) — New File's "already exists" check misses files inside folders
 - [223](./223.md) — Dashboard file links lose ?lineNumber= when opened in the app
 - [224](./224.md) — VoiceOver reads a Recent changes row as the subject only (no author, date or SHA)

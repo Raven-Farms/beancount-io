@@ -1,3 +1,4 @@
+import { routeText } from "@/common/route-text";
 import * as React from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { Feather } from "@expo/vector-icons";
@@ -218,7 +219,7 @@ export function AddTransactionScreen(): JSX.Element {
                         currentAsset,
                         currentExpense,
                         currentCurrency,
-                        currentPayee,
+                        currentPayee: routeText(currentPayee),
                         // onRefresh,
                       },
                     });

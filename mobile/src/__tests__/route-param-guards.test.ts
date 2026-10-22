@@ -92,19 +92,19 @@ describe("the file editor's ledger binding", () => {
     for (const [file, snippet] of [
       [
         "src/screens/ledger-file-browser-screen/index.tsx",
-        "params:{path:createdPath,ledger:ledgerId}",
+        "params:{path:routeText(createdPath),ledger:ledgerId}",
       ],
       [
         "src/screens/ledger-file-browser-screen/index.tsx",
-        "params:{path:entry.path,ledger:ledgerId}",
+        "params:{path:routeText(entry.path),ledger:ledgerId}",
       ],
       [
         "src/screens/transaction-detail-screen/transaction-detail-screen.tsx",
-        'path:error.filename??"",ledger:ledgerId,',
+        'path:routeText(error.filename??""),ledger:ledgerId,',
       ],
       [
         "src/screens/notifications-screen/notifications-screen.tsx",
-        "path:err.filename!,ledger:ledgerId,",
+        "path:routeText(err.filename!),ledger:ledgerId,",
       ],
     ]) {
       expect(compact(file).includes(snippet)).toBe(true);

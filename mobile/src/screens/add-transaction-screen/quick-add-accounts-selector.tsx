@@ -1,3 +1,4 @@
+import { routeText } from "@/common/route-text";
 import { useEffect, useState } from "react";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
 import { useReactiveVar } from "@apollo/client";
@@ -183,7 +184,7 @@ export const QuickAddAccountsSelector = (
                 router.navigate({
                   pathname: "/(app)/payee-input",
                   params: {
-                    payee: selectedPayee,
+                    payee: routeText(selectedPayee),
                     simpleOnly: "true",
                   },
                 });

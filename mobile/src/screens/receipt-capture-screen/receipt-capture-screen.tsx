@@ -1,3 +1,4 @@
+import { routeText } from "@/common/route-text";
 import { memo, useEffect, useRef, useState } from "react";
 import { Alert, StyleSheet, View } from "react-native";
 import { useRouter } from "expo-router";
@@ -155,8 +156,8 @@ const ReceiptCaptureScreenImpl = () => {
         pathname: "/(app)/add-transaction",
         params: {
           prefillDate: phase.date,
-          prefillPayee: phase.payee,
-          prefillNarration: phase.description,
+          prefillPayee: routeText(phase.payee),
+          prefillNarration: routeText(phase.description),
           prefillSourceAccount: phase.sourceAccount,
           prefillTargetAccount: phase.targetAccount,
           prefillAmount: receiptAmountText(phase.amount),
