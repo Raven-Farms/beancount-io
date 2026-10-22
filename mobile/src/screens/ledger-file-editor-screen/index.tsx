@@ -521,7 +521,7 @@ function LedgerFileEditorSession({
         t("ledgerEditorSaveLeftErrorsTitle"),
         t("ledgerEditorSaveLeftErrors", { error: first.message }),
         [
-          { text: t("close"), style: "cancel" },
+          { text: t("done"), style: "cancel" },
           {
             text: t("ledgerEditorViewErrors"),
             onPress: () => router.navigate("/(app)/notifications"),
