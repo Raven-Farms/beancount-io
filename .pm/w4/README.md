@@ -88,7 +88,6 @@
 
 - [327 — Resolve README folder links from the README's directory](./327.md) — minor; dashboard QA, 2026-10-21; child-folder and ./ links lose source context, while folder-row and relative-file controls work; two owned fixtures created/deleted with no residue or ledger errors.
 
-- [326 — Keep calendar year choices inside supported ledger dates](./326.md) — minor; dashboard QA, 2026-10-21; duplicate0001 maps to year zero, offers February29 and crashes the Journal section; retry clears the draft, valid year1/year4 controls pass and no write is attempted.
 
 
 
