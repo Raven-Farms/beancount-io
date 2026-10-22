@@ -25,6 +25,14 @@ describe("matchSuggestions", () => {
     ]);
   });
 
+  it("shows spellings that differ only in runs of whitespace as one row, and finds it by a single-spaced query (w21/509)", () => {
+    const rows = ["Qa Whole Foods", "Qa Whole  Foods"];
+    expect(matchSuggestions(rows, "", 30)).toEqual(["Qa Whole Foods"]);
+    expect(matchSuggestions(["Qa Whole  Foods"], "whole foods", 30)).toEqual([
+      "Qa Whole  Foods",
+    ]);
+  });
+
   it("keeps the plain behaviour: trim, drop empties, substring, limit", () => {
     expect(
       matchSuggestions([" Coffee ", "", "  ", "Tea", "coffee"], "cof", 30),
