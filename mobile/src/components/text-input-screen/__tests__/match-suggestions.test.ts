@@ -33,6 +33,15 @@ describe("matchSuggestions", () => {
     ]);
   });
 
+  it("finds a straight apostrophe by the curly one Smart Punctuation types (w21/519)", () => {
+    expect(matchSuggestions(["Trader Joe's"], "Trader Joe\u2019", 30)).toEqual([
+      "Trader Joe's",
+    ]);
+    expect(
+      matchSuggestions(["Trader Joe's", "Trader Joe\u2019s"], "", 30),
+    ).toEqual(["Trader Joe's"]);
+  });
+
   it("keeps the plain behaviour: trim, drop empties, substring, limit", () => {
     expect(
       matchSuggestions([" Coffee ", "", "  ", "Tea", "coffee"], "cof", 30),

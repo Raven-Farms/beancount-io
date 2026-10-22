@@ -7,10 +7,23 @@
  * the history each (w21/410).
  * Recurrence and manual marks keyed by the displayed spelling saw only part
  * of a merchant's history, and a mark was lost when the display flipped
- * (w21/169). Import-free so the unit runner can load it.
+ * (w21/169). Curly quotes read as straight ones (w21/519). Import-free so the unit runner can load it.
  */
 export function merchantKey(payee: string): string {
-  return payee.trim().normalize("NFC").replace(/\s+/g, " ").toLowerCase();
+  return foldQuotes(payee.trim().normalize("NFC"))
+    .replace(/\s+/g, " ")
+    .toLowerCase();
+}
+
+/**
+ * Curly quotes as the straight ones. iOS Smart Punctuation turns a typed ' into
+ * ’ even in a field with autocorrect off, so "Trader Joe’s" and "Trader Joe's"
+ * were two payees to every lookup that compared them literally (w21/519).
+ */
+export function foldQuotes(text: string): string {
+  return text
+    .replace(/[\u2018\u2019\u02bc]/gu, "'")
+    .replace(/[\u201c\u201d]/gu, '"');
 }
 
 /** Every spelling's series merged under its merchant key, by date. */

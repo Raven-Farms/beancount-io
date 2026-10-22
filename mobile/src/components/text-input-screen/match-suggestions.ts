@@ -1,3 +1,5 @@
+import { foldQuotes } from "../../common/merchant-key";
+
 /**
  * A suggestion in the form text is compared in: NFC, lower-cased, runs of whitespace as one space, with the dot
  * a lower-cased Turkish "İ" leaves behind (`i` + U+0307) taken off. Plain
@@ -5,7 +7,7 @@
  * for a composed "café" in a ledger that stores "Cafe" + U+0301 (w21/257).
  */
 function fold(text: string): string {
-  return text
+  return foldQuotes(text)
     .normalize("NFC")
     .toLowerCase()
     .replace(/i\u0307/gu, "i")
@@ -30,7 +32,7 @@ export function matchSuggestions(
   for (const suggestion of suggestions) {
     const item = suggestion.trim();
     if (!item) continue;
-    const key = item.normalize("NFC").replace(/\s+/gu, " ");
+    const key = foldQuotes(item.normalize("NFC")).replace(/\s+/gu, " ");
     if (seen.has(key)) continue;
     seen.add(key);
     if (!query || fold(item).includes(query)) {

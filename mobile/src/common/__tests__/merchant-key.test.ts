@@ -7,6 +7,15 @@ import { merchantKey, seriesByMerchant } from "../merchant-key";
  */
 const streaming = (date: string) => ({ date, currency: "USD", amount: 15.49 });
 
+describe("merchantKey with curly quotes", () => {
+  it("reads Smart Punctuation's ’ as the apostrophe typed (w21/519)", () => {
+    expect(merchantKey("Trader Joe\u2019s")).toBe(merchantKey("Trader Joe's"));
+    expect(merchantKey("The \u201cBig\u201d Cafe")).toBe(
+      merchantKey('The "Big" Cafe'),
+    );
+  });
+});
+
 describe("seriesByMerchant", () => {
   it("reads drifted spellings as one merchant's history", () => {
     const merged = seriesByMerchant(

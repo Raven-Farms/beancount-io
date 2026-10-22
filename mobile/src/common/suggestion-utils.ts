@@ -20,6 +20,7 @@
  *  - Slow / failed queries never block: with no results we surface nothing and
  *    the add flow behaves exactly as before.
  */
+import { foldQuotes } from "./merchant-key";
 
 /** Where a suggestion came from. */
 type SuggestionSource = "history" | "llm";
@@ -324,7 +325,7 @@ export function deriveTwoPostingSuggestions(
   entries: JournalEntryLike[],
   payee: string,
 ): { from: SideSuggestions; to: SideSuggestions } {
-  const target = payee.trim();
+  const target = foldQuotes(payee.trim());
   const fromCounts = new Map<string, number>();
   const toCounts = new Map<string, number>();
   const pairCounts = new Map<string, { pair: AccountPair; count: number }>();
@@ -342,7 +343,7 @@ export function deriveTwoPostingSuggestions(
   };
 
   for (const entry of entries) {
-    if (entry.payee?.trim() !== target) {
+    if (foldQuotes(entry.payee?.trim() ?? "") !== target) {
       continue;
     }
     const pair = extractTwoPostingPair(entry);
