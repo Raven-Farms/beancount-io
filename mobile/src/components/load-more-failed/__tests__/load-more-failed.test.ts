@@ -31,6 +31,34 @@ describe("a paged list whose next page failed", () => {
     });
   }
 
+  // w21/465: a successful pull to refresh left the failure footer under page one.
+  it("clears the failure once a refresh succeeds", () => {
+    const transactions = read(
+      "screens/transactions-screen/transactions-screen.tsx",
+    );
+    const refresh = transactions.slice(
+      transactions.indexOf("constonRefresh=async()=>{"),
+    );
+    const refetched = refresh.indexOf("awaitrefetch();");
+    const cleared = refresh.indexOf("setLoadMoreFailedFor(null);");
+    expect(refetched > -1 && cleared > refetched).toBe(true);
+    // Not on the failure path.
+    expect(cleared < refresh.indexOf("}catch(err){")).toBe(true);
+
+    const account = read(
+      "screens/account-detail-screen/account-detail-screen.tsx",
+    );
+    const accountRefresh = account.slice(
+      account.indexOf("constonRefresh=async()=>{"),
+    );
+    const awaited = accountRefresh.indexOf("accountsRefetch(),]);");
+    const accountCleared = accountRefresh.indexOf(
+      "setLoadMoreFailedFor(null);",
+    );
+    expect(awaited > -1 && accountCleared > awaited).toBe(true);
+    expect(accountCleared < accountRefresh.indexOf("}finally{")).toBe(true);
+  });
+
   it("has its message in every language", () => {
     const dir = path.join(__dirname, "../../../translations");
     const missing = fs

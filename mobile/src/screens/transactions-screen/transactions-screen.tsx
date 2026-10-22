@@ -267,6 +267,9 @@ const TransactionList = () => {
     try {
       setIsRefreshing(true);
       await refetch();
+      // The list is back at its first page: the next page failed on the old one
+      // and is asked for again by scrolling (w21/465).
+      setLoadMoreFailedFor(null);
     } catch (err) {
       console.error("Error refreshing transactions:", err);
     } finally {

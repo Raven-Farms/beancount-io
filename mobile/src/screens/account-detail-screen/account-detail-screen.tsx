@@ -412,6 +412,8 @@ const AccountDetailScreenImpl = ({
         pricesRefetch(),
         accountsRefetch(),
       ]);
+      // Back at the first page: scrolling asks for the next one again (w21/465).
+      setLoadMoreFailedFor(null);
     } finally {
       setRefreshing(false);
     }
