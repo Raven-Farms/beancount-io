@@ -1,4 +1,4 @@
-import { type BcioOptionsPublic } from "@/foundation/fava";
+import { type BcioOptionsPublic, unwrapFavaResponse } from "@/foundation/fava";
 import { logger } from "@/shared/logger";
 import { BadUserInputError } from "@/shared/errors";
 import { resolveEntryFile } from "@/features/ledger/utils/entry-file-resolver";
@@ -106,7 +106,10 @@ export class DirectiveAppendWorkflow implements IDirectiveAppendWorkflow {
     // Still asserted here, ahead of any work, so a bad explicit path is a
     // refusal rather than a wasted read. Auto-routed targets are asserted too
     // now — by the repo service, on every operation it is handed.
-    if (path !== undefined) assertSafeRepoPath(path, "path");
+    if (path !== undefined) {
+      assertSafeRepoPath(path, "path");
+      await this.assertLoaded(ledgerId, identity, path);
+    }
 
     const bcioData = await this.fetchBcioOptions(ledgerId, identity);
 
@@ -251,6 +254,34 @@ export class DirectiveAppendWorkflow implements IDirectiveAppendWorkflow {
    * a write, and routing to `main.bean` when a ledger declares no rules is the
    * long-standing fallback.
    */
+  /**
+   * A target the caller names must be a file the ledger loads: written
+   * anywhere else, the entry commits and no read ever shows it (w23/035).
+   * Auto-routed targets are the ledger's own routing rules and may create
+   * the file they route to.
+   */
+  private async assertLoaded(
+    ledgerId: string,
+    identity: Identity,
+    path: string,
+  ): Promise<void> {
+    const [ledgerOwner, ledgerName] = ledgerId.split("/");
+    const favaApiClient = await this.favaClientFactory.getPublicApiClient(
+      ledgerId,
+      identity.userId,
+    );
+    const sourceFiles = await unwrapFavaResponse(
+      favaApiClient.reports.getLedgerSourceFiles(ledgerOwner, ledgerName),
+      "get ledger source files",
+    );
+    if (sourceFiles.includes(path)) return;
+    throw new BadUserInputError(
+      `${path} is not included by the ledger (main.bean does not reach it); add an include for it, or omit path to auto-route`,
+      "path",
+      "Name a file the ledger loads (the `source-files` read lists them), or create the file and `include` it first.",
+    );
+  }
+
   private async fetchBcioOptions(
     ledgerId: string,
     identity: Identity,

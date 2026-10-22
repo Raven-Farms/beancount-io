@@ -359,7 +359,10 @@ whole ledger rather than record an entry, so change them deliberately with
 entries they annotate are accepted. Each directive goes to the file the
 ledger's own `bcio` options assign its type and date, unless `path` names one,
 and is inserted after the last directive dated on or before it rather than at
-the end of the file. A file whose own directives are out of date order gets
+the end of the file. A `path` must be a file the ledger loads — one of its
+`source-files` — or the call is refused as `BAD_USER_INPUT`: an entry written
+anywhere else would never appear in a report. Create and `include` a new file
+first. A file whose own directives are out of date order gets
 them appended, and says so in `appendedUnsorted`.
 
 Before committing, it bean-checks the projected ledger. New errors are a

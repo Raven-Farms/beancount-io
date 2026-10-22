@@ -91,6 +91,8 @@ async function fixture(caller = identity) {
     /** Errors the projected check reports for the overlaid ledger. */
     projectedErrors: [] as { message: string; source?: null }[],
     routeTransactionsTo: null as string | null,
+    /** The ledger's include closure; every fixture file unless narrowed. */
+    sourceFiles: undefined as string[] | undefined,
   };
   const commits: Commit[] = [];
 
@@ -131,6 +133,8 @@ async function fixture(caller = identity) {
             transaction_file: state.routeTransactionsTo,
           }),
         checkProjectedErrors,
+        getLedgerSourceFiles: async () =>
+          envelope(state.sourceFiles ?? [...state.files.keys()]),
       },
       ledgers: {
         getLedgerFile: async (_o: string, _n: string, q: { path: string }) =>
@@ -596,6 +600,51 @@ describe("appending Beancount text through the real adapters", () => {
       await f.close();
     }
   });
+
+  // w23/035: an explicit path outside the include closure committed an entry
+  // no read would ever show.
+  it.each(["rest", "gql", "mcp"] as const)(
+    "refuses an explicit path the ledger does not load on %s",
+    async (surface) => {
+      const f = await fixture();
+      f.state.files.set("2026/03.bean", "");
+      f.state.files.set("notes.txt", "");
+      f.state.sourceFiles = ["main.bean", "2026/02.bean"];
+      try {
+        for (const path of ["2026/03.bean", "qa-new.bean", "notes.txt"]) {
+          for (const dryRun of [true, false]) {
+            const result = await f.call(surface, { text: TXN, path, dryRun });
+            expect(result.ok).toBe(false);
+            expect(JSON.stringify(result.ok ? null : result.error)).toContain(
+              `${path} is not included by the ledger`,
+            );
+          }
+        }
+        expect(f.commits).toEqual([]);
+      } finally {
+        await f.close();
+      }
+    },
+  );
+
+  it.each(["rest", "gql", "mcp"] as const)(
+    "still writes to an included file in a subdirectory on %s",
+    async (surface) => {
+      const f = await fixture();
+      f.state.files.set("2026/02.bean", "");
+      f.state.sourceFiles = ["main.bean", "2026/02.bean"];
+      try {
+        const result = await f.call(surface, {
+          text: TXN,
+          path: "2026/02.bean",
+        });
+        expect(result.ok).toBe(true);
+        expect(f.commits[0].files[0]).toMatchObject({ path: "2026/02.bean" });
+      } finally {
+        await f.close();
+      }
+    },
+  );
 
   it("honours an explicit path over the routing rules", async () => {
     const f = await fixture();

@@ -33,6 +33,8 @@ const TXN = [
 function fixture(
   options: {
     files?: Record<string, string>;
+    /** The ledger's include closure; every fixture file unless given. */
+    sourceFiles?: string[];
     /** Files whose bytes are not valid UTF-8, as the repo service marks them. */
     lossy?: string[];
     transactionFile?: string | null;
@@ -67,6 +69,12 @@ function fixture(
   const favaClientFactory = {
     getPublicApiClient: async () => ({
       reports: {
+        getLedgerSourceFiles: async () => ({
+          data: {
+            success: true,
+            data: options.sourceFiles ?? [...files.keys()],
+          },
+        }),
         getLedgerBcioOptions: async () => ({
           data: {
             success: true,
