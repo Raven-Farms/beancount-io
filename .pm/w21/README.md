@@ -69,7 +69,6 @@
 - [470](./470.md) — Pull to refresh skips Spending's to-today read (337 follow-up)
 - [471](./471.md) — Upcoming entries can fill all of Recent Transactions
 - [315](./blocked/315.md) — In-app commits signed with Gitea username and real email (no full_name, no noreply) — **blocked:** needs the owner's noreply-address and published-history decisions, and a production backfill of existing Gitea users that can't be verified here
-- [383](./383.md) — Browse ledgers retry shows false "Your ledgers will appear here"
 - [384](./384.md) — Accounts/Reports expand state carries over to another ledger
 - [385](./385.md) — Stale delete still toasts "Failed to delete" over the gone state (250 follow-up)
 - [386](./386.md) — Arabic thousands separator read as decimal: ۱٬۲۳۴ saved as 1.234 (230 regression)

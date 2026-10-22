@@ -370,7 +370,9 @@ export function LedgerSelectionScreen() {
           </View>
         )}
         ListEmptyComponent={
-          state.loading || waitingForSearch ? (
+          // A retry in flight is a load: it must not read as an empty account
+          // ("Your ledgers will appear here") (w21/383).
+          state.loading || state.refreshing || waitingForSearch ? (
             skeleton
           ) : (
             <View style={styles.state}>
@@ -408,6 +410,10 @@ export function LedgerSelectionScreen() {
         }
         ListFooterComponent={
           <View style={styles.state}>
+            {/* With rows above, the failure is told here, beside Retry. */}
+            {state.error && state.items.length > 0 ? (
+              <Text style={styles.text}>{t("discoveryLoadError")}</Text>
+            ) : null}
             {state.error ? (
               <Pressable
                 accessibilityRole="button"

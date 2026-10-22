@@ -218,3 +218,48 @@ describe("ledger discovery", () => {
     expect(canWriteLedger({ push: false, admin: true })).toBe(true);
   });
 });
+
+// w21/383: a retry from a failed first load showed "Your ledgers will appear
+// here" while it ran, because the snapshot had `refreshing` and no error.
+describe("a retry from a failed first load", () => {
+  it("is a load in flight, with nothing to call empty", async () => {
+    let fail = true;
+    const retry = deferred<{ items: DiscoveryItem[]; hasMore: boolean }>();
+    const store = new DiscoveryStore({
+      page: async () => {
+        if (fail) throw new Error("offline");
+        return retry.promise;
+      },
+    } as never);
+    await store.load("starred", "");
+    expect(store.getSnapshot().error).toBe(true);
+    expect(store.getSnapshot().items.length).toBe(0);
+
+    fail = false;
+    const running = store.load("starred", "", true);
+    const during = store.getSnapshot();
+    // The same snapshot the screen reads: no rows, no error, a refresh running.
+    expect(during.items.length).toBe(0);
+    expect(during.error).toBe(false);
+    expect(during.refreshing).toBe(true);
+    retry.resolve({ items: [ledger("a/b", true)], hasMore: false });
+    await running;
+    expect(store.getSnapshot().items.length).toBe(1);
+  });
+
+  it("the screen shows the skeleton for that snapshot, and the failure beside Retry", () => {
+    const src = require("fs")
+      .readFileSync(require("path").join(__dirname, "..", "index.tsx"), "utf8")
+      .replace(/\s+/g, "");
+    expect(
+      src.includes(
+        "state.loading||state.refreshing||waitingForSearch?(skeleton",
+      ),
+    ).toBe(true);
+    expect(
+      src.includes(
+        '{state.error&&state.items.length>0?(<Textstyle={styles.text}>{t("discoveryLoadError")}</Text>)',
+      ),
+    ).toBe(true);
+  });
+});
