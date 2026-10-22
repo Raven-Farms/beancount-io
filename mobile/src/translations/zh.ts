@@ -520,6 +520,7 @@ export const zh: Translations = {
   keyboardAccessoryInsert: "插入 {{symbol}}",
   keyboardAccessoryDismiss: "隐藏键盘",
   ledgerEditorErrorLine: "第 {{line}} 行",
+  ledgerEditorJumpToLine: "跳转到第 {{line}} 行",
   ledgerEditorErrorCount: {
     other: "{{count}} 个错误",
   },

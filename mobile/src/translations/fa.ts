@@ -562,6 +562,7 @@ export const fa: Translations = {
   keyboardAccessoryInsert: "درج {{symbol}}",
   keyboardAccessoryDismiss: "پنهان کردن صفحه‌کلید",
   ledgerEditorErrorLine: "خط {{line}}",
+  ledgerEditorJumpToLine: "رفتن به خط {{line}}",
   ledgerEditorErrorCount: {
     one: "{{count}} خطا",
     other: "{{count}} خطا",

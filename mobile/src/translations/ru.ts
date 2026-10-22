@@ -579,6 +579,7 @@ export const ru: Translations = {
   keyboardAccessoryInsert: "Вставить {{symbol}}",
   keyboardAccessoryDismiss: "Скрыть клавиатуру",
   ledgerEditorErrorLine: "строка {{line}}",
+  ledgerEditorJumpToLine: "Перейти к строке {{line}}",
   ledgerEditorErrorCount: {
     one: "{{count}} ошибка",
     few: "{{count}} ошибки",

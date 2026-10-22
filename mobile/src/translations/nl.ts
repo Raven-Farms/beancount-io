@@ -573,6 +573,7 @@ export const nl: Translations = {
   keyboardAccessoryInsert: "{{symbol}} invoegen",
   keyboardAccessoryDismiss: "Toetsenbord verbergen",
   ledgerEditorErrorLine: "regel {{line}}",
+  ledgerEditorJumpToLine: "Ga naar regel {{line}}",
   ledgerEditorErrorCount: {
     one: "{{count}} fout",
     other: "{{count}} fouten",

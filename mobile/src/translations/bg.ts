@@ -569,6 +569,7 @@ export const bg: Translations = {
   keyboardAccessoryInsert: "Вмъкване на {{symbol}}",
   keyboardAccessoryDismiss: "Скриване на клавиатурата",
   ledgerEditorErrorLine: "ред {{line}}",
+  ledgerEditorJumpToLine: "Към ред {{line}}",
   ledgerEditorErrorCount: {
     one: "Грешка: {{count}}",
     other: "Грешки: {{count}}",

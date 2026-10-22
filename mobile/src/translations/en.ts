@@ -577,6 +577,7 @@ export const en = {
   keyboardAccessoryInsert: "Insert {{symbol}}",
   keyboardAccessoryDismiss: "Hide keyboard",
   ledgerEditorErrorLine: "line {{line}}",
+  ledgerEditorJumpToLine: "Jump to line {{line}}",
   ledgerEditorErrorCount: {
     one: "{{count}} error",
     other: "{{count}} errors",

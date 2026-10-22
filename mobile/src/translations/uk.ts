@@ -578,6 +578,7 @@ export const uk: Translations = {
   keyboardAccessoryInsert: "Вставити {{symbol}}",
   keyboardAccessoryDismiss: "Сховати клавіатуру",
   ledgerEditorErrorLine: "рядок {{line}}",
+  ledgerEditorJumpToLine: "Перейти до рядка {{line}}",
   ledgerEditorErrorCount: {
     one: "{{count}} помилка",
     few: "{{count}} помилки",

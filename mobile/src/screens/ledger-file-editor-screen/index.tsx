@@ -259,6 +259,13 @@ function ErrorBanner({
                 // A row that jumps to its line is a button; the label keeps
                 // the warning and arrow glyphs out of its name (w21/141).
                 accessibilityRole={err.lineno != null ? "button" : "text"}
+                accessibilityHint={
+                  err.lineno != null
+                    ? t("ledgerEditorJumpToLine", { line: err.lineno })
+                    : undefined
+                }
+                // A row with no line has nowhere to jump (w21/276).
+                disabled={err.lineno == null}
                 accessibilityLabel={
                   err.lineno != null
                     ? `${err.message}, ${t("ledgerEditorErrorLine", { line: err.lineno })}`

@@ -586,6 +586,7 @@ export const de: Translations = {
   keyboardAccessoryInsert: "{{symbol}} einfügen",
   keyboardAccessoryDismiss: "Tastatur ausblenden",
   ledgerEditorErrorLine: "Zeile {{line}}",
+  ledgerEditorJumpToLine: "Zu Zeile {{line}} springen",
   ledgerEditorErrorCount: {
     one: "{{count}} Fehler",
     other: "{{count}} Fehler",
