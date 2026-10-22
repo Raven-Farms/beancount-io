@@ -29,6 +29,13 @@ export interface CreateLedgerDraft<Values> {
    * requestId the server had long forgotten (w21/066).
    */
   requestedAt?: number;
+  /**
+   * A fingerprint of the request last sent under `requestId`. A resumed draft
+   * has no amount to rebuild that request from, so it carries this instead:
+   * the next create is the same request, or it gets an id of its own
+   * (w21/434).
+   */
+  sentFingerprint?: string;
   values: Values;
 }
 

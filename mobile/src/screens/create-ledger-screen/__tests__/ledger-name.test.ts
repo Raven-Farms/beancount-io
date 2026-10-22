@@ -1,6 +1,9 @@
 import {
   classifyCreateLedgerError,
+  createRequestFingerprint,
   generateDefaultLedgerName,
+  isNewCreateRequest,
+  isRequestIdReuse,
   ledgerSlugPreview,
   slugifyLedgerName,
 } from "../ledger-name";
@@ -72,5 +75,60 @@ describe("Sample-only template payload", () => {
       private: true,
       template: "SAMPLE",
     });
+  });
+});
+
+// w21/434: a resumed draft lost its amount, so its next create was a different
+// request under the old id, and the server refused it for a day.
+describe("a create request's id", () => {
+  const request = (amount: string) => ({
+    name: "household",
+    private: true,
+    setup: { accounts: [{ name: "Assets:Bank", amount }] },
+  });
+
+  it("is told apart by what the request sends", () => {
+    const first = createRequestFingerprint(request("1250.00"));
+    expect(createRequestFingerprint(request("1250.00"))).toBe(first);
+    expect(createRequestFingerprint(request("1300.00"))).not.toBe(first);
+    expect(createRequestFingerprint(request("1250.00").setup)).not.toBe(first);
+  });
+
+  it("is kept for the same request and replaced for a changed one", () => {
+    const sent = createRequestFingerprint(request("1250.00"));
+    // Nothing sent yet: the id is the first request's.
+    expect(isNewCreateRequest(undefined, sent)).toBe(false);
+    // A retry of the same request stays idempotent.
+    expect(isNewCreateRequest(sent, sent)).toBe(false);
+    // A resumed draft with a retyped amount is a request of its own.
+    expect(
+      isNewCreateRequest(sent, createRequestFingerprint(request("99.00"))),
+    ).toBe(true);
+  });
+
+  it("recognises the server's refusal of a reused id", () => {
+    const refusal =
+      "requestId was already used with a different creation request";
+    expect(isRequestIdReuse(new Error(refusal))).toBe(true);
+    expect(isRequestIdReuse({ graphQLErrors: [{ message: refusal }] })).toBe(
+      true,
+    );
+    expect(isRequestIdReuse(new Error("Name conflict"))).toBe(false);
+    expect(isRequestIdReuse(null)).toBe(false);
+  });
+
+  it("is minted again by the screen when the request changes", () => {
+    const source = require("fs")
+      .readFileSync(
+        require("path").join(__dirname, "..", "create-ledger-screen.tsx"),
+        "utf8",
+      )
+      .replace(/\s+/g, "") as string;
+    expect(
+      source.includes(
+        "if(isNewCreateRequest(sentFingerprintRef.current,fingerprint)){requestIdRef.current=newRequestId();",
+      ),
+    ).toBe(true);
+    expect(source.includes("if(isRequestIdReuse(error)){")).toBe(true);
   });
 });

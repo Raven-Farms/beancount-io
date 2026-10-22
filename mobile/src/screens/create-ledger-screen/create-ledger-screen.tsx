@@ -58,7 +58,10 @@ import { LEADING_TEXT_ALIGN, leadingInputTextAlign } from "@/common/rtl";
 import type { ColorTheme } from "@/types/theme-props";
 import {
   classifyCreateLedgerError,
+  createRequestFingerprint,
   generateDefaultLedgerName,
+  isNewCreateRequest,
+  isRequestIdReuse,
   slugifyLedgerName,
   ledgerSlugPreview,
 } from "./ledger-name";
@@ -195,6 +198,8 @@ export function CreateLedgerScreen(): JSX.Element {
   const [presetId, setPresetId] = useState<string | null>(SETUP_PRESETS[0].id);
   const requestIdRef = useRef<string>(newRequestId());
   const requestedAtRef = useRef(Date.now());
+  // The request last sent under `requestId` (w21/434).
+  const sentFingerprintRef = useRef<string | undefined>(undefined);
 
   const schema = useMemo(
     () =>
@@ -282,6 +287,7 @@ export function CreateLedgerScreen(): JSX.Element {
       setStartKind(draft.startKind);
       setPresetId(draft.presetId);
       requestIdRef.current = draft.requestId;
+      sentFingerprintRef.current = draft.sentFingerprint;
       if (draft.requestedAt !== undefined) {
         requestedAtRef.current = draft.requestedAt;
       }
@@ -290,19 +296,23 @@ export function CreateLedgerScreen(): JSX.Element {
   }, [reset]);
 
   const watched = watch();
-  useEffect(() => {
+  const saveDraft = (values: FormValues) => {
     const draft: CreateDraft = {
       step,
       startKind,
       presetId,
       requestId: requestIdRef.current,
       requestedAt: requestedAtRef.current,
-      values: watched,
+      sentFingerprint: sentFingerprintRef.current,
+      values,
     };
     void AsyncStorage.setItem(
       CREATE_LEDGER_DRAFT_KEY,
       serializeCreateLedgerDraft(draft),
     ).catch(() => {});
+  };
+  useEffect(() => {
+    saveDraft(watched);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [step, startKind, presetId, JSON.stringify(watched)]);
 
@@ -400,18 +410,27 @@ export function CreateLedgerScreen(): JSX.Element {
   const onSubmit = handleSubmit(
     async (values) => {
       const name = slugifyLedgerName(values.name);
+      const request = {
+        name,
+        private: values.private,
+        description: values.description.trim() || undefined,
+        ...(startKind === "sample" ? { template: LedgerTemplate.Sample } : {}),
+        ...(startKind === "preset" ? { setup: buildSetup(values) } : {}),
+      };
+      // The server refuses a reused id whose request changed, for a day. A
+      // resumed draft has lost its amount and may have a new Books begin, so
+      // a request that differs from the last one sent gets an id of its own;
+      // the same request keeps it and stays idempotent (w21/053, w21/434).
+      const fingerprint = createRequestFingerprint(request);
+      if (isNewCreateRequest(sentFingerprintRef.current, fingerprint)) {
+        requestIdRef.current = newRequestId();
+        requestedAtRef.current = Date.now();
+      }
+      sentFingerprintRef.current = fingerprint;
+      saveDraft(values);
       try {
         const result = await createLedger({
-          variables: {
-            name,
-            private: values.private,
-            description: values.description.trim() || undefined,
-            ...(startKind === "sample"
-              ? { template: LedgerTemplate.Sample }
-              : {}),
-            ...(startKind === "preset" ? { setup: buildSetup(values) } : {}),
-            requestId: requestIdRef.current,
-          },
+          variables: { ...request, requestId: requestIdRef.current },
         });
         void clearCreateLedgerDraft();
         const id = result.data?.createLedger?.id;
@@ -427,6 +446,14 @@ export function CreateLedgerScreen(): JSX.Element {
         // another copy of it (w21/242).
         router.dismissTo("/(app)/(tabs)");
       } catch (error) {
+        if (isRequestIdReuse(error)) {
+          // An id the server holds for another request: start a new one, and
+          // refresh the list in case the first attempt did make the ledger.
+          requestIdRef.current = newRequestId();
+          requestedAtRef.current = Date.now();
+          sentFingerprintRef.current = undefined;
+          await refresh().catch(() => {});
+        }
         const kind = classifyCreateLedgerError(error);
         if (kind === "conflict") {
           // The name's error renders on the form step, not on Review.

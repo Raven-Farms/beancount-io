@@ -86,3 +86,46 @@ export function classifyCreateLedgerError(
   }
   return "other";
 }
+
+/**
+ * A short fingerprint of the request a create sends, without its `requestId`.
+ * The server judges a repeated `requestId` by the whole request, so the screen
+ * keeps one id only while the request stays the same, and a draft can carry
+ * this instead of the amount it must not hold (w21/434). Not a secret and not
+ * a security hash: it only has to tell two requests apart.
+ */
+export function createRequestFingerprint(request: unknown): string {
+  const text = JSON.stringify(request) ?? "";
+  let hash = 0x811c9dc5;
+  for (let i = 0; i < text.length; i += 1) {
+    hash ^= text.charCodeAt(i);
+    hash = Math.imul(hash, 0x01000193) >>> 0;
+  }
+  return hash.toString(36);
+}
+
+/**
+ * Whether a create is a different request from the last one sent, so it needs
+ * an id of its own: the server refuses a reused id whose request changed, for
+ * 24 hours, whatever the person edits next.
+ */
+export function isNewCreateRequest(
+  lastSent: string | undefined,
+  fingerprint: string,
+): boolean {
+  return lastSent !== undefined && lastSent !== fingerprint;
+}
+
+/** Whether the server refused because the `requestId` was used with another request. */
+export function isRequestIdReuse(error: unknown): boolean {
+  const messages = [
+    error instanceof Error ? error.message : "",
+    ...(
+      (error as { graphQLErrors?: Array<{ message?: string }> } | null)
+        ?.graphQLErrors ?? []
+    ).map((entry) => entry.message ?? ""),
+  ];
+  return messages.some((message) =>
+    message.toLowerCase().includes("requestid was already used"),
+  );
+}

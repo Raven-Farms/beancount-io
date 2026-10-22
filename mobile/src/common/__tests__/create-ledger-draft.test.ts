@@ -53,6 +53,19 @@ describe("the Create Ledger draft", () => {
     expect(JSON.parse(raw).requestId).toBe("req-1");
   });
 
+  // w21/434: the id's request travels with it, without the amount.
+  it("keeps the fingerprint of the request last sent", () => {
+    const raw = serializeCreateLedgerDraft(
+      { ...draft, sentFingerprint: "abc12" },
+      saved,
+    );
+    expect(JSON.parse(raw).sentFingerprint).toBe("abc12");
+    expect(
+      restoreCreateLedgerDraft<Values>(raw, new Date(2026, 9, 20, 21, 0))
+        ?.sentFingerprint,
+    ).toBe("abc12");
+  });
+
   it("resumes the same day as it was left", () => {
     const restored = restoreCreateLedgerDraft<Values>(
       serializeCreateLedgerDraft(draft, saved),
