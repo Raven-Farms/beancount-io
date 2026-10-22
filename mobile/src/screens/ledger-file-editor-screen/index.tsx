@@ -17,7 +17,7 @@ import {
   useWindowDimensions,
 } from "react-native";
 import * as Clipboard from "expo-clipboard";
-import { Redirect, Stack, useRouter } from "expo-router";
+import { Redirect, Stack, useFocusEffect, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import {
   SafeAreaView,
@@ -524,7 +524,7 @@ function LedgerFileEditorSession({
           { text: t("close"), style: "cancel" },
           {
             text: t("ledgerEditorViewErrors"),
-            onPress: () => router.push("/(app)/notifications"),
+            onPress: () => router.navigate("/(app)/notifications"),
           },
         ],
       );
@@ -546,6 +546,34 @@ function LedgerFileEditorSession({
     };
   }, [client]);
 
+  // Swap the remote text in: the buffer, the sha and the flags that follow the
+  // text, under a new epoch.
+  const applyRemoteFile = useCallback(
+    (file: {
+      content?: string | null;
+      encoding?: string | null;
+      size?: number | null;
+      sha?: string | null;
+    }) => {
+      const raw = file.content ?? "";
+      const enc = file.encoding;
+      const fc = decodeLedgerFileContent(raw, enc);
+      setLossy(!isLosslessLedgerFileContent(raw, enc));
+      setTooLarge(isUnreadableLargeFile(file.content, file.size));
+      setOverLimit(isOverEditLimit(file.size));
+      lineEndingRef.current = lineEndingOf(fc);
+      const fs = file.sha ?? "";
+      const epoch = documentEpochRef.current + 1;
+      documentEpochRef.current = epoch;
+      resetRevisionTracker(revisionTrackerRef.current);
+      shaRef.current = fs;
+      recoveryRef.current.loaded(fc);
+      setDocumentSpec({ value: fc, epoch });
+      setHasUnsavedChanges(false);
+    },
+    [],
+  );
+
   const handleReload = useCallback(async (): Promise<boolean> => {
     // The error strip follows the cache after mount; a reload that swaps in
     // the remote text must refresh it too, or it keeps a fixed error at a line
@@ -558,28 +586,41 @@ function LedgerFileEditorSession({
       Alert.alert(t("ledgerEditorLoadFailed"));
       return false;
     }
-    const raw = result.data?.getLedgerFile?.content ?? "";
-    const enc = result.data?.getLedgerFile?.encoding;
-    const fc = decodeLedgerFileContent(raw, enc);
-    setLossy(!isLosslessLedgerFileContent(raw, enc));
-    setTooLarge(
-      isUnreadableLargeFile(
-        result.data?.getLedgerFile?.content,
-        result.data?.getLedgerFile?.size,
-      ),
-    );
-    setOverLimit(isOverEditLimit(result.data?.getLedgerFile?.size));
-    lineEndingRef.current = lineEndingOf(fc);
-    const fs = result.data?.getLedgerFile?.sha ?? "";
-    const epoch = documentEpochRef.current + 1;
-    documentEpochRef.current = epoch;
-    resetRevisionTracker(revisionTrackerRef.current);
-    shaRef.current = fs;
-    recoveryRef.current.loaded(fc);
-    setDocumentSpec({ value: fc, epoch });
-    setHasUnsavedChanges(false);
+    applyRemoteFile(result.data.getLedgerFile);
     return true;
-  }, [client, refetch, t]);
+  }, [applyRemoteFile, client, refetch, t]);
+
+  // Coming back to this editor after the file was saved from another one (View
+  // errors opens Notifications, whose error row opens a second editor on the
+  // same file) leaves this copy outdated, and a save from it hits the conflict.
+  // With nothing unsaved and no save running, return to the remote text when its
+  // sha has moved (w21/544).
+  const unsavedRef = useRef(false);
+  unsavedRef.current = hasUnsavedChanges;
+  const focusedBeforeRef = useRef(false);
+  useFocusEffect(
+    useCallback(() => {
+      if (!initialized) return undefined;
+      if (!focusedBeforeRef.current) {
+        focusedBeforeRef.current = true;
+        return undefined;
+      }
+      if (unsavedRef.current || saveInFlightRef.current) return undefined;
+      let live = true;
+      void refetch()
+        .then((result) => {
+          const file = result.data?.getLedgerFile;
+          if (!live || !file?.sha || file.sha === shaRef.current) return;
+          if (unsavedRef.current || saveInFlightRef.current) return;
+          applyRemoteFile(file);
+          void invalidateLedgerData(client, "errors");
+        })
+        .catch(() => undefined);
+      return () => {
+        live = false;
+      };
+    }, [applyRemoteFile, client, initialized, refetch]),
+  );
 
   const handleEdit = useCallback(
     async (epoch: number, revision: number, isDirty: boolean) => {

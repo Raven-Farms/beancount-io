@@ -53,7 +53,7 @@ describe("the file editor's Reload", () => {
   it("says a reload failed and leaves the text and the sha alone", () => {
     const reload = body(
       "const handleReload = useCallback(",
-      "}, [client, refetch, t]);",
+      "}, [applyRemoteFile, client, refetch, t]);",
     );
     const failure = reload.indexOf('Alert.alert(t("ledgerEditorLoadFailed"))');
     expect(failure === -1).toBe(false);
@@ -61,8 +61,15 @@ describe("the file editor's Reload", () => {
       true,
     );
     // Nothing is swapped in before the guard returns.
-    expect(failure < reload.indexOf("shaRef.current = fs")).toBe(true);
-    expect(failure < reload.indexOf("setDocumentSpec(")).toBe(true);
+    // The swap lives in `applyRemoteFile` (shared with the return-to-editor
+    // refresh, w21/544) and is only called past the guard.
+    expect(failure < reload.indexOf("applyRemoteFile(")).toBe(true);
+    const swap = body(
+      "const applyRemoteFile = useCallback(",
+      "const handleReload = useCallback(",
+    );
+    expect(swap.includes("shaRef.current = fs")).toBe(true);
+    expect(swap.includes("setDocumentSpec(")).toBe(true);
   });
 
   it("plays Copy & Reload's success only when the reload worked", () => {

@@ -11,7 +11,12 @@ const source = fs
 
 describe("the editor's jump to a linked line", () => {
   it("re-arms when a link sets the line, not on every focus", () => {
-    expect(source.includes("useFocusEffect(")).toBe(false);
+    // The one focus effect refreshes an outdated copy (w21/544); the jump is not
+    // part of it.
+    expect(source.split("useFocusEffect(").length - 1).toBe(1);
+    expect(
+      source.includes("useFocusEffect(useCallback(()=>{if(!initialized)"),
+    ).toBe(true);
     expect(source.includes("},[initialLineNum,router]);")).toBe(true);
   });
 
