@@ -1824,7 +1824,7 @@ def _transactions(
     # errors name; only errors it cannot place need a bisection of the batch.
     # Rows that book in input order keep it; only a sale with no position to
     # book against moves after its same-day purchase (w5/730).
-    valid = _same_day_purchases_first(valid, file=file)
+    valid = _booking_order(valid, file=file, allow_errors=allow_errors, into=into)
     batch_texts = [writer.format_transaction(d) for _, d in valid]
     try:
         write.validate_append(file, batch_texts, allow_errors=allow_errors, into=into)
@@ -1934,7 +1934,43 @@ def _batch_holdings(file: Path | None) -> list[Any]:
     return entries
 
 
-def _same_day_purchases_first(valid: list[tuple[int, Any]], *, file: Path | None = None) -> list[tuple[int, Any]]:
+def _booking_order(
+    valid: list[tuple[int, Any]], *, file: Path | None, allow_errors: bool, into: Path | None
+) -> list[tuple[int, Any]]:
+    """The order the batch books in: the same-day rule's, else the first alternative that validates.
+
+    The rule above reads signs and sets, which cannot tell whether a sale
+    books: a partial holding, the wrong cost lot, a purchase whose units
+    booking infers, and a short opened and covered the same day each defeat
+    it (w5/884). So when its order does not validate, the input order and the
+    order that puts every same-day sale after its purchases are tried against
+    the ledger, and the first that books wins. When none does, the rule's
+    order stands and its refusal is the one reported.
+    """
+    ordered = _same_day_purchases_first(valid, file=file)
+    if file is None:
+        return ordered
+    # Only a batch whose same-day rows could book another way is tried at all.
+    candidates = [ordered]
+    for alternative in (valid, _same_day_purchases_first(valid, file=file, eager=True)):
+        if all([i for i, _ in alternative] != [i for i, _ in seen] for seen in candidates):
+            candidates.append(alternative)
+    if len(candidates) == 1:
+        return ordered
+    for candidate in candidates:
+        try:
+            write.validate_append(
+                file, [writer.format_transaction(d) for _, d in candidate], allow_errors=allow_errors, into=into
+            )
+        except protocol.LedgerError:
+            continue
+        return candidate
+    return ordered
+
+
+def _same_day_purchases_first(
+    valid: list[tuple[int, Any]], *, file: Path | None = None, eager: bool = False
+) -> list[tuple[int, Any]]:
     """`valid` with each day's sales at cost after that day's purchases of the same lots (w5/543).
 
     Beancount books one date's entries in file order, and rows are appended
@@ -1950,6 +1986,9 @@ def _same_day_purchases_first(valid: list[tuple[int, Any]], *, file: Path | None
     date listed before it, or any earlier date anywhere in the input, since
     rows book chronologically. Only a sale with no position to book
     against moves after its same-day purchase (w5/730).
+
+    `eager` drops that test: every sale with a same-day purchase of its lot
+    moves behind it, and a purchase whose units are left to booking counts.
     """
     from collections import Counter, defaultdict
 
@@ -1961,9 +2000,14 @@ def _same_day_purchases_first(valid: list[tuple[int, Any]], *, file: Path | None
             for posting in directive.postings
             if posting.cost is not None
             and posting.units is not None
-            and posting.units.number is not None
-            and (posting.units.number < 0) == negative
-            and posting.units.number != 0
+            and (
+                (eager and not negative and posting.units.number is None)
+                or (
+                    posting.units.number is not None
+                    and (posting.units.number < 0) == negative
+                    and posting.units.number != 0
+                )
+            )
         }
 
     slots: dict[Any, list[int]] = defaultdict(list)
@@ -2007,9 +2051,12 @@ def _same_day_purchases_first(valid: list[tuple[int, Any]], *, file: Path | None
         for (_, directive), own, moves in zip(rows, bought, selling, strict=True):
             gated.append(
                 moves
-                and any(
-                    buyers[lot] > (lot in own) and lot not in before and not file_holds(*lot, date)
-                    for lot in lots(directive, negative=True)
+                and (
+                    eager
+                    or any(
+                        buyers[lot] > (lot in own) and lot not in before and not file_holds(*lot, date)
+                        for lot in lots(directive, negative=True)
+                    )
                 )
             )
             before |= own
