@@ -1,4 +1,7 @@
-import { selectAccountTransactions } from "../select-account-transactions";
+import {
+  accountPrefixFilter,
+  selectAccountTransactions,
+} from "../select-account-transactions";
 import { selectStatementAnchorMonth } from "../select-income-expense-chart";
 import {
   DirectiveType,
@@ -307,5 +310,47 @@ describe("selectStatementAnchorMonth", () => {
         [point("2025-12-31")],
       ),
     ).toBe("2026-01");
+  });
+});
+
+// w21/563: the card read the newest 200 transactions of every account, so a busy
+// month hid the salary. It now asks the journal for its own accounts.
+describe("accountPrefixFilter", () => {
+  it("asks for entries touching one of the report's roots", () => {
+    expect(accountPrefixFilter(["Income", "Expenses"])).toBe(
+      "^(?:Income|Expenses)",
+    );
+    expect(accountPrefixFilter("Expenses")).toBe("^(?:Expenses)");
+  });
+
+  it("escapes a renamed root that holds regex syntax", () => {
+    expect(accountPrefixFilter(["Ingresos.1", "Gastos(x)"])).toBe(
+      "^(?:Ingresos\\.1|Gastos\\(x\\))",
+    );
+  });
+
+  it("is a pattern the ledger service reads as a pattern, and matches the roots", () => {
+    const pattern = new RegExp(accountPrefixFilter(["Income", "Expenses"]));
+    expect(pattern.test("Income:Salary")).toBe(true);
+    expect(pattern.test("Expenses:Food:Groceries")).toBe(true);
+    expect(pattern.test("Assets:Bank:Checking")).toBe(false);
+  });
+
+  it("is what the card asks for", () => {
+    const card = require("fs")
+      .readFileSync(
+        require("path").join(
+          __dirname,
+          "..",
+          "..",
+          "components",
+          "account-transactions-card.tsx",
+        ),
+        "utf8",
+      )
+      .replace(/\s+/g, "") as string;
+    expect(card.includes("account:accountPrefixFilter(accountPrefix),")).toBe(
+      true,
+    );
   });
 });

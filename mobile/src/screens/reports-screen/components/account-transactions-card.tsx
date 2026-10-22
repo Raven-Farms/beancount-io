@@ -22,14 +22,15 @@ import { TimeRange } from "@/common/series-util";
 import {
   hasAnyAccountTransaction,
   resolveListAnchor,
+  accountPrefixFilter,
   selectAccountTransactions,
 } from "../selectors/select-account-transactions";
 import { CardLoadFailure } from "@/components/card-load-failure";
 import { selectCardLoadState } from "@/common/apollo/card-load-state";
 import { useGuest } from "@/common/guest/guest-context";
 
-// Pull enough recent transactions to cover the selected range client-side.
-// Matches the interim approach in spending-card.tsx (no account-filter query).
+// Pull enough recent transactions of the report's accounts to cover the selected
+// range client-side.
 const FETCH_WINDOW = 200;
 
 const getStyles = (theme: ColorTheme) =>
@@ -96,6 +97,8 @@ export function AccountTransactionsCard({
         offset: 0,
         limit: FETCH_WINDOW,
         directiveTypes: [DirectiveType.TRANSACTION],
+        // Only this report's accounts count against the window (w21/563).
+        account: accountPrefixFilter(accountPrefix),
       },
     },
     fetchPolicy: "cache-and-network",

@@ -34,6 +34,23 @@ function involvesAccount(
 }
 
 /**
+ * The ledger's `account` filter for the subtree(s) a report lists, as a pattern
+ * the journal query understands: an entry is returned when one of its accounts
+ * starts with a prefix, which is what `involvesAccount` then checks per posting.
+ * Without it the card read the newest 200 transactions of every account, and a
+ * busy month hid the salary and said "No transactions yet" (w21/563).
+ */
+export function accountPrefixFilter(accountPrefix: string | string[]): string {
+  const prefixes = Array.isArray(accountPrefix)
+    ? accountPrefix
+    : [accountPrefix];
+  const escaped = prefixes.map((prefix) =>
+    prefix.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"),
+  );
+  return `^(?:${escaped.join("|")})`;
+}
+
+/**
  * Transactions for a report: those with at least one posting under
  * `accountPrefix` (a single subtree, or any of several when an array is passed —
  * e.g. `["Income", "Expenses"]` for a combined money-in/out list), within the
