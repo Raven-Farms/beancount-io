@@ -97,5 +97,7 @@
 - [582](./582.md) — In uk and ru, the editor's Unsaved Changes alert has two "Cancel" buttons; the discarding one is translated as Cancel
 - [583](./583.md) — The "Saved, with a new ledger error" alert's dismiss reuses `close` (the Close directive): zh "关户", es "Cierre"
 - [584](./584.md) — Translation meaning errors: zh sign hint, sk unconfirmed write, uk rental deposit, four locales' "Decide later" label
+- [585](./585.md) — Receipt photos are never deleted from the device: each scan's image stays in the app cache after upload, cancel and sign-out
+- [586](./586.md) — The Android build declares the advertising-ID permission (`AD_ID`) though nothing uses it
 - [508](./blocked/508.md) — Mobile guesses that an entry is a plugin copy from its first line; read the ledger's `generated_from` instead (split from 443) — **blocked:** production's GraphQL schema lacks `generated_from` until the ledger service and backend-v2 deploy; mobile's client is generated from it
 - [315](./blocked/315.md) — In-app commits signed with Gitea username and real email (no full_name, no noreply) — **blocked:** needs the owner's noreply-address and published-history decisions, and a production backfill of existing Gitea users that can't be verified here
