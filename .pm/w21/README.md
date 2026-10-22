@@ -148,5 +148,9 @@
 - [633](./633.md) — The example holdings sheet offers guests "Sign In" where owners see "Update prices", which sign-in doesn't grant
 - [634](./634.md) — Signing in from the example drawer says "Could not complete sign-in" for every failure, including offline
 - [635](./635.md) — Latent: the guest client blocks `LedgerAccountCloseDates` and `QueryShell`, so w21/099 and w21/337 are off for guests
+- [636](./636.md) — Leaving the app for 30+ s during a receipt upload makes it fail on return, even when the photo reached S3
+- [637](./637.md) — On first use, Scan Receipt renders its "Camera access is needed" screen behind the system camera prompt
+- [638](./638.md) — Android: hardware Back during receipt Uploading or Reading leaves the upload and parse running (quota spent)
+- [639](./639.md) — Scan Receipt's decorative icons are their own VoiceOver stops (same class as w21/141 and w21/605)
 - [508](./blocked/508.md) — Mobile guesses that an entry is a plugin copy from its first line; read the ledger's `generated_from` instead (split from 443) — **blocked:** production's GraphQL schema lacks `generated_from` until the ledger service and backend-v2 deploy; mobile's client is generated from it
 - [315](./blocked/315.md) — In-app commits signed with Gitea username and real email (no full_name, no noreply) — **blocked:** needs the owner's noreply-address and published-history decisions, and a production backfill of existing Gitea users that can't be verified here
