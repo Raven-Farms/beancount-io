@@ -1,5 +1,13 @@
 # ClawHub publication and host rehearsal
 
+**Historical standalone distribution:** all thirteen `@puncsky/beancount-*`
+skill listings were retired through owner soft-delete on 2026-10-22, after the
+unified suite became public. Results below record the earlier releases and
+remain evidence, not current install instructions. Use the
+[suite installation guide](installation.md#one-suite-release) and
+[retirement record](suite-distribution.md#standalone-listing-retirement--2026-10-22-utc)
+for the current route and Hermes limitations.
+
 Checked on macOS on 2026-10-19 PDT and updated on 2026-10-20 PDT. This records registry submission, public installation, real agent queries, and the remaining host limits separately.
 
 ## Release

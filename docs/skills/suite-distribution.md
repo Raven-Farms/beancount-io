@@ -4,8 +4,8 @@ One Beancount.io package carries the thirteen customer workflows, their original
 skill names and their shared references. Claude Code and Codex retain their
 existing [whole-suite plugin installs](installation.md#plugin-both-clients).
 Subsequent ClawHub releases target **`@puncsky/beancount-io`** as a single
-`bundle-plugin`; the existing thirteen individual listings remain available as
-legacy releases. [m6](../../.pm/w6/done/m6/README.md) preserves their completed
+`bundle-plugin`; the thirteen individual listings are retired through owner
+soft-delete. [m6](../../.pm/w6/done/m6/README.md) preserves their completed
 verification; [m6.5](../../.pm/w6/blocked/m6.5/README.md) owns this transition.
 
 ## Release status — 2026-10-22 UTC
@@ -100,8 +100,8 @@ ambiguous lookup failures stop publication. The CLI waits for definitive
 publication, and its temporary credentials are removed even on failure. Retain a
 pending attempt and inspect its result rather than uploading identical content.
 
-The intended native OpenClaw entry is `clawhub:@puncsky/beancount-io`; installation,
-discovery and update commands will be recorded here after their exact rehearsal.
+The native OpenClaw entry is `clawhub:@puncsky/beancount-io`; its exercised
+installation, discovery and update commands appear in the release status above.
 The initial local-path attempt stopped at OpenClaw's source-trust prompt. After reviewing the exact owned artifact, the isolated local rehearsal explicitly acknowledged its source (`--force`) and its skills-only capability surface (`--accept-capabilities`). Neither flag overrides scanner/install-policy blocks. This consent affected the synthetic profile only.
 
 ## Native OpenClaw verification
@@ -173,7 +173,8 @@ workflow without weakening scanning or removing workflows.
 
 ## Legacy installs and migration
 
-Existing individual registry records, versions and user files are retained.
+The individual registry listings are retired as recorded below. Historical
+release evidence and existing user files are retained.
 Do not place the suite over manually edited standalone skills or remove them
 automatically. Native precedence and migration were exercised using the local suite plus a
 fresh public `@puncsky/beancount-ask@1.0.4` install in the same isolated workspace:
@@ -191,9 +192,38 @@ fresh public `@puncsky/beancount-ask@1.0.4` install in the same isolated workspa
 For a user's migration, inspect and preserve local edits before explicitly
 removing each old copy through its owning installer. Check
 `openclaw skills info <name> --json` to see which copy wins. The suite's public ClawHub entry and managed update are verified separately;
-local-path update is not substituted for registry update. Users staying on individual releases
-can keep the [previous exercised commands](installation.md#legacy-standalone-releases),
-with their recorded host limits; future routine publication uses the suite.
+local-path update is not substituted for registry update. Existing standalone
+copies are unchanged, but their old online install/update routes are retired.
+Future publication uses the suite.
+
+## Standalone listing retirement — 2026-10-22 UTC
+
+The owner requested cleanup of the scattered distribution entries after the
+suite release. All thirteen owned `@puncsky/beancount-*` skill listings were
+soft-deleted through ClawHub's documented owner endpoint, with a retirement
+reason pointing to the unified suite. Before retirement, every listing was
+owned by `puncsky` and its latest version was 1.0.4; the replacement suite was
+already public and clean. No skill version was republished or hard-deleted.
+
+At 23:16 UTC, anonymous lookups for all thirteen old listings return 404.
+Complete pagination of the public `beancount-` prefix catalog returns zero
+standalone entries owned by `puncsky`. Unified package search returns one
+`@puncsky/beancount-io` bundle plugin at 0.4.0. Native OpenClaw search, managed
+suite update and thirteen-skill discovery are rechecked after retirement.
+
+ClawHub's [owner soft-delete contract](https://github.com/openclaw/clawhub/blob/main/docs/http-api.md#delete-apiv1skillsslug--post-apiv1skillsslugundelete)
+retains a restore route and reports a 30-day slug reservation; these responses
+reserve the old names until 2026-11-21 UTC. This is not a permanent redirect to
+the plugin. The earlier release and host records remain historical evidence.
+Individual `skills/beancount-*/` source directories remain the suite's canonical
+workflows, with their original triggers and shared references.
+
+Existing local installs are not removed or rewritten. Preserve local edits
+before migrating through the owning installer. Fresh standalone ClawHub installs
+and updates are no longer supported, including the old Hermes route. Hermes's
+full-suite admission remains blocked as described above; retirement does not
+establish a replacement Hermes install path. Routine releases and current
+installation guidance now point only to the suite.
 
 ## Primary contracts
 

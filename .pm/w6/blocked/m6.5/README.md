@@ -1,6 +1,6 @@
 # w6 · m6.5 — Distribute the Beancount.io customer skills as one suite
 
-**Worker:** worker1 **Goal:** A user discovers, installs and updates the customer ledger workflows through one versioned Beancount.io suite entry on each supported host. **Status:** blocked (8/10 tasks done; public suite 0.4.0 and native registry install/update pass; Hermes admission remains)
+**Worker:** worker1 **Goal:** A user discovers, installs and updates the customer ledger workflows through one versioned Beancount.io suite entry on each supported host. **Status:** blocked (9/11 tasks done; public suite 0.4.0, native registry install/update and retirement of all thirteen standalone listings pass; Hermes admission remains)
 
 ## Scope and decisions
 
@@ -9,6 +9,7 @@
 - Reuse existing Claude Code/Codex suite manifests. Confirm the real ClawHub/OpenClaw/Hermes package contracts before selecting a format; no new runtime dependency is authorized.
 - Ship directly to main under the owner's standing instruction. Existing protected publishing credentials may be used; do not create new credentials, alter retained OAuth grants, send external messages or bypass host scanners.
 - Existing Hermes init policy and filtered-search findings remain [039](../039.md) and [040](../040.md); this milestone records their actual effect on a supported suite route.
+- Owner follow-through, 2026-10-22: clean up the previous scattered distribution entries too. Retire the thirteen owned standalone listings through reversible owner soft-delete, retain history/local copies, and update current guidance. This supersedes their initial continued-public-availability decision without rewriting completed m6 or t006 evidence.
 
 ## Tasks (in order)
 
@@ -20,17 +21,18 @@
 | [t004](done/t004.md) | Verify native OpenClaw suite install and update — **DONE** | 45m | t003 |
 | [t005](t005.md) | Verify the supported Hermes suite route — **BLOCKED** | 45m | t002 |
 | [t006](done/t006.md) | Preserve legacy standalone installation compatibility — **DONE** | 30m | t002 |
+| [t011](done/t011.md) | Retire the scattered standalone distribution entries — **DONE** | 30m | t004, t006 |
 | [t007](done/t007.md) | Adoption surface — **DONE** | 30m | t002, t006 |
 | [t008](done/t008.md) | Simplify — **DONE** | 20m | t007 |
 | [t009](done/t009.md) | Test coverage — **DONE** | 45m | t007, t008 |
-| [t010](t010.md) | Closeout — **BLOCKED** | 15m | t003, t004, t005, t009 |
+| [t010](t010.md) | Closeout — **BLOCKED** | 15m | t003, t004, t005, t009, t011 |
 
 ## Definition of done
 
 - One versioned suite package is accepted and publicly available through the selected supported registry route, built from canonical customer skill sources with matching provenance and MIT-0 licensing.
 - A single native OpenClaw install exposes all thirteen intended workflows; supported discovery, update and transition from individual installs are verified in an isolated profile.
 - Hermes has an exercised suite setup/update route using the same source inventory, with its native policy restrictions explicitly retained and no force-install or scanner bypass. An unavailable upstream route remains open with its unblock condition rather than being called delivered.
-- Existing Claude Code and Codex suite installs remain valid, and legacy standalone ClawHub releases stay available without continuing routine fragmented publication.
+- Existing Claude Code and Codex suite installs remain valid. Legacy standalone ClawHub listings are retired without deleting historical evidence or existing local copies; current online install/update guidance targets the suite.
 - Suite-first public documentation agrees with exact exercised commands and host limits; meaningful regression tests and owning-package checks pass.
 - Standing closing tasks are complete; /pm moves all tasks and this milestone into their done locations with consistent links and statuses.
 
@@ -43,7 +45,7 @@
 
 ## Out of scope
 
-- New accounting behavior, reworking skill descriptions/routing, MCP marketplace submissions, deleting existing listings, new credentials, paid platform fees, and unsolicited upstream outreach.
+- New accounting behavior, reworking skill descriptions/routing, MCP marketplace submissions, permanently deleting release history, new credentials, paid platform fees, and unsolicited upstream outreach.
 
 ## Hermes admission finding — 2026-10-22 UTC
 
@@ -75,4 +77,8 @@ The original attempt zx76nyp6dz5nf2zc8yj77maemx8gr01a automatically finalized as
 
 The same accepted 0.4.0 attempt is published, both scanners are clean, the public 53-file map matches, native search returns one suite entry, and actual public install/managed update pass with all 13 skills. t004 is complete and archived. The client-timeout and Git-source failures above remain historical controls, not current publication blockers. No upload was repeated.
 
-Eight tasks are complete. Only t005 (the actual Hermes portable metadata/default-scanner admission requirements) and t010 (final closeout depending on that delivery) remain blocked. **Unblock:** Hermes provides a compatible supported admission path preserving the intended workflows and host policy; the repository worker verifies native suite installation/discovery/update and closes the milestone only when its complete DoD holds. Existing w6/039 retains the init-policy finding. No owner input or remaining repository implementation/review gate is being invented.
+Nine tasks are complete, including the later owner-requested retirement in t011 below. Only t005 (the actual Hermes portable metadata/default-scanner admission requirements) and t010 (final closeout depending on that delivery) remain blocked. **Unblock:** Hermes provides a compatible supported admission path preserving the intended workflows and host policy; the repository worker verifies native suite installation/discovery/update and closes the milestone only when its complete DoD holds. Existing w6/039 retains the init-policy finding. No owner input or remaining repository implementation/review gate is being invented.
+
+## Standalone retirement follow-through — 2026-10-22 UTC
+
+The owner requested cleanup after suite publication. t011 retires all thirteen standalone listings through ClawHub's owner soft-delete, with a suite migration reason and retained restore receipts. All thirteen anonymous lookups return 404, complete prefix pagination finds zero owned standalone entries, and unified search returns the one public suite. Native managed update still passes with all thirteen workflows and 53/53 matching files. Current installation guidance removes the old online install/update commands; historical m6 and release evidence remain intact. Fresh Hermes standalone installation is retired too, and full-suite Hermes admission remains explicitly unsupported. This narrow follow-through includes its own adoption review and verification; the earlier completed closing-task evidence is retained, and final Closeout now also depends on t011.

@@ -1,6 +1,6 @@
 # Install the Beancount skills
 
-Install the thirteen `beancount-*` ledger skills for Claude Code, Codex, or both, from any directory. You keep one Git checkout of the skills and link it into each agent's skill directory. Updating the checkout updates every agent, and the helper script never touches skills it did not install. [OpenClaw and Hermes Agent](#openclaw-and-hermes-agent) have the suite and legacy registry routes described below, with their actual availability and host limits.
+Install the thirteen `beancount-*` ledger skills for Claude Code, Codex, or both, from any directory. You keep one Git checkout of the skills and link it into each agent's skill directory. Updating the checkout updates every agent, and the helper script never touches skills it did not install. [OpenClaw and Hermes Agent](#openclaw-and-hermes-agent) have the suite route and host limits described below, including migration from the retired standalone listings.
 
 Rehearsed on macOS with Claude Code and Codex (see [tested with](first-query.md#tested-with)). Linux uses the same commands but has not been rehearsed. Windows is not covered.
 
@@ -117,7 +117,7 @@ Both manifests carry one shared suite version; a client delivers a new copy only
 
 ### Hermes and raw GitHub folders
 
-Hermes supports the direct GitHub skill path, but a single raw folder can omit the shared references its instructions read. A direct `beancount-ask` install was SAFE yet lacked its CLI contract. Use the self-contained [ClawHub bundle](#openclaw-and-hermes-agent) for a standalone install. Hermes v0.22.2 still rejects `beancount-init`'s intended creation of a new ledger's instruction files; that restriction does not prevent a bundled `beancount-ask` from working independently. The accidental import scanner finding and the shell installer example from the earlier rehearsal are fixed; no force install is needed for the currently verified non-init registry bundles. See the [dated results](clawhub-rehearsal.md).
+Hermes supports direct GitHub skill paths, but a single raw folder can omit the shared references its instructions read. An earlier direct `beancount-ask` install was SAFE yet lacked its CLI contract. The self-contained standalone ClawHub listings used in that rehearsal are now retired; do not substitute a raw folder for the complete suite. Full Hermes suite installation remains unavailable because of the [actual host admission limits](suite-distribution.md#hermes-admission-limits). Existing local copies are retained, and the [dated standalone results](clawhub-rehearsal.md) remain historical evidence.
 
 ### Choosing a method
 
@@ -154,79 +154,36 @@ source hashes, search, migration, update limits and the resolved scanner timeout
 Legacy workspace copies take precedence over plugin copies: preserve edits and
 remove them through their owning installer before switching to the suite.
 
-Hermes v0.22.4 cannot currently admit the complete portable suite: it rejects nested host metadata and its plugin scanner blocks init's intended instruction-file creation. Keep the already verified standalone skills for Hermes. The full-suite limitation is tracked by w6/m6.5, alongside the existing init-policy finding w6/039; no forced install or scanner configuration change is part of this route.
+Hermes v0.22.4 cannot currently admit the complete portable suite: it rejects nested host metadata and its plugin scanner blocks init's intended instruction-file creation. Existing Hermes standalone copies can remain in use, but their old ClawHub install/update route is retired. The full-suite limitation is tracked by w6/m6.5, alongside the existing init-policy finding w6/039; no forced install or scanner configuration change is part of this route.
 
 ### Legacy standalone releases
 
-Existing `@puncsky/beancount-*` records and immutable versions are retained. The release workflow now targets the suite package instead of uploading each skill separately; the following historical standalone commands and evidence remain available for compatibility.
+The thirteen `@puncsky/beancount-*` skill listings were retired through owner
+soft-delete on 2026-10-22, after the unified suite became public. Their old
+online installation and update commands no longer resolve. Current ClawHub
+installation uses only the [one suite entry](#one-suite-release).
 
-The publisher is [`puncsky` on ClawHub](https://clawhub.ai/puncsky). Registry bundles include their shared command references and the MIT-0 license, so `beancount-ask` can be installed alone without cloning this repository. Workflows such as migration and close name the sibling skills they hand off to; install those separately when needed.
-
-Install the host using its official [OpenClaw guide](https://docs.openclaw.ai/install) or [Hermes guide](https://hermes-agent.nousresearch.com/docs/getting-started/installation), keep `bea` 0.3.1 or later on `PATH`, and configure a model provider in that host before an agent conversation.
-
-From your ledger workspace, install the verified read-only skill:
-
-```sh
-openclaw skills install @puncsky/beancount-ask
-```
-
-Or, in Hermes:
+Existing local copies and edits are retained. In OpenClaw, workspace skill
+copies take precedence over plugin skills: inspect
+`openclaw skills info <name> --json`, preserve edits, then remove each old copy through its owning installer
+when migrating. For ClawHub-owned copies, the previously exercised removal is:
 
 ```sh
-hermes skills install clawhub/@puncsky/beancount-ask --yes
+clawhub --workdir <workspace> uninstall @puncsky/<skill-name> --yes
 ```
 
-Update the registry skills already installed in the selected host/workspace:
+Check the selected source again after migration. Do not delete unrelated or
+manually edited skills automatically. The [migration evidence and retirement
+record](suite-distribution.md#legacy-installs-and-migration) retain the exact
+scope of these checks.
 
-```sh
-openclaw skills update --all
-hermes skills update
-```
-
-These commands were run on macOS with OpenClaw 2026.10.5 and Hermes v0.22.2. Both installed the standalone `beancount-ask@1.0.0` with its CLI contract and license; Hermes's scanner allowed it without `--force`. On 2026-10-20, each host also completed the synthetic first query through the installed skill and an executed `bea` 0.3.1 command, with the expected figures and unchanged ledger checksum. The [registry rehearsal](clawhub-rehearsal.md#real-host-turns--2026-10-20) records the tested model/runtime configuration and its limits; OpenClaw used its explicitly selected embedded runtime.
-
-**Release status, 2026-10-20:** all eleven original 1.0.0 releases are public. That eleven-skill release installs in one OpenClaw workspace. Ten skills install in Hermes; its scanner blocks `beancount-init` for the intended creation of ledger instruction files. Use the supported skills individually in Hermes, and keep the Git/link route above for the complete Claude Code/Codex suite. See the [per-skill results](clawhub-rehearsal.md#install-results).
-
-The 0.3.2 wording fixes were verified as registry 1.0.1 for add, import, init, migrate and reconcile, with the other six listings at 1.0.0. All eleven downloads and OpenClaw installations matched that submitted release. Later main changes were submitted as suite 0.3.3: five registry 1.0.2 updates and six 1.0.1 updates. At the 2026-10-21 04:23 UTC check, all eleven updates are public and all 105 authored files match the submitted release, including close/options 1.0.1. See the [synchronization record](clawhub-rehearsal.md#suite-033-synchronization--2026-10-20) for release progress and host limits.
-
-The Git/plugin suite now also contains `beancount-roll-forward` and `beancount-accruals`, bringing its inventory to thirteen. Their first registry releases, plus later add/ask/close/import/migrate/reconcile/trade changes, pass the client/adoption release gates and are accepted by protected run39679035375 as pending-publication. At21:41UTC on2026-10-21, the public registry still covers the original eleven skills and exposes older versions for the seven updates. The four unchanged current versions are publicly exact; install new versions only after promotion. Native Codex 0.163.0 works with configured `gpt-6.1-sol`, and Claude Code 2.1.306 resumes usable default-model turns on 2026-10-21. On the frozen 0.3.6 source, Claude discovers all thirteen skills and scores 113/113, with no new miss in that cohort. The subsequent0.3.7 description repairs use115 requests: Codex passes115/115 twice, while Claude resolves115/115 from114 original valid observations plus one documented-default timeout recovery. All earlier failures, including the historical PDF first-open loss, remain recorded. Current behavioral validation covers dated valuation, accrual recognition/identity, and reproducible variance commentary; the [dated client release record](client-release-controls-20261021.md) distinguishes source versions, corrections, actual results and remaining publication gates.
-
-Suite 0.3.8 repairs local/hosted scope conflicts and requires a working validator
-before an existing-ledger write. Its [native before/after controls](scope-contract-controls-20261022.md)
-preserve the explicitly unvalidated init scaffold, approved developer-tool
-writes and supported broker/migration flows. Descriptions and routing requests
-are unchanged. Protected [run39708894097](https://github.com/bex-co/beancount-io/actions/runs/39708894097)
-accepts all thirteen changed 1.0.4 submissions with exact fingerprints and clean
-credential removal. By 02:49 UTC ten current versions/97 authored files are
-public and install exactly in OpenClaw; Hermes allows nine versions/90 files
-across its suite and separate import-recovery profile. Init retains its policy
-refusal. Both hosts complete the standalone ask 1.0.4 first query through
-published bea 0.3.1 with unchanged synthetic ledgers. The final 2026-10-22
-follow-through clears the remaining accruals, property and reconcile promotions:
-all thirteen latest versions are 1.0.4, and all thirteen OpenClaw installs match
-119/119 authored files. Twelve supported Hermes installs match 112/112 files
-across the suite and the documented import-recovery profile; init retains its
-policy refusal. Fresh default Hermes search now displays all thirteen suite
-identifiers among sixteen results. The [final verification](clawhub-rehearsal.md#final-current-version-verification--2026-10-22-utc)
-preserves the original failures, recoveries, prior model-backed queries and
-exact host limits. The completed standalone milestone is preserved as history. The single suite
-package now ships as0.4.0, with public OpenClaw installation/update verified
-[above](#one-suite-release).
-An upload receipt does not establish public availability or complete support.
-
-The current Hermes default search finds all thirteen suite listings:
-
-```sh
-hermes skills search beancount
-```
-
-The earlier 2026-10-22 v0.22.4 cohort finds eleven names among fourteen results
-with `--source all --json --limit 30`, but omits the newly public roll-forward
-listing. That cohort's source-filtered `--source clawhub` path returned no results;
-its separate follow-up remains open after this closeout's successful default search.
-Use the explicit publisher-qualified identifiers for listings absent from
-search; the [dated evidence](clawhub-rehearsal.md#current-version-follow-through--2026-10-22-0249-utc)
-records discovery separately from version and installed-byte verification.
+Earlier releases reached 1.0.4 for all thirteen workflows, with verified
+OpenClaw installs, twelve supported Hermes installs and retained first queries.
+Those [dated results](clawhub-rehearsal.md#final-current-version-verification--2026-10-22-utc)
+are historical evidence, not a fresh standalone installation route. Hermes
+cannot currently install the complete suite; its metadata and default-scanner
+admission requirements remain open. The [Claude Code/Codex suite](#plugin-both-clients)
+and the OpenClaw suite above remain available.
 
 ## Update
 
