@@ -151,6 +151,46 @@ describe("isPluginCopy", () => {
     ).toBe(false);
   });
 
+  // w21/505: a multi-line narration and the old `"Payee" | "Narration"` header
+  // were read as one string, so an ordinary entry lost Edit and Delete.
+  it("keeps Edit on a multi-line narration and on the bar form", () => {
+    expect(
+      isPluginCopy(
+        {
+          date: "2026-08-30",
+          payee: "QA Multi",
+          narration: "qa line one\nline two",
+        },
+        '2026-08-30 * "QA Multi" "qa line one\nline two"\n  Expenses:Food  5 USD\n  Assets:Cash',
+      ),
+    ).toBe(false);
+    expect(
+      isPluginCopy(
+        { date: "2026-06-01", payee: "Cafe", narration: "Coffee" },
+        '2026-06-01 * "Cafe" | "Coffee"\n  Expenses:Food  3 USD\n  Assets:Cash',
+      ),
+    ).toBe(false);
+  });
+
+  it("still catches a copy of a multi-line narration, and does not judge an unclosed string", () => {
+    expect(
+      isPluginCopy(
+        {
+          date: "2026-08-30",
+          payee: "QA Multi",
+          narration: "qa line one\nline two (1/12)",
+        },
+        '2026-08-30 * "QA Multi" "qa line one\nline two"\n  Assets:Cash',
+      ),
+    ).toBe(true);
+    expect(
+      isPluginCopy(
+        { date: "2026-08-30", payee: "x", narration: "y" },
+        '2026-08-30 * "x" "never closes\n  Assets:Cash',
+      ),
+    ).toBe(false);
+  });
+
   it("is true when the slice is another kind of directive (a pad)", () => {
     expect(
       isPluginCopy(

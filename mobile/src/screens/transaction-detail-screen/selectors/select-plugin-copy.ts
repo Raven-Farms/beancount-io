@@ -13,24 +13,34 @@ function unescapeWritten(written: string): string | null {
   return written.replace(/\\(["\\])/g, "$1");
 }
 
-/** The transaction header a source slice opens with: its day and quoted strings. */
+/**
+ * The transaction header a source slice opens with: its day and quoted
+ * strings. A narration may continue onto the next line, so the strings are
+ * read across lines until each closes, and the old `"Payee" | "Narration"`
+ * form's bar is skipped (w21/505). A string that never closes leaves the
+ * header unread (null), so the entry is not judged.
+ */
 function sliceHeader(slice: string): {
   date: string;
   strings: string[];
 } | null {
-  const line = slice
-    .split("\n")
-    .map((text) => text.trim())
-    .find((text) => text !== "" && !text.startsWith(";"));
-  const header = line === undefined ? null : HEADER.exec(line);
+  const lines = slice.split("\n");
+  const first = lines.findIndex(
+    (text) => text.trim() !== "" && !text.trim().startsWith(";"),
+  );
+  const header = first < 0 ? null : HEADER.exec(lines[first]!.trim());
   // A slice that opens with `pad`, `balance`, … is not this transaction's text.
   if (!header || !FLAG.test(header[2]!)) return null;
   const strings: string[] = [];
-  let rest = header[3]!;
-  for (let match = QUOTED.exec(rest); match; match = QUOTED.exec(rest)) {
+  let rest = [header[3]!, ...lines.slice(first + 1)].join("\n");
+  for (;;) {
+    rest = rest.replace(/^\s*\|?\s*/, "");
+    const match = QUOTED.exec(rest);
+    if (!match) break;
     strings.push(match[1]!);
     rest = rest.slice(match[0].length);
   }
+  if (rest.startsWith('"')) return null;
   return { date: header[1]!, strings };
 }
 
