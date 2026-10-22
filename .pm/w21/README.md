@@ -35,5 +35,8 @@
 - [520](./520.md) — New Transaction writes USD into a ledger without `operating_currency` (missed by w21/415 and w21/395)
 - [521](./521.md) — The file editor's error banner drops the fix hint Notifications shows (w21/424 incomplete)
 - [522](./522.md) — After Overwrite or Recreate, the editor keeps the first-loaded text as its baseline, so a revert is never saved and Back loses it silently
+- [523](./523.md) — Reports counts a bill pre-entered for later this month while Home's Spending stops at today (w21/337 sibling)
+- [524](./524.md) — Home's Recent Transactions and Reports' account card key twin entries by the same `entry_hash` (missed by w21/419)
+- [525](./525.md) — A guest journal link's filters follow the guest to every other example, and come back after Reset (w21/489 gap)
 - [508](./blocked/508.md) — Mobile guesses that an entry is a plugin copy from its first line; read the ledger's `generated_from` instead (split from 443) — **blocked:** production's GraphQL schema lacks `generated_from` until the ledger service and backend-v2 deploy; mobile's client is generated from it
 - [315](./blocked/315.md) — In-app commits signed with Gitea username and real email (no full_name, no noreply) — **blocked:** needs the owner's noreply-address and published-history decisions, and a production backfill of existing Gitea users that can't be verified here
