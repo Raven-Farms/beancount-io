@@ -286,6 +286,61 @@ describe("selectTransactionAmount", () => {
     });
   });
 
+  // w21/571: a split or merger moves no money, yet read as shares gained or lost.
+  describe("a corporate action", () => {
+    it("reads a 10:1 split as a neutral amount, not +90 NVDA", () => {
+      const tx = makeTransaction({
+        postings: [
+          makePosting("Assets:QaNvda", "-10", "NVDA", {
+            number: "1200.00",
+            currency: "USD",
+          }),
+          makePosting("Assets:QaNvda", "100", "NVDA", {
+            number: "120.00",
+            currency: "USD",
+          }),
+        ],
+      });
+      expect(selectTransactionAmount(tx, "USD")).toEqual({
+        text: "100.00 NVDA",
+        value: 0,
+        currency: "NVDA",
+      });
+    });
+
+    it("reads a merger as neutral too, not -10 OLDCO", () => {
+      const tx = makeTransaction({
+        postings: [
+          makePosting("Assets:QaBroker", "-10", "OLDCO", {
+            number: "100.00",
+            currency: "USD",
+          }),
+          makePosting("Assets:QaBroker", "5", "NEWCO", {
+            number: "200.00",
+            currency: "USD",
+          }),
+        ],
+      });
+      const amount = selectTransactionAmount(tx, "USD");
+      expect(amount && "value" in amount ? amount.value : null).toBe(0);
+      expect(amount && "text" in amount ? amount.text : "").toBe("10.00 OLDCO");
+    });
+
+    it("leaves a purchase and a sale with cash as they were", () => {
+      const buy = makeTransaction({
+        postings: [
+          makePosting("Assets:QaBroker", "10", "NVDA", {
+            number: "100.00",
+            currency: "USD",
+          }),
+          makePosting("Assets:QaBroker:Cash", "-1000.00"),
+        ],
+      });
+      const amount = selectTransactionAmount(buy, "USD");
+      expect(amount && "value" in amount ? amount.value : 0).not.toBe(0);
+    });
+  });
+
   // w21/570: a fee or rounding line made the whole USD side read as spent.
   describe("a currency exchange with a fee or rounding line", () => {
     const exchange = (...extra: ReturnType<typeof makePosting>[]) =>

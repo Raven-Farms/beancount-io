@@ -109,6 +109,55 @@ const feeAmount = (lines: JournalPosting[]): TransactionAmount | null => {
 };
 
 /**
+ * A corporate action: every posting is a held lot (it has a cost), and the cost
+ * of what left equals the cost of what arrived in each cost currency. A split
+ * (-10 NVDA {1200 USD}, +100 NVDA {120 USD}) or a merger (-10 OLDCO {100 USD},
+ * +5 NEWCO {200 USD}) moves no money, yet read as shares gained or lost in
+ * money colours (w21/571). Its size is the largest leg, unsigned and neutral.
+ */
+const corporateActionAmount = (
+  postings: JournalPosting[],
+  roots: RootNames,
+): TransactionAmount | null => {
+  if (
+    postings.length < 2 ||
+    !postings.every((p) => p.cost?.currency && isBalanceSheet(p.account, roots))
+  ) {
+    return null;
+  }
+  const costs = new Map<string, number>();
+  let largest: JournalPosting | null = null;
+  for (const p of postings) {
+    const units = parseFloat(p.units.number);
+    const unitCost = parseFloat(p.cost!.number ?? "");
+    if (!Number.isFinite(units) || !Number.isFinite(unitCost)) return null;
+    costs.set(
+      p.cost!.currency,
+      (costs.get(p.cost!.currency) ?? 0) + units * unitCost,
+    );
+    if (
+      largest === null ||
+      Math.abs(units) > Math.abs(parseFloat(largest.units.number))
+    ) {
+      largest = p;
+    }
+  }
+  if ([...costs.values()].some((net) => Math.abs(net) >= 0.005) || !largest) {
+    return null;
+  }
+  const currency = largest.units.currency;
+  return {
+    text: formatAmount(
+      Math.abs(parseFloat(largest.units.number)),
+      currency,
+      amountScale(largest.units.number),
+    ),
+    value: 0,
+    currency,
+  };
+};
+
+/**
  * The one number to show for a transaction, in a single currency.
  *
  * Netting Assets/Liabilities postings answers "what moved in or out", but the
@@ -152,6 +201,9 @@ export const selectTransactionAmount = (
 ): TransactionAmount | null => {
   const postings = txn.postings ?? [];
   if (!postings.length) return null;
+
+  const corporateAction = corporateActionAmount(postings, roots);
+  if (corporateAction) return corporateAction;
 
   const cashPostings = postings.filter((p) => isBalanceSheet(p.account, roots));
 
