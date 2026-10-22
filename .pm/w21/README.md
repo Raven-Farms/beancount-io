@@ -21,6 +21,12 @@
 - [228](./blocked/228.md) — New Transaction stamps the first operating currency on every posting; no currency or price control — **blocked:** needs account-constraint currencies on the client, a price path (legacy field or typed mutation, deploy first) and an owner-approved form design
 - [304](./blocked/304.md) — Budgets on Liabilities/Assets get favourability backwards (owner decision) — **blocked:** needs an owner decision between deriving direction from the account root and limiting the picker to Income and Expenses, which reverses w1/023's "every root" rule
 - [424](./blocked/424.md) — Mobile does not show the ledger service's fix hints (split from 311) — **blocked:** production's GraphQL schema lacks `code`/`hint` until backend-v2 deploys; mobile's client is generated from it
+- [425](./425.md) — Zero-decimal budgets show ¥1,016.13 (290 regression)
+- [426](./426.md) — Single-commodity account detail lacks price note (291/279 follow-up)
+- [427](./427.md) — Guest: per-entry NOT_FOUND blanks whole example (292 gap)
+- [428](./428.md) — Line-less editor error rows read as "dimmed" (276 regression)
+- [429](./429.md) — New File refuses Mr.Smith/2024.Q/budget.march (275 follow-up)
+- [430](./430.md) — Gravatar caption says "Add a photo" on any load failure (289 follow-up)
 - [313](./313.md) — Notifications' Recent changes shows only the last 30 commits; no way to older history
 - [314](./314.md) — Commit listing silently caps limit at 50 (REST/GraphQL/MCP) and fetches unused stats/files
 - [315](./315.md) — In-app commits signed with Gitea username and real email (no full_name, no noreply)
