@@ -260,7 +260,8 @@ def answer_preset(
             amount = balances[account]
             lines.append(f'{day - datetime.timedelta(days=1)} * "Opening balance"')
             lines.append(f"  {account}  {amount:f} {currency}")
-            lines.append(f"  Equity:OpeningBalances  {-amount:f} {currency}")
+            # copy_negate keeps every digit: unary minus rounds a wide amount to the context (w5/901).
+            lines.append(f"  Equity:OpeningBalances  {amount.copy_negate():f} {currency}")
             lines.append("")
         for account in sorted(balances):
             lines.append(f"{day} balance {account}  {balances[account]:f} {currency}")
