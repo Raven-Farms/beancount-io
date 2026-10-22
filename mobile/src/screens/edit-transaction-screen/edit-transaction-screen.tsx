@@ -355,10 +355,16 @@ export const EditTransactionScreen = (): JSX.Element => {
                   }
                 : { entry_hash: exit.entryHash, ledger: ledgerId },
             });
+          } else if (here && exit.kind === "unchanged") {
+            // The entry kept its identity (a metadata edit, a comment, a
+            // reordered posting): the detail screen behind is still the right
+            // one, and refetches on focus after this write (w21/251).
+            if (router.canGoBack()) router.back();
+            else router.dismiss(2);
           } else if (here) {
-            // No usable new identity (an older server echoes the request
-            // hash): land on the journal, which the entries invalidation just
-            // refetched, rather than on a detail screen that can only error.
+            // The server reported no new identity: land on the journal, which
+            // the entries invalidation just refetched, rather than on a detail
+            // screen that can only error.
             router.dismiss(2);
           }
         }

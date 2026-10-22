@@ -8,11 +8,10 @@ describe("resolveSaveExit", () => {
     });
   });
 
-  it("lands on the journal when the server echoed the request hash", () => {
-    // Pre-change servers echo the request; a newer server reports the same
-    // hash only when the identity did not move. Both are safe on the journal.
+  // w21/251: the hash omits meta and sorts postings, so these edits keep it.
+  it("goes back to the same detail when the entry kept its hash", () => {
     expect(resolveSaveExit("same-hash", "same-hash")).toEqual({
-      kind: "journal",
+      kind: "unchanged",
     });
   });
 
@@ -48,5 +47,24 @@ describe("applySavedIdentity", () => {
         { entryHash: null, newSha256sum: "new-sha" },
       ),
     ).toEqual({ entryHash: "old-hash", sha256sum: "new-sha" });
+  });
+});
+
+describe("the edit screen's exits", () => {
+  it("goes back to the detail when the entry kept its identity", () => {
+    const source = require("fs")
+      .readFileSync(
+        require("path").join(__dirname, "..", "edit-transaction-screen.tsx"),
+        "utf8",
+      )
+      .replace(/\s+/g, "");
+    expect(source.includes('elseif(here&&exit.kind==="unchanged"){')).toBe(
+      true,
+    );
+    expect(
+      source.includes(
+        "if(router.canGoBack())router.back();elserouter.dismiss(2);",
+      ),
+    ).toBe(true);
   });
 });
