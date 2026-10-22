@@ -4,6 +4,10 @@
 
 ## Inbox
 
+- [336 — Preserve collection filters through the profile header’s Followers link](./336.md) — minor; public dashboard QA,2026-10-21; header link drops settled q=gov at both widths, while the repaired tab-trigger path preserves it.
+
+- [335 — Keep the active profile tab visible on narrow screens](./335.md) — minor; public dashboard QA,2026-10-21; direct/header Followers selection clips its label at390px; native keyboard repeats, manual horizontal scrolling and1440px controls retained.
+
 - [334 — Validate required New Entry text after trimming](./334.md) — minor; dashboard QA,2026-10-21; whitespace-only Account/Currency/Note content prepare empty required values; fresh desktop/narrow controls, eight requests preblocked, no hosted writes.
 
 - [333 — Name the Settings language popup as well as its trigger](./333.md) — minor; dashboard QA,2026-10-21; native English/German dialog names are empty while trigger/current-option/selection/focus controls pass.
