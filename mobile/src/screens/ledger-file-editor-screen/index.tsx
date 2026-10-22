@@ -55,6 +55,7 @@ import {
   isOverEditLimit,
   isUnreadableLargeFile,
 } from "@/common/ledger-file-content";
+import { createEditorRecovery } from "@/components/code-editor/editor-recovery";
 import { isBeancountFile } from "@/common/ledger-file-types";
 import {
   GetLedgerErrorsDocument,
@@ -416,6 +417,13 @@ function LedgerFileEditorSession({
   const lineEndingRef = useRef<LineEnding>("\n");
   const documentEpochRef = useRef(0);
   const revisionTrackerRef = useRef(createRevisionTracker());
+  // The latest text the editor reported, to put back if its web view restarts
+  // (w21/342).
+  const recoveryRef = useRef(createEditorRecovery());
+  // The accessory bar's last insert. Cleared once the editor reports the edit
+  // it made: a web view that restarts is handed its first props again, and the
+  // insert would be applied a second time at the top of the file.
+  const [insertSpec, setInsertSpec] = useState<InsertSpec | null>(null);
 
   useEffect(() => {
     if (!fileData?.getLedgerFile || initialized) return;
@@ -436,6 +444,7 @@ function LedgerFileEditorSession({
     documentEpochRef.current = epoch;
     resetRevisionTracker(revisionTrackerRef.current);
     shaRef.current = fs;
+    recoveryRef.current.loaded(fc);
     setDocumentSpec({ value: fc, epoch });
     setHasUnsavedChanges(false);
     setInitialized(true);
@@ -526,6 +535,7 @@ function LedgerFileEditorSession({
     documentEpochRef.current = epoch;
     resetRevisionTracker(revisionTrackerRef.current);
     shaRef.current = fs;
+    recoveryRef.current.loaded(fc);
     setDocumentSpec({ value: fc, epoch });
     setHasUnsavedChanges(false);
   }, [client, refetch]);
@@ -541,9 +551,35 @@ function LedgerFileEditorSession({
       );
       if (dirty === null) return;
       setHasUnsavedChanges(dirty);
+      // The editor has made the edit, so the insert that asked for it is spent.
+      setInsertSpec(null);
     },
     [],
   );
+
+  // The editor's text shortly after it changes; a draft from before a reload
+  // (an older epoch) is dropped.
+  const handleDraft = useCallback(async (text: string, epoch: number) => {
+    if (epoch === documentEpochRef.current) recoveryRef.current.draft(text);
+  }, []);
+
+  // The editor's page is up. The second time is iOS having killed its web view:
+  // the page restarted from its first props (the original text and a revision
+  // counter at 0), so the draft goes back in under a new epoch, and the revision
+  // tracker restarts with it (w21/342).
+  const handleEditorReady = useCallback(async () => {
+    const plan = recoveryRef.current.ready();
+    if (!plan) return;
+    const epoch = documentEpochRef.current + 1;
+    documentEpochRef.current = epoch;
+    resetRevisionTracker(revisionTrackerRef.current);
+    setDocumentSpec({
+      value: plan.value,
+      epoch,
+      savedValue: plan.savedValue,
+    });
+    setInsertSpec(null);
+  }, []);
 
   // The conflict alert's way out for the user's text (w21/273): copy it and
   // load the remote version, or save it over that version.
@@ -620,6 +656,7 @@ function LedgerFileEditorSession({
         if (!newSha) throw new Error(t("ledgerEditorSaveFailed"));
 
         shaRef.current = newSha;
+        recoveryRef.current.saved(content);
         if (epoch === documentEpochRef.current) {
           setHasUnsavedChanges(
             markRevisionsSaved(revisionTrackerRef.current, revision),
@@ -752,7 +789,6 @@ function LedgerFileEditorSession({
   // ── Accessory bar insert ─────────────────────────────────────────────────
 
   const insertSeq = useRef(0);
-  const [insertSpec, setInsertSpec] = useState<InsertSpec | null>(null);
   const editorRef = useRef<CodeEditorRef>(null);
 
   const handleInsert = (text: string, cursorOffset?: number) => {
@@ -929,6 +965,8 @@ function LedgerFileEditorSession({
               documentSpec={documentSpec}
               onEdit={handleEdit}
               onSave={handleSave}
+              onReady={handleEditorReady}
+              onDraft={handleDraft}
               editorTheme={theme.editor}
               beancount={beancount}
               keyboardInset={editorKeyboardInset}

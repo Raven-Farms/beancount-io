@@ -40,6 +40,7 @@ import { isSameEditorTheme } from "./editor-theme";
 import { detectIndentUnit, INSERT_INDENT, wrapSelection } from "./indent-unit";
 import { jumpScrollTop } from "./jump-scroll";
 import { editorFontSize } from "./editor-font";
+import { DRAFT_DEBOUNCE_MS } from "./editor-recovery";
 import {
   beancountIndent,
   copyBeancountState,
@@ -59,6 +60,17 @@ export type InsertSpec = {
 export type EditorDocumentSpec = {
   value: string;
   epoch: number;
+  /**
+   * The saved text, when it differs from `value` (a draft put back after the
+   * web view restarted): what "unsaved" is measured against (w21/342).
+   */
+  savedValue?: string;
+};
+
+/** Where the editor reports its text, debounced; set by the component. */
+type DraftSink = {
+  send: ((text: string, epoch: number) => void) | undefined;
+  timer: ReturnType<typeof setTimeout> | null;
 };
 
 export interface CodeEditorRef extends DOMImperativeFactory {
@@ -73,6 +85,13 @@ export type CodeEditorProps = {
   documentSpec: EditorDocumentSpec;
   onEdit: (epoch: number, revision: number, isDirty: boolean) => Promise<void>;
   onSave: (value: string, epoch: number, revision: number) => Promise<boolean>;
+  /**
+   * The page has mounted. The second call is a web view that restarted; the
+   * screen answers with the text to put back (w21/342).
+   */
+  onReady?: () => Promise<void>;
+  /** The editor's text shortly after it changes, for that recovery. */
+  onDraft?: (text: string, epoch: number) => Promise<void>;
   /** Serializable theme tokens from `colorTheme.editor` (palette.ts). */
   editorTheme: EditorTheme;
   beancount: boolean;
@@ -173,6 +192,7 @@ function buildExtensions(
   beancount: boolean,
   languageCompartment: Compartment,
   fontSize: number,
+  draftSink: DraftSink,
 ): Extension[] {
   return [
     accessCompartment.of([
@@ -208,6 +228,17 @@ function buildExtensions(
           editRevisionRef.current,
           !update.state.doc.eq(savedDocumentRef.current),
         );
+        if (draftSink.send) {
+          if (draftSink.timer) clearTimeout(draftSink.timer);
+          const view = update.view;
+          draftSink.timer = setTimeout(() => {
+            draftSink.timer = null;
+            draftSink.send?.(
+              view.state.doc.toString(),
+              documentEpochRef.current,
+            );
+          }, DRAFT_DEBOUNCE_MS);
+        }
       }
     }),
     Prec.highest(
@@ -277,6 +308,8 @@ export default function CodeEditor({
   documentSpec,
   onEdit,
   onSave,
+  onReady,
+  onDraft,
   editorTheme,
   beancount,
   readOnly = false,
@@ -292,6 +325,8 @@ export default function CodeEditor({
   keyboardInsetRef.current = keyboardInset;
   const onEditRef = useRef(onEdit);
   const onSaveRef = useRef(onSave);
+  const onReadyRef = useRef(onReady);
+  const draftSinkRef = useRef<DraftSink>({ send: undefined, timer: null });
   const documentEpochRef = useRef(documentSpec.epoch);
   const editRevisionRef = useRef(0);
   const savedDocumentRef = useRef(Text.of(documentSpec.value.split("\n")));
@@ -317,6 +352,16 @@ export default function CodeEditor({
   useEffect(() => {
     onSaveRef.current = onSave;
   }, [onSave]);
+  useEffect(() => {
+    onReadyRef.current = onReady;
+  }, [onReady]);
+  useEffect(() => {
+    // Without a screen listening there is nothing to report, and no timer to
+    // keep (w21/342).
+    draftSinkRef.current.send = onDraft
+      ? (text, epoch) => void onDraft(text, epoch).catch(() => undefined)
+      : undefined;
+  }, [onDraft]);
 
   requestSaveRef.current = () => {
     const view = viewRef.current;
@@ -384,13 +429,18 @@ export default function CodeEditor({
         beancount,
         languageCompartmentRef.current,
         appliedFontSizeRef.current,
+        draftSinkRef.current,
       ),
     });
 
     const view = new EditorView({ state, parent: containerRef.current });
     viewRef.current = view;
+    // The page is up. A second announcement means the web view restarted and
+    // the screen puts the draft back (w21/342).
+    void onReadyRef.current?.()?.catch(() => undefined);
 
     return () => {
+      if (draftSinkRef.current.timer) clearTimeout(draftSinkRef.current.timer);
       view.destroy();
       viewRef.current = null;
     };
@@ -423,18 +473,25 @@ export default function CodeEditor({
             appliedLanguageRef.current,
             languageCompartmentRef.current,
             appliedFontSizeRef.current,
+            draftSinkRef.current,
           ),
         }),
       );
     }
-    savedDocumentRef.current = view.state.doc;
+    // Unsaved is measured against the saved text, which is not the text shown
+    // when a draft was put back after the web view restarted (w21/342).
+    savedDocumentRef.current =
+      documentSpec.savedValue === undefined ||
+      documentSpec.savedValue === documentSpec.value
+        ? view.state.doc
+        : Text.of(documentSpec.savedValue.split("\n"));
 
     const target = pendingJumpRef.current;
     if (target && view.state.doc.lines > 1) {
       return jumpToEditorLine(view, target, () => keyboardInsetRef.current);
     }
     return undefined;
-  }, [documentSpec.epoch, documentSpec.value]);
+  }, [documentSpec.epoch, documentSpec.value, documentSpec.savedValue]);
 
   useEffect(() => {
     appliedLanguageRef.current = beancount;
