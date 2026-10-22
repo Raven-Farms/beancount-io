@@ -297,13 +297,44 @@ function amountSpreadIsApproximate(amounts: readonly number[]): boolean {
  */
 export function hasEnoughHistory(series: readonly SeriesPoint[]): boolean {
   const days = new Set<number>();
-  for (const point of series) {
+  for (const point of withoutCounterSign(series)) {
     const day = parseLedgerDay(point.date);
     if (day !== null && Number.isFinite(point.amount)) {
       days.add(day);
     }
   }
   return days.size >= MIN_EVENT_DATES;
+}
+
+/**
+ * The points with the payee's main sign. A refund or reversal on a bill is the
+ * opposite sign to its charges, and counted as an event it moved Next to the
+ * refund's day, made the amount "~", and could push a short history under the
+ * three events detection needs (w21/268). The main sign is the one most points
+ * carry, the larger total when they tie; zero amounts stay.
+ */
+function withoutCounterSign(series: readonly SeriesPoint[]): SeriesPoint[] {
+  let positive = 0;
+  let negative = 0;
+  let positiveSum = 0;
+  let negativeSum = 0;
+  for (const point of series) {
+    if (point.amount > 0) {
+      positive += 1;
+      positiveSum += point.amount;
+    } else if (point.amount < 0) {
+      negative += 1;
+      negativeSum -= point.amount;
+    }
+  }
+  if (positive === 0 || negative === 0) {
+    return [...series];
+  }
+  const keepPositive =
+    positive !== negative ? positive > negative : positiveSum >= negativeSum;
+  return series.filter((point) =>
+    keepPositive ? point.amount >= 0 : point.amount <= 0,
+  );
 }
 
 /**
@@ -314,9 +345,10 @@ export function hasEnoughHistory(series: readonly SeriesPoint[]): boolean {
  * for short, unclassifiable, or high-dispersion series.
  */
 export function detectRecurrence(
-  series: readonly SeriesPoint[],
+  allPoints: readonly SeriesPoint[],
   today: string,
 ): RecurrenceVerdict | null {
+  const series = withoutCounterSign(allPoints);
   if (series.length < MIN_EVENT_DATES) {
     return null;
   }
