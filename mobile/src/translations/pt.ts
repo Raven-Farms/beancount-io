@@ -822,6 +822,8 @@ export const pt: Translations = {
     "É exatamente isto que será criado. Volte para alterar algo.",
   createLedgerAccounts: "Contas",
   createLedgerAmountInvalid: "Insira um valor como 100 ou -30.50",
+  createLedgerAmountReenter:
+    "Introduza novamente o saldo inicial ou escolha Decidir mais tarde. Não é guardado no rascunho.",
   createLedgerCurrencyInvalid: "Escolha um código de moeda como USD ou EUR.",
   createLedgerHistoryStartInvalid: "Digite uma data válida como 2026-01-01.",
   createLedgerPresetPersonal: "Livro pessoal",

@@ -824,6 +824,8 @@ export const es: Translations = {
     "Esto es exactamente lo que se creará. Vuelve atrás para cambiar algo.",
   createLedgerAccounts: "Cuentas",
   createLedgerAmountInvalid: "Introduce un monto como 100 o -30.50",
+  createLedgerAmountReenter:
+    "Vuelve a introducir el saldo inicial o elige «Decidir más tarde». No se conserva en el borrador guardado.",
   createLedgerCurrencyInvalid: "Elige un código de moneda como USD o EUR.",
   createLedgerHistoryStartInvalid:
     "Introduce una fecha válida como 2026-01-01.",

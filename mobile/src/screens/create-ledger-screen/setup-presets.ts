@@ -178,6 +178,19 @@ export function openingAmountValue(input: string): string | null {
 }
 
 /**
+ * Whether a resumed draft still owes its opening amount: the draft keeps the
+ * account but not the amount, and an empty field would pass Next and send no
+ * opening line at all (w21/500).
+ */
+export function openingAmountOwed(
+  amountLost: boolean,
+  openingAccount: string,
+  amount: string,
+): boolean {
+  return amountLost && openingAccount !== "" && !amount.trim();
+}
+
+/**
  * The opening line a setup writes: only for an account the chosen preset
  * offers, and only with an amount. A typed amount under "Decide later" was
  * dropped without a word, and an account picked under another preset was

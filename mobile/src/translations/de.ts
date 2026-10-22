@@ -824,6 +824,8 @@ export const de: Translations = {
     "Genau das wird erstellt. Gehen Sie zurück, um etwas zu ändern.",
   createLedgerAccounts: "Konten",
   createLedgerAmountInvalid: "Geben Sie einen Betrag wie 100 oder -30.50 ein",
+  createLedgerAmountReenter:
+    "Geben Sie den Eröffnungssaldo erneut ein oder wählen Sie „Später entscheiden“. Er wird nicht im gespeicherten Entwurf aufbewahrt.",
   createLedgerCurrencyInvalid:
     "Wählen Sie einen Währungscode wie USD oder EUR.",
   createLedgerHistoryStartInvalid:

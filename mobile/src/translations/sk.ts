@@ -830,6 +830,8 @@ export const sk: Translations = {
     "Presne toto sa vytvorí. Vráťte sa, ak chcete niečo zmeniť.",
   createLedgerAccounts: "Účty",
   createLedgerAmountInvalid: "Zadajte sumu ako 100 alebo -30.50",
+  createLedgerAmountReenter:
+    "Zadajte počiatočný zostatok znova alebo vyberte Rozhodnúť neskôr. V uloženom koncepte sa neuchováva.",
   createLedgerCurrencyInvalid: "Zadajte kód meny, napríklad USD alebo EUR.",
   createLedgerHistoryStartInvalid:
     "Zadajte platný dátum, napríklad 2026-01-01.",

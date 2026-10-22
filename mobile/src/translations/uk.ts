@@ -823,6 +823,8 @@ export const uk: Translations = {
     "Буде створено саме це. Поверніться, щоб щось змінити.",
   createLedgerAccounts: "Рахунки",
   createLedgerAmountInvalid: "Введіть суму, наприклад 100 або -30.50",
+  createLedgerAmountReenter:
+    "Введіть початковий залишок ще раз або виберіть «Вирішити пізніше». У збереженій чернетці його не зберігається.",
   createLedgerCurrencyInvalid: "Укажіть код валюти, наприклад USD або EUR.",
   createLedgerHistoryStartInvalid:
     "Введіть коректну дату, наприклад 2026-01-01.",

@@ -826,6 +826,8 @@ export const fr: Translations = {
     "Voici exactement ce qui sera créé. Revenez en arrière pour modifier.",
   createLedgerAccounts: "Comptes",
   createLedgerAmountInvalid: "Saisissez un montant comme 100 ou -30.50",
+  createLedgerAmountReenter:
+    "Saisissez à nouveau le solde d'ouverture ou choisissez « Décider plus tard ». Il n'est pas conservé dans le brouillon enregistré.",
   createLedgerCurrencyInvalid: "Choisissez un code de devise comme USD ou EUR.",
   createLedgerHistoryStartInvalid:
     "Saisissez une date valide comme 2026-01-01.",

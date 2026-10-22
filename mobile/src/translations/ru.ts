@@ -824,6 +824,8 @@ export const ru: Translations = {
     "Будет создано именно это. Вернитесь, чтобы что-то изменить.",
   createLedgerAccounts: "Счета",
   createLedgerAmountInvalid: "Введите сумму, например 100 или -30.50",
+  createLedgerAmountReenter:
+    "Введите начальный остаток ещё раз или выберите «Решить позже». В сохранённом черновике он не хранится.",
   createLedgerCurrencyInvalid: "Укажите код валюты, например USD или EUR.",
   createLedgerHistoryStartInvalid:
     "Введите корректную дату, например 2026-01-01.",

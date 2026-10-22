@@ -750,6 +750,8 @@ export const en = {
     "This is exactly what will be created. Go back to change anything.",
   createLedgerAccounts: "Accounts",
   createLedgerAmountInvalid: "Enter an amount like 100 or -30.50.",
+  createLedgerAmountReenter:
+    "Enter the opening balance again, or choose Decide later. It is not kept in the saved draft.",
   createLedgerCurrencyInvalid: "Choose a currency code like USD or EUR.",
   createLedgerHistoryStartInvalid: "Enter a real date like 2026-01-01.",
   createLedgerPresetPersonal: "Personal ledger",

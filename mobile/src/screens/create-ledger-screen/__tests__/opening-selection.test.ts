@@ -1,6 +1,7 @@
 import fs from "fs";
 import path from "path";
 import {
+  openingAmountOwed,
   openingAmountValue,
   openingSelection,
   SETUP_PRESETS,
@@ -71,5 +72,37 @@ describe("Create Ledger's opening line", () => {
     // The refine the form runs on `openingAmount` is `openingAmountValue`.
     expect(openingAmountValue("12.")).toBe(null);
     expect(openingAmountValue("")).not.toBe(null);
+  });
+});
+
+// w21/500: a resumed draft keeps the opening account but not the amount, and an
+// empty amount passed Next, so Review and Create sent no opening balance.
+describe("an opening amount a resumed draft still owes", () => {
+  it("is owed once the draft lost it and the account is still chosen", () => {
+    expect(openingAmountOwed(true, "Assets:Cash", "")).toBe(true);
+    expect(openingAmountOwed(true, "Assets:Cash", "  ")).toBe(true);
+  });
+
+  it("is settled by an amount, by Decide later, or by a fresh form", () => {
+    expect(openingAmountOwed(true, "Assets:Cash", "2")).toBe(false);
+    expect(openingAmountOwed(true, "", "")).toBe(false);
+    expect(openingAmountOwed(false, "Assets:Cash", "")).toBe(false);
+  });
+
+  it("is checked by the form's schema with its own message", () => {
+    const source = fs
+      .readFileSync(
+        path.join(__dirname, "..", "create-ledger-screen.tsx"),
+        "utf8",
+      )
+      .replace(/\s+/g, "");
+    expect(
+      source.includes(
+        'path:["openingAmount"],message:t("createLedgerAmountReenter")',
+      ),
+    ).toBe(true);
+    expect(
+      source.includes("setAmountLost(Boolean(draft.values.openingAccount));"),
+    ).toBe(true);
   });
 });

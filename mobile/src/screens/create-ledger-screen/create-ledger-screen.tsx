@@ -36,6 +36,7 @@ import {
   isHistoryStart,
   isSetupCurrency,
   setupFields,
+  openingAmountOwed,
   openingAmountValue,
   openingSelection,
   SETUP_PRESETS,
@@ -204,35 +205,55 @@ export function CreateLedgerScreen(): JSX.Element {
   // The request last sent under `requestId` (w21/434).
   const sentFingerprintRef = useRef<string | undefined>(undefined);
 
+  // A resumed draft that had an opening account has lost its amount; Next is
+  // refused until it is entered again or the account cleared (w21/500).
+  const [amountLost, setAmountLost] = useState(false);
+
   const schema = useMemo(
     () =>
-      z.object({
-        name: z
-          .string()
-          .min(1, t("createLedgerNameRequired"))
-          .max(100, t("createLedgerNameMaxLength"))
-          .refine((val) => slugifyLedgerName(val).length > 0, {
-            message: t("createLedgerNameInvalid"),
+      z
+        .object({
+          name: z
+            .string()
+            .min(1, t("createLedgerNameRequired"))
+            .max(100, t("createLedgerNameMaxLength"))
+            .refine((val) => slugifyLedgerName(val).length > 0, {
+              message: t("createLedgerNameInvalid"),
+            }),
+          description: z.string(),
+          private: z.boolean(),
+          template: z.enum(["STARTER", "SAMPLE"]),
+          // Checked here, in the user's language, rather than refused on Review
+          // in the server's (w21/107).
+          currency: z.string().refine(isSetupCurrency, {
+            message: t("createLedgerCurrencyInvalid"),
           }),
-        description: z.string(),
-        private: z.boolean(),
-        template: z.enum(["STARTER", "SAMPLE"]),
-        // Checked here, in the user's language, rather than refused on Review
-        // in the server's (w21/107).
-        currency: z.string().refine(isSetupCurrency, {
-          message: t("createLedgerCurrencyInvalid"),
-        }),
-        historyStart: z.string().refine(isHistoryStart, {
-          message: t("createLedgerHistoryStartInvalid"),
-        }),
-        openingAccount: z.string(),
-        openingAmount: z
-          .string()
-          .refine((val) => openingAmountValue(val) !== null, {
-            message: t("createLedgerAmountInvalid"),
+          historyStart: z.string().refine(isHistoryStart, {
+            message: t("createLedgerHistoryStartInvalid"),
           }),
-      }),
-    [t],
+          openingAccount: z.string(),
+          openingAmount: z
+            .string()
+            .refine((val) => openingAmountValue(val) !== null, {
+              message: t("createLedgerAmountInvalid"),
+            }),
+        })
+        .superRefine((values, ctx) => {
+          if (
+            openingAmountOwed(
+              amountLost,
+              values.openingAccount,
+              values.openingAmount,
+            )
+          ) {
+            ctx.addIssue({
+              code: z.ZodIssueCode.custom,
+              path: ["openingAmount"],
+              message: t("createLedgerAmountReenter"),
+            });
+          }
+        }),
+    [t, amountLost],
   );
 
   const existingNames = useMemo(
@@ -294,6 +315,7 @@ export function CreateLedgerScreen(): JSX.Element {
       if (draft.requestedAt !== undefined) {
         requestedAtRef.current = draft.requestedAt;
       }
+      setAmountLost(Boolean(draft.values.openingAccount));
       reset(draft.values);
     });
   }, [reset]);
