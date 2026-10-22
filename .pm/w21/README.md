@@ -72,6 +72,7 @@
 - [473](./473.md) — 'Show N more lines' ignores plurals (379 follow-up)
 - [474](./474.md) — Editor tells a FORBIDDEN save to try again (378 follow-up)
 - [475](./475.md) — Dashboard budget chart takes an income target's direction from today's amount; zeroed income runs on expense rules (394 dashboard half)
+- [476](./476.md) — Custom/budget hash ignores account and amount; stale delete removes another budget
 - [315](./blocked/315.md) — In-app commits signed with Gitea username and real email (no full_name, no noreply) — **blocked:** needs the owner's noreply-address and published-history decisions, and a production backfill of existing Gitea users that can't be verified here
 - [397](./397.md) — Mobile loads ≤500 budget directives; oldest budget card vanishes
 - [398](./398.md) — Budget on a closed account runs forever and outranks real overspends
