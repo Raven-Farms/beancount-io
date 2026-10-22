@@ -94,6 +94,8 @@ function failureMessageKey(
       return "serverConnectionUnreachable";
     case "incompatible":
       return "serverConnectionIncompatible";
+    case "timeout":
+      return "serverConnectionTimeout";
     case "not_configured":
       return "serverConnectionNotConfigured";
     case "mismatch":

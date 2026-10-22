@@ -94,6 +94,61 @@ function harness(
   };
 }
 
+// w21/215: changing the server during a stuck discovery left Sign In blocked
+// behind the old attempt.
+describe("a sign-in dropped while it waits on discovery", () => {
+  it("lets the next attempt start fresh and signals the old one to stop", async () => {
+    const signals: (AbortSignal | undefined)[] = [];
+    let firstAborted = false;
+    const { launch, opened } = harness({
+      discover: (_serverUrl, signal) => {
+        signals.push(signal);
+        if (signals.length === 1) {
+          return new Promise((_resolve, reject) => {
+            signal?.addEventListener("abort", () => {
+              firstAborted = true;
+              reject(new Error("aborted"));
+            });
+          });
+        }
+        return Promise.resolve(discovery);
+      },
+    });
+
+    const first = launch("https://old.example.test/", "sign_in");
+    const firstSettled = first.then(
+      () => "resolved",
+      () => "rejected",
+    );
+    launch.abortDiscovery();
+    const second = launch(`${issuer}/`, "sign_in");
+
+    expect(await firstSettled).toBe("rejected");
+    expect(firstAborted).toBe(true);
+    expect(signals.length).toBe(2);
+    expect(await second).toBe(session);
+    expect(opened.length).toBe(1);
+  });
+
+  it("leaves an attempt alone once the browser is open", async () => {
+    let release: (value: AuthorizationBrowserResult) => void = () => undefined;
+    const { launch } = harness({
+      openAuthSession: () =>
+        new Promise<AuthorizationBrowserResult>((resolve) => {
+          release = resolve;
+        }),
+    });
+
+    const first = launch(`${issuer}/`, "sign_in");
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    launch.abortDiscovery();
+    // Still the one attempt: a second tap returns it rather than opening another.
+    expect(launch(`${issuer}/`, "sign_in")).toBe(first);
+    release({ type: "dismiss" });
+    expect(await first).toBe(null);
+  });
+});
+
 describe("native authorization launcher", () => {
   it("persists the verifier before the browser opens", async () => {
     const order: string[] = [];

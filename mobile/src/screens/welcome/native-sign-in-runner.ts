@@ -6,7 +6,12 @@ export type NativeSignInFlow = PendingOAuthAuthorization["flow"];
 
 /** Why a tap did not end in a session; each gets its own line on screen. */
 export type NativeSignInFailure =
-  "unreachable" | "incompatible" | "not_configured" | "mismatch" | "rejected";
+  | "unreachable"
+  | "timeout"
+  | "incompatible"
+  | "not_configured"
+  | "mismatch"
+  | "rejected";
 
 /** What one welcome-screen tap ended in. */
 export type NativeSignInOutcome =

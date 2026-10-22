@@ -12,7 +12,11 @@ export type AuthorizationBrowserResult =
   { type: "success"; url: string } | { type: string; url?: string };
 
 export type AuthorizationLauncherDependencies = {
-  discover: (serverUrl: string) => Promise<OAuthDiscovery>;
+  /** `signal` aborts when the attempt is dropped before discovery answers. */
+  discover: (
+    serverUrl: string,
+    signal?: AbortSignal,
+  ) => Promise<OAuthDiscovery>;
   createPkce: () => Promise<PkceChallenge>;
   createState: () => string;
   redirectUri: () => string;
@@ -58,22 +62,42 @@ async function discardPending(
  * the exchange instead. Both paths funnel through the same single-flight
  * completer, so a one-time code is never exchanged twice.
  */
-export function createAuthorizationLauncher(
-  deps: AuthorizationLauncherDependencies,
-): (
+export type AuthorizationLauncher = ((
   serverUrl: string,
   flow: PendingOAuthAuthorization["flow"],
-) => Promise<OAuthSession | null> {
-  let inFlight: Promise<OAuthSession | null> | undefined;
+) => Promise<OAuthSession | null>) & {
+  /**
+   * Drop an attempt still waiting on discovery, so the next call starts fresh
+   * (the server was changed under it, w21/215). Once the browser is open the
+   * attempt is the user's and is left alone.
+   */
+  abortDiscovery: () => void;
+};
 
-  return (serverUrl, flow) => {
+export function createAuthorizationLauncher(
+  deps: AuthorizationLauncherDependencies,
+): AuthorizationLauncher {
+  let inFlight: Promise<OAuthSession | null> | undefined;
+  let discovering: AbortController | undefined;
+
+  const launch = (
+    serverUrl: string,
+    flow: PendingOAuthAuthorization["flow"],
+  ) => {
     // A second tap must not open a second browser: the first one's verifier is
     // already the stored pending request, and overwriting it would make the
     // first redirect unexchangeable.
     if (inFlight) return inFlight;
 
+    const controller = new AbortController();
+    discovering = controller;
     const promise = (async () => {
-      const discovery = await deps.discover(serverUrl);
+      let discovery: OAuthDiscovery;
+      try {
+        discovery = await deps.discover(serverUrl, controller.signal);
+      } finally {
+        if (discovering === controller) discovering = undefined;
+      }
       const { codeVerifier, codeChallenge } = await deps.createPkce();
       const pending = createPendingAuthorization(discovery, {
         flow,
@@ -99,10 +123,20 @@ export function createAuthorizationLauncher(
       await discardPending(deps, pending.state);
       return null;
     })().finally(() => {
-      inFlight = undefined;
+      // An aborted attempt may already have been replaced by a newer one.
+      if (inFlight === promise) inFlight = undefined;
     });
 
     inFlight = promise;
     return promise;
   };
+
+  return Object.assign(launch, {
+    abortDiscovery: () => {
+      if (!discovering) return;
+      discovering.abort();
+      discovering = undefined;
+      inFlight = undefined;
+    },
+  });
 }

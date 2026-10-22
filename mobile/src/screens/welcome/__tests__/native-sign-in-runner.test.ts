@@ -60,6 +60,16 @@ describe("runNativeSignIn", () => {
     ).toBe("mismatch");
   });
 
+  it("names a server that never answered as a timeout (w21/215)", async () => {
+    expect(
+      await runNativeSignIn("sign_in", async () => {
+        throw new OAuthDiscoveryError("unreachable", "timed out", {
+          reason: "timeout",
+        });
+      }),
+    ).toBe("timeout");
+  });
+
   it("counts an unexpected exception as a rejection", async () => {
     const outcome = await runNativeSignIn("sign_in", async () => {
       throw new TypeError("something else entirely");

@@ -22,6 +22,9 @@ export type OAuthDiscovery = {
   revocationEndpoint: string;
 };
 
+/** How long a server gets to answer a probe or discovery before it is called unreachable. */
+export const CONNECTION_TIMEOUT_MS = 8_000;
+
 type Fetch = typeof fetch;
 
 function wellKnownUrl(kind: string, absoluteUrl: string): string {
@@ -95,7 +98,9 @@ export class OAuthDiscoveryError extends Error {
  * names itself by another address, one the app would accept (`canonicalUrl`).
  */
 export type DiscoveryDetail =
-  { reason: "not_configured" } | { reason: "mismatch"; canonicalUrl: string };
+  | { reason: "not_configured" }
+  | { reason: "mismatch"; canonicalUrl: string }
+  | { reason: "timeout" };
 
 const incompatible = (message: string, detail?: DiscoveryDetail) =>
   new OAuthDiscoveryError("incompatible", message, detail);

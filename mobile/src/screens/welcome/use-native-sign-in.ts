@@ -1,5 +1,10 @@
-import { useCallback, useRef, useState } from "react";
-import { startNativeAuthorization } from "@/common/oauth/start-authorization";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useReactiveVar } from "@apollo/client";
+import {
+  abortNativeAuthorizationDiscovery,
+  startNativeAuthorization,
+} from "@/common/oauth/start-authorization";
+import { serverUrlOverrideVar } from "@/common/vars/server-url";
 import {
   runNativeSignIn,
   type NativeSignInFailure,
@@ -27,16 +32,34 @@ export function useNativeSignIn({
   const [pendingFlow, setPendingFlow] = useState<NativeSignInFlow | null>(null);
   const [failure, setFailure] = useState<NativeSignIn["failure"]>(null);
   const running = useRef(false);
+  // Bumped when the server changes under a running attempt, so its late
+  // outcome (an error about the old URL) is dropped rather than shown.
+  const attempt = useRef(0);
+  const server = useReactiveVar(serverUrlOverrideVar);
+  const lastServer = useRef(server);
+
+  useEffect(() => {
+    if (lastServer.current === server) return;
+    lastServer.current = server;
+    if (!running.current) return;
+    attempt.current += 1;
+    abortNativeAuthorizationDiscovery();
+    running.current = false;
+    setPendingFlow(null);
+    onSettled?.();
+  }, [server, onSettled]);
 
   const start = useCallback(
     (flow: NativeSignInFlow) => {
       if (running.current) return;
       running.current = true;
+      const mine = attempt.current;
       onStart?.();
       setPendingFlow(flow);
       setFailure(null);
 
       void runNativeSignIn(flow, startNativeAuthorization).then((outcome) => {
+        if (attempt.current !== mine) return;
         running.current = false;
         setPendingFlow(null);
         onSettled?.();

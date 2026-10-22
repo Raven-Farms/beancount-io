@@ -15,6 +15,7 @@ import {
   type ServerUrlErrorCode,
 } from "./server-url-validation";
 import {
+  CONNECTION_TIMEOUT_MS,
   discoverOAuthServer,
   OAuthDiscoveryError,
   type DiscoveryDetail,
@@ -35,7 +36,6 @@ export type ServerConnectionResult =
   | { kind: "incompatible"; detail?: DiscoveryDetail };
 
 const HEALTH_QUERY = "query ServerHealth { health }";
-const CONNECTION_TIMEOUT_MS = 8_000;
 
 /**
  * A small contract probe for the exact public GraphQL surface the mobile app
