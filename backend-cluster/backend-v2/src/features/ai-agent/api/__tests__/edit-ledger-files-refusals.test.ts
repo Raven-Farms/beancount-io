@@ -625,6 +625,73 @@ describe("a new_string holding replacement patterns", () => {
   });
 });
 
+/** w23/052: small gaps in what updateLedgerFiles accepts and reports. */
+describe("updateLedgerFiles edge cases", () => {
+  const update = (
+    f: Awaited<ReturnType<typeof fixture>>,
+    file: Record<string, unknown>,
+    dry_run = false,
+  ) =>
+    f.client.callTool({
+      name: "updateLedgerFiles",
+      arguments: {
+        ledger: "alice/main",
+        description: "edit",
+        dry_run,
+        files: [{ path: "main.bean", ...file }],
+      },
+    });
+
+  it.each([false, true])(
+    "commits nothing when old_string and new_string match (dry run %p)",
+    async (dryRun) => {
+      const f = await fixture();
+      try {
+        const result = await update(
+          f,
+          { old_string: '01-05 * "Cafe"', new_string: '01-05 * "Cafe"' },
+          dryRun,
+        );
+        expect(result.isError).toBeFalsy();
+        expect(
+          (result.structuredContent as { result: unknown }).result,
+        ).toMatchObject({
+          summary: "No changes — nothing committed",
+          count: 0,
+          operations: [],
+          diff: [],
+        });
+        expect(f.changeLedgerFiles).not.toHaveBeenCalled();
+      } finally {
+        await f.close();
+      }
+    },
+  );
+
+  it.each([
+    [
+      { old_string: "", new_string: "x" },
+      "files.0.old_string: old_string must not be empty",
+    ],
+    [
+      { old_string: '01-05 * "Cafe"', new_string: "x", replace_all: true },
+      'files.0: Unrecognized key: "replace_all"',
+    ],
+  ])("refuses %j naming the problem", async (file, message) => {
+    const f = await fixture();
+    try {
+      const result = await update(f, file);
+      expect(result.isError).toBe(true);
+      expect(result.structuredContent).toMatchObject({
+        error: { code: "BAD_USER_INPUT", message },
+      });
+      expect(f.getLedgerFilesContent).not.toHaveBeenCalled();
+    } finally {
+      await f.close();
+    }
+  });
+});
+
 /** w5/036: an ambiguous `old_string` is the caller's to fix, in production too. */
 describe("an old_string that matches more than once", () => {
   it("is refused as bad input with the count and a way forward", async () => {

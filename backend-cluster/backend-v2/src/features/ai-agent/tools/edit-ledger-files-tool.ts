@@ -42,6 +42,7 @@ const description =
 const filePath = z.string().describe("File path relative to ledger root");
 const oldString = z
   .string()
+  .min(1, "old_string must not be empty")
   .describe("Exact text to replace — must appear exactly once in the file.");
 const newString = z.string().describe("Replacement text.");
 const baseSha = z
@@ -245,6 +246,9 @@ function foldOperations(
   const operations: LedgerChangeFileOperation[] = [];
   const projected = new Map<string, string | null>();
   for (const [path, { content, create }] of touched) {
+    // A change that leaves the file as it is commits nothing: it made an
+    // empty commit reported as "Committed 1 change(s)" (w23/052).
+    if (!create && content === fileCache.get(path)?.content) continue;
     projected.set(path, content);
     const sha = fileCache.get(path)?.sha;
     if (content === null) operations.push({ operation: "delete", path, sha });
@@ -328,6 +332,29 @@ export async function executeEditLedgerFiles(
         path: op.path,
       }));
 
+      if (operations.length === 0) {
+        // Every change left its file as it was (w23/052). The write is still
+        // authorized, so a caller the commit would refuse is refused here.
+        await services.ledgerRepo.changeFiles({
+          ledgerId,
+          identity,
+          operations: [],
+          message: description,
+          dryRun: true,
+        });
+        const errors = await readBeanCheckErrors(services, identity, ledgerId);
+        return {
+          diff: [],
+          summary: "No changes — nothing committed",
+          dry_run,
+          count: 0,
+          operations: [],
+          wrote: [],
+          entryHashes: [],
+          validation: toWriteValidation(errors, errors),
+        };
+      }
+
       if (dry_run) {
         // The preview must refuse exactly what the commit would: the service
         // runs the same write authorization and path validation, then stops
@@ -397,6 +424,8 @@ export async function executeEditLedgerFiles(
               )
                 throw error;
               attempt = (await prepare()).operations;
+              // The winner made the same change: nothing is left to commit.
+              if (attempt.length === 0) return;
             }
           }
         },
