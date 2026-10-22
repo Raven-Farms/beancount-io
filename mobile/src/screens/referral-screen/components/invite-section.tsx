@@ -64,12 +64,20 @@ export function InviteSection(): JSX.Element {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>{t("inviteFriends")}</Text>
+      {/* The button below is named by this title and its summary, so the title is
+          not a focus stop of its own (it was read twice, w21/488). */}
+      <Text
+        style={styles.title}
+        accessible={false}
+        importantForAccessibility="no"
+      >
+        {t("inviteFriends")}
+      </Text>
       <TouchableOpacity
         style={styles.section}
         activeOpacity={0.9}
         accessibilityRole="button"
-        accessibilityLabel={t("inviteFriends")}
+        accessibilityLabel={`${t("inviteFriends")}, ${t("inviteSummary")}`}
         onPress={() => {
           router.navigate("/(app)/referral");
         }}
