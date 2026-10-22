@@ -345,7 +345,19 @@ export function LedgerForm({
   return (
     <>
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
+        <form
+          onSubmit={(event) => {
+            // Only Review's Create Ledger confirms a new ledger. A submit
+            // from an earlier step, such as Enter in a field, advances.
+            if (isCreate && step < 2) {
+              event.preventDefault();
+              void nextStep();
+              return;
+            }
+            void form.handleSubmit(handleSubmit)(event);
+          }}
+          className="space-y-6"
+        >
           {limits && isCreate && !hideLimitIndicator ? (
             <LimitIndicator
               used={limits.ledgersUsed}
@@ -765,8 +777,12 @@ export function LedgerForm({
                 {t("common.back")}
               </Button>
             )}
+            {/* Distinct keys: Next must not become the submit button while
+                its own click is still being handled, or that click
+                creates the ledger before Review is shown (w4/314). */}
             {isCreate && step < 2 ? (
               <Button
+                key="next"
                 type="button"
                 onClick={() => void nextStep()}
                 disabled={isLoading || isAtLedgerLimit}
@@ -776,6 +792,7 @@ export function LedgerForm({
               </Button>
             ) : (
               <Button
+                key="submit"
                 type="submit"
                 disabled={isLoading || (isCreate && isAtLedgerLimit)}
                 className="transition-colors duration-200"
