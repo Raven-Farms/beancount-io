@@ -147,3 +147,11 @@
 - [383](./383.md) — Browse ledgers retry shows false "Your ledgers will appear here"
 - [384](./384.md) — Accounts/Reports expand state carries over to another ledger
 - [385](./385.md) — Stale delete still toasts "Failed to delete" over the gone state (250 follow-up)
+- [386](./386.md) — Arabic thousands separator read as decimal: ۱٬۲۳۴ saved as 1.234 (230 regression)
+- [387](./387.md) — Refusal containing "sha"/"409" misreported as changed elsewhere (250 follow-up)
+- [388](./388.md) — Hash-preserving edit returns to stale stashed detail (251 Acceptance unmet)
+- [389](./389.md) — JPY receipt still saves 1500.00 JPY (231 follow-up)
+- [390](./390.md) — Home net-worth chart permanent skeleton on failed first load (239 sibling)
+- [391](./391.md) — First offline launch after 244 drops the cached drawer list
+- [392](./392.md) — Add Budget refuses Persian/Arabic digits (230 sibling)
+- [393](./393.md) — Budget history delete after external change is a dead end (250 sibling)
