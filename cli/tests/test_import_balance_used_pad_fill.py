@@ -71,7 +71,8 @@ def test_apply_writes_nothing(tmp_path: Path, bea_config_dir: Path) -> None:
 
     assert result.exit_code == 4, result.output
     error = json.loads(result.stderr)["error"]
-    assert "1 row is blocked" in error["message"]
+    assert "1 row is blocked by a pad that would silently fill the gap; resolve it first." in error["message"]
+    assert "unopened account" not in error["message"]
     assert any("would silently insert the 50.00 EUR difference" in line for line in error["details"])
     assert (tmp_path / "mc.bean").read_text() == LEDGER
 
@@ -81,3 +82,40 @@ def test_a_balance_that_agrees_is_still_written(tmp_path: Path, bea_config_dir: 
 
     assert result.exit_code == 0, result.output
     assert re.search(r"2026-03-15 balance Assets:Checking +200\.00 EUR", (tmp_path / "mc.bean").read_text())
+
+
+def test_the_printed_pad_command_is_complete_and_runs(tmp_path: Path, bea_config_dir: Path) -> None:
+    """The remedy names the account, date and amount of the row (w5/873)."""
+    import shlex
+
+    result = _import(tmp_path, "250.00", "--apply")
+    (reason,) = [line for line in json.loads(result.stderr)["error"]["details"] if "pads it explicitly" in line]
+    command = re.search(r"(bea .*?) pads it explicitly", reason)
+    assert command is not None
+    argv = shlex.split(command.group(1))
+    assert argv[argv.index("add") :] == [
+        "add",
+        "balance",
+        "--account",
+        "Assets:Checking",
+        "--date",
+        "2026-03-15",
+        "--amount",
+        "250.00 EUR",
+        "--pad-from",
+        "Equity:OpeningBalances",
+    ]
+    ran = runner.invoke(app, ["--file", str(tmp_path / "mc.bean"), *argv[1:]])
+    assert ran.exit_code == 0, ran.output
+
+
+def test_the_blocked_summary_names_every_cause() -> None:
+    from bea_engine.importing import _blocked_summary
+
+    assert _blocked_summary(0, 0) == ""
+    assert _blocked_summary(1, 0).startswith(" 1 row is blocked by an unopened account or a currency mismatch;")
+    assert _blocked_summary(2, 2) == " 2 rows are blocked by pads that would silently fill the gap; resolve them first."
+    assert _blocked_summary(3, 1) == (
+        " 3 rows are blocked by unopened accounts or currency mismatches and a pad that would silently fill the gap;"
+        " resolve them first."
+    )

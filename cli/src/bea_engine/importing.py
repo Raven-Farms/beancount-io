@@ -466,6 +466,7 @@ def answer(
     quotes = _written_quotes(existing)
     price_conflicts = False
     rows: list[dict[str, Any]] = []
+    padded_rows = 0
     texts: list[str] = []
     conflicts = False
     # Which side a conflicting id came from: the ledger, or an earlier row of
@@ -715,9 +716,10 @@ def answer(
             # Written through the batch validation, which a pad passes: a
             # wrong statement amount in a currency an already used pad has not
             # padded was filled with a backdated adjustment, exit 0 (w5/871).
-            padded = _padded_balance_reason(entry, [*existing, *included], options)
+            padded = _padded_balance_reason(entry, [*existing, *included], options, ledger=file)
             if padded is not None:
                 status, reason, include = "blocked", padded, False
+                padded_rows += 1
         if include:
             texts.append(text)
             included.append(entry)
@@ -905,12 +907,7 @@ def answer(
                 )
             else:
                 guidance = "Import needs review; nothing was written."
-            if blocked == 1:
-                guidance += " 1 row is blocked by an unopened account or a currency mismatch; resolve it first."
-            elif blocked:
-                guidance += (
-                    f" {blocked} rows are blocked by unopened accounts or currency mismatches; resolve them first."
-                )
+            guidance += _blocked_summary(blocked, padded_rows)
             # Invalid rows were dropped from the refusal it raised first, so
             # fixing everything it listed met the next refusal (w5/858).
             if validation_errors:
@@ -1933,7 +1930,26 @@ def _entries_after(
     return result
 
 
-def _padded_balance_reason(balance: Any, entries: list[Any], options: Any) -> str | None:
+def _blocked_summary(blocked: int, padded: int) -> str:
+    """The apply refusal's sentence about blocked rows, naming each cause that applies (w5/873)."""
+    if not blocked:
+        return ""
+    causes = []
+    if blocked > padded:
+        causes.append(
+            "an unopened account or a currency mismatch"
+            if blocked - padded == 1
+            else "unopened accounts or currency mismatches"
+        )
+    if padded:
+        causes.append(
+            "a pad that would silently fill the gap" if padded == 1 else "pads that would silently fill the gap"
+        )
+    rows = "1 row is" if blocked == 1 else f"{blocked} rows are"
+    return f" {rows} blocked by {' and '.join(causes)}; resolve {'it' if blocked == 1 else 'them'} first."
+
+
+def _padded_balance_reason(balance: Any, entries: list[Any], options: Any, *, ledger: Path) -> str | None:
     """Why a used pad would silently fill this imported assertion's gap, or None.
 
     The rule `add balance` refuses by (w5/796): a pad an earlier assertion
@@ -1962,7 +1978,9 @@ def _padded_balance_reason(balance: Any, entries: list[Any], options: Any) -> st
         f"{account} holds {_plain(held)} {currency} on {date} but this row asserts {_plain(number)}; the pad at "
         f"{pad_at} ({cover.date} from {cover.source_account}) would silently insert the {_plain(number - held)} "
         f"{currency} difference. Fix the statement amount or record the missing transaction; "
-        f"bea add balance --pad-from {cover.source_account} pads it explicitly."
+        f"{bea_command(ledger)} add balance --account {shlex.quote(account)} --date {date.isoformat()} "
+        f"--amount {shlex.quote(f'{_plain(number)} {currency}')} --pad-from {shlex.quote(cover.source_account)} "
+        "pads it explicitly."
     )
 
 
