@@ -400,6 +400,11 @@ const esCommon: Record<string, TranslationEntry> = {
     message: "Descargar",
     description: "Auto-generated from code usage",
   },
+  "common.downloadFailed": {
+    message: "No se pudo descargar el archivo. Inténtalo de nuevo.",
+    description:
+      "Error shown when the browser could not generate a file download",
+  },
   "common.moreActions": {
     message: "Más acciones",
     description: "Label for dropdown menu with additional actions",

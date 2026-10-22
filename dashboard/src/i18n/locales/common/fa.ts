@@ -397,6 +397,11 @@ const faCommon: Record<string, TranslationEntry> = {
     message: "دانلود",
     description: "Auto-generated from code usage",
   },
+  "common.downloadFailed": {
+    message: "دانلود فایل ممکن نشد. لطفاً دوباره تلاش کنید.",
+    description:
+      "Error shown when the browser could not generate a file download",
+  },
   "common.moreActions": {
     message: "اقدامات بیشتر",
     description: "Label for dropdown menu with additional actions",

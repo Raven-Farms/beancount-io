@@ -392,6 +392,11 @@ const koCommon: Record<string, TranslationEntry> = {
     message: "다운로드",
     description: "Auto-generated from code usage",
   },
+  "common.downloadFailed": {
+    message: "파일을 다운로드하지 못했습니다. 다시 시도해 주세요.",
+    description:
+      "Error shown when the browser could not generate a file download",
+  },
   "common.moreActions": {
     message: "추가 작업",
     description: "Label for dropdown menu with additional actions",

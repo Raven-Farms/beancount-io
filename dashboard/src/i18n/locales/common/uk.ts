@@ -405,6 +405,11 @@ const ukCommon: Record<string, TranslationEntry> = {
     message: "Завантажити",
     description: "Auto-generated from code usage",
   },
+  "common.downloadFailed": {
+    message: "Не вдалося завантажити файл. Спробуйте ще раз.",
+    description:
+      "Error shown when the browser could not generate a file download",
+  },
   "common.moreActions": {
     message: "Більше дій",
     description: "Label for dropdown menu with additional actions",

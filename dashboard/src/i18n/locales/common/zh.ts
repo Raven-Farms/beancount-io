@@ -387,6 +387,11 @@ const zhCommon: Record<string, TranslationEntry> = {
     message: "下载",
     description: "Auto-generated from code usage",
   },
+  "common.downloadFailed": {
+    message: "无法下载文件，请重试。",
+    description:
+      "Error shown when the browser could not generate a file download",
+  },
   "common.moreActions": {
     message: "更多操作",
     description: "Label for dropdown menu with additional actions",

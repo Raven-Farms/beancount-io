@@ -397,6 +397,11 @@ const bgCommon: Record<string, TranslationEntry> = {
     message: "Изтегляне",
     description: "Auto-generated from code usage",
   },
+  "common.downloadFailed": {
+    message: "Файлът не можа да бъде изтеглен. Моля, опитайте отново.",
+    description:
+      "Error shown when the browser could not generate a file download",
+  },
   "common.moreActions": {
     message: "Още действия",
     description: "Label for dropdown menu with additional actions",

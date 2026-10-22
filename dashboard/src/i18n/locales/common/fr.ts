@@ -401,6 +401,11 @@ const frCommon: Record<string, TranslationEntry> = {
     message: "Télécharger",
     description: "Auto-generated from code usage",
   },
+  "common.downloadFailed": {
+    message: "Le fichier n'a pas pu être téléchargé. Veuillez réessayer.",
+    description:
+      "Error shown when the browser could not generate a file download",
+  },
   "common.moreActions": {
     message: "Plus d’actions",
     description: "Label for dropdown menu with additional actions",

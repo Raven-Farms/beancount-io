@@ -401,6 +401,11 @@ const ptCommon: Record<string, TranslationEntry> = {
     message: "Baixar",
     description: "Auto-generated from code usage",
   },
+  "common.downloadFailed": {
+    message: "Não foi possível baixar o arquivo. Tente novamente.",
+    description:
+      "Error shown when the browser could not generate a file download",
+  },
   "common.moreActions": {
     message: "Mais ações",
     description: "Label for dropdown menu with additional actions",

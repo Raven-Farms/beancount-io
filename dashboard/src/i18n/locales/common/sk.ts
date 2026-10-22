@@ -405,6 +405,11 @@ const skCommon: Record<string, TranslationEntry> = {
     message: "Stiahnuť",
     description: "Auto-generated from code usage",
   },
+  "common.downloadFailed": {
+    message: "Súbor sa nepodarilo stiahnuť. Skúste to znova.",
+    description:
+      "Error shown when the browser could not generate a file download",
+  },
   "common.moreActions": {
     message: "Ďalšie akcie",
     description: "Label for dropdown menu with additional actions",

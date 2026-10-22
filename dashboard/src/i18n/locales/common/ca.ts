@@ -401,6 +401,11 @@ const caCommon: Record<string, TranslationEntry> = {
     message: "Descarregar",
     description: "Auto-generated from code usage",
   },
+  "common.downloadFailed": {
+    message: "No s'ha pogut baixar el fitxer. Torneu-ho a provar.",
+    description:
+      "Error shown when the browser could not generate a file download",
+  },
   "common.moreActions": {
     message: "Més accions",
     description: "Label for dropdown menu with additional actions",

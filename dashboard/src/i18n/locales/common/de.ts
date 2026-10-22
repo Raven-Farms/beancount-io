@@ -398,6 +398,12 @@ const deCommon: Record<string, TranslationEntry> = {
     message: "Herunterladen",
     description: "Auto-generated from code usage",
   },
+  "common.downloadFailed": {
+    message:
+      "Die Datei konnte nicht heruntergeladen werden. Bitte versuchen Sie es erneut.",
+    description:
+      "Error shown when the browser could not generate a file download",
+  },
   "common.moreActions": {
     message: "Weitere Aktionen",
     description: "Label for dropdown menu with additional actions",

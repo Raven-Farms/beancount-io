@@ -404,6 +404,11 @@ const ruCommon: Record<string, TranslationEntry> = {
     message: "Скачать",
     description: "Auto-generated from code usage",
   },
+  "common.downloadFailed": {
+    message: "Не удалось скачать файл. Попробуйте ещё раз.",
+    description:
+      "Error shown when the browser could not generate a file download",
+  },
   "common.moreActions": {
     message: "Ещё действия",
     description: "Label for dropdown menu with additional actions",

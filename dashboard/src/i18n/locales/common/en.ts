@@ -396,6 +396,11 @@ const enCommon: Record<string, TranslationEntry> = {
     message: "Download",
     description: "Auto-generated from code usage",
   },
+  "common.downloadFailed": {
+    message: "The file could not be downloaded. Please try again.",
+    description:
+      "Error shown when the browser could not generate a file download",
+  },
   "common.moreActions": {
     message: "More actions",
     description: "Label for dropdown menu with additional actions",

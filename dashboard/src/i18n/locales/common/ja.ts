@@ -392,6 +392,11 @@ const jaCommon: Record<string, TranslationEntry> = {
     message: "ダウンロード",
     description: "Auto-generated from code usage",
   },
+  "common.downloadFailed": {
+    message: "ファイルをダウンロードできませんでした。もう一度お試しください。",
+    description:
+      "Error shown when the browser could not generate a file download",
+  },
   "common.moreActions": {
     message: "その他のアクション",
     description: "Label for dropdown menu with additional actions",

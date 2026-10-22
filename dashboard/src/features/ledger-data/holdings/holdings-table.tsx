@@ -20,6 +20,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { cn } from "@/common/lib/utils/utils";
 import { decodeLedgerId } from "@/common/lib/utils/encode";
 import { useTranslations } from "@/common/hooks/use-translations";
+import { toast } from "sonner";
 import { getErrorMessageKey } from "@/common/lib/errors/error-message";
 import { getClickableRowProps } from "@/common/components/clickable-row";
 import { Amount } from "@/common/components/amount";
@@ -79,8 +80,15 @@ export const DatasetTable = React.memo(
 
       const csvContent = tableToCSV(headers, rows);
       const filename = `holdings-export-${new Date().toISOString().split("T")[0]}.csv`;
-      downloadCSV(csvContent, filename);
-    }, [data, rowsFilter]);
+      // A refused download is reported here, with the table kept for another
+      // try (w4/329).
+      try {
+        downloadCSV(csvContent, filename);
+      } catch (error) {
+        console.error("Failed to download holdings:", error);
+        toast.error(t("common.downloadFailed"));
+      }
+    }, [data, rowsFilter, t]);
 
     const renderTableData = React.useMemo(() => {
       if (!data?.queryShell?.table) return null;
