@@ -135,11 +135,11 @@ const lightEditorTheme: EditorTheme = {
   gutterBorder: "#e0dfd3", // = light black40
   comment: STONE,
   keyword: "#d73a49",
-  string: "#28a745",
+  string: "#1a7f37", // was #28a745, 3.13:1 on white (w21/483)
   number: "#005cc5",
   account: "#6f42c1",
   tag: "#0366d6",
-  currency: "#e36209",
+  currency: "#b35000", // was #e36209, 3.49:1 on white (w21/483)
 };
 
 const darkEditorTheme: EditorTheme = {

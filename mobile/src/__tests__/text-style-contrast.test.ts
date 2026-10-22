@@ -349,3 +349,36 @@ describe("input placeholders", () => {
     expect(offenders.join(", ")).toBe("");
   });
 });
+
+// w21/483: the light editor coloured strings (3.13:1) and currencies (3.49:1)
+// below the text bar on its own background.
+describe("code editor token colours", () => {
+  for (const themeName of ["light", "dark"] as ThemeName[]) {
+    const editor = themes[themeName].colorTheme.editor as unknown as Record<
+      string,
+      string
+    >;
+    for (const token of [
+      "foreground",
+      "comment",
+      "keyword",
+      "string",
+      "number",
+      "account",
+      "tag",
+      "currency",
+    ]) {
+      it(`keeps ${token} readable on the ${themeName} editor background`, () => {
+        expect(
+          contrastRatio(editor[token]!, editor.background!) >= TEXT_BAR,
+        ).toBe(true);
+      });
+    }
+    it(`keeps line numbers readable on the ${themeName} gutter`, () => {
+      expect(
+        contrastRatio(editor.gutterForeground!, editor.gutterBackground!) >=
+          TEXT_BAR,
+      ).toBe(true);
+    });
+  }
+});
