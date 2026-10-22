@@ -178,6 +178,29 @@ describe("feed OAuth authorization across actual adapters", () => {
       await f.close();
     }
   });
+  // w23/045: negative and fractional values leaked `slice` semantics, so
+  // `limit=-1` returned all but the last item and `offset=-3` the oldest two.
+  it.each([
+    ["?limit=-1", "(limit: -1)"],
+    ["?offset=-1", "(offset: -1)"],
+    ["?offset=1.5&limit=2", "(offset: 1.5, limit: 2)"],
+    ["?limit=101", "(limit: 101)"],
+  ])("refuses %s on every surface before source work", async (query, args) => {
+    const f = await fixture();
+    try {
+      expect((await f.rest(query)).status).toBe(400);
+      const gql = await f.gql(args);
+      expect(gql.errors?.[0]?.message).toMatch(
+        /must be (a non-negative integer|an integer from 1 to 100)/,
+      );
+      await expect(f.read(query)).rejects.toThrow();
+      expect(f.getById).not.toHaveBeenCalled();
+      expect(f.cacheGet).not.toHaveBeenCalled();
+    } finally {
+      await f.close();
+    }
+  });
+
   it("rejects invalid sources consistently", async () => {
     const f = await fixture();
     try {

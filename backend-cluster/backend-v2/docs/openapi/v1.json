@@ -20295,7 +20295,7 @@
     "/api-gateway/v1/account/feed": {
       "get": {
         "summary": "Read your activity feed",
-        "description": "Merged blog, release, and ledger activity, newest first. Requires a session or account-wide OAuth credential with ledger.read. Source accepts BLOG, CHANGELOG, or LEDGER_RSS case-insensitively; omitted or empty means all sources. Locale defaults to the caller's profile then English. Offset defaults to 0 and limit to 10.",
+        "description": "Merged blog, release, and ledger activity, newest first. Requires a session or account-wide OAuth credential with ledger.read. Source accepts BLOG, CHANGELOG, or LEDGER_RSS case-insensitively; omitted or empty means all sources. Locale defaults to the caller's profile then English. Offset defaults to 0 and limit to 10, at most 100.",
         "tags": [
           "Ledger v1"
         ],
@@ -20310,8 +20310,9 @@
         "parameters": [
           {
             "schema": {
-              "type": "number",
+              "type": "integer",
               "nullable": true,
+              "minimum": 0,
               "default": 0
             },
             "required": false,
@@ -20320,8 +20321,9 @@
           },
           {
             "schema": {
-              "type": "number",
-              "nullable": true,
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
               "default": 10
             },
             "required": false,

@@ -10,6 +10,7 @@ import type { IModels } from "@/foundation/models";
 import type { IFavaClientFactory } from "@/foundation/clients/fava-client-factory";
 import type { IGiteaClientFactory } from "@/foundation/clients/gitea-client-factory";
 import { UnauthenticatedError, ValidationError } from "@/shared/errors";
+import { assertFeedPage } from "../utils/feed-page";
 import { User } from "@/features/auth/data/user-model";
 import { transformActivityToFeedItem } from "./activity-transformer";
 import { Activity } from "@/features/gitea/client/gitea-api";
@@ -137,6 +138,7 @@ export class FeedService implements IFeedService {
    * @returns Paginated feed response
    */
   async getFeed(args: GetFeedArgs, identity: Identity): Promise<FeedResponse> {
+    assertFeedPage(args.offset, args.limit);
     await this.authorization.authorizeOrThrow({
       principal: identity,
       action: AUTHORIZATION_ACTIONS.USER_SOCIAL_FEED_READ,
