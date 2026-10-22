@@ -4,6 +4,8 @@
 
 ## Inbox
 
+- [331 — Preserve fractional commodity values in Budget readouts](./331.md) — minor; dashboard QA with client-only responses and a month-end clock, 2026-10-21; small BTC targets/actuals/variance lose digits in headlines, period rows and tooltip; exact history and larger-BTC/USD controls pass.
+
 - [330 — Open Help Center in the dashboard's selected language](./330.md) — minor; dashboard QA, 2026-10-21; German/Persian menu actions open English despite translated pages returning200; English/navigation/focus controls pass.
 
 - [329 — Explain a failed BQL CSV download and keep retry usable](./329.md) — minor; dashboard QA with a simulated browser API failure, 2026-10-21; Download CSV throws without feedback at both widths, while restoration/retry and exact Unicode output pass.
