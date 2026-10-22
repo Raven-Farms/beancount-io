@@ -398,6 +398,34 @@ def _stranded_lots(entries: list[Any], account: str, date: datetime.date) -> lis
     return stranded
 
 
+def _remaining_balance(
+    entries: list[Any], options: Any, account: str, date: datetime.date
+) -> tuple[dict[str, Decimal], list[str]]:
+    """What `account` still holds at the end of `date`, as units and as stranded lots.
+
+    Units a loaded `check_drained` will assert zero are left to it, with its own
+    hint (w5/888); lots that cancel in units but not at cost, which no units
+    check can see, are named separately (w5/909).
+    """
+    held = _held_through(entries, account, date)
+    if held and any(str(name).endswith("check_drained") for name, _ in options.get("plugin") or ()):
+        covered = _drained_checks(entries, options, account, date)
+        held = {currency: number for currency, number in held.items() if currency not in covered}
+    return held, [] if held else _stranded_lots(entries, account, date)
+
+
+def _closed_with(entries: list[Any], options: Any, account: str) -> list[str]:
+    """The descendants a loaded `close_tree` plugin closes along with `account`: opened and not yet closed."""
+    from beancount.core.data import Close, Open
+
+    if not any(str(name).endswith("close_tree") for name, _ in options.get("plugin") or ()):
+        return []
+    prefix = f"{account}:"
+    opened = {entry.account for entry in entries if isinstance(entry, Open) and entry.account.startswith(prefix)}
+    closed = {entry.account for entry in entries if isinstance(entry, Close)}
+    return sorted(opened - closed)
+
+
 def _close(
     file: Path, request: dict[str, Any], *, into: Path | None, allow_errors: bool, strict_read: bool
 ) -> dict[str, Any]:
@@ -412,30 +440,32 @@ def _close(
     # A close over a balance strands it: later postings to the account are
     # refused and reports keep counting it (w2/092). A ledger that loads
     # check_drained refuses it in validation already, with its own hint, but
-    # only for what the plugin really checks (w5/888).
-    held = _held_through(entries, directive.account, directive.date)
-    drained = any(str(name).endswith("check_drained") for name, _ in options.get("plugin") or ())
-    if drained and held:
-        covered = _drained_checks(entries, options, directive.account, directive.date)
-        held = {currency: number for currency, number in held.items() if currency not in covered}
-    # Lots that cancel in units but not at cost: no units check, the plugin's
-    # included, can see them (w5/909).
-    stranded = [] if held else _stranded_lots(entries, directive.account, directive.date)
-    if stranded and not request.get("force"):
+    # only for what the plugin really checks (w5/888). The accounts the
+    # close_tree plugin closes with this one are closed by the same write, so
+    # they are judged the same way (w5/910).
+    if not request.get("force"):
         day = directive.date.isoformat()
-        raise protocol.LedgerError(
-            f"{directive.account} still holds {', '.join(stranded)} on {day}: the units cancel but the lots do not. "
-            f"Close those lots with a transaction posting each one's cost, dated on or before {day}, then close "
-            f"{directive.account}, or pass --force to close it with them. Nothing was written."
-        )
-    if held and not request.get("force"):
-        amounts = ", ".join(f"{_plain(number)} {currency}" for currency, number in sorted(held.items()))
-        day = directive.date.isoformat()
-        raise protocol.LedgerError(
-            f"{directive.account} still holds {amounts} on {day}. Move that balance out of "
-            f"{directive.account} with a transaction dated on or before {day}, then close it, or pass "
-            "--force to close it with the balance. Nothing was written."
-        )
+        for account in [directive.account, *_closed_with(entries, options, directive.account)]:
+            held, stranded = _remaining_balance(entries, options, account, directive.date)
+            own = account == directive.account
+            if stranded:
+                subject = f"{account} still holds {', '.join(stranded)} on {day}: the units cancel but the lots do not."
+                remedy = (
+                    f"Close those lots with a transaction posting each one's cost, dated on or before {day}, then "
+                    f"close {directive.account}, or pass --force to close {'it' if own else 'them'} with them."
+                )
+            elif held:
+                amounts = ", ".join(f"{_plain(number)} {currency}" for currency, number in sorted(held.items()))
+                subject = f"{account} still holds {amounts} on {day}"
+                subject += "." if own else f", and the close_tree plugin closes it with {directive.account}."
+                remedy = (
+                    f"Move that balance out of {account} with a transaction dated on or before {day}, then close "
+                    f"{'it' if own else directive.account}, or pass --force to close {'it' if own else 'them'} with "
+                    "the balance."
+                )
+            else:
+                continue
+            raise protocol.LedgerError(f"{subject} {remedy} Nothing was written.")
     # Write against the ledger this decision read (w5/115).
     return _appended(file, directive, allow_errors=allow_errors, into=into, snapshot=snapshot)
 
