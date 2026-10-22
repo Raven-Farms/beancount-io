@@ -139,5 +139,6 @@
 - [624](./624.md) — Update Budget is offered on a closed account's card and writes a directive that never applies
 - [625](./625.md) — At AX2, the bell badge's number outgrows its fixed 16pt pill: the count is cut off and its lower half vanishes onto the header
 - [626](./626.md) — "Show older changes" gets stuck after 30+ commits land while Notifications is open (page 2 re-asked forever)
+- [627](./627.md) — At AX2, New Transaction's posting accounts wrap mid-word ("Assets:Bank:Checkin / g"), the follow-up named in w21/029
 - [508](./blocked/508.md) — Mobile guesses that an entry is a plugin copy from its first line; read the ledger's `generated_from` instead (split from 443) — **blocked:** production's GraphQL schema lacks `generated_from` until the ledger service and backend-v2 deploy; mobile's client is generated from it
 - [315](./blocked/315.md) — In-app commits signed with Gitea username and real email (no full_name, no noreply) — **blocked:** needs the owner's noreply-address and published-history decisions, and a production backfill of existing Gitea users that can't be verified here
