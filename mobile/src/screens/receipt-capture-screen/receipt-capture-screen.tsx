@@ -18,6 +18,7 @@ import {
   shotFromLibraryResult,
 } from "./receipt-utils";
 import { CameraView, type CapturedShot } from "./camera-view";
+import { deleteReceiptShot } from "@/common/receipt-files";
 import { PreviewView } from "./preview-view";
 import { CHROME } from "./chrome";
 import { useRouteParams } from "@/common/hooks/use-route-params";
@@ -53,6 +54,17 @@ const ReceiptCaptureScreenImpl = () => {
   const { testMode } = useRouteParams<{ testMode?: string }>();
 
   const [shot, setShot] = useState<CapturedShot | null>(null);
+  // Every photo taken or picked on this visit, so none outlives it (w21/585):
+  // a retake drops the one it replaces, leaving drops what is left.
+  const photos = useRef<string[]>([]);
+  const keepPhoto = (taken: CapturedShot) => {
+    photos.current.push(taken.uri);
+    setShot(taken);
+  };
+  const dropPhotos = () => {
+    for (const uri of photos.current.splice(0)) void deleteReceiptShot(uri);
+  };
+  useEffect(() => dropPhotos, []);
   const launched = useRef(false);
   const handedOff = useRef(false);
   const failed = useRef(false);
@@ -93,7 +105,7 @@ const ReceiptCaptureScreenImpl = () => {
         }),
       );
       if (picked) {
-        setShot(picked);
+        keepPhoto(picked);
       }
     } catch {
       // Only a genuine picker rejection reaches here — a device that restricts
@@ -103,11 +115,12 @@ const ReceiptCaptureScreenImpl = () => {
   };
 
   const handleCapture = (captured: CapturedShot) => {
-    setShot(captured);
+    keepPhoto(captured);
   };
 
   const handleRetake = () => {
     workflow.reset();
+    dropPhotos();
     setShot(null);
     failed.current = false;
   };
@@ -134,7 +147,7 @@ const ReceiptCaptureScreenImpl = () => {
           await LegacyFS.writeAsStringAsync(uri, TEST_JPEG_B64, {
             encoding: LegacyFS.EncodingType.Base64,
           });
-          setShot({
+          keepPhoto({
             uri,
             mimeType: "image/jpeg",
             filename: "test-receipt.jpg",

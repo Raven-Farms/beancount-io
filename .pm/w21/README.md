@@ -27,7 +27,6 @@
 - [549](./blocked/549.md) — Create Ledger's "Amount owed" can't express a card in credit, and Review shows the opposite sign to the file — **blocked:** needs an owner decision on whether the setup API keeps "explicit negative = ledger sign" or changes its contract for REST, GraphQL and MCP
 - [554](./blocked/554.md) — A holding that is also another lot's cost currency drops out of the holdings sheet, so BTC's stale price is never flagged — **blocked:** needs a per-commodity cost-less balance the valuation reads do not carry (cross-package read contract and deploy)
 - [556](./blocked/556.md) — A holding priced only in an unrelated currency the account holds is labelled priced, though the ledger values it at cost — **blocked:** shares w21/554's blocker — a cost currency cannot be told from a cost-less holding of the same currency with the current reads
-- [585](./585.md) — Receipt photos are never deleted from the device: each scan's image stays in the app cache after upload, cancel and sign-out
 - [586](./586.md) — The Android build declares the advertising-ID permission (`AD_ID`) though nothing uses it
 - [587](./587.md) — Deleting a file that `main.bean` includes just says "Deleted": the ledger breaks or silently loses the file's entries
 - [588](./588.md) — New File creates a file nothing includes, so its entries never count, and Files doesn't show which files are read

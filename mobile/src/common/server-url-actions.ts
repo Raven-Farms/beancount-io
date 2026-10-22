@@ -1,4 +1,5 @@
 import { apolloClient } from "@/common/apollo/client";
+import { sweepReceiptCaches } from "@/common/receipt-files";
 import { purgeApolloCache } from "@/common/apollo/cache-persist";
 import { teardownSessionCaches } from "@/common/apollo/session-teardown";
 import { defaultRuntimeServerUrl } from "@/common/server-url";
@@ -58,6 +59,8 @@ export async function clearServerScopedState(
     // The next account on this device must not resume this one's setup
     // (w21/053).
     clearCreateLedgerDraft(),
+    // Receipt photos the camera and the picker left in the cache (w21/585).
+    sweepReceiptCaches(),
   ]);
 }
 
