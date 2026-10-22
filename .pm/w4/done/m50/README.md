@@ -33,4 +33,4 @@
 
 ## Scope and dedupe
 
-Reuse existing ReportErrorState/QueryView onRetry support and each current observer. No global retry loop, document reload, dependency or API change. [337](../337.md) Holdings and [338](../../338.md) Statistics use separate error renderers and remain separate work. [332](../332.md) owns managed-price mutation acknowledgement followed by read failure; this milestone's new Commodities case is its initial read with zero mutations. Other QueryView consumers and Account's separate primary-read branch are unverified audit scope, not added failures.
+Reuse existing ReportErrorState/QueryView onRetry support and each current observer. No global retry loop, document reload, dependency or API change. [337](../337.md) Holdings and [338](../338.md) Statistics use separate error renderers and remain separate work. [332](../332.md) owns managed-price mutation acknowledgement followed by read failure; this milestone's new Commodities case is its initial read with zero mutations. Other QueryView consumers and Account's separate primary-read branch are unverified audit scope, not added failures.
