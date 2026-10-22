@@ -132,4 +132,50 @@ describe("changeExistingFiles", () => {
     const fine = clientAnswering(() => json(201, {}));
     await expect(change(fine)).resolves.toBeUndefined();
   });
+
+  // w21/551: a delete of a file that is already gone failed the same way, and
+  // REST (through /change-files) said SERVICE_UNAVAILABLE where GraphQL and MCP
+  // said NOT_FOUND.
+  it("answers NOT_FOUND for a delete of a path that is gone, and probes only it", async () => {
+    const calls: Call[] = [];
+    const client = clientAnswering(({ method, url }) => {
+      if (method === "POST") {
+        return json(500, { message: "repository file does not exist" });
+      }
+      return url.endsWith("nope.bean")
+        ? json(404, { message: "not found" })
+        : json(200, {});
+    }, calls);
+    const remove = () =>
+      changeExistingFiles(
+        client as never,
+        "alice",
+        "book",
+        { files: [] },
+        [
+          { operation: "create", path: "new.bean", content: "eA==" },
+          { operation: "delete", path: "nope.bean", sha: "any" },
+        ],
+      );
+    await expect(remove()).rejects.toBeInstanceOf(NotFoundDetailError);
+    await expect(remove()).rejects.toThrow("File nope.bean does not exist");
+    expect(
+      calls
+        .filter((call) => call.method === "GET")
+        .every((call) => call.url.endsWith("nope.bean")),
+    ).toBe(true);
+  });
+
+  it("keeps the original error when the file to delete is still there", async () => {
+    const client = clientAnswering(({ method }) =>
+      method === "POST"
+        ? json(500, { message: "disk on fire" })
+        : json(200, { name: "a.bean", path: "a.bean", type: "file", sha: "s" }),
+    );
+    await expect(
+      changeExistingFiles(client as never, "alice", "book", { files: [] }, [
+        { operation: "delete", path: "a.bean", sha: "s" },
+      ]),
+    ).rejects.toMatchObject({ status: 500 });
+  });
 });

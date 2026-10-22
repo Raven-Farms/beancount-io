@@ -178,7 +178,7 @@ export async function updateExistingFile(
   }
 }
 
-/** Commit a set of file operations, answering NOT_FOUND for an update of a path that is gone (w21/468). */
+/** Commit a set of file operations, answering NOT_FOUND for an update or delete of a path that is gone (w21/468, w21/551). */
 export async function changeExistingFiles(
   client: ReturnType<typeof giteaClientForRequest>,
   owner: string,
@@ -201,10 +201,12 @@ export async function changeExistingFiles(
     });
   } catch (err) {
     if (!isUnexplainedServerError(err)) throw err;
-    const updated = operations
-      .filter((op) => op.operation === "update")
+    // A delete of a path that is gone fails the same way (w21/551): Gitea has no
+    // 404 for it either.
+    const existing = operations
+      .filter((op) => op.operation === "update" || op.operation === "delete")
       .map((op) => op.path);
-    await rethrowAsMissing(client, owner, repoName, updated, err);
+    await rethrowAsMissing(client, owner, repoName, existing, err);
   }
 }
 
