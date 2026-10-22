@@ -96,7 +96,6 @@
 
 - [320 — Preserve the creation draft after a failed request](./320.md) — minor; dashboard QA, 2026-10-21; caught creation failure clears the saved draft, so closing/reopening loses details and requestId at both widths; normal close/resume passes, every attempt preblocked.
 
-- [319 — Name the import configuration's amount filter and mapping table](./319.md) — minor; dashboard QA, 2026-10-21; native AX exposes both empty identities at both widths; filtering/selection/focus and named Preview controls pass.
 
 
 
