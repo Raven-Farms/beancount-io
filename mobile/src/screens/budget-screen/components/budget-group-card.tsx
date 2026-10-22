@@ -114,7 +114,13 @@ const getStyles = (theme: ColorTheme) =>
       fontSize: fontSizes.xs,
       color: theme.black80,
     },
+    // The fill is the page's quiet grey and the text is the primary text colour,
+    // both 4.5:1 or better in both themes; the status shows in the border, not
+    // in text that failed contrast ("Above target" was 2.22:1 in dark)
+    // (w21/482).
     statusBadge: {
+      backgroundColor: theme.black20,
+      borderWidth: 1,
       borderRadius: 6,
       paddingHorizontal: space.sm,
       paddingVertical: 2,
@@ -124,6 +130,7 @@ const getStyles = (theme: ColorTheme) =>
     statusText: {
       fontSize: fontSizes.xs,
       fontWeight: fontWeights.medium,
+      color: theme.text01,
     },
     stats: {
       flexDirection: "row",
@@ -274,13 +281,8 @@ export function BudgetGroupCard({
           </View>
           {stats.startsOn !== null && (
             // Not yet in effect: neutral, never "Above target" (w21/101).
-            <View
-              style={[
-                styles.statusBadge,
-                { backgroundColor: theme.black20, borderColor: theme.black60 },
-              ]}
-            >
-              <Text style={[styles.statusText, { color: theme.black80 }]}>
+            <View style={[styles.statusBadge, { borderColor: theme.black60 }]}>
+              <Text style={styles.statusText}>
                 {t("budgetStartsOn", {
                   date: formatLedgerDate(stats.startsOn, locale),
                 })}
@@ -288,13 +290,8 @@ export function BudgetGroupCard({
             </View>
           )}
           {stats.status !== null && (
-            <View
-              style={[
-                styles.statusBadge,
-                { backgroundColor: theme.black20, borderColor: statusColor },
-              ]}
-            >
-              <Text style={[styles.statusText, { color: statusColor }]}>
+            <View style={[styles.statusBadge, { borderColor: statusColor }]}>
+              <Text style={styles.statusText}>
                 {t(STATUS_LABEL_KEYS[stats.status])}
               </Text>
             </View>

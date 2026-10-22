@@ -168,6 +168,13 @@ const CASES: Case[] = [
     text: "sectionTitle",
     surface: { style: "container" },
   },
+  // w21/482: "Above target" was 2.22:1 in dark, "Below target" 3.0, "Starts" 2.95.
+  {
+    name: "budget card status badges",
+    file: "screens/budget-screen/components/budget-group-card.tsx",
+    text: "statusText",
+    surface: { style: "statusBadge" },
+  },
   {
     name: "New Ledger hints on the page",
     file: "screens/create-ledger-screen/create-ledger-screen.tsx",
