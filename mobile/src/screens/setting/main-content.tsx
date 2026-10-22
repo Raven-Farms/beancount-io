@@ -179,6 +179,7 @@ export const MainContent = () => {
           <ListItemHorizontal
             icon={<Ionicons name="trash" size={22} color={theme.black80} />}
             title={t("deleteAccount")}
+            busy={deleteAccountLoading}
             description={
               deleteAccountLoading
                 ? t("deleteAccountInProgress")

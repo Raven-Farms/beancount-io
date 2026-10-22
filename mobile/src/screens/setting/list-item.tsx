@@ -5,6 +5,7 @@ import { useThemeStyle } from "@/common/hooks/use-theme-style";
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "@/common/theme";
 import { directionalIcon, LEADING_TEXT_ALIGN } from "@/common/rtl";
+import { listItemLabel } from "./list-item-label";
 
 type ListItemHorizontalProps = {
   onPress?: () => void;
@@ -14,6 +15,8 @@ type ListItemHorizontalProps = {
   content?: string | React.ReactNode;
   icon?: React.ReactNode;
   destructive?: boolean;
+  /** The row's action is running; announced as busy (w21/287). */
+  busy?: boolean;
 };
 
 export const ListItemHorizontal = ({
@@ -24,6 +27,7 @@ export const ListItemHorizontal = ({
   description,
   icon,
   destructive = false,
+  busy = false,
 }: ListItemHorizontalProps) => {
   const theme = useTheme().colorTheme;
   const styles = useThemeStyle((theme: ColorTheme) =>
@@ -84,23 +88,10 @@ export const ListItemHorizontal = ({
     }),
   );
 
-  const label =
-    typeof title === "string"
-      ? typeof content === "string" && content
-        ? `${title}, ${content}`
-        : title
-      : undefined;
+  const label = listItemLabel({ title, content, description });
 
-  return (
-    <TouchableOpacity
-      style={styles.container}
-      activeOpacity={0.8}
-      onPress={onPress}
-      disabled={!onPress}
-      testID={testID}
-      accessibilityRole={onPress ? "button" : undefined}
-      accessibilityLabel={label}
-    >
+  const body = (
+    <>
       {icon && <View style={styles.iconContainer}>{icon}</View>}
       <View style={styles.topRow}>
         <View style={styles.titleContainer}>
@@ -134,7 +125,33 @@ export const ListItemHorizontal = ({
           )}
         </View>
       )}
+    </>
+  );
+
+  // A row with no action is not a control: a disabled touchable is read as
+  // "dimmed" (Version). It is one readable line instead.
+  return onPress ? (
+    <TouchableOpacity
+      style={styles.container}
+      activeOpacity={0.8}
+      onPress={onPress}
+      testID={testID}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      accessibilityState={{ busy }}
+    >
+      {body}
     </TouchableOpacity>
+  ) : (
+    <View
+      style={styles.container}
+      testID={testID}
+      accessible
+      accessibilityLabel={label}
+      accessibilityState={{ busy }}
+    >
+      {body}
+    </View>
   );
 };
 
