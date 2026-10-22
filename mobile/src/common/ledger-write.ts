@@ -55,7 +55,7 @@ export type LedgerWriteSpec<T> = {
   successMessage: string;
   failureMessage: string;
   /** Overrides the failure toast copy when `perform` threw. */
-  failureMessageFor?: (error: unknown) => string;
+  failureMessageFor?: (error: unknown) => string | undefined;
   /**
    * A failure the caller explains better than a toast: the entry was removed
    * elsewhere, and its own screen says so. The error haptic still fires, the

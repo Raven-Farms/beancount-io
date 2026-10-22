@@ -1,6 +1,10 @@
 import fs from "fs";
 import path from "path";
-import { selectOutcomeFailure, selectSaveFailure } from "../save-failure";
+import {
+  saveToastMessage,
+  selectOutcomeFailure,
+  selectSaveFailure,
+} from "../save-failure";
 
 describe("selectSaveFailure", () => {
   it("treats a stale checksum or a conflict as a conflict", () => {
@@ -136,6 +140,55 @@ describe("Edit Transaction reload of an entry that is gone", () => {
     );
     expect(
       source.includes('void invalidateLedgerData(client, "entries");'),
+    ).toBe(true);
+  });
+});
+
+// w21/507: a refused edit showed its refusal twice, once in the banner in
+// editor terms and once in the toast with the file's line citation.
+describe("saveToastMessage", () => {
+  const i18n = {
+    t: (key: string, params?: Record<string, string>) =>
+      key === "ledgerWouldBreak"
+        ? `This would add an error to your ledger: ${params?.detail}`
+        : key,
+  };
+  const refusal = Object.assign(new Error("Validation failed for entry: x"), {
+    graphQLErrors: [
+      {
+        message: "Validation failed",
+        extensions: {
+          code: "VALIDATION_FAILED",
+          field: "entry",
+          newLedgerErrors: "Balance failed for Assets:Cash (main.bean:87)",
+        },
+      },
+    ],
+  });
+
+  it("says only that the save failed for a refusal the banner explains", () => {
+    expect(saveToastMessage(refusal, i18n, "Couldn't save")).toBe(
+      "Couldn't save",
+    );
+  });
+
+  it("leaves any other failure to its own toast copy", () => {
+    expect(saveToastMessage(new Error("boom"), i18n, "Couldn't save")).toBe(
+      undefined,
+    );
+  });
+
+  it("is what Edit Transaction's save passes as its failure toast", () => {
+    const source = fs
+      .readFileSync(
+        path.join(__dirname, "..", "edit-transaction-screen.tsx"),
+        "utf8",
+      )
+      .replace(/\s+/g, "");
+    expect(
+      source.includes(
+        'failureMessageFor:(error)=>saveToastMessage(error,i18n,t("editFailed")),',
+      ),
     ).toBe(true);
   });
 });

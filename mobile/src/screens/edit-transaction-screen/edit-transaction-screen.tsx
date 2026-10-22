@@ -54,7 +54,7 @@ import {
   resetRevisionTracker,
 } from "@/components/code-editor/revision-tracker";
 import { applySavedIdentity, resolveSaveExit } from "./save-exit";
-import { selectOutcomeFailure } from "./save-failure";
+import { saveToastMessage, selectOutcomeFailure } from "./save-failure";
 import { isEntryGone } from "@/screens/transaction-detail-screen/selectors/select-entry-gone";
 import { selectedTransactionVar } from "@/screens/transaction-detail-screen/open-transaction-detail";
 import { RouteLedgerUnavailable } from "@/components/route-ledger-unavailable";
@@ -307,6 +307,10 @@ export const EditTransactionScreen = (): JSX.Element => {
           loadingMessage: t("saving"),
           successMessage: t("editSuccess"),
           failureMessage: t("editFailed"),
+          // The banner below explains a refusal in editor terms; the toast
+          // would repeat it with the file's line numbers (w21/507).
+          failureMessageFor: (error) =>
+            saveToastMessage(error, i18n, t("editFailed")),
           // We navigate back ourselves (only when the save covered the latest
           // edit) because runLedgerWrite's own goBack would fire while the
           // draft still reads dirty and trip the unsaved-changes guard.

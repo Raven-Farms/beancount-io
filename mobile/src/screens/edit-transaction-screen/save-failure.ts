@@ -51,3 +51,17 @@ export function selectOutcomeFailure(
   if (shown !== null) return { kind: "rejected", message: shown };
   return selectSaveFailure(outcome.message);
 }
+
+/**
+ * The toast over a failed save. A refusal is explained by the banner in the
+ * editor's own terms (and read out once from there), so the toast says only
+ * that the save failed instead of repeating it with the file's line citation
+ * (w21/507). Any other failure keeps its toast copy.
+ */
+export function saveToastMessage(
+  error: unknown,
+  i18n: Parameters<typeof ledgerWriteFailureMessage>[1],
+  generic: string,
+): string | undefined {
+  return ledgerWriteFailureMessage(error, i18n) !== null ? generic : undefined;
+}
