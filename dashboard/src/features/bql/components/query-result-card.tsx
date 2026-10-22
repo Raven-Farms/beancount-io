@@ -284,7 +284,7 @@ export function QueryResultCard({
 }: QueryResultCardProps) {
   const { t } = useTranslations();
   const detailsRef = useRef<HTMLDetailsElement>(null);
-  const errorFeedback = error ? getQueryErrorFeedback(error) : null;
+  const errorFeedback = error ? getQueryErrorFeedback(error, query) : null;
 
   useEffect(() => {
     if (detailsRef.current && isInitiallyOpen) {

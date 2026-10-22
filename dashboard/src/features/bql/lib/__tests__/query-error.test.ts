@@ -108,4 +108,43 @@ describe("getQueryErrorFeedback", () => {
       ),
     ).toEqual({ key: "common.errors.serviceUnavailable" });
   });
+
+  describe("current parser form (w4/971)", () => {
+    const found = (position: number) =>
+      graphQLError(
+        `Invalid BQL query: syntax error at position ${position}: found ')' expected one of: identifier, '*'`,
+        "BAD_USER_INPUT",
+      );
+
+    it.each([
+      ["ASCII", "SELECT 'ab' AS label FROM )", 26],
+      ["Japanese", "SELECT '日本' AS label FROM )", 30],
+    ])(
+      "names the token at its 1-based character for %s text, from a UTF-8 byte offset",
+      (_, query, bytes) => {
+        expect(getQueryErrorFeedback(found(bytes), query)).toEqual({
+          key: "bql.errors.syntaxError",
+          params: { token: ")", position: "27" },
+        });
+      },
+    );
+
+    it("keeps generic feedback when the offset does not land on that token", () => {
+      const generic = getQueryErrorFeedback(
+        found(26),
+        "SELECT '日本' AS label FROM )",
+      );
+      expect(generic.key).not.toBe("bql.errors.syntaxError");
+      expect(getQueryErrorFeedback(found(30), "SELECT 1")).toEqual(generic);
+      expect(getQueryErrorFeedback(found(26)).key).toBe(generic.key);
+    });
+
+    it("never shows the expected-token list", () => {
+      const feedback = getQueryErrorFeedback(
+        found(26),
+        "SELECT 'ab' AS label FROM )",
+      );
+      expect(JSON.stringify(feedback)).not.toContain("expected");
+    });
+  });
 });

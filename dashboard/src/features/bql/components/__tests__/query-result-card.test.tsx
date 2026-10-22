@@ -36,7 +36,11 @@ vi.mock("../lib/chart-utils", () => ({
 vi.mock("@/common/hooks/use-translations", () => ({
   useTranslations: () => ({
     t: (key: string, params?: Record<string, string>) =>
-      params?.column ? `${key}:${params.column}` : key,
+      params?.column
+        ? `${key}:${params.column}`
+        : params?.token
+          ? `${key}:${params.token},${params.position}`
+          : key,
   }),
 }));
 
@@ -181,6 +185,33 @@ describe("QueryResultCard", () => {
     ).not.toBeInTheDocument();
     expect(screen.queryByTestId("virtual-list")).not.toBeInTheDocument();
   });
+
+  it.each([
+    ["ASCII", "SELECT 'ab' AS label FROM )", 26],
+    ["Japanese", "SELECT '日本' AS label FROM )", 30],
+  ])(
+    "names the current parser's token at its character for %s text (w4/971)",
+    (_, query, bytes) => {
+      const error = new CombinedGraphQLErrors({
+        errors: [
+          {
+            message: `Invalid BQL query: syntax error at position ${bytes}: found ')' expected one of: identifier`,
+            extensions: { code: "BAD_USER_INPUT" },
+          },
+        ],
+      });
+
+      render(<QueryResultCard {...defaultProps} query={query} error={error} />);
+      fireEvent.click(document.querySelector("summary")!);
+
+      expect(
+        screen.getByText("bql.errors.syntaxError:),27"),
+      ).toBeInTheDocument();
+      expect(
+        screen.queryByText("common.errors.badUserInput"),
+      ).not.toBeInTheDocument();
+    },
+  );
 
   it("should render localized error message in error state", () => {
     const error = new Error("Query failed");
