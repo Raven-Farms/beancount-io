@@ -63,7 +63,7 @@ export function selectBudgetPanelRows(
   asOf?: string,
   windowStart?: string,
 ): BudgetPanelRow[] {
-  const rows = inputs.map(({ group, actual, periodEnd }) => {
+  const ranked = inputs.map(({ group, actual, periodEnd }) => {
     // Reuse the card's derivation so the two surfaces can't drift on the
     // favorability rules. It reads a series, so hand it the single period the
     // panel cares about, sign-corrected the way the card's series already is.
@@ -89,39 +89,50 @@ export function selectBudgetPanelRows(
     );
     const spent = stats.actual ?? 0;
     const noBudget = stats.budget <= 0;
+    // Whether the period has run its course. A target prorated to today is
+    // behind for most of a month for an income that arrives once (an unpaid
+    // salary), which is no miss until the period is over (w21/377). Unknown
+    // when no day is given.
+    const over = asOf === undefined || periodEnd <= asOf;
     if (stats.startsOn !== null) {
       return {
+        over,
+        row: {
+          account: group.account,
+          shortAccount: dropRoot(group.account),
+          currency: group.currency,
+          scale,
+          budget: stats.budget,
+          actual: spent,
+          progressPercent: 0,
+          noBudget,
+          favorable: true,
+          status: null,
+          income: direction === -1,
+          startsOn: stats.startsOn,
+        },
+      };
+    }
+
+    return {
+      over,
+      row: {
         account: group.account,
         shortAccount: dropRoot(group.account),
         currency: group.currency,
         scale,
         budget: stats.budget,
         actual: spent,
-        progressPercent: 0,
+        progressPercent: noBudget
+          ? spent > 0
+            ? 100
+            : 0
+          : (stats.progressPercent ?? 0),
         noBudget,
-        favorable: true,
-        status: null,
+        favorable: stats.favorable,
+        status: stats.status,
         income: direction === -1,
-        startsOn: stats.startsOn,
-      };
-    }
-
-    return {
-      account: group.account,
-      shortAccount: dropRoot(group.account),
-      currency: group.currency,
-      scale,
-      budget: stats.budget,
-      actual: spent,
-      progressPercent: noBudget
-        ? spent > 0
-          ? 100
-          : 0
-        : (stats.progressPercent ?? 0),
-      noBudget,
-      favorable: stats.favorable,
-      status: stats.status,
-      income: direction === -1,
+      },
     };
   });
 
@@ -129,30 +140,43 @@ export function selectBudgetPanelRows(
   // beaten at 150% as the biggest risk and hid a budget at 97% of its limit:
   //  4. a zero budget already spent past (it read "0% used", w21/076);
   //  3. anything off its target the wrong way, the bigger miss first (an
-  //     expense over its cap, an income target behind);
+  //     expense over its cap, an income target behind once its period is over);
   //  2. spending closest to its cap;
+  //  1.5 an income target behind with its period still running: it is not a
+  //     miss yet, so it never outranks an expense near its cap (w21/377);
   //  1. income that met or beat its target: nothing to act on;
   //  0. a budget not yet in effect.
   // Ties break on account so the order is stable between renders rather than
   // depending on query completion order.
-  const rank = (row: BudgetPanelRow): [number, number] =>
+  const rank = ({
+    row,
+    over,
+  }: {
+    row: BudgetPanelRow;
+    over: boolean;
+  }): [number, number] =>
     row.startsOn !== undefined
       ? [0, 0]
       : !row.favorable && row.noBudget && row.actual > 0
         ? [4, 0]
-        : !row.favorable
-          ? [3, Math.abs(row.progressPercent - 100)]
-          : row.income
-            ? [1, 0]
-            : [2, row.progressPercent];
-  return rows
+        : !row.favorable && row.income && !over
+          ? [1.5, Math.abs(row.progressPercent - 100)]
+          : !row.favorable
+            ? [3, Math.abs(row.progressPercent - 100)]
+            : row.income
+              ? [1, 0]
+              : [2, row.progressPercent];
+  return ranked
     .sort((a, b) => {
       const [tierA, scoreA] = rank(a);
       const [tierB, scoreB] = rank(b);
       return (
-        tierB - tierA || scoreB - scoreA || a.account.localeCompare(b.account)
+        tierB - tierA ||
+        scoreB - scoreA ||
+        a.row.account.localeCompare(b.row.account)
       );
     })
+    .map(({ row }) => row)
     .slice(0, limit);
 }
 

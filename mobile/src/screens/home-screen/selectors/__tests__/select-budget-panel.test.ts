@@ -386,3 +386,46 @@ describe("the Home panel's status wording and ranking", () => {
     expect(rows[0].shortAccount).toBe("Zero");
   });
 });
+
+// w21/377: a salary paid once a month reads 0% "Below target" until payday, which
+// scored as the biggest miss and pushed an expense at 96% of its cap out.
+describe("an income target behind mid-period", () => {
+  const midMonth = (account: string, amount: string, actual: number) => ({
+    ...input(account, amount, actual),
+    periodEnd: "2025-01-31",
+  });
+  const rows = (asOf: string) =>
+    selectBudgetPanelRows(
+      [
+        midMonth("Income:Salary", "-5000 USD", 0),
+        midMonth("Expenses:Shopping", "300 USD", 200),
+        midMonth("Expenses:Food", "600 USD", 288),
+        midMonth("Expenses:Transport", "150 USD", 70),
+      ],
+      3,
+      asOf,
+    ).map((row) => row.shortAccount);
+
+  it("does not outrank the expenses closest to their caps", () => {
+    const names = rows("2025-01-15");
+    expect(names.includes("Salary")).toBe(false);
+    expect(names.length).toBe(3);
+  });
+
+  it("is a miss once its period is over", () => {
+    expect(rows("2025-01-31")[0]).toBe("Salary");
+    expect(rows("2025-02-02")[0]).toBe("Salary");
+  });
+
+  it("still ranks above an income target that was met", () => {
+    const names = selectBudgetPanelRows(
+      [
+        midMonth("Income:Salary", "-5000 USD", 0),
+        midMonth("Income:Bonus", "-100 USD", -500),
+      ],
+      2,
+      "2025-01-15",
+    ).map((row) => row.shortAccount);
+    expect(names).toEqual(["Salary", "Bonus"]);
+  });
+});
