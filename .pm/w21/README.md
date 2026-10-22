@@ -118,5 +118,9 @@
 - [603](./603.md) — Money flow drops a lot's date and label, so sales from different lots look identical
 - [604](./604.md) — Posting metadata on transaction detail is cut to 2 lines and can't be selected
 - [605](./605.md) — Transaction detail's decorative icon glyphs are their own VoiceOver stops (w21/141 fixed only account rows)
+- [606](./606.md) — Android: the tab bar covers the last rows of every tab, so the last file or account row and Transactions' Retry can't be tapped
+- [607](./607.md) — Android: the keyboard accessory bar hides behind the keyboard (navigation bar inset subtracted twice)
+- [608](./608.md) — Android: fields near the bottom stay under the keyboard (iOS-only keyboard avoidance under edge-to-edge)
+- [609](./609.md) — Android: Add Budget's amount opens a full letter keyboard (`numbers-and-punctuation` is iOS-only)
 - [508](./blocked/508.md) — Mobile guesses that an entry is a plugin copy from its first line; read the ledger's `generated_from` instead (split from 443) — **blocked:** production's GraphQL schema lacks `generated_from` until the ledger service and backend-v2 deploy; mobile's client is generated from it
 - [315](./blocked/315.md) — In-app commits signed with Gitea username and real email (no full_name, no noreply) — **blocked:** needs the owner's noreply-address and published-history decisions, and a production backfill of existing Gitea users that can't be verified here
