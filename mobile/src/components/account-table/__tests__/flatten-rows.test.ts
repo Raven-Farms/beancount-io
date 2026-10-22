@@ -320,12 +320,14 @@ describe("the reveal wiring", () => {
       ),
       "utf8",
     );
-    expect(open.includes("revealAccountVar(account);")).toBe(true);
+    expect(open.includes("revealAccountVar({ ledgerId, account });")).toBe(
+      true,
+    );
     const table = fs.readFileSync(
       path.join(__dirname, "..", "account-table.tsx"),
       "utf8",
     );
-    expect(table.includes("revealAccountOverrides(categories, reveal)")).toBe(
+    expect(table.includes("revealAccountOverrides(categories, account)")).toBe(
       true,
     );
     expect(

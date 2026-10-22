@@ -1,6 +1,10 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useReactiveVar } from "@apollo/client";
-import { revealAccountVar } from "@/common/vars/reveal-account";
+import {
+  revealAccountVar,
+  type AccountReveal,
+} from "@/common/vars/reveal-account";
+import { ledgerVar } from "@/common/vars";
 import { useScrollToTop } from "expo-router";
 import {
   FlatList,
@@ -488,20 +492,38 @@ export function AccountTable({
   // A just-opened account: open its ancestors, then scroll to it once the
   // refreshed tree holds its row (w21/175).
   const reveal = useReactiveVar(revealAccountVar);
+  const ledgerId = useReactiveVar(ledgerVar);
+  // The reveal whose ancestors were opened. Opened once: a row the user then
+  // collapses must stay collapsed, not be re-opened by every later change
+  // (w21/363).
+  const openedReveal = useRef<AccountReveal | null>(null);
   useEffect(() => {
     if (!reveal) return;
-    const opened = revealAccountOverrides(categories, reveal);
-    if (!opened) return;
-    const pending = Object.keys(opened).filter((key) => !overrides[key]);
-    if (pending.length > 0) {
-      setOverrides((prev) => ({ ...prev, ...opened }));
+    // Opened in another ledger: nothing here to reveal.
+    if (reveal.ledgerId !== ledgerId) {
+      revealAccountVar(null);
       return;
     }
-    const index = rows.findIndex((row) => row.account === reveal && !row.own);
-    if (index < 0) return;
+    const account = reveal.account;
+    if (openedReveal.current !== reveal) {
+      const opened = revealAccountOverrides(categories, account);
+      if (!opened) return;
+      openedReveal.current = reveal;
+      const pending = Object.keys(opened).filter((key) => !overrides[key]);
+      if (pending.length > 0) {
+        setOverrides((prev) => ({ ...prev, ...opened }));
+        return;
+      }
+    }
+    const index = rows.findIndex((row) => row.account === account && !row.own);
+    // Opened, yet the row is not there: the user collapsed an ancestor first.
+    if (index < 0) {
+      revealAccountVar(null);
+      return;
+    }
     revealAccountVar(null);
     listRef.current?.scrollToIndex({ index, viewPosition: 0.5 });
-  }, [reveal, categories, overrides, rows]);
+  }, [reveal, ledgerId, categories, overrides, rows]);
 
   const onToggle = useCallback((row: TableRow) => {
     setOverrides((prev) => ({ ...prev, [row.key]: !row.expanded }));

@@ -353,7 +353,7 @@ export function OpenAccountScreenComponent(): JSX.Element {
     if (result.ok) {
       setSaved(true);
       // Accounts opens its ancestors and scrolls to it (w21/175).
-      revealAccountVar(account);
+      revealAccountVar({ ledgerId, account });
       // Pop only this screen, then hand the account to whatever registered via
       // `pushOpenAccount` — the picker's callback delivers the pick and pops
       // its own frame, so no screen ever pops a frame it doesn't own. A plain
