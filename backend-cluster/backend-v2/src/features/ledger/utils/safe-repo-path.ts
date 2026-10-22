@@ -2,8 +2,10 @@ import { BadUserInputError } from "@/shared/errors";
 
 /**
  * Reject repo-relative paths that could change the Gitea URL endpoint after
- * downstream URL parsing. Ledger-v2 repeats this check at its own boundary;
- * keeping it here prevents unsafe values from crossing the service boundary.
+ * downstream URL parsing, and paths inside `.git`, which Gitea refuses at any
+ * depth and in any case. Ledger-v2 repeats this check at its own boundary;
+ * keeping it here prevents unsafe values from crossing the service boundary
+ * and refuses dry runs that never reach Gitea (w23/027).
  */
 export function assertSafeRepoPath(
   path: unknown,
@@ -18,6 +20,12 @@ export function assertSafeRepoPath(
   for (const segment of path.split("/")) {
     if (segment === "" || segment === "." || segment === "..") {
       throw new BadUserInputError("Invalid file path", field);
+    }
+    if (segment.toLowerCase() === ".git") {
+      throw new BadUserInputError(
+        "Paths inside .git can't be read or written",
+        field,
+      );
     }
   }
 }

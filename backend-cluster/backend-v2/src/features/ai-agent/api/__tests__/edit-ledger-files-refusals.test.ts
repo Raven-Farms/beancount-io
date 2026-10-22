@@ -117,6 +117,33 @@ describe("previewing a create over an existing file", () => {
 });
 
 /**
+ * w23/027. A preview never reaches Gitea, which refuses any `.git` component,
+ * so it approved a create that the commit then failed as "malformed path
+ * component".
+ */
+describe("previewing a create inside .git", () => {
+  it.each([".git/qa-x.bean", "sub/.git/qa-x.bean", ".Git/qa-x.bean"])(
+    "refuses %p as bad input, as the commit would",
+    async (path) => {
+      const f = await fixture();
+      try {
+        const result = await f.preview(path);
+        expect(result.isError).toBe(true);
+        const { error } = result.structuredContent as {
+          error: { code: string; message: string };
+        };
+        expect(error.code).toBe("BAD_USER_INPUT");
+        expect(error.message).toContain("inside .git");
+        expect(f.getLedgerFilesContent).not.toHaveBeenCalled();
+        expect(f.changeLedgerFiles).not.toHaveBeenCalled();
+      } finally {
+        await f.close();
+      }
+    },
+  );
+});
+
+/**
  * w1/m38. Splitting `editLedgerFiles` into one tool per kind of change kept
  * the batch: every file a call names lands in the same commit, so a partial
  * write cannot leave the ledger half-restructured.

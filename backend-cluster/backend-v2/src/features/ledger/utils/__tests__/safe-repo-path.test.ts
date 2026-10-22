@@ -6,9 +6,30 @@ import {
 } from "@/features/ledger/utils/safe-archive-name";
 
 describe("repository path validation", () => {
-  it.each(["main.bean", "accounts/2026.bean", "Q1 #draft.bean"])(
-    "accepts %p",
-    (path) => expect(() => assertSafeRepoPath(path)).not.toThrow(),
+  it.each([
+    "main.bean",
+    "accounts/2026.bean",
+    "Q1 #draft.bean",
+    ".gitignore",
+    ".github/workflows/check.yml",
+    ".gitx/notes.bean",
+    "sub/.git.bean",
+  ])("accepts %p", (path) =>
+    expect(() => assertSafeRepoPath(path)).not.toThrow(),
+  );
+
+  // Gitea refuses a `.git` component anywhere; a listing reported it as an
+  // outage and a dry run previewed a commit that could not happen (w23/027).
+  it.each([".git", ".Git", ".GIT/config", "sub/.git", ".git/objects/x.bean"])(
+    "refuses %p, which is inside .git",
+    (path) => {
+      expect(() => assertSafeRepoPath(path, "dirPath")).toThrow(
+        expect.objectContaining({
+          message: expect.stringContaining("inside .git"),
+          metadata: expect.objectContaining({ field: "dirPath" }),
+        }),
+      );
+    },
   );
 
   it.each([

@@ -20,7 +20,10 @@ import { BadUserInputError } from "@/shared/errors";
 
 /**
  * Reject a repo-relative path containing traversal / absolute / empty
- * segments, NULs, or backslashes. Throws {@link BadUserInputError}.
+ * segments, NULs, or backslashes, or one inside `.git` — Gitea refuses any
+ * `.git` component, case-insensitively and at any depth, with an error the
+ * listing route would otherwise report as an outage (w23/027). Throws
+ * {@link BadUserInputError}.
  */
 export function assertSafeRepoPath(
   path: unknown,
@@ -35,6 +38,12 @@ export function assertSafeRepoPath(
   for (const segment of path.split("/")) {
     if (segment === "" || segment === "." || segment === "..") {
       throw new BadUserInputError(`Invalid file path: ${path}`, field);
+    }
+    if (segment.toLowerCase() === ".git") {
+      throw new BadUserInputError(
+        `Paths inside .git can't be read or written: ${path}`,
+        field,
+      );
     }
   }
 }

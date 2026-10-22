@@ -21,6 +21,20 @@ describe("safe repository URL paths", () => {
     expect(() => assertSafeRepoPath(path)).toThrow(BadUserInputError);
   });
 
+  it.each([".git", ".Git/config", "sub/.GIT/x.bean"])(
+    "refuses %p, which is inside .git",
+    (path) => {
+      expect(() => toSafeRepoUrlPath(path)).toThrow(/inside \.git/);
+    },
+  );
+
+  it.each([".gitignore", ".github/ci.yml", ".gitx/a.bean", "sub/.git.bean"])(
+    "accepts %p, whose segment only starts with .git",
+    (path) => {
+      expect(() => assertSafeRepoPath(path)).not.toThrow();
+    },
+  );
+
   it("double-encodes a percent-encoded traversal so it remains a filename", () => {
     expect(toSafeRepoUrlPath("%2e%2e/private.bean")).toBe(
       "%252e%252e/private.bean",

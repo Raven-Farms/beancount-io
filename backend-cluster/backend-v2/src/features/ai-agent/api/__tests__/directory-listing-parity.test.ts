@@ -240,4 +240,40 @@ describe("directory listing on REST, MCP and GraphQL", () => {
       await f.close();
     }
   });
+
+  // w23/027: Gitea refuses any `.git` component, and the ledger service's
+  // listing rethrew that as an outage, so every retry read SERVICE_UNAVAILABLE.
+  it.each([".git", ".Git", "sub/.git", ".git/objects"])(
+    "refuses %p as bad input on every surface",
+    async (dir) => {
+      const f = await fixture();
+      try {
+        const { rest, mcp, gql } = await f.list(dir);
+        const refused = {
+          code: "BAD_USER_INPUT",
+          message: expect.stringContaining("inside .git"),
+        };
+        expect(rest).toMatchObject(refused);
+        expect(mcp).toMatchObject(refused);
+        expect(gql).toMatchObject({ code: "BAD_USER_INPUT" });
+      } finally {
+        await f.close();
+      }
+    },
+  );
+
+  it.each([".github", ".gitx"])(
+    "still lists %p, whose name only starts with .git",
+    async (dir) => {
+      const f = await fixture();
+      try {
+        const { rest, mcp, gql } = await f.list(dir);
+        expect(rest).toMatchObject({ code: "NOT_FOUND" });
+        expect(mcp).toMatchObject({ code: "NOT_FOUND" });
+        expect(gql).toMatchObject({ code: "NOT_FOUND" });
+      } finally {
+        await f.close();
+      }
+    },
+  );
 });
