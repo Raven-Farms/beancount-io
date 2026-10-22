@@ -20,7 +20,7 @@ export type SheetSeries = "netWorthData" | "assetsData" | "liabilitiesData";
 /**
  * What the latest point of one Home curve discloses (see `selectValuation`):
  * its market figure, measured against the same point at cost and in units, and
- * dated by the ledger's prices at the point's own date. Home names what a
+ * valued at the ledger's latest prices. Home names what a
  * total holds rather than presenting a net worth whose basis the reader has to
  * guess.
  */
@@ -40,7 +40,12 @@ export function selectSeriesValuation(
     cost: latestBalance(basis?.cost?.[series]),
     units: latestBalance(basis?.units?.[series]),
     currency,
-    date: latest?.date,
+    // No valuation date: the latest point is today's standing, valued at the
+    // ledger's latest prices as the Accounts tree is, so price age is measured
+    // against today. Against the point's date — the month-end of the last
+    // activity — a ledger idle since September never showed a stale price
+    // (w21/209).
+    date: undefined,
     today,
     prices,
     managed,
