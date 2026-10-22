@@ -65,7 +65,6 @@
 - [959 — Treat repeated allowed currencies as one during transaction inference](./959.md) — minor CLI existing-ledger/native-import inference finding; USD/EUR and split-file controls reproduced 2026-10-21.
 - [958 — Keep unused unopened accounts out of remembered CSV settings](./958.md) — minor CLI memory-guard follow-up to 452/714; empty, skipped and fully categorized exports reproduced 2026-10-21.
 - [957 — Allow instrument units in the portfolio preset's holdings account](./957.md) — minor CLI first-purchase setup finding; reproduced twice in USD/EUR on 2026-10-21.
-- [897 — Preserve explicitly selected acquisition dates in import identity](./897.md) — major CLI skipped-sale follow-up to 349; reproduced 2026-10-20.
 - [898 — Preserve wide arithmetic totals in `@@` annotations](./898.md) — minor CLI precision follow-up to 059, 802 and 263; reproduced 2026-10-20.
 - [899 — Include partial lot constraints in generated import IDs](./899.md) — major CLI skipped-sale follow-up to 349 and 467; label-only and number-only cases reproduced 2026-10-20.
 - [900 — Keep payee and narration boundaries in generated import IDs](./900.md) — major CLI skipped-payment follow-up to w1/149 and 140; reproduced 2026-10-20.

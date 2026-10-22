@@ -8,6 +8,7 @@ Beangulp importer, deduplicates, validates, and optionally appends.
 from __future__ import annotations
 
 import copy
+import datetime
 import difflib
 import hashlib
 import io
@@ -1319,11 +1320,13 @@ def _source_postings(entry: Any, account: str) -> list[Any]:
     return [p for p in _source_legs(entry, account) if _has_explicit_units(p)]
 
 
-_Lot = tuple[Decimal | None, str | None, str | None]
+_Lot = tuple[Decimal | None, str | None, str | None, datetime.date | None]
 
 
-def _lot_stated(posting: Any) -> tuple[Decimal | None, Decimal | None, Decimal | None, str | None, str | None] | None:
-    """A source posting's cost as stated: per-unit, total, units, currency, label.
+def _lot_stated(
+    posting: Any,
+) -> tuple[Decimal | None, Decimal | None, Decimal | None, str | None, str | None, datetime.date | None] | None:
+    """A source posting's cost as stated: per-unit, total, units, currency, label, acquisition date.
 
     None for a posting held at no cost. Each field is None unless stated in
     that type; Cost and CostSpec spell the per-unit field differently.
@@ -1340,6 +1343,7 @@ def _lot_stated(posting: Any) -> tuple[Decimal | None, Decimal | None, Decimal |
         units if isinstance(units, Decimal) else None,
         cost.currency if isinstance(cost.currency, str) else None,
         getattr(cost, "label", None) or None,
+        cost.date if isinstance(getattr(cost, "date", None), datetime.date) else None,
     )
 
 
@@ -1356,12 +1360,12 @@ def _lot(posting: Any) -> _Lot | None:
     stated = _lot_stated(posting)
     if stated is None:
         return None
-    per, total, units, currency, label = stated
+    per, total, units, currency, label, acquired = stated
     if per is not None and total is not None and units:
         per = per + total / abs(units)
     elif per is None and total is not None and units:
         per = total / abs(units)
-    return (per, currency, label)
+    return (per, currency, label, acquired)
 
 
 def _lot_per_only(posting: Any) -> _Lot | None:
@@ -1374,10 +1378,10 @@ def _lot_per_only(posting: Any) -> _Lot | None:
     stated = _lot_stated(posting)
     if stated is None:
         return None
-    per, total, units, currency, label = stated
+    per, total, units, currency, label, acquired = stated
     if per is None and total is not None and units:
         per = total / abs(units)
-    return (per, currency, label)
+    return (per, currency, label, acquired)
 
 
 def _price_text(posting: Any) -> str:
@@ -1387,7 +1391,7 @@ def _price_text(posting: Any) -> str:
     return ""
 
 
-def _lot_text(posting: Any, *, per_only: bool = False) -> str:
+def _lot_text(posting: Any, *, per_only: bool = False, dated: bool = True) -> str:
     """A source posting's cost or price, as it bears on which source row this is.
 
     Two same-day buys of `10 AAPL` at 100 and 120 USD are two rows; hashing
@@ -1398,8 +1402,12 @@ def _lot_text(posting: Any, *, per_only: bool = False) -> str:
     lot = _lot_per_only(posting) if per_only else _lot(posting)
     cost = ""
     if lot is not None and lot[0] is not None and lot[1] is not None:
+        # An acquisition date the importer states picks the lot: two sales of
+        # the same price from different dates are two rows (w5/897). `dated=False`
+        # is the spelling written before it counted.
+        acquired = f", {lot[3].isoformat()}" if dated and lot[3] is not None else ""
         label = f', "{lot[2]}"' if lot[2] else ""
-        cost = f" {{{_exact_amount(lot[0], lot[1])}{label}}}"
+        cost = f" {{{_exact_amount(lot[0], lot[1])}{acquired}{label}}}"
     return cost + _price_text(posting)
 
 
@@ -2552,7 +2560,11 @@ def _hash_import_ids(
     """
     legs = sorted((p.units.number, p.units.currency, _lot_text(p)) for p in _source_postings(entry, account))
     per_legs = sorted(
-        (p.units.number, p.units.currency, _lot_text(p, per_only=True)) for p in _source_postings(entry, account)
+        (p.units.number, p.units.currency, _lot_text(p, per_only=True, dated=False))
+        for p in _source_postings(entry, account)
+    )
+    undated_legs = sorted(
+        (p.units.number, p.units.currency, _lot_text(p, dated=False)) for p in _source_postings(entry, account)
     )
     amounts = [(number, currency) for number, currency, _ in legs]
     # The digest hashes the description before `single_line` escapes it: a tab
@@ -2569,6 +2581,7 @@ def _hash_import_ids(
     units_only = _amounts_exact(amounts)
     exact = "+".join(_exact_amount(number, currency) + lot for number, currency, lot in legs)
     per_only = "+".join(_exact_amount(number, currency) + lot for number, currency, lot in per_legs)
+    undated = "+".join(_exact_amount(number, currency) + lot for number, currency, lot in undated_legs)
 
     single_base = _hash_base(date, exact, description, nfc_account)
     seen[single_base] = seen.get(single_base, 0) + 1
@@ -2609,6 +2622,14 @@ def _hash_import_ids(
         counter = f"units\0{units_base}"
         seen[counter] = seen.get(counter, 0) + 1
         older.append(_digest_import_id(units_base, seen[counter]))
+    if undated != exact:
+        # Written before the acquisition date an importer states was part of
+        # the id: lookup-only and lot-gated like every older spelling, so it
+        # matches the same lot and never a different dated one (w5/897).
+        undated_base = _hash_base(date, undated, description, nfc_account)
+        undated_counter = f"undated\0{undated_base}"
+        seen[undated_counter] = seen.get(undated_counter, 0) + 1
+        older.append(_digest_import_id(undated_base, seen[undated_counter]))
     per_base = _hash_base(date, per_only, description, nfc_account)
     # Numbered over every row sharing the per-only base, as the releases that
     # wrote it numbered it — including rows whose spelling did not change — so
@@ -2638,6 +2659,11 @@ def _hash_import_ids(
             units_counter = f"paired-units\0{units_paired}"
             seen[units_counter] = seen.get(units_counter, 0) + 1
             older.append(_digest_import_id(units_paired, seen[units_counter]))
+        if undated != exact:
+            undated_paired = _hash_base(date, undated, f"{payee}|{description}", nfc_account)
+            undated_paired_counter = f"paired-undated\0{undated_paired}"
+            seen[undated_paired_counter] = seen.get(undated_paired_counter, 0) + 1
+            older.append(_digest_import_id(undated_paired, seen[undated_paired_counter]))
         per_paired = _hash_base(date, per_only, f"{payee}|{description}", nfc_account)
         per_paired_counter = f"paired-per\0{per_paired}"
         seen[per_paired_counter] = seen.get(per_paired_counter, 0) + 1
