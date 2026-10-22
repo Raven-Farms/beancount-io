@@ -91,8 +91,9 @@ export function toErrorResponse(err: unknown): {
     // it is a lost compare-and-swap, which callers re-read and retry (w23/017).
     // A stale sha or a create over an existing file is a 422 that backend-v2
     // read as the caller's bad input, so its retry never ran (w23/032).
+    // The single-file delete answers a stale sha with 400 (w21/550).
     if (
-      (err.status === 422 || err.status >= 500) &&
+      (err.status === 400 || err.status === 422 || err.status >= 500) &&
       isGiteaWriteConflict(err)
     ) {
       return { status: 409, body: errorResponse(conflictMessage(err)) };

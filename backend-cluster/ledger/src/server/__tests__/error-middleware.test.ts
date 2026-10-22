@@ -102,6 +102,29 @@ describe("toErrorResponse", () => {
     );
   });
 
+  // w21/550: the single-file delete answers it with 400, so GraphQL's delete
+  // read it as the caller's bad input while REST and MCP, through
+  // /change-files, got CONFLICT.
+  it("answers a stale sha on the single-file delete (400) with 409 too", () => {
+    const stale = toErrorResponse({
+      status: 400,
+      error: { message: "sha does not match [given: abc, expected: def]" },
+    });
+    expect(stale.status).toBe(409);
+    expect(stale.body.error).toBe(
+      "the ledger changed under a concurrent write; re-read it and retry",
+    );
+  });
+
+  it("keeps any other 400 a 400", () => {
+    const bad = toErrorResponse({
+      status: 400,
+      error: { message: "invalid sha format" },
+    });
+    expect(bad.status).toBe(400);
+    expect(bad.body.error).toBe("invalid sha format");
+  });
+
   it("answers a create over an existing file with 409 naming it", () => {
     const taken = toErrorResponse({
       status: 422,

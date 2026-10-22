@@ -45,11 +45,15 @@ async function fixture(answer: string) {
   const updateLedgerFile = jest.fn(async () => {
     throw conflict(answer);
   });
+  const deleteLedgerFile = jest.fn(async () => {
+    throw conflict(answer);
+  });
   const factory = {
     getPublicApiClient: async () => ({
       ledgers: {
         changeLedgerFiles,
         updateLedgerFile,
+        deleteLedgerFile,
         getLedgerFilesContent: async () => ({
           data: { success: true, data: [] },
         }),
@@ -148,6 +152,25 @@ describe("a write the ledger answers with 409", () => {
           ledgerId: "alice/main",
           input: { path: "qa.bean", content: "OyBxYQo=", sha: "old" },
           platform: "web",
+        }),
+      ).rejects.toMatchObject({ category: "CONFLICT" });
+    } finally {
+      await f.close();
+    }
+  });
+
+  // w21/550: the ledger service's single-file delete answered a stale sha with
+  // 400 (Gitea 1.24), which GraphQL read as BAD_USER_INPUT while REST and MCP,
+  // through /change-files, said CONFLICT. The service now answers 409 for it
+  // (its own error-middleware test pins that); GraphQL carries it as CONFLICT.
+  it("is a ConflictError on GraphQL's deleteLedgerFile", async () => {
+    const f = await fixture(STALE);
+    try {
+      await expect(
+        f.workflow.deleteLedgerFile({
+          identity,
+          ledgerId: "alice/main",
+          input: { path: "qa.bean", sha: "old", message: "delete qa" },
         }),
       ).rejects.toMatchObject({ category: "CONFLICT" });
     } finally {
