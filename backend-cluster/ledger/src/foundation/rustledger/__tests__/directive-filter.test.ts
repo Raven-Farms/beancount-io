@@ -180,6 +180,39 @@ describe("filterDirectives — AdvancedFilter parity", () => {
     ]);
   });
 
+  // w21/640: the mobile search sends a lone `#tag` as the exact tag, a
+  // case-insensitive prefix of any one tag through `tags:`, or the text. The
+  // `tags:` attribute reads the list as "a, b"; this pins the form it relies on.
+  it("matches the search box's case-insensitive tag and link prefix", () => {
+    const tagged = {
+      type: "transaction",
+      date: "2026-10-12",
+      flag: "*",
+      payee: "QA Ichiran",
+      narration: "ramen",
+      tags: ["Trip", "Japan2026"],
+      links: ["receipt-abc"],
+      postings: [],
+    } as DirectiveJson;
+    const other = {
+      ...tagged,
+      narration: "other",
+      tags: ["nihon-japan"],
+      links: [],
+    } as DirectiveJson;
+    const search = (filter: string) =>
+      filterDirectives([tagged, other], { filter }).map((directive) =>
+        directive.type === "transaction" ? directive.narration : "",
+      );
+    expect(search('#japan2026,tags:"(?:^|, )japan2026","#japan2026"')).toEqual([
+      "ramen",
+    ]);
+    expect(search('#japan,tags:"(?:^|, )japan","#japan"')).toEqual(["ramen"]);
+    expect(search('^receipt,links:"(?:^|, )receipt","\\^receipt"')).toEqual([
+      "ramen",
+    ]);
+  });
+
   // w21/655: rustledger's note has no tags or links; the parse restores them.
   it("matches tags and links the parse restored on a note", () => {
     const note = {

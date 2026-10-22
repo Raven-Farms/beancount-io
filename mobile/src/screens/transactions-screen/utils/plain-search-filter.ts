@@ -32,7 +32,15 @@ export function toPlainSearchFilter(raw: string): string | undefined {
   // the same token is also how a check or order number is written in a
   // narration ("Check #1042"), which the bare form never finds, so it is sent
   // as an alternative: the tag or link, or the text (`,` is Fava's OR) (w21/400).
-  if (TAG_OR_LINK.test(trimmed)) return `${trimmed},${quoted(trimmed)}`;
+  // The bare form compares exactly, case and all, and the field does not
+  // capitalize, so "#japan2026" missed #Japan2026: a third alternative matches
+  // the start of any one tag (or link) case-insensitively, through the filter's
+  // `tags:` attribute, whose list reads "a, b" (w21/640).
+  if (TAG_OR_LINK.test(trimmed)) {
+    const attribute = trimmed.startsWith("#") ? "tags" : "links";
+    const prefix = `${attribute}:"(?:^|, )${escapeRegExp(trimmed.slice(1))}"`;
+    return `${trimmed},${prefix},${quoted(trimmed)}`;
+  }
 
   return quoted(trimmed);
 }

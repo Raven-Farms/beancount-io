@@ -84,20 +84,36 @@ describe("toPlainSearchFilter", () => {
 // or order number reads in a narration ("Check #1042"), so it goes with the text
 // as an alternative (`,` is Fava's OR) (w21/400).
 describe("toPlainSearchFilter tags and links", () => {
-  it("sends a single tag or link token as the tag or the text", () => {
-    expect(toPlainSearchFilter(" #work ")).toBe('#work,"#work"');
+  it("sends a single tag or link token as the tag, its prefix, or the text", () => {
+    expect(toPlainSearchFilter(" #work ")).toBe(
+      '#work,tags:"(?:^|, )work","#work"',
+    );
     expect(toPlainSearchFilter("^qa-receipt-001")).toBe(
-      '^qa-receipt-001,"\\^qa-receipt-001"',
+      '^qa-receipt-001,links:"(?:^|, )qa-receipt-001","\\^qa-receipt-001"',
     );
     expect(toPlainSearchFilter("#trip/2026.q3")).toBe(
-      '#trip/2026.q3,"#trip/2026\\.q3"',
+      '#trip/2026.q3,tags:"(?:^|, )trip/2026\\.q3","#trip/2026\\.q3"',
     );
   });
 
+  // w21/640: the bare form matched only the exact, case-sensitive tag.
+  it("matches the start of a tag in any case", () => {
+    const filter = toPlainSearchFilter("#japan") ?? "";
+    const pattern = /tags:"([^"]*)"/.exec(filter)?.[1] ?? "";
+    // The filter lists a transaction's tags as "a, b" and matches the pattern
+    // case-insensitively.
+    const matches = (tags: string) => new RegExp(pattern, "i").test(tags);
+    expect(matches("Japan2026")).toBe(true);
+    expect(matches("trip, JAPAN")).toBe(true);
+    expect(matches("nihon-japan")).toBe(false);
+  });
+
   it("finds a check number in a narration as well as a real tag", () => {
-    expect(toPlainSearchFilter("#1042")).toBe('#1042,"#1042"');
+    expect(toPlainSearchFilter("#1042")).toBe(
+      '#1042,tags:"(?:^|, )1042","#1042"',
+    );
     expect(toPlainSearchFilter("#112-3456789-1234567")).toBe(
-      '#112-3456789-1234567,"#112-3456789-1234567"',
+      '#112-3456789-1234567,tags:"(?:^|, )112-3456789-1234567","#112-3456789-1234567"',
     );
   });
 
