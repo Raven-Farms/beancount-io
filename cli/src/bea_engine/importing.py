@@ -465,7 +465,7 @@ def answer(
     if source.read_bytes() != source_bytes:
         raise ConflictError("The export changed during extraction; nothing was written. Retry.")
     source_hash = hashlib.sha256(source_bytes).hexdigest()
-    other_entries = {_directive_text(entry) for entry in written if not isinstance(entry, Transaction | Price)}
+    other_entries = {_directive_key(entry) for entry in written if not isinstance(entry, Transaction | Price)}
     quotes = _written_quotes(existing)
     price_conflicts = False
     rows: list[dict[str, Any]] = []
@@ -718,9 +718,10 @@ def answer(
                     recorded.append(entry)
                     batch_rows[id(entry)] = index + 1
         elif not isinstance(entry, Transaction):
-            if text in other_entries:
+            directive_key = _directive_key(entry)
+            if directive_key in other_entries:
                 status, reason = "duplicate", "Identical directive already exists."
-            other_entries.add(text)
+            other_entries.add(directive_key)
         include = status == "new" or (status == "possible_duplicate" and duplicates == "include")
         unblocked = (status, reason)
         if include and _entry_accounts(entry):
@@ -1639,6 +1640,24 @@ def _directive_text(entry: Any) -> str:
     if getattr(entry, "diff_amount", None) is not None:
         entry = entry._replace(diff_amount=None)
     return unicodedata.normalize("NFC", format_entry(entry))
+
+
+def _directive_key(entry: Any) -> str:
+    """What "identical directive" compares: the printed text with order made irrelevant.
+
+    Metadata is a mapping, so reordering its keys does not change the directive,
+    and an opening's allowed currencies are a set, so their order and repeats do
+    not either; the text appended keeps the order it was given (w5/916). Values,
+    types, booking, balance precision and tolerance all still count.
+    """
+    from beancount.core.data import Open
+
+    meta = getattr(entry, "meta", None)
+    if meta:
+        entry = entry._replace(meta={key: meta[key] for key in sorted(meta)})
+    if isinstance(entry, Open) and entry.currencies:
+        entry = entry._replace(currencies=sorted(set(entry.currencies)))
+    return _directive_text(entry)
 
 
 def _match_text(value: str | None) -> str:
