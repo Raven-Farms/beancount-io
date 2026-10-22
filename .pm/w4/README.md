@@ -95,6 +95,8 @@
 
 ## Milestones
 
+- [ ] **m49** — [Keep entry-source saves within their pending draft session](./m49/README.md) (6 tasks) ← dashboard QA,2026-10-22; major client draft loss, pending source edits and a different newly opened entry draft disappear at an older modeled acknowledgement; failure/retry controls pass, no hosted writes.
+
 - [ ] **m48** — [Preserve receipt review through recording and failure](./m48/README.md) (6 tasks) ← dashboard QA,2026-10-22; minor, pending corrections disappear at success and failed Record drops the corrected review; promoted from973, local responses only.
 
 - [ ] **m47** — [Keep profile saves within their submitted dialog session](./m47/README.md) (6 tasks) ← dashboard QA,2026-10-22; minor, concurrent Enter requests and older completion closing a newer draft; promoted from975, all writes intercepted or locally modeled.
