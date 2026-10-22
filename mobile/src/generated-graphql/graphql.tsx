@@ -276,7 +276,7 @@ export type LedgerDirectoryQueryVariables = Exact<{
 }>;
 
 
-export type LedgerDirectoryQuery = { listLedgers: Array<{ id: string, name: string, fullName: string, private: boolean }> };
+export type LedgerDirectoryQuery = { listLedgers: Array<{ id: string, name: string, fullName: string, description: string | null, private: boolean }> };
 
 export type DiscoveryLedgerFragment = { id: string, fullName: string, description: string | null, private: boolean, isStarred: boolean | null, permissions: { pull: boolean, push: boolean, admin: boolean } | null };
 
@@ -1944,6 +1944,7 @@ export const LedgerDirectoryDocument = gql`
     id
     name
     fullName
+    description
     private
   }
 }

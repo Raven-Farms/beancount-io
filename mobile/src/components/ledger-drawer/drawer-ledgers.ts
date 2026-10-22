@@ -1,8 +1,12 @@
+import { ledgerMatchesQuery } from "../../common/ledger-search";
+
 export type DrawerLedger = {
   id: string;
   name: string;
   fullName: string;
   private?: boolean;
+  /** Searched with the name; the directory supplies it (w21/244). */
+  description?: string | null;
   disabled?: boolean;
   statusLabel?: string;
 };
@@ -121,18 +125,13 @@ export function groupLedgersByOwner<T extends { fullName: string }>(
 }
 
 /** Narrows the list to what matches `query`, in the list's own order.
- * Matching runs against `owner/name` together, so typing an account name
- * brings up that account's books and typing a ledger name finds it whoever
- * owns it. An empty or whitespace query matches everything. */
-export function filterLedgers<T extends { fullName: string }>(
-  ledgers: readonly T[],
-  query: string,
-): T[] {
-  const needle = query.trim().toLowerCase();
-  if (!needle) {
-    return [...ledgers];
-  }
-  return ledgers.filter((ledger) =>
-    ledger.fullName.toLowerCase().includes(needle),
-  );
+ * Every word of the query must be found in `owner/name` or the description,
+ * in any order, with `-`, `_` and `/` read as word breaks: typing an account
+ * name brings up that account's books, "my book" finds `my-book`, and a word
+ * from the description finds the ledger as Browse ledgers does (w21/244). An
+ * empty or whitespace query matches everything. */
+export function filterLedgers<
+  T extends { fullName: string; description?: string | null },
+>(ledgers: readonly T[], query: string): T[] {
+  return ledgers.filter((ledger) => ledgerMatchesQuery(ledger, query));
 }

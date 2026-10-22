@@ -13,6 +13,7 @@ const ledger = (i: number) => ({
   id: String(i),
   name: `book-${String(i).padStart(3, "0")}`,
   fullName: `owner/book-${String(i).padStart(3, "0")}`,
+  description: null,
   private: true,
 });
 

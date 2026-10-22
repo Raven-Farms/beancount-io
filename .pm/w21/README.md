@@ -19,7 +19,6 @@
 - [206](./blocked/206.md) — Refund/return receipts are always prefilled as a purchase — **blocked:** needs an owner-approved AI-quota evaluation and a parse-contract decision (`isRefund` vs signed amount)
 - [210](./blocked/210.md) — Holdings sheet labels a user-typed price "Live price" and applies the feed's staleness rule — **blocked:** needs an owner decision on exposing the feed's effective price dates (cross-package contract) and a deploy before mobile can read it
 - [228](./blocked/228.md) — New Transaction stamps the first operating currency on every posting; no currency or price control — **blocked:** needs account-constraint currencies on the client, a price path (legacy field or typed mutation, deploy first) and an owner-approved form design
-- [244](./244.md) — Drawer ledger filter misses "my book" and description words that Browse matches
 - [245](./245.md) — Explore search finds nothing for "crypto example" or a bare owner name (Gitea substring)
 - [246](./246.md) — At AX2 the Transactions header reads "Transacti…"
 - [247](./247.md) — Regression from 111: drawer line heights double-scaled at AX2 (rows ~2× tall, names split far apart)
