@@ -1,5 +1,9 @@
 import { parseLedgerId } from "@/shared/str";
-import { unwrapFavaResponse } from "@/foundation/fava";
+import {
+  FavaApiError,
+  favaApiErrorToDomainError,
+  unwrapFavaResponse,
+} from "@/foundation/fava";
 import { decodeFileContent } from "@/shared/file-content";
 import { operationNotAllowedFromCause } from "@/features/ledger/utils/operation-not-allowed-from-cause";
 import type {
@@ -15,7 +19,12 @@ import { AUTHORIZATION_ACTIONS } from "@/server/api/authorization/authorization-
 import { assertSafeRepoPath } from "@/features/ledger/utils/safe-repo-path";
 import { assertKeepsEntryPoint } from "@/features/ledger/utils/ledger-entry-point";
 import { assertExplicitFileContentSize } from "@/features/ledger/utils/explicit-file-size";
-import { BadUserInputError, ConflictError } from "@/shared/errors";
+import {
+  BadUserInputError,
+  ConflictError,
+  InternalServerError,
+  NotFoundError,
+} from "@/shared/errors";
 import { listDirectory } from "@/features/ledger/utils/directory-listing";
 
 type CommitUser = {
@@ -142,6 +151,14 @@ export class LedgerRepoService
         files: false,
       }),
       "get latest commit",
+      // The ledger was authorized just above, so a 404 here is the branch
+      // the caller named, not its ledger (w23/047).
+      (cause) =>
+        cause instanceof FavaApiError
+          ? cause.status === 404
+            ? new NotFoundError("Branch", branchName)
+            : favaApiErrorToDomainError(cause, "get latest commit")
+          : new InternalServerError("Failed to get latest commit"),
     );
 
     const commit = data[0];

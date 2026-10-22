@@ -7,6 +7,7 @@ import { buildSchema } from "type-graphql";
 import { graphql } from "graphql";
 import { LedgerJournalQueryResolver } from "../../../resolvers/ledger-journal-resolver.query";
 import { HealthResolver } from "@/features/healthz/api/health-resolver";
+import { FavaApiError } from "@/foundation/fava";
 import { LedgerJournalService } from "@/features/ledger/service/ledger-journal-service";
 import {
   AuthorizationService,
@@ -57,15 +58,20 @@ beforeAll(async () => {
 async function fixture() {
   const envelope = (data: unknown) => ({ data: { success: true, data } });
   const journal = {
-    getContext: jest.fn(async (_owner: string, _name: string, hash: string) =>
-      envelope({
+    getContext: jest.fn(async (_owner: string, _name: string, hash: string) => {
+      // The ledger service's own answer for a hash it cannot resolve.
+      if (!(hash in contexts)) {
+        const error = `Entry with ID '${hash}' not found`;
+        throw new FavaApiError(error, 404, { success: false, error } as never);
+      }
+      return envelope({
         entry: {},
         sha256sum: "sha",
         slice: SLICE,
         managed_source: null,
         ...contexts[hash],
-      }),
-    ),
+      });
+    }),
   };
   const fava = {
     getAdminClient: () => ({
@@ -148,6 +154,36 @@ async function fixture() {
       };
       return content.result?.generated_from;
     },
+    /** Each surface's refusal message for an entry hash. */
+    refusal: async (surface: string, entryHash: string) => {
+      if (surface === "rest") {
+        const response = await fetch(
+          `${rest.url}/api-gateway/v1/ledgers/alice/main/entry-context?entryHash=${entryHash}`,
+        );
+        expect(response.status).toBe(404);
+        return ((await response.json()) as { error: { message: string } }).error
+          .message;
+      }
+      if (surface === "gql") {
+        const response = await graphql({
+          schema,
+          source: `query { getLedgerEntryContext(ledgerId:"alice/main",entryHash:"${entryHash}") { slice } }`,
+          contextValue: { identity, getCurrentIdentity: () => identity },
+        });
+        return response.errors?.[0]?.message;
+      }
+      const response = await client.callTool({
+        name: "getEntryContext",
+        arguments: { entryHash },
+      });
+      expect(response.isError).toBe(true);
+      const { error } = response.structuredContent as {
+        error: { code: string; message: string; hint: string };
+      };
+      expect(error.code).toBe("NOT_FOUND");
+      expect(error.hint).toContain("listLedgerEntries");
+      return error.message;
+    },
     close: async () => {
       await client.close();
       await server.close();
@@ -164,6 +200,19 @@ describe.each(["rest", "gql", "mcp"])("entry context via %s", (surface) => {
       expect(await f.generatedFrom(surface, "own")).toBeNull();
       // An older ledger service omits the field: read as "not a copy".
       expect(await f.generatedFrom(surface, "older")).toBeNull();
+    } finally {
+      await f.close();
+    }
+  });
+
+  // w23/047: a stale hash read "Ledger resource not found", as if the ledger
+  // itself were gone.
+  it("names the entry a stale hash no longer resolves to", async () => {
+    const f = await fixture();
+    try {
+      expect(await f.refusal(surface, "stale")).toBe(
+        "Entry with ID 'stale' not found",
+      );
     } finally {
       await f.close();
     }

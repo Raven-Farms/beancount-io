@@ -103,6 +103,40 @@ describe("unwrapFavaResponse", () => {
     },
   );
 
+  // w23/047: every 404 read "Ledger resource not found", so a stale entry
+  // hash told an agent its ledger was gone.
+  it.each([
+    [
+      "Entry with ID 'abc:1' not found",
+      "Entry with ID 'abc:1' not found",
+      {
+        resource: "Entry",
+        id: "abc:1",
+        hint: expect.stringContaining("listLedgerEntries"),
+      },
+    ],
+    [
+      "Ledger entry point with ID 'alice/main:main.bean' not found",
+      "Ledger entry point with ID 'alice/main:main.bean' not found",
+      { resource: "Ledger entry point" },
+    ],
+    ["File 2026.bean not found", "File 2026.bean not found", {}],
+    ["The target couldn't be found.", "Ledger resource not found", {}],
+    ["", "Ledger resource not found", {}],
+  ])("keeps what a 404 %p names", async (upstream, message, metadata) => {
+    const caught = await unwrapFavaResponse(
+      Promise.reject(
+        new FavaApiError(upstream || "Not Found", 404, {
+          success: false,
+          error: upstream,
+        }),
+      ),
+      "read entry",
+    ).catch((error: unknown) => error);
+    expect(caught).toBeInstanceOf(NotFoundError);
+    expect(caught).toMatchObject({ category: "NOT_FOUND", message, metadata });
+  });
+
   it("maps the legacy resource-limit message to ResourceLimitReachedError", async () => {
     const response = Promise.reject(
       new FavaApiError(

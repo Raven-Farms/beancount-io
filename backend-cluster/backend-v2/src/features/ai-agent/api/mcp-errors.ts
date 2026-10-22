@@ -72,7 +72,7 @@ const CATEGORY_HINTS: Record<ErrorCategory, string> = {
   [ErrorCategory.FORBIDDEN]:
     "This credential lacks the authority for that operation. Check `beancount://{owner}/{name}/metadata` for your permission on the ledger.",
   [ErrorCategory.NOT_FOUND]:
-    "Confirm the target exists: `listLedgers` for ledgers, `listLedgerFiles` or `beancount://{owner}/{name}/source-files` for files.",
+    "Confirm the target exists: `listLedgers` for ledgers, `listLedgerFiles` or `beancount://{owner}/{name}/source-files` for files, `listLedgerEntries` for entry hashes, which change when an entry is edited.",
   [ErrorCategory.BAD_USER_INPUT]:
     "Fix the named argument and call again; `tools/list` publishes each tool's input schema.",
   [ErrorCategory.VALIDATION_FAILED]:

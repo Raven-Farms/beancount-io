@@ -1,4 +1,5 @@
 import { LedgerRepoService } from "../ledger-repo-service";
+import { FavaApiError } from "@/foundation/fava";
 import { authorizeLedger } from "@/features/ledger/utils/authorize-ledger";
 import type { Identity } from "@/server/api/identity";
 
@@ -59,6 +60,40 @@ describe("LedgerRepoService", () => {
       });
 
       expect(result).toBeNull();
+    });
+
+    // w23/047: an unknown branch read "Ledger resource not found".
+    it("names the branch the ledger does not have", async () => {
+      mockRepoGetAllCommits.mockRejectedValue(
+        new FavaApiError("Not Found", 404, {
+          success: false,
+          error: "The target couldn't be found.",
+        } as never),
+      );
+
+      await expect(
+        service.getLatestCommit({
+          ledgerId: LEDGER_ID,
+          identity: IDENTITY,
+          branchName: "master",
+        }),
+      ).rejects.toMatchObject({
+        category: "NOT_FOUND",
+        message: "Branch with ID 'master' not found",
+      });
+    });
+
+    it("keeps any other ledger failure as the ledger's", async () => {
+      mockRepoGetAllCommits.mockRejectedValue(
+        new FavaApiError("down", 503, {
+          success: false,
+          error: "down",
+        } as never),
+      );
+
+      await expect(
+        service.getLatestCommit({ ledgerId: LEDGER_ID, identity: IDENTITY }),
+      ).rejects.toMatchObject({ category: "SERVICE_UNAVAILABLE" });
     });
 
     // w21/314: only the commit's own fields are read.

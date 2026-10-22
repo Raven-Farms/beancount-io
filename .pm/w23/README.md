@@ -19,6 +19,5 @@
 - [050](./050.md) — statement summaries silently drop balances not in the stated currency: `conversion=units` net worth 715.58 vs 117,458; unpriceable `conversion=EUR` still says `latest-price`
 - [049](./049.md) — guided setup writes account names and the title raw: a `blank@1` account name injects directives; a title ending in `\` leaves `main.bean` unparseable
 - [048](./048.md) — guided setup with a known opening builds a broken ledger: `Equity:OpeningBalances` opened twice in 6 of 8 presets; no validation despite ADR021
-- [047](./047.md) — every ledger-service 404 reads "Ledger resource not found": stale entry hashes and unknown branches tell the agent its ledger is missing
 - [022](./blocked/022.md) — report rustledger BQL gaps upstream (`cost(sum(position))`, `neg`/`filter_currency`, `meta('lineno')`, `AT value`, `BALANCES FROM`) — **blocked:** filing in an external tracker needs the user's approval
 - [026](./blocked/026.md) — streaming archive route for MCP OAuth clients over 8 MiB (option 1 from 023) — **blocked:** an ADR 0007 trust-boundary decision for the owner

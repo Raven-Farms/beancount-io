@@ -26,6 +26,32 @@ const NEW_LEDGER_ERRORS = "NEW_LEDGER_ERRORS";
 const RESOURCE_LIMIT_MESSAGE =
   /^(.*?) limit reached\. Maximum: (\d+), Current: (\d+)\./i;
 
+/**
+ * What a ledger-service 404 says is missing (w23/047). It names the thing —
+ * `Entry with ID 'h' not found` — and dropping that for a bare "Ledger resource
+ * not found" told an agent holding a stale entry hash that its ledger was gone.
+ * Gitea's generic wording names nothing and keeps the old message.
+ */
+function notFoundFromUpstream(message: string): NotFoundError {
+  const named = /^(.+?) with ID '(.*)' not found$/s.exec(message);
+  if (named) {
+    const [, resource, id] = named;
+    return new NotFoundError(
+      resource,
+      id,
+      resource === "Entry"
+        ? "Entry hashes change when an entry is edited or an identical twin is deleted; read fresh ones with `listLedgerEntries`."
+        : undefined,
+    );
+  }
+  const informative =
+    message.trim() !== "" &&
+    !/^(not found|the target couldn't be found\.?)$/i.test(message.trim());
+  const notFound = new NotFoundError("Ledger resource");
+  if (informative) notFound.message = message;
+  return notFound;
+}
+
 function upstreamMessage(error: FavaApiError, fallback: string): string {
   return error.body?.error || error.message || fallback;
 }
@@ -127,7 +153,7 @@ export function favaApiErrorToDomainError(
     case 403:
       return new ForbiddenError(message, "Ledger API");
     case 404:
-      return new NotFoundError("Ledger resource");
+      return notFoundFromUpstream(error.body?.error || "");
     case 409:
       return new ConflictError("Ledger resource", message);
     case 429:
