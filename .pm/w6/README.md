@@ -10,7 +10,7 @@ m6/t001–t012 are complete, including authenticated first queries and default H
 
 | Items | Verified state | Action that clears the blocker |
 | --- | --- | --- |
-| [m6](m6/README.md) | Source0.3.8 repair1de39be41 and full CI pass; protected39708894097 accepts all13 changed1.0.4 fingerprints119files, cleanup green. Nine current versions/90public bytes and OpenClaw installs verified; eligible Hermes/query work continues. | Verify each newly public target independently. ClawHub still must promote accruals/importer-author/property/reconcile1.0.4; all current-main/public/native DoD before closeout. |
+| [m6](blocked/m6/README.md) | Source0.3.8 repair1de39be41 and full CI pass; protected39708894097 accepts all13 changed1.0.4 fingerprints119files, cleanup green. Nine current versions/90public bytes and OpenClaw installs verified; eligible Hermes/query work continues. | Verify each newly public target independently. ClawHub still must promote accruals/importer-author/property/reconcile1.0.4; all current-main/public/native DoD before closeout. |
 | [016](./blocked/016.md), [017](./blocked/017.md), [018](./blocked/018.md), [022](./blocked/022.md), [023](./blocked/023.md), [024](./blocked/024.md), [025](./blocked/025.md) | The seven recorded corrections have merged source candidates retained on inspected upstream main `51cf2326`. No newer supported npm artifact is published. | Rustledger maintainer publishes WASM containing the seven fixes; repository worker adopts one release and runs each note's native and REST/GraphQL/MCP acceptance cases. |
 | [029](./blocked/029.md), [034](./blocked/034.md), [037](./blocked/037.md) | [Rustledger PR #2682](https://github.com/rustledger/rustledger/pull/2682) merged 2026-10-19 at 11:03 UTC, covering SUBST, FINDFIRST, and short-circuit guards. | Maintainer publishes a compatible WASM artifact; repository worker adopts it and verifies the exact native/API controls. Merge alone does not clear the release condition. |
 | [m2](./blocked/m2/README.md), [026](./blocked/026.md), [027](./blocked/027.md), [028](./blocked/028.md), [031](./blocked/031.md), [032](./blocked/032.md), [033](./blocked/033.md), [035](./blocked/035.md), [036](./blocked/036.md), [038](./blocked/038.md) | Upstream main `51cf2326` retains the missing contracts or affected implementations; no matching correction was identified. Waiting for a release alone is insufficient. | User files or explicitly authorizes the upstream requests below; maintainer implements and publishes; repository worker adopts and verifies. |
@@ -59,7 +59,7 @@ Prioritize the major correctness findings (PRINT/FROM/JOURNAL, authored location
 
 - [x] **m7** — [Connect OpenClaw and Hermes Agent to the hosted MCP endpoint](./done/m7/README.md) (9 tasks; A1; backend-v2 fixtures and docs) ← user request 2026-10-16 to list Beancount.io on OpenClaw and Hermes Agent; ADR 019 D8
 
-- [ ] **m6** — [Publish the ledger skills to ClawHub for OpenClaw and Hermes Agent](./m6/README.md) (13 tasks; A3; skills and CI) ← user request2026-10-16 — **in progress:** ten1.0.4 versions public/97files/nativeOpenClaw verified; nine supported Hermes installs/90files and both standalone first queries pass; three publication conditions remain; full w6 queue audit continues.
+- [ ] **m6** — [Publish the ledger skills to ClawHub for OpenClaw and Hermes Agent](./blocked/m6/README.md) (13 tasks; A3; skills and CI) ← user request2026-10-16 — **blocked:** ten1.0.4 versions public/97files/nativeOpenClaw verified; nine supported Hermes installs/90files and both standalone first queries pass; ClawHub must promote the existing accruals/property/reconcile1.0.4 versions before final byte/install/DoD checks.
 
 - [x] **m5** — [Include current earnings in balance-sheet equity](./done/m5/README.md) (6 tasks; major; ledger with backend-v2 validation).
 
@@ -154,3 +154,39 @@ The approved local m8–m10/041/042 drafts were copied into an isolated checkout
 
 
 **m6 submission complete — 2026-10-21:** the execution phase above is followed by successful protected submission39679035375 and an actual public-promotion wait. Continue independent w6 work and every newly public listing; no repeat upload or user resume is needed.
+
+## Full queue reconciliation — 2026-10-22 UTC
+
+All60pending nodes are reviewed individually:23inbox notes,5milestones and
+32tasks, including later m8–m10 implementation and standing tasks. All49explicit
+dependency edges resolve, and all8m6prerequisites are done. Current static
+adoption/reuse/coverage preparation is complete within its recorded limits;
+actual producer/publication/native evidence is still required before dependent
+tasks can close. No independent implementation pick remains after the current
+host controls, fresh directory reviews and late upstream audit below.
+
+| Remaining work | Exact condition and owner |
+| --- | --- |
+| m6/t013 | ClawHub promotes the existing accruals/property/reconcile1.0.4 versions; worker then verifies current public bytes, supported native installs and every DoD. All three saved normal scans are clean/writtenBack. Ten current versions/97files, nine Hermes installs/90files and both actual standalone first queries are already verified. |
+| 19engine notes plus m2 | Rustledger maintainers publish supported artifacts/contracts satisfying each recorded acceptance; ledger/backend worker then adopts and runs native/API/parity gates. Fresh02:52UTC canonical npm/GitHub metadata still has0.24.0 with unchanged integrity. Main's two new OVER/escaping commits clear none of the20gates. Ten have merged source awaiting release; ten including m2 still need the exact contract/semantics. |
+| 039/040 | Hermes maintainers supply compatible init policy and corrected discovery, or a genuinely changed relevant candidate; worker performs bounded no-force controls. Current init1.0.4 is refused18findings. Fresh catalog controls still split14default/all versus0explicitClawHub and omit newly public roll-forward. All five relevant source files remain unchanged despite later main movement. |
+| m8 and dependents | Smithery/Arcade supplies surviving supported intake. Glama operator completes separate agreement/claim/private QA profile and a healthy full day under w2/088; worker then verifies the real connector path. Existing packet, identity and configuration preparation is complete. |
+| m9 and dependents | QA account holder approves Docker/Cline's separate exact grants, followed by actual native journeys; operator resolves official Cursor Publisher Terms; authorized operator sends prepared GitHub nomination, followed by curation/native VSCode QA. Cursor community publication and approved native QA are complete and its grant remains retained. Public VSCode API reading is complete, not a pending approval. |
+| m10 and dependents | MCPServers.org/MCPMarket reviewers publish existing free submissions; worker verifies real metadata and connection paths. Fresh02:59UTC displayed queries finish with1/1unrelated and21/End of results, respectively, no canonical match; this is not private moderator status or directory-wide absence. Lobe operator resolves its separate agreement/account/repository access before publication and QA. |
+| 041/042 | Owner approves MCP.so's39USD fee or platform supplies supported free intake. PulseMCP reopens supported intake; its primary directory page still announces paused new listings/changes at the fresh check. Worker then performs dedup/submission/public/native verification. |
+
+The source/native outcome is on main in1de39be41 and1e611d415; completed review
+follow-ups are851f7513e (040), a9115079e (039), a741597ac (MCPServers) and
+3878eb01a (MCPMarket pagination). Earlier retained Cursor QA and public VSCode
+rollup outcomes aref854162ff and1c3bc2e17; old-submission scan diagnosis isc8b7b6ea2.
+Protected39708894097 and its fingerprint/credential-cleanup proof are complete.
+No PR is opened, and no original login or retained Cursor grant is revoked.
+
+Private complete60-node snapshots/acceptance/owner/dependency evidence is retained
+under `backend-cluster/backend-v2/tmp/w6-terminal-actionability-20261022/`, pinned
+to3878eb01a before the final m6 move. Late source evidence is in
+`scripts/skills/tmp/w6-late-release-recheck-20261022/`; current query/public-byte
+and scan evidence is in `scripts/skills/tmp/w6-scope-contract-20261022/`.
+The blocked m6 record preserves exact remaining jobs and per-target resumption
+conditions. All partial implementation is already shipped; anonymous native
+workspaces remain ready. Completed checks are not repeated to simulate progress.
