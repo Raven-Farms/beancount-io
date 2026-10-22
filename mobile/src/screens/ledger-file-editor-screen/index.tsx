@@ -682,9 +682,32 @@ function LedgerFileEditorSession({
   );
 
   const handleSaveRef = useRef<
-    | ((content: string, epoch: number, revision: number) => Promise<boolean>)
+    | ((
+        content: string,
+        epoch: number,
+        revision: number,
+        viaRestore?: boolean,
+      ) => Promise<boolean>)
     | null
   >(null);
+
+  // Overwrite and Recreate write outside the editor's own save. Without a guard
+  // of their own, a Save tapped meanwhile sent a stale sha: a false "File
+  // Deleted" over a restore that was succeeding, or a "File Changed" that held
+  // the guard and dropped Overwrite's own save (w21/578). While one runs, Save
+  // is ignored and the header says "Saving…".
+  const restoringRef = useRef(false);
+  const [restoring, setRestoring] = useState(false);
+  const startRestore = (): boolean => {
+    if (restoringRef.current || saveInFlightRef.current) return false;
+    restoringRef.current = true;
+    setRestoring(true);
+    return true;
+  };
+  const endRestore = () => {
+    restoringRef.current = false;
+    setRestoring(false);
+  };
 
   // A save that bypassed the editor's own (Overwrite, Recreate) leaves its
   // saved-text baseline at the text first loaded, so reverting the edit read
@@ -702,20 +725,26 @@ function LedgerFileEditorSession({
   // Take the sha of the version on the server, not its text, and save over it.
   const overwriteRemote = useCallback(
     async (content: string, epoch: number, revision: number) => {
+      if (!startRestore()) return;
       try {
-        const result = await refetch();
-        const current = result.data?.getLedgerFile?.sha;
-        if (!current) throw new Error("no sha");
-        shaRef.current = current;
-      } catch {
-        Alert.alert(t("ledgerEditorSaveFailed"));
-        return;
-      }
-      const latest = recoveryRef.current.latest();
-      if (await handleSaveRef.current?.(content, epoch, revision)) {
-        rebaseOnSaved(latest, content);
+        try {
+          const result = await refetch();
+          const current = result.data?.getLedgerFile?.sha;
+          if (!current) throw new Error("no sha");
+          shaRef.current = current;
+        } catch {
+          Alert.alert(t("ledgerEditorSaveFailed"));
+          return;
+        }
+        const latest = recoveryRef.current.latest();
+        if (await handleSaveRef.current?.(content, epoch, revision, true)) {
+          rebaseOnSaved(latest, content);
+        }
+      } finally {
+        endRestore();
       }
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [rebaseOnSaved, refetch, t],
   );
 
@@ -775,6 +804,7 @@ function LedgerFileEditorSession({
 
   const recreateFile = useCallback(
     async (content: string, epoch: number, revision: number) => {
+      if (!startRestore()) return;
       const latest = recoveryRef.current.latest();
       try {
         const result = await createLedgerFile({
@@ -813,8 +843,11 @@ function LedgerFileEditorSession({
           t("ledgerEditorSaveFailed"),
           ledgerWriteFailureMessage(err, { t }) ?? undefined,
         );
+      } finally {
+        endRestore();
       }
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [
       client,
       createLedgerFile,
@@ -827,11 +860,17 @@ function LedgerFileEditorSession({
   );
 
   const handleSave = useCallback(
-    async (content: string, epoch: number, revision: number) => {
+    async (
+      content: string,
+      epoch: number,
+      revision: number,
+      viaRestore = false,
+    ) => {
       if (
         !canWrite ||
         epoch !== documentEpochRef.current ||
-        saveInFlightRef.current
+        saveInFlightRef.current ||
+        (restoringRef.current && !viaRestore)
       )
         return false;
 
@@ -1043,26 +1082,27 @@ function LedgerFileEditorSession({
 
   // ── Header right ────────────────────────────────────────────────────────
 
-  const headerRight = saving
-    ? () => <Text style={styles.savingText}>{t("ledgerEditorSaving")}</Text>
-    : () => (
-        <TouchableOpacity
-          style={styles.saveBtn}
-          accessibilityRole="button"
-          disabled={!hasUnsavedChanges}
-          onPress={() => editorRef.current?.requestSave()}
-        >
-          <Text
-            style={[
-              styles.saveBtnText,
-              !hasUnsavedChanges && styles.saveBtnTextDisabled,
-            ]}
-            maxFontSizeMultiplier={headerActionMaxFontSizeMultiplier}
+  const headerRight =
+    saving || restoring
+      ? () => <Text style={styles.savingText}>{t("ledgerEditorSaving")}</Text>
+      : () => (
+          <TouchableOpacity
+            style={styles.saveBtn}
+            accessibilityRole="button"
+            disabled={!hasUnsavedChanges}
+            onPress={() => editorRef.current?.requestSave()}
           >
-            {t("ledgerEditorSave")}
-          </Text>
-        </TouchableOpacity>
-      );
+            <Text
+              style={[
+                styles.saveBtnText,
+                !hasUnsavedChanges && styles.saveBtnTextDisabled,
+              ]}
+              maxFontSizeMultiplier={headerActionMaxFontSizeMultiplier}
+            >
+              {t("ledgerEditorSave")}
+            </Text>
+          </TouchableOpacity>
+        );
 
   // ── Render ───────────────────────────────────────────────────────────────
 

@@ -37,7 +37,7 @@ describe("the file editor's conflict alert", () => {
     // Takes the current sha, then saves the same buffer with it.
     const sha = overwrite.indexOf("shaRef.current=current");
     const save = overwrite.indexOf(
-      "handleSaveRef.current?.(content,epoch,revision)",
+      "handleSaveRef.current?.(content,epoch,revision,true)",
     );
     expect(sha === -1 || save === -1).toBe(false);
     expect(sha < save).toBe(true);

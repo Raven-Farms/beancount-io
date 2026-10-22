@@ -35,7 +35,7 @@ describe("after Overwrite or Recreate succeeds", () => {
       "constlatest=recoveryRef.current.latest()",
     );
     const save = overwrite.indexOf(
-      "handleSaveRef.current?.(content,epoch,revision)",
+      "handleSaveRef.current?.(content,epoch,revision,true)",
     );
     expect(latest > -1 && latest < save).toBe(true);
     expect(overwrite.includes("rebaseOnSaved(latest,content)")).toBe(true);
