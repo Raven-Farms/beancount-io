@@ -36,7 +36,7 @@
 
 ## Inbox
 
-- [980 — Compose long and short dependencies in same-day bulk ordering](./980.md) — major CLI follow-up to 884; combining two independently supported pairs rejects the short cover and partial mode leaves it open, reproduced 2026-10-22.
+- [980 — Preserve independent trade dependencies in same-day bulk ordering](./980.md) — major CLI follow-up to 884; combined pairs reject a valid short cover, and the inferred-purchase fallback changes an independent LIFO/HIFO lot and profit, reproduced 2026-10-22.
 
 - [979 — Keep opposite-direction source legs distinct in native import matching](./979.md) — major CLI follow-up to 603/896; a sell-two/buy-one pair is falsely accepted as an exact one-share sale, hiding a native-ID source change, reproduced 2026-10-22.
 
