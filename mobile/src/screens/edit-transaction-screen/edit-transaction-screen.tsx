@@ -48,6 +48,7 @@ import CodeEditor, {
   type EditorDocumentSpec,
   type InsertSpec,
 } from "@/components/code-editor/code-editor";
+import { createEditorRecovery } from "@/components/code-editor/editor-recovery";
 import {
   applyEditorEdit,
   createRevisionTracker,
@@ -169,6 +170,11 @@ export const EditTransactionScreen = (): JSX.Element => {
   const entryHashRef = useRef(entryHash ?? "");
   const documentEpochRef = useRef(0);
   const revisionTrackerRef = useRef(createRevisionTracker());
+  // The editor's text, kept so iOS killing its web view does not lose the draft
+  // (w21/342, as the file editor; w21/621).
+  const recoveryRef = useRef(createEditorRecovery());
+  const insertSeq = useRef(0);
+  const [insertSpec, setInsertSpec] = useState<InsertSpec | null>(null);
   // Set when a successful save navigates back, so the beforeRemove guard does
   // not mistake that navigation for a draft discard.
   const savedOutRef = useRef(false);
@@ -183,6 +189,7 @@ export const EditTransactionScreen = (): JSX.Element => {
     documentEpochRef.current = epoch;
     resetRevisionTracker(revisionTrackerRef.current);
     shaRef.current = context.sha256sum;
+    recoveryRef.current.loaded(context.slice);
     setDocumentSpec({ value: context.slice, epoch });
     setHasUnsavedChanges(false);
     setInitialized(true);
@@ -216,9 +223,11 @@ export const EditTransactionScreen = (): JSX.Element => {
     documentEpochRef.current = epoch;
     resetRevisionTracker(revisionTrackerRef.current);
     shaRef.current = context.sha256sum;
+    recoveryRef.current.loaded(context.slice);
     setDocumentSpec({ value: context.slice, epoch });
     setHasUnsavedChanges(false);
     setSaveError(null);
+    setInsertSpec(null);
   }, [ledgerId, refetchContext, client]);
 
   // ── Save ────────────────────────────────────────────────────────────────────
@@ -243,9 +252,35 @@ export const EditTransactionScreen = (): JSX.Element => {
       if (dirty === null) return;
       setHasUnsavedChanges(dirty);
       setSaveError(null);
+      // The editor has made the edit, so the insert that asked for it is spent.
+      setInsertSpec(null);
     },
     [],
   );
+
+  // The editor's text shortly after it changes; a draft from before a reload
+  // (an older epoch) is dropped.
+  const handleDraft = useCallback(async (text: string, epoch: number) => {
+    if (epoch === documentEpochRef.current) recoveryRef.current.draft(text);
+  }, []);
+
+  // The editor's page is up. The second time is iOS having killed its web view:
+  // the page restarted from its first props (the original slice, a revision
+  // counter at 0 and the last insert), so the draft goes back in under a new
+  // epoch and the revision tracker restarts with it (w21/621).
+  const handleEditorReady = useCallback(async () => {
+    const plan = recoveryRef.current.ready();
+    if (!plan) return;
+    const epoch = documentEpochRef.current + 1;
+    documentEpochRef.current = epoch;
+    resetRevisionTracker(revisionTrackerRef.current);
+    setDocumentSpec({
+      value: plan.value,
+      epoch,
+      savedValue: plan.savedValue,
+    });
+    setInsertSpec(null);
+  }, []);
 
   const handleSave = useCallback(
     async (
@@ -355,6 +390,7 @@ export const EditTransactionScreen = (): JSX.Element => {
           return false;
         }
 
+        recoveryRef.current.saved(content);
         // Edits typed while the save was in flight are NOT covered by it —
         // stay on the screen with an accurate dirty flag in that case.
         const stillDirty = markRevisionsSaved(
@@ -457,8 +493,6 @@ export const EditTransactionScreen = (): JSX.Element => {
     ? keyboardOverlap + (showAccessory ? KEYBOARD_ACCESSORY_BAR_HEIGHT : 0)
     : 0;
 
-  const insertSeq = useRef(0);
-  const [insertSpec, setInsertSpec] = useState<InsertSpec | null>(null);
   const editorRef = useRef<CodeEditorRef>(null);
 
   const handleInsert = (text: string, cursorOffset?: number) => {
@@ -575,6 +609,8 @@ export const EditTransactionScreen = (): JSX.Element => {
               documentSpec={documentSpec}
               onEdit={handleEdit}
               onSave={handleSave}
+              onReady={handleEditorReady}
+              onDraft={handleDraft}
               editorTheme={theme.editor}
               beancount
               keyboardInset={editorKeyboardInset}
