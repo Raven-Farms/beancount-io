@@ -23,7 +23,6 @@
 - [424](./blocked/424.md) — Mobile does not show the ledger service's fix hints (split from 311) — **blocked:** production's GraphQL schema lacks `code`/`hint` until backend-v2 deploys; mobile's client is generated from it
 - [453](./blocked/453.md) — addEntries/bulkEntries have no idempotency key: a retry after a lost response can duplicate the entry (split from 351) — **blocked:** needs an owner-approved contract (field, bounds, retention) across REST/GraphQL/MCP and a backend-v2 deploy
 - [496](./blocked/496.md) — Mobile guesses that an entry is a plugin copy from its first line; read the ledger's `generated_from` instead (split from 443) — **blocked:** production's GraphQL schema lacks `generated_from` until the ledger service and backend-v2 deploy; mobile's client is generated from it
-- [461](./461.md) — Recurring paycheck's typical amount is unsigned
 - [462](./462.md) — Deleting the last posting overwrites the typed amount above it
 - [463](./463.md) — Locale-formatted amounts (1.234,56, 1 234,56, U+2212) refused
 - [464](./464.md) — Quote hint glued to refusal without punctuation (369 follow-up)

@@ -1,6 +1,6 @@
 import { formatLedgerDateShort } from "../../common/date-format";
 import type { useTranslations } from "../../common/hooks/use-translations";
-import { formatAmount } from "../transactions-screen/utils/transaction-display-utils";
+import { formatMerchantTotal } from "../merchant-detail-screen/selectors/format-merchant-total";
 import {
   cadenceLabelKey,
   type MerchantListItem,
@@ -62,8 +62,13 @@ export function merchantRowText(
     const typical = detection
       ? primaryTypical(detection.typicalAmountByCurrency)
       : null;
+    // Signed as the detail's header is: a paycheck is -$5,000.00, not a bill
+    // of $5,000.00 (w21/461).
     trailingAmount = typical
-      ? `${detection?.isApproximate ? "~" : ""}${formatAmount(typical.amount, typical.currency)}`
+      ? `${detection?.isApproximate ? "~" : ""}${formatMerchantTotal({
+          total: typical.amount,
+          currency: typical.currency,
+        })}`
       : null;
     subtitle = cadenceLabel;
     if (detection?.nextExpected) {

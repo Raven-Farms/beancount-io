@@ -102,3 +102,34 @@ describe("the Merchants row", () => {
     );
   });
 });
+
+// w21/461: a paycheck's typical amount read as an unsigned $5,000.00, like a bill,
+// under a detail header that says -$15,000.00.
+describe("the typical amount on a recurring row", () => {
+  const typical = (amount: number, isApproximate = false) => {
+    const item = netflix(true, false) as unknown as {
+      resolved: { detection: Record<string, unknown> };
+    };
+    item.resolved.detection = {
+      ...item.resolved.detection,
+      typicalAmountByCurrency: { USD: amount },
+      isApproximate,
+    };
+    return merchantRowText(
+      item as unknown as MerchantListItem,
+      t,
+      "en",
+      "2026-10-21",
+    ).trailingAmount;
+  };
+
+  it("carries a paycheck's sign, as the detail header does", () => {
+    expect(typical(-5000)).toBe("-$5,000.00");
+    expect(typical(-5000, true)).toBe("~-$5,000.00");
+  });
+
+  it("leaves a bill unsigned", () => {
+    expect(typical(15.99)).toBe("$15.99");
+    expect(typical(15.99, true)).toBe("~$15.99");
+  });
+});
