@@ -23,9 +23,10 @@ _FORCE = "--force"
 # Upstream's default pattern with Beancount's own account grammar: the lexer
 # takes any non-ASCII character in a component, upstream's default only ASCII,
 # so `Assets:Bank:Épargne` or `Assets:银行` stayed flat in the middle of the
-# tree. Written with escapes so the argument itself is plain ASCII.
-_LETTERS = r"(?:[A-Za-z0-9-_']|[^\x00-\x7F\s])*"
-_COMPONENT = r"(?:[A-Z0-9]|[^\x00-\x7F\s])" + _LETTERS
+# tree — whitespace included: `My\u00a0Savings` is one valid component (w5/883).
+# Written with escapes so the argument itself is plain ASCII.
+_LETTERS = r"(?:[A-Za-z0-9-_']|[^\x00-\x7F])*"
+_COMPONENT = r"(?:[A-Z0-9]|[^\x00-\x7F])" + _LETTERS
 _ENGLISH_ROOT = r"(?:Assets|Liabilities|Equity|Income|Expenses)"
 # Any root the grammar allows, not only the five English names: a ledger with
 # `option "name_assets" "Aktiva"` found "no hierarchical column" (w5/414). A
@@ -33,12 +34,12 @@ _ENGLISH_ROOT = r"(?:Assets|Liabilities|Equity|Income|Expenses)"
 # taken for an account. Upstream takes the leftmost column that matches, so a
 # narration such as `NYSE:IBM dividend` beside the accounts would win it;
 # bea decides the column once per input instead (see `_decide_pattern`).
-_ACCOUNT_ANY = rf"(?:{_ENGLISH_ROOT}(?::{_COMPONENT})*|(?:[A-Z]|[^\x00-\x7F\s]){_LETTERS}(?::{_COMPONENT})+)"
+_ACCOUNT_ANY = rf"(?:{_ENGLISH_ROOT}(?::{_COMPONENT})*|(?:[A-Z]|[^\x00-\x7F]){_LETTERS}(?::{_COMPONENT})+)"
 # The w5/570 per-position form, kept for input bea cannot pre-scan (a held
 # descriptor upstream reads itself): its lookahead rescans to the end of the
 # line at every start position, which is quadratic in line length (w5/769).
 _ACCOUNT_PATTERN = (
-    rf"(?:(?!.*(?<!\S){_ENGLISH_ROOT}:)(?:[A-Z]|[^\x00-\x7F\s]){_LETTERS}(?::{_COMPONENT})+"
+    rf"(?:(?!.*(?<!\S){_ENGLISH_ROOT}:)(?:[A-Z]|[^\x00-\x7F]){_LETTERS}(?::{_COMPONENT})+"
     rf"|{_ENGLISH_ROOT}(?::{_COMPONENT})*)"
 )
 _DEFAULT_DELIMITER = r"[ \t]+"
