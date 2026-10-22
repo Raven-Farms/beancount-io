@@ -36,6 +36,7 @@
 
 ## Inbox
 
+- [965 — Give mixed-type query ordering a consistent comparison rule](./965.md) — minor CLI follow-up to 760; source permutations change ORDER BY and LIMIT results, reproduced 2026-10-21.
 - [964 — Report tool-description drift, not only prompt drift](./964.md) — minor backend-v2 eval-harness finding from the w5/m5 Codex measurement ([w4/960](../w4/done/960.md)); observed 2026-10-21.
 - [963 — Limit Codex eval sessions to the eval server, as Claude Code's are](./963.md) — minor backend-v2 eval-harness finding from the w5/m5 Codex measurement; observed 2026-10-21.
 - [962 — Accept "rejected … lacks `ledger.write`" as a read-only refusal](./962.md) — trivial backend-v2 eval scoring finding from the w5/m5 Codex measurement; observed 2026-10-21.
