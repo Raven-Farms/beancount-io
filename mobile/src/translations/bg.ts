@@ -356,6 +356,7 @@ export const bg: Translations = {
   openAccountInvalidCharacters:
     "В имената на сметки използвайте само букви, цифри и тирета.",
   transaction: "Транзакция",
+  transactionActions: "Действия за транзакцията",
   loadingMore: "Зарежда се още...",
   noMoreEntries: "Няма повече записи",
   noEntries: "Няма записи",

@@ -363,6 +363,7 @@ export const ru: Translations = {
   openAccountInvalidCharacters:
     "В названиях счетов используйте только буквы, цифры и дефисы.",
   transaction: "Транзакция",
+  transactionActions: "Действия с транзакцией",
   loadingMore: "Загружается ещё...",
   noMoreEntries: "Больше записей нет",
   noEntries: "Нет записей",

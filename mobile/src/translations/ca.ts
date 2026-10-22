@@ -364,6 +364,7 @@ export const ca: Translations = {
   openAccountInvalidCharacters:
     "Als noms de compte, fes servir només lletres, xifres i guions.",
   transaction: "Transacció",
+  transactionActions: "Accions de la transacció",
   loadingMore: "Carregant més...",
   noMoreEntries: "No hi ha més entrades",
   noEntries: "Cap entrada",

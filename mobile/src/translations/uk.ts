@@ -362,6 +362,7 @@ export const uk: Translations = {
   openAccountInvalidCharacters:
     "У назвах рахунків використовуйте лише літери, цифри та дефіси.",
   transaction: "Транзакція",
+  transactionActions: "Дії з транзакцією",
   loadingMore: "Завантажується ще...",
   noMoreEntries: "Більше записів немає",
   noEntries: "Немає записів",

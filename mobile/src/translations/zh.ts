@@ -320,6 +320,7 @@ export const zh: Translations = {
   openAccountUppercaseComponent: "每级账户名称都必须以大写字母或数字开头。",
   openAccountInvalidCharacters: "账户名称只能使用字母、数字和连字符。",
   transaction: "交易",
+  transactionActions: "交易操作",
   loadingMore: "加载更多...",
   noMoreEntries: "没有更多记录",
   noEntries: "暂无记录",

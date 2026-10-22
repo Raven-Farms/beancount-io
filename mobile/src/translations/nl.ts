@@ -355,6 +355,7 @@ export const nl: Translations = {
   openAccountInvalidCharacters:
     "Gebruik in accountnamen alleen letters, cijfers en koppeltekens.",
   transaction: "Transactie",
+  transactionActions: "Transactieacties",
   loadingMore: "Meer laden...",
   noMoreEntries: "Geen verdere vermeldingen",
   noEntries: "Geen boekingen",

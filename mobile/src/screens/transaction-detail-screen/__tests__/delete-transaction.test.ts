@@ -265,3 +265,27 @@ describe("deleting an entry that changed elsewhere", () => {
     expect(source.includes('changed:t("deleteTransactionChanged")')).toBe(true);
   });
 });
+
+// w21/254: VoiceOver called the transaction detail's menu "Details", the same
+// word as the screen's section heading.
+describe("the transaction detail's menu button", () => {
+  it("is labelled by what it holds, not by the section heading's word", () => {
+    const source = require("fs")
+      .readFileSync(
+        require("path").join(__dirname, "..", "transaction-detail-screen.tsx"),
+        "utf8",
+      )
+      .replace(/\s+/g, "");
+    expect(
+      source.includes(
+        '<MenuButtonaccessibilityLabel={t("transactionActions")}',
+      ),
+    ).toBe(true);
+    expect(
+      source.includes('<MenuButtonaccessibilityLabel={t("details")}'),
+    ).toBe(false);
+    const { en } = require("../../../translations/en");
+    expect(en.transactionActions).toBe("Transaction actions");
+    expect(en.transactionActions === en.details).toBe(false);
+  });
+});

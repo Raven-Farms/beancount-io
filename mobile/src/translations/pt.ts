@@ -364,6 +364,7 @@ export const pt: Translations = {
   openAccountInvalidCharacters:
     "Use apenas letras, números e hifens nos nomes de conta.",
   transaction: "Transação",
+  transactionActions: "Ações da transação",
   loadingMore: "Carregando mais...",
   noMoreEntries: "Não há mais entradas",
   noEntries: "Sem registros",

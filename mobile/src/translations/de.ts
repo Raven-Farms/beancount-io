@@ -366,6 +366,7 @@ export const de: Translations = {
   openAccountInvalidCharacters:
     "Verwenden Sie in Kontonamen nur Buchstaben, Ziffern und Bindestriche.",
   transaction: "Transaktion",
+  transactionActions: "Transaktionsaktionen",
   loadingMore: "Lädt mehr...",
   noMoreEntries: "Keine weiteren Einträge",
   noEntries: "Keine Einträge",

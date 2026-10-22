@@ -346,6 +346,7 @@ export const en = {
   openAccountInvalidCharacters:
     "Use only letters, numbers, and hyphens in account names.",
   transaction: "Transaction",
+  transactionActions: "Transaction actions",
   loadingMore: "Loading more...",
   noMoreEntries: "No more entries",
   noEntries: "No entries",

@@ -365,6 +365,7 @@ export const sk: Translations = {
   openAccountInvalidCharacters:
     "V názvoch účtov používajte len písmená, číslice a spojovníky.",
   transaction: "Transakcia",
+  transactionActions: "Akcie transakcie",
   loadingMore: "Načítava sa viac...",
   noMoreEntries: "Žiadne ďalšie záznamy",
   noEntries: "Žiadne záznamy",

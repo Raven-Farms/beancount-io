@@ -633,7 +633,7 @@ const TransactionDetailImpl = ({
                     ) : null}
                     {menuItems.length > 0 ? (
                       <MenuButton
-                        accessibilityLabel={t("details")}
+                        accessibilityLabel={t("transactionActions")}
                         icon={
                           <Ionicons
                             name="ellipsis-horizontal"

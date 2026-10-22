@@ -351,6 +351,7 @@ export const fa: Translations = {
   openAccountInvalidCharacters:
     "در نام حساب‌ها فقط از حروف، ارقام و خط تیره استفاده کنید.",
   transaction: "تراکنش",
+  transactionActions: "اقدامات تراکنش",
   loadingMore: "در حال بارگذاری بیشتر...",
   noMoreEntries: "رکورد دیگری نیست",
   noEntries: "بدون رکورد",
