@@ -106,5 +106,9 @@
 - [591](./591.md) — On servers older than 2026-10-21, `getLedgerErrors` (now selecting `code`/`hint`) fails: Notifications breaks, the bell reads 0, the editor's checks go silent
 - [592](./592.md) — Creating a ledger fails on servers older than 2026-10-20, even Starter and Sample (ADR021's older-backend rule not followed)
 - [593](./593.md) — Test connection says "Connected" without checking that the server's schema is new enough
+- [594](./594.md) — Amounts with 17+ significant digits show wrong digits: "1.234567890123456690 ETH" for …789
+- [595](./595.md) — In a BTC ledger, Accounts, Spending, Reports and merchant totals round BTC to 2 decimals ("0.00 BTC" for 0.004)
+- [596](./596.md) — JPY/KRW/VND budgets read "Variance +¥0 · Above target" in red (status judged at cents, shown at yen)
+- [597](./597.md) — VoiceOver readouts: chart net "−$0.0000000000000036"; budget rows round to "100% used" either side of target, and "0%" for a small spend
 - [508](./blocked/508.md) — Mobile guesses that an entry is a plugin copy from its first line; read the ledger's `generated_from` instead (split from 443) — **blocked:** production's GraphQL schema lacks `generated_from` until the ledger service and backend-v2 deploy; mobile's client is generated from it
 - [315](./blocked/315.md) — In-app commits signed with Gitea username and real email (no full_name, no noreply) — **blocked:** needs the owner's noreply-address and published-history decisions, and a production backfill of existing Gitea users that can't be verified here
