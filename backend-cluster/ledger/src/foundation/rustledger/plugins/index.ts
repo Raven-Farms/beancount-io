@@ -3,11 +3,7 @@ import type {
   DirectiveJson,
   LedgerOptions,
 } from "@rustledger/wasm";
-import {
-  pluginError,
-  type PluginContext,
-  type PluginFn,
-} from "./types";
+import { pluginError, type PluginContext, type PluginFn } from "./types";
 import { amortizeOver } from "./amortize-over";
 import { forecast } from "./forecast";
 import { linkDocuments } from "./link-documents";
@@ -15,10 +11,14 @@ import { tagDiscoveredDocuments } from "./tag-discovered-documents";
 import { getDirectiveSourceId as sourceIdOf } from "./provenance";
 export {
   captureDirectiveSourceIds,
+  captureGeneratedDirectives,
   getDirectiveSourceId,
   getDirectiveSourceLocation,
   inheritDirectiveSourceId,
+  isGeneratedDirective,
+  markGeneratedDirective,
   restoreDirectiveSourceIds,
+  restoreGeneratedDirectives,
   seedDirectiveSourceIds,
   type DirectiveSourceLocation,
 } from "./provenance";

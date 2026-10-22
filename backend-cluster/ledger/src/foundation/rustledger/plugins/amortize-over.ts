@@ -5,7 +5,7 @@ import type {
   LedgerOptions,
 } from "@rustledger/wasm";
 import { pluginError, type PluginContext, type PluginResult } from "./types";
-import { inheritDirectiveSourceId } from "./provenance";
+import { inheritDirectiveSourceId, markGeneratedDirective } from "./provenance";
 import { utcDate } from "../utc-date";
 
 /**
@@ -167,6 +167,7 @@ function amortizeTransaction(
       postings,
     };
     inheritDirectiveSourceId(txn, amortized);
+    markGeneratedDirective(amortized);
     entries.push(amortized);
   });
   return { entries, errs: [] };

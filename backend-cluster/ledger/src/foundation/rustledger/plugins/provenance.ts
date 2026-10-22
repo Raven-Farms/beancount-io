@@ -15,6 +15,13 @@ export interface DirectiveSourceLocation {
  */
 const sourceIds = new WeakMap<DirectiveJson, string>();
 const sourceLocations = new WeakMap<DirectiveJson, DirectiveSourceLocation>();
+/**
+ * Directives a plugin or the pad pass made from another one: a copy shares its
+ * source's identity (so a click on it reaches the source's text), which is why
+ * a client has to be told it is a copy before offering to edit or delete it.
+ * A directive a plugin only rewrites in place (links, tags) is not one.
+ */
+const generatedDirectives = new WeakSet<DirectiveJson>();
 
 /** Seed source IDs and optional locations on the raw pre-plugin stream. */
 export function seedDirectiveSourceIds(
@@ -40,6 +47,18 @@ export function inheritDirectiveSourceId(
   if (id !== undefined) sourceIds.set(output, id);
   const location = sourceLocations.get(source);
   if (location !== undefined) sourceLocations.set(output, location);
+  // A rewrite of a copy (a link added to it) is still a copy.
+  if (generatedDirectives.has(source)) generatedDirectives.add(output);
+}
+
+/** Record that `output` was generated from the directive it inherited its source from. */
+export function markGeneratedDirective(output: DirectiveJson): void {
+  generatedDirectives.add(output);
+}
+
+/** Whether a directive is a copy a plugin or the pad pass generated. */
+export function isGeneratedDirective(directive: DirectiveJson): boolean {
+  return generatedDirectives.has(directive);
 }
 
 /** Original pre-plugin entry ID for a directive, when it has source provenance. */
@@ -61,6 +80,23 @@ export function captureDirectiveSourceIds(
   directives: readonly DirectiveJson[],
 ): Array<string | null> {
   return directives.map((directive) => sourceIds.get(directive) ?? null);
+}
+
+/** Serialize which directives are generated copies, parallel to the input. */
+export function captureGeneratedDirectives(
+  directives: readonly DirectiveJson[],
+): boolean[] {
+  return directives.map((directive) => generatedDirectives.has(directive));
+}
+
+/** Restore the generated marks on the fresh objects created by postMessage. */
+export function restoreGeneratedDirectives(
+  directives: readonly DirectiveJson[],
+  captured: readonly boolean[],
+): void {
+  directives.forEach((directive, index) => {
+    if (captured[index] === true) generatedDirectives.add(directive);
+  });
 }
 
 /** Restore provenance on the fresh directive objects created by postMessage. */

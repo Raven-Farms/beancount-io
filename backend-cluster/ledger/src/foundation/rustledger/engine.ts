@@ -17,13 +17,16 @@ import { LedgerHandleCache } from "./ledger-handle-cache";
 import {
   applyPlugins,
   captureDirectiveSourceIds,
+  captureGeneratedDirectives,
   collectLedgerPlugins,
   getDirectiveSourceId,
   getDirectiveSourceLocation,
   HANDLED_PLUGIN_NAMES,
   inheritDirectiveSourceId,
+  markGeneratedDirective,
   seedDirectiveSourceIds,
   restoreDirectiveSourceIds,
+  restoreGeneratedDirectives,
   localTodayStr,
   neutralizeIncludedOptionsAndPlugins,
   skippedPluginWarning,
@@ -101,6 +104,8 @@ export interface LedgerSnapshot {
   directiveCount: number;
   /** Worker-safe provenance, parallel to `directives`; internal engine data. */
   sourceIds?: Array<string | null>;
+  /** Which directives are generated copies, parallel to `directives`. */
+  generated?: boolean[];
   /** Complete source index, built only for callers that explicitly request it. */
   sourceDetails?: Record<string, EntrySourceDetails>;
 }
@@ -222,6 +227,7 @@ function mergePaddingTransactions(
     if (!transactions) return;
     transactions.forEach((transaction) => {
       inheritDirectiveSourceId(directive, transaction);
+      markGeneratedDirective(transaction);
       merged.push(transaction);
     });
     pending.delete(key);
@@ -462,6 +468,9 @@ export async function parseLedgerFiles(
     if (snapshot.sourceIds !== undefined) {
       restoreDirectiveSourceIds(snapshot.directives, snapshot.sourceIds);
     }
+    if (snapshot.generated !== undefined) {
+      restoreGeneratedDirectives(snapshot.directives, snapshot.generated);
+    }
     return Object.freeze({
       ...snapshot,
       errors: Object.freeze(snapshot.errors) as BeancountError[],
@@ -472,6 +481,9 @@ export async function parseLedgerFiles(
               string | null
             >,
           }
+        : {}),
+      ...(snapshot.generated
+        ? { generated: Object.freeze(snapshot.generated) as boolean[] }
         : {}),
       ...(snapshot.sourceDetails
         ? { sourceDetails: Object.freeze(snapshot.sourceDetails) }
@@ -663,6 +675,10 @@ async function parseLedgerFilesUncached(
     applyTs || sourceDetails !== undefined
       ? captureDirectiveSourceIds(directives)
       : undefined;
+  const capturedGenerated =
+    capturedSourceIds !== undefined
+      ? captureGeneratedDirectives(directives)
+      : undefined;
   const serializedSourceDetails =
     options.includeSourceDetails === true && sourceDetails !== undefined
       ? Object.fromEntries(sourceDetails)
@@ -680,6 +696,9 @@ async function parseLedgerFilesUncached(
       ? {
           sourceIds: Object.freeze(capturedSourceIds) as Array<string | null>,
         }
+      : {}),
+    ...(capturedGenerated !== undefined
+      ? { generated: Object.freeze(capturedGenerated) as boolean[] }
       : {}),
     ...(serializedSourceDetails !== undefined
       ? { sourceDetails: Object.freeze(serializedSourceDetails) }

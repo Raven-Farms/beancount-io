@@ -31,6 +31,7 @@ import {
   findEntrySliceAsync,
   formatFiscalYearEnd,
   getDirectiveSourceId,
+  isGeneratedDirective,
   hashEntry,
   parseDateRange,
   parseEntryId,
@@ -273,6 +274,13 @@ export type EntryContextResult = {
    * no edit, delete, or open-file action for it.
    */
   managed_source: string | null;
+  /**
+   * The entry hash of the source entry when this entry is a copy a plugin or a
+   * pad generated from it (`amortize_over`, `forecast`, padding), else null. A
+   * copy shares its source's text and checksum, so editing or deleting "it"
+   * changes the source and every other copy; clients offer neither (w21/443).
+   */
+  generated_from: string | null;
 };
 
 /**
@@ -734,6 +742,10 @@ export class LedgerJournalService implements ILedgerJournalService {
       sha256sum: found.sha256,
       slice: found.slice,
       managed_source: managedPriceSourceFor(found.file, managedPrices),
+      generated_from:
+        directive !== undefined && isGeneratedDirective(directive)
+          ? sourceEntryHash
+          : null,
     };
   }
 

@@ -673,6 +673,11 @@ export interface ContextPublic {
    * The feed URL when the entry comes from a managed price include (ADR 015), else null. The entry is read-only.
    */
   managed_source?: string | null;
+  /**
+   * Generated From
+   * The entry hash of the source entry when this entry is a copy a plugin or a pad generated from it (amortize_over, forecast, padding), else null. A copy shares its source's text and checksum, so editing or deleting it changes the source and every other copy.
+   */
+  generated_from?: string | null;
 }
 
 /**

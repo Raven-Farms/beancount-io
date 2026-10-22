@@ -210,6 +210,22 @@ describe("parseLedgerFiles — plugin orchestration (stubbed WASM)", () => {
     expect(snapshot.directiveCount).toBe(5);
   });
 
+  // w21/443: a padding transaction answers with its pad's text, so it is a copy.
+  it("marks the padding transaction as generated, not its pad", async () => {
+    const { isGeneratedDirective } = await import("../plugins/provenance");
+    parsedDirectives = [openCash, openEquity, padCash, balanceCash];
+    rawPaddingTransactions = [paddingCash];
+
+    const snapshot = await parseLedgerFiles(
+      { "main.bean": "2017-01-02 pad Assets:Cash Equity:Opening" },
+      "main.bean",
+    );
+
+    expect(isGeneratedDirective(paddingCash)).toBe(true);
+    expect(isGeneratedDirective(padCash)).toBe(false);
+    expect(snapshot.directives).toContain(paddingCash);
+  });
+
   it("walks a same-day transaction written before a pad first (w21/134)", async () => {
     const deposit: DirectiveJson = {
       type: "transaction",

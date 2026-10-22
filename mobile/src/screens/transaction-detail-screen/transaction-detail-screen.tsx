@@ -64,6 +64,7 @@ import {
   type TransactionMenuAction,
   userMetadataLines,
 } from "./selectors/select-transaction-detail";
+import { isPluginCopy } from "./selectors/select-plugin-copy";
 import { shouldShowTransactionWriteActions } from "./selectors/select-transaction-write-actions";
 import {
   createRevisionCheck,
@@ -590,6 +591,7 @@ const TransactionDetailImpl = ({
   const showWriteActions = shouldShowTransactionWriteActions(
     canWrite,
     sha256sum,
+    isPluginCopy(entry, contextSource?.slice),
   );
   const menuActions = selectTransactionMenuActions({
     isGenerated,

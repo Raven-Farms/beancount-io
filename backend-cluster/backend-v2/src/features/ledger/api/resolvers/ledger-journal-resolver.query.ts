@@ -47,6 +47,13 @@ class EntryContext {
       "The feed URL when the entry comes from a managed price include; such an entry is read-only.",
   })
   managed_source: string | null;
+
+  @Field(() => String, {
+    nullable: true,
+    description:
+      "The entry hash of the source entry when this entry is a copy a plugin or a pad generated from it (amortize_over, forecast, padding). A copy shares its source's text and checksum, so editing or deleting it changes the source and every other copy.",
+  })
+  generated_from: string | null;
 }
 
 @InputType()

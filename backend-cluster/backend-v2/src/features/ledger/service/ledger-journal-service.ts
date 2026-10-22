@@ -62,6 +62,13 @@ export type EntryContextResult = {
    * else null: the entry is read-only, with no source file to open.
    */
   managed_source: string | null;
+  /**
+   * The entry hash of the source entry when this entry is a copy a plugin or a
+   * pad generated from it (amortize_over, forecast, padding), else null. A copy
+   * shares its source's text and checksum, so editing or deleting it changes the
+   * source and every other copy: clients offer neither (w21/443).
+   */
+  generated_from: string | null;
 };
 
 export type PlaintextJournalResult = { content: string };
@@ -254,6 +261,7 @@ export class LedgerJournalService
       sha256sum: ctx.sha256sum,
       slice: ctx.slice,
       managed_source: ctx.managed_source ?? null,
+      generated_from: ctx.generated_from ?? null,
     };
   }
 

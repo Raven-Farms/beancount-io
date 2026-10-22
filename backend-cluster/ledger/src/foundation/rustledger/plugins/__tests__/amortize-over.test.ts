@@ -1,6 +1,7 @@
 import BigNumber from "bignumber.js";
 import type { DirectiveJson, LedgerOptions } from "@rustledger/wasm";
 import { amortizeOver, MAX_AMORTIZE_MONTHS } from "../amortize-over";
+import { isGeneratedDirective } from "../provenance";
 
 const OPTS = {} as LedgerOptions;
 const FAR_FUTURE = "2099-01-01";
@@ -331,5 +332,21 @@ describe("amortizeOver", () => {
     } as DirectiveJson;
     const { directives } = amortizeOver([open], OPTS, { today: FAR_FUTURE });
     expect(directives).toEqual([open]);
+  });
+});
+
+// w21/443: a copy shares its source's identity, so clients must be told it is one.
+describe("amortizeOver provenance", () => {
+  it("marks every monthly copy as generated, and the plain transaction not", () => {
+    const plain = amortizeTxn({});
+    const result = amortizeOver([amortizeTxn({ months: "3" }), plain], OPTS, {
+      today: FAR_FUTURE,
+    });
+    const copies = result.directives.filter((directive) =>
+      (directive as { narration?: string }).narration?.includes("("),
+    );
+    expect(copies).toHaveLength(3);
+    expect(copies.every((copy) => isGeneratedDirective(copy))).toBe(true);
+    expect(isGeneratedDirective(plain)).toBe(false);
   });
 });
