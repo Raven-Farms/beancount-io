@@ -75,3 +75,40 @@ describe("rechecking a detail screen on return", () => {
     ).toBe(true);
   });
 });
+
+// w21/527: a Back that lands before the invalidation settles saw no change, and
+// the bump that followed was never read.
+describe("rechecking when the revision moves after focus", () => {
+  it("sees a bump that arrives while the screen is already focused", () => {
+    let revision = 0;
+    const check = createRevisionCheck(() => revision);
+    // Focus arrives while the refetches are still running.
+    expect(check()).toBe(false);
+    // The invalidation settles; the screen re-runs its check on the new value.
+    revision += 1;
+    expect(check()).toBe(true);
+    expect(check()).toBe(false);
+  });
+
+  it("is re-run by the screen whenever the revision changes", () => {
+    const screen = require("fs")
+      .readFileSync(
+        require("path").join(
+          __dirname,
+          "..",
+          "..",
+          "transaction-detail-screen.tsx",
+        ),
+        "utf8",
+      )
+      .replace(/\s+/g, "") as string;
+    expect(
+      screen.includes("constledgerRevision=useReactiveVar(ledgerRevisionVar);"),
+    ).toBe(true);
+    expect(
+      screen.includes(
+        "ledgerChangedSinceCheck,refetchContext,ledgerRevision,]",
+      ),
+    ).toBe(true);
+  });
+});

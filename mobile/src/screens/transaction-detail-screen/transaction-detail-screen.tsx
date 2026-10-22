@@ -369,13 +369,26 @@ const TransactionDetailImpl = ({
     () => createRevisionCheck(() => ledgerRevisionVar()),
     [],
   );
+  // The revision moves only when an invalidation has settled, which can be
+  // after the screen above has navigated back here: a focus-only check saw no
+  // change and the later bump went unread (w21/527). Following the revision
+  // re-runs the check while focused.
+  const ledgerRevision = useReactiveVar(ledgerRevisionVar);
   useFocusEffect(
     useCallback(() => {
       if (!entryHash || !shouldLoadContext) return;
       if (ledgerChangedSinceCheck()) {
         void refetchContext().catch(() => undefined);
       }
-    }, [entryHash, shouldLoadContext, ledgerChangedSinceCheck, refetchContext]),
+      // `ledgerRevision` only re-runs this; the check reads the var itself.
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [
+      entryHash,
+      shouldLoadContext,
+      ledgerChangedSinceCheck,
+      refetchContext,
+      ledgerRevision,
+    ]),
   );
 
   const [deleteMutation] = useDeleteLedgerEntrySourceSliceMutation();
