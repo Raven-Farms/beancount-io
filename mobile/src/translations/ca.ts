@@ -226,7 +226,6 @@ export const ca: Translations = {
   accountPickerClosedOn: "{{name}} es va tancar el {{date}}",
   accountPickerOpensOn:
     "{{name}} s'obre el {{date}}. Canvieu la data per utilitzar-lo.",
-  next: "Següent",
   cancel: "Cancel·lar",
   confirm: "Confirmar",
   saving: "Guardant...",
@@ -235,8 +234,6 @@ export const ca: Translations = {
   saveFailed: "Error al guardar",
   profilePartialSave:
     "El nom d'usuari s'ha desat, però no s'ha pogut desar el vostre nom. Torneu-ho a provar.",
-  amountEmptyError: "Si us plau, introdueix l'import",
-  accountEmptyError: "Tria el compte d'origen i el de destí",
   accounts: "Comptes",
   // Column header for the Accounts tab's account column. The balance column
   // reuses `balance`; each root row states its own valuation basis.
@@ -285,7 +282,6 @@ export const ca: Translations = {
   payee: "Beneficiari",
   narration: "Descripció",
   suggestions: "Suggeriments",
-  aiSuggestions: "Suggeriments d'IA",
   from: "De",
   to: "A",
   date: "Data",

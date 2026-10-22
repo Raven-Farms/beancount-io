@@ -348,21 +348,4 @@ describe("the icon guardrail covers every vector-icon family (w21/358)", () => {
     }
     expect(VECTOR_ICON.test("<Text>Delete</Text>")).toBe(false);
   });
-
-  it("the keypad's Delete key is labelled", () => {
-    const src = fs
-      .readFileSync(
-        path.join(
-          SRC_ROOT,
-          "screens/add-transaction-screen/add-transaction-screen.tsx",
-        ),
-        "utf8",
-      )
-      .replace(/\s+/g, "");
-    expect(
-      src.includes(
-        'accessibilityLabel={key.display==="Del"?i18n.t("deleteTransaction"):undefined}',
-      ),
-    ).toBe(true);
-  });
 });

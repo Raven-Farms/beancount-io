@@ -22,7 +22,7 @@
  */
 
 /** Where a suggestion came from. */
-export type SuggestionSource = "history" | "llm";
+type SuggestionSource = "history" | "llm";
 
 export interface AccountSuggestion {
   account: string;

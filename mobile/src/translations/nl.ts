@@ -221,7 +221,6 @@ export const nl: Translations = {
   accountPickerClosedOn: "{{name}} is gesloten op {{date}}",
   accountPickerOpensOn:
     "{{name}} wordt geopend op {{date}}. Wijzig de datum om het te gebruiken.",
-  next: "Volgende",
   cancel: "Annuleren",
   confirm: "Bevestigen",
   saving: "Opslaan...",
@@ -230,8 +229,6 @@ export const nl: Translations = {
   saveFailed: "Opslaan mislukt",
   profilePartialSave:
     "De gebruikersnaam is opgeslagen, maar je naam kon niet worden opgeslagen. Probeer het opnieuw.",
-  amountEmptyError: "Voer het bedrag in",
-  accountEmptyError: "Kies het account waarvan en waarnaar",
   accounts: "Accounts",
   // Column header for the Accounts tab's account column. The balance column
   // reuses `balance`; each root row states its own valuation basis.
@@ -277,7 +274,6 @@ export const nl: Translations = {
   payee: "Begunstigde",
   narration: "Beschrijving",
   suggestions: "Suggesties",
-  aiSuggestions: "AI-suggesties",
   from: "Van",
   to: "Naar",
   date: "Datum",

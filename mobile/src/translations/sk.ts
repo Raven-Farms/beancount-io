@@ -224,7 +224,6 @@ export const sk: Translations = {
   accountPickerClosedOn: "{{name}} bol zatvorený {{date}}",
   accountPickerOpensOn:
     "{{name}} sa otvára {{date}}. Zmeňte dátum, aby ste ho mohli použiť.",
-  next: "Ďalej",
   cancel: "Zrušiť",
   confirm: "Potvrdiť",
   saving: "Ukladanie...",
@@ -233,8 +232,6 @@ export const sk: Translations = {
   saveFailed: "Ukladanie zlyhalo",
   profilePartialSave:
     "Používateľské meno bolo uložené, ale vaše meno sa nepodarilo uložiť. Skúste to znova.",
-  amountEmptyError: "Prosím zadajte sumu",
-  accountEmptyError: "Vyberte zdrojový a cieľový účet",
   accounts: "Účty",
   // Column header for the Accounts tab's account column. The balance column
   // reuses `balance`; each root row states its own valuation basis.
@@ -287,7 +284,6 @@ export const sk: Translations = {
   payee: "Príjemca",
   narration: "Popis",
   suggestions: "Návrhy",
-  aiSuggestions: "Návrhy AI",
   from: "Od",
   to: "Pre",
   date: "Dátum",

@@ -83,7 +83,6 @@
 - [484](./484.md) — Profile, server settings, budget delete errors not announced (354 sibling)
 - [485](./485.md) — Files Up and budget Delete targets under 44pt
 - [315](./blocked/315.md) — In-app commits signed with Gitea username and real email (no full_name, no noreply) — **blocked:** needs the owner's noreply-address and published-history decisions, and a production backfill of existing Gitea users that can't be verified here
-- [413](./413.md) — Parked keypad flow: overwrite, JPY ×100, double submit, closed accounts
 - [414](./414.md) — Home 1M/3M count back from last entry, not today (240 sibling)
 - [415](./415.md) — No operating_currency: Home shows $0.00 USD, all "Not in total"
 - [416](./416.md) — Zero change from zero baseline reads "+$0.00" in gain colour

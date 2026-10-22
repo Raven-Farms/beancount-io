@@ -220,7 +220,6 @@ export const bg: Translations = {
   accountPickerClosedOn: "{{name}} е закрита на {{date}}",
   accountPickerOpensOn:
     "{{name}} се открива на {{date}}. Променете датата, за да го използвате.",
-  next: "Напред",
   cancel: "Отказ",
   confirm: "Потвърждение",
   saving: "Запазване...",
@@ -229,8 +228,6 @@ export const bg: Translations = {
   saveFailed: "Неуспешно запазване",
   profilePartialSave:
     "Потребителското име е запазено, но името ви не можа да се запази. Опитайте отново.",
-  amountEmptyError: "Моля въведете сумата",
-  accountEmptyError: "Изберете сметка източник и сметка получател",
   accounts: "Сметки",
   // Column header for the Accounts tab's account column. The balance column
   // reuses `balance`; each root row states its own valuation basis.
@@ -276,7 +273,6 @@ export const bg: Translations = {
   payee: "Получател",
   narration: "Описание",
   suggestions: "Предложения",
-  aiSuggestions: "Предложения от ИИ",
   from: "От",
   to: "До",
   date: "Дата",

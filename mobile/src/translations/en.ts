@@ -212,7 +212,6 @@ export const en = {
   accountPickerClosedOn: "{{name}} was closed on {{date}}",
   accountPickerOpensOn:
     "{{name}} opens on {{date}}. Change the date to use it.",
-  next: "Next",
   cancel: "Cancel",
   confirm: "Confirm",
   saving: "Saving...",
@@ -221,8 +220,6 @@ export const en = {
   saveFailed: "Failed to save",
   profilePartialSave:
     "Username saved, but your name couldn't be saved. Try again.",
-  amountEmptyError: "Please input the amount",
-  accountEmptyError: "Please select the from and to accounts",
   accounts: "Accounts",
   // Column header for the Accounts tab's account column. The balance column
   // reuses `balance`; each root row states its own valuation basis.
@@ -268,7 +265,6 @@ export const en = {
   payee: "Payee",
   narration: "Narration",
   suggestions: "Suggestions",
-  aiSuggestions: "AI Suggestions",
   from: "From",
   to: "To",
   date: "Date",

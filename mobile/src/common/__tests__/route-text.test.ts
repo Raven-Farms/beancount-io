@@ -74,14 +74,6 @@ describe("the senders of free-text params", () => {
     ],
     [["common", "app-links", "resolve-app-link.ts"], ["path:routeText(path)"]],
     [
-      ["screens", "add-transaction-screen", "add-transaction-next-screen.tsx"],
-      ["payee:routeText(payee)", "narration:routeText(narration)"],
-    ],
-    [
-      ["screens", "add-transaction-screen", "quick-add-accounts-selector.tsx"],
-      ["payee:routeText(selectedPayee)"],
-    ],
-    [
       [
         "screens",
         "multi-postings-transaction",

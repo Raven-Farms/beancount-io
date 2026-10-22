@@ -17,18 +17,6 @@ const guardsBefore = (source: string, guard: string, render: string) => {
 };
 
 describe("route param guards", () => {
-  it("sends add-transaction-next without an amount to the live add flow", () => {
-    const source = read("app/(app)/add-transaction-next.tsx");
-    expect(source.includes("currentMoney?: string")).toBe(true);
-    expect(
-      guardsBefore(
-        source,
-        '<Redirect href="/add-transaction" />',
-        "<AddTransactionNextScreen />",
-      ),
-    ).toBe(true);
-  });
-
   it("sends the file editor without a path to the Files tab for its session", () => {
     const source = read("src/screens/ledger-file-editor-screen/index.tsx");
     const screen = source.slice(

@@ -197,7 +197,6 @@ export const zh: Translations = {
   accountPickerCreate: "创建“%{name}”",
   accountPickerClosedOn: "{{name}} 已于 {{date}} 关闭",
   accountPickerOpensOn: "{{name}} 将于 {{date}} 开立。请更改日期以使用它。",
-  next: "下一步",
   cancel: "取消",
   confirm: "确定",
   saving: "保存...",
@@ -205,8 +204,6 @@ export const zh: Translations = {
   saveSuccess: "保存成功!",
   saveFailed: "保存失败",
   profilePartialSave: "用户名已保存，但姓名未能保存。请重试。",
-  amountEmptyError: "请输入金额",
-  accountEmptyError: "请选择转出和转入账户",
   accounts: "账户",
   // Column header for the Accounts tab's account column. The balance column
   // reuses `balance`; each root row states its own valuation basis.
@@ -249,7 +246,6 @@ export const zh: Translations = {
   payee: "收款方",
   narration: "备注",
   suggestions: "建议",
-  aiSuggestions: "AI 建议",
   from: "从",
   to: "到",
   date: "日期",

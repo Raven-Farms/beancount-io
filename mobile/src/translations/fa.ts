@@ -217,7 +217,6 @@ export const fa: Translations = {
   accountPickerClosedOn: "{{name}} در {{date}} بسته شد",
   accountPickerOpensOn:
     "{{name}} در {{date}} باز می‌شود. برای استفاده از آن تاریخ را تغییر دهید.",
-  next: "بعدی",
   cancel: "لغو",
   confirm: "تأیید",
   saving: "در حال ذخیره...",
@@ -226,8 +225,6 @@ export const fa: Translations = {
   saveFailed: "ذخیره ناموفق",
   profilePartialSave:
     "نام کاربری ذخیره شد، اما نام شما ذخیره نشد. دوباره تلاش کنید.",
-  amountEmptyError: "لطفاً مبلغ را وارد کنید",
-  accountEmptyError: "حساب مبدأ و مقصد را انتخاب کنید",
   accounts: "حساب‌ها",
   // Column header for the Accounts tab's account column. The balance column
   // reuses `balance`; each root row states its own valuation basis.
@@ -273,7 +270,6 @@ export const fa: Translations = {
   payee: "دریافت‌کننده",
   narration: "شرح",
   suggestions: "پیشنهادها",
-  aiSuggestions: "پیشنهادهای هوش مصنوعی",
   from: "از",
   to: "به",
   date: "تاریخ",

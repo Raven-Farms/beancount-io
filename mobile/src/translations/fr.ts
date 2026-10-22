@@ -224,7 +224,6 @@ export const fr: Translations = {
   accountPickerClosedOn: "{{name}} a été clôturé le {{date}}",
   accountPickerOpensOn:
     "{{name}} ouvre le {{date}}. Changez la date pour l'utiliser.",
-  next: "Suivant",
   cancel: "Annuler",
   confirm: "Confirmer",
   saving: "Enregistrement...",
@@ -233,8 +232,6 @@ export const fr: Translations = {
   saveFailed: "Échec de l'enregistrement",
   profilePartialSave:
     "Le nom d'utilisateur est enregistré, mais votre nom n'a pas pu l'être. Réessayez.",
-  amountEmptyError: "Veuillez saisir le montant",
-  accountEmptyError: "Choisissez le compte de départ et le compte d'arrivée",
   accounts: "Comptes",
   // Column header for the Accounts tab's account column. The balance column
   // reuses `balance`; each root row states its own valuation basis.
@@ -283,7 +280,6 @@ export const fr: Translations = {
   payee: "Bénéficiaire",
   narration: "Libellé",
   suggestions: "Suggestions",
-  aiSuggestions: "Suggestions de l'IA",
   from: "De",
   to: "À",
   date: "Date",

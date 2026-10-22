@@ -248,7 +248,6 @@ describe("translations", () => {
       expect(en.cancel).toBe("Cancel");
       expect(en.confirm).toBe("Confirm");
       expect(en.done).toBe("Done");
-      expect(en.next).toBe("Next");
     });
 
     it("has status message keys", () => {

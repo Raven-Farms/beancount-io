@@ -222,7 +222,6 @@ export const uk: Translations = {
   accountPickerClosedOn: "{{name}} закрито {{date}}",
   accountPickerOpensOn:
     "{{name}} відкривається {{date}}. Змініть дату, щоб його використати.",
-  next: "Далі",
   cancel: "Скасувати",
   confirm: "Підтвердити",
   saving: "Збереження...",
@@ -231,8 +230,6 @@ export const uk: Translations = {
   saveFailed: "Помилка збереження",
   profilePartialSave:
     "Ім'я користувача збережено, але ваше ім'я зберегти не вдалося. Спробуйте ще раз.",
-  amountEmptyError: "Будь ласка, введіть суму",
-  accountEmptyError: "Оберіть рахунок списання та рахунок зарахування",
   accounts: "Рахунки",
   // Column header for the Accounts tab's account column. The balance column
   // reuses `balance`; each root row states its own valuation basis.
@@ -285,7 +282,6 @@ export const uk: Translations = {
   payee: "Отримувач",
   narration: "Опис",
   suggestions: "Пропозиції",
-  aiSuggestions: "Підказки ШІ",
   from: "Від",
   to: "До",
   date: "Дата",
