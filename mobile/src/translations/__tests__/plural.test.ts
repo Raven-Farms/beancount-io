@@ -254,3 +254,31 @@ describe("without Intl.PluralRules", () => {
     });
   });
 });
+
+// w21/473: "Show 1 more lines", and Russian's "ещё 2 строк" for "строки".
+describe("commit detail's Show more lines", () => {
+  const { uk } = require("../uk");
+  const i18n = new I18n({ en, ru, uk });
+  registerPluralizers(i18n, ["en", "ru", "uk"]);
+  const render = (locale: string, count: number) =>
+    i18n.t("commitDetailShowMore", { locale, count });
+
+  it("reads in the singular and plural in English", () => {
+    expect(render("en", 1)).toBe("Show 1 more line");
+    expect(render("en", 2)).toBe("Show 2 more lines");
+    expect(render("en", 209)).toBe("Show 209 more lines");
+  });
+
+  it("agrees with the count in Russian", () => {
+    expect(render("ru", 1)).toBe("Показать ещё 1 строку");
+    expect(render("ru", 2)).toBe("Показать ещё 2 строки");
+    expect(render("ru", 5)).toBe("Показать ещё 5 строк");
+    expect(render("ru", 21)).toBe("Показать ещё 21 строку");
+  });
+
+  it("agrees with the count in Ukrainian", () => {
+    expect(render("uk", 1)).toBe("Показати ще 1 рядок");
+    expect(render("uk", 2)).toBe("Показати ще 2 рядки");
+    expect(render("uk", 5)).toBe("Показати ще 5 рядків");
+  });
+});

@@ -537,7 +537,12 @@ export const ru: Translations = {
   commitFileDeleted: "Удалён",
   commitFileRenamedFrom: "Переименован из {{name}}",
   commitDetailDiff: "Изменения",
-  commitDetailShowMore: "Показать ещё {{count}} строк",
+  commitDetailShowMore: {
+    one: "Показать ещё {{count}} строку",
+    few: "Показать ещё {{count}} строки",
+    many: "Показать ещё {{count}} строк",
+    other: "Показать ещё {{count}} строки",
+  },
   commitDetailNoDiff: "Изменения недоступны.",
   commitDetailAdditions: {
     one: "+{{count}} строка",

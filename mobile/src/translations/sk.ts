@@ -540,7 +540,12 @@ export const sk: Translations = {
   commitFileDeleted: "Odstránený",
   commitFileRenamedFrom: "Premenovaný z {{name}}",
   commitDetailDiff: "Rozdiely",
-  commitDetailShowMore: "Zobraziť ďalších {{count}} riadkov",
+  commitDetailShowMore: {
+    one: "Zobraziť ďalší {{count}} riadok",
+    few: "Zobraziť ďalšie {{count}} riadky",
+    many: "Zobraziť ďalších {{count}} riadka",
+    other: "Zobraziť ďalších {{count}} riadkov",
+  },
   commitDetailNoDiff: "Nie sú dostupné žiadne rozdiely.",
   commitDetailAdditions: {
     one: "+{{count}} riadok",
