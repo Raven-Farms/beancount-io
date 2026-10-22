@@ -9,6 +9,10 @@ import { successResponse } from "@/server/envelope";
 import { checkDirectiveLimitForFileChanges } from "@/core/directive-limit";
 import { NotFoundDetailError } from "@/server/py-errors";
 import { readGiteaRawBuffer } from "@/features/gitea/utils/gitea-file-content";
+import {
+  giteaErrorStatus,
+  isGiteaWriteConflict,
+} from "@/features/gitea/utils/gitea-error";
 import { assertSafeRepoPath, toSafeRepoUrlPath } from "@/shared/safe-repo-path";
 
 /** Python `LedgerFileContentPublic` — fixed projection, nulls included. */
@@ -109,6 +113,96 @@ interface ChangeFilesBody {
 
 const is404 = (err: unknown): boolean =>
   (err as { status?: number }).status === 404;
+
+/**
+ * Whether a thrown Gitea error is a 5xx that is not a lost write race. Gitea has
+ * no 404 for an update of a path that no longer exists: it answers 500, which
+ * backend-v2 reports as SERVICE_UNAVAILABLE ("try again in a moment") for a save
+ * that can never succeed (w21/468).
+ */
+function isUnexplainedServerError(err: unknown): boolean {
+  const status = giteaErrorStatus(err);
+  return status !== undefined && status >= 500 && !isGiteaWriteConflict(err);
+}
+
+/**
+ * After a failed update: read each path. One that is gone is the answer
+ * (NOT_FOUND); if every one exists, the original error stands.
+ */
+async function rethrowAsMissing(
+  client: ReturnType<typeof giteaClientForRequest>,
+  owner: string,
+  repoName: string,
+  paths: readonly string[],
+  original: unknown,
+): Promise<never> {
+  for (const path of paths) {
+    try {
+      await client.repos.repoGetContents(
+        owner,
+        repoName,
+        toSafeRepoUrlPath(path),
+      );
+    } catch (probe) {
+      if (is404(probe)) {
+        throw new NotFoundDetailError(`File ${path} does not exist`);
+      }
+    }
+  }
+  throw original;
+}
+
+/** Update a file, answering NOT_FOUND when the file is gone (w21/468). */
+export async function updateExistingFile(
+  client: ReturnType<typeof giteaClientForRequest>,
+  owner: string,
+  repoName: string,
+  safeUrlPath: string,
+  path: string,
+  options: { content: string; sha: string; message: string },
+) {
+  try {
+    return await client.repos.repoUpdateFile(
+      owner,
+      repoName,
+      safeUrlPath,
+      options,
+    );
+  } catch (err) {
+    if (!isUnexplainedServerError(err)) throw err;
+    return rethrowAsMissing(client, owner, repoName, [path], err);
+  }
+}
+
+/** Commit a set of file operations, answering NOT_FOUND for an update of a path that is gone (w21/468). */
+export async function changeExistingFiles(
+  client: ReturnType<typeof giteaClientForRequest>,
+  owner: string,
+  repoName: string,
+  body: ChangeFilesBody,
+  operations: ChangeFilesBody["files"] = [],
+): Promise<void> {
+  try {
+    await client.repos.repoChangeFiles(owner, repoName, {
+      files: operations.map((op) => ({
+        operation: op.operation,
+        path: op.path,
+        content: op.content ?? undefined,
+        from_path: op.from_path ?? undefined,
+        sha: op.sha ?? undefined,
+      })),
+      message: body.message ?? undefined,
+      branch: body.branch ?? undefined,
+      new_branch: body.new_branch ?? undefined,
+    });
+  } catch (err) {
+    if (!isUnexplainedServerError(err)) throw err;
+    const updated = operations
+      .filter((op) => op.operation === "update")
+      .map((op) => op.path);
+    await rethrowAsMissing(client, owner, repoName, updated, err);
+  }
+}
 
 export function setFilesHandler(router: Router): void {
   // operationId: getLedgerFile — GET /ledgers/{o}/{r}/files?path=
@@ -235,10 +329,12 @@ export function setFilesHandler(router: Router): void {
         { [body.path]: body.content },
         { exempt: directiveLimitExempt(ctx) },
       );
-      const res = await client.repos.repoUpdateFile(
+      const res = await updateExistingFile(
+        client,
         owner,
         repoName,
         safeUrlPath,
+        body.path,
         {
           content: body.content,
           sha: body.sha,
@@ -299,18 +395,7 @@ export function setFilesHandler(router: Router): void {
         fileChanges,
         { exempt: directiveLimitExempt(ctx) },
       );
-      await client.repos.repoChangeFiles(owner, repoName, {
-        files: operations.map((op) => ({
-          operation: op.operation,
-          path: op.path,
-          content: op.content ?? undefined,
-          from_path: op.from_path ?? undefined,
-          sha: op.sha ?? undefined,
-        })),
-        message: body.message ?? undefined,
-        branch: body.branch ?? undefined,
-        new_branch: body.new_branch ?? undefined,
-      });
+      await changeExistingFiles(client, owner, repoName, body, operations);
       ctx.body = successResponse(null);
     },
   );
