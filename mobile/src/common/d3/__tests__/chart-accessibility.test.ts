@@ -182,14 +182,14 @@ describe("which curve a chart is, and how Android steps it", () => {
       .readFileSync(path.join(__dirname, "..", "..", "..", ...parts), "utf8")
       .replace(/\s+/g, "");
 
-  it("passes each Home chart its own title", () => {
+  it("names each Home chart to a screen reader, without drawing it", () => {
     expect(
       read(
         "screens",
         "home-screen",
         "components",
         "account-charts-card.tsx",
-      ).includes("label={t(key)}footnote={footnotes[key]}"),
+      ).includes("a11yLabel={t(key)}footnote={footnotes[key]}"),
     ).toBe(true);
   });
 
