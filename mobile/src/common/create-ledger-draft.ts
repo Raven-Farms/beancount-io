@@ -39,7 +39,14 @@ export interface CreateLedgerDraft<Values> {
   values: Values;
 }
 
-type DraftValues = { historyStart: string; openingAmount: string };
+type DraftValues = {
+  historyStart: string;
+  openingAmount: string;
+  openingAccount?: string;
+};
+
+/** The step holding the form's fields, the opening amount among them. */
+const FORM_STEP = 1;
 
 /** The draft as stored: without the opening amount, with when it was saved. */
 export function serializeCreateLedgerDraft<Values extends DraftValues>(
@@ -57,7 +64,9 @@ export function serializeCreateLedgerDraft<Values extends DraftValues>(
 /**
  * The stored draft to resume, or null when there is none, it is malformed,
  * or it has outlived its `requestId`. A draft saved before today reopens with
- * today's Books begin rather than the day it was started.
+ * today's Books begin rather than the day it was started. One left past the
+ * form with an opening account reopens on the form: its amount is not kept,
+ * and Review would build the ledger without the balance (w21/435).
  */
 export function restoreCreateLedgerDraft<Values extends DraftValues>(
   raw: string | null,
@@ -86,8 +95,10 @@ export function restoreCreateLedgerDraft<Values extends DraftValues>(
   const { savedAt, ...draft } = parsed;
   const today = getFormatDate(now);
   const stale = getFormatDate(new Date(savedAt)) < today;
+  const amountLost = Boolean(draft.values.openingAccount);
   return {
     ...draft,
+    step: amountLost ? Math.min(draft.step, FORM_STEP) : draft.step,
     values: {
       ...draft.values,
       openingAmount: "",

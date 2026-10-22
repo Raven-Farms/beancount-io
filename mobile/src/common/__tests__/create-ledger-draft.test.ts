@@ -66,6 +66,32 @@ describe("the Create Ledger draft", () => {
     ).toBe("abc12");
   });
 
+  // w21/435: Review without the amount builds the ledger without the balance.
+  it("reopens on the form when an opening account lost its amount", () => {
+    const onReview = { ...draft, step: 2 };
+    const restored = restoreCreateLedgerDraft<Values>(
+      serializeCreateLedgerDraft(onReview, saved),
+      new Date(2026, 9, 20, 21, 0),
+    );
+    expect(restored?.step).toBe(1);
+    expect(restored?.values.openingAccount).toBe("Assets:Bank:Checking");
+    expect(restored?.values.openingAmount).toBe("");
+  });
+
+  it("keeps Review for a draft with no opening account", () => {
+    const onReview = {
+      ...draft,
+      step: 2,
+      values: { ...draft.values, openingAccount: "", openingAmount: "" },
+    };
+    expect(
+      restoreCreateLedgerDraft<Values>(
+        serializeCreateLedgerDraft(onReview, saved),
+        new Date(2026, 9, 20, 21, 0),
+      )?.step,
+    ).toBe(2);
+  });
+
   it("resumes the same day as it was left", () => {
     const restored = restoreCreateLedgerDraft<Values>(
       serializeCreateLedgerDraft(draft, saved),

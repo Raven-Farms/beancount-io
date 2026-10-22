@@ -22,7 +22,6 @@
 - [304](./blocked/304.md) — Budgets on Liabilities/Assets get favourability backwards (owner decision) — **blocked:** needs an owner decision between deriving direction from the account root and limiting the picker to Income and Expenses, which reverses w1/023's "every root" rule
 - [424](./blocked/424.md) — Mobile does not show the ledger service's fix hints (split from 311) — **blocked:** production's GraphQL schema lacks `code`/`hint` until backend-v2 deploys; mobile's client is generated from it
 - [453](./blocked/453.md) — addEntries/bulkEntries have no idempotency key: a retry after a lost response can duplicate the entry (split from 351) — **blocked:** needs an owner-approved contract (field, bounds, retention) across REST/GraphQL/MCP and a backend-v2 deploy
-- [435](./435.md) — Draft resumed on Review drops the opening balance silently
 - [436](./436.md) — Cleared Books begin → server UTC date (051 regression path)
 - [437](./437.md) — In-progress create reported as name conflict
 - [438](./438.md) — Setup ValidationError args swapped: garbled messages
