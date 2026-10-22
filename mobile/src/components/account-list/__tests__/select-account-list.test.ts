@@ -449,6 +449,27 @@ describe("a parent's own postings", () => {
     expect(Math.abs(sum - row.value) < 0.005).toBe(true);
   });
 
+  // w21/331: the Accounts tab passes the ledger's open accounts, which sends the
+  // tree through the graft, and its copy used to drop `balance`.
+  it("keep their own row when the tree is grafted with the open accounts", () => {
+    const [row] = selectAccountTreeFromRoot("USD", bank, 1, {
+      accounts: ["Assets:Bank", "Assets:Bank:Savings", "Assets:Bank:Checking"],
+      rootAccount: "Assets",
+    });
+    expect(row.account).toBe("Assets:Bank");
+    expect(
+      row.children.map((child) => [
+        child.name,
+        child.value,
+        child.own ?? false,
+      ]),
+    ).toEqual([
+      ["Savings", 10500, false],
+      ["Checking", 6502.01, false],
+      ["Bank", 200, true],
+    ]);
+  });
+
   it("add no row when the parent holds nothing itself", () => {
     const children = bank.children[0].children;
     const [row] = selectAccountTreeFromRoot("USD", {

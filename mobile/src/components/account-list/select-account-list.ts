@@ -420,9 +420,12 @@ function graftZeroAccounts(
       notInTotalOf(node.balance_children, currency).length > 0);
   const rendered = rawNodes(children).filter(survives);
   // Copied, never mutated in place: the raw nodes belong to the Apollo cache.
+  // Every field `toNode` reads: dropping `balance` left a parent's own postings
+  // out of the Accounts tab, so its rows did not add up to it (w21/331).
   const clone = (node: RawChild): RawChild => ({
     account: node.account,
     balance_children: node.balance_children,
+    balance: node.balance,
     children: (node.children ?? []).map(clone),
   });
   const grafted = children.map(clone);
