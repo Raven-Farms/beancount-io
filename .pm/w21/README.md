@@ -27,5 +27,8 @@
 - [512](./512.md) — Notifications' "Show older" hides one page early after a foreground refetch (w21/498 regression)
 - [513](./513.md) — Home's Recent Transactions misses its offline cache on a later day (daily window key; w21/471 regression)
 - [514](./514.md) — Add Budget refuses a decimal comma ("49,99") that New Transaction accepts
+- [515](./515.md) — Reports' chart and Cash flow say "No cash flow in this range" above Expenses' "Not in total: 420.00 EUR" (sibling of w21/493)
+- [516](./516.md) — An account with only a future posting shows "$0.00 · Not enough data" while its Accounts row says −$20,000.00 (w21/491)
+- [517](./517.md) — A units account chart still runs past today: 1M reads "+3 VOO" from next month's buy (w21/491 incomplete)
 - [508](./blocked/508.md) — Mobile guesses that an entry is a plugin copy from its first line; read the ledger's `generated_from` instead (split from 443) — **blocked:** production's GraphQL schema lacks `generated_from` until the ledger service and backend-v2 deploy; mobile's client is generated from it
 - [315](./blocked/315.md) — In-app commits signed with Gitea username and real email (no full_name, no noreply) — **blocked:** needs the owner's noreply-address and published-history decisions, and a production backfill of existing Gitea users that can't be verified here
