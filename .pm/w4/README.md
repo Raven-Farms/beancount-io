@@ -76,7 +76,6 @@
 
 - [965 — Keep transaction submit shortcuts out of active composition](./965.md) — major; trusted composing Ctrl/Meta+Enter requests an unfinished transaction at both widths; four writes intercepted, ordinary controls pass, matching form handler lacks the shared guard.
 
-- [964 — Return focus to the file editor after choosing Stay](./964.md) — minor; desktop/narrow native Escape→Enter preserves the live draft/node but leaves BODY focused and typing ignored; bounded editor return-focus handoff, no writes.
 
 
 
