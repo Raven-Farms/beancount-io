@@ -26,5 +26,15 @@
     "result": "One unrelated StdioA result in the complete displayed result set; no canonical hosted connector match",
     "action": "No resubmission; retain original pending receipt and advertised review window",
     "limit": "Public search observation, not moderator queue/status access or authenticated connection proof"
-  }
+  },
+  "publicReviewRechecks": [
+    {
+      "observedAtUTC": "2026-10-22T02:59:01Z",
+      "url": "https://mcpservers.org/search?query=beancount",
+      "displayedStatus": "Showing 1-1 of 1 servers",
+      "result": "Only unrelated StdioA/beancount-mcp; no canonical hosted match in this complete displayed query result",
+      "action": "Retain original Free $0 submission; no resubmission",
+      "limit": "Public search does not expose moderator queue, rejection or connection state"
+    }
+  ]
 }
