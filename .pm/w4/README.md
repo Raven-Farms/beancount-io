@@ -68,7 +68,6 @@
 
 - [971 — Restore BQL syntax feedback for the current parser](./971.md) — minor; public dashboard QA,2026-10-22; current found-token diagnostics fall back to generic advice at both widths/reload; exact Unicode/ASCII offsets constrain repair, unknown-column/correction/history controls pass, no writes.
 
-- [970 — Restore useful focus after a file Save fails](./970.md) — minor; dashboard QA with pre-transport failures,2026-10-22; button Save unlocks with exact draft but BODY focus/ignored typing at both widths; editor-origin shortcut and refocus controls pass, three writes preblocked.
 
 
 
