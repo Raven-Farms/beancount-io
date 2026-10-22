@@ -5,6 +5,7 @@ import {
   feedDateIsCalendarDay,
   feedQueryVariables,
   feedRowAction,
+  feedRowDetail,
   feedSourceLabelKey,
   sortFeedItems,
 } from "../feed-logic";
@@ -225,5 +226,47 @@ describe("sortFeedItems", () => {
       post("ok", "2026-10-22T00:00:00.000Z"),
     ];
     expect(ids(sortFeedItems(rows))).toEqual(["ok", "bad"]);
+  });
+});
+
+// w21/599: every save read "Committed to books", so several in a day looked
+// duplicated, and a collaborator's commit could not be told from yours.
+describe("feedRowDetail", () => {
+  const commit = (summary: string | null, author: string | null) => ({
+    source: FeedSource.LedgerRss,
+    summary,
+    author,
+  });
+  const me = { username: "alice", names: ["Alice Smith"] };
+
+  it("shows each save's message under its row", () => {
+    expect(
+      feedRowDetail(commit("Add October rent", "alice"), me).subtitle,
+    ).toBe("Add October rent");
+    expect(feedRowDetail(commit("  Fix payee  ", "alice"), me).subtitle).toBe(
+      "Fix payee",
+    );
+    expect(feedRowDetail(commit("", "alice"), me).subtitle).toBe(null);
+  });
+
+  it("names a collaborator, and not you however your name is written", () => {
+    expect(feedRowDetail(commit("m", "bob"), me).byline).toBe("bob");
+    expect(feedRowDetail(commit("m", "alice"), me).byline).toBe(null);
+    expect(feedRowDetail(commit("m", "ALICE"), me).byline).toBe(null);
+    expect(feedRowDetail(commit("m", "Alice Smith"), me).byline).toBe(null);
+    expect(feedRowDetail(commit("m", null), me).byline).toBe(null);
+  });
+
+  it("names the author when it is unknown who is signed in", () => {
+    expect(feedRowDetail(commit("m", "bob")).byline).toBe("bob");
+  });
+
+  it("leaves blog and release rows to their titles", () => {
+    expect(
+      feedRowDetail(
+        { source: FeedSource.Blog, summary: "An excerpt", author: "Staff" },
+        me,
+      ),
+    ).toEqual({ subtitle: null, byline: null });
   });
 });

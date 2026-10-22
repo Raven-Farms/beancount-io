@@ -23,9 +23,11 @@ import {
   feedRowAction,
   feedSourceLabelKey,
   feedCardIsEmpty,
+  feedRowDetail,
   sortFeedItems,
 } from "./feed-logic";
 import { useApolloClient } from "@apollo/client";
+import { useCurrentUser } from "@/common/hooks/use-current-user";
 import { getServerUrl } from "@/common/vars/server-url";
 import { openAppLinkTarget } from "@/common/app-links/open-app-link";
 import { CardLoadFailure } from "@/components/card-load-failure";
@@ -63,10 +65,20 @@ type FeedRowProps = {
   link: string;
   publishedAt: unknown;
   source: FeedSource;
+  subtitle: string | null;
+  byline: string | null;
   isFirst: boolean;
 };
 
-function FeedRow({ title, link, publishedAt, source, isFirst }: FeedRowProps) {
+function FeedRow({
+  title,
+  link,
+  publishedAt,
+  source,
+  subtitle,
+  byline,
+  isFirst,
+}: FeedRowProps) {
   // Keyed on the text size: iOS keeps a Text's old measurement when it
   // changes with the app open (mobile/AGENTS.md; w21/015).
   const { fontScale } = useWindowDimensions();
@@ -93,7 +105,7 @@ function FeedRow({ title, link, publishedAt, source, isFirst }: FeedRowProps) {
   const date = formatFeedDate(publishedAt, locale, {
     calendarDay: feedDateIsCalendarDay(source),
   });
-  const metaText = date ? `${sourceLabel} · ${date}` : sourceLabel;
+  const metaText = [sourceLabel, date, byline].filter(Boolean).join(" · ");
 
   return (
     <Pressable
@@ -105,6 +117,15 @@ function FeedRow({ title, link, publishedAt, source, isFirst }: FeedRowProps) {
       <Text key={`title-${fontScale}`} style={styles.title} numberOfLines={2}>
         {title}
       </Text>
+      {subtitle ? (
+        <Text
+          key={`subtitle-${fontScale}`}
+          style={styles.metaText}
+          numberOfLines={2}
+        >
+          {subtitle}
+        </Text>
+      ) : null}
       <View style={styles.meta}>
         <Text key={`meta-${fontScale}`} style={styles.metaText}>
           {metaText}
@@ -134,6 +155,7 @@ export function FeedCard({
     }
   }, [refreshSignal, refetch]);
 
+  const { user, displayName } = useCurrentUser();
   const items = sortFeedItems(data?.getFeed?.items ?? []);
   const loadState = selectCardLoadState({
     loading: loading,
@@ -165,6 +187,10 @@ export function FeedCard({
               link={item.link}
               publishedAt={item.publishedAt}
               source={item.source}
+              {...feedRowDetail(item, {
+                username: user?.username,
+                names: [displayName, user?.email?.split("@")[0]],
+              })}
               isFirst={index === 0}
             />
           ))}

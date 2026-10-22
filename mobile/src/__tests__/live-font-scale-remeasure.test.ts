@@ -426,7 +426,8 @@ const HOME_CARD_TEXTS: [string, string[]][] = [
   ],
   [
     "screens/home-screen/components/feed-card.tsx",
-    ["{styles.title}", "{styles.metaText}"],
+    // The commit message under a ledger row is a second metaText (w21/599).
+    ["{styles.title}", "{styles.metaText}", "{styles.metaText}"],
   ],
 ];
 for (const [file, styles] of HOME_CARD_TEXTS)

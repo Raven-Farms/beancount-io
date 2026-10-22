@@ -108,6 +108,36 @@ export function sortFeedItems<
 }
 
 /**
+ * What a ledger row says beyond "Committed to books": the commit message as its
+ * second line, and who committed it when that is not the signed-in account. Every
+ * save read as the same row, so several in a day looked duplicated, and a
+ * collaborator's commit to a shared ledger could not be told from yours
+ * (w21/599). Blog and release rows keep their title only, as before.
+ */
+export function feedRowDetail(
+  item: {
+    source: FeedSource;
+    summary?: string | null;
+    author?: string | null;
+  },
+  me?: {
+    username?: string | null;
+    names?: ReadonlyArray<string | null | undefined>;
+  },
+): { subtitle: string | null; byline: string | null } {
+  if (item.source !== FeedSource.LedgerRss) {
+    return { subtitle: null, byline: null };
+  }
+  const subtitle = item.summary?.trim() || null;
+  const author = item.author?.trim() || null;
+  const mine = [me?.username, ...(me?.names ?? [])]
+    .map((name) => name?.trim().toLowerCase())
+    .filter(Boolean);
+  const byline = author && !mine.includes(author.toLowerCase()) ? author : null;
+  return { subtitle, byline };
+}
+
+/**
  * Whether the Latest Updates card has nothing to show and leaves the screen. An
  * empty feed (the server answers `[]` for any RSS outage) used to be a header
  * over a blank card (w21/417). A failed first load keeps its retry card, and a
