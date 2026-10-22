@@ -1894,6 +1894,40 @@ async function main(): Promise<void> {
       `the validator ${intact ? "accepts" : "refuses"} tag #${tag}, as the engine reads it`,
     );
   }
+  // Every flag the validator takes reads back on a transaction and a posting
+  // (w21/650: a `%` posting was read as a comment and silently dropped).
+  const unreadFlags: string[] = [];
+  for (let code = 0x21; code <= 0x7e; code += 1) {
+    const flag = String.fromCharCode(code);
+    const asPosting = accepts({
+      postings: [{ account: "Assets:Cash", flag }],
+    });
+    if (!asPosting && !accepts({ flag })) continue;
+    const flagged = await parseLedgerFiles(
+      {
+        "main.bean": `2024-01-01 open Assets:Cash\n2024-01-01 open Equity:Open\n2024-01-02 ${flag} "t"\n  ${flag} Assets:Cash 1 USD\n  Equity:Open\n`,
+      },
+      "main.bean",
+    );
+    const read = flagged.directives.find(
+      (directive) => directive.type === "transaction",
+    );
+    if (
+      !(
+        flagged.errors.length === 0 &&
+        read?.type === "transaction" &&
+        read.flag === flag &&
+        read.postings.length === 2 &&
+        read.postings[0]?.flag === flag
+      )
+    ) {
+      unreadFlags.push(flag);
+    }
+  }
+  assert(
+    unreadFlags.length === 0,
+    `the engine reads every flag the validator accepts, on a transaction and a posting${unreadFlags.length ? ` (not: ${unreadFlags.join(" ")})` : ""}`,
+  );
   for (const flag of ["*", "!", "P", "A", "Z", "'X"]) {
     const flagged = await parseLedgerFiles(
       {

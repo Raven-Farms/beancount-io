@@ -106,6 +106,21 @@ describe("assertEntryTokens", () => {
     );
   });
 
+  // w21/650: rustledger read a `%` posting as a comment; the entry committed
+  // with no postings.
+  it("refuses a % posting or transaction flag, saying why", () => {
+    expect(() =>
+      assertEntryTokens([
+        txn({ postings: [{ account: "Assets:Cash", flag: "%" }] }),
+      ]),
+    ).toThrow(
+      'entry 0: postings[0].flag "%" is not a valid flag: the ledger engine cannot read a "%" flag yet',
+    );
+    expect(() => assertEntryTokens([txn({ flag: "%" })])).toThrow(
+      /flag "%" is not a valid transaction flag: the ledger engine cannot read/,
+    );
+  });
+
   it("refuses a quoted posting flag", () => {
     expect(() =>
       assertEntryTokens([

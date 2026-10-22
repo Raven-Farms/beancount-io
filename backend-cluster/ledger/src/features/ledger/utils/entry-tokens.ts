@@ -23,8 +23,10 @@ const NOT_IN_A_TOKEN = /[\s\p{C}]/u;
 const TOKEN_RULES = {
   date: /^\d{4}-\d{2}-\d{2}$/,
   // Any capital letter, as both engines' grammars and `bea` take (w21/652).
-  flag: /^[*!&#?%A-Z]$/,
-  "transaction flag": /^(?:[*!&#?%A-Z]|txn)$/,
+  // Not `%`: valid Beancount, but rustledger reads a `%` posting as a comment
+  // (the entry silently loses it) and cannot parse a `%` transaction (w21/650).
+  flag: /^[*!&#?A-Z]$/,
+  "transaction flag": /^(?:[*!&#?A-Z]|txn)$/,
   tag: /^[A-Za-z0-9_/.-]+$/,
   link: /^[A-Za-z0-9_/.-]+$/,
   // A futures contract starts with a slash (`/ESZ24`, w21/651). A digit right
@@ -125,8 +127,12 @@ export function assertEntryTokens(
   rows.forEach((row, idx) => {
     for (const [field, value, kind] of rowTokens(row)) {
       if (!isToken(kind, value)) {
+        const why =
+          value === "%" && (kind === "flag" || kind === "transaction flag")
+            ? ': the ledger engine cannot read a "%" flag yet, and would drop the posting; use another flag'
+            : "";
         throw new BadUserInputError(
-          `entry ${idx}: ${field} ${JSON.stringify(value)} is not a valid ${kind}`,
+          `entry ${idx}: ${field} ${JSON.stringify(value)} is not a valid ${kind}${why}`,
           field,
         );
       }
