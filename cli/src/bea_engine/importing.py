@@ -10,6 +10,7 @@ from __future__ import annotations
 import copy
 import datetime
 import difflib
+import functools
 import hashlib
 import io
 import os
@@ -36,7 +37,13 @@ from bea_engine.ledger.text import (
     reports_unused_accounts,
     unknown_root_message,
 )
-from bea_engine.ledger.writer import format_entry, nfc_entry_accounts, normalize_entry_strings
+from bea_engine.ledger.writer import (
+    _SHORT_LOT_LABELS,
+    format_entry,
+    held_short_lot_labels,
+    nfc_entry_accounts,
+    normalize_entry_strings,
+)
 from bea_engine.paths import expand_path
 from bea_engine.protocol import ConflictError, EngineError, LedgerError, UsageError, capturing
 from bea_engine.query import format_error
@@ -146,6 +153,21 @@ def _effective_id_keys(id_keys: list[str] | None, *, csv_id_mapped: bool = False
     return resolved
 
 
+def _with_short_lots[**P, R](function: Callable[P, R]) -> Callable[P, R]:
+    """Run an import with no short-lot labels known until its ledger is loaded, then forget them."""
+
+    @functools.wraps(function)
+    def wrapped(*args: P.args, **kwargs: P.kwargs) -> R:
+        token = _SHORT_LOT_LABELS.set(lambda: frozenset())
+        try:
+            return function(*args, **kwargs)
+        finally:
+            _SHORT_LOT_LABELS.reset(token)
+
+    return wrapped
+
+
+@_with_short_lots
 def answer(
     file: Path,
     source: Path,
@@ -206,6 +228,10 @@ def answer(
     target = ledger_write.destination(file, into)
     original = snapshot.require_target(target, into=into)
     existing, errors, options = managed_load.load_file(file, snapshot=snapshot)
+    # A positive cover keeps the label of the short lot it covers, in the rows
+    # an importer returns as well (w5/925).
+    short_labels = held_short_lot_labels(existing)
+    _SHORT_LOT_LABELS.set(lambda: short_labels)
     # Appended rows cannot repair unreadable existing text. Refuse it before
     # extracting rows or calling any ready, even under --allow-errors.
     # An account staged under nounused can still be cleared by this import.

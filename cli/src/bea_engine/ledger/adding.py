@@ -86,7 +86,11 @@ def answer(
             # covers the whole graph, not just root and target, so a write to
             # an include in another directory queues too (w5/718).
             with write.locked_graph(file, write.destination(file, into), deciding=True):
-                return build(file, request, into=into, allow_errors=allow_errors, strict_read=strict_read)
+                if directive_type not in ("transaction", "transactions"):
+                    return build(file, request, into=into, allow_errors=allow_errors, strict_read=strict_read)
+                # A positive cover keeps the label of the short lot it covers.
+                with writer.short_lot_labels(lambda: _batch_holdings(file)):
+                    return build(file, request, into=into, allow_errors=allow_errors, strict_read=strict_read)
         if directive_type not in TYPES:
             raise protocol.UsageError(f"Unknown directive type {directive_type!r}. Use one of: {', '.join(TYPES)}.")
         # The root file's roots, for a write to the root itself: Beancount

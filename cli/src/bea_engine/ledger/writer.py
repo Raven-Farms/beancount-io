@@ -5,7 +5,9 @@ from __future__ import annotations
 import datetime
 import re
 import unicodedata
-from collections.abc import Callable
+from collections.abc import Callable, Iterable
+from contextlib import contextmanager
+from contextvars import ContextVar
 from decimal import Context, Decimal
 from pathlib import Path
 from typing import Any, NamedTuple, cast
@@ -228,6 +230,48 @@ def _fixed_point_metadata(meta: dict[str, Any] | None) -> dict[str, Any]:
     return {key: _fixed_point(value) for key, value in (meta or {}).items()}
 
 
+#: Asks which `(account, label)` short lots the ledger being written holds; set around a write.
+_SHORT_LOT_LABELS: ContextVar[Callable[[], frozenset[tuple[str, str]]]] = ContextVar(
+    "short_lot_labels", default=lambda: frozenset()
+)
+
+
+def held_short_lot_labels(entries: Iterable[Any]) -> frozenset[tuple[str, str]]:
+    """The labelled lots the entries leave short: net negative units per account, commodity and label."""
+    nets: dict[tuple[str, str, str], Decimal] = {}
+    for entry in entries:
+        if not isinstance(entry, Transaction):
+            continue
+        for posting in entry.postings:
+            label = getattr(posting.cost, "label", None)
+            if not label or posting.units is None or posting.units.number is None:
+                continue
+            key = (posting.account, posting.units.currency, label)
+            nets[key] = nets.get(key, Decimal(0)) + posting.units.number
+    return frozenset((account, label) for (account, _, label), net in nets.items() if net < 0)
+
+
+@contextmanager
+def short_lot_labels(entries: Callable[[], Iterable[Any]]) -> Any:
+    """Make the ledger's short labelled lots known to `normalize_entry_strings` for one write (w5/925).
+
+    `entries` is called at most once, and only when a positive posting carries a
+    lot label, so a write that has none never reads the ledger for this.
+    """
+    memo: list[frozenset[tuple[str, str]]] = []
+
+    def labels() -> frozenset[tuple[str, str]]:
+        if not memo:
+            memo.append(held_short_lot_labels(entries()))
+        return memo[0]
+
+    token = _SHORT_LOT_LABELS.set(labels)
+    try:
+        yield
+    finally:
+        _SHORT_LOT_LABELS.reset(token)
+
+
 def normalize_entry_strings(entry: Any) -> Any:
     """Flatten untrusted directive text and metadata without mutating the input.
 
@@ -251,11 +295,20 @@ def normalize_entry_strings(entry: Any) -> Any:
         # exactly as typed (w5/733).
         cost: Any = posting.cost
         units: Any = posting.units
-        reduction = (
-            units is not None
-            and units is not MISSING
-            and getattr(units, "number", MISSING) is not MISSING
-            and units.number < 0
+        known = units is not None and units is not MISSING and getattr(units, "number", MISSING) is not MISSING
+        label = getattr(cost, "label", None)
+        # Negative units sell a lot; positive units cover one only when the
+        # ledger holds that short lot, which only the ledger can say (w5/925).
+        # Asked only for a labelled positive posting: any other write never
+        # reads the ledger for this.
+        reduction = known and (
+            units.number < 0
+            or (
+                units.number > 0
+                and isinstance(label, str)
+                and bool(label)
+                and (posting.account, label) in _SHORT_LOT_LABELS.get()()
+            )
         )
         if not reduction and isinstance(getattr(cost, "label", None), str):
             posting = posting._replace(cost=cost._replace(label=single_line(cost.label)))
