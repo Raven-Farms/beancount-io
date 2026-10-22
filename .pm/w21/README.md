@@ -59,7 +59,6 @@
 - [460](./460.md) — Internal double spaces split one merchant in two
 - [461](./461.md) — Recurring paycheck's typical amount is unsigned
 - [315](./blocked/315.md) — In-app commits signed with Gitea username and real email (no full_name, no noreply) — **blocked:** needs the owner's noreply-address and published-history decisions, and a production backfill of existing Gitea users that can't be verified here
-- [368](./368.md) — BOM-prefixed include: first entry can't be saved or deleted
 - [369](./369.md) — Edit refusal cites off-screen file lines and repeats parse errors
 - [370](./370.md) — Reports category shares divide by net total; refunds push sum over 100%
 - [371](./371.md) — Reports "Other" nets refunds against spending, hiding real amounts

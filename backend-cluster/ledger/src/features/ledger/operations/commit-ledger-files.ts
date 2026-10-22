@@ -86,6 +86,9 @@ const MAX_ATTEMPTS = 5;
 // the conflict taxonomy (`isGiteaWriteConflict`) are shared with the other
 // Gitea-write paths — see `@/features/ledger/utils/gitea-error`.
 
+/** U+FEFF, the byte-order mark a UTF-8 file may start with. */
+const BOM = "\uFEFF";
+
 /**
  * Read a file's current content + blob SHA, or `null` when it does not exist
  * (Gitea `404`). Content and SHA come from the SAME response, so the SHA the
@@ -96,7 +99,7 @@ async function readFileOrNull(
   owner: string,
   repo: string,
   path: string,
-): Promise<{ content: string; sha: string } | null> {
+): Promise<{ content: string; sha: string; bom: boolean } | null> {
   try {
     // Transform keys can carry user-authored routing (bcio options) — guard
     // the URL splice like every other repoGetContents call.
@@ -106,18 +109,21 @@ async function readFileOrNull(
       toSafeRepoUrlPath(path),
     );
     const sha = res.data.sha;
-    return sha
-      ? {
-          content: await readGiteaFileText(
-            client.repos,
-            owner,
-            repo,
-            toSafeRepoUrlPath(path),
-            res.data,
-          ),
-          sha,
-        }
-      : null;
+    if (!sha) return null;
+    const text = await readGiteaFileText(
+      client.repos,
+      owner,
+      repo,
+      toSafeRepoUrlPath(path),
+      res.data,
+    );
+    // The ledger load decodes with `TextDecoder`, which drops a leading BOM,
+    // while this read kept it. On the file's first line it hid the entry's date
+    // from the block splitter, so an entry opened from the load could never be
+    // found to save or delete (w21/368). Hand the transform the same text the
+    // load saw; the BOM is written back, so the file keeps its bytes.
+    const bom = text.startsWith(BOM);
+    return { content: bom ? text.slice(BOM.length) : text, sha, bom };
   } catch (error) {
     if (isGiteaNotFound(error)) return null;
     if (error instanceof DomainError) throw error;
@@ -188,7 +194,8 @@ export async function commitLedgerFiles(
           // failed) can discover the desired block already exists. Do not send
           // a byte-identical update: Gitea may reject an empty commit as 422.
           if (read && transformed === read.content) return null;
-          const content = Buffer.from(transformed, "utf-8").toString("base64");
+          const body = read?.bom ? BOM + transformed : transformed;
+          const content = Buffer.from(body, "utf-8").toString("base64");
           return read
             ? { operation: "update", path, content, sha: read.sha }
             : { operation: "create", path, content };
