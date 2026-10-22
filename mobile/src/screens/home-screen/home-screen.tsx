@@ -32,7 +32,6 @@ import { BudgetCard } from "@/screens/home-screen/components/budget-card";
 import { FeedCard } from "@/screens/home-screen/components/feed-card";
 import { AskAiCard } from "@/screens/home-screen/components/ask-ai-card";
 import { config } from "@/config";
-import { getPrimaryCurrency } from "@/common/currency-util";
 import { ColorTheme } from "@/types/theme-props";
 import { useRouter } from "expo-router";
 import { AddTransactionCallback } from "@/common/globalFnFactory";
@@ -67,13 +66,12 @@ const HomeScreenImpl = (): JSX.Element => {
   const { refetch: ledgerErrorsRefetch } = useLedgerErrors(ledgerId);
   const { canWrite } = useLedgerAccess();
   const {
-    currencies,
+    primaryCurrency: currency,
     refetch: ledgerMetaRefetch,
     data: ledgerMeta,
     error: ledgerMetaError,
   } = useLedgerReadContext(ledgerId);
 
-  const currency = getPrimaryCurrency(currencies);
   // One balance-sheet query feeds all three curves on the card. Home is the
   // only place net worth is charted; the Accounts tab is account lists only.
   const {

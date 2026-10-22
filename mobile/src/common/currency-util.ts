@@ -19,6 +19,22 @@ const SYMBOL_OVERRIDES: Record<string, string> = {
 export const getCurrencySymbol = (currency: string) =>
   SYMBOL_OVERRIDES[currency] ?? (CurrencyIcons[currency]?.symbol || "");
 
+/**
+ * The currency a ledger's headline figures read in: its first operating
+ * currency, else the first commodity it holds that is a known currency (a stock
+ * ticker is not one), else the first commodity at all, and USD only for a ledger
+ * with no commodity yet. A ledger without `option "operating_currency"` showed
+ * Home as $0.00 USD with every amount under "Not in total" (w21/415).
+ */
+export const ledgerPrimaryCurrency = (
+  operating: readonly string[],
+  commodities: readonly string[],
+): string =>
+  operating[0] ??
+  commodities.find((code) => getCurrencySymbol(code) !== "") ??
+  commodities[0] ??
+  "USD";
+
 // ISO 4217 minor units that differ from the usual two. The yen and won have no
 // minor unit, so "¥1,500.00" was wrong; the dinars carry three (w21/070).
 const MINOR_UNITS: Record<string, number> = {

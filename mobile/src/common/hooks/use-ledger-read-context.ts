@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import { getAccountsAndCurrency } from "../ledger-meta-utils";
+import { ledgerPrimaryCurrency } from "../currency-util";
 import { useLedgerReadContextQuery } from "@/generated-graphql/graphql";
 
 /** Metadata for ledger reads, available without a user identity. */
@@ -32,5 +33,11 @@ export function useLedgerReadContext(ledgerId: string) {
     ...ordered,
     ...result,
     accounts: result.data?.getLedger.attributes.accounts,
+    // What the headline figures read in: the operating currency, else the
+    // ledger's own commodity, not a blind USD (w21/415).
+    primaryCurrency: ledgerPrimaryCurrency(
+      ordered.currencies,
+      ledger?.attributes.currencies ?? [],
+    ),
   };
 }

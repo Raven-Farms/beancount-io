@@ -13,7 +13,6 @@ import { gutter, rowMinHeight, useTheme } from "@/common/theme";
 import { useThemeStyle } from "@/common/hooks";
 import { useTranslations } from "@/common/hooks/use-translations";
 import { useGuest } from "@/common/guest/guest-context";
-import { getPrimaryCurrency } from "@/common/currency-util";
 import { LedgerDrawerHeader, StaleDataBanner } from "@/components";
 import { LoadingTile } from "@/components/loading-tile";
 import { FadeInView } from "@/components/crossfade";
@@ -85,11 +84,10 @@ const AccountsScreenImpl = (): JSX.Element => {
   const {
     data: ledgerMeta,
     accounts,
-    currencies,
+    primaryCurrency: currency,
     refetch: ledgerMetaRefetch,
     error: ledgerMetaError,
   } = useLedgerReadContext(ledgerId);
-  const currency = getPrimaryCurrency(currencies);
 
   // Commodity holdings are valued at market, as on Home, so they count toward
   // Assets rather than being dropped for lack of a cash balance.

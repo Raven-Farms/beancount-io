@@ -83,7 +83,6 @@
 - [484](./484.md) — Profile, server settings, budget delete errors not announced (354 sibling)
 - [485](./485.md) — Files Up and budget Delete targets under 44pt
 - [315](./blocked/315.md) — In-app commits signed with Gitea username and real email (no full_name, no noreply) — **blocked:** needs the owner's noreply-address and published-history decisions, and a production backfill of existing Gitea users that can't be verified here
-- [415](./415.md) — No operating_currency: Home shows $0.00 USD, all "Not in total"
 - [416](./416.md) — Zero change from zero baseline reads "+$0.00" in gain colour
 - [417](./417.md) — Latest Updates renders blank card on empty feed
 - [418](./418.md) — Spending card never shows its two totals; empty ledger $0–$1 axis

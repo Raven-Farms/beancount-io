@@ -9,7 +9,6 @@ import { ColorTheme } from "@/types/theme-props";
 import { useThemeStyle } from "@/common/hooks";
 import { useTranslations } from "@/common/hooks/use-translations";
 import { useToday } from "@/common/hooks/use-today";
-import { getPrimaryCurrency } from "@/common/currency-util";
 import { gutter } from "@/common/theme";
 import { LedgerDrawerHeader } from "@/components/ledger-drawer/ledger-drawer-header";
 import { StaleDataBanner } from "@/components/stale-data-banner";
@@ -68,12 +67,11 @@ const ReportsScreenImpl = (): JSX.Element => {
   const [refreshing, setRefreshing] = useState(false);
 
   const {
-    currencies,
+    primaryCurrency: currency,
     data: ledgerMeta,
     error: ledgerMetaError,
     refetch: ledgerMetaRefetch,
   } = useLedgerReadContext(ledgerId);
-  const currency = getPrimaryCurrency(currencies);
   // The ledger may rename its roots (`option "name_expenses" "Gastos"`), and
   // Recent transactions found nothing under the English names (w21/073).
   const incomeRoot = ledgerMeta?.getLedger.options.nameIncome || "Income";

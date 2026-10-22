@@ -15,7 +15,6 @@ import { ColorTheme } from "@/types/theme-props";
 import { fontSizes, fontWeights, useTheme } from "@/common/theme";
 import { useThemeStyle } from "@/common/hooks";
 import { useTranslations } from "@/common/hooks/use-translations";
-import { getPrimaryCurrency } from "@/common/currency-util";
 import { selectReadContextState } from "@/common/apollo/card-load-state";
 import { BalanceChartCard, StaleDataBanner } from "@/components";
 import { isShowingStaleDataFromQueries } from "@/common/apollo/stale-data";
@@ -131,7 +130,7 @@ const AccountDetailScreenImpl = ({
   const { colorTheme: theme, name: themeName } = useTheme();
 
   const {
-    currencies,
+    primaryCurrency: currency,
     data: ledgerReadData,
     error: ledgerReadError,
     refetch: ledgerMetaRefetch,
@@ -139,7 +138,6 @@ const AccountDetailScreenImpl = ({
   // Until the read context lands the currency is a blind "USD"; a failed one
   // leaves it so for good. Held like the account's own reads (w21/406).
   const contextState = selectReadContextState(ledgerReadData, ledgerReadError);
-  const currency = getPrimaryCurrency(currencies);
   // Income, Expenses and Equity mirror net worth, so their changes color the
   // other way round; the figures themselves keep the ledger's sign (w0/033).
   const roots = ledgerReadData?.getLedger.options;

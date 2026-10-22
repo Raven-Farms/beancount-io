@@ -346,7 +346,7 @@ export type LedgerReadContextQueryVariables = Exact<{
 }>;
 
 
-export type LedgerReadContextQuery = { getLedger: { id: string, private: boolean, attributes: { accounts: Array<string> }, options: { nameAssets: string, nameExpenses: string, nameIncome: string, nameLiabilities: string, nameEquity: string, operatingCurrency: Array<string> } } };
+export type LedgerReadContextQuery = { getLedger: { id: string, private: boolean, attributes: { accounts: Array<string>, currencies: Array<string> }, options: { nameAssets: string, nameExpenses: string, nameIncome: string, nameLiabilities: string, nameEquity: string, operatingCurrency: Array<string> } } };
 
 export type ListCommitsQueryVariables = Exact<{
   ledgerId: string;
@@ -2343,6 +2343,7 @@ export const LedgerReadContextDocument = gql`
     private
     attributes {
       accounts
+      currencies
     }
     options {
       nameAssets
