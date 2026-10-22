@@ -70,6 +70,7 @@ vi.mock("@/common/hooks/use-translations.ts", () => ({
         "component.searchControls.filtersDescription":
           "Change the time, account, or payee/tag scope for this page.",
       })[key] ?? key,
+    i18n: { language: "en" },
   }),
 }));
 

@@ -34,6 +34,7 @@ import {
 import { Badge } from "@/common/components/ui/badge.tsx";
 import { LedgerSearchControls } from "@/common/components/ledger-search-controls";
 import { useTranslations } from "@/common/hooks/use-translations.ts";
+import { docsUrl } from "@/common/lib/docs-url";
 import { cn } from "@/common/lib/utils/utils";
 import { LedgerSearchParamsContext } from "@/common/providers/ledger-search-params-provider";
 import { Authenticated } from "../authenticated";
@@ -65,7 +66,7 @@ export function LayoutHeader({
 }) {
   const { isMobile, openMobile } = useSidebar();
   const location = useLocation();
-  const { t } = useTranslations();
+  const { t, i18n } = useTranslations();
   const returnPath = useSafeReturnPath();
   const { searchParams } = useContext(LedgerSearchParamsContext);
   const [filtersOpen, setFiltersOpen] = useState(false);
@@ -173,7 +174,8 @@ export function LayoutHeader({
               <DropdownMenuContent align="end" className="w-64">
                 <DropdownMenuItem asChild>
                   <a
-                    href="https://beancount.io/docs/help-center"
+                    // In the reader's language; English is at the root (w4/330).
+                    href={docsUrl(i18n.language, "help-center")}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="items-start"

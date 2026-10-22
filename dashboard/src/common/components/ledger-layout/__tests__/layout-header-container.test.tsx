@@ -456,3 +456,37 @@ describe("LayoutHeader available-width filters", () => {
     ).not.toBeInTheDocument();
   });
 });
+
+describe("LayoutHeader Help Center language (w4/330)", () => {
+  it("points Help Center at the active language's docs and follows a language change", async () => {
+    const { localization, user } = await setup("de");
+    const t = (key: string) => localization.i18n.t(key);
+    const helpCenterHref = async () => {
+      const trigger = screen.getByRole("button", {
+        name: t("common.helpAndSupport"),
+      });
+      trigger.focus();
+      await user.keyboard("{Enter}");
+      const href = (
+        await screen.findByRole("menuitem", {
+          name: new RegExp(t("common.helpCenter")),
+        })
+      ).getAttribute("href");
+      await user.keyboard("{Escape}");
+      await waitFor(() => expect(trigger).toHaveFocus());
+      return href;
+    };
+
+    expect(await helpCenterHref()).toBe(
+      "https://beancount.io/de/docs/help-center",
+    );
+    await act(() => localization.changeLanguage("fa"));
+    expect(await helpCenterHref()).toBe(
+      "https://beancount.io/fa/docs/help-center",
+    );
+    await act(() => localization.changeLanguage("en"));
+    expect(await helpCenterHref()).toBe(
+      "https://beancount.io/docs/help-center",
+    );
+  });
+});
