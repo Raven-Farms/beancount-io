@@ -248,7 +248,9 @@ function ErrorBanner({
         <ScrollView
           testID="ledger-editor-error-list"
           style={styles.errorList}
-          scrollEnabled={errors.length > 3}
+          // A message is shown whole (w21/312), so a list of even one long row
+          // can outgrow `maxHeight` and has to scroll.
+          scrollEnabled
         >
           {errors.map((err, i) => (
             <View key={`${err.lineno ?? "unknown"}-${i}`}>
@@ -278,9 +280,7 @@ function ErrorBanner({
                   color={theme.error}
                 />
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.errorText} numberOfLines={2}>
-                    {err.message}
-                  </Text>
+                  <Text style={styles.errorText}>{err.message}</Text>
                   {err.lineno != null && (
                     // Translated, as the banner's count is (w21/091).
                     <Text style={styles.errorLocation}>
