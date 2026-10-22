@@ -4,6 +4,8 @@
 
 ## Inbox
 
+- [337 — Offer a retry after a Holdings read fails](./337.md) — minor; public dashboard QA with injected reads,2026-10-21; Currency view gives connection guidance without an action at both widths; reload/grouping recovery passes, matching source traced.
+
 - [336 — Preserve collection filters through the profile header’s Followers link](./336.md) — minor; public dashboard QA,2026-10-21; header link drops settled q=gov at both widths, while the repaired tab-trigger path preserves it.
 
 - [335 — Keep the active profile tab visible on narrow screens](./335.md) — minor; public dashboard QA,2026-10-21; English/Persian Followers selection clips its label at390px; native keyboard and both-direction manual scrolling controls retained,1440px fits.
