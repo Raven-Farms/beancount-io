@@ -39,4 +39,28 @@ describe("capitalizeAccountPrefill", () => {
     expect(capitalizeAccountPrefill("")).toBe("");
     expect(capitalizeAccountPrefill("   ")).toBe("   ");
   });
+
+  // w21/260: only Latin initials were capitalised, so ru, uk and bg users landed
+  // on a name the form refused.
+  it("capitalizes Cyrillic and Greek initials too", () => {
+    expect(capitalizeAccountPrefill("продукты")).toBe("Продукты");
+    expect(capitalizeAccountPrefill("їжа")).toBe("Їжа");
+    expect(capitalizeAccountPrefill("храна")).toBe("Храна");
+    expect(capitalizeAccountPrefill("φαγητό")).toBe("Φαγητό");
+    expect(opensValid("продукты")).toBe(true);
+    expect(opensValid("φαγητό")).toBe(true);
+    expect(opensValid("їжа:ресторан")).toBe(true);
+  });
+
+  it("drops the space after a colon, so each component starts a name", () => {
+    expect(capitalizeAccountPrefill("expenses: food")).toBe("Expenses:Food");
+    expect(opensValid("expenses: food")).toBe(true);
+  });
+
+  it("leaves ß, the Turkish dotless i and caseless text as they were", () => {
+    expect(capitalizeAccountPrefill("ßteuer")).toBe("ßteuer");
+    expect(capitalizeAccountPrefill("\u0131\u015f")).toBe("\u0131\u015f");
+    expect(capitalizeAccountPrefill("i\u015f")).toBe("I\u015f");
+    expect(capitalizeAccountPrefill("日本:食費")).toBe("日本:食費");
+  });
 });
