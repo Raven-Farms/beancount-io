@@ -62,7 +62,7 @@ describe("Create Ledger's preview failure", () => {
   it("shows a translated failure with a retry, and the server's words only for a refusal", () => {
     expect(
       source.includes(
-        'previewFailureKind(previewError)==="refused"?(<InlineErrorstyle={styles.error}message={previewError.message}/>):(<CardLoadFailureonRetry={retryPreview}/>)',
+        'previewFailureKind(previewError)==="refused"?(<InlineErrorstyle={styles.error}message={previewError.message}/>):(<><InlineErrorstyle={styles.error}message={t("ledgerLoadError")}/><PressableonPress={retryPreview}accessibilityRole="button"hitSlop={8}><Textstyle={styles.retry}>{t("discoveryRetry")}</Text></Pressable></>)',
       ),
     ).toBe(true);
     expect(
@@ -72,14 +72,20 @@ describe("Create Ledger's preview failure", () => {
     ).toBe(true);
   });
 
-  it("holds Create while the preview has failed", () => {
+  // w21/511: Create worked while the preview was loading, and looked enabled
+  // after it failed.
+  it("holds Create while the preview loads or has failed, and dims it", () => {
     expect(
       source.includes(
-        'constpreviewBlocked=startKind==="preset"&&Boolean(previewError);',
+        'constpreviewBlocked=startKind==="preset"&&(previewLoading||Boolean(previewError));',
       ),
     ).toBe(true);
-    expect(source.includes("disabled={busy||(step===2&&previewBlocked)}")).toBe(
-      true,
-    );
+    expect(
+      source.includes("constcreateDisabled=busy||(step===2&&previewBlocked);"),
+    ).toBe(true);
+    expect(source.includes("disabled={createDisabled}")).toBe(true);
+    expect(
+      source.includes("createDisabled?styles.doneButtonDisabled:null"),
+    ).toBe(true);
   });
 });

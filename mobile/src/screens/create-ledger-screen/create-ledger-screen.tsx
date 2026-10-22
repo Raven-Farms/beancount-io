@@ -56,7 +56,6 @@ import {
 import { useLedgerDirectory } from "@/common/ledger-directory/ledger-directory-provider";
 import { ledgerVar } from "@/common/vars";
 import { LEADING_TEXT_ALIGN, leadingInputTextAlign } from "@/common/rtl";
-import { CardLoadFailure } from "@/components/card-load-failure";
 import { InlineError } from "@/components/inline-error";
 import type { ColorTheme } from "@/types/theme-props";
 import {
@@ -101,6 +100,11 @@ const getStyles = (theme: ColorTheme) =>
     doneButton: headerActionStyle(theme),
     doneButtonDisabled: {
       color: theme.black60,
+    },
+    retry: {
+      fontSize: fontSizes.md,
+      color: theme.primary,
+      textAlign: LEADING_TEXT_ALIGN,
     },
     content: {
       paddingHorizontal: gutter,
@@ -412,8 +416,10 @@ export function CreateLedgerScreen(): JSX.Element {
   }, [step, startKind]);
 
   // Create waits for the preview: without it the accounts to be made are not
-  // known, and a refused setup would be refused again (w21/478).
-  const previewBlocked = startKind === "preset" && Boolean(previewError);
+  // known, and a refused setup would be refused again (w21/478). That holds
+  // while the preview loads as well as after it failed (w21/511).
+  const previewBlocked =
+    startKind === "preset" && (previewLoading || Boolean(previewError));
   const retryPreview = () => {
     const setup = buildSetup(getValues());
     if (setup) void runPreview({ variables: { setup } });
@@ -437,6 +443,7 @@ export function CreateLedgerScreen(): JSX.Element {
       )
     : null;
   const busy = loading || isSubmitting;
+  const createDisabled = busy || (step === 2 && previewBlocked);
 
   // Field errors render on the form step, so a refused Create returns there;
   // left on Review, the spinner stopped and nothing said why (w21/105).
@@ -538,7 +545,7 @@ export function CreateLedgerScreen(): JSX.Element {
                   void onSubmit();
                 }
               }}
-              disabled={busy || (step === 2 && previewBlocked)}
+              disabled={createDisabled}
               accessibilityRole="button"
               accessibilityLabel={
                 step < 2 ? t("createLedgerNext") : t("createLedgerSubmit")
@@ -551,7 +558,7 @@ export function CreateLedgerScreen(): JSX.Element {
                 <Text
                   style={[
                     styles.doneButton,
-                    busy ? styles.doneButtonDisabled : null,
+                    createDisabled ? styles.doneButtonDisabled : null,
                   ]}
                   maxFontSizeMultiplier={headerActionMaxFontSizeMultiplier}
                 >
@@ -882,7 +889,19 @@ export function CreateLedgerScreen(): JSX.Element {
                       message={previewError.message}
                     />
                   ) : (
-                    <CardLoadFailure onRetry={retryPreview} />
+                    <>
+                      <InlineError
+                        style={styles.error}
+                        message={t("ledgerLoadError")}
+                      />
+                      <Pressable
+                        onPress={retryPreview}
+                        accessibilityRole="button"
+                        hitSlop={8}
+                      >
+                        <Text style={styles.retry}>{t("discoveryRetry")}</Text>
+                      </Pressable>
+                    </>
                   )
                 ) : previewData?.previewLedgerSetup ? (
                   <>
