@@ -23,7 +23,6 @@
 - [424](./blocked/424.md) — Mobile does not show the ledger service's fix hints (split from 311) — **blocked:** production's GraphQL schema lacks `code`/`hint` until backend-v2 deploys; mobile's client is generated from it
 - [453](./blocked/453.md) — addEntries/bulkEntries have no idempotency key: a retry after a lost response can duplicate the entry (split from 351) — **blocked:** needs an owner-approved contract (field, bounds, retention) across REST/GraphQL/MCP and a backend-v2 deploy
 - [496](./blocked/496.md) — Mobile guesses that an entry is a plugin copy from its first line; read the ledger's `generated_from` instead (split from 443) — **blocked:** production's GraphQL schema lacks `generated_from` until the ledger service and backend-v2 deploy; mobile's client is generated from it
-- [494](./494.md) — Regression (418): Spending caption drops refund sign
 - [495](./495.md) — 427 getLedgerFile guard never fires; AGENTS.md dangling ref (413)
 - [496](./496.md) — Reports chart draws all-zero range as 2pt bars on $0–$1 axis
 - [497](./497.md) — Bar-chart month labels lack year: Budget 1Y has two OCT

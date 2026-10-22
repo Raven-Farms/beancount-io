@@ -267,6 +267,26 @@ describe("the spending card's totals and empty state", () => {
     ).toBe("This month $1,234.56 · Last month $987.65");
   });
 
+  // w21/494: $120 spent and a $500 refund read as "This month $380.00".
+  it("keeps the sign of a net-refund month in the caption and the summary", () => {
+    expect(
+      spendingTotalsCaption(
+        { thisMonth: -380, lastMonth: 1200 },
+        "USD",
+        labels,
+      ),
+    ).toBe("This month -$380.00 · Last month $1,200.00");
+    const { spendingChartSummary } = require("../select-spending-compare");
+    expect(
+      spendingChartSummary(
+        { thisMonth: -380, lastMonth: 1200 },
+        "USD",
+        (_key: string, params: Record<string, string>) =>
+          `${params.thisMonth}|${params.lastMonth}`,
+      ),
+    ).toBe("-$380.00|$1,200.00");
+  });
+
   it("isolates each amount for right-to-left text", () => {
     expect(
       spendingTotalsCaption(

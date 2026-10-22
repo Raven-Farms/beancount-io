@@ -1,6 +1,6 @@
 import { resolveCurrencyBalance } from "../../../common/balance-util";
 import { notInTotalOf, type Holding } from "../../../common/balance-display";
-import { formatMoneyWithCurrency } from "../../../common/number-utils";
+import { formatSignedMoneyWithCurrency } from "../../../common/number-utils";
 import { formatTimeFilter } from "../../transactions-screen/filters/select-filter-query";
 
 export type SpendingCompare = {
@@ -123,8 +123,9 @@ export function spendingChartSummary(
   note?: string,
 ): string {
   const summary = t("spendingChartSummary", {
-    lastMonth: formatMoneyWithCurrency(lastMonth, currency),
-    thisMonth: formatMoneyWithCurrency(thisMonth, currency),
+    // Signed: a net-refund month is negative spending, not spending (w21/494).
+    lastMonth: formatSignedMoneyWithCurrency(lastMonth, currency),
+    thisMonth: formatSignedMoneyWithCurrency(thisMonth, currency),
   });
   return note ? `${summary}. ${note}` : summary;
 }
@@ -142,7 +143,7 @@ export function spendingTotalsCaption(
   isolate: (text: string) => string = (text) => text,
 ): string {
   const amount = (value: number) =>
-    isolate(formatMoneyWithCurrency(value, currency));
+    isolate(formatSignedMoneyWithCurrency(value, currency));
   return `${labels.thisMonth} ${amount(thisMonth)} · ${labels.lastMonth} ${amount(lastMonth)}`;
 }
 
