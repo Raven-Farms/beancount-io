@@ -2,6 +2,7 @@ import { AccountNode } from "@/components/account-list/select-account-list";
 import {
   breakdownRowAccessibilityValue,
   breakdownShare,
+  roundedShares,
   shareBase,
   topNWithOther,
   OTHER_ACCOUNT,
@@ -200,5 +201,57 @@ describe("the empty breakdown", () => {
     expect(screen.includes('emptyMessage={t("reportsNoIncome")}')).toBe(true);
     expect(en.reportsNoExpenses).toBe("No expenses in this period");
     expect(en.reportsNoIncome).toBe("No income in this period");
+  });
+});
+
+// w21/373: each row rounded on its own, so three equal categories read 33% three
+// times and 96 + 5 read 101.
+describe("roundedShares", () => {
+  const rows = (...values: number[]) =>
+    values.map((value, i) => ({ account: `Expenses:C${i}`, value }));
+  const total = (shares: Map<string, number>) =>
+    Array.from(shares.values()).reduce((sum, n) => sum + n, 0);
+
+  it("adds up to exactly 100", () => {
+    expect(total(roundedShares(rows(100, 100, 100)))).toBe(100);
+    expect(total(roundedShares(rows(96.4, 4.6)))).toBe(100);
+    expect(total(roundedShares(rows(1, 1, 1, 1, 1, 1, 1)))).toBe(100);
+    expect(total(roundedShares(rows(300, 200)))).toBe(100);
+  });
+
+  it("gives the extra points to the largest remainders, ties to the first", () => {
+    const equal = roundedShares(rows(100, 100, 100));
+    expect(equal.get("Expenses:C0")).toBe(34);
+    expect(equal.get("Expenses:C1")).toBe(33);
+    expect(equal.get("Expenses:C2")).toBe(33);
+    const uneven = roundedShares(rows(96.4, 4.6));
+    expect(uneven.get("Expenses:C0")).toBe(95);
+    expect(uneven.get("Expenses:C1")).toBe(5);
+  });
+
+  it("states a plain share as it is, and none for a refunded row", () => {
+    const shares = roundedShares(rows(300, 200, -100));
+    expect(shares.get("Expenses:C0")).toBe(60);
+    expect(shares.get("Expenses:C1")).toBe(40);
+    expect(shares.has("Expenses:C2")).toBe(false);
+    expect(roundedShares(rows(-250)).size).toBe(0);
+    expect(roundedShares([]).size).toBe(0);
+  });
+
+  it("is what the card prints and speaks", () => {
+    const card = require("fs")
+      .readFileSync(
+        require("path").join(
+          __dirname,
+          "../../components/category-breakdown.tsx",
+        ),
+        "utf8",
+      )
+      .replace(/\s+/g, "");
+    expect(card.includes("constshares=roundedShares(items);")).toBe(true);
+    expect(card.includes('{printed===null?"":`${printed}%`}')).toBe(true);
+    expect(
+      card.includes("breakdownRowAccessibilityValue(amountText,printed,t)"),
+    ).toBe(true);
   });
 });

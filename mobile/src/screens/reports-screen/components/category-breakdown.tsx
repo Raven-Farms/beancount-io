@@ -30,6 +30,7 @@ import { AccountNode } from "@/components/account-list/select-account-list";
 import {
   breakdownRowAccessibilityValue,
   breakdownShare,
+  roundedShares,
   shareBase,
 } from "../selectors/select-breakdown-rows";
 import { LEADING_TEXT_ALIGN, directionalIcon } from "@/common/rtl";
@@ -218,6 +219,8 @@ export function CategoryBreakdown({
   const stacked = prefersStackedLayout(fontScale);
   const [overrides, setOverrides] = useState<Record<string, boolean>>({});
   const base = shareBase(items);
+  // The whole percents the labels print, adding up to 100 (w21/373).
+  const shares = roundedShares(items);
 
   const toggle = (account: string, currentlyExpanded: boolean) => {
     setOverrides((prev) => ({ ...prev, [account]: !currentlyExpanded }));
@@ -305,6 +308,7 @@ export function CategoryBreakdown({
     // (a net-refunded category) have none: the bar is hidden and no percentage
     // is printed or spoken, but the amount still shows (w21/039, w21/370).
     const pct = breakdownShare(node.value, base);
+    const printed = shares.get(node.account) ?? null;
 
     const amountText = formatSignedMoneyWithCurrency(
       node.value,
@@ -354,7 +358,7 @@ export function CategoryBreakdown({
           />
         </View>
         <Text style={styles.pctLabel}>
-          {pct === null ? "" : `${Math.round(pct)}%`}
+          {printed === null ? "" : `${printed}%`}
         </Text>
       </View>
     );
@@ -369,7 +373,7 @@ export function CategoryBreakdown({
             accessibilityRole="button"
             accessibilityLabel={node.name}
             accessibilityValue={{
-              text: breakdownRowAccessibilityValue(amountText, pct, t),
+              text: breakdownRowAccessibilityValue(amountText, printed, t),
             }}
             {...disclosureAccessibility(isExpanded, t)}
           >
