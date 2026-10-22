@@ -113,7 +113,7 @@ Ignored evidence alongside W4/273's artifacts: `adjacent-backplate-complete-cont
 
 ## Calendar selected-date state in forced colors, 2026-10-21
 
-This is an independently reproduced selected-state paint failure, owned by [t006](./done/t006.md) within the shared contrast milestone. It is **not** attributed to the text-backplate mechanism above: CalendarDayButton has no surviving forced-color selected treatment in the first place. The separate RTL direction failure is filed as [298](../../298.md).
+This is an independently reproduced selected-state paint failure, owned by [t006](./done/t006.md) within the shared contrast milestone. It is **not** attributed to the text-backplate mechanism above: CalendarDayButton has no surviving forced-color selected treatment in the first place. The separate RTL direction failure is filed as [298](../298.md).
 
 Fresh authenticated Accounts → Open Account on the designated synthetic QA ledger, English/UTC, owned headless Chromium155, at 1440×1000 and 390×844 in forced light/dark. Enter ISO `2026-08-12`, commit the local date draft, and open the actual popup with native ArrowDown. Keep focus on Today outside the calendar grid and move the pointer away. Capture the calendar, click August13 to select it, then reopen and again focus Today. The field correctly becomes `08/13/2026` and data-selected-single moves12→13, but neither date has a visible selected marker.
 
