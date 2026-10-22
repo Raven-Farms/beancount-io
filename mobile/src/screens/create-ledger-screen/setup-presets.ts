@@ -210,16 +210,23 @@ export function isSetupCurrency(code: string): boolean {
  * checks accept " USD" and "2026-10-21 ", but the server's validator refuses
  * them, so the error showed only after Create, in raw English (w21/330).
  */
-export function setupFields(values: {
-  currency: string;
-  historyStart: string;
-}): {
+export function setupFields(
+  values: {
+    currency: string;
+    historyStart: string;
+  },
+  now: Date = new Date(),
+): {
   operatingCurrency: string;
-  historyStart: string | undefined;
+  historyStart: string;
 } {
   return {
     operatingCurrency: (values.currency.trim() || "USD").toUpperCase(),
-    historyStart: toAsciiNumerals(values.historyStart).trim() || undefined,
+    // A cleared field is today on this phone, sent as a date: the server's own
+    // fallback is the UTC day, tomorrow in the evening across the Americas
+    // (w21/436).
+    historyStart:
+      toAsciiNumerals(values.historyStart).trim() || defaultHistoryStart(now),
   };
 }
 

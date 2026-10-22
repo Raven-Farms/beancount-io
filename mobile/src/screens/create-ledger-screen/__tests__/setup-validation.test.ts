@@ -46,10 +46,26 @@ describe("setupFields", () => {
   });
 
   it("falls back to USD and to today for blanks", () => {
-    expect(setupFields({ currency: "   ", historyStart: "  " })).toEqual({
-      operatingCurrency: "USD",
-      historyStart: undefined,
-    });
+    expect(
+      setupFields(
+        { currency: "   ", historyStart: "  " },
+        new Date(2026, 9, 21, 12),
+      ),
+    ).toEqual({ operatingCurrency: "USD", historyStart: "2026-10-21" });
+  });
+
+  // w21/436: left empty, the server counted the UTC day, which is tomorrow at
+  // 22:30 in Los Angeles.
+  it("sends the phone's local day in the evening, not a date for the server to guess", () => {
+    const evening = new Date(2026, 9, 21, 22, 30);
+    expect(
+      setupFields({ currency: "USD", historyStart: "" }, evening).historyStart,
+    ).toBe("2026-10-21");
+    // A typed date wins.
+    expect(
+      setupFields({ currency: "USD", historyStart: "2026-01-01" }, evening)
+        .historyStart,
+    ).toBe("2026-01-01");
   });
 });
 
