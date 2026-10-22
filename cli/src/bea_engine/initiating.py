@@ -227,7 +227,9 @@ def answer_preset(
     accounts = [account["name"] for account in entry["accounts"]]
     balances = _parse_opening_balances(opening_balances, accounts, "preset's")
 
-    open_day = day - datetime.timedelta(days=1) if balances else day
+    # A confirmed zero asserts the boundary without posting anything (w5/876).
+    funded = sorted(account for account, amount in balances.items() if amount)
+    open_day = day - datetime.timedelta(days=1) if funded else day
     # Beancount string content: a quote or backslash left bare ended the string
     # early or began an escape, so the saved title was not the one supplied.
     saved_title = (title or entry["title"]).replace("\\", "\\\\").replace('"', '\\"')
@@ -240,14 +242,14 @@ def answer_preset(
         "",
     ]
     opened = sorted(accounts)
-    if balances and "Equity:OpeningBalances" not in opened:
+    if funded and "Equity:OpeningBalances" not in opened:
         opened.append("Equity:OpeningBalances")
         opened.sort()
     for account in opened:
         lines.append(f"{open_day} open {account} {currency}")
     if balances:
         lines.append("")
-        for account in sorted(balances):
+        for account in funded:
             amount = balances[account]
             lines.append(f'{day - datetime.timedelta(days=1)} * "Opening balance"')
             lines.append(f"  {account}  {amount:f} {currency}")

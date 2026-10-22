@@ -295,7 +295,9 @@ def init(
         if title is not None:
             argv += ["--title", title]
     for account, amount in balances.items():
-        if amount:
+        # A preset keeps a confirmed zero as a zero assertion; the fixed
+        # template only ever posts nonzero openings (w5/876).
+        if amount or preset is not None:
             argv += ["--opening-balance", f"{account} {amount:f}"]
     data = launch.helper_json(argv, writes=True)
     if warnings:
