@@ -5,6 +5,7 @@
  *
  * Kept free of any `@/` imports so the jest-lite runner can require it.
  */
+import { openOn, type CloseDates } from "../../common/account-close-dates";
 import { filterAccounts } from "../../common/account-search";
 import {
   topAccounts,
@@ -215,4 +216,23 @@ export function withParentAccounts(accounts: readonly string[]): string[] {
     }
   }
   return result;
+}
+
+/**
+ * The accounts a picker lists. A filter keeps every opened account plus their
+ * parents (w21/036). A budget is offered the accounts open today plus their
+ * parents too: "Food: 600 a month" across its children is the commonest budget,
+ * the server rolls children up by prefix, and a budget's account need not be
+ * opened itself, so `Expenses:Food` was reachable only through a spurious
+ * `open` (w21/396). A posting gets only accounts open on its date.
+ */
+export function pickerAccounts(
+  type: string,
+  opened: readonly string[],
+  onDate: string,
+  closeDates: CloseDates,
+): string[] {
+  if (type === "filter") return withParentAccounts(opened);
+  const open = openOn(opened, onDate, closeDates);
+  return type === "budget" ? withParentAccounts(open) : open;
 }

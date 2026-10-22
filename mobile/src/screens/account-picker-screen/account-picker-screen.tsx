@@ -24,7 +24,6 @@ import { useAccountCloseDates } from "@/common/hooks/use-account-close-dates";
 import {
   closedAccountNamed,
   notYetOpenAccountNamed,
-  openOn,
 } from "@/common/account-close-dates";
 import { formatLedgerDate } from "@/common/date-format";
 import { getFormatDate } from "@/common/format-util";
@@ -34,10 +33,10 @@ import {
   ALL_ROOTS,
   findAccountLocation,
   isSearchQuery,
+  pickerAccounts,
   showCreateAccountRow,
   showCreateBelowResults,
   visibleAccountSections,
-  withParentAccounts,
   type PickerSection,
 } from "./picker-sections";
 import { ColorTheme } from "@/types/theme-props";
@@ -312,9 +311,12 @@ function AccountPickerScreenComponent(): JSX.Element {
   const closeDates = useAccountCloseDates(ledgerId);
   const accounts = useMemo(() => {
     const opened = accountOrderFor(type) === "from" ? assets : expenses;
-    return type === "filter"
-      ? withParentAccounts(opened)
-      : openOn(opened, entryDate ?? getFormatDate(new Date()), closeDates);
+    return pickerAccounts(
+      type,
+      opened,
+      entryDate ?? getFormatDate(new Date()),
+      closeDates,
+    );
   }, [type, assets, expenses, entryDate, closeDates]);
 
   // Grouped once: the chips are its titles, and the browse list is a slice of

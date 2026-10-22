@@ -64,12 +64,27 @@ describe("the account picker", () => {
 
   it("filters posting pickers by the entry date and leaves the filter picker whole", () => {
     expect(
-      source.includes(
-        "openOn(opened, entryDate ?? getFormatDate(new Date()), closeDates)",
+      source
+        .replace(/\s+/g, "")
+        .includes(
+          "pickerAccounts(type,opened,entryDate??getFormatDate(newDate()),closeDates,)",
+        ),
+    ).toBe(true);
+    // `pickerAccounts` keeps the filter list whole and dates the posting pickers.
+    const sections = require("fs").readFileSync(
+      require("path").join(
+        __dirname,
+        "../../screens/account-picker-screen/picker-sections.ts",
+      ),
+      "utf8",
+    );
+    expect(
+      sections.includes(
+        'if (type === "filter") return withParentAccounts(opened);',
       ),
     ).toBe(true);
     expect(
-      source.includes('type === "filter"\n      ? withParentAccounts(opened)'),
+      sections.includes("const open = openOn(opened, onDate, closeDates);"),
     ).toBe(true);
   });
 });
