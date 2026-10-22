@@ -32,6 +32,7 @@ import type { ParsedRow, ImportTransaction } from "../../../types";
 import {
   buildImportConfigFormValues,
   getValidImportRows,
+  retainedRowChoices,
   toImportConfigDraft,
   type ImportConfigDraft,
 } from "../../../lib/import-config-draft";
@@ -121,6 +122,15 @@ export function TransactionConfigForm({
     [],
   );
 
+  // Saving a Configure edit must not drop a choice for a row Preview holds
+  // back as invalid (w4/309); those rows do not change while Configure is open.
+  const retainedChoices = useMemo(
+    () => retainedRowChoices(rows, configDraft),
+    // Mount-time, like the defaults above.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [],
+  );
+
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
     defaultValues,
@@ -130,32 +140,35 @@ export function TransactionConfigForm({
     const subscription = form.watch((values) => {
       if (!values.transactions) return;
       onConfigDraftChange(
-        toImportConfigDraft({
-          sourceAccount: values.sourceAccount ?? "",
-          defaultCurrency: values.defaultCurrency ?? primaryCurrency,
-          transactions: (values.transactions ?? []).flatMap((txn) =>
-            txn?.id
-              ? [
-                  {
-                    id: txn.id,
-                    rowIndex: txn.rowIndex ?? 0,
-                    date: txn.date ?? "",
-                    payee: txn.payee ?? "",
-                    description: txn.description ?? "",
-                    amount: txn.amount ?? 0,
-                    amountInput: txn.amountInput ?? "",
-                    amountDecimal: txn.amountDecimal ?? "",
-                    targetAccount: txn.targetAccount ?? "",
-                    selected: txn.selected ?? true,
-                  },
-                ]
-              : [],
-          ),
-        }),
+        toImportConfigDraft(
+          {
+            sourceAccount: values.sourceAccount ?? "",
+            defaultCurrency: values.defaultCurrency ?? primaryCurrency,
+            transactions: (values.transactions ?? []).flatMap((txn) =>
+              txn?.id
+                ? [
+                    {
+                      id: txn.id,
+                      rowIndex: txn.rowIndex ?? 0,
+                      date: txn.date ?? "",
+                      payee: txn.payee ?? "",
+                      description: txn.description ?? "",
+                      amount: txn.amount ?? 0,
+                      amountInput: txn.amountInput ?? "",
+                      amountDecimal: txn.amountDecimal ?? "",
+                      targetAccount: txn.targetAccount ?? "",
+                      selected: txn.selected ?? true,
+                    },
+                  ]
+                : [],
+            ),
+          },
+          retainedChoices,
+        ),
       );
     });
     return () => subscription.unsubscribe();
-  }, [form, onConfigDraftChange, primaryCurrency]);
+  }, [form, onConfigDraftChange, primaryCurrency, retainedChoices]);
 
   const { categorizeTransactions, loading: aiLoading } =
     useAICategorization(ledgerId);

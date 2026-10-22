@@ -86,11 +86,33 @@ export function buildImportConfigFormValues(
   };
 }
 
-/** Persist only configuration choices; drop mappings for removed row ids. */
+/**
+ * Earlier choices for preview rows the form does not hold: a temporarily
+ * invalid row keeps its target and exclusion for when it is repaired
+ * (w4/309). Rows no longer in the preview are not carried.
+ */
+export function retainedRowChoices(
+  rows: ParsedRow[],
+  draft: ImportConfigDraft | null | undefined,
+): Record<string, ImportConfigRowDraft> {
+  const inForm = new Set(getValidImportRows(rows).map((row) => row.id));
+  const kept: Record<string, ImportConfigRowDraft> = {};
+  for (const row of rows) {
+    const prior = draft?.rows[row.id];
+    if (prior && !inForm.has(row.id)) kept[row.id] = prior;
+  }
+  return kept;
+}
+
+/**
+ * Persist only configuration choices: the form's rows, plus `retained`
+ * choices for preview rows outside it; mappings for removed rows drop out.
+ */
 export function toImportConfigDraft(
   values: ImportConfigFormValues,
+  retained: Record<string, ImportConfigRowDraft> = {},
 ): ImportConfigDraft {
-  const rows: Record<string, ImportConfigRowDraft> = {};
+  const rows: Record<string, ImportConfigRowDraft> = { ...retained };
   for (const txn of values.transactions) {
     rows[txn.id] = {
       targetAccount: txn.targetAccount,
