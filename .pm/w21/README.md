@@ -134,5 +134,8 @@
 - [619](./619.md) — Edit refusals cited elsewhere read "(near this entry)", even far away or in another file
 - [620](./620.md) — The server's single-entry check (w23/036) puts API wording ("newContent…", "use updateLedgerFiles") into the Edit banner
 - [621](./621.md) — Edit Transaction lacks w21/342's web-view recovery: a WebContent crash resets the draft and re-inserts the last shortcut
+- [622](./622.md) — Correcting a new budget the same day leaves the wrong amount in effect ("Budget $341.94" where 300/month gives $212.90)
+- [623](./623.md) — Update Budget with a date before the current entry saves but changes nothing, with no warning
+- [624](./624.md) — Update Budget is offered on a closed account's card and writes a directive that never applies
 - [508](./blocked/508.md) — Mobile guesses that an entry is a plugin copy from its first line; read the ledger's `generated_from` instead (split from 443) — **blocked:** production's GraphQL schema lacks `generated_from` until the ledger service and backend-v2 deploy; mobile's client is generated from it
 - [315](./blocked/315.md) — In-app commits signed with Gitea username and real email (no full_name, no noreply) — **blocked:** needs the owner's noreply-address and published-history decisions, and a production backfill of existing Gitea users that can't be verified here
