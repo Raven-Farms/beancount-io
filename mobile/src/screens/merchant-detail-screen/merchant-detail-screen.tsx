@@ -43,7 +43,10 @@ import {
   toggleRecurringOverride,
 } from "@/common/vars/merchant-recurring-overrides";
 import { cadenceLabelKey } from "@/screens/merchants-screen/selectors/merchant-sections";
-import { resolveRecurringVerdict } from "@/screens/merchants-screen/selectors/resolve-recurring";
+import {
+  endedBeforeSeriesWindow,
+  resolveRecurringVerdict,
+} from "@/screens/merchants-screen/selectors/resolve-recurring";
 import { usePayeeRecurrence } from "@/screens/merchants-screen/use-payee-recurrence";
 import { EntryRow } from "@/screens/transactions-screen/entry-row";
 import {
@@ -373,8 +376,9 @@ function MerchantDetailBody({
         detection,
         overrideFor(overrides, ledgerId!, payee),
         enoughHistory.has(merchantKey(payee)),
+        endedBeforeSeriesWindow(stats?.lastDate, today),
       ),
-    [detection, overrides, ledgerId, payee, enoughHistory],
+    [detection, overrides, ledgerId, payee, enoughHistory, stats, today],
   );
 
   // The list the query shows now, read when a page lands (w21/116).

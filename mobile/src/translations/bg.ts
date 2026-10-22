@@ -105,6 +105,7 @@ export const bg: Translations = {
   merchantsCadenceYearly: "Годишно",
   merchantsCadenceIrregular: "Неравномерно",
   merchantsCadenceUnknown: "Недостатъчна история",
+  merchantsCadenceInactive: "Няма скорошни плащания",
   merchantsNextExpected: "Следващо {{date}}",
   merchantsOverdue: "Просрочено",
   merchantsLastPaid: "Последно платено {{date}}",

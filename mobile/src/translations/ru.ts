@@ -110,6 +110,7 @@ export const ru: Translations = {
   merchantsCadenceYearly: "Ежегодно",
   merchantsCadenceIrregular: "Нерегулярно",
   merchantsCadenceUnknown: "Мало истории",
+  merchantsCadenceInactive: "Нет недавних платежей",
   merchantsNextExpected: "Следующий {{date}}",
   merchantsOverdue: "Просрочено",
   merchantsLastPaid: "Последний платёж {{date}}",

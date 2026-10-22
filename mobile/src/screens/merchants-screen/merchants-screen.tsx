@@ -24,6 +24,7 @@ import {
 } from "@/common/theme";
 import { useThemeStyle } from "@/common/hooks";
 import { useTranslations } from "@/common/hooks/use-translations";
+import { useToday } from "@/common/hooks/use-today";
 import { ColorTheme } from "@/types/theme-props";
 import { useQueryShellQuery } from "@/generated-graphql/graphql";
 import { LedgerGuard, useLedgerGuard } from "@/components/ledger-guard";
@@ -140,6 +141,7 @@ const getStyles = (theme: ColorTheme) =>
   });
 
 function MerchantsDirectory() {
+  const today = useToday();
   const ledgerId = useLedgerGuard();
   const styles = useThemeStyle(getStyles);
   const theme = useTheme().colorTheme;
@@ -196,6 +198,7 @@ function MerchantsDirectory() {
         (payee) => overrideFor(overrides, ledgerId!, payee),
         searchQuery,
         sort,
+        today,
       ),
     [
       merchants,
@@ -205,6 +208,7 @@ function MerchantsDirectory() {
       ledgerId,
       searchQuery,
       sort,
+      today,
     ],
   );
 

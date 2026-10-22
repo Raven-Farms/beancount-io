@@ -13,6 +13,7 @@ import {
 } from "./aggregate-payees";
 import type { RecurrenceVerdict } from "./detect-recurrence";
 import {
+  endedBeforeSeriesWindow,
   resolveRecurringVerdict,
   type RecurringOverride,
   type ResolvedCadence,
@@ -51,6 +52,7 @@ export function buildMerchantSections(
   overrideForPayee: OverrideLookup,
   searchQuery: string,
   sort: MerchantSort,
+  today?: string,
 ): MerchantSection[] {
   const filtered = filterMerchants([...merchants], searchQuery);
 
@@ -61,6 +63,7 @@ export function buildMerchantSections(
       detection,
       overrideForPayee(merchant.payee),
       enoughHistory.has(key),
+      today !== undefined && endedBeforeSeriesWindow(merchant.lastDate, today),
     );
     return {
       merchant,
@@ -155,6 +158,8 @@ export function cadenceLabelKey(
       return "merchantsCadenceIrregular";
     case "unknown":
       return "merchantsCadenceUnknown";
+    case "inactive":
+      return "merchantsCadenceInactive";
     default:
       return null;
   }

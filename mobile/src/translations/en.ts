@@ -97,6 +97,7 @@ export const en = {
   merchantsCadenceYearly: "Yearly",
   merchantsCadenceIrregular: "Irregular",
   merchantsCadenceUnknown: "Not enough history",
+  merchantsCadenceInactive: "No recent payments",
   merchantsNextExpected: "Next {{date}}",
   merchantsOverdue: "Overdue",
   merchantsLastPaid: "Last paid {{date}}",

@@ -104,6 +104,7 @@ export const fa: Translations = {
   merchantsCadenceYearly: "سالانه",
   merchantsCadenceIrregular: "نامنظم",
   merchantsCadenceUnknown: "سابقه کافی نیست",
+  merchantsCadenceInactive: "پرداخت اخیری وجود ندارد",
   merchantsNextExpected: "بعدی {{date}}",
   merchantsOverdue: "سررسید گذشته",
   merchantsLastPaid: "آخرین پرداخت {{date}}",

@@ -108,6 +108,7 @@ export const ca: Translations = {
   merchantsCadenceYearly: "Anual",
   merchantsCadenceIrregular: "Irregular",
   merchantsCadenceUnknown: "Historial insuficient",
+  merchantsCadenceInactive: "Sense pagaments recents",
   merchantsNextExpected: "Proper {{date}}",
   merchantsOverdue: "Vençut",
   merchantsLastPaid: "Últim pagament {{date}}",

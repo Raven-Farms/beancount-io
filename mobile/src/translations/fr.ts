@@ -108,6 +108,7 @@ export const fr: Translations = {
   merchantsCadenceYearly: "Annuel",
   merchantsCadenceIrregular: "Irrégulier",
   merchantsCadenceUnknown: "Historique insuffisant",
+  merchantsCadenceInactive: "Aucun paiement récent",
   merchantsNextExpected: "Prochain {{date}}",
   merchantsOverdue: "En retard",
   merchantsLastPaid: "Dernier paiement {{date}}",
