@@ -100,7 +100,6 @@
 
 - [316 — Keep opening-balance choices consistent when ledger presets change](./316.md) — minor; dashboard QA, 2026-10-21; Portfolio displays Decide later while sending the previous Personal account; an unattached amount is silently omitted; valid-account recovery passes.
 
-- [314 — Advancing to ledger Review must not submit the creation form](./314.md) — major; dashboard QA, 2026-10-21; pointer/keyboard details Next changes the same button to submit and attempts CreateLedger before final confirmation; every attempt blocked before transport.
 - [315 — Review the selected ledger starting point rather than the retained preset](./315.md) — minor; dashboard QA, 2026-10-21; Starter and Sample both review as Personal ledger despite correct template/setup payloads; no ledger created.
 
 
@@ -201,7 +200,7 @@
 
 ## Dropped
 
-- ~~**985**~~ — Stop Create Ledger's Next from submitting the ledger before Review — dropped 2026-10-22: duplicate of [314](./314.md), the earlier and fuller report of the same Details → Next CreateLedger defect, filed without finding it.
+- ~~**985**~~ — Stop Create Ledger's Next from submitting the ledger before Review — dropped 2026-10-22: duplicate of [314](./done/314.md), the earlier and fuller report of the same Details → Next CreateLedger defect, filed without finding it.
 
 - ~~**328**~~ — Offer a retry after a statement or Account Journal read fails — dropped 2026-10-22: promoted to [m50](./done/m50/README.md), preserving all evidence and adding independently repeated Commodities primary-read failure; six observer integrations plus regressions exceed one hour, with no new historical group.
 
