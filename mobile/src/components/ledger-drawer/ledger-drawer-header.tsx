@@ -19,6 +19,14 @@ import { headerTitleLineHeight, headerHeight } from "./header-layout";
 import { useLedgerDrawer } from "./ledger-drawer-context";
 import { useGuest } from "@/common/guest/guest-context";
 
+/**
+ * How far the badge's count scales with the text size. The bell it sits on is a
+ * fixed 24pt, so a count at AX2 (30pt line box) outgrew the 16pt pill and its
+ * lower half fell onto the header; iOS caps its own badges the same way
+ * (w21/625).
+ */
+const BADGE_MAX_FONT_SIZE_MULTIPLIER = 1.3;
+
 const getStyles = (theme: ColorTheme) =>
   StyleSheet.create({
     navBar: {
@@ -59,8 +67,9 @@ const getStyles = (theme: ColorTheme) =>
       top: -4,
       end: -6,
       minWidth: 16,
-      height: 16,
-      borderRadius: 8,
+      // Grows with its text rather than clipping it (w21/625).
+      minHeight: 16,
+      borderRadius: 9,
       backgroundColor: theme.error,
       justifyContent: "center",
       alignItems: "center",
@@ -126,7 +135,12 @@ function NotificationsBellButton(): JSX.Element {
         <Ionicons name="notifications-outline" size={24} color={theme.black} />
         {count > 0 && (
           <View style={styles.badge}>
-            <Text style={styles.badgeText}>{count > 99 ? "99+" : count}</Text>
+            <Text
+              style={styles.badgeText}
+              maxFontSizeMultiplier={BADGE_MAX_FONT_SIZE_MULTIPLIER}
+            >
+              {count > 99 ? "99+" : count}
+            </Text>
           </View>
         )}
       </View>

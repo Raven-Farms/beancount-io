@@ -29,3 +29,27 @@ describe("the Notifications bell", () => {
     );
   });
 });
+
+// w21/625: at AX2 the count's text outgrew the fixed 16pt pill and was clipped.
+describe("the bell's error badge at large text sizes", () => {
+  const source = fs
+    .readFileSync(
+      path.join(__dirname, "..", "ledger-drawer-header.tsx"),
+      "utf8",
+    )
+    .replace(/\s+/g, "");
+
+  it("caps how far its count scales", () => {
+    expect(source.includes("constBADGE_MAX_FONT_SIZE_MULTIPLIER=1.3;")).toBe(
+      true,
+    );
+    expect(
+      source.includes("maxFontSizeMultiplier={BADGE_MAX_FONT_SIZE_MULTIPLIER}"),
+    ).toBe(true);
+  });
+
+  it("lets the pill grow with its text instead of clipping it", () => {
+    expect(source.includes("minHeight:16,borderRadius:9,")).toBe(true);
+    expect(source.includes("height:16,")).toBe(false);
+  });
+});
