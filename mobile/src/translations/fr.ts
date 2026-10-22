@@ -731,6 +731,8 @@ export const fr: Translations = {
   createLedgerTierLimit:
     "La limite de grands livres est atteinte. Impossible d'en créer un autre.",
   createLedgerGenericError: "Impossible de créer le grand livre. Réessayez.",
+  createLedgerStillCreating:
+    "Ce grand livre est encore en cours de création. Patientez quelques secondes, puis touchez à nouveau Créer.",
   createLedgerDrawerRow: "Nouveau grand livre",
   createLedgerEmptyTitle: "Aucun grand livre pour l'instant",
   createLedgerEmptyBody:

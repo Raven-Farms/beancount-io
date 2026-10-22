@@ -37,7 +37,7 @@ export function generateDefaultLedgerName(existingNames: string[]): string {
   return `${baseName}-${counter}`;
 }
 
-export type CreateLedgerErrorKind = "conflict" | "tier" | "other";
+export type CreateLedgerErrorKind = "conflict" | "creating" | "tier" | "other";
 
 /** Map backend createLedger failures to field/form error kinds. */
 export function classifyCreateLedgerError(
@@ -50,6 +50,7 @@ export function classifyCreateLedgerError(
         ? error
         : "";
   const lower = message.toLowerCase();
+  if (lower.includes("still in progress")) return "creating";
   if (
     lower.includes("already exists") ||
     lower.includes("name conflict") ||
@@ -77,7 +78,21 @@ export function classifyCreateLedgerError(
   if (Array.isArray(gqlErrors)) {
     for (const err of gqlErrors) {
       const code = String(err.extensions?.code ?? "").toUpperCase();
-      if (code.includes("CONFLICT")) return "conflict";
+      if (code.includes("CONFLICT")) {
+        // A CONFLICT is also what a create still running under the same
+        // requestId answers; only a name clash is the name's error (w21/437).
+        if (/still in progress/i.test(err.message ?? "")) return "creating";
+        const { reasonCode, field } = (err.extensions ?? {}) as {
+          reasonCode?: string;
+          field?: string;
+        };
+        if (reasonCode === "LEDGER_NAME_ALREADY_EXISTS" || field === "name") {
+          return "conflict";
+        }
+        const kind = classifyCreateLedgerError(err.message ?? "");
+        if (kind !== "other") return kind;
+        continue;
+      }
       if (code.includes("RESOURCE_LIMIT") || code.includes("LIMIT"))
         return "tier";
       const kind = classifyCreateLedgerError(err.message ?? "");

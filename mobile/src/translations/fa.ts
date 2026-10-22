@@ -702,6 +702,8 @@ export const fa: Translations = {
   createLedgerTierLimit:
     "به سقف تعداد دفترکل رسیده‌اید. ایجاد دفترکل دیگری امکان‌پذیر نیست.",
   createLedgerGenericError: "ایجاد دفترکل ممکن نشد. دوباره تلاش کنید.",
+  createLedgerStillCreating:
+    "این دفترکل هنوز در حال ایجاد است. چند ثانیه صبر کنید و دوباره روی ایجاد بزنید.",
   createLedgerDrawerRow: "دفترکل جدید",
   createLedgerEmptyTitle: "هنوز دفترکلی ندارید",
   createLedgerEmptyBody: "یک دفترکل بسازید یا نمونه‌های عمومی را کشف کنید.",

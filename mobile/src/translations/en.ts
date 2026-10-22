@@ -722,6 +722,8 @@ export const en = {
   createLedgerTierLimit:
     "The ledger limit has been reached. Another ledger cannot be created.",
   createLedgerGenericError: "Couldn't create the ledger. Please try again.",
+  createLedgerStillCreating:
+    "This ledger is still being created. Wait a few seconds, then tap Create again.",
   createLedgerNext: "Next",
   createLedgerBack: "Back",
   createLedgerStep: "Step {{step}} of {{total}}",

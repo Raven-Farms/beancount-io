@@ -732,6 +732,8 @@ export const ca: Translations = {
     "S'ha arribat al límit de llibres. No se'n pot crear cap més.",
   createLedgerGenericError:
     "No s'ha pogut crear el llibre. Torneu-ho a provar.",
+  createLedgerStillCreating:
+    "Aquest llibre encara s'està creant. Espereu uns segons i torneu a tocar Crea.",
   createLedgerDrawerRow: "Nou llibre",
   createLedgerEmptyTitle: "Encara no hi ha llibres",
   createLedgerEmptyBody: "Creeu un llibre o descobriu exemples públics.",

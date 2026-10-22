@@ -726,6 +726,8 @@ export const uk: Translations = {
   createLedgerTierLimit:
     "Досягнуто ліміту книг. Створити ще одну книгу неможливо.",
   createLedgerGenericError: "Не вдалося створити книгу. Спробуйте ще раз.",
+  createLedgerStillCreating:
+    "Ця книга ще створюється. Зачекайте кілька секунд і знову натисніть «Створити».",
   createLedgerDrawerRow: "Нова книга",
   createLedgerEmptyTitle: "Поки немає книг",
   createLedgerEmptyBody: "Створіть книгу або знайдіть публічні приклади.",

@@ -732,6 +732,8 @@ export const sk: Translations = {
   createLedgerTierLimit:
     "Bol dosiahnutý limit kníh. Ďalšiu knihu nie je možné vytvoriť.",
   createLedgerGenericError: "Knihu sa nepodarilo vytvoriť. Skúste to znova.",
+  createLedgerStillCreating:
+    "Táto kniha sa ešte vytvára. Počkajte niekoľko sekúnd a znova klepnite na Vytvoriť.",
   createLedgerDrawerRow: "Nová kniha",
   createLedgerEmptyTitle: "Zatiaľ žiadne knihy",
   createLedgerEmptyBody: "Vytvorte knihu alebo objavte verejné príklady.",

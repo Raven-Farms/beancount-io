@@ -461,6 +461,12 @@ export function CreateLedgerScreen(): JSX.Element {
           setStep(FORM_STEP);
           return;
         }
+        if (kind === "creating") {
+          // The first attempt is still running under this requestId: the same
+          // request, tapped again, returns its ledger (w21/437).
+          setError("root", { message: t("createLedgerStillCreating") });
+          return;
+        }
         if (kind === "tier") {
           setError("root", { message: t("createLedgerTierLimit") });
           return;

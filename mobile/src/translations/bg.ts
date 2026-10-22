@@ -712,6 +712,8 @@ export const bg: Translations = {
     "Достигнат е лимитът за книги. Не може да се създаде друга книга.",
   createLedgerGenericError:
     "Книгата не можа да бъде създадена. Опитайте отново.",
+  createLedgerStillCreating:
+    "Тази книга все още се създава. Изчакайте няколко секунди и натиснете Създай отново.",
   createLedgerDrawerRow: "Нова книга",
   createLedgerEmptyTitle: "Все още няма книги",
   createLedgerEmptyBody: "Създайте книга или открийте публични примери.",

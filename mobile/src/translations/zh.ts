@@ -648,6 +648,8 @@ export const zh: Translations = {
   createLedgerTemplateSampleHint: "含示例交易，便于探索应用。",
   createLedgerTierLimit: "已达到账本数量上限，无法创建新的账本。",
   createLedgerGenericError: "无法创建账本，请重试。",
+  createLedgerStillCreating:
+    "此账本仍在创建中。请等待几秒钟，然后再次点击“创建”。",
   createLedgerDrawerRow: "新建账本",
   createLedgerEmptyTitle: "还没有账本",
   createLedgerEmptyBody: "创建一个账本，或发现公开示例。",

@@ -728,6 +728,8 @@ export const pt: Translations = {
   createLedgerTierLimit:
     "Foi atingido o limite de livros. Não é possível criar outro.",
   createLedgerGenericError: "Não foi possível criar o livro. Tente novamente.",
+  createLedgerStillCreating:
+    "Este livro ainda está sendo criado. Aguarde alguns segundos e toque em Criar novamente.",
   createLedgerDrawerRow: "Novo livro",
   createLedgerEmptyTitle: "Ainda não há livros",
   createLedgerEmptyBody: "Crie um livro ou descubra exemplos públicos.",

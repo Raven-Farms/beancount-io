@@ -727,6 +727,8 @@ export const ru: Translations = {
   createLedgerTierLimit:
     "Достигнут лимит книг. Создать ещё одну книгу невозможно.",
   createLedgerGenericError: "Не удалось создать книгу. Попробуйте снова.",
+  createLedgerStillCreating:
+    "Эта книга ещё создаётся. Подождите несколько секунд и снова нажмите «Создать».",
   createLedgerDrawerRow: "Новая книга",
   createLedgerEmptyTitle: "Пока нет книг",
   createLedgerEmptyBody: "Создайте книгу или найдите публичные примеры.",

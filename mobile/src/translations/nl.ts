@@ -718,6 +718,8 @@ export const nl: Translations = {
     "De grootboeklimiet is bereikt. Er kan geen nieuw grootboek worden aangemaakt.",
   createLedgerGenericError:
     "Kon het grootboek niet maken. Probeer het opnieuw.",
+  createLedgerStillCreating:
+    "Dit grootboek wordt nog gemaakt. Wacht een paar seconden en tik dan opnieuw op Maken.",
   createLedgerDrawerRow: "Nieuw grootboek",
   createLedgerEmptyTitle: "Nog geen grootboeken",
   createLedgerEmptyBody: "Maak een grootboek of ontdek openbare voorbeelden.",

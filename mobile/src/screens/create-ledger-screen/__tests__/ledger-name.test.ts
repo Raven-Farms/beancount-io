@@ -59,6 +59,43 @@ describe("classifyCreateLedgerError", () => {
   });
 });
 
+// w21/437: every CONFLICT was the name's, though a create still running under
+// the same requestId answers CONFLICT too.
+describe("a CONFLICT from createLedger", () => {
+  const conflict = (message: string, extensions: Record<string, unknown>) => ({
+    graphQLErrors: [
+      { message, extensions: { code: "CONFLICT", ...extensions } },
+    ],
+  });
+
+  it("is the name's error only for a name clash", () => {
+    expect(
+      classifyCreateLedgerError(
+        conflict("Ledger conflict: Name already exists", {
+          reasonCode: "LEDGER_NAME_ALREADY_EXISTS",
+          field: "name",
+        }),
+      ),
+    ).toBe("conflict");
+    expect(
+      classifyCreateLedgerError(conflict("Ledger conflict", { field: "name" })),
+    ).toBe("conflict");
+  });
+
+  it("is still creating when the first attempt has not finished", () => {
+    const message =
+      "Ledger creation conflict: A creation with this requestId is still in progress";
+    expect(classifyCreateLedgerError(conflict(message, {}))).toBe("creating");
+    expect(classifyCreateLedgerError(new Error(message))).toBe("creating");
+  });
+
+  it("is neither for a conflict that says nothing about a name", () => {
+    expect(
+      classifyCreateLedgerError(conflict("Entry conflict: stale hash", {})),
+    ).toBe("other");
+  });
+});
+
 describe("Sample-only template payload", () => {
   it("omits template for Starter and sends SAMPLE for Sample", () => {
     const buildVariables = (template: "STARTER" | "SAMPLE") => ({

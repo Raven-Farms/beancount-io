@@ -730,6 +730,8 @@ export const de: Translations = {
     "Das Limit für Hauptbücher wurde erreicht. Es kann kein weiteres Hauptbuch erstellt werden.",
   createLedgerGenericError:
     "Hauptbuch konnte nicht erstellt werden. Bitte erneut versuchen.",
+  createLedgerStillCreating:
+    "Dieses Hauptbuch wird noch erstellt. Warten Sie einige Sekunden und tippen Sie erneut auf Erstellen.",
   createLedgerDrawerRow: "Neues Hauptbuch",
   createLedgerEmptyTitle: "Noch keine Hauptbücher",
   createLedgerEmptyBody:
