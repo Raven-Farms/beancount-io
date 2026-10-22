@@ -35,6 +35,7 @@ import {
   defaultHistoryStart,
   isHistoryStart,
   isSetupCurrency,
+  setupFields,
   openingAmountValue,
   openingSelection,
   SETUP_PRESETS,
@@ -355,8 +356,7 @@ export function CreateLedgerScreen(): JSX.Element {
     return {
       preset: preset.id,
       title: values.name,
-      operatingCurrency: (values.currency || "USD").toUpperCase(),
-      historyStart: values.historyStart || undefined,
+      ...setupFields(values),
       accounts: opening
         ? [
             {

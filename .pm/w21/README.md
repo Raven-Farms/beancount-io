@@ -40,7 +40,6 @@
 - [441](./441.md) — Home charts announced without curve name; iOS-only hint
 - [442](./442.md) — Android reinstall never sets account-choice mark (318 sibling)
 - [315](./blocked/315.md) — In-app commits signed with Gitea username and real email (no full_name, no noreply) — **blocked:** needs the owner's noreply-address and published-history decisions, and a production backfill of existing Gitea users that can't be verified here
-- [330](./330.md) — Create Ledger currency/date with surrounding spaces refused late with raw English
 - [331](./331.md) — Accounts tab still lacks the parent "(own)" row: graftZeroAccounts' clone drops balance (174 follow-up)
 - [332](./332.md) — Budget ALL still counts a pre-entered entry inside the current period (168 follow-up)
 - [333](./333.md) — Brands next to CJK/kana no longer match after 172 ("Amazon购物")

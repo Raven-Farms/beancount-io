@@ -204,6 +204,24 @@ export function isSetupCurrency(code: string): boolean {
 }
 
 /**
+ * The currency and start date as the server receives them: trimmed. The form's
+ * checks accept " USD" and "2026-10-21 ", but the server's validator refuses
+ * them, so the error showed only after Create, in raw English (w21/330).
+ */
+export function setupFields(values: {
+  currency: string;
+  historyStart: string;
+}): {
+  operatingCurrency: string;
+  historyStart: string | undefined;
+} {
+  return {
+    operatingCurrency: (values.currency.trim() || "USD").toUpperCase(),
+    historyStart: values.historyStart.trim() || undefined,
+  };
+}
+
+/**
  * Whether "Books begin" holds a real `YYYY-MM-DD` day, or nothing (today). A
  * `2026-04-31` rolls over to 1 May in `Date.parse`, so it reached the ledger
  * (w21/107).
