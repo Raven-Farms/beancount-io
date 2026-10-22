@@ -77,6 +77,11 @@
 - [478](./478.md) — Create Ledger preview failure shows raw English, no Retry
 - [479](./479.md) — Create Ledger errors silent to VoiceOver (354 sibling)
 - [480](./480.md) — Budget pages past 500 never re-read on refresh (397 follow-up)
+- [481](./481.md) — Load errors/empty states/captions in black60 (1.78:1 light)
+- [482](./482.md) — Budget status badges fail contrast (2.22:1 dark)
+- [483](./483.md) — Light editor strings/currencies below 4.5:1
+- [484](./484.md) — Profile, server settings, budget delete errors not announced (354 sibling)
+- [485](./485.md) — Files Up and budget Delete targets under 44pt
 - [315](./blocked/315.md) — In-app commits signed with Gitea username and real email (no full_name, no noreply) — **blocked:** needs the owner's noreply-address and published-history decisions, and a production backfill of existing Gitea users that can't be verified here
 - [411](./411.md) — New Transaction: changing payee keeps first payee's accounts
 - [412](./412.md) — Payee fill ranks FROM/TO independently; can fill same account twice
