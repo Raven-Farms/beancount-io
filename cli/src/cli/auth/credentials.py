@@ -42,6 +42,18 @@ def _parse_expire_at(expire_at: str) -> datetime:
     return parsed.astimezone(UTC)
 
 
+def grant_expiry(expire_at: object) -> datetime:
+    """The aware-UTC expiry of a freshly granted session, or ValueError when it could not be read later.
+
+    The same rules `Credentials.is_expired` applies to the stored file, so a
+    grant is judged before it replaces the credential rather than refused by
+    the next command (w5/894).
+    """
+    if not isinstance(expire_at, str):
+        raise ValueError("expireAt must be a string")
+    return _parse_expire_at(expire_at)
+
+
 @dataclass
 class Credentials:
     token: str
