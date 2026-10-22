@@ -7,12 +7,14 @@
  * the history each (w21/410).
  * Recurrence and manual marks keyed by the displayed spelling saw only part
  * of a merchant's history, and a mark was lost when the display flipped
- * (w21/169). Curly quotes read as straight ones (w21/519). Import-free so the unit runner can load it.
+ * (w21/169). The dotted capital İ lowercases to i + U+0307, folded to i so a
+ * typed "iş" finds "İşBank" (w21/569). Curly quotes read as straight ones (w21/519). Import-free so the unit runner can load it.
  */
 export function merchantKey(payee: string): string {
   return foldQuotes(payee.trim().normalize("NFC"))
     .replace(/\s+/g, " ")
-    .toLowerCase();
+    .toLowerCase()
+    .replace(/i\u0307/gu, "i");
 }
 
 /**

@@ -190,20 +190,34 @@ function compileMatcherRegex(search: string): RegExp {
   }
 }
 
-function makeMatcher(search: string): FilterValueMatcher {
-  if (search.length > MAX_FILTER_PATTERN_LENGTH) {
+/**
+ * The Turkish capital dotted İ (U+0130), and the "i" + combining dot a
+ * lowercase pass leaves, as a plain "i". A case-insensitive regex never matches
+ * `i` against `İ` (their case mapping is language-specific, and the `i` flag
+ * uses the language-neutral one), so "iş" and "izmir" missed "İşBank ATM" and
+ * "İZMİR Kahve" (w21/569). Applied to the pattern and to the text it searches.
+ */
+function foldDottedI(text: string): string {
+  return text.replace(/\u0130/gu, "i").replace(/i\u0307/gu, "i");
+}
+
+function makeMatcher(rawSearch: string): FilterValueMatcher {
+  if (rawSearch.length > MAX_FILTER_PATTERN_LENGTH) {
     throw new AdvancedFilterParseError(
       `Filter pattern exceeds ${MAX_FILTER_PATTERN_LENGTH} characters`,
     );
   }
+  const search = foldDottedI(rawSearch);
   try {
     const regex = compileMatcherRegex(search);
-    return (value): boolean => regex.test(stringifyFilterValue(value));
+    return (value): boolean =>
+      regex.test(foldDottedI(stringifyFilterValue(value)));
   } catch {
     // Fava deliberately treats a regex that Python cannot compile as a literal
     // exact match. Keep that behavior after attempting the compatibility
     // translations above.
-    return (value): boolean => stringifyFilterValue(value) === search;
+    return (value): boolean =>
+      foldDottedI(stringifyFilterValue(value)) === search;
   }
 }
 

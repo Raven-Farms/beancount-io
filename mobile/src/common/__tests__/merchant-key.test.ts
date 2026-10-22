@@ -7,6 +7,32 @@ import { merchantKey, seriesByMerchant } from "../merchant-key";
  */
 const streaming = (date: string) => ({ date, currency: "USD", amount: 15.49 });
 
+// w21/569: "İ".toLowerCase() is "i" + U+0307, so a typed "iş" was never a
+// substring of "İşBank ATM".
+describe("merchantKey with a Turkish dotted capital", () => {
+  it("reads İ as i", () => {
+    expect(merchantKey("İşBank ATM")).toBe("işbank atm");
+    expect(merchantKey("İZMİR Kahve")).toBe("izmir kahve");
+  });
+
+  it("lets a plain search find it", () => {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const {
+      filterMerchants,
+    } = require("../../screens/merchants-screen/selectors/aggregate-payees");
+    const merchants = [
+      { payee: "İşBank ATM" },
+      { payee: "İZMİR Kahve" },
+      { payee: "Cafe" },
+    ];
+    const names = (query: string) =>
+      filterMerchants(merchants, query).map((m: { payee: string }) => m.payee);
+    expect(names("iş")).toEqual(["İşBank ATM"]);
+    expect(names("izmir")).toEqual(["İZMİR Kahve"]);
+    expect(names("İş")).toEqual(["İşBank ATM"]);
+  });
+});
+
 describe("merchantKey with curly quotes", () => {
   it("reads Smart Punctuation's ’ as the apostrophe typed (w21/519)", () => {
     expect(merchantKey("Trader Joe\u2019s")).toBe(merchantKey("Trader Joe's"));

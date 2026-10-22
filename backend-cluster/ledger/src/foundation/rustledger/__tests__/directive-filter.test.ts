@@ -203,6 +203,30 @@ describe("filterDirectives — AdvancedFilter parity", () => {
     expect(filterDirectives(unicode, { filter: "咖啡" })).toEqual(unicode);
   });
 
+  // w21/569: the regex `i` flag never matches `i` against the Turkish `İ`.
+  it("finds a payee with a Turkish dotted capital İ by its plain i", () => {
+    const turkish = (payee: string): DirectiveJson => ({
+      type: "transaction",
+      date: "2024-04-01",
+      flag: "*",
+      payee,
+      narration: "",
+      tags: [],
+      links: [],
+      postings: [],
+    });
+    const isbank = turkish("İşBank ATM");
+    const izmir = turkish("İZMİR Kahve");
+    const other = turkish("Starbucks");
+    const all = [isbank, izmir, other];
+    expect(filterDirectives(all, { filter: "iş" })).toEqual([isbank]);
+    expect(filterDirectives(all, { filter: "izmir" })).toEqual([izmir]);
+    // A search typed with the dotted capital finds it too.
+    expect(filterDirectives(all, { filter: "İş" })).toEqual([isbank]);
+    // And the plain ASCII rule is untouched.
+    expect(filterDirectives(all, { filter: "STAR" })).toEqual([other]);
+  });
+
   it("compares only Amount-shaped metadata values", () => {
     const primitiveMeta = {
       type: "note",
