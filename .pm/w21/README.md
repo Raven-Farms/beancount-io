@@ -54,6 +54,10 @@
 - [455](./455.md) — Budget ALL shows $0 / Below target while current period loads or fails
 - [456](./456.md) — Budget chart y-axis floored at 1 hides BTC bars
 - [457](./457.md) — Budget chart summary says missed income is over target; no years
+- [458](./458.md) — One shifted twice-a-month payment turns it biweekly
+- [459](./459.md) — A skipped month drops a monthly bill's day anchor
+- [460](./460.md) — Internal double spaces split one merchant in two
+- [461](./461.md) — Recurring paycheck's typical amount is unsigned
 - [315](./blocked/315.md) — In-app commits signed with Gitea username and real email (no full_name, no noreply) — **blocked:** needs the owner's noreply-address and published-history decisions, and a production backfill of existing Gitea users that can't be verified here
 - [367](./367.md) — Narration edit refused when entry has an existing interpolation/lot error quoting it
 - [368](./368.md) — BOM-prefixed include: first entry can't be saved or deleted
