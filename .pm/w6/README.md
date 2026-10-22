@@ -2,22 +2,54 @@
 
 **Worker:** worker1 — general-purpose adoption worker; accepts the next highest-impact milestone across packages, topics, and A1/A2/A3 rather than owning a permanent specialty.
 
-## Blocker triage — updated 2026-10-21 UTC
+## Current work and blocker triage — 2026-10-22 UTC
 
-The twenty engine items and Hermes notes039/040 remain blocked; m6 has completed its native/client prerequisites and protected0.3.7 submission, and now waits only for nine accepted versions to become public. Official npm and GitHub release checks at21:08UTC still report WASM0.24.0, last published September 6. On inspected upstream main `51cf2326`, ten engine items have merged source candidates awaiting release; nine notes plus m2 still need contract or semantic changes. No published artifact clears an engine adoption prerequisite. The marketplace run below records prepared packets and two available free submissions. A subsequent task-level pass continues executable validation and client setup inside m6–m10; the blocked labels do not establish that every remaining substep is unavailable. Existing platform, agreement and moderation conditions apply only to the actions that require them.
+| Milestone | Adoption outcome | Current state |
+| --- | --- | --- |
+| [m6](./blocked/m6/README.md) | Install each local-ledger skill directly from ClawHub in OpenClaw or Hermes, without a repository checkout. | t001–t012 done; t013 awaits three existing1.0.4public promotions and their exact-byte/native checks. |
+| [m7](./done/m7/README.md) | Connect OpenClaw and Hermes to the existing hosted Beancount.io MCP endpoint. | Done; separate from local ClawHub skill distribution. |
+| [m8](./blocked/m8/README.md) | Publish or claim the hosted connector on Smithery and Glama. | Shared packet done; supported Smithery intake and existing Glama claim/private-QA/full-day health remain. |
+| [m9](./blocked/m9/README.md) | Make the hosted connector discoverable in Docker, Cursor, Cline and GitHub/VS Code galleries. | Cursor community/native QA complete and grant retained; separate client grants, official agreement/operator nomination and platform reviews remain. |
+| [m10](./blocked/m10/README.md) | List the hosted connector in MCPServers.org, MCPMarket and LobeHub. | Two free submissions are accepted into review queues; public listing/connection checks and Lobe account/agreement/publication remain. |
 
-m6/t001–t012 are complete, including authenticated first queries and default Hermes discovery. All eleven accepted suite 0.3.3 updates are public, all 105 authored files match, and individual installs have been verified in OpenClaw and supported Hermes (init exception retained). Claude Code 2.1.306 resumes real default-model turns at 19:13 UTC, discovers all thirteen skills and scores 113/113 on frozen0.3.6 routing versus102/103 before. The [client release controls](../../docs/skills/client-release-controls-20261021.md) retain two newly found instruction defects and their successful two-client body corrections for candidate 0.3.7. The separately recorded Codex PDF first-open loss leads to measured import/migrate/reconcile repairs. Candidate4 complete Codex cohorts pass115/115 twice but Claude records a new tax-advice/ask miss; candidate5 targets and complete cohorts pass on both clients, with the documented Claude timeout recovery kept separate. Failed cohorts are retained. All six named dependency/adoption prerequisites are now done; protected run39679035375 accepts all nine changed/new versions with successful credential cleanup; current public/host verification follows actual promotion. The [earlier preflight](../../docs/skills/clawhub-release-preflight-20261021.md) remains historical six-release/seven-skip evidence; the combined description repairs make the current anonymous plan nine releases/four unchanged. Hermes's recorded init/source-filter gaps remain separate.
+The current local-skills suite is0.3.8. Protected
+[run39708894097](https://github.com/bex-co/beancount-io/actions/runs/39708894097)
+accepts all13changed1.0.4versions and119authored fingerprints, with publisher
+credential cleanup complete. Ten public versions/97files have native OpenClaw
+proof; nine supported Hermes versions/90files and both standalone ask1.0.4actual
+first queries pass. At04:14UTC the remaining metadata is unchanged: accruals404,
+property latest1.0.1 and reconcile1.0.2. All three existing1.0.4normal scans are
+alreadyclean/writtenBack; normal scan completion does not finalize publication.
+No identical upload or duplicate scan is needed. [Current host evidence](../../docs/skills/clawhub-rehearsal.md#current-version-follow-through--2026-10-22-0249-utc)
+retains original failures, documented recoveries and the Hermes init exception.
+
+The04:17UTC primary release/source refresh retains WASM0.24.0 (58versions,
+September6publication, identical artifact integrity). Rustledger main advances
+to2595fc09, but static system-table descriptions do not expose arbitrary
+projected-expression types through WASM QueryResult. None of the20recorded
+engine gates clears. Hermes stablev0.22.4/tag4d043038 and inspected main4e58c721
+are unchanged; no identical native policy/search repro is repeated.
 
 | Items | Verified state | Action that clears the blocker |
 | --- | --- | --- |
-| [m6](blocked/m6/README.md) | Source0.3.8 repair1de39be41 and full CI pass; protected39708894097 accepts all13 changed1.0.4 fingerprints119files, cleanup green. Nine current versions/90public bytes and OpenClaw installs verified; eligible Hermes/query work continues. | Verify each newly public target independently. ClawHub still must promote accruals/importer-author/property/reconcile1.0.4; all current-main/public/native DoD before closeout. |
-| [016](./blocked/016.md), [017](./blocked/017.md), [018](./blocked/018.md), [022](./blocked/022.md), [023](./blocked/023.md), [024](./blocked/024.md), [025](./blocked/025.md) | The seven recorded corrections have merged source candidates retained on inspected upstream main `51cf2326`. No newer supported npm artifact is published. | Rustledger maintainer publishes WASM containing the seven fixes; repository worker adopts one release and runs each note's native and REST/GraphQL/MCP acceptance cases. |
-| [029](./blocked/029.md), [034](./blocked/034.md), [037](./blocked/037.md) | [Rustledger PR #2682](https://github.com/rustledger/rustledger/pull/2682) merged 2026-10-19 at 11:03 UTC, covering SUBST, FINDFIRST, and short-circuit guards. | Maintainer publishes a compatible WASM artifact; repository worker adopts it and verifies the exact native/API controls. Merge alone does not clear the release condition. |
-| [m2](./blocked/m2/README.md), [026](./blocked/026.md), [027](./blocked/027.md), [028](./blocked/028.md), [031](./blocked/031.md), [032](./blocked/032.md), [033](./blocked/033.md), [035](./blocked/035.md), [036](./blocked/036.md), [038](./blocked/038.md) | Upstream main `51cf2326` retains the missing contracts or affected implementations; no matching correction was identified. Waiting for a release alone is insufficient. | User files or explicitly authorizes the upstream requests below; maintainer implements and publishes; repository worker adopts and verifies. |
-| [039](./blocked/039.md) | Latest stable Hermes v0.22.4 (`4d043038`) retains the unchanged scanner. Its fresh 19:24 UTC native init 1.0.2 control still exits 1 with 18 findings/DANGEROUS, without force; [dated evidence](./blocked/039.md#new-stable-release-control--2026-10-21-1924-utc). | Hermes maintainers provide a compatible policy/install path; repository worker installs unchanged init without force and rehearses consent/validation/preservation. |
-| [040](./blocked/040.md) | Fresh archive-pinned native controls return fourteen/default and fourteen/all results, including all eleven suite skills; explicit `--source clawhub` returns `[]` with exit 0. Public registry search returns all eleven. | Hermes host/index correction makes both search paths find the suite; repository worker verifies the searches and a returned-listing install without force. |
+| [m6](./blocked/m6/README.md) | Current13submissions accepted; ten public/97files and eligible host/query checks complete. | ClawHub promotes existing accruals/property/reconcile1.0.4; worker verifies each target independently, rechecks current-main bytes and all DoD before closeout. |
+| [016](./blocked/016.md), [017](./blocked/017.md), [018](./blocked/018.md), [022](./blocked/022.md), [023](./blocked/023.md), [024](./blocked/024.md), [025](./blocked/025.md), [029](./blocked/029.md), [034](./blocked/034.md), [037](./blocked/037.md) | Ten retained merged source candidates still lack a suitable published WASM artifact. | Rustledger maintainer publishes a compatible artifact; repository worker adopts it with the owning package manager and verifies each exact native/API case. |
+| [m2](./blocked/m2/README.md), [026](./blocked/026.md), [027](./blocked/027.md), [028](./blocked/028.md), [031](./blocked/031.md), [032](./blocked/032.md), [033](./blocked/033.md), [035](./blocked/035.md), [036](./blocked/036.md), [038](./blocked/038.md) | The exact contract/semantic requirements remain unmet; a version increase alone is insufficient. Static table metadata does not clear m2's expression/WASM schema requirement. | Rustledger maintainers implement and publish the required contracts; repository worker adopts and verifies. Any outward upstream request still needs explicit authorization. |
+| [039](./blocked/039.md) | Current init1.0.4 native control is DANGEROUS/18findings with no installed directory; host scanner unchanged. | Hermes maintainers provide a compatible policy/install path; worker rehearses no-force consent/validation/existing-file preservation. |
+| [040](./blocked/040.md) | Latest changed-catalog native cohort returns14default/all and0explicitClawHub, omitting newly public roll-forward; public registry has that listing. No corrected host candidate appears. | Hermes host/index correction or genuinely changed relevant input; worker verifies bounded search controls and an actually returned listing install without force. |
 
-Release evidence: [npm registry metadata](https://registry.npmjs.org/@rustledger%2fwasm) has 58 versions and only `latest: 0.24.0` (newest publication 2026-09-06), matching [GitHub latest release v0.24.0](https://github.com/rustledger/rustledger/releases/tag/v0.24.0) and the ledger dependency. The January 1.0.0 RC builds are older. Inspected upstream main is [`51cf2326e7d6d61cb4e38dd00b9a0007b9bc851d`](https://github.com/rustledger/rustledger/commit/51cf2326e7d6d61cb4e38dd00b9a0007b9bc851d). This is source/release triage, not a fresh production retest. Every original reproduction and acceptance criterion remains applicable. Per-item source anchors, exact unblock conditions and native host records are retained under `scripts/skills/tmp/w6-audit-20261021/`.
+Release evidence: [canonical npm metadata](https://registry.npmjs.org/@rustledger%2fwasm),
+[GitHub latest releasev0.24.0](https://github.com/rustledger/rustledger/releases/tag/v0.24.0),
+and [inspected Rustledger main2595fc09](https://github.com/rustledger/rustledger/commit/2595fc09f20ea3d39724abb2dac5d11a5787b59f).
+This is source/release triage, not a new production test. Private bounded04:13
+continuation evidence is retained under `scripts/skills/tmp/w6-resume-20261022T0413/`.
+The [client release controls](../../docs/skills/client-release-controls-20261021.md),
+[historical publication preflight](../../docs/skills/clawhub-release-preflight-20261021.md)
+and [full queue reconciliation below](#full-queue-reconciliation--2026-10-22-utc)
+preserve earlier source versions, failures and outcomes. Blocking one item does
+not block later independent work; each remaining substep keeps its own condition.
+
+## Historical release and execution evidence
 
 **Rechecked 2026-10-19:** npm WASM latest remains 0.24.0. Rustledger PR #2682 has now merged; the publication prerequisite remains unmet for all twenty engine items. The workflow branch is refreshed on current main and its ten-skill layout; no hosted engine retest or dependency upgrade was performed.
 
