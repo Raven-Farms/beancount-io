@@ -117,6 +117,7 @@
 - [950 — Resolve inferred costs and prices before import hashing and comparison](./950.md) — major CLI missed-trade gap; omitted cost/price parts merge distinct purchases or hide currency corrections, while numeric inference also makes unchanged bank-ID trades falsely conflict, reproduced 2026-10-21.
 - [951 — Check imported balances against every dated row in the batch](./951.md) — major CLI used-pad guard gap; newest-first entries accept a stale EUR assertion with a hidden −50 EUR adjustment and refuse the correct assertion, reproduced 2026-10-21.
 - [952 — Invalidate the ledger cache when a local plugin helper changes](./952.md) — minor CLI stale-accounting follow-up to 326; edited fee helper leaves four read commands at 1 USD while fresh loads calculate 12.50 USD, reproduced 2026-10-21.
+- [953 — Name generator extraction failures without the configuration repair hint](./953.md) — minor CLI diagnostic follow-up to 852; deferred extract() exits get an unrelated Ingest/main-guard remedy while immediate method exits are correctly identified, reproduced 2026-10-21.
 
 The 27 findings from the MCP QA auth sweep against the hosted endpoint (023–054, less the five under [Dropped](#dropped)) were fixed in `backend-cluster/backend-v2` and closed on 2026-10-02 and 2026-10-03; each note under [`done/`](./done/) records what shipped and in which commit. None has been re-observed against the hosted endpoint yet — the fixes reach it with the next backend deploy.
 
