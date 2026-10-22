@@ -69,7 +69,6 @@
 - [470](./470.md) — Pull to refresh skips Spending's to-today read (337 follow-up)
 - [471](./471.md) — Upcoming entries can fill all of Recent Transactions
 - [315](./blocked/315.md) — In-app commits signed with Gitea username and real email (no full_name, no noreply) — **blocked:** needs the owner's noreply-address and published-history decisions, and a production backfill of existing Gitea users that can't be verified here
-- [390](./390.md) — Home net-worth chart permanent skeleton on failed first load (239 sibling)
 - [391](./391.md) — First offline launch after 244 drops the cached drawer list
 - [392](./392.md) — Add Budget refuses Persian/Arabic digits (230 sibling)
 - [393](./393.md) — Budget history delete after external change is a dead end (250 sibling)

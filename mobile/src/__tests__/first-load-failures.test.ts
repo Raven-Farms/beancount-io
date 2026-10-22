@@ -112,3 +112,32 @@ describe("account detail after a failed refresh", () => {
     );
   });
 });
+
+// w21/390: Home's net-worth chart drew its skeleton for a failed first load too,
+// which looked like loading forever. (Fixed with w21/262; pinned here.)
+describe("Home's net-worth chart card", () => {
+  const read = (relative: string) =>
+    require("fs")
+      .readFileSync(require("path").join(__dirname, "..", relative), "utf8")
+      .replace(/\s+/g, "");
+
+  it("tells a failed first load from a loading one and offers Retry", () => {
+    const card = read("screens/home-screen/components/account-charts-card.tsx");
+    expect(card.includes("if(loading||error){")).toBe(true);
+    expect(
+      card.includes(
+        "{loading?(<LoadingTileheight={PAGE_HEIGHT+PILLS_HEIGHT}mx={16}/>):(",
+      ),
+    ).toBe(true);
+    expect(card.includes("<CardLoadFailureonRetry={onRetry}/>")).toBe(true);
+  });
+
+  it("is given the failure and a retry that refetches the balance sheet", () => {
+    const home = read("screens/home-screen/home-screen.tsx");
+    expect(home.includes("error={chartError}")).toBe(true);
+    expect(home.includes("onRetry={retryChart}")).toBe(true);
+    expect(
+      home.includes("Promise.all([ledgerMetaRefetch(),balanceSheetRefetch()])"),
+    ).toBe(true);
+  });
+});
