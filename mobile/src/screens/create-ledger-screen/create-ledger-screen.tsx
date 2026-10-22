@@ -712,7 +712,13 @@ export function CreateLedgerScreen(): JSX.Element {
                 ].map((option) => (
                   <Pressable
                     key={option.value || "none"}
-                    onPress={() => setValue("openingAccount", option.value)}
+                    onPress={() => {
+                      setValue("openingAccount", option.value);
+                      // "Decide later" hides the amount field, so a value left
+                      // in it would keep failing Next's validation with no
+                      // message to show (w21/326).
+                      if (option.value === "") setValue("openingAmount", "");
+                    }}
                     style={[
                       styles.optionRow,
                       openingAccountValue === option.value
