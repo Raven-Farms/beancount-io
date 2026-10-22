@@ -13,6 +13,9 @@ describe("assertEntryTokens", () => {
     "Assets:Café",
     "资产:现金",
     "Liabilities:CreditCard:2026",
+    // w21/649: ZWNJ and ZWJ, as Persian and Indic words carry them.
+    "Assets:Bank:خانه\u200cها",
+    "Assets:Bank:क्\u200dष",
   ])("accepts account %p", (account) => {
     expect(() =>
       assertEntryTokens([
@@ -29,6 +32,10 @@ describe("assertEntryTokens", () => {
     "Assets:Cash\u2028x",
     "Assets:Ca;sh",
     'Assets:Ca"sh',
+    // Other format characters stay refused (w21/649): ZWSP, LRM, word joiner.
+    "Assets:Bank:خانه\u200bها",
+    "Assets:Bank:خانه\u200eها",
+    "Assets:Bank:خانه\u2060ها",
   ])("refuses account %p", (account) => {
     expect(() =>
       assertEntryTokens([

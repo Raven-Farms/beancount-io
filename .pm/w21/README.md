@@ -87,7 +87,6 @@
 - [646](./646.md) — The same "1M"/"3M" pills mean a rolling window on Transactions but calendar months on Reports (Food $60 vs $100)
 - [647](./647.md) — API/agent entries with an `@` price are refused as UNBALANCED: the precheck ignores price weight (ledger; REST, GraphQL and MCP)
 - [648](./648.md) — The entries precheck ignores `inferred_tolerance_default` in Beancount syntax and gives integer postings a 0.5 tolerance (ledger)
-- [649](./649.md) — Since w23/033, valid account names with ZWNJ/ZWJ (normal in Persian) are refused with raw English API text (undoes w21/192) (ledger)
 - [508](./blocked/508.md) — Mobile guesses that an entry is a plugin copy from its first line; read the ledger's `generated_from` instead (split from 443) — **blocked:** production's GraphQL schema lacks `generated_from` until the ledger service and backend-v2 deploy; mobile's client is generated from it
 - [315](./blocked/315.md) — In-app commits signed with Gitea username and real email (no full_name, no noreply) — **blocked:** needs the owner's noreply-address and published-history decisions, and a production backfill of existing Gitea users that can't be verified here
 - [658](./658.md) — The dashboard's file browser sorts names as plain text ("qa-10.bean" before "qa-2.bean"); split from w21/589

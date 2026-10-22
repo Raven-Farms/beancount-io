@@ -18,7 +18,11 @@ const ACCOUNT = new RegExp(
     `(?::(?:[A-Z0-9]|${NON_ASCII})(?:[A-Za-z0-9-]|${NON_ASCII})*)+$`,
   "u",
 );
-const NOT_IN_A_TOKEN = /[\s\p{C}]/u;
+// ZWNJ and ZWJ are format characters (`\p{Cf}`) that Persian and Indic
+// words carry ("خانه‌ها"); both engines read them in an account, and the
+// app's Open Account allows them (w21/192), so they are not refused (w21/649).
+// Every other format and control character still is.
+const NOT_IN_A_TOKEN = /(?![\u200c\u200d])[\s\p{C}]/u;
 
 const TOKEN_RULES = {
   date: /^\d{4}-\d{2}-\d{2}$/,

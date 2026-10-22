@@ -376,6 +376,20 @@ describe("bulk entries refuse tokens that would not lex as written", () => {
     expect(written).toContain("资产:现金");
   });
 
+  // w21/649: a ZWNJ is part of the Persian word; both engines read it.
+  it("opens an account whose name holds a ZWNJ", async () => {
+    const response = await post([
+      {
+        type: "open",
+        item: { date: "2026-03-20", account: "Assets:Bank:خانه\u200cها" },
+      },
+    ]);
+    expect(response.status).toBe(200);
+    expect(fromB64(committed[0]!.files[0]!.content)).toContain(
+      "2026-03-20 open Assets:Bank:خانه\u200cها",
+    );
+  });
+
   // w21/653: the engines' lexers read tags as ASCII, so `#旅行` was dropped
   // (and `#café` read as `#caf`); the validator names the field instead.
   it("refuses a non-ASCII tag with the validator's message", async () => {

@@ -1946,6 +1946,23 @@ async function main(): Promise<void> {
     );
   }
 
+  // w21/649: an account with a ZWNJ or ZWJ is accepted, and the engine reads it.
+  for (const account of ["Assets:Bank:خانه\u200cها", "Assets:Bank:क्\u200dष"]) {
+    const opened = await parseLedgerFiles(
+      { "main.bean": `2024-01-01 open ${account}\n` },
+      "main.bean",
+    );
+    assert(
+      accepts({ postings: [{ account }] }) &&
+        opened.errors.length === 0 &&
+        opened.directives.some(
+          (directive) =>
+            directive.type === "open" && directive.account === account,
+        ),
+      `the validator accepts ${JSON.stringify(account)}, and the engine reads it`,
+    );
+  }
+
   // w21/651: a futures currency is accepted exactly when the engine reads it
   // as written (`/6E` is read as one sixth of `E`).
   for (const currency of ["/ESZ24", "/NQH21_QNEG21C13100", "/6E", "/6.3"]) {
