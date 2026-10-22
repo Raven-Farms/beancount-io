@@ -62,5 +62,9 @@
 - [547](./547.md) — Create Ledger accepts "___"-style names the server refuses, then shows only a generic retry error
 - [548](./548.md) — Books begin in years 0001–0099 passes the form, but the server refuses it (`Date.UTC` in build-ledger) (backend-v2)
 - [549](./549.md) — Create Ledger's "Amount owed" can't express a card in credit, and Review shows the opposite sign to the file
+- [550](./550.md) — Stale-sha file delete: `BAD_USER_INPUT` on GraphQL vs `CONFLICT` on REST/MCP (Gitea's single-file 400 unmapped)
+- [551](./551.md) — Deleting an already-gone file: `SERVICE_UNAVAILABLE` on REST vs `NOT_FOUND` on GraphQL/MCP
+- [552](./552.md) — `previewLedgerSetup`/`createLedger` with `title: null` is a 500 on GraphQL; null amount/currency are wrongly refused
+- [553](./553.md) — File create: REST commits "Update <path>" and refuses `""`, GraphQL commits "Create <path>" and accepts it
 - [508](./blocked/508.md) — Mobile guesses that an entry is a plugin copy from its first line; read the ledger's `generated_from` instead (split from 443) — **blocked:** production's GraphQL schema lacks `generated_from` until the ledger service and backend-v2 deploy; mobile's client is generated from it
 - [315](./blocked/315.md) — In-app commits signed with Gitea username and real email (no full_name, no noreply) — **blocked:** needs the owner's noreply-address and published-history decisions, and a production backfill of existing Gitea users that can't be verified here
