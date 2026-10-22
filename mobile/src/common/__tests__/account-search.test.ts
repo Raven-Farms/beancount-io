@@ -138,6 +138,33 @@ describe("filterAccounts", () => {
       expect(filterAccounts("outdoors", [...tied].reverse())).toEqual(tied);
     });
 
+    // w21/642: an exact name scored like a prefix, and usage broke the tie.
+    test("puts the account the query names exactly first, whatever the usage", () => {
+      const usage: AccountUsage = {
+        "Expenses:Rental-Car": { count: 9, lastUsedAt: NOW },
+        "Expenses:Food:Groceries": { count: 9, lastUsedAt: NOW },
+      };
+      const chart = [
+        "Expenses:Rental-Car",
+        "Expenses:Rent",
+        "Expenses:Food:Groceries",
+        "Expenses:Food",
+      ];
+      expect(filterAccounts("rent", chart, { usage, now: NOW })[0]).toBe(
+        "Expenses:Rent",
+      );
+      expect(
+        filterAccounts("Expenses:Food", chart, { usage, now: NOW })[0],
+      ).toBe("Expenses:Food");
+      expect(filterAccounts("food", chart, { usage, now: NOW })[0]).toBe(
+        "Expenses:Food",
+      );
+      // Smartcase still holds: an uppercase query names only that case.
+      expect(
+        filterAccounts("RENT", ["Expenses:Rent", "Expenses:RENT-Car"])[0],
+      ).toBe("Expenses:RENT-Car");
+    });
+
     test("never lets usage outrank a better match", () => {
       const usage: AccountUsage = {
         "Expenses:Fun:Outdoors": { count: 99, lastUsedAt: NOW },

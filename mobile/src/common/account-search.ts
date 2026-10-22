@@ -145,14 +145,31 @@ export function fuzzyMatch(pattern: string, text: string): number {
 }
 
 /**
+ * How exactly `pattern` names `account`: 2 for the whole name, 1 for its last
+ * segment, else 0, under the same smartcase rule as the match. A past pick of
+ * `Expenses:Rental-Car` ranked it above `Expenses:Rent` for "rent", since a
+ * whole-segment match scored like a prefix and usage broke the tie (w21/642).
+ */
+function exactness(pattern: string, account: string): number {
+  const wanted = toNfc(pattern);
+  const named = (text: string) =>
+    text.length === wanted.length &&
+    substringIndex(text, lowerAligned(text), wanted) === 0;
+  const text = toNfc(account);
+  if (named(text)) return 2;
+  return named(text.slice(text.lastIndexOf(SEGMENT_SEPARATOR) + 1)) ? 1 : 0;
+}
+
+/**
  * Accounts matching `pattern`, best first. An empty pattern returns the input
  * order untouched, so the caller can hand back its browse ordering unchanged.
  *
- * Match quality always dominates — a better match outranks a more-used weaker
- * one. Only once two accounts match equally well does `usage` decide, so the
- * ones the user actually books against come first; remaining ties break on the
- * shorter account, then alphabetically, so equally-good matches land in a
- * stable, predictable order rather than query-order chance.
+ * An account the query names exactly (its whole name, then its last segment)
+ * comes first. Then match quality dominates — a better match outranks a
+ * more-used weaker one. Only once two accounts match equally well does `usage`
+ * decide, so the ones the user actually books against come first; remaining
+ * ties break on the shorter account, then alphabetically, so equally-good
+ * matches land in a stable, predictable order rather than query-order chance.
  */
 export function filterAccounts(
   pattern: string,
@@ -171,6 +188,7 @@ export function filterAccounts(
 
   const matches: Array<{
     account: string;
+    exact: number;
     score: number;
     frecency: number;
   }> = [];
@@ -192,6 +210,7 @@ export function filterAccounts(
     // survived the match, which on a real chart of accounts is few of them.
     matches.push({
       account,
+      exact: words.length === 1 ? exactness(trimmed, account) : 0,
       score,
       frecency: ranking
         ? frecencyScore(ranking.usage[account], ranking.now)
@@ -202,6 +221,7 @@ export function filterAccounts(
   return matches
     .sort(
       (a, b) =>
+        b.exact - a.exact ||
         b.score - a.score ||
         b.frecency - a.frecency ||
         a.account.length - b.account.length ||
