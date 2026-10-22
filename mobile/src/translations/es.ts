@@ -385,6 +385,10 @@ export const es: Translations = {
   ledgerInvalidLink:
     "^{{value}} no se puede usar como enlace. Usa solo las letras A–Z, dígitos y - _ . /",
   ledgerInvalidFlag: "{{value}} no se puede usar como marca.",
+  ledgerEntryOneAtATime: "Edita una sola entrada a la vez.",
+  ledgerEntryIndent: "Sangra los apuntes bajo la línea de la fecha.",
+  ledgerEntryNotAnEntry:
+    "Las opciones, los complementos y las inclusiones no son asientos. Cámbialos en el editor de archivos del libro.",
   openAccountInvalidRoot: "Elige un tipo de cuenta válido.",
   openAccountNameRequired: "Escribe al menos un componente del nombre.",
   openAccountEmptyComponent:

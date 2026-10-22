@@ -384,6 +384,10 @@ export const pt: Translations = {
   ledgerInvalidLink:
     "^{{value}} não pode ser usado como link. Use apenas as letras A–Z, dígitos e - _ . /",
   ledgerInvalidFlag: "{{value}} não pode ser usado como marca.",
+  ledgerEntryOneAtATime: "Edite um lançamento de cada vez.",
+  ledgerEntryIndent: "Recue os lançamentos abaixo da linha da data.",
+  ledgerEntryNotAnEntry:
+    "Opções, plugins e inclusões não são lançamentos. Altere-os no editor de arquivos do livro.",
   openAccountInvalidRoot: "Escolha um tipo de conta válido.",
   openAccountNameRequired: "Digite pelo menos uma parte do nome da conta.",
   openAccountEmptyComponent:

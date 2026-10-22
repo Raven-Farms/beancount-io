@@ -388,6 +388,10 @@ export const de: Translations = {
   ledgerInvalidLink:
     "^{{value}} kann nicht als Link verwendet werden. Verwenden Sie nur die Buchstaben A–Z, Ziffern und - _ . /",
   ledgerInvalidFlag: "{{value}} kann nicht als Flag verwendet werden.",
+  ledgerEntryOneAtATime: "Bearbeiten Sie jeweils nur einen Eintrag.",
+  ledgerEntryIndent: "Rücken Sie die Buchungszeilen unter der Datumszeile ein.",
+  ledgerEntryNotAnEntry:
+    "Optionen, Plugins und Includes sind keine Einträge. Ändern Sie sie im Dateieditor des Buchs.",
   openAccountInvalidRoot: "Wählen Sie einen gültigen Kontotyp.",
   openAccountNameRequired: "Geben Sie mindestens einen Namensbestandteil ein.",
   openAccountEmptyComponent: "Namensbestandteile dürfen nicht leer sein.",

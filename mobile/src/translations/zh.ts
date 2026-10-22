@@ -338,6 +338,10 @@ export const zh: Translations = {
   ledgerInvalidLink:
     "^{{value}} 不能用作关联。只能使用字母 A–Z、数字和 - _ . /",
   ledgerInvalidFlag: "{{value}} 不能用作标记。",
+  ledgerEntryOneAtATime: "一次只能编辑一条记录。",
+  ledgerEntryIndent: "请将分录缩进到日期行下方。",
+  ledgerEntryNotAnEntry:
+    "选项、插件和包含指令不是记录。请在账本文件编辑器中修改它们。",
   openAccountInvalidRoot: "请选择有效的账户类型。",
   openAccountNameRequired: "请至少输入一级账户名称。",
   openAccountEmptyComponent: "各级账户名称不能为空。",

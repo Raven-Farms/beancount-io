@@ -373,6 +373,10 @@ export const fa: Translations = {
   ledgerInvalidLink:
     "^{{value}} را نمی‌توان به‌عنوان پیوند به کار برد. فقط از حروف A–Z، ارقام و - _ . / استفاده کنید.",
   ledgerInvalidFlag: "{{value}} را نمی‌توان به‌عنوان پرچم به کار برد.",
+  ledgerEntryOneAtATime: "هر بار فقط یک ورودی را ویرایش کنید.",
+  ledgerEntryIndent: "ردیف‌های تراکنش را زیر خط تاریخ تورفتگی بدهید.",
+  ledgerEntryNotAnEntry:
+    "گزینه‌ها، افزونه‌ها و شامل‌شدن‌ها ورودی نیستند. آن‌ها را در ویرایشگر فایل دفتر تغییر دهید.",
   openAccountInvalidRoot: "یک نوع حساب معتبر انتخاب کنید.",
   openAccountNameRequired: "دست‌کم یک بخش از نام حساب را وارد کنید.",
   openAccountEmptyComponent: "بخش‌های نام حساب نمی‌توانند خالی باشند.",

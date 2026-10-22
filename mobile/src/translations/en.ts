@@ -369,6 +369,10 @@ export const en = {
   ledgerInvalidLink:
     "^{{value}} can't be used as a link. Use only the letters A–Z, digits and - _ . /",
   ledgerInvalidFlag: "{{value}} can't be used as a flag.",
+  ledgerEntryOneAtATime: "Edit one entry at a time.",
+  ledgerEntryIndent: "Indent postings under the date line.",
+  ledgerEntryNotAnEntry:
+    "Options, plugins and includes aren't entries. Change them in the ledger file editor.",
   openAccountInvalidRoot: "Choose a valid account type.",
   openAccountNameRequired: "Enter at least one account name component.",
   openAccountEmptyComponent: "Account components cannot be empty.",

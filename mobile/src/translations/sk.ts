@@ -387,6 +387,10 @@ export const sk: Translations = {
   ledgerInvalidLink:
     "^{{value}} nemožno použiť ako odkaz. Použite iba písmená A–Z, číslice a - _ . /",
   ledgerInvalidFlag: "{{value}} nemožno použiť ako príznak.",
+  ledgerEntryOneAtATime: "Upravujte naraz iba jeden záznam.",
+  ledgerEntryIndent: "Odsaďte účtovania pod riadkom s dátumom.",
+  ledgerEntryNotAnEntry:
+    "Možnosti, pluginy a zahrnutia nie sú záznamy. Zmeňte ich v editore súboru knihy.",
   openAccountInvalidRoot: "Vyberte platný typ účtu.",
   openAccountNameRequired: "Zadajte aspoň jednu časť názvu účtu.",
   openAccountEmptyComponent: "Časti názvu účtu nemôžu byť prázdne.",

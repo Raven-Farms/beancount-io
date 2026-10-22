@@ -377,6 +377,10 @@ export const bg: Translations = {
   ledgerInvalidLink:
     "^{{value}} не може да се използва като връзка. Използвайте само буквите A–Z, цифри и - _ . /",
   ledgerInvalidFlag: "{{value}} не може да се използва като флаг.",
+  ledgerEntryOneAtATime: "Редактирайте по един запис наведнъж.",
+  ledgerEntryIndent: "Отместете постингите навътре под реда с датата.",
+  ledgerEntryNotAnEntry:
+    "Опциите, плъгините и включванията не са записи. Променяйте ги в редактора на файла на книгата.",
   openAccountInvalidRoot: "Изберете валиден вид сметка.",
   openAccountNameRequired: "Въведете поне една част от името на сметката.",
   openAccountEmptyComponent:

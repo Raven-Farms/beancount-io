@@ -386,6 +386,10 @@ export const fr: Translations = {
   ledgerInvalidLink:
     "^{{value}} ne peut pas servir de lien. Utilisez uniquement les lettres A–Z, des chiffres et - _ . /",
   ledgerInvalidFlag: "{{value}} ne peut pas servir de drapeau.",
+  ledgerEntryOneAtATime: "Modifiez une seule écriture à la fois.",
+  ledgerEntryIndent: "Indentez les lignes de mouvement sous la ligne de date.",
+  ledgerEntryNotAnEntry:
+    "Les options, les plugins et les inclusions ne sont pas des écritures. Modifiez-les dans l'éditeur de fichier du grand livre.",
   openAccountInvalidRoot: "Choisissez un type de compte valide.",
   openAccountNameRequired: "Saisissez au moins un élément du nom.",
   openAccountEmptyComponent: "Les éléments du nom ne peuvent pas être vides.",

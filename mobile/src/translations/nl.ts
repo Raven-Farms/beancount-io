@@ -376,6 +376,10 @@ export const nl: Translations = {
   ledgerInvalidLink:
     "^{{value}} kan niet als link worden gebruikt. Gebruik alleen de letters A–Z, cijfers en - _ . /",
   ledgerInvalidFlag: "{{value}} kan niet als vlag worden gebruikt.",
+  ledgerEntryOneAtATime: "Bewerk één boeking tegelijk.",
+  ledgerEntryIndent: "Laat de boekingsregels inspringen onder de datumregel.",
+  ledgerEntryNotAnEntry:
+    "Opties, plugins en includes zijn geen boekingen. Wijzig ze in de bestandseditor van het grootboek.",
   openAccountInvalidRoot: "Kies een geldig accounttype.",
   openAccountNameRequired: "Voer minstens één naamdeel in.",
   openAccountEmptyComponent: "Naamdelen mogen niet leeg zijn.",

@@ -387,6 +387,10 @@ export const ru: Translations = {
   ledgerInvalidLink:
     "^{{value}} нельзя использовать как ссылку. Используйте только буквы A–Z, цифры и - _ . /",
   ledgerInvalidFlag: "{{value}} нельзя использовать как флаг.",
+  ledgerEntryOneAtATime: "Редактируйте по одной записи за раз.",
+  ledgerEntryIndent: "Сделайте отступ у проводок под строкой с датой.",
+  ledgerEntryNotAnEntry:
+    "Опции, плагины и включения не являются записями. Меняйте их в редакторе файла книги.",
   openAccountInvalidRoot: "Выберите допустимый тип счёта.",
   openAccountNameRequired: "Введите хотя бы одну часть названия счёта.",
   openAccountEmptyComponent: "Части названия счёта не могут быть пустыми.",

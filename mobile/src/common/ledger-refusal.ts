@@ -151,6 +151,17 @@ const TOKEN_REFUSAL_KEYS: Record<string, string> = {
   "transaction flag": "ledgerInvalidFlag",
 };
 
+function refusalMessages(error: unknown): unknown[] {
+  const gqlErrors = (error as { graphQLErrors?: unknown } | null)
+    ?.graphQLErrors;
+  return [
+    ...(Array.isArray(gqlErrors) ? gqlErrors : []).map(
+      (gqlError) => (gqlError as { message?: unknown } | null)?.message,
+    ),
+    (error as { message?: unknown } | null)?.message,
+  ];
+}
+
 /**
  * A token refusal in the app's words, naming the value and not the wire field
  * it came in (w21/659); null for one whose kind has no copy, so the screen
@@ -161,15 +172,7 @@ function tokenRefusal(
   error: unknown,
   i18n: Translate,
 ): string | null | undefined {
-  const gqlErrors = (error as { graphQLErrors?: unknown } | null)
-    ?.graphQLErrors;
-  const messages = [
-    ...(Array.isArray(gqlErrors) ? gqlErrors : []).map(
-      (gqlError) => (gqlError as { message?: unknown } | null)?.message,
-    ),
-    (error as { message?: unknown } | null)?.message,
-  ];
-  for (const message of messages) {
+  for (const message of refusalMessages(error)) {
     const match =
       typeof message === "string" ? TOKEN_REFUSAL.exec(message) : null;
     if (!match) continue;
@@ -182,6 +185,38 @@ function tokenRefusal(
     }
     const key = TOKEN_REFUSAL_KEYS[match[2]];
     return key ? i18n.t(key, { value }) : null;
+  }
+  return undefined;
+}
+
+/**
+ * The ledger's refusal of replacement text that is not exactly one dated
+ * directive (w23/036): "newContent must be one dated directive: …", "…holds 2
+ * entries; edit them one at a time or use updateLedgerFiles", "…holds no
+ * entry; remove the entry with deleteEntrySource instead", and "`option`
+ * configures the ledger and is not an entry…". They named API fields and calls
+ * in English on the Edit Transaction banner (w21/620); undefined when the error
+ * is not one.
+ */
+const SINGLE_ENTRY_REFUSALS: [RegExp, string][] = [
+  [/^\S+ holds no entry;/, "editTransactionEmpty"],
+  [/^\S+ holds \d+ entries;/, "ledgerEntryOneAtATime"],
+  [/^\S+ must be one dated directive:/, "ledgerEntryIndent"],
+  [
+    /^`[a-z]+` configures the ledger and is not an entry/,
+    "ledgerEntryNotAnEntry",
+  ],
+];
+
+function singleEntryRefusal(
+  error: unknown,
+  i18n: Translate,
+): string | undefined {
+  for (const message of refusalMessages(error)) {
+    if (typeof message !== "string") continue;
+    for (const [pattern, key] of SINGLE_ENTRY_REFUSALS) {
+      if (pattern.test(message)) return i18n.t(key);
+    }
   }
   return undefined;
 }
@@ -269,6 +304,8 @@ export function ledgerWriteFailureMessage(
   if (codes.includes("BAD_USER_INPUT")) {
     const token = tokenRefusal(error, i18n);
     if (token !== undefined) return token;
+    const single = singleEntryRefusal(error, i18n);
+    if (single !== undefined) return single;
   }
   if (codes.some((code) => LEDGER_TEXT_CODES.has(code))) {
     return error instanceof Error && error.message.trim()

@@ -386,6 +386,10 @@ export const ca: Translations = {
   ledgerInvalidLink:
     "^{{value}} no es pot fer servir com a enllaç. Fes servir només les lletres A–Z, xifres i - _ . /",
   ledgerInvalidFlag: "{{value}} no es pot fer servir com a marca.",
+  ledgerEntryOneAtATime: "Edita una sola entrada alhora.",
+  ledgerEntryIndent: "Sagna els apunts sota la línia de la data.",
+  ledgerEntryNotAnEntry:
+    "Les opcions, els connectors i les inclusions no són entrades. Canvia-les a l'editor de fitxers del llibre.",
   openAccountInvalidRoot: "Tria un tipus de compte vàlid.",
   openAccountNameRequired: "Escriu almenys un component del nom.",
   openAccountEmptyComponent: "Els components del nom no poden ser buits.",

@@ -438,3 +438,45 @@ describe("ledgerWriteFailureMessage with a token refusal", () => {
     ).toBe("entry 0: renders as more than one directive");
   });
 });
+
+// w21/620: the server's single-entry check (w23/036) put API wording ("newContent
+// must be one dated directive", "use updateLedgerFiles") on the Edit banner.
+describe("ledgerWriteFailureMessage with a single-entry refusal", () => {
+  const keyed = { t: (key: string) => key };
+  const badInput = (message: string) =>
+    Object.assign(new Error(message), {
+      graphQLErrors: [{ message, extensions: { code: "BAD_USER_INPUT" } }],
+    });
+
+  it("is the app's own copy, without API names", () => {
+    const cases: [string, string][] = [
+      [
+        "newContent must be one dated directive: Assets:Cash -23.50 USD",
+        "ledgerEntryIndent",
+      ],
+      [
+        "newContent holds 2 entries; edit them one at a time or use updateLedgerFiles",
+        "ledgerEntryOneAtATime",
+      ],
+      [
+        "newContent holds no entry; remove the entry with deleteEntrySource instead",
+        "editTransactionEmpty",
+      ],
+      [
+        '`option` configures the ledger and is not an entry; change it with updateLedgerFiles: option "title" "x"',
+        "ledgerEntryNotAnEntry",
+      ],
+    ];
+    for (const [message, expected] of cases) {
+      expect(ledgerWriteFailureMessage(badInput(message), keyed)).toBe(
+        expected,
+      );
+    }
+  });
+
+  it("leaves other bad input as the server wrote it", () => {
+    expect(
+      ledgerWriteFailureMessage(badInput("limit must be positive"), keyed),
+    ).toBe("limit must be positive");
+  });
+});

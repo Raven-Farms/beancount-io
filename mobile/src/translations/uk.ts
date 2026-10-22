@@ -385,6 +385,10 @@ export const uk: Translations = {
   ledgerInvalidLink:
     "^{{value}} не можна використати як посилання. Використовуйте лише літери A–Z, цифри та - _ . /",
   ledgerInvalidFlag: "{{value}} не можна використати як прапорець.",
+  ledgerEntryOneAtATime: "Редагуйте по одному запису за раз.",
+  ledgerEntryIndent: "Зробіть відступ у проводок під рядком із датою.",
+  ledgerEntryNotAnEntry:
+    "Опції, плагіни та включення не є записами. Змінюйте їх у редакторі файлу книги.",
   openAccountInvalidRoot: "Оберіть дійсний тип рахунку.",
   openAccountNameRequired: "Введіть хоча б одну частину назви рахунку.",
   openAccountEmptyComponent: "Частини назви рахунку не можуть бути порожніми.",
