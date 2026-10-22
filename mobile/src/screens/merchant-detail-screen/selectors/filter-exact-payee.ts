@@ -6,6 +6,11 @@
  * Free of `@/` imports so the jest-lite runner can require it.
  */
 
+import { toPlainSearchFilter } from "../../transactions-screen/utils/plain-search-filter";
+
+/** The longest filter pattern the ledger service accepts. */
+const MAX_FILTER_PATTERN_LENGTH = 256;
+
 export interface PayeeBearing {
   payee?: string | null;
 }
@@ -57,13 +62,28 @@ export function parseSpellings(raw: string | string[] | undefined): string[] {
 export function exactPayeeFilter(
   payees: readonly string[],
 ): string | undefined {
-  const alternatives = payees
+  // The server matches case-insensitively, so spellings that differ only in
+  // case or in trailing space are one alternative (w21/361).
+  const seen = new Set<string>();
+  const spellings = payees
     .map((payee) => payee.trim())
-    .filter(Boolean)
+    .filter((payee) => {
+      const key = payee.toLowerCase();
+      if (!payee || seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  if (spellings.length === 0) return undefined;
+  const alternatives = spellings
     .map((payee) => payee.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"))
     // The filter's string literal has no escapes, so a quote is spelled \x22.
     .map((payee) => payee.replace(/"/g, "\\x22"));
-  return alternatives.length === 0
-    ? undefined
-    : `payee:"^\\s*(?:${alternatives.join("|")})\\s*$"`;
+  const pattern = `^\\s*(?:${alternatives.join("|")})\\s*$`;
+  // The ledger service refuses a pattern longer than this, which failed the
+  // whole journal for a merchant with long merged spellings. Fall back to
+  // matching the primary spelling as text; `filterExactPayee` still narrows
+  // the rows on the client.
+  return pattern.length > MAX_FILTER_PATTERN_LENGTH
+    ? toPlainSearchFilter(spellings[0])
+    : `payee:"${pattern}"`;
 }

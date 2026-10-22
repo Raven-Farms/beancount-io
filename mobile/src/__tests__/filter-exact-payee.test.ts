@@ -61,6 +61,38 @@ describe("exactPayeeFilter", () => {
     );
   });
 
+  // w21/361: the ledger service refuses a filter pattern over 256 characters,
+  // which failed the whole journal for a merchant with long merged spellings.
+  it("merges spellings that differ only in case or trailing space", () => {
+    expect(exactPayeeFilter(["QA Ace", "qa ace", "QA Ace ", "Qa ACE"])).toBe(
+      'payee:"^\\s*(?:QA Ace)\\s*$"',
+    );
+  });
+
+  it("stays under the server's pattern limit, falling back to the primary spelling as text", () => {
+    const long = "ACME INTERNATIONAL PAYMENT PROCESSING SERVICES 0123456789";
+    const spellings = [
+      long,
+      long.toLowerCase(),
+      `${long} `,
+      `${long} EU`,
+      `${long} UK`,
+      `${long} DE`,
+      `${long} FR`,
+      `${long} IT`,
+    ];
+    const filter = exactPayeeFilter(spellings)!;
+    // Six distinct spellings of 57-60 characters do not fit in 256, so the
+    // primary one is matched as text instead.
+    expect(filter).toBe(`"${long}"`);
+    // Case variants alone collapse to one alternative, which fits.
+    expect(
+      exactPayeeFilter([long, long.toLowerCase(), `${long} `])!.startsWith(
+        'payee:"^',
+      ),
+    ).toBe(true);
+  });
+
   it("is nothing for no payee", () => {
     expect(exactPayeeFilter([" "])).toBe(undefined);
   });
