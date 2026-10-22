@@ -135,7 +135,24 @@ Remove the old install **before** installing by another method — two copies of
 
 ### One suite release
 
-Subsequent ClawHub releases use one **`@puncsky/beancount-io` bundle plugin**, sharing the existing Claude Code/Codex suite version. All thirteen workflows keep their names, instructions and sibling references. The [suite distribution record](suite-distribution.md) carries the exact publication state, supported install/update commands, and migration evidence. The 0.4.0 release is being prepared; the earlier individual listings remain usable during review.
+Install the complete suite from one public ClawHub plugin entry,
+**[`@puncsky/beancount-io`](https://clawhub.ai/plugins/@puncsky/beancount-io)**,
+sharing the Claude Code/Codex suite version **0.4.0**. All thirteen workflows
+keep their names, instructions and sibling references.
+
+```sh
+openclaw plugins install clawhub:@puncsky/beancount-io --accept-capabilities
+openclaw plugins update beancount-io
+openclaw skills list --json
+```
+
+These exact commands pass on OpenClaw 2026.10.5. The accepted surface contains
+only skills; normal registry trust is Safe. All thirteen skills are visible and
+callable, all 53 authored files match, and the managed update preserves the
+package and unrelated skills. The [suite record](suite-distribution.md) gives
+source hashes, search, migration, update limits and the resolved scanner timeout.
+Legacy workspace copies take precedence over plugin copies: preserve edits and
+remove them through their owning installer before switching to the suite.
 
 Hermes v0.22.4 cannot currently admit the complete portable suite: it rejects nested host metadata and its plugin scanner blocks init's intended instruction-file creation. Keep the already verified standalone skills for Hermes. The full-suite limitation is tracked by w6/m6.5, alongside the existing init-policy finding w6/039; no forced install or scanner configuration change is part of this route.
 
@@ -192,8 +209,9 @@ across the suite and the documented import-recovery profile; init retains its
 policy refusal. Fresh default Hermes search now displays all thirteen suite
 identifiers among sixteen results. The [final verification](clawhub-rehearsal.md#final-current-version-verification--2026-10-22-utc)
 preserves the original failures, recoveries, prior model-backed queries and
-exact host limits. The owner selects a single suite package for future ClawHub
-releases; that package is not yet published or verified by this milestone.
+exact host limits. The completed standalone milestone is preserved as history. The single suite
+package now ships as0.4.0, with public OpenClaw installation/update verified
+[above](#one-suite-release).
 An upload receipt does not establish public availability or complete support.
 
 The current Hermes default search finds all thirteen suite listings:

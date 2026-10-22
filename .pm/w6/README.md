@@ -7,20 +7,22 @@
 | Milestone | Adoption outcome | Current state |
 | --- | --- | --- |
 | [m6](done/m6/README.md) | Install the submitted local-ledger skills from ClawHub without a repository checkout. | Done:13public/current versions and OpenClaw119/119files;12supported Hermes installs112/112files; current default search and retained first queries pass. Future publication uses one suite package. |
-| [m7](./done/m7/README.md) | Connect OpenClaw and Hermes to the existing hosted Beancount.io MCP endpoint. | Done; separate from local ClawHub skill distribution. |
-| [m8](./blocked/m8/README.md) | Publish or claim the hosted connector on Smithery and Glama. | Shared packet done; supported Smithery intake and existing Glama claim/private-QA/full-day health remain. |
-| [m9](./blocked/m9/README.md) | Make the hosted connector discoverable in Docker, Cursor, Cline and GitHub/VS Code galleries. | Cursor community/native QA complete and grant retained; separate client grants, official agreement/operator nomination and platform reviews remain. |
-| [m10](./blocked/m10/README.md) | List the hosted connector in MCPServers.org, MCPMarket and LobeHub. | Two free submissions are accepted into review queues; public listing/connection checks and Lobe account/agreement/publication remain. |
+| [m6.5](./blocked/m6.5/README.md) | Install and update the ledger workflows through one Beancount.io suite. | Public `@puncsky/beancount-io` 0.4.0; native search/install/update, 13 skills/53 files and migration pass. Eight tasks done; Hermes admission and final closeout remain blocked. |
+| [m7](done/m7/README.md) | Connect OpenClaw and Hermes to the existing hosted Beancount.io MCP endpoint. | Done; separate from local ClawHub skill distribution. |
+| [m8](blocked/m8/README.md) | Publish or claim the hosted connector on Smithery and Glama. | Shared packet done; supported Smithery intake and existing Glama claim/private-QA/full-day health remain. |
+| [m9](blocked/m9/README.md) | Make the hosted connector discoverable in Docker, Cursor, Cline and GitHub/VS Code galleries. | Cursor community/native QA complete and grant retained; separate client grants, official agreement/operator nomination and platform reviews remain. |
+| [m10](blocked/m10/README.md) | List the hosted connector in MCPServers.org, MCPMarket and LobeHub. | Two free submissions are accepted into review queues; public listing/connection checks and Lobe account/agreement/publication remain. |
 
-The local-skills suite0.3.8 closeout is complete. All13latest ClawHub versions
+The historical standalone suite0.3.8 closeout is complete. All13latest ClawHub versions
 are1.0.4 under puncsky, matching119authored files. OpenClaw installs all13;
 Hermes verifies12supported skills/112files across its suite and the documented
 import-recovery profile. Init remains independently tracked in039. Fresh default
 Hermes discovery finds all13suite names among16results; source-filtered discovery
 remains a separate040 follow-up. Both retained standalone first queries pass.
 See [final verification](../../docs/skills/clawhub-rehearsal.md#final-current-version-verification--2026-10-22-utc).
-The owner selects one suite package for subsequent ClawHub publication; the
-package is not yet delivered by this completed standalone-release milestone.
+The owner selects one suite package for subsequent ClawHub publication.
+[m6.5](./blocked/m6.5/README.md) now ships public suite0.4.0 with verified native
+OpenClaw install/update; its remaining delivery gate is Hermes suite admission.
 
 The04:17UTC primary release/source refresh retains WASM0.24.0 (58versions,
 September6publication, identical artifact integrity). Rustledger main advances
@@ -31,10 +33,10 @@ are unchanged; no identical native policy/search repro is repeated.
 
 | Items | Verified state | Action that clears the blocker |
 | --- | --- | --- |
-| [016](./blocked/016.md), [017](./blocked/017.md), [018](./blocked/018.md), [022](./blocked/022.md), [023](./blocked/023.md), [024](./blocked/024.md), [025](./blocked/025.md), [029](./blocked/029.md), [034](./blocked/034.md), [037](./blocked/037.md) | Ten retained merged source candidates still lack a suitable published WASM artifact. | Rustledger maintainer publishes a compatible artifact; repository worker adopts it with the owning package manager and verifies each exact native/API case. |
-| [m2](./blocked/m2/README.md), [026](./blocked/026.md), [027](./blocked/027.md), [028](./blocked/028.md), [031](./blocked/031.md), [032](./blocked/032.md), [033](./blocked/033.md), [035](./blocked/035.md), [036](./blocked/036.md), [038](./blocked/038.md) | The exact contract/semantic requirements remain unmet; a version increase alone is insufficient. Static table metadata does not clear m2's expression/WASM schema requirement. | Rustledger maintainers implement and publish the required contracts; repository worker adopts and verifies. Any outward upstream request still needs explicit authorization. |
-| [039](./blocked/039.md) | Current init1.0.4 native control is DANGEROUS/18findings with no installed directory; host scanner unchanged. | Hermes maintainers provide a compatible policy/install path; worker rehearses no-force consent/validation/existing-file preservation. |
-| [040](./blocked/040.md) | The m6 closeout's fresh default search now finds all13suite names among16results. The previously observed explicit-source failure remains independently tracked and is not retested by this closeout. | Hermes host/index correction or genuinely changed relevant input; worker verifies bounded source-filter controls and an actually returned listing install without force. |
+| [016](blocked/016.md), [017](blocked/017.md), [018](blocked/018.md), [022](blocked/022.md), [023](blocked/023.md), [024](blocked/024.md), [025](blocked/025.md), [029](blocked/029.md), [034](blocked/034.md), [037](blocked/037.md) | Ten retained merged source candidates still lack a suitable published WASM artifact. | Rustledger maintainer publishes a compatible artifact; repository worker adopts it with the owning package manager and verifies each exact native/API case. |
+| [m2](blocked/m2/README.md), [026](blocked/026.md), [027](blocked/027.md), [028](blocked/028.md), [031](blocked/031.md), [032](blocked/032.md), [033](blocked/033.md), [035](blocked/035.md), [036](blocked/036.md), [038](blocked/038.md) | The exact contract/semantic requirements remain unmet; a version increase alone is insufficient. Static table metadata does not clear m2's expression/WASM schema requirement. | Rustledger maintainers implement and publish the required contracts; repository worker adopts and verifies. Any outward upstream request still needs explicit authorization. |
+| [039](blocked/039.md) | Current init1.0.4 native control is DANGEROUS/18findings with no installed directory; host scanner unchanged. | Hermes maintainers provide a compatible policy/install path; worker rehearses no-force consent/validation/existing-file preservation. |
+| [040](blocked/040.md) | The m6 closeout's fresh default search now finds all13suite names among16results. The previously observed explicit-source failure remains independently tracked and is not retested by this closeout. | Hermes host/index correction or genuinely changed relevant input; worker verifies bounded source-filter controls and an actually returned listing install without force. |
 
 Release evidence: [canonical npm metadata](https://registry.npmjs.org/@rustledger%2fwasm),
 [GitHub latest releasev0.24.0](https://github.com/rustledger/rustledger/releases/tag/v0.24.0),
@@ -82,77 +84,77 @@ Prioritize the major correctness findings (PRINT/FROM/JOURNAL, authored location
 
 ## Milestones
 
-- [ ] **m6.5** — [Distribute the Beancount.io customer skills as one suite](./m6.5/README.md) (10 tasks; A3/A2/A1; ~6h) ← explicit owner request 2026-10-22; preserves completed m6 and existing standalone releases.
+- [ ] **m6.5** — [Distribute the Beancount.io customer skills as one suite](./blocked/m6.5/README.md) (10 tasks; 8 done; A3/A2/A1) ← explicit owner request 2026-10-22. **Blocked:** Hermes portable metadata/init-policy admission and final closeout only. Suite 0.4.0 is public; native registry search, install, update, 13 skills/53 files, migration and tests pass.
 
-- [ ] **m9** — [Reach developer marketplaces and galleries](./blocked/m9/README.md) (10 tasks; A3/A1) ← approved local roadmap, synchronized under `$loopx w6` on 2026-10-21 UTC; **blocked:** payloads prepared; cursor.directory entry in New/native OAuth/query/preview complete; native dedicated-QA journeys, final publisher agreement/operator request and external reviews remain
-- [ ] **m10** — [List the connector in independent web directories](./blocked/m10/README.md) (8 tasks; A3/A1) ← approved local roadmap, synchronized under `$loopx w6` on 2026-10-21 UTC; **blocked:** MCPServers.org and MCPMarket free submissions accepted into queues; LobeHub sign-in agreement approval pending
+- [ ] **m9** — [Reach developer marketplaces and galleries](blocked/m9/README.md) (10 tasks; A3/A1) ← approved local roadmap, synchronized under `$loopx w6` on 2026-10-21 UTC; **blocked:** payloads prepared; cursor.directory entry in New/native OAuth/query/preview complete; native dedicated-QA journeys, final publisher agreement/operator request and external reviews remain
+- [ ] **m10** — [List the connector in independent web directories](blocked/m10/README.md) (8 tasks; A3/A1) ← approved local roadmap, synchronized under `$loopx w6` on 2026-10-21 UTC; **blocked:** MCPServers.org and MCPMarket free submissions accepted into queues; LobeHub sign-in agreement approval pending
 
-- [ ] **m8** — [Claim and publish the hosted connector on Smithery and Glama](./blocked/m8/README.md) (8 tasks; A3/A1) ← existing local marketplace roadmap, continued under `$loopx w6` on 2026-10-21 UTC; t001 packet shipped; **blocked:** Smithery publisher returns removed-update 403, Glama awaits w2/088 claim and full-day health
+- [ ] **m8** — [Claim and publish the hosted connector on Smithery and Glama](blocked/m8/README.md) (8 tasks; A3/A1) ← existing local marketplace roadmap, continued under `$loopx w6` on 2026-10-21 UTC; t001 packet shipped; **blocked:** Smithery publisher returns removed-update 403, Glama awaits w2/088 claim and full-day health
 
-- [x] **m7** — [Connect OpenClaw and Hermes Agent to the hosted MCP endpoint](./done/m7/README.md) (9 tasks; A1; backend-v2 fixtures and docs) ← user request 2026-10-16 to list Beancount.io on OpenClaw and Hermes Agent; ADR 019 D8
+- [x] **m7** — [Connect OpenClaw and Hermes Agent to the hosted MCP endpoint](done/m7/README.md) (9 tasks; A1; backend-v2 fixtures and docs) ← user request 2026-10-16 to list Beancount.io on OpenClaw and Hermes Agent; ADR 019 D8
 
 - [x] **m6** — [Publish the ledger skills to ClawHub for OpenClaw and Hermes Agent](done/m6/README.md) (13 tasks; A3; skills and CI) — **DONE:** all13current1.0.4versions/public bytes/OpenClaw installs verified;12supported Hermes installs and retained first queries pass; future publication switches to one suite package.
 
-- [x] **m5** — [Include current earnings in balance-sheet equity](./done/m5/README.md) (6 tasks; major; ledger with backend-v2 validation).
+- [x] **m5** — [Include current earnings in balance-sheet equity](done/m5/README.md) (6 tasks; major; ledger with backend-v2 validation).
 
-- [x] **m4** — [Complete empty-narration transaction lookups across APIs](./done/m4/README.md) (6 tasks; minor; ledger and backend-v2).
+- [x] **m4** — [Complete empty-narration transaction lookups across APIs](done/m4/README.md) (6 tasks; minor; ledger and backend-v2).
 
-- [x] **m3** — [Expose core ledger options consistently across API surfaces](./done/m3/README.md) (7 tasks; minor; backend-v2).
+- [x] **m3** — [Expose core ledger options consistently across API surfaces](done/m3/README.md) (7 tasks; minor; backend-v2).
 
-- [ ] **m2** — [Preserve BQL expression types across projection aliases](./blocked/m2/README.md) (7 tasks; minor; ledger with backend-v2 validation) — **blocked:** the engine query result has no column types; needs a published `@rustledger/wasm` release that exposes them
+- [ ] **m2** — [Preserve BQL expression types across projection aliases](blocked/m2/README.md) (7 tasks; minor; ledger with backend-v2 validation) — **blocked:** the engine query result has no column types; needs a published `@rustledger/wasm` release that exposes them
 
-- [x] **m1** — Count canonical BQL rows in MCP text summaries (7 tasks) ← from [003](./done/003.md).
+- [x] **m1** — Count canonical BQL rows in MCP text summaries (7 tasks) ← from [003](done/003.md).
 
 ## Inbox
 
-- [041](./blocked/041.md) — MCP.so publication — **blocked:** current $39 mandatory fee needs explicit approval or a documented free route; packet is ready.
-- [042](./blocked/042.md) — PulseMCP publication — **blocked:** new listings and changes remain paused; needs supported reopened intake.
+- [041](blocked/041.md) — MCP.so publication — **blocked:** current $39 mandatory fee needs explicit approval or a documented free route; packet is ready.
+- [042](blocked/042.md) — PulseMCP publication — **blocked:** new listings and changes remain paused; needs supported reopened intake.
 
-- [039](./blocked/039.md) — Recheck Hermes support for consent-gated ledger instruction scaffolding — **blocked:** needs a compatible Hermes host policy; retain the approved workflow and do not force installation.
-- [040](./blocked/040.md) — Recheck Hermes source-filtered ClawHub discovery — **blocked:** fresh changed-catalog cohort finds the original eleven via default/all, omits newly public roll-forward, and returns none with `--source clawhub`; needs a relevant host/index correction or changed catalog candidate.
-
-
-
-- [016](./blocked/016.md) — Adopt corrected PRINT filtering and cost-preserving rendering (major; ledger; 45–60m after release) — **blocked:** awaiting a published WASM artifact containing upstream 3ad34e07.
-
-- [017](./blocked/017.md) — Adopt upstream BQL date subtraction support (minor; ledger; 35–50m after release) — **blocked:** awaiting a published WASM artifact containing upstream 6972f5ed.
-
-- [018](./blocked/018.md) — Adopt upstream MIN/MAX support for posting amounts (minor; ledger; 35–50m after release) — **blocked:** awaiting a published WASM artifact containing upstream 25fc6be5.
+- [039](blocked/039.md) — Recheck Hermes support for consent-gated ledger instruction scaffolding — **blocked:** needs a compatible Hermes host policy; retain the approved workflow and do not force installation.
+- [040](blocked/040.md) — Recheck Hermes source-filtered ClawHub discovery — **blocked:** fresh changed-catalog cohort finds the original eleven via default/all, omits newly public roll-forward, and returns none with `--source clawhub`; needs a relevant host/index correction or changed catalog candidate.
 
 
 
-- [022](./blocked/022.md) — Adopt BQL JOURNAL date windows and opening summaries (major; ledger; 45–60m after release) — **blocked:** awaiting a published WASM artifact containing upstream 1324bc25.
+- [016](blocked/016.md) — Adopt corrected PRINT filtering and cost-preserving rendering (major; ledger; 45–60m after release) — **blocked:** awaiting a published WASM artifact containing upstream 3ad34e07.
 
-- [023](./blocked/023.md) — Adopt correct FROM predicate evaluation in BQL (major; ledger; 45–60m after release) — **blocked:** awaiting a published WASM artifact containing upstream a2d984d6.
+- [017](blocked/017.md) — Adopt upstream BQL date subtraction support (minor; ledger; 35–50m after release) — **blocked:** awaiting a published WASM artifact containing upstream 6972f5ed.
 
-- [024](./blocked/024.md) — Adopt hidden ORDER BY keys in subqueries and table groups (minor; ledger; 45–60m after release) — **blocked:** awaiting a published WASM artifact containing upstream 05b8588b.
-
-- [025](./blocked/025.md) — Adopt quoted BQL column resolution (major; ledger; 45–60m after release) — **blocked:** awaiting a published WASM artifact containing upstream 9d3bde86.
-
-- [026](./blocked/026.md) — Restore authored BQL source locations (minor; ledger; 45–60m after upstream support) — **blocked:** needs a published source-aware WASM query binding, not a known local patch.
-
-- [027](./blocked/027.md) — Preserve GETPRICE currency argument normalization (minor; ledger; 35–50m after upstream support) — **blocked:** needs a published Beanquery-compatible WASM lookup.
-
-- [028](./blocked/028.md) — Preserve negative SPLITCOMP component indices (minor; ledger; 35–50m after upstream support) — **blocked:** needs a published signed-index WASM implementation.
-
-- [029](./blocked/029.md) — Preserve Beanquery SUBST replacement and null semantics (minor; ledger; 35–50m after upstream support) — **blocked:** needs a compatible published WASM replacement/null implementation.
+- [018](blocked/018.md) — Adopt upstream MIN/MAX support for posting amounts (minor; ledger; 35–50m after release) — **blocked:** awaiting a published WASM artifact containing upstream 25fc6be5.
 
 
-- [031](./blocked/031.md) — Adopt floor-based DATE_BIN arithmetic before the origin (minor; ledger; 35–50m after upstream support) — **blocked:** needs a published native fixed-stride correction.
 
-- [032](./blocked/032.md) — Preserve calendar DATE_BIN origins and boundaries (minor; ledger; 45–60m after upstream support) — **blocked:** needs a published native month/year boundary correction.
+- [022](blocked/022.md) — Adopt BQL JOURNAL date windows and opening summaries (major; ledger; 45–60m after release) — **blocked:** awaiting a published WASM artifact containing upstream 1324bc25.
 
-- [033](./blocked/033.md) — Preserve typed zero amounts from ONLY inventory extraction (minor; ledger; 35–50m after upstream support) — **blocked:** needs a published native zero-preserving extraction.
+- [023](blocked/023.md) — Adopt correct FROM predicate evaluation in BQL (major; ledger; 45–60m after release) — **blocked:** awaiting a published WASM artifact containing upstream a2d984d6.
 
-- [034](./blocked/034.md) — Preserve FINDFIRST prefix and case matching (minor; ledger; 35–50m after upstream support) — **blocked:** needs a published native regex-policy correction.
+- [024](blocked/024.md) — Adopt hidden ORDER BY keys in subqueries and table groups (minor; ledger; 45–60m after release) — **blocked:** awaiting a published WASM artifact containing upstream 05b8588b.
 
-- [035](./blocked/035.md) — Adopt FILTER_CURRENCY Position overload (minor; ledger; 35–50m after upstream support) — **blocked:** needs a compatible published native overload.
+- [025](blocked/025.md) — Adopt quoted BQL column resolution (major; ledger; 45–60m after release) — **blocked:** awaiting a published WASM artifact containing upstream 9d3bde86.
 
-- [036](./blocked/036.md) — Preserve BOOL string and tag-set truthiness in BQL (minor; ledger; 35–50m after upstream support) — **blocked:** needs a published native string/set truthiness correction.
+- [026](blocked/026.md) — Restore authored BQL source locations (minor; ledger; 45–60m after upstream support) — **blocked:** needs a published source-aware WASM query binding, not a known local patch.
 
-- [037](./blocked/037.md) — Adopt short-circuit BQL logical guards (minor; ledger; 45–60m after upstream support) — **blocked:** needs a published native lazy logical evaluator.
+- [027](blocked/027.md) — Preserve GETPRICE currency argument normalization (minor; ledger; 35–50m after upstream support) — **blocked:** needs a published Beanquery-compatible WASM lookup.
 
-- [038](./blocked/038.md) — Preserve integer arithmetic before type-sensitive BQL operations (minor; ledger; 45–60m after upstream support) — **blocked:** needs a published native integer-preserving arithmetic path.
+- [028](blocked/028.md) — Preserve negative SPLITCOMP component indices (minor; ledger; 35–50m after upstream support) — **blocked:** needs a published signed-index WASM implementation.
+
+- [029](blocked/029.md) — Preserve Beanquery SUBST replacement and null semantics (minor; ledger; 35–50m after upstream support) — **blocked:** needs a compatible published WASM replacement/null implementation.
+
+
+- [031](blocked/031.md) — Adopt floor-based DATE_BIN arithmetic before the origin (minor; ledger; 35–50m after upstream support) — **blocked:** needs a published native fixed-stride correction.
+
+- [032](blocked/032.md) — Preserve calendar DATE_BIN origins and boundaries (minor; ledger; 45–60m after upstream support) — **blocked:** needs a published native month/year boundary correction.
+
+- [033](blocked/033.md) — Preserve typed zero amounts from ONLY inventory extraction (minor; ledger; 35–50m after upstream support) — **blocked:** needs a published native zero-preserving extraction.
+
+- [034](blocked/034.md) — Preserve FINDFIRST prefix and case matching (minor; ledger; 35–50m after upstream support) — **blocked:** needs a published native regex-policy correction.
+
+- [035](blocked/035.md) — Adopt FILTER_CURRENCY Position overload (minor; ledger; 35–50m after upstream support) — **blocked:** needs a compatible published native overload.
+
+- [036](blocked/036.md) — Preserve BOOL string and tag-set truthiness in BQL (minor; ledger; 35–50m after upstream support) — **blocked:** needs a published native string/set truthiness correction.
+
+- [037](blocked/037.md) — Adopt short-circuit BQL logical guards (minor; ledger; 45–60m after upstream support) — **blocked:** needs a published native lazy logical evaluator.
+
+- [038](blocked/038.md) — Preserve integer arithmetic before type-sensitive BQL operations (minor; ledger; 45–60m after upstream support) — **blocked:** needs a published native integer-preserving arithmetic path.
 
 ## Continuation decisions — 2026-10-19
 

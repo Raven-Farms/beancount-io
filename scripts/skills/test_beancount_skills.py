@@ -521,6 +521,12 @@ class TestClawHubWorkflow(Workspace):
     def release(self, mode="publish", scenario="missing", **changes):
         folder = self.root / "suite"
         self.assertEqual(run("suite", folder)[0], 0)
+        publisher = self.root / "publisher/publish-clawhub-suite.py"
+        publisher.parent.mkdir()
+        shutil.copy2(SCRIPTS_DIR / "publish-clawhub-suite.py", publisher)
+        version = json.loads((folder / "plugin.json").read_text())["version"]
+        receipts = {"@fixture-owner/beancount-io": {version: {"attempt_id": "retained-attempt"}}} if scenario == "accepted-404" else {}
+        publisher.with_name("clawhub-publications.json").write_text(json.dumps(receipts))
         executable = self.root / "bin/clawhub"
         executable.parent.mkdir()
         executable.write_text(
@@ -530,7 +536,7 @@ class TestClawHubWorkflow(Workspace):
             "with open(os.environ['PUBLISH_CALLS'], 'a') as log: log.write(json.dumps(args)+'\\n')\n"
             "scenario=os.environ['SCENARIO']\n"
             "if 'inspect' in args:\n"
-            "    if scenario in ('missing', 'upload-fails'):\n"
+            "    if scenario in ('missing', 'upload-fails', 'accepted-404'):\n"
             "        print('Package not found or not visible to this account.', file=sys.stderr); sys.exit(1)\n"
             "    if scenario == 'pending':\n"
             "        print('Could not resolve latest version', file=sys.stderr); sys.exit(1)\n"
@@ -552,7 +558,7 @@ class TestClawHubWorkflow(Workspace):
             "SCENARIO": scenario, "SUITE_FOLDER": str(folder), **changes,
         }
         env.pop("CLAWHUB_TOKEN", None)
-        result = subprocess.run([sys.executable, str(SCRIPTS_DIR / "publish-clawhub-suite.py"), mode, str(folder)], env=env, capture_output=True, text=True)
+        result = subprocess.run([sys.executable, str(publisher), mode, str(folder)], env=env, capture_output=True, text=True)
         calls = [json.loads(line) for line in calls_file.read_text().splitlines()] if calls_file.exists() else []
         return result, calls
 
@@ -602,6 +608,14 @@ class TestClawHubWorkflow(Workspace):
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("inspect the existing attempt", result.stderr)
         self.assertTrue(all("publish" not in call for call in calls))
+
+    def test_accepted_first_release_stays_protected_when_registry_lookups_return_404(self):
+        result, calls = self.release(scenario="accepted-404")
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("follow that attempt without uploading again", result.stderr)
+        self.assertIn("retained-attempt", result.stderr)
+        self.assertEqual(len(calls), 1)
+        self.assertIn("inspect", calls[0])
 
     def test_cli_publication_failure_is_propagated(self):
         result, _ = self.release(scenario="upload-fails")

@@ -44,6 +44,15 @@ def main() -> int:
                 raise ValueError("the published version differs; bump the shared suite version before releasing")
             print(json.dumps({"status": "unchanged", "name": name, "version": version}))
             return 0
+        # A first staged package is invisible even to its owner until publication.
+        # Keep accepted receipts: a 404 must never turn that pending version into a new upload.
+        receipts = json.loads(Path(__file__).with_name("clawhub-publications.json").read_text())
+        accepted = receipts.get(name, {}).get(version)
+        if accepted:
+            raise ValueError(
+                f"ClawHub already accepted {name}@{version} as attempt {accepted['attempt_id']}; "
+                "follow that attempt without uploading again"
+            )
         # Other errors (network, rate limits, malformed/private pending state) stop the release.
         missing = ("Package not found or not visible to this account.", "Version not found")
         if not any(message in result.stderr for message in missing):
