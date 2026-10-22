@@ -285,10 +285,12 @@ const PostingRow = ({
   const stacked = prefersStackedLayout(fontScale);
   const { t } = useTranslations();
 
-  const isNegative = posting.amountInput.startsWith("-");
-  const absValue = isNegative
-    ? posting.amountInput.slice(1)
-    : posting.amountInput;
+  // The sign is read from the trimmed text, as the parser reads it: a pasted
+  // " -12.50" was saved as negative but shown positive, and the toggle then
+  // wrote a second minus (w21/232).
+  const typed = posting.amountInput.trim();
+  const isNegative = typed.startsWith("-");
+  const absValue = isNegative ? typed.slice(1) : typed;
   const hasAmount = hasNonZeroAmount(posting);
   const unparsed = hasUnparsedAmount(posting);
   const amountColor = unparsed

@@ -354,13 +354,16 @@ export function updatePostingAmount(
   input: string,
   minorUnits = 2,
 ): Posting[] {
-  const amount = parseExactAmount(input);
+  // Stored without the spaces a pasted amount carries: the row reads the sign
+  // off the text itself (w21/232).
+  const text = input.trim();
+  const amount = parseExactAmount(text);
   const isLast = index === postings.length - 1;
   const updated = postings.map((p, i) =>
     i === index
       ? {
           ...p,
-          amountInput: input,
+          amountInput: text,
           amount,
           isAuto: isLast ? false : p.isAuto,
         }

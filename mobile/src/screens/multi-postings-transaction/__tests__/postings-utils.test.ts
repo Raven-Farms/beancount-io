@@ -808,3 +808,43 @@ describe("amounts at the currency's own minor unit", () => {
     expect(legs.map((leg) => leg.amountInput)).toEqual(["-1500", "1500"]);
   });
 });
+
+// w21/232: a pasted " -12.50" was saved as negative but shown positive, and
+// the sign toggle then wrote a second minus.
+describe("an amount pasted with surrounding spaces", () => {
+  const start = () => createInitialPostings("Assets:Cash", "Expenses:Food");
+
+  it("is stored without them, so the row's sign matches the parser's", () => {
+    const [first, auto] = updatePostingAmount(start(), 0, " -12.50 ");
+    expect(first.amountInput).toBe("-12.50");
+    expect(first.amount).toBe("-12.50");
+    expect(auto.amountInput).toBe("12.50");
+  });
+
+  it("flips cleanly with the toggle", () => {
+    // What the row does: strip the minus, or prepend one, to the stored text.
+    const once = updatePostingAmount(start(), 0, " -12.50")[0].amountInput;
+    const flipped = once.startsWith("-") ? once.slice(1) : `-${once}`;
+    const next = updatePostingAmount(start(), 0, flipped);
+    expect(next[0].amount).toBe("12.50");
+    expect(validatePostings(next)).toBe(null);
+  });
+
+  it("keeps the row's reading of the sign tied to the trimmed text", () => {
+    const row = require("fs")
+      .readFileSync(
+        require("path").join(
+          __dirname,
+          "..",
+          "multi-postings-transaction-screen.tsx",
+        ),
+        "utf8",
+      )
+      .replace(/\s+/g, "");
+    expect(
+      row.includes(
+        "consttyped=posting.amountInput.trim();constisNegative=typed.startsWith",
+      ),
+    ).toBe(true);
+  });
+});
