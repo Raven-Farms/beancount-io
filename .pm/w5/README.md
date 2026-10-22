@@ -36,6 +36,8 @@
 
 ## Inbox
 
+- [978 — Match a cost-selected FIFO sale to its split booked twin](./978.md) — major CLI follow-up to 603; an ordinary stated-cost sale spanning two equal-cost lots is imported twice, reproduced 2026-10-22.
+
 - [977 — Recognize unchanged multi-fill imports above twelve booked lots](./977.md) — minor CLI follow-up to 896; two open-cost fills over 13 lots falsely conflict on reimport, reproduced 2026-10-22.
 
 - [976 — Honor shared-ID transfer reservations before skipping rows](./976.md) — major CLI follow-up to 882; one transfer is offered twice under a reused shared reference and skip drops a real gift, reproduced 2026-10-22.
