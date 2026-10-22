@@ -152,6 +152,13 @@
           },
           "sha": {
             "type": "string"
+          },
+          "lossy": {
+            "type": "boolean",
+            "enum": [
+              true
+            ],
+            "description": "Present when the file is not valid UTF-8: `content` shows U+FFFD for its undecodable bytes, so writing it back would replace them."
           }
         },
         "required": [

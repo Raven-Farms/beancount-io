@@ -95,7 +95,7 @@ import {
 } from "@/server/api/authorization";
 import { assertSafeRepoPath } from "@/features/ledger/utils/safe-repo-path";
 import { assertExplicitFileContentSize } from "@/features/ledger/utils/explicit-file-size";
-import { decodeFileContent } from "@/shared/file-content";
+import { assertWritableText, decodeFileContent } from "@/shared/file-content";
 import {
   formatIncludeLine,
   globMatches,
@@ -1025,7 +1025,12 @@ export class LedgerWorkflow implements ILedgerWorkflow {
       if (isGlobPattern(resolved)) return null;
       return resolved === input.oldPath ? include : null;
     };
-    let includingFiles: { path: string; content: string; sha: string }[] = [];
+    let includingFiles: {
+      path: string;
+      content: string;
+      lossy: boolean;
+      sha: string;
+    }[] = [];
     // A glob can't be rewritten for one file; refuse when the file falls out
     // of a pattern that includes it today.
     const lostGlobs: string[] = [];
@@ -1044,7 +1049,7 @@ export class LedgerWorkflow implements ILedgerWorkflow {
       includingFiles = (contents ?? [])
         .map((file) => ({
           path: file.path,
-          content: decodeFileContent(file),
+          ...decodeFileContent(file),
           sha: file.sha,
         }))
         .filter(({ path, content }) => {
@@ -1099,6 +1104,8 @@ export class LedgerWorkflow implements ILedgerWorkflow {
     ];
     const updatedIncludes: string[] = [];
     for (const including of includingFiles) {
+      // A rewrite re-encodes the whole including file (w23/030).
+      assertWritableText(including, "updateIncludes");
       const rewritten = including.content
         .split("\n")
         .map((line) => {

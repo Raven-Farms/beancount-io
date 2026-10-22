@@ -47,6 +47,8 @@ export type LedgerFileWithContent = {
   path: string;
   content: string;
   sha: string;
+  /** Present when the file is not valid UTF-8: `content` holds U+FFFD. */
+  lossy?: true;
 };
 
 type FileChangesParams = {
@@ -251,11 +253,15 @@ export class LedgerRepoService
       );
     }
 
-    return files.map((file) => ({
-      path: file.path,
-      content: decodeFileContent(file),
-      sha: file.sha,
-    }));
+    return files.map((file) => {
+      const { content, lossy } = decodeFileContent(file);
+      return {
+        path: file.path,
+        content,
+        sha: file.sha,
+        ...(lossy && { lossy: true as const }),
+      };
+    });
   }
 
   async changeFiles(params: FileChangesParams): Promise<void> {

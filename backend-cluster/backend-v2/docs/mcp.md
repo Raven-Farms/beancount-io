@@ -395,6 +395,15 @@ may not be created twice, created and then deleted, or changed after it is
 deleted in one call; those are refused as `BAD_USER_INPUT` before anything is
 read.
 
+A file that is not valid UTF-8 (a Windows-1252 export, say) reads back from
+`readLedgerFiles` and REST `GET …/files/{path}` with `lossy: true`: its
+undecodable bytes show as U+FFFD, and GraphQL `getLedgerFile` returns the exact
+bytes as base64. Anything that would rewrite such a file from that text — an
+`old_string` edit, `appendLedgerText`/`addLedgerEntries`, or an include rewrite
+in `renameLedgerFile` — is refused as `BAD_USER_INPUT` naming the file, so no
+write replaces bytes it never touched. Replacing the whole content, deleting
+the file, and renaming it (which moves its bytes unchanged) still work.
+
 Send plain UTF-8 text, not base64. For example, these are arguments to
 `updateLedgerFiles` for a preview; use an existing path and exact text from your
 own ledger:

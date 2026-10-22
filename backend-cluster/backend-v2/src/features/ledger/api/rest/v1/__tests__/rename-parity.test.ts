@@ -41,7 +41,10 @@ beforeAll(async () => {
   });
 });
 
-type FixtureFiles = Map<string, { content: string; sha: string }>;
+type FixtureFiles = Map<
+  string,
+  { content: string; sha: string; encoding?: string }
+>;
 
 async function fixture(
   caller = identity,
@@ -73,7 +76,7 @@ async function fixture(
       sha: entry.sha,
       size: entry.content.length,
       content: entry.content,
-      encoding: null,
+      encoding: entry.encoding ?? null,
     };
   };
   const change = jest.fn(async (_owner, _name, options) => {
@@ -646,3 +649,46 @@ describe.each(["rest", "gql", "mcp"])(
     });
   },
 );
+
+/**
+ * w23/030. Rewriting an include re-encoded the whole including file from its
+ * lenient decode, so a Latin-1 includer lost every non-ASCII byte. Moving a
+ * Latin-1 file itself never decodes it and must keep its bytes.
+ */
+describe.each(["rest", "gql", "mcp"])("rename around a non-UTF-8 file via %s", (surface) => {
+  const latin1 = Buffer.concat([
+    Buffer.from('; Caf'),
+    Buffer.from([0xe9]),
+    Buffer.from('\ninclude "b.bean"\n'),
+  ]).toString("base64");
+
+  it("refuses to rewrite an include in a file that is not valid UTF-8", async () => {
+    const f = await fixture(identity, { "b.bean": "; b\n" });
+    f.files.set("main.bean", { content: latin1, sha: "sha-l", encoding: "base64" });
+    try {
+      const outcome = await f.call(surface, "b.bean", "c.bean", { updateIncludes: true });
+      expect(outcome.success).toBe(false);
+      if (surface === "rest")
+        expect(outcome.result).toMatchObject({
+          error: { code: "BAD_USER_INPUT", message: expect.stringContaining("main.bean is not valid UTF-8") },
+        });
+      expect(f.change).not.toHaveBeenCalled();
+    } finally {
+      await f.close();
+    }
+  });
+
+  it("moves a file that is not valid UTF-8 byte for byte", async () => {
+    const f = await fixture(identity, {});
+    f.files.set("old.bean", { content: latin1, sha: "sha-l", encoding: "base64" });
+    try {
+      expect((await f.call(surface, "old.bean", "new.bean")).success).toBe(true);
+      const created = f.change.mock.calls[0][2].files.find(
+        (op: { operation: string }) => op.operation === "create",
+      );
+      expect(created.content).toBe(latin1);
+    } finally {
+      await f.close();
+    }
+  });
+});

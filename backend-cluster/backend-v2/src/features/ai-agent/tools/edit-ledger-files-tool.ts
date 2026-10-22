@@ -19,6 +19,7 @@ import {
   withPostWriteValidation,
 } from "./write-validation";
 import { unifiedDiff } from "@/shared/unified-diff";
+import { assertWritableText } from "@/shared/file-content";
 
 /** Commits one edit call makes before a lost race is the caller's (w23/017). */
 const MAX_COMMIT_ATTEMPTS = 3;
@@ -158,7 +159,7 @@ function assertFoldable(files: FileOperation[]): void {
  * text committed only the last (w23/028).
  */
 function foldOperations(
-  fileCache: Map<string, { content: string; sha: string }>,
+  fileCache: Map<string, { content: string; sha: string; lossy?: true }>,
   files: FileOperation[],
 ): {
   operations: LedgerChangeFileOperation[];
@@ -194,6 +195,7 @@ function foldOperations(
       continue;
     }
     // update (str_replace), matched against the text earlier edits produced
+    if (!state) assertWritableText({ path: f.path, ...fileCache.get(f.path) });
     const count = current.split(f.old_string).length - 1;
     if (count === 0)
       // The file exists; it is the argument that does not match it. The
@@ -277,15 +279,18 @@ export async function executeEditLedgerFiles(
       // again when a concurrent write wins the commit, so exact-text edits
       // land on the new content instead of failing the call (w23/017).
       const prepare = async () => {
-        const fileCache = new Map<string, { content: string; sha: string }>();
+        const fileCache = new Map<
+          string,
+          { content: string; sha: string; lossy?: true }
+        >();
         if (pathsToFetch.length > 0) {
           const cachedFiles = await services.ledgerRepo.getFilesContent({
             ledgerId,
             identity,
             paths: pathsToFetch,
           });
-          for (const file of cachedFiles) {
-            fileCache.set(file.path, { content: file.content, sha: file.sha });
+          for (const { path, ...file } of cachedFiles) {
+            fileCache.set(path, file);
           }
         }
 

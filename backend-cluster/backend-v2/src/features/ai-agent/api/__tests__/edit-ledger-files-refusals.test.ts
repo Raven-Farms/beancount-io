@@ -17,6 +17,12 @@ import type { McpRequestContext } from "../mcp-context";
  * registry and repo service, with only the ledger client faked.
  */
 const config = { api: { scopeEnforcement: "enforce" } } as AppConfig;
+// A Windows-1252 export: `E9` is "é" there and invalid UTF-8 (w23/030).
+const LATIN1 = Buffer.concat([
+  Buffer.from("; qa Caf"),
+  Buffer.from([0xe9]),
+  Buffer.from(" latin-1 comment\nqa-tail\n"),
+]);
 const identity: Identity = {
   userId: "usr_alice",
   method: "oauth",
@@ -25,20 +31,31 @@ const identity: Identity = {
 };
 
 async function fixture() {
-  const existing = new Set(["main.bean", "accounts.bean"]);
+  const existing = new Set(["main.bean", "accounts.bean", "qa-latin1.txt"]);
   const getLedgerFilesContent = jest.fn(
     async (_owner: string, _name: string, { files }: { files: string[] }) => ({
       data: {
         success: true,
         data: files
           .filter((path) => existing.has(path))
-          .map((path) => ({
-            path,
-            name: path,
-            type: "file",
-            sha: "s1",
-            content: '2026-01-05 * "Cafe"\n2026-02-05 * "Cafe"\n',
-          })),
+          .map((path) =>
+            path === "qa-latin1.txt"
+              ? {
+                  path,
+                  name: path,
+                  type: "file",
+                  sha: "s1",
+                  encoding: "base64",
+                  content: LATIN1.toString("base64"),
+                }
+              : {
+                  path,
+                  name: path,
+                  type: "file",
+                  sha: "s1",
+                  content: '2026-01-05 * "Cafe"\n2026-02-05 * "Cafe"\n',
+                },
+          ),
       },
     }),
   );
@@ -390,6 +407,80 @@ describe("several changes to one file in one call", () => {
         }
         expect(f.getLedgerFilesContent).not.toHaveBeenCalled();
         expect(f.changeLedgerFiles).not.toHaveBeenCalled();
+      } finally {
+        await f.close();
+      }
+    },
+  );
+});
+
+/**
+ * w23/030. The file cache decoded leniently, so an `old_string` edit to a
+ * Latin-1 file committed U+FFFD over every byte it never touched.
+ */
+describe("editing a file that is not valid UTF-8", () => {
+  const call = (
+    f: Awaited<ReturnType<typeof fixture>>,
+    name: string,
+    file: Record<string, string>,
+    dry_run = false,
+  ) =>
+    f.client.callTool({
+      name,
+      arguments: {
+        ledger: "alice/main",
+        description: "edit",
+        dry_run,
+        files: [{ path: "qa-latin1.txt", ...file }],
+      },
+    });
+
+  it("refuses an old_string edit in the preview and the commit", async () => {
+    const f = await fixture();
+    try {
+      for (const dryRun of [true, false]) {
+        const result = await call(
+          f,
+          "updateLedgerFiles",
+          { old_string: "qa-tail", new_string: "qa-tail2" },
+          dryRun,
+        );
+        expect(result.isError).toBe(true);
+        expect(result.structuredContent).toMatchObject({
+          error: {
+            code: "BAD_USER_INPUT",
+            message: expect.stringContaining(
+              "qa-latin1.txt is not valid UTF-8",
+            ),
+          },
+        });
+      }
+      expect(f.changeLedgerFiles).not.toHaveBeenCalled();
+    } finally {
+      await f.close();
+    }
+  });
+
+  it.each([
+    ["updateLedgerFiles", { content: "; now utf-8\n" }, "update"],
+    ["deleteLedgerFiles", {}, "delete"],
+  ])(
+    "still lets %s write the file without reading its text",
+    async (name, file, operation) => {
+      const f = await fixture();
+      f.changeLedgerFiles.mockResolvedValue({
+        data: { success: true, data: {} },
+      });
+      try {
+        expect((await call(f, name, file)).isError).toBeFalsy();
+        const [, , body] = f.changeLedgerFiles.mock.calls[0] as [
+          string,
+          string,
+          { files: { operation: string; path: string }[] },
+        ];
+        expect(body.files).toEqual([
+          expect.objectContaining({ operation, path: "qa-latin1.txt" }),
+        ]);
       } finally {
         await f.close();
       }

@@ -8,6 +8,7 @@ import {
   parseDirectiveText,
 } from "@/features/ledger/utils/directive-text";
 import { assertSafeRepoPath } from "@/features/ledger/utils/safe-repo-path";
+import { assertWritableText } from "@/shared/file-content";
 import { unifiedDiff } from "@/shared/unified-diff";
 import {
   diffBeanCheckErrors,
@@ -145,6 +146,8 @@ export class DirectiveAppendWorkflow implements IDirectiveAppendWorkflow {
     // travel together, so nothing has to be re-looked-up to build the commit.
     const targets = [...byPath].map(([target, targetDirectives]) => {
       const current = existing.get(target);
+      // Inserting re-encodes the whole file (w23/030).
+      if (current) assertWritableText(current);
       const before = current?.content ?? "";
       const result = insertDirectives(before, targetDirectives);
       return {

@@ -28,6 +28,8 @@ const TXN = [
 function fixture(
   options: {
     files?: Record<string, string>;
+    /** Files whose bytes are not valid UTF-8, as the repo service marks them. */
+    lossy?: string[];
     transactionFile?: string | null;
     projectedErrors?: { message: string }[];
   } = {},
@@ -41,6 +43,7 @@ function fixture(
           path,
           content: files.get(path)!,
           sha: `sha-${path}`,
+          ...(options.lossy?.includes(path) && { lossy: true }),
         })),
     ),
     checkProjectedFiles: jest.fn(
@@ -80,6 +83,29 @@ function fixture(
 }
 
 describe("DirectiveAppendWorkflow", () => {
+  // w23/030: inserting re-encoded the whole lossy text, so every byte that was
+  // not valid UTF-8 was committed back as U+FFFD.
+  it.each([false, true])(
+    "refuses a target that is not valid UTF-8 (dryRun %p)",
+    async (dryRun) => {
+      const { workflow, ledgerRepo } = fixture({
+        files: { "latin1.bean": "; Caf\uFFFD\n" },
+        lossy: ["latin1.bean"],
+      });
+      await expect(
+        workflow.appendDirectiveText({
+          identity: IDENTITY,
+          ledgerId: LEDGER_ID,
+          input: { text: TXN, path: "latin1.bean", dryRun },
+        }),
+      ).rejects.toMatchObject({
+        category: "BAD_USER_INPUT",
+        message: expect.stringContaining("latin1.bean is not valid UTF-8"),
+      });
+      expect(ledgerRepo.changeGeneratedFiles).not.toHaveBeenCalled();
+    },
+  );
+
   it("commits an auto-routed target through the repo service, so its path is asserted", async () => {
     const { workflow, ledgerRepo } = fixture({
       files: { "txns/2026.bean": "" },

@@ -78,6 +78,10 @@ const fileSchema = z
     path: z.string(),
     content: z.string(),
     sha: z.string(),
+    lossy: z.literal(true).optional().openapi({
+      description:
+        "Present when the file is not valid UTF-8: `content` shows U+FFFD for its undecodable bytes, so writing it back would replace them.",
+    }),
   })
   .openapi("LedgerFile", { description: "One ledger file and its blob SHA" });
 
