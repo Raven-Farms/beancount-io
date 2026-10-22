@@ -4,6 +4,8 @@
 
 ## Inbox
 
+- [989 — Keep a newer BQL draft when its earlier submission finishes URL navigation](./989.md) — minor residual of W3/m12; live QA,2026-10-22; genuine delayed navigation replaces a later unexecuted draft at both widths; no hosted writes.
+
 - [988 — Keep focus after deleting BQL history cards](./988.md) — minor; real public-query history at both widths,2026-10-22; deleting focused middle/last cards leaves BODY while exact storage/editor controls pass; next-Tab behavior recorded, no writes.
 
 - [987 — Explain failed file-download generation](./987.md) — minor; modeled browser API failure over a real public file,2026-10-22; both widths leave Download open without feedback or a file; restored retries match actual API bytes, no writes.
