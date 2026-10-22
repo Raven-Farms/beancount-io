@@ -33,7 +33,7 @@ import {
 import { getEntryPostings } from "../utils/entry-utils";
 import { LEADING_TEXT_ALIGN } from "@/common/rtl";
 import { selectEntryRowAmount } from "./format-entry-row-amount";
-import { entryRowSecondaryText } from "./entry-row-secondary";
+import { entryRowSecondaryText, entryRowTitle } from "./entry-row-secondary";
 import { entryRowDateLine } from "./entry-row-date";
 import { entryRowAccessibilityLabel } from "./entry-row-accessibility-label";
 
@@ -143,7 +143,7 @@ const getDisplayInfo = (
 
   // A bare transaction is titled in the app's language, not by its English
   // directive type (w21/241).
-  const name = entry.payee || entry.narration || untitledLabel;
+  const name = entryRowTitle(entry) ?? untitledLabel;
 
   return {
     name,
@@ -198,7 +198,7 @@ export const EntryRow: React.FC<EntryRowProps> = ({
   // Brand text for the logo: payee/narration only (not the directive_type
   // fallback), so non-transactions match on their account instead.
   const brandText = isJournalTransaction(entry)
-    ? entry.payee || entry.narration || undefined
+    ? entryRowTitle(entry)
     : undefined;
 
   const leading = (

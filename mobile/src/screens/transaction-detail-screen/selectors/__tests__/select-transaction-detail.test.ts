@@ -221,6 +221,16 @@ describe("selectPostingRows", () => {
 });
 
 describe("selectTransactionTitle", () => {
+  // w21/568: a payee of spaces won the title and left it blank.
+  it("skips a payee that is only spaces", () => {
+    expect(
+      selectTransactionTitle(txn([], { payee: " ", narration: "Coffee" })),
+    ).toBe("Coffee");
+    expect(
+      selectTransactionTitle(txn([], { payee: " ", narration: " " })),
+    ).toBe("");
+  });
+
   it("prefers payee, then narration, then empty", () => {
     expect(selectTransactionTitle(txn([]))).toBe("Blue Bottle");
     expect(selectTransactionTitle(txn([], { payee: null }))).toBe(

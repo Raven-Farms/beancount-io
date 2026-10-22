@@ -269,7 +269,7 @@ export function postingBasisText(
 }
 
 export function selectTransactionTitle(txn: JournalTransaction): string {
-  return txn.payee || txn.narration || "";
+  return txn.payee?.trim() || txn.narration?.trim() || "";
 }
 
 /** An overflow-menu action on the transaction detail screen. */

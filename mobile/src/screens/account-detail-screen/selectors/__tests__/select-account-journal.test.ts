@@ -1039,7 +1039,7 @@ describe("the title of a bare transaction", () => {
     ).toBe(true);
     expect(
       read("transactions-screen", "entry-row", "index.tsx").includes(
-        "constname=entry.payee||entry.narration||untitledLabel;",
+        "constname=entryRowTitle(entry)??untitledLabel;",
       ),
     ).toBe(true);
   });
