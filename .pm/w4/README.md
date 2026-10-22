@@ -4,6 +4,8 @@
 
 ## Inbox
 
+- [963 — Keep the pre-startup keyboard target visible after hydration](./963.md) — minor; pure-native-Tab desktop/narrow controls retain focus/nodes but initial restoration resets scroll to0 and hides the target; matching router source traced, no writes.
+
 - [962 — Keep Budget's first Add action from being lost](./962.md) — minor; dashboard QA,2026-10-22; four natural-load Enter/pointer cases lose an enabled header activation before handler readiness; retry/dismissal focus pass, matching page source traced; no writes.
 
 - [961 — Keep recognized CSV validation failures available for repair](./961.md) — minor; dashboard QA,2026-10-22; sole invalid date and mixed decimal conventions are mislabeled unreadable columns/AI at both widths; valid companion enables normal local repair, precision controls pass; no writes/AI.
@@ -117,7 +119,7 @@
 
 - [x] **m37** — [Resolve README file and image references from their source path](./done/m37/README.md) (7 tasks) ← dashboard QA, 2026-10-20; minor, rendered file/image context and native hrefs. — deployed native links/images verified; owned fixture cleanup complete
 
-- [ ] **m36** — [Preserve profile and commit timestamps through hydration](./blocked/m36/README.md) (10 tasks) ← dashboard QA, 2026-10-20; minor, deployed commit/activity controls pass; repository-card hydration and exact titles remain. — **blocked:** card fix shipped in `e38a2b614`; awaiting deployed repository-card check
+- [ ] **m36** — [Preserve profile and commit timestamps through hydration](./m36/README.md) (10 tasks) ← dashboard QA, 2026-10-20; minor, deployed commit/activity controls pass; repository-card hydration and exact titles remain. — deployed repository boundary/title checks pass2026-10-22; t003 done, final review/gates open.
 
 - [ ] **m35** — [Keep form fields usable when suggestions fail](./blocked/m35/README.md) (6 tasks) ← dashboard QA, 2026-10-20; minor, four form suggestion wrappers. — **blocked:** fields now survive; deployed keyboard retry still loses focus, follow-up recorded
 
@@ -185,7 +187,7 @@
 
 - ~~**294**~~ — Preserve an acknowledged star action when its metadata refresh fails — dropped 2026-10-20: promoted to [m41](./m41/README.md), preserving Star evidence and adding the independent Budget acknowledgement/read failure; two controllers and regressions exceed one hour.
 
-- ~~**293**~~ — Keep the DatePicker calendar reachable in short viewports — dropped 2026-10-20: promoted to [m40](./m40/README.md), preserving all evidence and adding the independent modal Combobox wheel failure; the shared repair and regression scope exceed one hour.
+- ~~**293**~~ — Keep the DatePicker calendar reachable in short viewports — dropped 2026-10-20: promoted to [m40](./done/m40/README.md), preserving all evidence and adding the independent modal Combobox wheel failure; the shared repair and regression scope exceed one hour.
 
 - ~~**016**~~ — Commodity accounts are shown as an unlabelled USD cost basis — and a commodity with no cost renders as $0.00 — dropped 2026-09-26: promotion to [m11](./done/m11/README.md) completed; the milestone's verification record carries the outcome, and w4/m26 superseded its valuation basis.
 

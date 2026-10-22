@@ -1,6 +1,6 @@
 # w4 · m36 — Preserve profile and commit timestamps through hydration
 
-**Worker:** worker1 **Goal:** Commit, profile activity and repository-card timestamps hydrate without replacing focused controls and show exact browser-zone dates. **Status:** blocked (t001, t002, t004, t005, t007, t008 done; t003 needs the deployed repository-card check)
+**Worker:** worker1 **Goal:** Commit, profile activity and repository-card timestamps hydrate without replacing focused controls and show exact browser-zone dates. **Status:** todo (t001–t005, t007, t008 done; t009/t010 and closeout remain)
 
 **Severity:** minor. **Estimate:** 260m across ten tasks, dashboard only.
 
@@ -12,7 +12,7 @@
 | [t002](./done/t002.md) | Synchronize the exact timestamp name after hydration — **DONE** | 25m | t001 |
 | [t007](./done/t007.md) | Stabilize profile activity relative text and exact titles — **DONE** | 40m | t001 |
 | [t008](./done/t008.md) | Stabilize repository-card relative text and exact titles — **DONE** | 35m | t007 |
-| [t003](./t003.md) | Verify the timestamp and keyboard adoption surface | 20m | t002, t007, t008 |
+| [t003](./done/t003.md) | Verify the timestamp and keyboard adoption surface — **DONE** | 20m | t002, t007, t008 |
 | [t004](./done/t004.md) | Simplify the initial commit/activity lifecycle — **DONE** | 10m | t007 |
 | [t005](./done/t005.md) | Prove the initial commit/activity SSR behavior — **DONE** | 40m | t007 |
 | [t009](./t009.md) | Simplify the added repository-card lifecycle | 10m | t003 |
@@ -25,7 +25,7 @@ The completed t004/t005 record the original two-consumer source review and regre
 
 - [ ] A real server-rendered CommitMetadata hydrated across a relative-age label boundary retains the original timestamp and focused neighboring control, with no React418 recovery.
 - [ ] A real public ProfileActivity hydrated across its relative-age boundary retains the existing profile tree and focused Show more ledgers button. Its unchanged activity instants display current relative labels without React418 recovery.
-- [ ] A real server-rendered RepositoryListItem crossing a relative-age boundary retains the original card, time nodes and focused sibling control, without React418. Its initial and expanded exact titles match browser time zones, including a UTC/Kiritimati calendar-day difference. Preserve profile collection and Starred rendering.
+- [x] A real server-rendered RepositoryListItem crossing a relative-age boundary retains the original card, time nodes and focused sibling control, without React418. Its initial and expanded exact titles match browser time zones, including a UTC/Kiritimati calendar-day difference. Preserve profile collection and Starred rendering.
 - [ ] Matching-window controls for all three consumers retain their original nodes/focus; readable SSR timestamps remain available.
 - [ ] ProfileActivity's five initial exact-time title attributes and client-expanded rows agree with the browser time zone after hydration, including a UTC/Kiritimati calendar-day difference; their datetime instants stay unchanged.
 - [ ] After hydration, the actual time element's accessible name and keyboard tooltip agree with active application language and actual browser time zone, including a UTC/Kiritimati calendar-day difference. The datetime instant never changes.
@@ -47,13 +47,8 @@ Repair the three independently proved consumers: CommitMetadata in direct/histor
 
 The initial implementation shipped in c293ab9c1 and the TanStack useHydrated refactor in 21029d403. The prior source worker recorded passing dashboard format/lint/6375 tests/build and real renderToString → hydrateRoot clock/zone regressions for those two consumers. Those historical checks are not claimed to validate the added card implementation.
 
-**Remaining reproduced failure:** unmodified RepositoryListItem still computes clock-dependent text and a runtime-zone title on initial render. At both widths a real startup delay changes its relative phrase, emits React418 and replaces the focused profile tree while other card labels remain stable. A narrow repeat needs only 11.586 seconds (13 → 14 minutes); an immediate-release control retains all nodes/focus. Separately, Kiritimati retains the server-zone title on all 12 initial public cards while 12 newly mounted cards have correct titles. See the appended production controls in [FINDINGS.md](./FINDINGS.md). This extends the same open hydration finding; the finding-group count is unchanged.
+**Previous pre-repair failure (2026-10-20):** unmodified RepositoryListItem still computes clock-dependent text and a runtime-zone title on initial render. At both widths a real startup delay changes its relative phrase, emits React418 and replaces the focused profile tree while other card labels remain stable. A narrow repeat needs only 11.586 seconds (13 → 14 minutes); an immediate-release control retains all nodes/focus. Separately, Kiritimati retains the server-zone title on all 12 initial public cards while 12 newly mounted cards have correct titles. See the appended production controls in [FINDINGS.md](./FINDINGS.md). This extends the same open hydration finding; the finding-group count is unchanged.
 
-## Blocked again
+## Repository-card deployment verification
 
-**Blocked 2026-10-20** — t008's repository-card repair shipped; t003's deployed card journey (and t009, t010 and t006 after it) cannot run here.
-
-- **Shipped baseline:** `e38a2b614`. RepositoryListItem reuses the ProfileActivity convention: TanStack `useHydrated`, a UTC exact date as the server/hydration text and title, then the relative age and browser-zone title in place after hydration, with the `datetime` instant unchanged. `repository-list-item-hydration.test.tsx` runs real `renderToString` → `hydrateRoot`: across a 13→14-minute boundary and in a stable window the cards, time nodes and focused sibling button survive with no recoverable error, and under Pacific/Kiritimati the initial and newly rendered card titles match the browser expression (Jul 28 versus the server's Jul 27). It fails with the change reverted. Test mocks for LedgerCollection, profile tabs and date-locale gained `useHydrated`/`i18n`; dashboard format, lint, test and build pass. The task table's duplicated rows were removed.
-- **Blocker:** t003's added repository-card acceptance needs the deployed build and a held-startup browser at 1440 and 390; this worker has neither.
-- **Unblock:** after `e38a2b614` or later is deployed, QA repeats FINDINGS.md's held-startup card boundary and the UTC/Kiritimati 12-card title comparison at both widths, confirming focus and nodes survive without React418 and initial/expanded titles agree; then close t003, run t009's /simplify, complete t010 (the hydration test above is its starting point) and t006. **Who:** the user (deploy) and the dashboard QA loop.
-
+**Unblocked 2026-10-22** — matching repaired RepositoryListItem is deployed. Fresh native-focus held-startup controls at1440/390 cross a real relative-age boundary and preserve every original card/time node and focused control without React418. Stable-window controls pass, and all initial/expanded titles agree across both widths × UTC/Kiritimati. t003 is complete using these new controls plus its previously recorded commit/activity/locale/navigation evidence. t009/t010 and final closeout remain open. [FINDINGS.md](./FINDINGS.md) retains details and the old blocker. Independent vertical startup restoration now has [963](../963.md); it does not undo the proven timestamp/node repair and is not silently treated as fixed here.
