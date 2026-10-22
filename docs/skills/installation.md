@@ -174,21 +174,28 @@ credential removal. By 02:49 UTC ten current versions/97 authored files are
 public and install exactly in OpenClaw; Hermes allows nine versions/90 files
 across its suite and separate import-recovery profile. Init retains its policy
 refusal. Both hosts complete the standalone ask 1.0.4 first query through
-published bea 0.3.1 with unchanged synthetic ledgers. Accruals, property and
-reconcile still await current-version promotion even though all three normal
-scans finish clean and write back. The [dated follow-through](clawhub-rehearsal.md#current-version-follow-through--2026-10-22-0249-utc)
-preserves the original failures, recoveries and exact host limits.
+published bea 0.3.1 with unchanged synthetic ledgers. The final 2026-10-22
+follow-through clears the remaining accruals, property and reconcile promotions:
+all thirteen latest versions are 1.0.4, and all thirteen OpenClaw installs match
+119/119 authored files. Twelve supported Hermes installs match 112/112 files
+across the suite and the documented import-recovery profile; init retains its
+policy refusal. Fresh default Hermes search now displays all thirteen suite
+identifiers among sixteen results. The [final verification](clawhub-rehearsal.md#final-current-version-verification--2026-10-22-utc)
+preserves the original failures, recoveries, prior model-backed queries and
+exact host limits. The owner selects a single suite package for future ClawHub
+releases; that package is not yet published or verified by this milestone.
 An upload receipt does not establish public availability or complete support.
 
-The tested Hermes default search finds the original eleven suite listings:
+The current Hermes default search finds all thirteen suite listings:
 
 ```sh
 hermes skills search beancount
 ```
 
-The 2026-10-22 v0.22.4 cohort finds those eleven names among fourteen results
+The earlier 2026-10-22 v0.22.4 cohort finds eleven names among fourteen results
 with `--source all --json --limit 30`, but omits the newly public roll-forward
-listing. The source-filtered `--source clawhub` path still returns no results.
+listing. That cohort's source-filtered `--source clawhub` path returned no results;
+its separate follow-up remains open after this closeout's successful default search.
 Use the explicit publisher-qualified identifiers for listings absent from
 search; the [dated evidence](clawhub-rehearsal.md#current-version-follow-through--2026-10-22-0249-utc)
 records discovery separately from version and installed-byte verification.

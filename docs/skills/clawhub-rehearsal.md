@@ -471,3 +471,56 @@ Private evidence remains under the ignored scope-contract scratch directory:
 `openclaw-standalone-ask-1.0.4/`, and
 `scopeFix/hermes-current-1.0.4/`. Root independently compares both completed
 query tool JSON results and verifies the unchanged-ledger/source invariants.
+
+## Final current-version verification — 2026-10-22 UTC
+
+At 19:58 UTC, the three previously pending 1.0.4 listings are publicly available.
+The final anonymous latest-metadata snapshot confirms publisher `puncsky` and
+version 1.0.4 for all thirteen skills. Their immutable release archives and
+installed authored files match the complete 119-file release map
+`3c1e0c9c84e4d265f4f2014828f6aa6bbd83a448e604c8333a3455396451f5da`.
+The customer skills, suite manifests and bundle builder remain unchanged from
+the protected release at `95851b631` (suite 0.3.8).
+
+The newly eligible installations use the same isolated, anonymous host profiles
+and supported commands as the earlier controls:
+
+| Skill / version | Authored files | OpenClaw 2026.10.5 | Hermes v0.22.4 source pin |
+| --- | --- | --- | --- |
+| beancount-accruals / 1.0.4 | 7 | Installed exactly; Safe | Installed exactly; SAFE / ALLOWED |
+| beancount-property / 1.0.4 | 6 | Installed exactly; Safe | Installed exactly; SAFE / ALLOWED |
+| beancount-reconcile / 1.0.4 | 9 | Installed exactly; Safe | Installed exactly; SAFE / ALLOWED |
+
+All thirteen OpenClaw skills now coexist in one task workspace and match
+119/119 authored files. Twelve supported Hermes skills match 112/112 files:
+eleven in its suite profile and import in the previously documented recovery
+profile. Init remains absent after its retained policy refusal; [039](../../.pm/w6/blocked/039.md)
+continues to own that compatibility gap. The Hermes archive's native version
+display limitation remains unchanged; the official v0.22.4 tag, commit
+`4d04303818b6`, archive and lock hashes establish the tested source provenance.
+
+One default Hermes search against the newly complete public catalog exits 0
+and displays all thirteen suite identifiers among sixteen results. The rendered
+Identifier column is reconstructed across wrapped lines; installed versions are
+verified separately. This clears the earlier default-search omission. The
+explicit-source behavior is not retried here and remains tracked in
+[040](../../.pm/w6/blocked/040.md).
+
+The earlier exact-1.0.4 standalone first-query results above remain the model-
+backed evidence. This closeout makes no new model call, credential copy, grant,
+upload, scan request, force install or policy override. Original failures and
+the import recovery remain preserved. Private final metadata, native logs,
+byte proofs, default-search output and local check results are retained under
+ignored `scripts/skills/tmp/w6-m6-closeout-20261022/` in the shipping worktree
+and the original scope-contract scratch directory.
+
+The owner selects a single suite package as the future ClawHub publication
+unit. These checks finish the already-submitted individual-skill milestone;
+they do not establish a published or verified OpenClaw suite plugin. Existing
+listings and evidence are retained for the subsequent distribution transition.
+
+Closeout validation passes the current structural/fixture check, 37 checker
+tests, all 142 installer/recipe/journey tests, and the agent-guidance check.
+The suite tests retain expected rejection diagnostics; their final unittest
+result is OK. No customer source, release version, dependency or lockfile changes
+are needed for this documentation and board closeout.
