@@ -138,3 +138,55 @@ describe("TextEditor Escape during composition", () => {
     expect(onCancel).toHaveBeenCalledTimes(1);
   });
 });
+
+/**
+ * Monaco's keybinding service handles Escape for its open widgets
+ * (suggestions, Go to Line, parameter hints) and stops the event at the
+ * editor; only an Escape none of them claimed cancels the edit (w4/968).
+ */
+describe("TextEditor Escape after Monaco's widgets", () => {
+  const onCancel = vi.fn();
+  beforeEach(() => {
+    onCancel.mockClear();
+    current = makeEditor();
+  });
+
+  function renderWithWidget() {
+    const view = render(
+      <TextEditor content="" filename="main.bean" onCancel={onCancel} />,
+    );
+    const editor = view.getByTestId("editor");
+    let widgetOpen = false;
+    editor.addEventListener("keydown", (event) => {
+      if (event.key === "Escape" && widgetOpen) {
+        widgetOpen = false;
+        event.preventDefault();
+        event.stopPropagation();
+      }
+    });
+    return {
+      editor,
+      openWidget: () => {
+        widgetOpen = true;
+      },
+    };
+  }
+
+  it("lets an open widget's Escape close it without opening the departure choice", () => {
+    const { editor, openWidget } = renderWithWidget();
+    openWidget();
+    fireEvent.keyDown(editor, { key: "Escape", keyCode: 27 });
+    expect(onCancel).not.toHaveBeenCalled();
+
+    // With the widget closed, the same Escape cancels the edit.
+    fireEvent.keyDown(editor, { key: "Escape", keyCode: 27 });
+    expect(onCancel).toHaveBeenCalledTimes(1);
+  });
+
+  it("ignores an Escape another handler already took", () => {
+    const { editor } = renderWithWidget();
+    editor.addEventListener("keydown", (event) => event.preventDefault());
+    fireEvent.keyDown(editor, { key: "Escape", keyCode: 27 });
+    expect(onCancel).not.toHaveBeenCalled();
+  });
+});

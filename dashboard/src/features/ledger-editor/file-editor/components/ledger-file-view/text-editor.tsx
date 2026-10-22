@@ -83,7 +83,7 @@ export const TextEditor = ({
   // Handle document-level keyboard shortcuts:
   //   Cmd+F  — open Monaco find widget (all modes; only when editor is focused)
   //   Cmd+S  — save file (edit mode only)
-  //   Escape — cancel edit (edit mode only)
+  //   Escape — cancel edit (edit mode only; after Monaco's own widgets)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       const isMod = e.ctrlKey || e.metaKey;
@@ -105,22 +105,28 @@ export const TextEditor = ({
         if (currentContent !== undefined) onSave(currentContent);
         return;
       }
+    };
 
-      if (e.key === "Escape" && onCancel) {
-        // An input method's Escape cancels its composition, not the edit.
-        if (composingRef.current || isCompositionKey(e)) return;
-        if (!shouldCancelEditOnEscape(editorRef.current, e.target)) {
-          return;
-        }
-        e.preventDefault();
-        e.stopPropagation();
-        onCancel();
+    // Escape is heard after Monaco, not before: its suggestions, Go to Line,
+    // Find and parameter hints handle their own Escape and stop it there, so
+    // only an Escape no editor widget claimed cancels the edit (w4/968).
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key !== "Escape" || readOnly || !onCancel || e.defaultPrevented) {
+        return;
       }
+      // An input method's Escape cancels its composition, not the edit.
+      if (composingRef.current || isCompositionKey(e)) return;
+      if (!shouldCancelEditOnEscape(editorRef.current, e.target)) return;
+      e.preventDefault();
+      onCancel();
     };
 
     document.addEventListener("keydown", handleKeyDown, { capture: true });
-    return () =>
+    document.addEventListener("keydown", handleEscape);
+    return () => {
       document.removeEventListener("keydown", handleKeyDown, { capture: true });
+      document.removeEventListener("keydown", handleEscape);
+    };
   }, [readOnly, onSave, onCancel]);
 
   const handleEditorMount = (
