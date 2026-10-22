@@ -15,6 +15,11 @@ const react = {
       ? type({ ...props, children })
       : { type, props: props ?? {}, children: children.flat() };
   },
+  // Effects run as they are declared; the cursor-less stub is enough for a
+  // component whose effect only reports.
+  useEffect(effect: () => void) {
+    effect();
+  },
   useState(initial: unknown) {
     const slot = cursor++;
     if (!(slot in states)) states[slot] = initial;
@@ -104,6 +109,27 @@ describe("UserAvatar", () => {
     const after = content(render(props));
     expect(after.type).toBe("Text");
     expect(after.children).toEqual(["A"]);
+  });
+
+  it("reports whether the picture is what shows (w21/289)", () => {
+    const reports: boolean[] = [];
+    const props = {
+      uri: "https://example.test/ada.png",
+      name: "ada",
+      size: 24,
+      onFallbackChange: (fallback: boolean) => reports.push(fallback),
+    };
+    content(render(props)).props.onError();
+    render(props);
+    expect(reports).toEqual([false, true]);
+    const none: boolean[] = [];
+    render({
+      uri: null,
+      name: "ada",
+      size: 24,
+      onFallbackChange: (fallback: boolean) => none.push(fallback),
+    });
+    expect(none).toEqual([true]);
   });
 
   it("tries again when the picture changes after a failure", () => {

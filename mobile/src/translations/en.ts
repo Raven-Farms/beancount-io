@@ -772,6 +772,7 @@ export const en = {
   profileEmailReadOnly: "Email can't be changed here",
   profileNotSet: "Not set",
   profilePhotoFromGravatar: "Photo from Gravatar",
+  profileAddGravatar: "Add a photo on Gravatar",
   profileUpdated: "Profile updated",
   multiplePostings: "Multiple postings",
 };

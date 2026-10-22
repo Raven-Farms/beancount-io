@@ -729,6 +729,7 @@ export const fa: Translations = {
   profileEmailReadOnly: "ایمیل را اینجا نمی‌توان تغییر داد",
   profileNotSet: "تنظیم نشده",
   profilePhotoFromGravatar: "عکس از Gravatar",
+  profileAddGravatar: "افزودن عکس در Gravatar",
   profileUpdated: "نمایه به‌روزرسانی شد",
   multiplePostings: "چند ثبت",
   createLedgerNext: "بعدی",

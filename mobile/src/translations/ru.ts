@@ -756,6 +756,7 @@ export const ru: Translations = {
   profileEmailReadOnly: "Адрес эл. почты нельзя изменить здесь",
   profileNotSet: "Не указано",
   profilePhotoFromGravatar: "Фото из Gravatar",
+  profileAddGravatar: "Добавьте фото в Gravatar",
   profileUpdated: "Профиль обновлён",
   multiplePostings: "Несколько проводок",
   createLedgerNext: "Далее",

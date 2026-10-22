@@ -738,6 +738,7 @@ export const bg: Translations = {
   profileEmailReadOnly: "Имейлът не може да се променя тук",
   profileNotSet: "Не е зададено",
   profilePhotoFromGravatar: "Снимка от Gravatar",
+  profileAddGravatar: "Добавете снимка в Gravatar",
   profileUpdated: "Профилът е обновен",
   multiplePostings: "Няколко реда",
   createLedgerNext: "Напред",

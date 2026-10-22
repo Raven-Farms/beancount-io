@@ -764,6 +764,7 @@ export const sk: Translations = {
   profileEmailReadOnly: "E-mail tu nemožno zmeniť",
   profileNotSet: "Nenastavené",
   profilePhotoFromGravatar: "Fotka z Gravataru",
+  profileAddGravatar: "Pridajte fotku na Gravatar",
   profileUpdated: "Profil bol aktualizovaný",
   multiplePostings: "Viacero zápisov",
   createLedgerNext: "Ďalej",

@@ -756,6 +756,7 @@ export const pt: Translations = {
   profileEmailReadOnly: "O e-mail não pode ser alterado aqui",
   profileNotSet: "Não definido",
   profilePhotoFromGravatar: "Foto do Gravatar",
+  profileAddGravatar: "Adicione uma foto no Gravatar",
   profileUpdated: "Perfil atualizado",
   multiplePostings: "Vários lançamentos",
   createLedgerNext: "Próximo",

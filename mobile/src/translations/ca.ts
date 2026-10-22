@@ -759,6 +759,7 @@ export const ca: Translations = {
   profileEmailReadOnly: "El correu electrònic no es pot canviar aquí",
   profileNotSet: "Sense definir",
   profilePhotoFromGravatar: "Foto de Gravatar",
+  profileAddGravatar: "Afegiu una foto a Gravatar",
   profileUpdated: "Perfil actualitzat",
   multiplePostings: "Diversos apunts",
   createLedgerNext: "Següent",

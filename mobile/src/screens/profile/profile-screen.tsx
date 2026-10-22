@@ -223,6 +223,7 @@ export function ProfileScreen(): JSX.Element {
   const { refresh: refreshLedgers } = useLedgerDirectory();
   const client = useApolloClient();
   const [saved, setSaved] = useState(false);
+  const [avatarFallback, setAvatarFallback] = useState(false);
   const keyboardVerticalOffset = useStackKeyboardOffset();
   const screenOptions = useMemo(() => ({ title: t("profile") }), [t]);
 
@@ -361,6 +362,13 @@ export function ProfileScreen(): JSX.Element {
       </Text>
     ) : null;
 
+  // A Gravatar URL comes back for everyone without an upload; when it fails to
+  // load there is no Gravatar, and the initials must not be captioned as one
+  // (w21/289).
+  const gravatarCaption = avatarFallback
+    ? t("profileAddGravatar")
+    : t("profilePhotoFromGravatar");
+
   let body: JSX.Element;
   if (user) {
     body = (
@@ -375,6 +383,7 @@ export function ProfileScreen(): JSX.Element {
             uri={user.avatarUrl}
             name={displayName}
             size={AVATAR_SIZE}
+            onFallbackChange={setAvatarFallback}
           />
           {isGravatarUrl(user.avatarUrl) ? (
             <Pressable
@@ -382,12 +391,10 @@ export function ProfileScreen(): JSX.Element {
                 void WebBrowser.openBrowserAsync("https://gravatar.com/")
               }
               accessibilityRole="link"
-              accessibilityLabel={t("profilePhotoFromGravatar")}
+              accessibilityLabel={gravatarCaption}
               hitSlop={8}
             >
-              <Text style={styles.avatarCaption}>
-                {t("profilePhotoFromGravatar")}
-              </Text>
+              <Text style={styles.avatarCaption}>{gravatarCaption}</Text>
             </Pressable>
           ) : null}
         </View>

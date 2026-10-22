@@ -744,6 +744,7 @@ export const nl: Translations = {
   profileEmailReadOnly: "Je e-mailadres kan hier niet worden gewijzigd",
   profileNotSet: "Niet ingesteld",
   profilePhotoFromGravatar: "Foto van Gravatar",
+  profileAddGravatar: "Voeg een foto toe op Gravatar",
   profileUpdated: "Profiel bijgewerkt",
   multiplePostings: "Meerdere boekingen",
   createLedgerNext: "Volgende",

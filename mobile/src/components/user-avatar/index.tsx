@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Image, PixelRatio, StyleSheet, Text, View } from "react-native";
 import { useTheme } from "@/common/theme";
 import { avatarImageUri, userInitials } from "@/common/user-display";
@@ -8,6 +8,12 @@ type UserAvatarProps = {
   name: string;
   size: number;
   testID?: string;
+  /**
+   * Told whether the picture is not what shows: no picture, or one that failed
+   * to load. A Gravatar URL is returned for everyone without an upload, so
+   * only a failed load says there is no Gravatar (w21/289).
+   */
+  onFallbackChange?: (fallback: boolean) => void;
 };
 
 /** A round account picture that falls back to the person's initials when
@@ -18,6 +24,7 @@ export function UserAvatar({
   name,
   size,
   testID,
+  onFallbackChange,
 }: UserAvatarProps): JSX.Element {
   const theme = useTheme().colorTheme;
   const source = avatarImageUri(
@@ -26,6 +33,9 @@ export function UserAvatar({
   );
   const [failedSource, setFailedSource] = useState<string>();
   const showImage = source !== undefined && source !== failedSource;
+  useEffect(() => {
+    onFallbackChange?.(!showImage);
+  }, [showImage, onFallbackChange]);
   const circle = {
     width: size,
     height: size,

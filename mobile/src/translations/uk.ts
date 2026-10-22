@@ -756,6 +756,7 @@ export const uk: Translations = {
   profileEmailReadOnly: "Адресу ел. пошти тут змінити не можна",
   profileNotSet: "Не вказано",
   profilePhotoFromGravatar: "Фото з Gravatar",
+  profileAddGravatar: "Додайте фото в Gravatar",
   profileUpdated: "Профіль оновлено",
   multiplePostings: "Кілька проведень",
   createLedgerNext: "Далі",

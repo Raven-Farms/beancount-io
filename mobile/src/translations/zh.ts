@@ -676,6 +676,7 @@ export const zh: Translations = {
   profileEmailReadOnly: "此处无法修改邮箱",
   profileNotSet: "未设置",
   profilePhotoFromGravatar: "头像来自 Gravatar",
+  profileAddGravatar: "在 Gravatar 上添加照片",
   profileUpdated: "个人资料已更新",
   multiplePostings: "多笔分录",
   createLedgerNext: "下一步",
