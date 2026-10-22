@@ -39,6 +39,9 @@ export function LimitIndicator({
   const { t } = useTranslations();
   const { isReactNative } = useReactNativeContext();
 
+  // An unlimited allowance (-1) has no limit to show or reach (w4/313).
+  if (max === -1) return null;
+
   // Calculate usage percentage
   const percentage = (used / max) * 100;
 

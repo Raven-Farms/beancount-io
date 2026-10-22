@@ -441,4 +441,26 @@ describe("LimitIndicator", () => {
       expect(screen.queryByText("Upgrade to unlock")).not.toBeInTheDocument();
     });
   });
+
+  // Enterprise allowances are unlimited (-1): nothing is near or at a limit,
+  // in either binding or variant (w4/313).
+  it.each([
+    ["ledgers", "alert"],
+    ["collaborators", "alert"],
+    ["collaborators", "badge"],
+  ] as const)(
+    "shows no %s limit as %s for an unlimited allowance",
+    (limitType, variant) => {
+      const { container } = render(
+        <LimitIndicator
+          used={7}
+          max={-1}
+          limitType={limitType}
+          tier="ENTERPRISE"
+          variant={variant}
+        />,
+      );
+      expect(container).toBeEmptyDOMElement();
+    },
+  );
 });
