@@ -613,6 +613,8 @@ export const ru: Translations = {
   ledgerEditorRecreate: "Сохранить как новый файл",
   ledgerEditorSaveFailedHint:
     "Ваш текст всё ещё здесь. Попробуйте ещё раз чуть позже.",
+  ledgerEditorAccessRemoved:
+    "Вы больше не можете редактировать эту книгу. Ваш текст пока здесь: скопируйте его, чтобы сохранить.",
   ledgerEditorCopyFailed:
     "Не удалось скопировать ваш текст, поэтому файл не перезагружен.",
   ledgerEditorReload: "Перезагрузить",

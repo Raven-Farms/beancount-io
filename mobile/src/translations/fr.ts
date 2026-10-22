@@ -617,6 +617,8 @@ export const fr: Translations = {
   ledgerEditorRecreate: "Enregistrer comme nouveau fichier",
   ledgerEditorSaveFailedHint:
     "Votre texte est toujours là. Réessayez dans un instant.",
+  ledgerEditorAccessRemoved:
+    "Vous ne pouvez plus modifier ce grand livre. Votre texte est toujours là : copiez-le pour le conserver.",
   ledgerEditorCopyFailed:
     "Impossible de copier votre texte ; le fichier n'a donc pas été rechargé.",
   ledgerEditorReload: "Recharger",

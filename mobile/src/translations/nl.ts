@@ -604,6 +604,8 @@ export const nl: Translations = {
   ledgerEditorRecreate: "Opslaan als nieuw bestand",
   ledgerEditorSaveFailedHint:
     "Je tekst staat er nog. Probeer het zo meteen opnieuw.",
+  ledgerEditorAccessRemoved:
+    "Je kunt dit grootboek niet meer bewerken. Je tekst staat er nog: kopieer hem om hem te bewaren.",
   ledgerEditorCopyFailed:
     "Je tekst kon niet worden gekopieerd, dus het bestand is niet herladen.",
   ledgerEditorReload: "Herladen",

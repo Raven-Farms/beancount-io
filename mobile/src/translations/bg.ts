@@ -601,6 +601,8 @@ export const bg: Translations = {
   ledgerEditorRecreate: "Запиши като нов файл",
   ledgerEditorSaveFailedHint:
     "Текстът ви все още е тук. Опитайте отново след малко.",
+  ledgerEditorAccessRemoved:
+    "Вече нямате право да редактирате тази книга. Текстът ви все още е тук: копирайте го, за да го запазите.",
   ledgerEditorCopyFailed:
     "Текстът не можа да се копира, затова файлът не беше презареден.",
   ledgerEditorReload: "Презареди",

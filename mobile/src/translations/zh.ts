@@ -545,6 +545,8 @@ export const zh: Translations = {
     "此文件已在别处被删除或移动，无法保存。您的文本仍在这里：可以复制它，或将其保存为同一路径下的新文件。",
   ledgerEditorRecreate: "另存为新文件",
   ledgerEditorSaveFailedHint: "您的文本仍在这里。请稍后再试。",
+  ledgerEditorAccessRemoved:
+    "你已无法再编辑此账本。你的文字仍在这里：请复制以保留。",
   ledgerEditorCopyFailed: "无法复制你的文本，因此未重新加载文件。",
   ledgerEditorReload: "重新加载",
   ledgerEditorKeepEditing: "继续编辑",

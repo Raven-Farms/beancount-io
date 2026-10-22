@@ -617,6 +617,8 @@ export const sk: Translations = {
     "Tento súbor bol inde odstránený alebo presunutý a nedá sa uložiť. Váš text je stále tu: skopírujte ho alebo ho uložte ako nový súbor na rovnakej ceste.",
   ledgerEditorRecreate: "Uložiť ako nový súbor",
   ledgerEditorSaveFailedHint: "Váš text je stále tu. Skúste to o chvíľu znova.",
+  ledgerEditorAccessRemoved:
+    "Túto knihu už nemôžete upravovať. Váš text tu stále je: skopírujte ho, aby ste ho zachovali.",
   ledgerEditorCopyFailed:
     "Váš text sa nepodarilo skopírovať, preto sa súbor znova nenačítal.",
   ledgerEditorReload: "Načítať znova",

@@ -616,6 +616,8 @@ export const ca: Translations = {
   ledgerEditorRecreate: "Desa com a fitxer nou",
   ledgerEditorSaveFailedHint:
     "El vostre text encara és aquí. Torneu-ho a provar d'aquí a un moment.",
+  ledgerEditorAccessRemoved:
+    "Ja no podeu editar aquest llibre. El vostre text continua aquí: copieu-lo per conservar-lo.",
   ledgerEditorCopyFailed:
     "No s'ha pogut copiar el text, per això el fitxer no s'ha recarregat.",
   ledgerEditorReload: "Torna a carregar",

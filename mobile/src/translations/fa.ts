@@ -593,6 +593,8 @@ export const fa: Translations = {
     "این فایل جای دیگری حذف یا جابه‌جا شده و ذخیره نمی‌شود. متن شما هنوز اینجاست: آن را کپی کنید یا به‌صورت فایل جدید در همان مسیر ذخیره کنید.",
   ledgerEditorRecreate: "ذخیره به‌عنوان فایل جدید",
   ledgerEditorSaveFailedHint: "متن شما هنوز اینجاست. کمی بعد دوباره تلاش کنید.",
+  ledgerEditorAccessRemoved:
+    "دیگر نمی‌توانید این دفترکل را ویرایش کنید. متن شما هنوز اینجاست: برای نگه داشتن آن را کپی کنید.",
   ledgerEditorCopyFailed: "متن شما کپی نشد، بنابراین فایل دوباره بارگیری نشد.",
   ledgerEditorReload: "بارگذاری دوباره",
   ledgerEditorKeepEditing: "ادامهٔ ویرایش",

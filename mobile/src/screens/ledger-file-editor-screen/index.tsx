@@ -3,7 +3,7 @@ import {
   ledgerWriteFailureMessage,
 } from "@/common/ledger-refusal";
 import { useGuest } from "@/common/guest/guest-context";
-import { isLedgerGone } from "@/common/graphql-error-codes";
+import { isLedgerGone, isWriteForbidden } from "@/common/graphql-error-codes";
 import { disclosureAccessibility } from "@/common/accessibility";
 import { useLedgerAccess } from "@/common/hooks/use-ledger-access";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -798,6 +798,17 @@ function LedgerFileEditorSession({
                 text: t("ledgerEditorRecreate"),
                 onPress: () => void recreateFile(content, epoch, revision),
               },
+            ],
+          );
+        } else if (isWriteForbidden(err)) {
+          // Edit access was removed: a retry cannot succeed, and the draft is
+          // the only copy (w21/474).
+          Alert.alert(
+            t("ledgerEditorSaveFailed"),
+            t("ledgerEditorAccessRemoved"),
+            [
+              { text: t("ledgerEditorKeepEditing"), style: "cancel" },
+              { text: t("copy"), onPress: () => void copyDraft(content) },
             ],
           );
         } else {

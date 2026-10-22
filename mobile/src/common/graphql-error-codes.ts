@@ -31,6 +31,15 @@ export function isLedgerGone(err: unknown): boolean {
 }
 
 /**
+ * Whether a write was refused because this account may no longer write to the
+ * ledger (a collaborator downgraded to read): retrying cannot succeed
+ * (w21/474).
+ */
+export function isWriteForbidden(err: unknown): boolean {
+  return graphQLErrorCodes(err).includes("FORBIDDEN");
+}
+
+/**
  * Whether the launch check of the persisted ledger selection should drop it:
  * only when the server says the ledger is gone or no longer yours. Any other
  * failure (SERVICE_UNAVAILABLE, RATE_LIMITED, INTERNAL_SERVER_ERROR, a
