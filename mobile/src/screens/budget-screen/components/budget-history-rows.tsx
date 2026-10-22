@@ -29,6 +29,7 @@ import {
   type BudgetHistoryRow,
 } from "@/screens/budget-screen/selectors/budget-selectors";
 import { LEADING_TEXT_ALIGN } from "@/common/rtl";
+import { InlineError } from "@/components/inline-error";
 
 const getStyles = (theme: ColorTheme) =>
   StyleSheet.create({
@@ -205,7 +206,7 @@ export function BudgetHistoryRows({
           </View>
         ))}
 
-      {error && <Text style={styles.error}>{error}</Text>}
+      {error && <InlineError style={styles.error} message={error} />}
     </View>
   );
 }

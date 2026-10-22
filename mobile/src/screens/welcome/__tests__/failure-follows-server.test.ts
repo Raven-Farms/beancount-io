@@ -20,7 +20,7 @@ describe("a settled sign-in failure", () => {
   it("is announced to a screen reader", () => {
     expect(
       read("index.tsx").includes(
-        '<Textstyle={styles.error}accessibilityRole="alert">{t(failureMessageKey(failure))}</Text>',
+        "<InlineErrorstyle={styles.error}message={t(failureMessageKey(failure))}/>",
       ),
     ).toBe(true);
   });

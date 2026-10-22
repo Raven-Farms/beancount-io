@@ -93,6 +93,20 @@ function load(file: string): any {
             },
             useOptionalLedgerDirectory: () => null,
           };
+        if (id === "@/components/inline-error")
+          return {
+            InlineError: ({
+              message,
+              style,
+            }: {
+              message: string;
+              style?: unknown;
+            }) => ({
+              type: "Text",
+              props: { style, accessibilityRole: "alert" },
+              children: [message],
+            }),
+          };
         throw new Error(`Unexpected dependency: ${id}`);
       },
     },

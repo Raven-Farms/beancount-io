@@ -21,6 +21,7 @@ import {
 import { isLedgerGone } from "@/common/graphql-error-codes";
 import { useOptionalLedgerDirectory } from "@/common/ledger-directory/ledger-directory-provider";
 import { useGuest } from "@/common/guest/guest-context";
+import { InlineError } from "@/components/inline-error";
 
 interface LedgerGuardContextValue {
   ledgerId: string;
@@ -155,9 +156,10 @@ const LedgerGuardProviderComponent = ({
               color={theme.black40}
               style={styles.icon}
             />
-            <Text style={styles.message} accessibilityRole="alert">
-              {t("discoveryLoadError")}
-            </Text>
+            <InlineError
+              style={styles.message}
+              message={t("discoveryLoadError")}
+            />
             <View style={styles.actions}>
               <TouchableOpacity
                 style={styles.button}

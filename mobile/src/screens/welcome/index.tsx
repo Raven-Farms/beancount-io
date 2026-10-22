@@ -3,7 +3,6 @@ import {
   ScrollView,
   StyleSheet,
   Image,
-  Text,
   useWindowDimensions,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
@@ -24,6 +23,7 @@ import {
   useNativeSignIn,
   type NativeSignIn,
 } from "@/screens/welcome/use-native-sign-in";
+import { InlineError } from "@/components/inline-error";
 
 const getStyles = (theme: ColorTheme) =>
   StyleSheet.create({
@@ -190,14 +190,16 @@ export function WelcomeScreen(): JSX.Element {
             </Button>
           </View>
           {failure && (
-            <Text style={styles.error} accessibilityRole="alert">
-              {t(failureMessageKey(failure))}
-            </Text>
+            <InlineError
+              style={styles.error}
+              message={t(failureMessageKey(failure))}
+            />
           )}
           {signOutReason === "sessionEnded" && !failure ? (
-            <Text style={styles.error} accessibilityRole="alert">
-              {t("sessionEndedNotice")}
-            </Text>
+            <InlineError
+              style={styles.error}
+              message={t("sessionEndedNotice")}
+            />
           ) : null}
         </View>
       </ScrollView>

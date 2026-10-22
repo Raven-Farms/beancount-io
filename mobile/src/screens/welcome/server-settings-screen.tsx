@@ -30,6 +30,7 @@ import { Button } from "@/components/button";
 import { PressableScale } from "@/components/pressable-scale";
 import { createConnectionTestGate } from "./connection-test-gate";
 import { useStackKeyboardOffset } from "@/common/hooks/use-stack-keyboard-offset";
+import { InlineError } from "@/components/inline-error";
 
 const getStyles = (theme: ColorTheme) =>
   StyleSheet.create({
@@ -291,17 +292,16 @@ export function ServerSettingsScreen(): JSX.Element {
             />
             <Text style={styles.helper}>{t("serverUrlHelper")}</Text>
             {validationError && (
-              <Text style={styles.error} accessibilityRole="alert">
-                {validationMessage(validationError, t)}
-              </Text>
+              <InlineError
+                style={styles.error}
+                message={validationMessage(validationError, t)}
+              />
             )}
             {connection && (
-              <Text
+              <InlineError
                 style={connectionIsSuccess ? styles.success : styles.error}
-                accessibilityRole="alert"
-              >
-                {connectionMessage(connection, t)}
-              </Text>
+                message={connectionMessage(connection, t)}
+              />
             )}
             {canonical !== undefined && (
               <PressableScale

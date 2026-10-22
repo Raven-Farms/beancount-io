@@ -59,6 +59,7 @@ import { SearchBar } from "@/components/search-bar";
 import { UserAvatar } from "@/components/user-avatar";
 import { useCurrentUser } from "@/common/hooks/use-current-user";
 import { type DrawerLedger, getDrawerSections } from "./drawer-ledgers";
+import { InlineError } from "@/components/inline-error";
 
 const skeletonWidths = [140, 112, 160];
 const IDENTITY_AVATAR_SIZE = 24;
@@ -726,9 +727,7 @@ export function LedgerDrawer({
       {guest ? (
         <>
           {guest.signInFailed && (
-            <Text accessibilityRole="alert" style={styles.stateText}>
-              {t("signInFailed")}
-            </Text>
+            <InlineError style={styles.stateText} message={t("signInFailed")} />
           )}
           <DrawerMenuRow
             testID="guest-sign-in"

@@ -9,7 +9,7 @@ import {
 } from "react";
 import { ApolloProvider, makeVar } from "@apollo/client";
 import { Redirect, router } from "expo-router";
-import { AppState, StyleSheet, Text, View } from "react-native";
+import { AppState, StyleSheet, View } from "react-native";
 import { GuestContext, useGuest } from "@/common/guest/guest-context";
 import { createGuestClient } from "@/common/guest/guest-client";
 import {
@@ -30,6 +30,7 @@ import {
 import type { StashedTransaction } from "@/screens/transaction-detail-screen/open-transaction-detail";
 import { createForegroundRefresher } from "@/common/apollo/foreground-refresh";
 import { exampleRoutes } from "./example-routes";
+import { InlineError } from "@/components/inline-error";
 
 const GuestReadContext = createContext<{
   failure?: GuestReadFailure;
@@ -182,16 +183,14 @@ export function ExampleReadScreen({
         refreshing={false}
         onRefresh={retry}
       >
-        <Text
-          accessibilityRole="alert"
+        <InlineError
           style={[styles.message, { color: theme.text01 }]}
-        >
-          {t(
+          message={t(
             failure === "unavailable"
               ? "guestUnavailable"
               : "guestConnectionError",
           )}
-        </Text>
+        />
         <Button type="primary" onPress={retry}>
           {t("discoveryRetry")}
         </Button>

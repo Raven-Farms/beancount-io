@@ -51,6 +51,7 @@ import {
   type ProfileValues,
 } from "./profile-changes";
 import { useIsHere } from "@/common/hooks/use-is-here";
+import { InlineError } from "@/components/inline-error";
 
 /** The longest first or last name the form accepts. */
 const NAME_MAX = 100;
@@ -194,9 +195,7 @@ function ProfileFooter({
   return (
     <View style={styles.footer}>
       {rootError ? (
-        <Text style={styles.formError} accessibilityRole="alert">
-          {rootError}
-        </Text>
+        <InlineError style={styles.formError} message={rootError} />
       ) : null}
       <View style={!canSave && !isSubmitting ? styles.saveDisabled : null}>
         <Button
@@ -357,9 +356,7 @@ export function ProfileScreen(): JSX.Element {
 
   const nameError = (message: string | undefined) =>
     message ? (
-      <Text style={[styles.hint, styles.hintError]} accessibilityRole="alert">
-        {message}
-      </Text>
+      <InlineError style={[styles.hint, styles.hintError]} message={message} />
     ) : null;
 
   // A Gravatar URL comes back for everyone without an upload; when it fails to
@@ -416,12 +413,10 @@ export function ProfileScreen(): JSX.Element {
           testID: "profile-username",
         })}
         {errors.username?.message ? (
-          <Text
+          <InlineError
             style={[styles.hint, styles.hintError]}
-            accessibilityRole="alert"
-          >
-            {errors.username.message}
-          </Text>
+            message={errors.username.message}
+          />
         ) : (
           <Text style={styles.hint}>
             {`${t("profileUsernameRule")} ${t("profileUsernameHint")}`}

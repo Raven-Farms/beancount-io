@@ -100,6 +100,20 @@ vm.runInNewContext(
       if (id === "./example-routes") return { exampleRoutes: {} };
       if (id === "@/common/apollo/foreground-refresh")
         return require("../../../common/apollo/foreground-refresh");
+      if (id === "@/components/inline-error")
+        return {
+          InlineError: ({
+            message,
+            style,
+          }: {
+            message: string;
+            style?: unknown;
+          }) => ({
+            type: "Text",
+            props: { style, accessibilityRole: "alert" },
+            children: [message],
+          }),
+        };
       throw new Error(`Unexpected dependency: ${id}`);
     },
   },

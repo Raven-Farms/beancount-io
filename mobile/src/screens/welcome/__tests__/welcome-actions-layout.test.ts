@@ -95,6 +95,20 @@ function loadWelcome(): any {
         return { useNativeSignIn: () => signIn };
       if (id === "@/assets/images/icon.png") return 1;
       if (id === "@/common/vars/sign-out-reason") return { signOutReasonVar };
+      if (id === "@/components/inline-error")
+        return {
+          InlineError: ({
+            message,
+            style,
+          }: {
+            message: string;
+            style?: unknown;
+          }) => ({
+            type: "Text",
+            props: { style, accessibilityRole: "alert" },
+            children: [message],
+          }),
+        };
       throw new Error(`Unexpected dependency: ${id}`);
     },
   });

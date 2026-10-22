@@ -34,6 +34,16 @@ describe("live regions and VoiceOver", () => {
     expect(offenders.join(", ")).toBe("");
   });
 
+  // w21/484: `accessibilityRole="alert"` does nothing on iOS, so a bare one is a
+  // silent error. Only the files that announce may declare it.
+  it("no file declares the alert role without announcing on iOS", () => {
+    const offenders = collect(srcDir)
+      .filter((file) => /accessibilityRole="alert"/.test(read(file)))
+      .filter((file) => !/announceForAccessibility/.test(read(file)))
+      .map((file) => path.relative(srcDir, file));
+    expect(offenders.join(", ")).toBe("");
+  });
+
   it("toasts are announced on iOS, except the loading spinner", () => {
     const src = read(
       path.join(srcDir, "common/providers/toast-provider/index.tsx"),
@@ -64,6 +74,10 @@ describe("live regions and VoiceOver", () => {
       "screens/edit-transaction-screen/edit-transaction-screen.tsx",
       "components/text-input-modal/index.tsx",
       "screens/create-ledger-screen/create-ledger-screen.tsx",
+      "screens/profile/profile-screen.tsx",
+      "screens/welcome/server-settings-screen.tsx",
+      "screens/welcome/index.tsx",
+      "screens/budget-screen/components/budget-history-rows.tsx",
     ]) {
       expect(read(path.join(srcDir, file)).includes("<InlineError")).toBe(true);
     }
