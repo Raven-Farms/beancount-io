@@ -46,6 +46,11 @@ const PUBLIC_OPERATIONS = new Set([
   "GetLedgerEntryContext",
   "AccountReport",
   "AccountJournal",
+  // Public reads the anonymous server answers: the close dates that hide an
+  // emptied closed account (w21/099) and the "scheduled this month" check
+  // (w21/337) were refused for guests (w21/635).
+  "LedgerAccountCloseDates",
+  "QueryShell",
 ]);
 
 // The read of one entry: its NOT_FOUND says that entry is gone, which the screen

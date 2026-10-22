@@ -6,6 +6,8 @@ import {
   GetLedgerEntryContextDocument,
   AccountReportDocument,
   AccountJournalDocument,
+  LedgerAccountCloseDatesDocument,
+  QueryShellDocument,
   UpdateLedgerFileDocument,
   DeleteLedgerFileDocument,
   CreateLedgerFileDocument,
@@ -118,6 +120,20 @@ describe("guest read isolation", () => {
           items: [],
         },
       },
+    ],
+    // w21/635: Accounts and Home hide emptied closed accounts, and Spending stops
+    // at today, from these two public reads; the gate refused both for guests.
+    [
+      "account close dates",
+      LedgerAccountCloseDatesDocument,
+      {},
+      { getLedgerAccountDirectives: [] },
+    ],
+    [
+      "query shell",
+      QueryShellDocument,
+      { query: "SELECT 1" },
+      { queryShell: { table: { rows: [], types: [] } } },
     ],
   ] as const) {
     it(`loads the shared ${name} screen's actual operation anonymously`, async () => {
