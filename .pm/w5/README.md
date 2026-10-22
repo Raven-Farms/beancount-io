@@ -37,7 +37,7 @@
 ## Inbox
 
 - [982 — Preserve labels in stranded-lot close advice](./982.md) — minor CLI follow-up to 909/913; omitted or unescaped labels make the copied recovery fail or leave wrong lots open, reproduced 2026-10-22.
-- [981 — Keep empty acquisition labels distinct in import identities](./981.md) — major CLI follow-up to 899/915; empty and absent labels share one hash, silently skipping a second purchase even with include, reproduced 2026-10-22.
+- [981 — Preserve acquisition labels in import identities](./981.md) — major CLI follow-up to 899/915; empty/absent labels collapse and NFD/NFC labels split identity, causing skipped or duplicate purchases and false native-ID conflicts, reproduced 2026-10-22.
 - [980 — Preserve trade dependencies in same-day bulk ordering](./980.md) — major CLI follow-up to 884; combined pairs reject a valid short cover, the fallback changes independent LIFO/HIFO lots, and newest-first custody transfers drop a bookable sale, reproduced 2026-10-22.
 
 - [979 — Keep opposite-direction source legs distinct in native import matching](./979.md) — major CLI follow-up to 603/896; a sell-two/buy-one pair is falsely accepted as an exact one-share sale, hiding a native-ID source change, reproduced 2026-10-22.
