@@ -388,6 +388,7 @@ export const fr: Translations = {
     "Ce marchand n'est pas disponible dans le grand livre sélectionné.",
   commitDetailUnavailable:
     "Cette modification n'est pas disponible dans le grand livre sélectionné.",
+  commitDetailGone: "Ce commit n'est plus disponible.",
   fileEditorUnavailable:
     "Ce fichier n’est pas disponible dans le registre sélectionné.",
   journalLoadError: "Échec du chargement du journal",

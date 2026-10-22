@@ -383,6 +383,7 @@ export const uk: Translations = {
   transactionErrorOpenFile: "Відкрити в редакторі файлів",
   merchantDetailUnavailable: "Цей продавець недоступний у вибраній книзі.",
   commitDetailUnavailable: "Ця зміна недоступна у вибраній книзі.",
+  commitDetailGone: "Ця зміна більше недоступна.",
   fileEditorUnavailable: "Цей файл недоступний у вибраній книзі.",
   journalLoadError: "Помилка завантаження журналу",
   // entry context (transactions screen)

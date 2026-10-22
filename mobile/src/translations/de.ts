@@ -390,6 +390,7 @@ export const de: Translations = {
     "Dieser Händler ist im ausgewählten Hauptbuch nicht verfügbar.",
   commitDetailUnavailable:
     "Diese Änderung ist im ausgewählten Hauptbuch nicht verfügbar.",
+  commitDetailGone: "Dieser Commit ist nicht mehr verfügbar.",
   fileEditorUnavailable:
     "Diese Datei ist im ausgewählten Hauptbuch nicht verfügbar.",
   journalLoadError: "Fehler beim Laden des Journals",

@@ -377,6 +377,7 @@ export const bg: Translations = {
   transactionErrorOpenFile: "Отвори в редактора на файлове",
   merchantDetailUnavailable: "Този търговец не е наличен в избраната книга.",
   commitDetailUnavailable: "Тази промяна не е налична в избраната книга.",
+  commitDetailGone: "Тази промяна вече не е налична.",
   fileEditorUnavailable: "Този файл не е наличен в избраната книга.",
   journalLoadError: "Неуспешно зареждане на журнала",
   // entry context (transactions screen)

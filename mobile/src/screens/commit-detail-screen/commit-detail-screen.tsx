@@ -1,6 +1,6 @@
 import { FlatList, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Stack } from "expo-router";
+import { Redirect, Stack } from "expo-router";
 import { ColorTheme } from "@/types/theme-props";
 import { fonts } from "@/common/theme";
 import { useThemeStyle } from "@/common/hooks";
@@ -24,6 +24,7 @@ import {
 } from "@/screens/notifications-screen/formatting";
 import { CardLoadFailure } from "@/components/card-load-failure";
 import { selectCardLoadState } from "@/common/apollo/card-load-state";
+import { graphQLErrorCodes } from "@/common/graphql-error-codes";
 import { useRouteParams } from "@/common/hooks/use-route-params";
 
 /** "Added", "Deleted" or "Renamed from …"; nothing for an edited file. */
@@ -223,6 +224,17 @@ function CommitDetailScreenImpl({
   const message = splitCommitMessage(commit?.message ?? "");
   const shortSha = sha ? sha.slice(0, 7) : "";
 
+  // An unknown or rewritten sha (a stale Latest Updates row after a force
+  // push) answers NOT_FOUND; Try Again could never succeed (w21/297).
+  if (!commit && graphQLErrorCodes(error).includes("NOT_FOUND")) {
+    return (
+      <RouteLedgerUnavailable
+        title={shortSha}
+        message={t("commitDetailGone")}
+      />
+    );
+  }
+
   return (
     <>
       <Stack.Screen options={{ title: shortSha }} />
@@ -399,13 +411,15 @@ export function CommitDetailScreen(): JSX.Element {
     sha?: string;
     ledger?: string;
   }>();
+  const sha = firstRouteParam(params.sha);
+
+  // Opened by URL without a commit there is nothing to show; a blank title over
+  // "No diff available." read as an empty commit (w21/297).
+  if (!sha) return <Redirect href="/(app)/(tabs)" />;
 
   return (
     <LedgerGuard>
-      <CommitDetailRoute
-        sha={firstRouteParam(params.sha)}
-        ledger={params.ledger}
-      />
+      <CommitDetailRoute sha={sha} ledger={params.ledger} />
     </LedgerGuard>
   );
 }

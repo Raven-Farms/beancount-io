@@ -388,6 +388,7 @@ export const es: Translations = {
     "Este comercio no está disponible en el libro seleccionado.",
   commitDetailUnavailable:
     "Este cambio no está disponible en el libro seleccionado.",
+  commitDetailGone: "Este cambio ya no está disponible.",
   fileEditorUnavailable:
     "Este archivo no está disponible en el libro seleccionado.",
   journalLoadError: "Error al cargar el diario",

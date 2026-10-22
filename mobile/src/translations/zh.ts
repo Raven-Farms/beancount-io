@@ -337,6 +337,7 @@ export const zh: Translations = {
   transactionErrorOpenFile: "在文件编辑器中打开",
   merchantDetailUnavailable: "所选账本中没有这个商家。",
   commitDetailUnavailable: "所选账本中没有这项更改。",
+  commitDetailGone: "此提交已不可用。",
   fileEditorUnavailable: "所选账本中没有此文件。",
   journalLoadError: "加载日记账失败",
   // entry context (transactions screen)
