@@ -6,6 +6,9 @@ export const uk: Translations = {
   guestTryExample: "Спробувати приклад",
   guestChooseExample: "Вибрати приклад",
   guestReadOnly: "Приклад лише для читання",
+  guestSignInHint: "Відкриває вхід",
+  guestReadOnlyEditor:
+    "Приклад лише для читання. Увійдіть, щоб редагувати власну книгу.",
   guestExit: "Вийти з прикладів",
   guestIntroduction:
     "Переглядайте справжні звіти без облікового запису. Ці книги доступні лише для читання.",
@@ -608,6 +611,7 @@ export const uk: Translations = {
     "Задайте ціль для будь-якого рахунку, щоб почати відстеження.",
   budgetEmptyStateCta: "Додати перший бюджет",
   budgetPanelEmpty: "Задайте ціль для рахунку",
+  budgetPanelEmptyGuest: "Увійдіть, щоб встановити цілі витрат",
   budgetPanelRowValue:
     "{{actual}} з {{budget}}, використано {{percent}}%, {{status}}",
   budgetPanelRowValueNoBudget: "{{actual}} з {{budget}}, {{status}}",

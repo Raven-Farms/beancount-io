@@ -126,6 +126,7 @@ export function BudgetCard({
       onPress={openBudget}
       accessibilityRole="button"
       accessibilityLabel={row.account}
+      accessibilityHint={guest ? t("guestSignInHint") : undefined}
       // The label collapses this subtree, so the amounts and the meter would
       // otherwise reach assistive tech not at all. `accessibilityValue.text` is
       // spoken after the label and repeats nothing from it.
@@ -168,9 +169,10 @@ export function BudgetCard({
             style={styles.emptyRow}
             onPress={openBudget}
             accessibilityRole="button"
+            accessibilityHint={guest ? t("guestSignInHint") : undefined}
           >
             <Text key={`empty-${fontScale}`} style={styles.emptyText}>
-              {t("budgetPanelEmpty")}
+              {t(guest ? "budgetPanelEmptyGuest" : "budgetPanelEmpty")}
             </Text>
           </TouchableOpacity>
         </FadeInView>
@@ -180,7 +182,12 @@ export function BudgetCard({
   };
 
   return (
-    <DashboardCard title={t("budget")} onSeeAll={openBudget}>
+    // A guest has no Budget screen to see: the tap would only open sign-in,
+    // unlabelled (w21/293).
+    <DashboardCard
+      title={t("budget")}
+      onSeeAll={guest ? undefined : openBudget}
+    >
       {renderBody()}
     </DashboardCard>
   );

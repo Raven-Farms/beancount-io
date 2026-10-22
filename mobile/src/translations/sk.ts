@@ -6,6 +6,9 @@ export const sk: Translations = {
   guestTryExample: "Vyskúšať príklad",
   guestChooseExample: "Vybrať príklad",
   guestReadOnly: "Príklad iba na čítanie",
+  guestSignInHint: "Otvorí prihlásenie",
+  guestReadOnlyEditor:
+    "Ukážka len na čítanie. Prihláste sa a upravujte vlastnú knihu.",
   guestExit: "Opustiť príklady",
   guestIntroduction:
     "Preskúmajte skutočné prehľady bez účtu. Tieto knihy sú iba na čítanie.",
@@ -615,6 +618,7 @@ export const sk: Translations = {
     "Nastavte cieľ pre ľubovoľný účet a začnite sledovať.",
   budgetEmptyStateCta: "Pridať prvý rozpočet",
   budgetPanelEmpty: "Nastavte cieľ pre účet",
+  budgetPanelEmptyGuest: "Prihláste sa a nastavte ciele výdavkov",
   budgetPanelRowValue:
     "{{actual}} z {{budget}}, využité {{percent}}%, {{status}}",
   budgetPanelRowValueNoBudget: "{{actual}} z {{budget}}, {{status}}",

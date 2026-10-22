@@ -6,6 +6,9 @@ export const bg: Translations = {
   guestTryExample: "Изпробвайте пример",
   guestChooseExample: "Изберете пример",
   guestReadOnly: "Пример само за четене",
+  guestSignInHint: "Отваря вход",
+  guestReadOnlyEditor:
+    "Примерът е само за четене. Влезте, за да редактирате собствения си дневник.",
   guestExit: "Изход от примерите",
   guestIntroduction:
     "Разгледайте реални отчети без профил. Тези книги са само за четене.",
@@ -595,6 +598,7 @@ export const bg: Translations = {
     "Задайте цел за която и да е сметка, за да започнете проследяване.",
   budgetEmptyStateCta: "Добавете първия си бюджет",
   budgetPanelEmpty: "Задайте цел за сметка",
+  budgetPanelEmptyGuest: "Влезте, за да зададете цели за разходите",
   budgetPanelRowValue:
     "{{actual}} от {{budget}}, използвани {{percent}}%, {{status}}",
   budgetPanelRowValueNoBudget: "{{actual}} от {{budget}}, {{status}}",

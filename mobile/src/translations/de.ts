@@ -6,6 +6,9 @@ export const de: Translations = {
   guestTryExample: "Beispiel ausprobieren",
   guestChooseExample: "Beispiel auswählen",
   guestReadOnly: "Schreibgeschütztes Beispiel",
+  guestSignInHint: "Öffnet die Anmeldung",
+  guestReadOnlyEditor:
+    "Beispiel nur zum Lesen. Melden Sie sich an, um Ihr eigenes Hauptbuch zu bearbeiten.",
   guestExit: "Beispiele verlassen",
   guestIntroduction:
     "Erkunde echte Berichte ohne Konto. Diese Bücher sind schreibgeschützt.",
@@ -612,6 +615,7 @@ export const de: Translations = {
     "Legen Sie für ein beliebiges Konto ein Ziel fest, um es zu verfolgen.",
   budgetEmptyStateCta: "Erstes Budget hinzufügen",
   budgetPanelEmpty: "Für ein Konto ein Ziel festlegen",
+  budgetPanelEmptyGuest: "Melden Sie sich an, um Ausgabenziele festzulegen",
   budgetPanelRowValue:
     "{{actual}} von {{budget}}, {{percent}}% genutzt, {{status}}",
   budgetPanelRowValueNoBudget: "{{actual}} von {{budget}}, {{status}}",

@@ -6,6 +6,9 @@ export const nl: Translations = {
   guestTryExample: "Probeer een voorbeeld",
   guestChooseExample: "Kies een voorbeeld",
   guestReadOnly: "Alleen-lezen voorbeeld",
+  guestSignInHint: "Opent het inloggen",
+  guestReadOnlyEditor:
+    "Voorbeeld alleen-lezen. Meld je aan om je eigen grootboek te bewerken.",
   guestExit: "Voorbeelden verlaten",
   guestIntroduction:
     "Bekijk echte rapporten zonder account. Deze boeken zijn alleen-lezen.",
@@ -599,6 +602,7 @@ export const nl: Translations = {
     "Stel voor een willekeurige rekening een doel in om te gaan volgen.",
   budgetEmptyStateCta: "Je eerste budget toevoegen",
   budgetPanelEmpty: "Stel een doel in voor een rekening",
+  budgetPanelEmptyGuest: "Meld je aan om uitgavendoelen in te stellen",
   budgetPanelRowValue:
     "{{actual}} van {{budget}}, {{percent}}% gebruikt, {{status}}",
   budgetPanelRowValueNoBudget: "{{actual}} van {{budget}}, {{status}}",

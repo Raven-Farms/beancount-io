@@ -6,6 +6,9 @@ export const es: Translations = {
   guestTryExample: "Probar un ejemplo",
   guestChooseExample: "Elegir un ejemplo",
   guestReadOnly: "Ejemplo de solo lectura",
+  guestSignInHint: "Abre el inicio de sesión",
+  guestReadOnlyEditor:
+    "Ejemplo de solo lectura. Inicia sesión para editar tu propio libro.",
   guestExit: "Salir de los ejemplos",
   guestIntroduction:
     "Explora informes reales sin una cuenta. Estos libros son de solo lectura.",
@@ -610,6 +613,7 @@ export const es: Translations = {
     "Define un objetivo para cualquier cuenta y empieza a hacer seguimiento.",
   budgetEmptyStateCta: "Añadir tu primer presupuesto",
   budgetPanelEmpty: "Define un objetivo para una cuenta",
+  budgetPanelEmptyGuest: "Inicia sesión para fijar objetivos de gasto",
   budgetPanelRowValue:
     "{{actual}} de {{budget}}, {{percent}}% utilizado, {{status}}",
   budgetPanelRowValueNoBudget: "{{actual}} de {{budget}}, {{status}}",

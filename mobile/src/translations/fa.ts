@@ -6,6 +6,8 @@ export const fa: Translations = {
   guestTryExample: "امتحان یک نمونه",
   guestChooseExample: "انتخاب نمونه",
   guestReadOnly: "نمونهٔ فقط خواندنی",
+  guestSignInHint: "ورود را باز می‌کند",
+  guestReadOnlyEditor: "نمونهٔ فقط‌خواندنی. برای ویرایش دفتر خودتان وارد شوید.",
   guestExit: "خروج از نمونه‌ها",
   guestIntroduction:
     "بدون حساب کاربری، گزارش‌های واقعی را بررسی کنید. این دفترها فقط خواندنی هستند.",
@@ -588,6 +590,7 @@ export const fa: Translations = {
     "برای هر حسابی یک هدف تعیین کنید تا پیگیری آغاز شود.",
   budgetEmptyStateCta: "افزودن اولین بودجه",
   budgetPanelEmpty: "برای یک حساب هدف تعیین کنید",
+  budgetPanelEmptyGuest: "برای تعیین هدف هزینه وارد شوید",
   budgetPanelRowValue:
     "{{actual}} از {{budget}}، {{percent}}% مصرف‌شده، {{status}}",
   budgetPanelRowValueNoBudget: "{{actual}} از {{budget}}، {{status}}",

@@ -6,6 +6,9 @@ export const ca: Translations = {
   guestTryExample: "Prova un exemple",
   guestChooseExample: "Tria un exemple",
   guestReadOnly: "Exemple de només lectura",
+  guestSignInHint: "Obre l'inici de sessió",
+  guestReadOnlyEditor:
+    "Exemple de només lectura. Inicieu la sessió per editar el vostre llibre.",
   guestExit: "Surt dels exemples",
   guestIntroduction:
     "Explora informes reals sense compte. Aquests llibres són de només lectura.",
@@ -611,6 +614,7 @@ export const ca: Translations = {
     "Defineix un objectiu per a qualsevol compte per començar-ne el seguiment.",
   budgetEmptyStateCta: "Afegeix el teu primer pressupost",
   budgetPanelEmpty: "Defineix un objectiu per a un compte",
+  budgetPanelEmptyGuest: "Inicieu la sessió per fixar objectius de despesa",
   budgetPanelRowValue:
     "{{actual}} de {{budget}}, {{percent}}% utilitzat, {{status}}",
   budgetPanelRowValueNoBudget: "{{actual}} de {{budget}}, {{status}}",

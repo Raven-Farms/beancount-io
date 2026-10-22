@@ -2,6 +2,8 @@ export const en = {
   guestTryExample: "Try an example",
   guestChooseExample: "Choose an example",
   guestReadOnly: "Read-only example",
+  guestSignInHint: "Opens sign in",
+  guestReadOnlyEditor: "Read-only example. Sign in to edit your own ledger.",
   guestExit: "Leave examples",
   guestIntroduction:
     "Explore real reports without an account. These ledgers are read-only.",
@@ -604,6 +606,7 @@ export const en = {
     "Set a spending target for any account to start tracking against it.",
   budgetEmptyStateCta: "Add your first budget",
   budgetPanelEmpty: "Set a spending target for any account",
+  budgetPanelEmptyGuest: "Sign in to set spending targets",
   budgetPanelRowValue:
     "{{actual}} of {{budget}}, {{percent}}% used, {{status}}",
   budgetPanelRowValueNoBudget: "{{actual}} of {{budget}}, {{status}}",

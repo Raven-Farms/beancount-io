@@ -860,7 +860,9 @@ function LedgerFileEditorSession({
                   ? "ledgerEditorTooLargeToEdit"
                   : lossy
                     ? "ledgerEditorNotUtf8"
-                    : "ledgerReadOnly",
+                    : guest
+                      ? "guestReadOnlyEditor"
+                      : "ledgerReadOnly",
             )}
           </Text>
         </View>

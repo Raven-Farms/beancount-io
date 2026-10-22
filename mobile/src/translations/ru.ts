@@ -6,6 +6,9 @@ export const ru: Translations = {
   guestTryExample: "Попробовать пример",
   guestChooseExample: "Выбрать пример",
   guestReadOnly: "Пример только для чтения",
+  guestSignInHint: "Открывает вход",
+  guestReadOnlyEditor:
+    "Пример только для чтения. Войдите, чтобы редактировать свою книгу.",
   guestExit: "Выйти из примеров",
   guestIntroduction:
     "Изучайте реальные отчёты без аккаунта. Эти книги доступны только для чтения.",
@@ -609,6 +612,7 @@ export const ru: Translations = {
     "Задайте цель для любого счёта, чтобы начать отслеживание.",
   budgetEmptyStateCta: "Добавить первый бюджет",
   budgetPanelEmpty: "Задайте цель для счёта",
+  budgetPanelEmptyGuest: "Войдите, чтобы задать цели расходов",
   budgetPanelRowValue:
     "{{actual}} из {{budget}}, использовано {{percent}}%, {{status}}",
   budgetPanelRowValueNoBudget: "{{actual}} из {{budget}}, {{status}}",
