@@ -13,7 +13,6 @@ const compact = (relative: string) =>
 
 describe("lists searched with the keyboard up", () => {
   for (const file of [
-    "components/text-input-screen/index.tsx",
     "screens/account-picker-screen/account-picker-screen.tsx",
     "screens/ledger-selection/index.tsx",
   ]) {
@@ -27,6 +26,21 @@ describe("lists searched with the keyboard up", () => {
       expect(source.includes('keyboardDismissMode="on-drag"')).toBe(true);
     });
   }
+
+  // w21/319: the multiline layout's KeyboardAvoidingView already shrinks the
+  // list by the keyboard, so the scroll view must not inset for it again.
+  it("insets the suggestions only where nothing else avoids the keyboard", () => {
+    const source = compact("components/text-input-screen/index.tsx");
+    expect(
+      source.includes(
+        'automaticallyAdjustKeyboardInsets={Platform.OS==="ios"&&!multiline}',
+      ),
+    ).toBe(true);
+    expect(source.includes('keyboardDismissMode="on-drag"')).toBe(true);
+    expect(
+      source.includes('behavior={Platform.OS==="ios"?"padding":undefined}'),
+    ).toBe(true);
+  });
 
   it("drops the picker's fixed padding for the inset", () => {
     expect(

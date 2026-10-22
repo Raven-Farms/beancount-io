@@ -182,8 +182,10 @@ export const TextInputScreen: React.FC<TextInputScreenProps> = ({
         contentContainerStyle={styles.suggestionsContent}
         keyboardShouldPersistTaps="handled"
         // The last matches scroll above the keyboard instead of staying
-        // under it (w21/145).
-        automaticallyAdjustKeyboardInsets={Platform.OS === "ios"}
+        // under it (w21/145). Not in the multiline layout: its
+        // KeyboardAvoidingView already shrinks the list by the keyboard, and
+        // insetting the content as well left a ~300 pt blank band (w21/319).
+        automaticallyAdjustKeyboardInsets={Platform.OS === "ios" && !multiline}
         keyboardDismissMode="on-drag"
         showsVerticalScrollIndicator={false}
       >
