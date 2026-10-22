@@ -157,3 +157,6 @@
 - [375](./375.md) — No-ledger users still can't reach Settings (drawer header inside guard; 217 follow-up)
 - [376](./376.md) — Cancel during New File folder lookup still creates and opens the file (222 follow-up)
 - [377](./377.md) — Budget panel ranks unpaid monthly salary first mid-month (218 follow-up)
+- [378](./378.md) — File editor: save after external delete is a bodiless "Failed to save" dead end
+- [379](./379.md) — Commit detail renders all diff lines; large commits stall
+- [380](./380.md) — Files delete after external change toasts raw sha mismatch, no refresh
