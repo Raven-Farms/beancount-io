@@ -2,6 +2,7 @@ import { routeText } from "@/common/route-text";
 import { CardLoadFailure } from "@/components/card-load-failure";
 import { useCallback, useMemo, useState } from "react";
 import {
+  Platform,
   SectionList,
   StyleSheet,
   Text,
@@ -153,7 +154,11 @@ function MerchantsDirectory() {
   // keyboard up it lands behind it. Shortening the container by the overlap
   // re-centers the message in what the user can actually see.
   const keyboardHeight = useKeyboardHeight();
-  const keyboardOverlap = getKeyboardOverlap(keyboardHeight, insets.bottom);
+  const keyboardOverlap = getKeyboardOverlap(
+    keyboardHeight,
+    insets.bottom,
+    Platform.OS,
+  );
   const searchBoxHeight = searchFieldHeight(fontScale);
   const overrides = useReactiveVar(merchantRecurringOverridesVar);
 

@@ -9,6 +9,7 @@ import { useLedgerAccess } from "@/common/hooks/use-ledger-access";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Alert,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -1039,7 +1040,11 @@ function LedgerFileEditorSession({
   // the keyboard once the web view's own ✓ is suppressed. Only Beancount
   // files get the insert buttons (w21/144).
   const showAccessory = canWrite && isKeyboardVisible && initialized;
-  const keyboardOverlap = getKeyboardOverlap(keyboardHeight, insets.bottom);
+  const keyboardOverlap = getKeyboardOverlap(
+    keyboardHeight,
+    insets.bottom,
+    Platform.OS,
+  );
   const editorKeyboardInset = isKeyboardVisible
     ? keyboardOverlap + (showAccessory ? KEYBOARD_ACCESSORY_BAR_HEIGHT : 0)
     : 0;

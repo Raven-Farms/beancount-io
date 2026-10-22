@@ -406,14 +406,14 @@ test("filterFileErrors: a present filename never falls back to the message", () 
 // ── keyboard overlap ─────────────────────────────────────────────────────────
 
 test("getKeyboardOverlap: removes the bottom safe-area gap", () => {
-  const overlap = getKeyboardOverlap(291, 34);
+  const overlap = getKeyboardOverlap(291, 34, "ios");
   if (overlap !== 257) {
     throw new Error(`expected 257px overlap, got ${overlap}`);
   }
 });
 
 test("getKeyboardOverlap: never returns a negative overlap", () => {
-  const overlap = getKeyboardOverlap(20, 34);
+  const overlap = getKeyboardOverlap(20, 34, "ios");
   if (overlap !== 0) {
     throw new Error(`expected zero overlap, got ${overlap}`);
   }

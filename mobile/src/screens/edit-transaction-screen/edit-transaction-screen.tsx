@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Alert,
+  Platform,
   Pressable,
   StyleSheet,
   Text,
@@ -447,7 +448,11 @@ export const EditTransactionScreen = (): JSX.Element => {
   const keyboardHeight = useKeyboardHeight();
   const isKeyboardVisible = keyboardHeight > 0;
   const showAccessory = canWrite && isKeyboardVisible && initialized;
-  const keyboardOverlap = getKeyboardOverlap(keyboardHeight, insets.bottom);
+  const keyboardOverlap = getKeyboardOverlap(
+    keyboardHeight,
+    insets.bottom,
+    Platform.OS,
+  );
   const editorKeyboardInset = isKeyboardVisible
     ? keyboardOverlap + (showAccessory ? KEYBOARD_ACCESSORY_BAR_HEIGHT : 0)
     : 0;

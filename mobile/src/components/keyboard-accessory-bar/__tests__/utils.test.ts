@@ -1,5 +1,9 @@
 import { INSERT_INDENT } from "../../code-editor/indent-unit";
-import { buildKeyboardShortcutButtons, buildPlainTextButtons } from "../utils";
+import {
+  buildKeyboardShortcutButtons,
+  buildPlainTextButtons,
+  getKeyboardOverlap,
+} from "../utils";
 
 test("keyboard shortcuts follow the transaction entry flow", () => {
   const buttons = buildKeyboardShortcutButtons("2026-07-29", ["USD"]);
@@ -117,4 +121,10 @@ describe("the shortcut keys' spoken names", () => {
   it("name the plain-text file's indent key too", () => {
     expect(buildPlainTextButtons()[0].spokenKey).toBe("keyboardInsertTab");
   });
+});
+
+test("the keyboard overlap subtracts the bottom inset on iOS only", () => {
+  expect(getKeyboardOverlap(336, 34, "ios")).toBe(302);
+  expect(getKeyboardOverlap(336, 48, "android")).toBe(336);
+  expect(getKeyboardOverlap(20, 34, "ios")).toBe(0);
 });

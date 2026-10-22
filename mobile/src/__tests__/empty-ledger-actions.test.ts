@@ -164,6 +164,7 @@ function load(relative: string): any {
           Pressable: "Pressable",
           ActivityIndicator: "ActivityIndicator",
           SectionList,
+          Platform: { OS: "ios" },
           StyleSheet: {
             create: (styles: any) => styles,
             flatten: (styles: any) => Object.assign({}, ...[styles].flat()),

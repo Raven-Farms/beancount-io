@@ -14,15 +14,18 @@ export type KeyboardShortcutButton = {
 };
 
 /**
- * Keyboard events report height from the bottom of the window, while the
- * editor is laid out above its bottom safe-area inset. Convert the event
- * height into the portion that actually overlaps the editor.
+ * Keyboard events report height from the bottom of the window on iOS, while
+ * the editor is laid out above its bottom safe-area inset. Convert the event
+ * height into the portion that actually overlaps the editor. Android reports
+ * the height above the navigation bar already, so subtracting the inset there
+ * hid the accessory bar behind the keyboard (w21/607).
  */
 export function getKeyboardOverlap(
   keyboardHeight: number,
   bottomInset: number,
+  platform: string,
 ): number {
-  return Math.max(0, keyboardHeight - bottomInset);
+  return Math.max(0, keyboardHeight - (platform === "ios" ? bottomInset : 0));
 }
 
 export function buildKeyboardShortcutButtons(
