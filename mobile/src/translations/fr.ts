@@ -228,6 +228,9 @@ export const fr: Translations = {
   accountPickerClosedOn: "{{name}} a été clôturé le {{date}}",
   accountPickerOpensOn:
     "{{name}} ouvre le {{date}}. Changez la date pour l'utiliser.",
+  accountPickerOpenLater:
+    "Vos comptes ouvrent le {{date}}. Changez la date pour les utiliser.",
+  accountPickerNoAccounts: "Ce grand livre n'a encore aucun compte.",
   cancel: "Annuler",
   confirm: "Confirmer",
   saving: "Enregistrement...",

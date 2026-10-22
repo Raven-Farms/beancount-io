@@ -224,6 +224,9 @@ export const bg: Translations = {
   accountPickerClosedOn: "{{name}} е закрита на {{date}}",
   accountPickerOpensOn:
     "{{name}} се открива на {{date}}. Променете датата, за да го използвате.",
+  accountPickerOpenLater:
+    "Сметките ви се откриват на {{date}}. Променете датата, за да ги използвате.",
+  accountPickerNoAccounts: "Тази книга все още няма сметки.",
   cancel: "Отказ",
   confirm: "Потвърждение",
   saving: "Запазване...",

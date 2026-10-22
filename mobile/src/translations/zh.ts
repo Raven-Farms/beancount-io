@@ -201,6 +201,8 @@ export const zh: Translations = {
   accountPickerCreate: "创建“%{name}”",
   accountPickerClosedOn: "{{name}} 已于 {{date}} 关闭",
   accountPickerOpensOn: "{{name}} 将于 {{date}} 开立。请更改日期以使用它。",
+  accountPickerOpenLater: "你的账户将于 {{date}} 开立。请更改日期以使用它们。",
+  accountPickerNoAccounts: "此账本还没有账户。",
   cancel: "取消",
   confirm: "确定",
   saving: "保存...",

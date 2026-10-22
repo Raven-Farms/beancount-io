@@ -221,6 +221,9 @@ export const fa: Translations = {
   accountPickerClosedOn: "{{name}} در {{date}} بسته شد",
   accountPickerOpensOn:
     "{{name}} در {{date}} باز می‌شود. برای استفاده از آن تاریخ را تغییر دهید.",
+  accountPickerOpenLater:
+    "حساب‌های شما در {{date}} باز می‌شوند. برای استفاده از آن‌ها تاریخ را تغییر دهید.",
+  accountPickerNoAccounts: "این دفتر هنوز هیچ حسابی ندارد.",
   cancel: "لغو",
   confirm: "تأیید",
   saving: "در حال ذخیره...",

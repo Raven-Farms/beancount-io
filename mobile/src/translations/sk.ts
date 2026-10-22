@@ -228,6 +228,9 @@ export const sk: Translations = {
   accountPickerClosedOn: "{{name}} bol zatvorený {{date}}",
   accountPickerOpensOn:
     "{{name}} sa otvára {{date}}. Zmeňte dátum, aby ste ho mohli použiť.",
+  accountPickerOpenLater:
+    "Vaše účty sa otvárajú {{date}}. Zmeňte dátum, aby ste ich mohli použiť.",
+  accountPickerNoAccounts: "Táto kniha zatiaľ nemá žiadne účty.",
   cancel: "Zrušiť",
   confirm: "Potvrdiť",
   saving: "Ukladanie...",

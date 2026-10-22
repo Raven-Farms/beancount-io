@@ -230,6 +230,9 @@ export const ca: Translations = {
   accountPickerClosedOn: "{{name}} es va tancar el {{date}}",
   accountPickerOpensOn:
     "{{name}} s'obre el {{date}}. Canvieu la data per utilitzar-lo.",
+  accountPickerOpenLater:
+    "Els vostres comptes s'obren el {{date}}. Canvieu la data per utilitzar-los.",
+  accountPickerNoAccounts: "Aquest llibre encara no té comptes.",
   cancel: "Cancel·lar",
   confirm: "Confirmar",
   saving: "Guardant...",

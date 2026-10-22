@@ -132,7 +132,8 @@ function offersCreate(type?: string): boolean {
 /**
  * Whether the create-account row belongs in the empty state. It renders exactly
  * when a query matched nothing (no sections at all — see
- * `visibleAccountSections`) *and* the caller may write to this ledger:
+ * `visibleAccountSections`), or the picker has no accounts at all (a new
+ * ledger, w21/643), *and* the caller may write to this ledger:
  * offering Create to a read-only collaborator only walks them into the open
  * account screen's write guard.
  *
@@ -145,11 +146,12 @@ export function showCreateAccountRow(
   visibleSectionCount: number,
   access: LedgerWriteAccess,
   type?: string,
+  hasAccounts = true,
 ): boolean {
   if (!offersCreate(type) || !access.canWrite || access.error) {
     return false;
   }
-  return isSearchQuery(query) && visibleSectionCount === 0;
+  return (isSearchQuery(query) || !hasAccounts) && visibleSectionCount === 0;
 }
 
 /**

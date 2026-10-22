@@ -205,3 +205,25 @@ export function notYetOpenAccountNamed(
   }
   return null;
 }
+
+/**
+ * The first day any of `accounts` opens, when none of them takes an entry
+ * dated `onDate` because they all open later. A back-dated entry's picker came
+ * up blank as "No matching accounts" before anything was typed, with nothing
+ * to say why (w21/643). Null when one is open, or the open dates are unknown.
+ */
+export function firstOpeningAfter(
+  accounts: readonly string[],
+  onDate: string,
+  closeDates: CloseDates,
+): string | null {
+  let first: string | null = null;
+  for (const account of accounts) {
+    if (isOpenOn(account, onDate, closeDates)) return null;
+    const openedAt = closeDates.openedOn?.get(account);
+    if (openedAt !== undefined && onDate < openedAt) {
+      if (first === null || openedAt < first) first = openedAt;
+    }
+  }
+  return first;
+}

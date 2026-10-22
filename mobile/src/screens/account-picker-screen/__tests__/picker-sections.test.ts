@@ -335,6 +335,15 @@ describe("showCreateAccountRow", () => {
     ).toBe(false);
   });
 
+  // w21/643: a new ledger's picker had nothing to browse and no way to open
+  // an account, since Create waited for a query.
+  test("should offer creation to a writer whose ledger has no accounts", () => {
+    expect(showCreateAccountRow("", 0, writer, "posting", false)).toBe(true);
+    expect(showCreateAccountRow("", 0, writer, "posting", true)).toBe(false);
+    expect(showCreateAccountRow("", 0, reader, "posting", false)).toBe(false);
+    expect(showCreateAccountRow("", 0, writer, "filter", false)).toBe(false);
+  });
+
   test("should treat a failed permission query as read-only", () => {
     expect(
       showCreateAccountRow("Coffee", 0, {

@@ -1,6 +1,7 @@
 import {
   closeDatesOf,
   closedAccountNamed,
+  firstOpeningAfter,
   isOpenOn,
   isSeedableOn,
   notYetOpenAccountNamed,
@@ -300,5 +301,39 @@ describe("notYetOpenAccountNamed", () => {
       src.includes("constshowCreateFooter=!closedMatch&&!futureMatch&&"),
     ).toBe(true);
     expect(src.includes('testID="account-picker-opens-row"')).toBe(true);
+  });
+});
+
+// w21/643: a back-dated entry's picker came up blank as "No matching accounts"
+// when every account opens later.
+describe("firstOpeningAfter", () => {
+  const dates = closeDatesOf([
+    { account: "Assets:Cash", openedAt: "2024-01-01" },
+    { account: "Assets:Bank", openedAt: "2024-03-01" },
+    { account: "Assets:Old", openedAt: "2020-01-01", closedAt: "2021-01-01" },
+  ]);
+
+  it("names the first opening when nothing is open on the entry's date", () => {
+    expect(
+      firstOpeningAfter(["Assets:Cash", "Assets:Bank"], "2023-12-31", dates),
+    ).toBe("2024-01-01");
+    expect(
+      firstOpeningAfter(
+        ["Assets:Bank", "Assets:Old", "Assets:Cash"],
+        "2023-12-31",
+        dates,
+      ),
+    ).toBe("2024-01-01");
+  });
+
+  it("is null when an account is open, or nothing opens later", () => {
+    expect(
+      firstOpeningAfter(["Assets:Cash", "Assets:Bank"], "2024-01-01", dates),
+    ).toBe(null);
+    expect(firstOpeningAfter(["Assets:Old"], "2023-12-31", dates)).toBe(null);
+    expect(firstOpeningAfter([], "2023-12-31", dates)).toBe(null);
+    expect(
+      firstOpeningAfter(["Assets:Cash"], "2023-12-31", closeDatesOf(undefined)),
+    ).toBe(null);
   });
 });

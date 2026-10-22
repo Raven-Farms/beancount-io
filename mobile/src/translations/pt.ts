@@ -228,6 +228,9 @@ export const pt: Translations = {
   accountPickerCreate: 'Criar "%{name}"',
   accountPickerClosedOn: "{{name}} foi encerrada em {{date}}",
   accountPickerOpensOn: "{{name}} abre em {{date}}. Altere a data para usá-la.",
+  accountPickerOpenLater:
+    "Suas contas abrem em {{date}}. Altere a data para usá-las.",
+  accountPickerNoAccounts: "Este livro ainda não tem contas.",
   cancel: "Cancelar",
   confirm: "Confirmar",
   saving: "Salvando...",

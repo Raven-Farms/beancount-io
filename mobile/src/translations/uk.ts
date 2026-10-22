@@ -226,6 +226,9 @@ export const uk: Translations = {
   accountPickerClosedOn: "{{name}} закрито {{date}}",
   accountPickerOpensOn:
     "{{name}} відкривається {{date}}. Змініть дату, щоб його використати.",
+  accountPickerOpenLater:
+    "Ваші рахунки відкриваються {{date}}. Змініть дату, щоб їх використати.",
+  accountPickerNoAccounts: "У цій книзі ще немає рахунків.",
   cancel: "Скасувати",
   confirm: "Підтвердити",
   saving: "Збереження...",

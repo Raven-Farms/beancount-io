@@ -219,6 +219,9 @@ export const en = {
   accountPickerClosedOn: "{{name}} was closed on {{date}}",
   accountPickerOpensOn:
     "{{name}} opens on {{date}}. Change the date to use it.",
+  accountPickerOpenLater:
+    "Your accounts open on {{date}}. Change the date to use them.",
+  accountPickerNoAccounts: "This ledger has no accounts yet.",
   cancel: "Cancel",
   confirm: "Confirm",
   saving: "Saving...",

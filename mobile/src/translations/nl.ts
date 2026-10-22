@@ -225,6 +225,9 @@ export const nl: Translations = {
   accountPickerClosedOn: "{{name}} is gesloten op {{date}}",
   accountPickerOpensOn:
     "{{name}} wordt geopend op {{date}}. Wijzig de datum om het te gebruiken.",
+  accountPickerOpenLater:
+    "Je rekeningen worden geopend op {{date}}. Wijzig de datum om ze te gebruiken.",
+  accountPickerNoAccounts: "Dit grootboek heeft nog geen rekeningen.",
   cancel: "Annuleren",
   confirm: "Bevestigen",
   saving: "Opslaan...",
