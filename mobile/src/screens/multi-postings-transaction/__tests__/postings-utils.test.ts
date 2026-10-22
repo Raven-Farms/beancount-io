@@ -689,7 +689,10 @@ describe("a new posting's amount field", () => {
     const [typed, auto] = createInitialPostings("Assets:Cash", "Expenses:Food");
     expect(typed.amountInput).toBe("");
     expect(typed.amount).toBe(null);
-    expect(auto.amountInput).toBe("0.00");
+    // The zero auto leg shows no text either (w21/321), though it still counts
+    // as a zero amount.
+    expect(auto.amountInput).toBe("");
+    expect(auto.amount).toBe("0.00");
     // The zero auto leg a new posting turns into a typed one starts empty
     // too; a computed amount is kept.
     expect(addPosting([typed, auto])[1].amountInput).toBe("");
@@ -706,6 +709,53 @@ describe("a new posting's amount field", () => {
     );
     expect(postings[0].amountInput).toBe("12.50");
     expect(postings[1].amountInput).toBe("-12.50");
+  });
+
+  // w21/321: the two paths that still put real "0.00" text into a field.
+  it("seeds nothing for a receipt whose total is zero or unreadable", () => {
+    for (const total of ["0", "0.00", "", "abc", "-0"]) {
+      const [paid, auto] = createPrefilledPostings(
+        "Assets:Bank",
+        "Expenses:Food",
+        total,
+      );
+      expect(paid.amountInput).toBe("");
+      expect(paid.amount).toBe(null);
+      expect(auto.amountInput).toBe("");
+      expect(hasUnparsedAmount(paid)).toBe(false);
+    }
+    // A real total is still seeded on the paying leg and balanced.
+    const [paid, auto] = createPrefilledPostings(
+      "Assets:Bank",
+      "Expenses:Food",
+      "12.50",
+    );
+    expect(paid.amountInput).toBe("-12.50");
+    expect(auto.amountInput).toBe("12.50");
+  });
+
+  it("types 12.50 into a zero leg wherever the caret is", () => {
+    const [typed, auto] = createInitialPostings("Assets:Cash", "Expenses:Food");
+    // The auto leg has no text to append to, so a tap and a keystroke give
+    // exactly what was typed.
+    const edited = updatePostingAmount(
+      [typed, auto],
+      1,
+      `${auto.amountInput}12.50`,
+    );
+    expect(edited[1].amountInput).toBe("12.50");
+    expect(edited[1].amount).toBe("12.50");
+    const [receiptPaid, receiptAuto] = createPrefilledPostings(
+      "Assets:Bank",
+      "Expenses:Food",
+      "0",
+    );
+    const typedReceipt = updatePostingAmount(
+      [receiptPaid, receiptAuto],
+      0,
+      `${receiptPaid.amountInput}12.50`,
+    );
+    expect(typedReceipt[0].amountInput).toBe("12.50");
   });
 
   it("still reads an untouched leg as a zero amount, not an invalid one", () => {

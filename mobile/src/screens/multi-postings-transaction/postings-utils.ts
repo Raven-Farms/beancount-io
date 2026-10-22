@@ -198,8 +198,12 @@ function applyAutoFill(postings: Posting[], minorUnits = 2): Posting[] {
     : formatExactAmount(negateExact(sumOfOthers), minorUnits);
   const parsed = parseExactAmount(autoAmount);
 
+  // A zero auto leg shows no text, so the "0.00" placeholder does: shown as
+  // text, a tap placed the caret after it and "12.50" became "0.0012.50"
+  // (w21/321).
+  const shown = isZeroExact(sumOfOthers) ? "" : autoAmount;
   return postings.map((p, i) =>
-    i === lastIdx ? { ...p, amount: parsed, amountInput: autoAmount } : p,
+    i === lastIdx ? { ...p, amount: parsed, amountInput: shown } : p,
   );
 }
 
@@ -207,13 +211,16 @@ export function makePosting(partial?: Partial<Posting>): Posting {
   // An amount the user types starts empty, so the "0.00" placeholder shows
   // and the first digit starts the value. Seeded as text, "0.00" was typed
   // onto: an iOS tap leaves the caret after it with nothing selected, and
-  // "12.50" became "0.0012.50" (w21/159). The auto leg's "0.00" is computed
-  // display, never typed into.
-  const amountInput = partial?.amountInput ?? (partial?.isAuto ? "0.00" : "");
+  // "12.50" became "0.0012.50" (w21/159). The auto leg is empty while it is
+  // zero for the same reason (w21/321): it carries a computed zero amount but
+  // no text to type onto.
+  const amountInput = partial?.amountInput ?? "";
   const amount =
     partial && "amount" in partial
       ? (partial.amount ?? null)
-      : parseExactAmount(amountInput);
+      : partial?.isAuto
+        ? "0.00"
+        : parseExactAmount(amountInput);
   return {
     id: nextId(),
     account: partial?.account ?? "",
@@ -255,11 +262,16 @@ export function createPrefilledPostings(
   minorUnits = 2,
 ): Posting[] {
   const parsed = parseExactAmount(amountInput);
-  const paidAmount =
-    parsed === null || isZeroExact(parsed)
-      ? parseExactAmount(formatExactAmount("0", minorUnits))
-      : parseExactAmount(formatExactAmount(negateExact(parsed), minorUnits));
-  const paidInput = formatExactAmount(paidAmount ?? "0", minorUnits);
+  // A total that is zero or unreadable seeds nothing: an empty field shows the
+  // placeholder and the first digit starts the value, where a seeded "0.00"
+  // was typed onto (w21/321).
+  const hasTotal = parsed !== null && !isZeroExact(parsed);
+  const paidAmount = hasTotal
+    ? parseExactAmount(formatExactAmount(negateExact(parsed), minorUnits))
+    : null;
+  const paidInput = hasTotal
+    ? formatExactAmount(paidAmount ?? "0", minorUnits)
+    : "";
   return applyAutoFill(
     [
       makePosting({
