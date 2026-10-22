@@ -224,6 +224,8 @@ export const ca: Translations = {
   accountPickerNoResults: "Cap compte coincident",
   accountPickerCreate: 'Crea "%{name}"',
   accountPickerClosedOn: "{{name}} es va tancar el {{date}}",
+  accountPickerOpensOn:
+    "{{name}} s'obre el {{date}}. Canvieu la data per utilitzar-lo.",
   next: "Següent",
   cancel: "Cancel·lar",
   confirm: "Confirmar",

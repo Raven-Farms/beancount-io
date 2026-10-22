@@ -222,6 +222,8 @@ export const es: Translations = {
   accountPickerNoResults: "No hay cuentas coincidentes",
   accountPickerCreate: 'Crear "%{name}"',
   accountPickerClosedOn: "{{name}} se cerró el {{date}}",
+  accountPickerOpensOn:
+    "{{name}} se abre el {{date}}. Cambia la fecha para usarla.",
   next: "Siguiente",
   cancel: "Cancelar",
   confirm: "Confirmar",

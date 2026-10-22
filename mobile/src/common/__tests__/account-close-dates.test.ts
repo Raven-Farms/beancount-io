@@ -3,6 +3,7 @@ import {
   closedAccountNamed,
   isOpenOn,
   isSeedableOn,
+  notYetOpenAccountNamed,
   openOn,
 } from "../account-close-dates";
 
@@ -228,5 +229,61 @@ describe("isSeedableOn", () => {
     expect(isSeedableOn("Assets:Cash", "2026-10-01", closeDatesOf(null))).toBe(
       true,
     );
+  });
+});
+
+// w21/374: an account the ledger opens later is hidden for an earlier entry but
+// its name then read as new, and Create ended at "already open".
+describe("notYetOpenAccountNamed", () => {
+  const closeDates = closeDatesOf([
+    { account: "Assets:QaFutureBank", openedAt: "2026-11-01" },
+    { account: "Assets:Cash", openedAt: "2025-01-01" },
+  ]);
+
+  it("names an account that opens after the entry's date, with its open date", () => {
+    expect(
+      notYetOpenAccountNamed("Assets:QaFutureBank", "2026-10-21", closeDates),
+    ).toEqual({ account: "Assets:QaFutureBank", openedAt: "2026-11-01" });
+    expect(
+      notYetOpenAccountNamed(
+        "  assets:qafuturebank ",
+        "2026-10-21",
+        closeDates,
+      ),
+    ).toEqual({ account: "Assets:QaFutureBank", openedAt: "2026-11-01" });
+  });
+
+  it("is nothing once the entry is on or after the open date, or for another name", () => {
+    expect(
+      notYetOpenAccountNamed("Assets:QaFutureBank", "2026-11-01", closeDates),
+    ).toBe(null);
+    expect(
+      notYetOpenAccountNamed("Assets:Cash", "2026-10-21", closeDates),
+    ).toBe(null);
+    expect(notYetOpenAccountNamed("Assets:New", "2026-10-21", closeDates)).toBe(
+      null,
+    );
+    expect(notYetOpenAccountNamed("", "2026-10-21", closeDates)).toBe(null);
+  });
+
+  it("the picker shows the opens-on row and no Create for it", () => {
+    const fs = require("fs");
+    const path = require("path");
+    const src = fs
+      .readFileSync(
+        path.join(
+          __dirname,
+          "../../screens/account-picker-screen/account-picker-screen.tsx",
+        ),
+        "utf8",
+      )
+      .replace(/\s+/g, "");
+    expect(
+      src.includes("constshowCreateRow=!closedMatch&&!futureMatch&&"),
+    ).toBe(true);
+    expect(
+      src.includes("constshowCreateFooter=!closedMatch&&!futureMatch&&"),
+    ).toBe(true);
+    expect(src.includes('testID="account-picker-opens-row"')).toBe(true);
   });
 });

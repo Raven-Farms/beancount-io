@@ -210,6 +210,8 @@ export const en = {
   accountPickerNoResults: "No matching accounts",
   accountPickerCreate: 'Create "%{name}"',
   accountPickerClosedOn: "{{name}} was closed on {{date}}",
+  accountPickerOpensOn:
+    "{{name}} opens on {{date}}. Change the date to use it.",
   next: "Next",
   cancel: "Cancel",
   confirm: "Confirm",

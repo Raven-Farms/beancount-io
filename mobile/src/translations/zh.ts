@@ -196,6 +196,7 @@ export const zh: Translations = {
   accountPickerNoResults: "没有匹配的账户",
   accountPickerCreate: "创建“%{name}”",
   accountPickerClosedOn: "{{name}} 已于 {{date}} 关闭",
+  accountPickerOpensOn: "{{name}} 将于 {{date}} 开立。请更改日期以使用它。",
   next: "下一步",
   cancel: "取消",
   confirm: "确定",

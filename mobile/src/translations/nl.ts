@@ -219,6 +219,8 @@ export const nl: Translations = {
   accountPickerNoResults: "Geen overeenkomende rekeningen",
   accountPickerCreate: '"%{name}" aanmaken',
   accountPickerClosedOn: "{{name}} is gesloten op {{date}}",
+  accountPickerOpensOn:
+    "{{name}} wordt geopend op {{date}}. Wijzig de datum om het te gebruiken.",
   next: "Volgende",
   cancel: "Annuleren",
   confirm: "Bevestigen",

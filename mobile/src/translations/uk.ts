@@ -220,6 +220,8 @@ export const uk: Translations = {
   accountPickerNoResults: "Немає відповідних рахунків",
   accountPickerCreate: "Створити «%{name}»",
   accountPickerClosedOn: "{{name}} закрито {{date}}",
+  accountPickerOpensOn:
+    "{{name}} відкривається {{date}}. Змініть дату, щоб його використати.",
   next: "Далі",
   cancel: "Скасувати",
   confirm: "Підтвердити",

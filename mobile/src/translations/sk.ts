@@ -222,6 +222,8 @@ export const sk: Translations = {
   accountPickerNoResults: "Žiadne zodpovedajúce účty",
   accountPickerCreate: "Vytvoriť „%{name}“",
   accountPickerClosedOn: "{{name}} bol zatvorený {{date}}",
+  accountPickerOpensOn:
+    "{{name}} sa otvára {{date}}. Zmeňte dátum, aby ste ho mohli použiť.",
   next: "Ďalej",
   cancel: "Zrušiť",
   confirm: "Potvrdiť",

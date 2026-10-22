@@ -221,6 +221,8 @@ export const ru: Translations = {
   accountPickerNoResults: "Нет подходящих счетов",
   accountPickerCreate: "Создать «%{name}»",
   accountPickerClosedOn: "{{name}} закрыт {{date}}",
+  accountPickerOpensOn:
+    "{{name}} открывается {{date}}. Измените дату, чтобы использовать его.",
   next: "Далее",
   cancel: "Отмена",
   confirm: "Подтвердить",

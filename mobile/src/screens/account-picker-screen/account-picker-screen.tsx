@@ -21,7 +21,11 @@ import {
 import { useLedgerAccess } from "@/common/hooks/use-ledger-access";
 import { useLedgerReadContext } from "@/common/hooks/use-ledger-read-context";
 import { useAccountCloseDates } from "@/common/hooks/use-account-close-dates";
-import { closedAccountNamed, openOn } from "@/common/account-close-dates";
+import {
+  closedAccountNamed,
+  notYetOpenAccountNamed,
+  openOn,
+} from "@/common/account-close-dates";
 import { formatLedgerDate } from "@/common/date-format";
 import { getFormatDate } from "@/common/format-util";
 import { groupAccountsByRoot } from "@/common/ledger-meta-utils";
@@ -517,8 +521,18 @@ function AccountPickerScreenComponent(): JSX.Element {
           entryDate ?? getFormatDate(new Date()),
           closeDates,
         );
+  // The same for an account the ledger opens later than the entry's date.
+  const futureMatch =
+    type === "filter"
+      ? null
+      : notYetOpenAccountNamed(
+          trimmedQuery,
+          entryDate ?? getFormatDate(new Date()),
+          closeDates,
+        );
   const showCreateRow =
     !closedMatch &&
+    !futureMatch &&
     showCreateAccountRow(query, visibleSections.length, {
       canWrite,
       loading: accessLoading,
@@ -530,6 +544,7 @@ function AccountPickerScreenComponent(): JSX.Element {
   const searchResults = isSearching ? (visibleSections[0]?.data ?? []) : [];
   const showCreateFooter =
     !closedMatch &&
+    !futureMatch &&
     showCreateBelowResults(query, searchResults, {
       canWrite,
       loading: accessLoading,
@@ -666,6 +681,18 @@ function AccountPickerScreenComponent(): JSX.Element {
                 {t("accountPickerClosedOn", {
                   name: closedMatch.account,
                   date: formatLedgerDate(closedMatch.closedAt, locale),
+                })}
+              </Text>
+            ) : null}
+            {futureMatch ? (
+              <Text
+                key={`future-${fontScale}`}
+                testID="account-picker-opens-row"
+                style={styles.emptyText}
+              >
+                {t("accountPickerOpensOn", {
+                  name: futureMatch.account,
+                  date: formatLedgerDate(futureMatch.openedAt, locale),
                 })}
               </Text>
             ) : null}

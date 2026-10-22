@@ -62,7 +62,6 @@
 - [463](./463.md) — Locale-formatted amounts (1.234,56, 1 234,56, U+2212) refused
 - [464](./464.md) — Quote hint glued to refusal without punctuation (369 follow-up)
 - [315](./blocked/315.md) — In-app commits signed with Gitea username and real email (no full_name, no noreply) — **blocked:** needs the owner's noreply-address and published-history decisions, and a production backfill of existing Gitea users that can't be verified here
-- [374](./374.md) — Account picker offers Create for a not-yet-open account → "already open" dead end
 - [375](./375.md) — No-ledger users still can't reach Settings (drawer header inside guard; 217 follow-up)
 - [376](./376.md) — Cancel during New File folder lookup still creates and opens the file (222 follow-up)
 - [377](./377.md) — Budget panel ranks unpaid monthly salary first mid-month (218 follow-up)

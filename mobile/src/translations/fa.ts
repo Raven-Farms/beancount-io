@@ -215,6 +215,8 @@ export const fa: Translations = {
   accountPickerNoResults: "حسابی مطابقت ندارد",
   accountPickerCreate: "ایجاد «%{name}»",
   accountPickerClosedOn: "{{name}} در {{date}} بسته شد",
+  accountPickerOpensOn:
+    "{{name}} در {{date}} باز می‌شود. برای استفاده از آن تاریخ را تغییر دهید.",
   next: "بعدی",
   cancel: "لغو",
   confirm: "تأیید",

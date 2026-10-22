@@ -225,6 +225,8 @@ export const de: Translations = {
   accountPickerNoResults: "Keine passenden Konten",
   accountPickerCreate: "„%{name}“ erstellen",
   accountPickerClosedOn: "{{name}} wurde am {{date}} geschlossen",
+  accountPickerOpensOn:
+    "{{name}} wird am {{date}} eröffnet. Ändern Sie das Datum, um es zu verwenden.",
   next: "Weiter",
   cancel: "Abbrechen",
   confirm: "Bestätigen",

@@ -218,6 +218,8 @@ export const bg: Translations = {
   accountPickerNoResults: "Няма съвпадащи сметки",
   accountPickerCreate: "Създай „%{name}“",
   accountPickerClosedOn: "{{name}} е закрита на {{date}}",
+  accountPickerOpensOn:
+    "{{name}} се открива на {{date}}. Променете датата, за да го използвате.",
   next: "Напред",
   cancel: "Отказ",
   confirm: "Потвърждение",

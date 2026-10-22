@@ -133,3 +133,27 @@ export function closedAccountNamed(
   }
   return null;
 }
+
+/**
+ * The account a search names exactly (ignoring case) that the ledger opens only
+ * after `onDate`, with its open date. A posting picker hides it for a back-dated
+ * entry, so its exact name read as new and offered Create, which Open Account
+ * then refused as "already open" (w21/374).
+ */
+export function notYetOpenAccountNamed(
+  query: string,
+  onDate: string,
+  closeDates: CloseDates,
+): { account: string; openedAt: string } | null {
+  const wanted = query.trim().normalize("NFC").toLowerCase();
+  if (!wanted) return null;
+  for (const [account, openedAt] of closeDates.openedOn ?? []) {
+    if (
+      account.normalize("NFC").toLowerCase() === wanted &&
+      onDate < openedAt
+    ) {
+      return { account, openedAt };
+    }
+  }
+  return null;
+}
