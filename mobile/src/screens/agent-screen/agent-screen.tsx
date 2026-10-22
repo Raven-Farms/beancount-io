@@ -387,6 +387,7 @@ function AgentScreenImpl() {
               value={input}
               onChangeText={setInput}
               placeholder={t("agentPlaceholder")}
+              accessibilityLabel={t("agentPlaceholder")}
               placeholderTextColor={theme.controlPlaceholder}
               multiline
               editable={!isStreaming}

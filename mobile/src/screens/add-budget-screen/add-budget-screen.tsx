@@ -358,6 +358,7 @@ function AddBudgetScreenImpl(): JSX.Element {
             <Text style={styles.label}>{t("budgetAmount")}</Text>
             <TextInput
               testID="add-budget-amount-input"
+              accessibilityLabel={t("budgetAmount")}
               value={amount}
               onChangeText={(value) => {
                 setAmount(value);

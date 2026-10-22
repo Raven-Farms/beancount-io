@@ -452,6 +452,7 @@ export function OpenAccountScreenComponent(): JSX.Element {
               <View style={styles.inputDivider} />
               <TextInput
                 testID="open-account-name-input"
+                accessibilityLabel={t("account")}
                 value={subPath}
                 onChangeText={(value) => {
                   const typed = peelTypedRoot(value, rootPrefix, roots);

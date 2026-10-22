@@ -290,3 +290,41 @@ describe("accessibility labels on icon-only pressables (w4/m7)", () => {
     expect(sample.slice(0, tagEnd).includes("accessibilityRole")).toBe(false);
   });
 });
+
+// w21/355: VoiceOver stops reading a placeholder once a field has text, and
+// the visible label is a sibling Text, so a field without its own label read
+// only its example or its value ("500", "Bank:Checking").
+describe("text fields name themselves (w21/355)", () => {
+  const fields = (): { relFile: string; line: number; tag: string }[] => {
+    const found: { relFile: string; line: number; tag: string }[] = [];
+    for (const { base, dir } of SCAN_ROOTS) {
+      if (!fs.existsSync(dir)) continue;
+      for (const file of walkTsxFiles(dir)) {
+        const source = fs.readFileSync(file, "utf8");
+        const open = /<TextInput\b/g;
+        let match: RegExpExecArray | null;
+        while ((match = open.exec(source)) !== null) {
+          const end = findOpeningTagEnd(source, match.index + 1);
+          if (end < 0) continue;
+          found.push({
+            relFile: path.relative(base, file).split(path.sep).join("/"),
+            line: source.slice(0, match.index).split("\n").length,
+            tag: source.slice(match.index, end),
+          });
+        }
+      }
+    }
+    return found;
+  };
+
+  it("finds the app's text fields", () => {
+    expect(fields().length >= 14).toBe(true);
+  });
+
+  it("every TextInput carries an accessibilityLabel", () => {
+    const unnamed = fields()
+      .filter(({ tag }) => !/accessibilityLabel(ledBy)?=/.test(tag))
+      .map(({ relFile, line }) => `${relFile}:${line}`);
+    expect(unnamed).toEqual([]);
+  });
+});
