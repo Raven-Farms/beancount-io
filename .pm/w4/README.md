@@ -74,7 +74,6 @@
 
 - [968 — Leave file-editor Escape to Monaco's active widgets](./968.md) — minor; dashboard QA,2026-10-22; completion and Go to Line plus ordinary Escape open Unsaved Changes at both widths; widget acceptance, Find dismissal and normal cancellation controls pass, sources match, no writes.
 
-- [967 — Keep Add posting from becoming Remove posting while focused](./967.md) — minor; dashboard QA,2026-10-22; Add reuses its focused button as Remove posting2, so a second Enter deletes that draft at both widths; explicit new-row editing/removal controls pass, no writes.
 
 
 
