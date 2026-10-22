@@ -304,21 +304,35 @@ describe("a refusal read in the editor's terms", () => {
     expect(stopped).toBe("Would break: parse error: bad quote. HINT");
   });
 
-  it("says near this entry for a line outside it or in another file", () => {
+  it("says near this entry for a line just outside it", () => {
+    for (const line of [6, 10, 12]) {
+      expect(
+        describeLedgerRefusal(
+          wouldBreak(`parse error: unexpected input (2024.bean:${line})`),
+          words,
+          { where },
+        ),
+      ).toBe("Would break: parse error: unexpected input (near this entry)");
+    }
+  });
+
+  // w21/619: a far-away balance assertion, or another file, was "near this
+  // entry", and since w21/507 its real location appeared nowhere.
+  it("keeps the location of a line far from the entry or in another file", () => {
     expect(
       describeLedgerRefusal(
-        wouldBreak("parse error: unexpected input (2024.bean:11)"),
+        wouldBreak("Balance failed for Assets:Cash (2024.bean:87)"),
         words,
         { where },
       ),
-    ).toBe("Would break: parse error: unexpected input (near this entry)");
+    ).toBe("Would break: Balance failed for Assets:Cash (2024.bean:87)");
     expect(
       describeLedgerRefusal(
         wouldBreak("Duplicate open directive (main.bean:7)"),
         words,
         { where },
       ),
-    ).toBe("Would break: Duplicate open directive (near this entry)");
+    ).toBe("Would break: Duplicate open directive (main.bean:7)");
   });
 
   it("suggests escaping a quote when the header's quotes do not pair up", () => {

@@ -43,6 +43,9 @@ export type RefusalContext = {
   draft?: string;
 };
 
+/** How many lines past an entry a citation still reads as "near this entry". */
+const NEAR_ENTRY_LINES = 3;
+
 const sameFile = (cited: string, own: string) => {
   const a = cited.replace(/^\.?\//, "");
   const b = own.replace(/^\.?\//, "");
@@ -55,8 +58,9 @@ const sameFile = (cited: string, own: string) => {
  * same message appears several times; each is shown once. The citation is a
  * line of the file, which the editor does not show (it numbers the entry from
  * 1): it becomes the editor's line when it falls inside the entry, and "near
- * this entry" when it does not, as it does when a stray quote runs the parser
- * into the next entry.
+ * this entry" when it falls just outside it, as it does when a stray quote runs
+ * the parser into the next entry. A citation further away, or in another file,
+ * stays as the server gave it.
  */
 function tidyRefusalDetail(
   detail: string,
@@ -69,15 +73,18 @@ function tidyRefusalDetail(
     const text = where
       ? part.replace(/ \(([^()]+):(\d+)\)$/, (_all, file: string, line) => {
           const editorLine = Number(line) - where.lineno + 1;
-          const inside =
-            sameFile(file, where.filename) &&
-            editorLine >= 1 &&
-            editorLine <= where.lineCount;
-          return ` (${
-            inside
-              ? i18n.t("ledgerRefusalLine", { line: String(editorLine) })
-              : i18n.t("ledgerRefusalNearEntry")
-          })`;
+          if (!sameFile(file, where.filename)) return _all;
+          if (editorLine >= 1 && editorLine <= where.lineCount) {
+            return ` (${i18n.t("ledgerRefusalLine", { line: String(editorLine) })})`;
+          }
+          // Only a line that touches the entry is "near" it; a balance
+          // assertion hundreds of lines on, or a line of another file, keeps
+          // its own location (w21/619).
+          const beyond =
+            editorLine < 1 ? 1 - editorLine : editorLine - where.lineCount;
+          return beyond <= NEAR_ENTRY_LINES
+            ? ` (${i18n.t("ledgerRefusalNearEntry")})`
+            : _all;
         })
       : part;
     if (seen.has(text)) continue;
