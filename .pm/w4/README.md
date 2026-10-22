@@ -55,7 +55,6 @@
 
 - [329 — Explain failed BQL and Holdings CSV downloads and keep retry usable](./329.md) — minor; dashboard QA with a simulated browser API failure,2026-10-21; both actions throw without feedback at both widths, while restored retries preserve exact CSV output.
 
-- [328 — Offer a retry after a statement or Account Journal read fails](./328.md) — minor; dashboard QA with injected read failures, 2026-10-21/22; Trial Balance and Account Journal supply no retry at both widths; reload/filter recovery passes, with three equivalent statement callers source-traced.
 
 - [327 — Resolve README folder links from the README's directory](./327.md) — minor; dashboard QA, 2026-10-21; child-folder and ./ links lose source context, while folder-row and relative-file controls work; two owned fixtures created/deleted with no residue or ledger errors.
 
@@ -92,6 +91,8 @@
 - [289 — Preserve long amount digits in portrait statement print output](./blocked/289.md) — minor; dashboard QA, 2026-10-20. — **blocked:** fix shipped in `68e973700`; awaiting portrait PDF check
 
 ## Milestones
+
+- [ ] **m50** — [Retry failed statement, Account Journal and commodity reads](./m50/README.md) (6 tasks) ← dashboard QA,2026-10-21/22; minor, promoted from328 with a sixth equivalent observer; current variables and read-only recovery preserved.
 
 - [ ] **m49** — [Keep entry-source saves within their pending draft session](./m49/README.md) (6 tasks) ← dashboard QA,2026-10-22; major client draft loss, pending source edits and a different newly opened entry draft disappear at an older modeled acknowledgement; failure/retry controls pass, no hosted writes.
 
@@ -180,6 +181,8 @@
 - [x] **m13** — [Preserve ledger pages through loading and hydration](./done/m13/README.md) (6 tasks) ← repeated dashboard QA, promoted w4/073, 2026-09-17
 
 ## Dropped
+
+- ~~**328**~~ — Offer a retry after a statement or Account Journal read fails — dropped 2026-10-22: promoted to [m50](./m50/README.md), preserving all evidence and adding independently repeated Commodities primary-read failure; six observer integrations plus regressions exceed one hour, with no new historical group.
 
 - ~~**973**~~ — Freeze receipt review edits while recording — dropped 2026-10-22: promoted to [m48](./m48/README.md), preserving the original report and adding independently repeated failed-record review loss; separate pending/failure repairs and real regressions exceed one hour.
 
