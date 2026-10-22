@@ -1,6 +1,6 @@
 import Constants from "expo-constants";
 import * as WebBrowser from "expo-web-browser";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Alert, Platform } from "react-native";
 import { List as List2 } from "@/components";
 
@@ -80,6 +80,9 @@ export const MainContent = () => {
   }));
   const [deleteAccountMutation, { loading: deleteAccountLoading }] =
     useDeleteAccountMutation();
+
+  const [loggingOut, setLoggingOut] = useState(false);
+  const loggingOutRef = useRef(false);
 
   const getLanguageLabel = (lng: string) => {
     return LANGUAGES[lng as keyof typeof LANGUAGES] || LANGUAGES.en;
@@ -221,6 +224,7 @@ export const MainContent = () => {
           title={t("logout")}
           icon={<Ionicons name="log-out" size={20} color={theme.error} />}
           destructive
+          busy={loggingOut}
           onPress={() => {
             Alert.alert(
               "",
@@ -230,8 +234,18 @@ export const MainContent = () => {
                 {
                   text: t("logoutAlertConfirm"),
                   onPress: async () => {
-                    await actionLogout(session);
-                    router.replace("/auth/welcome");
+                    // One sign-out at a time: a second tap used to start a
+                    // parallel one (w21/352).
+                    if (loggingOutRef.current) return;
+                    loggingOutRef.current = true;
+                    setLoggingOut(true);
+                    try {
+                      await actionLogout(session);
+                      router.replace("/auth/welcome");
+                    } finally {
+                      loggingOutRef.current = false;
+                      setLoggingOut(false);
+                    }
                   },
                 },
               ],

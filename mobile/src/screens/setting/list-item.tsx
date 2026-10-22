@@ -184,11 +184,14 @@ export const SecondaryButton = ({
   onPress,
   icon,
   destructive = false,
+  busy = false,
 }: {
   title: string;
   onPress: () => void;
   icon?: React.ReactNode;
   destructive?: boolean;
+  /** An action is under way: the button is dimmed and ignores presses. */
+  busy?: boolean;
 }) => {
   const styles = useThemeStyle((theme: ColorTheme) =>
     StyleSheet.create({
@@ -208,6 +211,7 @@ export const SecondaryButton = ({
         alignItems: "center",
         justifyContent: "center",
         gap: 8,
+        opacity: busy ? 0.5 : 1,
       },
       text: {
         fontSize: 16,
@@ -223,8 +227,10 @@ export const SecondaryButton = ({
         style={styles.button}
         activeOpacity={0.8}
         onPress={onPress}
+        disabled={busy}
         accessibilityRole="button"
         accessibilityLabel={title}
+        accessibilityState={{ disabled: busy, busy }}
       >
         {icon}
         <Text style={styles.text}>{title}</Text>
