@@ -460,7 +460,17 @@ const AccountDetailScreenImpl = ({
   const retryChart = useCallback(() => {
     void ledgerMetaRefetch().catch(() => undefined);
     void (unitsCurrency ? unitsReportRefetch() : reportRefetch());
-  }, [unitsCurrency, unitsReportRefetch, reportRefetch, ledgerMetaRefetch]);
+    // The journal beneath failed with the chart when the account never loaded,
+    // and its "Failed to load journal" has no retry of its own: one Try again
+    // recovers the whole screen (w21/577).
+    void journalRefetch().catch(() => undefined);
+  }, [
+    unitsCurrency,
+    unitsReportRefetch,
+    reportRefetch,
+    ledgerMetaRefetch,
+    journalRefetch,
+  ]);
 
   const listHeader = useMemo(
     () => (

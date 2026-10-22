@@ -27,7 +27,6 @@
 - [549](./blocked/549.md) — Create Ledger's "Amount owed" can't express a card in credit, and Review shows the opposite sign to the file — **blocked:** needs an owner decision on whether the setup API keeps "explicit negative = ledger sign" or changes its contract for REST, GraphQL and MCP
 - [554](./blocked/554.md) — A holding that is also another lot's cost currency drops out of the holdings sheet, so BTC's stale price is never flagged — **blocked:** needs a per-commodity cost-less balance the valuation reads do not carry (cross-package read contract and deploy)
 - [556](./blocked/556.md) — A holding priced only in an unrelated currency the account holds is labelled priced, though the ledger values it at cost — **blocked:** shares w21/554's blocker — a cost currency cannot be told from a cost-less holding of the same currency with the current reads
-- [577](./577.md) — Account detail's chart "Try again" leaves the journal stuck on "Failed to load journal", with no retry of its own
 - [578](./578.md) — The file editor's Recreate and Overwrite skip the save guard: a Save tapped meanwhile brings back a false "File Deleted" or drops the Overwrite
 - [579](./579.md) — Create Ledger finishing after the user left still switches the ledger and pops every screen (missed by w21/194)
 - [580](./580.md) — A link to another ledger during a dirty New Transaction switches the ledger under the draft (sibling of w21/090)
