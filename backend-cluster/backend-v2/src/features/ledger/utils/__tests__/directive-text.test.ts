@@ -48,16 +48,81 @@ describe("parseDirectiveText", () => {
     expect(directive.text.startsWith("; groceries\n")).toBe(true);
   });
 
-  it("accepts the undated tag stack around the entries it annotates", () => {
-    expect(
-      parseDirectiveText(
-        'pushtag #trip\n2026-01-02 * "Cafe"\n  Assets:Cash  -3 USD\n  Expenses:Food\npoptag #trip',
-      ).map(({ date, kind }) => ({ date, kind })),
-    ).toEqual([
-      { date: null, kind: "Custom" },
+  // w23/041: the stack is positional, but each appended entry moves to its
+  // date position, so the statements ended up apart from the entries they
+  // annotated. They are applied to those entries instead.
+  it("writes a pushed tag onto each enclosed transaction and drops the statements", () => {
+    const parsed = parseDirectiveText(
+      [
+        "pushtag #trip",
+        '2026-01-02 * "Cafe" #food ; lunch',
+        "  Assets:Cash  -3 USD",
+        "  Expenses:Food",
+        '2026-01-02 note Assets:Cash "left a tip"',
+        "poptag #trip",
+        '2026-01-03 * "Home"',
+        "  Assets:Cash  -1 USD",
+        "  Expenses:Food",
+      ].join("\n"),
+    );
+    expect(parsed.map(({ date, kind }) => ({ date, kind }))).toEqual([
       { date: "2026-01-02", kind: "Transaction" },
-      { date: null, kind: "Custom" },
+      { date: "2026-01-02", kind: "Note" },
+      { date: "2026-01-03", kind: "Transaction" },
     ]);
+    expect(parsed[0]!.text.split("\n")[0]).toBe(
+      '2026-01-02 * "Cafe" #food #trip ; lunch',
+    );
+    // Beancount tags only transactions from the stack.
+    expect(parsed[1]!.text).toBe('2026-01-02 note Assets:Cash "left a tip"');
+    expect(parsed[2]!.text).not.toContain("#trip");
+  });
+
+  it("writes pushed metadata onto each enclosed directive under its header", () => {
+    const parsed = parseDirectiveText(
+      [
+        'pushmeta trip: "Lisbon"',
+        '2026-01-02 * "Cafe"',
+        "  Assets:Cash  -3 USD",
+        "  Expenses:Food",
+        "2026-01-02 open Expenses:Travel",
+        '  trip: "kept"',
+        "popmeta trip:",
+      ].join("\n"),
+    );
+    expect(parsed[0]!.text.split("\n").slice(0, 2)).toEqual([
+      '2026-01-02 * "Cafe"',
+      '  trip: "Lisbon"',
+    ]);
+    // An entry's own value for the key stands.
+    expect(parsed[1]!.text).toBe(
+      '2026-01-02 open Expenses:Travel\n  trip: "kept"',
+    );
+  });
+
+  it.each([
+    [
+      "pushtag #trip\n2026-01-02 open Assets:Cash",
+      "line 1: pushed #trip is never popped",
+    ],
+    [
+      'pushmeta trip: "x"\n2026-01-02 open Assets:Cash',
+      "line 1: pushed metadata is never popped",
+    ],
+    [
+      "2026-01-02 open Assets:Cash\npoptag #trip",
+      "line 2: `poptag #trip` has no matching pushtag",
+    ],
+    [
+      "2026-01-02 open Assets:Cash\npopmeta trip:",
+      "line 2: `popmeta trip:` has no matching pushmeta",
+    ],
+    [
+      "pushtag trip\n2026-01-02 open Assets:Cash",
+      "line 1: `pushtag` takes one #tag",
+    ],
+  ])("refuses an unbalanced or malformed stack: %p", (text, message) => {
+    expect(() => parseDirectiveText(text)).toThrow(message);
   });
 
   // w23/018: these reconfigure the whole ledger, and were appended with "No

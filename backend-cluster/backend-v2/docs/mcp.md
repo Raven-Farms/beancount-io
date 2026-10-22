@@ -355,8 +355,11 @@ It parses the text into directives and refuses anything that is not one —
 prose, a diff, JSON — before writing. It also refuses `option`, `plugin` and
 `include` lines with `BAD_USER_INPUT` naming the line: they reconfigure the
 whole ledger rather than record an entry, so change them deliberately with
-`updateLedgerFiles`. `pushtag`/`poptag` and `pushmeta`/`popmeta` around the
-entries they annotate are accepted. Each directive goes to the file the
+`updateLedgerFiles`. `pushtag`/`poptag` and `pushmeta`/`popmeta` around
+entries are applied to them — the tag written onto each enclosed transaction,
+the metadata under each enclosed directive — and the statements themselves are
+not written, because each entry moves to its date position; a push that is
+never popped, or a pop with no push, is refused naming the line. Each directive goes to the file the
 ledger's own `bcio` options assign its type and date, unless `path` names one,
 and is inserted after the last directive dated on or before it rather than at
 the end of the file. A `path` must be a file the ledger loads — one of its

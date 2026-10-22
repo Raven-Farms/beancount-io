@@ -254,6 +254,31 @@ describe("DirectiveAppendWorkflow", () => {
     });
   });
 
+  // w23/041: the untagged entry went to its date position and an empty
+  // pushtag/poptag pair to the end of the file.
+  it("inserts a tag-stack entry at its date position, tagged, with no stray statements", async () => {
+    const { workflow, ledgerRepo } = fixture({
+      files: {
+        "main.bean":
+          "2026-01-01 open Assets:Cash\n\n2026-03-01 open Expenses:Food\n",
+      },
+    });
+    await workflow.appendDirectiveText({
+      identity: IDENTITY,
+      ledgerId: LEDGER_ID,
+      input: { text: `pushtag #trip\n${TXN}poptag #trip\n` },
+    });
+    const { operations } = ledgerRepo.changeGeneratedFiles.mock.calls[0][0];
+    const content = operations[0].content as string;
+    expect(content).not.toMatch(/pushtag|poptag/);
+    expect(
+      content.indexOf('2026-02-05 * "Cafe" "Coffee" #trip'),
+    ).toBeGreaterThan(content.indexOf("2026-01-01 open"));
+    expect(content.indexOf("#trip")).toBeLessThan(
+      content.indexOf("2026-03-01 open"),
+    );
+  });
+
   it("commits anyway when the caller says allowInvalid and means it", async () => {
     const { workflow, ledgerRepo } = fixture({
       files: { "main.bean": "" },

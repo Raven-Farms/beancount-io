@@ -37,9 +37,109 @@ const UNDATED_KEYWORDS = new Set([
  * tool's own validation relies on, and `include` pulls in a whole file — each
  * reported "No new bean-check errors". They are refused as text to append;
  * a deliberate configuration change is a file edit. `pushtag`/`poptag` and
- * `pushmeta`/`popmeta` only annotate the entries between them, so they stay.
+ * `pushmeta`/`popmeta` only annotate the entries between them, so they are
+ * applied to those entries instead (see `TagStack`).
  */
 const CONFIGURATION_KEYWORDS = new Set(["option", "plugin", "include"]);
+
+/** Where a line's comment starts, outside any string; its length if none. */
+function commentStart(line: string): number {
+  let inString = false;
+  for (let i = 0; i < line.length; i += 1) {
+    const char = line[i];
+    if (inString) {
+      if (char === "\\") i += 1;
+      else if (char === '"') inString = false;
+    } else if (char === '"') inString = true;
+    else if (char === ";") return i;
+  }
+  return line.length;
+}
+
+/**
+ * The `pushtag`/`pushmeta` stacks, expanded onto the entries between push and
+ * pop (w23/041). The stack is positional in Beancount, and every appended
+ * entry is moved to its date position, so the statements themselves would
+ * end up apart from the entries they annotate: the tag silently dropped, or a
+ * dangling `pushtag` breaking the file. Tags go on transactions, the only
+ * directive Beancount tags from the stack; metadata goes on every directive.
+ */
+class TagStack {
+  private readonly tags: { tag: string; line: number }[] = [];
+  private readonly meta = new Map<string, { value: string; line: number }>();
+
+  /** Apply one statement; false when the line is not a stack statement. */
+  apply(line: string, lineNumber: number): boolean {
+    const keyword = /^(pushtag|poptag|pushmeta|popmeta)\b/.exec(line)?.[1];
+    if (!keyword) return false;
+    const body = line.slice(keyword.length, commentStart(line)).trim();
+    const refuse = (problem: string) => {
+      throw new BadUserInputError(
+        `line ${lineNumber}: ${problem}: ${line.trim()}`,
+        "text",
+      );
+    };
+    if (keyword === "pushtag" || keyword === "poptag") {
+      const tag = /^#([^\s#^]+)$/.exec(body)?.[1];
+      if (!tag) refuse(`\`${keyword}\` takes one #tag`);
+      if (keyword === "pushtag")
+        this.tags.push({ tag: tag!, line: lineNumber });
+      else {
+        const at = this.tags.map((entry) => entry.tag).lastIndexOf(tag!);
+        if (at === -1) refuse(`\`poptag #${tag}\` has no matching pushtag`);
+        this.tags.splice(at, 1);
+      }
+      return true;
+    }
+    const pair = /^([a-z][A-Za-z0-9_-]*):\s*(.*)$/.exec(body);
+    if (!pair) refuse(`\`${keyword}\` takes a metadata key`);
+    const [, key, value] = pair!;
+    if (keyword === "pushmeta") {
+      if (!value) refuse("`pushmeta` needs a value");
+      this.meta.set(key, { value, line: lineNumber });
+    } else if (!this.meta.delete(key)) {
+      refuse(`\`popmeta ${key}:\` has no matching pushmeta`);
+    }
+    return true;
+  }
+
+  /** A push left open at the end of the text is refused, naming its line. */
+  assertClosed(): void {
+    const open = this.tags[0] ?? [...this.meta.values()][0];
+    if (!open) return;
+    throw new BadUserInputError(
+      `line ${open.line}: pushed ${this.tags[0] ? `#${this.tags[0].tag}` : "metadata"} is never popped`,
+      "text",
+    );
+  }
+
+  /** The directive's lines with the active tags and metadata written onto it. */
+  annotate(lines: string[], head: number, kind: DirectiveKind): string[] {
+    const header = lines[head];
+    const cut = commentStart(header);
+    const before = header.slice(0, cut).trimEnd();
+    const present = new Set(before.match(/#[^\s#^]+/g) ?? []);
+    const added =
+      kind === "Transaction"
+        ? [...new Set(this.tags.map((entry) => `#${entry.tag}`))].filter(
+            (tag) => !present.has(tag),
+          )
+        : [];
+    const comment = header.slice(cut);
+    const annotated = [
+      [before, ...added].join(" ") + (comment ? ` ${comment}` : ""),
+    ];
+    const keys = new Set(
+      lines
+        .slice(head + 1)
+        .map((line) => /^\s+([a-z][A-Za-z0-9_-]*):/.exec(line)?.[1]),
+    );
+    for (const [key, { value }] of this.meta) {
+      if (!keys.has(key)) annotated.push(`  ${key}: ${value}`);
+    }
+    return [...lines.slice(0, head), ...annotated, ...lines.slice(head + 1)];
+  }
+}
 
 /**
  * Dated directive keywords, mapped to the file-routing type
@@ -124,14 +224,20 @@ export function parseDirectiveText(text: string): ParsedDirective[] {
   let current: {
     head: ReturnType<typeof directiveHead>;
     lines: string[];
+    /** Index of the directive's own first line, after any comments above it. */
+    headLine: number;
   } | null = null;
+  const stack = new TagStack();
 
   const flush = () => {
     if (!current?.head) return;
     directives.push({
       date: current.head.date,
       kind: current.head.kind,
-      text: current.lines.join("\n").replace(/\s+$/, ""),
+      text: stack
+        .annotate(current.lines, current.headLine, current.head.kind)
+        .join("\n")
+        .replace(/\s+$/, ""),
     });
     current = null;
   };
@@ -169,11 +275,14 @@ export function parseDirectiveText(text: string): ParsedDirective[] {
         "Append dated directives only. To change the ledger's options, plugins or includes deliberately, edit the main file with `updateLedgerFiles`.",
       );
     }
+    // The current directive takes the stack as it stood at its header.
     flush();
-    current = { head, lines: [...pending, line] };
+    if (stack.apply(line, index + 1)) return;
+    current = { head, lines: [...pending, line], headLine: pending.length };
     pending = [];
   });
   flush();
+  stack.assertClosed();
 
   if (directives.length === 0) {
     throw new BadUserInputError(
