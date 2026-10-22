@@ -44,5 +44,8 @@
 - [529](./529.md) — Month-end and quarter-end recurring bills show "Next" on the 30th instead of the 31st (w21/271 regression)
 - [530](./530.md) — A new every-two-weeks payment spanning February reads "Twice a month", with Next up to 6 days late
 - [531](./531.md) — The account picker offers "Create" for a closed account's short name, then Open Account refuses it
+- [532](./532.md) — Account detail's "Off by" amounts land on the wrong balance assertion when the file isn't in date order (ledger)
+- [533](./533.md) — A balance assertion failing its explicit `~` tolerance shows as passing: `diff_amount` is null for E2002 (ledger)
+- [534](./534.md) — Booking and interpolation (`BOOK`) errors have no file or line, so the app can't open them (ledger)
 - [508](./blocked/508.md) — Mobile guesses that an entry is a plugin copy from its first line; read the ledger's `generated_from` instead (split from 443) — **blocked:** production's GraphQL schema lacks `generated_from` until the ledger service and backend-v2 deploy; mobile's client is generated from it
 - [315](./blocked/315.md) — In-app commits signed with Gitea username and real email (no full_name, no noreply) — **blocked:** needs the owner's noreply-address and published-history decisions, and a production backfill of existing Gitea users that can't be verified here
