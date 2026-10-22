@@ -199,6 +199,18 @@ describe("budgetPanelRowAccessibilityValue", () => {
     expect(text.indexOf("budget=$500.00") > -1).toBe(true);
   });
 
+  // w21/539: a refund month's Actual lost its minus, so "Actual $50.00" sat
+  // beside "Variance -$404.84" on a $354.84 budget.
+  it("keeps the minus of a refund month's actual", () => {
+    const text = budgetPanelRowAccessibilityValue(
+      row({ actual: -50, budget: 354.84 }),
+      t,
+    );
+
+    expect(text.indexOf("actual=-$50.00") > -1).toBe(true);
+    expect(text.indexOf("budget=$354.84") > -1).toBe(true);
+  });
+
   it("rounds the meter's progress to a whole percent", () => {
     const text = budgetPanelRowAccessibilityValue(
       row({ progressPercent: 73.4166 }),

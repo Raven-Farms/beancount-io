@@ -23,7 +23,6 @@
 - [453](./blocked/453.md) — addEntries/bulkEntries have no idempotency key: a retry after a lost response can duplicate the entry (split from 351) — **blocked:** needs an owner-approved contract (field, bounds, retention) across REST/GraphQL/MCP and a backend-v2 deploy
 - [518](./blocked/518.md) — New Transaction books a plain first-row amount as money *into* the bank (Checking +4.50, Groceries −4.50) — **blocked:** needs an owner product decision on the default row signs (negative source row vs From/To labels)
 - [526](./blocked/526.md) — Transactions, Account and Merchant detail drop back to the newest 20 rows after a return to the app or any write; a stale "Couldn't load more" footer stays — **blocked:** needs an owner decision on how to keep loaded pages through a refresh (field policy vs refetch to depth vs accept page 1)
-- [539](./539.md) — Budget and Home show a refund month's Actual without its minus sign ("Actual $50.00 · Variance −$404.84")
 - [540](./540.md) — Cash flow cuts off "(income)"/"(expenses)" on group names of 7+ characters, so both read "Interest …" (w0/034 incomplete)
 - [541](./541.md) — Cash flow drops flows under 0.005 units whatever the currency, so BTC ledgers lose nodes and Savings is wrong
 - [542](./542.md) — The balance chart's dashed start line and VoiceOver's "From" use the first point, while the change row uses the opening balance

@@ -14,7 +14,10 @@ import { ColorTheme } from "@/types/theme-props";
 import { fontSizes, space } from "@/common/theme";
 import { useThemeStyle } from "@/common/hooks/use-theme-style";
 import { useTranslations } from "@/common/hooks/use-translations";
-import { formatMoneyWithCurrency } from "@/common/number-utils";
+import {
+  formatMoneyWithCurrency,
+  formatSignedMoneyWithCurrency,
+} from "@/common/number-utils";
 import { AmountText, DashboardCard } from "@/components";
 import { FadeInView } from "@/components/crossfade";
 import { BudgetMeter } from "@/screens/budget-screen/components/budget-meter";
@@ -156,7 +159,7 @@ export function BudgetCard({
           {row.shortAccount}
         </Text>
         <AmountText style={styles.amounts}>
-          {`${formatMoneyWithCurrency(row.actual, row.currency, row.scale)} / ${formatMoneyWithCurrency(row.budget, row.currency, row.scale)}`}
+          {`${formatSignedMoneyWithCurrency(row.actual, row.currency, false, row.scale)} / ${formatMoneyWithCurrency(row.budget, row.currency, row.scale)}`}
         </AmountText>
       </View>
       <BudgetMeter percent={row.progressPercent} favorable={row.favorable} />

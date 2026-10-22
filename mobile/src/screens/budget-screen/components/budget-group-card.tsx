@@ -316,7 +316,12 @@ export function BudgetGroupCard({
           <View style={styles.stat}>
             <Text style={styles.statLabel}>{t("budgetActual")}</Text>
             <AmountText style={styles.statValue}>
-              {formatAmount(stats.actual)}
+              {formatSignedMoneyWithCurrency(
+                stats.actual,
+                currency,
+                false,
+                scale,
+              )}
             </AmountText>
           </View>
         )}

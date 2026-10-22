@@ -5,7 +5,10 @@
  */
 import { dropRoot } from "../../../common/account-util";
 import { formatLedgerDate } from "../../../common/date-format";
-import { formatMoneyWithCurrency } from "../../../common/number-utils";
+import {
+  formatMoneyWithCurrency,
+  formatSignedMoneyWithCurrency,
+} from "../../../common/number-utils";
 import {
   groupDirection,
   budgetDisplayScale,
@@ -236,13 +239,23 @@ export function budgetPanelRowAccessibilityValue(
         );
   if (row.noBudget || row.startsOn !== undefined) {
     return t("budgetPanelRowValueNoBudget", {
-      actual: formatMoneyWithCurrency(row.actual, row.currency, row.scale),
+      actual: formatSignedMoneyWithCurrency(
+        row.actual,
+        row.currency,
+        false,
+        row.scale,
+      ),
       budget: formatMoneyWithCurrency(row.budget, row.currency, row.scale),
       status,
     });
   }
   return t("budgetPanelRowValue", {
-    actual: formatMoneyWithCurrency(row.actual, row.currency, row.scale),
+    actual: formatSignedMoneyWithCurrency(
+      row.actual,
+      row.currency,
+      false,
+      row.scale,
+    ),
     budget: formatMoneyWithCurrency(row.budget, row.currency, row.scale),
     // Whole percent: a spoken "73.4166 percent" is noise, and the meter it
     // describes is a bar, not a readout.
