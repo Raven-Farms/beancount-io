@@ -1,5 +1,9 @@
 import { selectedPeriodLabel } from "../series-util";
-import { changePercent, formatChangePercent } from "./change-percent";
+import {
+  changePercent,
+  describeChange,
+  formatChangePercent,
+} from "./change-percent";
 
 /**
  * What a screen reader needs from the interactive line chart (w21/316). The
@@ -60,12 +64,14 @@ export function chartPointText(
   const { numbers, baseline, format, translate } = series;
   const value = numbers[index] ?? 0;
   const pct = changePercent(baseline, value);
-  const amount = format(value - baseline, true);
+  const shownPct = pct === null ? null : formatChangePercent(pct);
+  // As the change row reads it: a change that rounds to nothing is "$0.00",
+  // not "+$0.00" (w21/416, w21/543).
+  const { amount } = describeChange(value - baseline, shownPct, format);
   return translate("chartPointValue", {
     period: periodAt(series, index),
     value: format(value),
-    change:
-      pct === null ? amount : `${amount} (${formatChangePercent(pct).text})`,
+    change: shownPct === null ? amount : `${amount} (${shownPct.text})`,
   });
 }
 

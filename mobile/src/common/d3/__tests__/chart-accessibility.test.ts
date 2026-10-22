@@ -43,6 +43,13 @@ describe("the chart's accessibility text", () => {
     ).toBe(true);
   });
 
+  // w21/543: VoiceOver said "+$0.00 since start" where the header shows a
+  // neutral "$0.00".
+  it("says a change that rounds to nothing without a plus", () => {
+    const flat = { ...series, numbers: [0, 0, 0], baseline: 0 };
+    expect(chartPointText(flat, 1)).toBe("Feb 2026, $0.00, $0.00 since start");
+  });
+
   it("has no summary without a curve to describe", () => {
     expect(chartSummaryLabel("x", { ...series, numbers: [5] })).toBe(null);
     expect(chartSummaryLabel("x", { ...series, numbers: [] })).toBe(null);
