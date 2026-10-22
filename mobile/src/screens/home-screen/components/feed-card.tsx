@@ -23,6 +23,7 @@ import {
   feedRowAction,
   feedSourceLabelKey,
   feedCardIsEmpty,
+  sortFeedItems,
 } from "./feed-logic";
 import { useApolloClient } from "@apollo/client";
 import { getServerUrl } from "@/common/vars/server-url";
@@ -133,7 +134,7 @@ export function FeedCard({
     }
   }, [refreshSignal, refetch]);
 
-  const items = data?.getFeed?.items ?? [];
+  const items = sortFeedItems(data?.getFeed?.items ?? []);
   const loadState = selectCardLoadState({
     loading: loading,
     hasData: data !== undefined,

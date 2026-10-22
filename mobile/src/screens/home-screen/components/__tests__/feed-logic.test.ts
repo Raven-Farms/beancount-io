@@ -6,6 +6,7 @@ import {
   feedQueryVariables,
   feedRowAction,
   feedSourceLabelKey,
+  sortFeedItems,
 } from "../feed-logic";
 
 describe("feedSourceLabelKey", () => {
@@ -147,5 +148,82 @@ describe("feedCardIsEmpty", () => {
     expect(src.includes('feedCardIsEmpty({failed:loadState==="failed",')).toBe(
       true,
     );
+  });
+});
+
+// w21/598: a commit at 18:30 Pacific on the 21st (01:30Z on the 22nd) sorted
+// above the 22nd's posts, so the shown dates read Oct 21 over Oct 22.
+describe("sortFeedItems", () => {
+  const post = (id: string, publishedAt: string, source = FeedSource.Blog) => ({
+    id,
+    publishedAt,
+    source,
+  });
+  const ids = (items: { id: string }[]) => items.map((item) => item.id);
+
+  it("puts a post's day above an earlier commit day, whatever the instants say", () => {
+    // Local noon on the 21st is the 21st in any zone.
+    const commit = post(
+      "commit",
+      new Date(2026, 9, 21, 12, 0).toISOString(),
+      FeedSource.LedgerRss,
+    );
+    const blog = post("blog", "2026-10-22T00:00:00.000Z");
+    expect(ids(sortFeedItems([commit, blog]))).toEqual(["blog", "commit"]);
+  });
+
+  it("orders rows within a displayed day by time, and later days first", () => {
+    const early = post(
+      "early",
+      new Date(2026, 9, 21, 9, 0).toISOString(),
+      FeedSource.LedgerRss,
+    );
+    const late = post(
+      "late",
+      new Date(2026, 9, 21, 17, 0).toISOString(),
+      FeedSource.LedgerRss,
+    );
+    const next = post("next", "2026-10-22T00:00:00.000Z");
+    const older = post("older", "2026-10-20T00:00:00.000Z");
+    expect(ids(sortFeedItems([older, early, next, late]))).toEqual([
+      "next",
+      "late",
+      "early",
+      "older",
+    ]);
+  });
+
+  it("never shows the dates going up as you read down", () => {
+    const rows = [
+      post("a", "2026-10-22T00:00:00.000Z"),
+      post(
+        "b",
+        new Date(2026, 9, 21, 18, 30).toISOString(),
+        FeedSource.LedgerRss,
+      ),
+      post("c", "2026-10-21T00:00:00.000Z"),
+      post(
+        "d",
+        new Date(2026, 9, 22, 8, 0).toISOString(),
+        FeedSource.LedgerRss,
+      ),
+    ];
+    const shown = sortFeedItems(rows).map((row) =>
+      row.source === FeedSource.LedgerRss
+        ? new Date(row.publishedAt).toDateString()
+        : new Date(`${row.publishedAt.slice(0, 10)}T12:00:00`).toDateString(),
+    );
+    const times = shown.map((day) => Date.parse(day));
+    expect(times.every((time, i) => i === 0 || times[i - 1]! >= time)).toBe(
+      true,
+    );
+  });
+
+  it("keeps a row with an unreadable date after the rest, in place", () => {
+    const rows = [
+      post("bad", "not a date"),
+      post("ok", "2026-10-22T00:00:00.000Z"),
+    ];
+    expect(ids(sortFeedItems(rows))).toEqual(["ok", "bad"]);
   });
 });

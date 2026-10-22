@@ -1,4 +1,5 @@
 import { FeedSource } from "../../../generated-graphql/types";
+import { getFormatDate } from "../../../common/format-util";
 import {
   normalizeOrigin,
   resolveAppLink,
@@ -63,6 +64,47 @@ export function feedRowAction(
  */
 export function feedDateIsCalendarDay(source: FeedSource): boolean {
   return source !== FeedSource.LedgerRss;
+}
+
+/**
+ * The day a row shows. A blog or release post is a calendar day (midnight UTC);
+ * ledger activity is a commit time, shown in the device's zone.
+ */
+function displayedDay(item: {
+  publishedAt: unknown;
+  source: FeedSource;
+}): string {
+  const published = String(item.publishedAt);
+  if (feedDateIsCalendarDay(item.source)) return published.slice(0, 10);
+  return getFormatDate(new Date(published));
+}
+
+/**
+ * The rows newest first by the day they show, then by time within a day. The
+ * server sorts by instant, so a commit at 18:30 Pacific on the 21st (01:30Z on
+ * the 22nd) sat above the 22nd's posts, and the dates read "Oct 21" over "Oct
+ * 22" (w21/598). A row whose date does not parse keeps its place at the end.
+ */
+export function sortFeedItems<
+  T extends { publishedAt: unknown; source: FeedSource },
+>(items: readonly T[]): T[] {
+  const keyed = items.map((item, index) => {
+    const time = Date.parse(String(item.publishedAt));
+    return {
+      item,
+      index,
+      time,
+      day: Number.isNaN(time) ? "" : displayedDay(item),
+    };
+  });
+  keyed.sort((a, b) => {
+    if (a.day !== b.day) return a.day < b.day ? 1 : -1;
+    if (a.time !== b.time && !Number.isNaN(a.time) && !Number.isNaN(b.time)) {
+      return b.time - a.time;
+    }
+    return a.index - b.index;
+  });
+  return keyed.map(({ item }) => item);
 }
 
 /**
