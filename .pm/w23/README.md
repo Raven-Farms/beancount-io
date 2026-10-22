@@ -10,6 +10,7 @@
 
 ## Inbox
 
+- [068](./068.md) — file writes accept a path differing from an existing one only by case (`MAIN.bean` beside `main.bean`), which collides on macOS/Windows checkouts
 - [067](./067.md) — a posting before its account's `open` is reported as "never opened" (engine wording), inviting a duplicate `open`
 - [066](./066.md) — asset download URL reveals which numeric ledger IDs exist (pinned: `FORBIDDEN` vs `NOT_FOUND`; account-wide: two different not-found messages)
 - [065](./blocked/065.md) — a ledger-pinned credential keeps the old name after a rename — **blocked:** owner picks repository-ID pins, canonical-name pins, or an accurate refusal (credential trust boundary)
