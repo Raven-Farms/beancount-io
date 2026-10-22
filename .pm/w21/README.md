@@ -18,7 +18,6 @@
 - [201](./blocked/201.md) — Missing file: GraphQL returns null, REST/MCP NOT_FOUND; directory path differs too — **blocked:** needs an owner decision on the file-read contract (null vs NOT_FOUND), which the dashboard's README reads and shipped mobile builds rely on
 - [206](./blocked/206.md) — Refund/return receipts are always prefilled as a purchase — **blocked:** needs an owner-approved AI-quota evaluation and a parse-contract decision (`isRefund` vs signed amount)
 - [210](./blocked/210.md) — Holdings sheet labels a user-typed price "Live price" and applies the feed's staleness rule — **blocked:** needs an owner decision on exposing the feed's effective price dates (cross-package contract) and a deploy before mobile can read it
-- [219](./219.md) — Quarterly/weekly budget's last bar labelled with today (OCT on YTD, DEC on ALL)
 - [220](./220.md) — Budget chart sized for full screen width overflows its card by 32 pt; first bar and label clipped
 - [221](./221.md) — "%XX" in free text is decoded twice between screens: narration "50%50" comes back "50P"
 - [222](./222.md) — New File's "already exists" check misses files inside folders

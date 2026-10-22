@@ -8,7 +8,11 @@ import { formatLedgerMonthDay } from "../../../common/date-format";
 import { getFormatDate } from "../../../common/format-util";
 import { formatShortMoneyWithCurrency } from "../../../common/number-utils";
 import { formatTimeFilter } from "../../transactions-screen/filters/select-filter-query";
-import type { VarianceStatus } from "./budget-selectors";
+import {
+  addDaysISO,
+  nextIntervalStartISO,
+  type VarianceStatus,
+} from "./budget-selectors";
 
 /** Translation key for a directive's cadence, e.g. "monthly" → budgetIntervalMonthly. */
 const INTERVAL_LABEL_KEYS: Record<string, string> = {
@@ -28,6 +32,11 @@ export function intervalLabelKey(interval: string): string {
  * Axis label for one charted period. Monthly and quarterly periods reuse the
  * app's existing month-abbreviation keys ("01".."12"); longer and shorter
  * cadences label themselves.
+ *
+ * A bar is labelled by the period's own last day, not the date the server
+ * sent: on a windowed span the last range ends today, so the current quarter
+ * read as the current month ("OCT") where the full history said "DEC", and
+ * this week as 10/21 beside 10/25 (w21/219).
  */
 export function periodAxisLabel(
   date: string,
@@ -39,10 +48,14 @@ export function periodAxisLabel(
   if (normalized === "yearly") {
     return date.slice(0, 4);
   }
-  if (normalized === "weekly" || normalized === "daily") {
+  if (normalized === "daily") {
     return formatLedgerMonthDay(date, locale);
   }
-  return t(date.slice(5, 7));
+  const end = addDaysISO(nextIntervalStartISO(date, interval), -1);
+  if (normalized === "weekly") {
+    return formatLedgerMonthDay(end, locale);
+  }
+  return t(end.slice(5, 7));
 }
 
 /**
