@@ -71,11 +71,28 @@ automatically connected. These records remain ready for the narrow synthetic-QA
 rehearsal. They establish configuration preparation, not OAuth, tool discovery,
 a ledger query, a write preview or publication.
 
-Chrome opens, but the browser tooling currently exposes no connected browser.
-The native authorization callback is therefore not started again. Browser
-connection and the separate exact Docker scope decision remain prerequisites
-before completing the already documented read/preview/callback journey. The
-retained Cursor grant does not provide Docker authorization.
+At this preparation snapshot, Chrome opens but browser control is unavailable,
+so no native authorization callback is started. The later restored-browser
+attempt below clears that access limitation. The retained Cursor grant does
+not provide Docker authorization.
+
+## Restored-browser consent preparation — 2026-10-22 UTC
+
+Browser control is restored. Official standalone gateway 0.44.1 starts the
+same supported authorization flow with explicit `ledger.read ledger.write`.
+The actual consent identifies “MCP Gateway - beancount-io”, the official
+`mcp.docker.com/oauth/callback` return proxy, and the existing canonical MCP
+resource. Only the intended synthetic QA ledger is selected; all-ledger access
+remains unselected. The final access action awaits its exact action-time
+confirmation. No OAuth grant or token is obtained and no accounting tool runs.
+
+The native listener at `127.0.0.1:54321/callback` times out and exits with
+`callback timeout: context deadline exceeded`. After approval, restart the
+same client/scope flow and inspect its fresh consent before completing it;
+the old page cannot prove a successful callback. Native query, supported
+dry-run preview, unchanged-state checks and the separately authorized upstream
+review remain open. The prepared page and expired-listener log are retained
+under ignored `backend-cluster/backend-v2/tmp/w6-native-20261022T0818/`.
 
 ## Primary references
 
