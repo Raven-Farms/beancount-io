@@ -18,7 +18,11 @@ import {
 } from "@/screens/transactions-screen/types";
 import { openTransactionDetail } from "@/screens/transaction-detail-screen/open-transaction-detail";
 import { TimeRange } from "@/common/series-util";
-import { selectAccountTransactions } from "../selectors/select-account-transactions";
+import {
+  hasAnyAccountTransaction,
+  resolveListAnchor,
+  selectAccountTransactions,
+} from "../selectors/select-account-transactions";
 import { CardLoadFailure } from "@/components/card-load-failure";
 import { selectCardLoadState } from "@/common/apollo/card-load-state";
 import { useGuest } from "@/common/guest/guest-context";
@@ -56,6 +60,8 @@ type AccountTransactionsCardProps = {
    * same months.
    */
   anchorMonth: string | null;
+  /** The statement the anchor comes from is still on its first load. */
+  statementLoading: boolean;
   refreshing: boolean;
 };
 
@@ -72,6 +78,7 @@ export function AccountTransactionsCard({
   emptyKey,
   timeRange,
   anchorMonth,
+  statementLoading,
   refreshing,
 }: AccountTransactionsCardProps): JSX.Element {
   const styles = useThemeStyle(getStyles);
@@ -100,17 +107,28 @@ export function AccountTransactionsCard({
     }
   }, [refreshing, refetch]);
 
+  const journal = useMemo(
+    () =>
+      (data?.getLedgerJournal.data ?? []) as unknown as JournalDirectiveType[],
+    [data],
+  );
+  const currentMonth = today.slice(0, 7);
+  const listAnchor = resolveListAnchor(
+    anchorMonth,
+    statementLoading,
+    journal,
+    accountPrefix,
+    currentMonth,
+  );
   const entries = useMemo(
     () =>
-      selectAccountTransactions(
-        (data?.getLedgerJournal.data ??
-          []) as unknown as JournalDirectiveType[],
-        accountPrefix,
-        timeRange,
-        anchorMonth,
-      ),
-    [data, accountPrefix, timeRange, anchorMonth],
+      selectAccountTransactions(journal, accountPrefix, timeRange, listAnchor),
+    [journal, accountPrefix, timeRange, listAnchor],
   );
+  // Rows exist, just not in this range: say so instead of "No transactions yet".
+  const emptyText = hasAnyAccountTransaction(journal, accountPrefix)
+    ? t("recentTransactionsEmptyRange")
+    : t(emptyKey);
 
   return (
     <DashboardCard title={t(titleKey)} bleed testID="account-transactions-card">
@@ -122,12 +140,12 @@ export function AccountTransactionsCard({
         <CardLoadFailure
           onRetry={() => void refetch().catch(() => undefined)}
         />
-      ) : loading && entries.length === 0 ? (
+      ) : (loading || statementLoading) && entries.length === 0 ? (
         <LoadingTile height={160} mx={16} />
       ) : (
         <FadeInView>
           {entries.length === 0 ? (
-            <Text style={styles.empty}>{t(emptyKey)}</Text>
+            <Text style={styles.empty}>{emptyText}</Text>
           ) : (
             entries.map((entry, index) => (
               <EntryRow

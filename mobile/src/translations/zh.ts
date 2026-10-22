@@ -385,6 +385,7 @@ export const zh: Translations = {
   noAccounts: "暂无账户",
   recentTransactions: "最近交易",
   recentTransactionsEmpty: "还没有交易记录",
+  recentTransactionsEmptyRange: "此区间没有交易记录",
   spending: "支出",
   spendingSubtitle: "本月与上月对比",
   spendingChartSummary: "支出：上月 {{lastMonth}}，本月 {{thisMonth}}。",

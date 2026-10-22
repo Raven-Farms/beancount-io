@@ -429,6 +429,7 @@ export const uk: Translations = {
   noAccounts: "Немає рахунків",
   recentTransactions: "Останні транзакції",
   recentTransactionsEmpty: "Транзакцій поки немає",
+  recentTransactionsEmptyRange: "Немає транзакцій за цей період",
   spending: "Витрати",
   spendingSubtitle: "Цей місяць проти минулого",
   spendingChartSummary:

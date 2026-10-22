@@ -434,6 +434,7 @@ export const sk: Translations = {
   noAccounts: "Žiadne účty",
   recentTransactions: "Nedávne transakcie",
   recentTransactionsEmpty: "Zatiaľ žiadne transakcie",
+  recentTransactionsEmptyRange: "V tomto období nie sú žiadne transakcie",
   spending: "Výdavky",
   spendingSubtitle: "Tento mesiac oproti minulému",
   spendingChartSummary:

@@ -430,6 +430,7 @@ export const ru: Translations = {
   noAccounts: "Нет счетов",
   recentTransactions: "Последние транзакции",
   recentTransactionsEmpty: "Транзакций пока нет",
+  recentTransactionsEmptyRange: "Нет транзакций за этот период",
   spending: "Расходы",
   spendingSubtitle: "Этот месяц и прошлый",
   spendingChartSummary:

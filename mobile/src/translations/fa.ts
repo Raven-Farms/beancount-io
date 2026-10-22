@@ -417,6 +417,7 @@ export const fa: Translations = {
   noAccounts: "بدون حساب",
   recentTransactions: "تراکنش‌های اخیر",
   recentTransactionsEmpty: "هنوز تراکنشی نیست",
+  recentTransactionsEmptyRange: "در این بازه تراکنشی نیست",
   spending: "هزینه‌ها",
   spendingSubtitle: "این ماه در برابر ماه گذشته",
   spendingChartSummary:

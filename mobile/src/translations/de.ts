@@ -437,6 +437,7 @@ export const de: Translations = {
   noAccounts: "Keine Konten",
   recentTransactions: "Letzte Transaktionen",
   recentTransactionsEmpty: "Noch keine Transaktionen",
+  recentTransactionsEmptyRange: "Keine Transaktionen in diesem Zeitraum",
   spending: "Ausgaben",
   spendingSubtitle: "Dieser Monat vs. Vormonat",
   spendingChartSummary:

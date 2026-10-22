@@ -426,6 +426,7 @@ export const nl: Translations = {
   noAccounts: "Geen accounts",
   recentTransactions: "Recente transacties",
   recentTransactionsEmpty: "Nog geen transacties",
+  recentTransactionsEmptyRange: "Geen transacties in deze periode",
   spending: "Uitgaven",
   spendingSubtitle: "Deze maand vergeleken met vorige maand",
   spendingChartSummary:

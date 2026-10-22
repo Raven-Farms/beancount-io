@@ -423,6 +423,7 @@ export const bg: Translations = {
   noAccounts: "Няма сметки",
   recentTransactions: "Последни транзакции",
   recentTransactionsEmpty: "Още няма транзакции",
+  recentTransactionsEmptyRange: "Няма транзакции за този период",
   spending: "Разходи",
   spendingSubtitle: "Този месец спрямо миналия",
   spendingChartSummary:

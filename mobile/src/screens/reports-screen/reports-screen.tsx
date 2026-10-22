@@ -276,6 +276,7 @@ const ReportsScreenImpl = (): JSX.Element => {
           emptyKey="recentTransactionsEmpty"
           timeRange={timeRange}
           anchorMonth={anchorMonth}
+          statementLoading={isLoading}
           refreshing={refreshing}
         />
       </DashboardScrollView>

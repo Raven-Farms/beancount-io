@@ -435,6 +435,7 @@ export const ca: Translations = {
   noAccounts: "Cap compte",
   recentTransactions: "Transaccions recents",
   recentTransactionsEmpty: "Encara no hi ha transaccions",
+  recentTransactionsEmptyRange: "Sense transaccions en aquest període",
   spending: "Despeses",
   spendingSubtitle: "Aquest mes en comparació amb l'anterior",
   spendingChartSummary:

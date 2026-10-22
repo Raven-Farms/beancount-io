@@ -432,6 +432,7 @@ export const en = {
   noAccounts: "No accounts",
   recentTransactions: "Recent Transactions",
   recentTransactionsEmpty: "No transactions yet",
+  recentTransactionsEmptyRange: "No transactions in this range",
   spending: "Spending",
   spendingSubtitle: "This month vs. last month",
   spendingChartSummary:
