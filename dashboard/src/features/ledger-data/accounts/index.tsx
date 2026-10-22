@@ -461,8 +461,11 @@ export default function LedgerAccountsPage() {
 
   const hasActiveFilters = search.length > 0 || typeFilter !== ACCOUNT_TYPE_ALL;
 
+  // The empty state's Clear leaves with its results; hand focus to the
+  // search, as the field's own clear icon does, for the next query (w4/340).
   const clearFilters = () => {
     setListSearch({ search: undefined, type: undefined });
+    searchInputRef.current?.focus();
   };
 
   return (

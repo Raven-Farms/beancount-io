@@ -245,38 +245,59 @@ describe("Budget search Clear focus on the owning page", () => {
     expectHistories(["Expenses:Rent"]);
   });
 
-  it("keeps the separate no-match reset clearing interval and search while retaining time", async () => {
-    const user = userEvent.setup();
-    await mountPage();
-    await user.click(filterButton("Interval", "Monthly"));
-    await user.click(filterButton("Time span", "Last year"));
-    await user.type(searchBox(), "no-matching-budget");
-    expectHistories([]);
-    expect(screen.getByText(en["common.noResultsFound"])).toBeInTheDocument();
-    const clearButtons = screen.getAllByRole("button", { name: "Clear" });
-    expect(clearButtons).toHaveLength(2);
-    await user.click(clearButtons.find((button) => button !== searchClear())!);
-    expect(searchBox()).toHaveValue("");
-    expect(filterButton("Interval", "All")).toHaveAttribute(
-      "aria-pressed",
-      "true",
-    );
-    expect(filterButton("Time span", "Last year")).toHaveAttribute(
-      "aria-pressed",
-      "true",
-    );
-    expectHistories(entries.map((entry) => entry.values[0] as string));
-    await waitFor(() => {
-      expect(query).toHaveBeenCalledWith(
-        GetLedgerIntervalTotalsDocument,
-        expect.objectContaining({
-          variables: expect.objectContaining({
-            accountName: "Expenses:Travel",
-            interval: "yearly",
-            time: "year-1",
-          }),
-        }),
+  it.each(["keyboard", "pointer"])(
+    "keeps the separate no-match reset clearing interval and search while retaining time, then returns to search (%s, w4/340)",
+    async (via) => {
+      const user = userEvent.setup();
+      await mountPage();
+      await user.click(filterButton("Interval", "Monthly"));
+      await user.click(filterButton("Time span", "Last year"));
+      const input = searchBox();
+      await user.type(input, "no-matching-budget");
+      expectHistories([]);
+      expect(screen.getByText(en["common.noResultsFound"])).toBeInTheDocument();
+      const clearButtons = screen.getAllByRole("button", { name: "Clear" });
+      expect(clearButtons).toHaveLength(2);
+      const reset = clearButtons.find((button) => button !== searchClear())!;
+      if (via === "keyboard") {
+        reset.focus();
+        await user.keyboard("{Enter}");
+      } else {
+        await user.click(reset);
+      }
+      expect(reset).not.toBeInTheDocument();
+      expect(searchBox()).toBe(input);
+      expect(input).toHaveFocus();
+      expect(searchBox()).toHaveValue("");
+      expect(filterButton("Interval", "All")).toHaveAttribute(
+        "aria-pressed",
+        "true",
       );
-    });
-  });
+      expect(filterButton("Time span", "Last year")).toHaveAttribute(
+        "aria-pressed",
+        "true",
+      );
+      expectHistories(entries.map((entry) => entry.values[0] as string));
+      await waitFor(() => {
+        expect(query).toHaveBeenCalledWith(
+          GetLedgerIntervalTotalsDocument,
+          expect.objectContaining({
+            variables: expect.objectContaining({
+              accountName: "Expenses:Travel",
+              interval: "yearly",
+              time: "year-1",
+            }),
+          }),
+        );
+      });
+      // Keys typed straight away, without a refocus, search again.
+      await user.keyboard("Dining");
+      expect(input).toHaveValue("Dining");
+      expectHistories(["Expenses:Dining"]);
+      expect(filterButton("Time span", "Last year")).toHaveAttribute(
+        "aria-pressed",
+        "true",
+      );
+    },
+  );
 });

@@ -181,9 +181,12 @@ export default function LedgerBudgetPage() {
 
   const hasListFilters = search.trim() !== "" || selectedInterval !== "ALL";
 
+  // The no-results Clear leaves with its results; hand focus to the search,
+  // as the field's own clear icon does, for the next query (w4/340).
   const clearListFilters = () => {
     setSearch("");
     setSelectedInterval("ALL");
+    searchInputRef.current?.focus();
   };
 
   return (

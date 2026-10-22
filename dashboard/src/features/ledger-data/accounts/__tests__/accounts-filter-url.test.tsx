@@ -493,6 +493,52 @@ describe("accounts list filters in the URL", () => {
     );
   });
 
+  it.each([
+    { isMobile: false, via: "keyboard" },
+    { isMobile: true, via: "keyboard" },
+    { isMobile: false, via: "pointer" },
+  ])(
+    "returns the empty state's Clear to search for the next query (mobile=$isMobile, $via, w4/340)",
+    async ({ isMobile, via }) => {
+      viewport.isMobile = isMobile;
+      const user = userEvent.setup();
+      const router = await mountAt("/ledger/alice/books/accounts");
+      await user.click(typeChip("Assets"));
+      const input = searchBox();
+      await user.type(input, "no-matching-account");
+      await waitFor(() => expect(accountNames()).toEqual([]));
+
+      const reset = screen
+        .getAllByRole("button", { name: "common.clearInput" })
+        .find((button) => button !== searchClear())!;
+      if (via === "keyboard") {
+        reset.focus();
+        await user.keyboard("{Enter}");
+      } else {
+        await user.click(reset);
+      }
+
+      // The reset drops search and type; focus lands back in the search.
+      await waitFor(() => expect(router.state.location.search).toEqual({}));
+      expect(reset).not.toBeInTheDocument();
+      expect(searchBox()).toBe(input);
+      expect(input).toHaveValue("");
+      expect(input).toHaveFocus();
+      expect(typeChip("page.accounts.allTypes")).toHaveAttribute(
+        "aria-pressed",
+        "true",
+      );
+      // Keys typed straight away, without a refocus, search again.
+      await user.keyboard("Cash");
+      expect(input).toHaveValue("Cash");
+      await waitFor(() =>
+        expect(router.state.location.search).toEqual({ search: "Cash" }),
+      );
+      expect(accountNames().length).toBeGreaterThan(0);
+      expect(accountNames().every((name) => /cash/i.test(name))).toBe(true);
+    },
+  );
+
   it("keeps pasted input consistent with the bounded search URL", async () => {
     const user = userEvent.setup();
     const router = await mountAt("/ledger/alice/books/accounts");
