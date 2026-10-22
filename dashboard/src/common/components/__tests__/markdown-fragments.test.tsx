@@ -71,3 +71,69 @@ it("renders the same fragment href on the server", () => {
     'href="#user-content-qa-20261020-fragment-target"',
   );
 });
+
+/**
+ * The code overrides rebuilt their elements and dropped the sanitized id and
+ * the authored direction: a link to a code block reached nothing, and
+ * `dir="ltr"` code read "8 = 2 − 10" in a Persian page (w4/303).
+ */
+describe("code anchors and authored direction", () => {
+  const CODE_README = [
+    "[qa code anchor](#qa-code-target)",
+    "",
+    "[qa inline anchor](#user-content-qa-inline-target)",
+    "",
+    "[qa heading anchor](#qa-heading-target)",
+    "",
+    '<pre id="qa-code-target" dir="ltr"><code>qa code',
+    "    10 - 2 = 8",
+    "    aligned line</code></pre>",
+    "",
+    '<p><code id="qa-inline-target" dir="ltr">qa inline</code></p>',
+    "",
+    '<h2 id="qa-heading-target">qa heading control</h2>',
+    "",
+    '<pre dir="sideways"><code>qa odd direction</code></pre>',
+    "",
+    "```",
+    "qa plain fence",
+    "```",
+  ].join("\n");
+
+  it("links reach code blocks and inline code by their sanitized ids", () => {
+    render(<MarkdownRenderer content={CODE_README} />);
+    const block = targetOf("qa code anchor");
+    expect(block?.tagName).toBe("PRE");
+    expect(block).toHaveAttribute("id", "user-content-qa-code-target");
+    expect(block?.textContent).toContain("    10 - 2 = 8");
+    const inline = targetOf("qa inline anchor");
+    expect(inline?.tagName).toBe("CODE");
+    expect(inline).toHaveTextContent("qa inline");
+    expect(targetOf("qa heading anchor")?.tagName).toBe("H2");
+    // The clobber prefix stays: no unprefixed id reaches the document.
+    expect(document.getElementById("qa-code-target")).toBeNull();
+    expect(document.getElementById("qa-inline-target")).toBeNull();
+  });
+
+  it("keeps an allowed authored direction and adds none otherwise", () => {
+    const { container } = render(<MarkdownRenderer content={CODE_README} />);
+    const pres = [...container.querySelectorAll("pre")];
+    const byText = (text: string) =>
+      pres.find((pre) => pre.textContent?.includes(text));
+    expect(byText("10 - 2 = 8")).toHaveAttribute("dir", "ltr");
+    expect(
+      document.getElementById("user-content-qa-inline-target"),
+    ).toHaveAttribute("dir", "ltr");
+    expect(byText("qa odd direction")).not.toHaveAttribute("dir");
+    expect(byText("qa plain fence")).not.toHaveAttribute("dir");
+    expect(byText("qa plain fence")).not.toHaveAttribute("id");
+  });
+
+  it("renders the same ids and direction on the server", () => {
+    const html = renderToString(<MarkdownRenderer content={CODE_README} />);
+    expect(html).toMatch(
+      /<pre[^>]*id="user-content-qa-code-target"[^>]*dir="ltr"|<pre[^>]*dir="ltr"[^>]*id="user-content-qa-code-target"/,
+    );
+    expect(html).toContain('id="user-content-qa-inline-target"');
+  });
+});

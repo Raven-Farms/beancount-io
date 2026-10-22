@@ -3,7 +3,7 @@ import remarkGfm from "remark-gfm";
 import remarkBreaks from "remark-breaks";
 import rehypeRaw from "rehype-raw";
 import rehypeSanitize from "rehype-sanitize";
-import { CodeBlock } from "@/common/components/code-block";
+import { CodeBlock, type CodeAttributes } from "@/common/components/code-block";
 import { ExternalLink } from "lucide-react";
 import type { Components } from "react-markdown";
 import { useMemo, type ComponentProps, type ReactNode } from "react";
@@ -35,6 +35,7 @@ interface HastNode {
     id?: unknown;
     name?: unknown;
     href?: unknown;
+    dir?: unknown;
   };
   children?: HastNode[];
 }
@@ -83,6 +84,20 @@ function rehypeLinkSanitizedFragments() {
   };
 }
 
+/**
+ * The sanitized id and an authored direction of a code element. The code
+ * overrides rebuild their elements, which dropped both: a README link to a
+ * code block reached nothing, and `dir="ltr"` code read backwards in an RTL
+ * page (w4/303). The id already carries the sanitizer's prefix.
+ */
+function codeAttributes(node: HastNode | undefined): CodeAttributes {
+  const { id, dir } = node?.properties ?? {};
+  return {
+    id: typeof id === "string" ? id : undefined,
+    dir: dir === "ltr" || dir === "rtl" || dir === "auto" ? dir : undefined,
+  };
+}
+
 function hastText(node: HastNode): string {
   if (node.type === "text") return node.value ?? "";
   return (node.children ?? []).map(hastText).join("");
@@ -94,10 +109,11 @@ const components: Components = {
   // inline collapsed the author's lines (w4/269). The `code` override below
   // therefore only ever sees inline spans.
   pre({ children, node }) {
-    const code = (node as HastNode | undefined)?.children?.find(
+    const pre = node as HastNode | undefined;
+    const code = pre?.children?.find(
       (child) => child.type === "element" && child.tagName === "code",
     );
-    if (!code) return <pre>{children}</pre>;
+    if (!code) return <pre {...codeAttributes(pre)}>{children}</pre>;
     const classes = code.properties?.className;
     const languageClass = (Array.isArray(classes) ? classes : [])
       .map(String)
@@ -107,12 +123,20 @@ const components: Components = {
         code={hastText(code).replace(/\n$/, "")}
         language={languageClass?.slice("language-".length)}
         inline={false}
+        preAttributes={codeAttributes(pre)}
+        codeAttributes={codeAttributes(code)}
       />
     );
   },
 
-  code({ children }) {
-    return <CodeBlock code={String(children)} inline />;
+  code({ children, node }) {
+    return (
+      <CodeBlock
+        code={String(children)}
+        inline
+        codeAttributes={codeAttributes(node as HastNode | undefined)}
+      />
+    );
   },
 
   a({ children, href, ...props }) {
