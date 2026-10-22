@@ -12,3 +12,12 @@ export function barChartValueDomain(
   const max = Math.max(...numbers, 0);
   return min === 0 && max === 0 ? [0, 1] : [min, max];
 }
+
+/**
+ * Whether every value of every series is exactly zero: a range with only
+ * transfers or prices in it. Such a chart is empty, not a row of 2 pt bars over
+ * a "$0 to $1" axis (w21/496).
+ */
+export function hasNoFlow(...series: readonly (readonly number[])[]): boolean {
+  return series.every((values) => values.every((value) => value === 0));
+}

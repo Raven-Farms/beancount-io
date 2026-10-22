@@ -6,7 +6,7 @@ import { formatShortMoneyWithCurrency } from "@/common/number-utils";
 import { useTheme } from "@/common/theme";
 import { useTranslations } from "@/common/hooks/use-translations";
 import { AnimatedBar } from "./animated-bar";
-import { barChartValueDomain } from "./bar-chart-domain";
+import { barChartValueDomain, hasNoFlow } from "./bar-chart-domain";
 import { useEntranceProgress } from "./use-entrance-progress";
 import { restingBarRect } from "./bar-geometry";
 import { ScrollableAxisChart } from "./scrollable-axis-chart";
@@ -81,6 +81,12 @@ function IncomeExpenseBarChart({
 
   if (months.length === 0) {
     return <ChartPlaceholder height={chartHeight} />;
+  }
+  // A range whose every month is nothing but transfers or prices: no income, no
+  // expense, no net. Two bars over a "$0 to $1" axis read as cents of activity,
+  // beside a Cash flow card that says there is none (w21/496).
+  if (hasNoFlow(income, expense, net)) {
+    return <ChartPlaceholder height={chartHeight} label={t("cashFlowEmpty")} />;
   }
 
   // Every series sets the bounds, bars included: a refund month's negative

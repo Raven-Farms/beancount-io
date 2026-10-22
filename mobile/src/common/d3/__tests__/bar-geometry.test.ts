@@ -1,4 +1,5 @@
-import { barGrowsUp, barRectAt } from "../bar-geometry";
+import { barGrowsUp, barRectAt, restingBarRect } from "../bar-geometry";
+import { hasNoFlow } from "../bar-chart-domain";
 
 // A plot whose value-zero line sits 100px down from the top of the SVG.
 const BASELINE = 100;
@@ -86,4 +87,39 @@ test("a zero-height bar stays collapsed on the baseline", () => {
     y: BASELINE,
     height: 0,
   });
+});
+
+// w21/496: a month with nothing in it drew 2 pt bars over a "$0 to $1" axis.
+test("a value of exactly zero rests with no height, on the baseline", () => {
+  expect(restingBarRect(0, BASELINE, BASELINE)).toEqual({
+    height: 0,
+    y: BASELINE,
+  });
+});
+
+test("a value worth almost nothing keeps its 2 pt bar, in either direction", () => {
+  expect(restingBarRect(0.001, BASELINE - 0.1, BASELINE).height).toBe(2);
+  expect(restingBarRect(-0.001, BASELINE + 0.1, BASELINE).height).toBe(2);
+});
+
+test("a range with no flow at all is empty, one with any is not", () => {
+  expect(hasNoFlow([0], [0], [0])).toBe(true);
+  expect(hasNoFlow([0, 0], [0, 0], [0, 0])).toBe(true);
+  expect(hasNoFlow([0, 5], [0, 0], [0, 5])).toBe(false);
+  expect(hasNoFlow([0], [0.01], [0])).toBe(false);
+  expect(hasNoFlow([0], [-3], [0])).toBe(false);
+});
+
+test("the income and expense chart shows the empty state for it", () => {
+  const source = require("fs")
+    .readFileSync(
+      require("path").join(__dirname, "..", "income-expense-bar-chart.tsx"),
+      "utf8",
+    )
+    .replace(/\s+/g, "");
+  expect(
+    source.includes(
+      'if(hasNoFlow(income,expense,net)){return<ChartPlaceholderheight={chartHeight}label={t("cashFlowEmpty")}/>;}',
+    ),
+  ).toBe(true);
 });
