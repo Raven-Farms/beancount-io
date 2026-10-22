@@ -93,7 +93,7 @@
 
 ## Milestones
 
-- [ ] **m46** — [Preserve an unsaved file through ledger refresh](./m46/README.md) (6 tasks) ← continuous dashboard QA,2026-10-21; both-width native Refresh silently replaces dirty text, Undo cannot recover; fixture cleaned and current/served source matches.
+- [ ] **m46** — [Preserve editor drafts through ledger refresh](./m46/README.md) (6 tasks) ← continuous dashboard QA,2026-10-21; both-width native Refresh loses file and unexecuted BQL drafts, removing original editor/main nodes; fixtures cleaned and responsible current/served sources match.
 
 - [ ] **m45** — [Keep commodity quantities precise in Budget and statements](./m45/README.md) (6 tasks) ← promoted331 and actual public statement QA,2026-10-21; minor,4.00995ETH becomes4.01 in shared hierarchy; modeled Budget loses fine BTC digits.
 
