@@ -265,6 +265,7 @@ def answer_preset(
         "currency": currency,
         "date": day.isoformat(),
         "preset": preset,
+        "opened": open_day.isoformat(),
         "accounts": opened,
     }
 

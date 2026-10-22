@@ -308,7 +308,8 @@ def init(
         if not prompted:
             for warning in warnings:
                 output.note(warning)
-        accounts = data.get("accounts") or list(_ACCOUNTS)
+        # A preset may open nothing; only a result without the key is the fixed chart.
+        accounts = data["accounts"] if "accounts" in data else list(_ACCOUNTS)
         output.success(f"Created {file} with {len(accounts)} accounts in {currency}.")
         try:
             shown = f"~/{file.relative_to(Path.home())}"
@@ -324,8 +325,10 @@ def init(
         else:
             next_command = f"cd {_shell_path(shown.rpartition('/')[0])} && bea check"
         typer.echo(f"Next: {next_command}")
-        typer.echo(
-            f"Accounts open on {day}. To record earlier history, edit their open dates; "
-            "new ledgers can use init --date YYYY-MM-DD."
-        )
+        if accounts:
+            # The preset builder opens accounts the day before the boundary when it posts an opening balance.
+            typer.echo(
+                f"Accounts open on {data.get('opened', day)}. To record earlier history, edit their open dates; "
+                "new ledgers can use init --date YYYY-MM-DD."
+            )
         typer.echo(f"Record purchases with {bea} add transaction, or preview a bank export with {bea} import.")
