@@ -197,3 +197,59 @@ describe("receiptAmountText", () => {
     ).toBe(true);
   });
 });
+
+// ──────────────────────────────────────────────────────────────────────────────
+// w21/282: Android re-encodes a HEIC pick to a .jpeg cache file but still
+// reports image/heic and the .heic name.
+// ──────────────────────────────────────────────────────────────────────────────
+
+test("a re-encoded Android pick is the jpeg its file is, not the heic it reports", async () => {
+  expect(
+    await pick({
+      canceled: false,
+      assets: [
+        {
+          uri: "file:///data/cache/ImagePicker/3f2a.jpeg",
+          mimeType: "image/heic",
+          fileName: "20261021_101500.heic",
+        },
+      ],
+    }),
+  ).toEqual({
+    uri: "file:///data/cache/ImagePicker/3f2a.jpeg",
+    mimeType: "image/jpeg",
+    filename: "20261021_101500.jpeg",
+  });
+});
+
+test("a pick whose file says nothing keeps the reported type and name", async () => {
+  expect(
+    await pick({
+      canceled: false,
+      assets: [
+        {
+          uri: "content://media/external/images/media/42",
+          mimeType: "image/png",
+          fileName: "scan.png",
+        },
+      ],
+    }),
+  ).toEqual({
+    uri: "content://media/external/images/media/42",
+    mimeType: "image/png",
+    filename: "scan.png",
+  });
+});
+
+test("a query string does not hide the file's extension", async () => {
+  expect(
+    await pick({
+      canceled: false,
+      assets: [{ uri: "file:///c/a.JPG?x=1", mimeType: "image/heif" }],
+    }),
+  ).toEqual({
+    uri: "file:///c/a.JPG?x=1",
+    mimeType: "image/jpeg",
+    filename: "receipt.jpg",
+  });
+});

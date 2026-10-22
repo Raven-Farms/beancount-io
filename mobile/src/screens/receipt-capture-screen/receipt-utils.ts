@@ -100,10 +100,44 @@ export const shotFromLibraryResult = (
   if (!asset?.uri) {
     return null;
   }
-  const mimeType = asset.mimeType ?? "image/jpeg";
-  return {
-    uri: asset.uri,
-    mimeType,
-    filename: asset.fileName ?? `receipt.${mimeToExt(mimeType)}`,
-  };
+  const reported = asset.mimeType ?? "image/jpeg";
+  // The file the picker returned says what it is: on Android it re-encodes a
+  // HEIC photo into a `.jpeg` cache file yet still reports `image/heic` and
+  // the `.heic` name, which the server then refuses (w21/282). Fall back to
+  // the reported type only when the extension says nothing.
+  const fileType = typeOfExtension(extensionOf(asset.uri));
+  const mimeType = fileType ?? reported;
+  const nameType = asset.fileName
+    ? typeOfExtension(extensionOf(asset.fileName))
+    : null;
+  const filename =
+    asset.fileName && (fileType === null || nameType === fileType)
+      ? asset.fileName
+      : `${stem(asset.fileName)}.${fileType ? extensionOf(asset.uri) : mimeToExt(mimeType)}`;
+  return { uri: asset.uri, mimeType, filename };
+};
+
+const EXTENSION_TYPES: Record<string, string> = {
+  jpg: "image/jpeg",
+  jpeg: "image/jpeg",
+  png: "image/png",
+  webp: "image/webp",
+  gif: "image/gif",
+};
+
+/** The lower-cased extension of a path or URI, without query or fragment. */
+const extensionOf = (path: string): string => {
+  const name = path.split(/[?#]/u)[0]!.split("/").pop() ?? "";
+  const dot = name.lastIndexOf(".");
+  return dot < 0 ? "" : name.slice(dot + 1).toLowerCase();
+};
+
+const typeOfExtension = (extension: string): string | null =>
+  EXTENSION_TYPES[extension] ?? null;
+
+/** A file name without its extension, or `receipt` when there is none. */
+const stem = (fileName: string | null | undefined): string => {
+  const dot = fileName ? fileName.lastIndexOf(".") : -1;
+  const base = fileName && dot > 0 ? fileName.slice(0, dot) : (fileName ?? "");
+  return base || "receipt";
 };
