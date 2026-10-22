@@ -204,6 +204,40 @@ describe("guest read isolation", () => {
     });
   }
 
+  // w21/427: a vanished entry or file is that screen's "removed", not the end
+  // of the example.
+  for (const [name, document, extra] of [
+    ["entry", GetLedgerEntryContextDocument, { entryHash: "gone" }],
+    ["file", GetLedgerFileDocument, { path: "gone.bean" }],
+  ] as const) {
+    it(`leaves a missing ${name} to its own screen`, async () => {
+      await client.query({ query, variables });
+      response = {
+        errors: [{ message: "Not found", extensions: { code: "NOT_FOUND" } }],
+      };
+      await rejects(() =>
+        client.query({
+          query: document,
+          variables: { ...variables, ...extra },
+        }),
+      );
+      expect(failures).toEqual([]);
+    });
+
+    it(`still reports lost access found by the ${name} read`, async () => {
+      response = {
+        errors: [{ message: "Private", extensions: { code: "FORBIDDEN" } }],
+      };
+      await rejects(() =>
+        client.query({
+          query: document,
+          variables: { ...variables, ...extra },
+        }),
+      );
+      expect(failures).toEqual(["unavailable"]);
+    });
+  }
+
   it("distinguishes connection failures and never falls back to the managed server", async () => {
     globalThis.fetch = async (url) => {
       requests.push({ url: String(url), options: {} });

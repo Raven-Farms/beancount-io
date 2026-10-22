@@ -48,6 +48,24 @@ const PUBLIC_OPERATIONS = new Set([
   "AccountJournal",
 ]);
 
+// Reads of one entry or one file: their NOT_FOUND says that item is gone, which
+// the screen shows itself ("removed"), not that the example is (w21/427).
+const ITEM_OPERATIONS = new Set(["GetLedgerEntryContext", "getLedgerFile"]);
+
+function isMissingItem(
+  operationName: string,
+  error: Parameters<typeof guestReadFailure>[0],
+): boolean {
+  return (
+    ITEM_OPERATIONS.has(operationName) &&
+    !error.networkError &&
+    (error.graphQLErrors ?? []).length > 0 &&
+    error.graphQLErrors!.every(
+      ({ extensions }) => String(extensions?.code) === "NOT_FOUND",
+    )
+  );
+}
+
 /**
  * Whether a failure should blank the whole example. Losing access always does;
  * a connection failure does only while nothing has loaded yet. After that the
@@ -100,6 +118,7 @@ export function createGuestClient(
         }),
       ),
       onError((error) => {
+        if (isMissingItem(error.operation.operationName, error)) return;
         const failure = guestReadFailure(error);
         if (flagsSession(failure, anythingLoaded)) onFailure?.(failure);
       }),
