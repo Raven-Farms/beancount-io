@@ -386,3 +386,41 @@ describe("the Custom range seed", () => {
     expect(source.includes("setMonth(")).toBe(false);
   });
 });
+
+// w21/306: all three status chips match every transaction, so they filter
+// nothing.
+describe("selecting every status", () => {
+  const all = filters({ statuses: ["cleared", "pending", "other"] });
+
+  it("sends no subtype filter and counts as no filter", () => {
+    expect(toFilterQuery(all, TODAY)).toEqual({});
+    expect(countActiveFilters(all, TODAY)).toBe(0);
+  });
+
+  it("in any order", () => {
+    const shuffled = filters({ statuses: ["other", "cleared", "pending"] });
+    expect(toFilterQuery(shuffled, TODAY)).toEqual({});
+    expect(countActiveFilters(shuffled, TODAY)).toBe(0);
+  });
+
+  it("still filters when only some are selected", () => {
+    const some = filters({ statuses: ["cleared", "pending"] });
+    expect(toFilterQuery(some, TODAY)).toEqual({
+      transactionSubtypes: ["cleared", "pending"],
+    });
+    expect(countActiveFilters(some, TODAY)).toBe(1);
+  });
+
+  it("keeps the other filters when every status is on", () => {
+    const both = filters({
+      statuses: ["cleared", "pending", "other"],
+      range: "1M",
+      account: "Assets:Cash",
+    });
+    expect(Object.keys(toFilterQuery(both, TODAY)).sort()).toEqual([
+      "account",
+      "time",
+    ]);
+    expect(countActiveFilters(both, TODAY)).toBe(2);
+  });
+});

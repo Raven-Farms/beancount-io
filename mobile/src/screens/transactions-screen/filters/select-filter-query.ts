@@ -2,6 +2,7 @@ import { getFormatDate } from "../../../common/format-util";
 import {
   NO_FILTERS,
   ScopedTransactionFilters,
+  TRANSACTION_STATUSES,
   TransactionFilters,
 } from "./types";
 
@@ -107,6 +108,16 @@ export const formatTimeFilter = (range: DateRange): string =>
   `${range.start} - ${range.end}`;
 
 /**
+ * Whether the status chips filter anything. Cleared, Pending and Other together
+ * match every transaction, so selecting all three is the same as none: no dot,
+ * no subtype sent, and an empty ledger keeps its welcome instead of "No
+ * transactions match your search or filters" (w21/306).
+ */
+const statusFilterActive = (filters: TransactionFilters): boolean =>
+  filters.statuses.length > 0 &&
+  !TRANSACTION_STATUSES.every((status) => filters.statuses.includes(status));
+
+/**
  * Translates filter state into query fields, omitting whatever is inactive so
  * the variables stay identical to an unfiltered query when nothing is set.
  */
@@ -116,7 +127,7 @@ export const toFilterQuery = (
 ): FilterQuery => {
   const query: FilterQuery = {};
 
-  if (filters.statuses.length > 0) {
+  if (statusFilterActive(filters)) {
     query.transactionSubtypes = [...filters.statuses];
   }
 
@@ -142,7 +153,7 @@ export const countActiveFilters = (
   today: Date,
 ): number => {
   let count = 0;
-  if (filters.statuses.length > 0) count += 1;
+  if (statusFilterActive(filters)) count += 1;
   if (resolveDateRange(filters, today)) count += 1;
   if (filters.account) count += 1;
   return count;
