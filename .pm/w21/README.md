@@ -150,3 +150,6 @@
 - [400](./400.md) — Search "#1042" finds nothing (lone #-token only a tag filter; 025 regression)
 - [401](./401.md) — iOS smart quotes break apostrophe searches (Trader Joe’s)
 - [402](./402.md) — Search over 256 chars escaped fails the whole Transactions list
+- [403](./403.md) — Android status bar icons stay white after Scan Receipt
+- [404](./404.md) — "Give it a review" opens a web listing that can't take a review
+- [405](./405.md) — Settings drops Account section silently when profile fails to load
