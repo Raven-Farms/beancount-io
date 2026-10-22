@@ -8,7 +8,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/common/components/ui/table";
-import { Alert, AlertDescription } from "@/common/components/ui/alert";
 import { Skeleton } from "@/common/components/ui/skeleton";
 import { Button } from "@/common/components/ui/button";
 import { Download } from "lucide-react";
@@ -21,7 +20,8 @@ import { cn } from "@/common/lib/utils/utils";
 import { decodeLedgerId } from "@/common/lib/utils/encode";
 import { useTranslations } from "@/common/hooks/use-translations";
 import { toast } from "sonner";
-import { getErrorMessageKey } from "@/common/lib/errors/error-message";
+import { ReportErrorState } from "@/common/components/state-components";
+import { useQueryRetry } from "@/common/hooks/use-query-retry";
 import { getClickableRowProps } from "@/common/components/clickable-row";
 import { Amount } from "@/common/components/amount";
 
@@ -58,13 +58,16 @@ export const DatasetTable = React.memo(
     const { t } = useTranslations();
     const navigate = useNavigate();
 
-    const { data, loading, error } = useQuery(QueryShellDocument, {
+    const { data, loading, error, refetch } = useQuery(QueryShellDocument, {
       variables: {
         ledgerId: ledgerId,
         query,
       },
       fetchPolicy: "cache-first",
     });
+    // A failed read offers Try Again on this grouping's own query, and keeps
+    // its error view while that retry runs (w4/337, as w4/m50).
+    const { failure, retrying, retry } = useQueryRetry(error, refetch);
 
     const handleExportCSV = React.useCallback(() => {
       if (!data?.queryShell?.table) return;
@@ -275,6 +278,12 @@ export const DatasetTable = React.memo(
       );
     }, [data, t]);
 
+    if (failure) {
+      return (
+        <ReportErrorState error={failure} onRetry={retry} retrying={retrying} />
+      );
+    }
+
     if (loading) {
       return (
         <div>
@@ -292,16 +301,6 @@ export const DatasetTable = React.memo(
             </div>
           </div>
         </div>
-      );
-    }
-
-    if (error) {
-      return (
-        <Alert variant="destructive" className="border-destructive/50">
-          <AlertDescription className="text-sm font-medium">
-            {t(getErrorMessageKey(error))}
-          </AlertDescription>
-        </Alert>
       );
     }
 
