@@ -55,3 +55,28 @@ def test_a_ledger_with_commodities_keeps_its_advice(tmp_path: Path) -> None:
 
     assert result.exit_code == 2, result.output
     assert "Name the commodity with --csv currency=CODE" in " ".join(result.stderr.split())
+
+
+def test_an_already_open_source_is_told_to_declare_a_commodity(tmp_path: Path) -> None:
+    """`add open` refuses a second open, so that advice cannot be followed (w5/874)."""
+    ledger = tmp_path / "main.bean"
+    start = "2024-01-01 open Assets:Cash\n2024-01-01 open Expenses:Uncategorized\n"
+    ledger.write_text(start)
+    (tmp_path / "bank.csv").write_text("Date,Description,Amount\n2024-02-01,Coffee,-3.50\n")
+    base = ["--no-input", "--file", str(ledger)]
+
+    first = runner.invoke(app, [*base, "import", str(tmp_path / "bank.csv"), *CSV])
+
+    assert first.exit_code == 2, first.output
+    said = " ".join(first.stderr.split())
+    assert "Declare one, then name it with --csv currency=CODE" in said
+    assert "add commodity --date YYYY-MM-DD --currency CODE" in said
+    assert "Open Assets:Cash" not in said
+    assert ledger.read_text() == start
+
+    declared = runner.invoke(app, [*base, "add", "commodity", "--date", "2024-01-01", "--currency", "USD"])
+    assert declared.exit_code == 0, declared.output
+    named = ["--csv", "date=Date,amount=Amount,narration=Description,currency=USD", "--account", "Assets:Cash"]
+    applied = runner.invoke(app, [*base, "import", str(tmp_path / "bank.csv"), "--apply", *named])
+    assert applied.exit_code == 0, applied.output
+    assert runner.invoke(app, [*base, "check"]).exit_code == 0

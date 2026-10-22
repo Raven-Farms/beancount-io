@@ -1334,6 +1334,7 @@ class CsvImporter:
         default_account: str = "Expenses:Uncategorized",
         currency: str | None = None,
         known_currencies: frozenset[str] | None = None,
+        source_open: bool = False,
         delimiter: str | None = None,
         encoding: str = "utf-8",
         account_roots: Collection[str] | None = None,
@@ -1364,6 +1365,7 @@ class CsvImporter:
         self._currency = currency
         # Commodities a constant `currency=CODE` may name; None skips the check.
         self._known_currencies = known_currencies
+        self._source_open = source_open
         # Set by _check_columns when the currency mapping names a commodity
         # rather than a column the file has.
         self._constant_currency: str | None = None
@@ -1714,11 +1716,17 @@ class CsvImporter:
                     # `currency=CODE` is refused on a ledger that knows no
                     # commodity, so advising it first sent the next run into
                     # that refusal (w5/841).
-                    raise UsageError(
-                        f"{where}: no currency column, and the ledger knows no commodity yet. Open "
-                        f"{self._account} for one currency first: bea add open --account {self._account} "
-                        "--currency CODE --date YYYY-MM-DD."
+                    # An account that is already open takes no second `open`
+                    # (`add open` refuses it); declaring a commodity is what
+                    # lets `currency=CODE` through (w5/874).
+                    remedy = (
+                        f"Declare one, then name it with --csv currency=CODE: {self._bea} add commodity "
+                        "--date YYYY-MM-DD --currency CODE."
+                        if self._source_open
+                        else f"Open {self._account} for one currency first: {self._bea} add open "
+                        f"--account {self._account} --currency CODE --date YYYY-MM-DD."
                     )
+                    raise UsageError(f"{where}: no currency column, and the ledger knows no commodity yet. {remedy}")
                 if not currency:
                     raise UsageError(
                         f"{where}: no currency column and the ledger has no single operating currency. "

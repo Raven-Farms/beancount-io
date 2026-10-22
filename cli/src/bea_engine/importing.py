@@ -263,6 +263,7 @@ def answer(
             default_account=default_account,
             currency=_row_currency(existing, csv_account, options, checked="currency" not in mapping.columns),
             known_currencies=_known_currencies(existing, operating),
+            source_open=csv_account in _open_currencies(existing, Open),
             delimiter=resolved_delimiter,
             encoding=resolved_encoding,
             account_roots=roots,
