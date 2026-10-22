@@ -165,6 +165,8 @@ export const zh: Translations = {
   serverConnectionTimeout: "服务器未及时响应。",
   serverConnectionUnreachable: "无法连接到该服务器。",
   serverConnectionIncompatible: "该服务器未提供所需的 Beancount.io API。",
+  serverConnectionOlder:
+    "此服务器比应用更旧。可以连接，但部分功能可能无法使用。",
   serverConnectionNotConfigured: "此服务器尚未设置登录。",
   serverConnectionMismatch:
     "此地址与服务器报告的地址不一致。请打开服务器设置并测试连接。",

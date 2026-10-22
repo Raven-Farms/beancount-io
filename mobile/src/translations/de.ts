@@ -189,6 +189,8 @@ export const de: Translations = {
   serverConnectionUnreachable: "Dieser Server ist nicht erreichbar.",
   serverConnectionIncompatible:
     "Dieser Server stellt die erforderliche Beancount.io-API nicht bereit.",
+  serverConnectionOlder:
+    "Dieser Server ist älter als die App. Sie können sich verbinden, aber einige Funktionen funktionieren eventuell nicht.",
   serverConnectionNotConfigured:
     "Dieser Server ist noch nicht für die Anmeldung eingerichtet.",
   serverConnectionMismatch:

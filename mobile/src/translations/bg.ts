@@ -184,6 +184,8 @@ export const bg: Translations = {
   serverConnectionUnreachable: "Неуспешно свързване със сървъра.",
   serverConnectionIncompatible:
     "Този сървър не предоставя необходимия API на Beancount.io.",
+  serverConnectionOlder:
+    "Този сървър е по-стар от приложението. Можете да се свържете, но някои функции може да не работят.",
   serverConnectionNotConfigured: "Този сървър все още не е настроен за вход.",
   serverConnectionMismatch:
     "Този адрес не съвпада с адреса, който сървърът съобщава. Отворете настройките на сървъра и тествайте връзката.",

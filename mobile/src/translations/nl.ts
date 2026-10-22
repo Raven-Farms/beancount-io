@@ -185,6 +185,8 @@ export const nl: Translations = {
   serverConnectionUnreachable: "Deze server kan niet worden bereikt.",
   serverConnectionIncompatible:
     "Deze server biedt niet de vereiste Beancount.io-API.",
+  serverConnectionOlder:
+    "Deze server is ouder dan de app. Je kunt verbinden, maar sommige functies werken mogelijk niet.",
   serverConnectionNotConfigured:
     "Deze server is nog niet ingesteld voor inloggen.",
   serverConnectionMismatch:

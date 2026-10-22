@@ -138,6 +138,8 @@ function connectionMessage(
       return t("serverConnectionTimeout");
     case "unreachable":
       return t("serverConnectionUnreachable");
+    case "older":
+      return t("serverConnectionOlder");
     case "incompatible":
       // Say what the server told us, so the fix is a tap rather than a guess
       // (w21/214); only a server that answered without a hint gets the

@@ -182,6 +182,8 @@ export const fa: Translations = {
   serverConnectionUnreachable: "دسترسی به این سرور ممکن نبود.",
   serverConnectionIncompatible:
     "این سرور API لازم Beancount.io را ارائه نمی‌کند.",
+  serverConnectionOlder:
+    "این سرور از برنامه قدیمی‌تر است. می‌توانید وصل شوید، اما ممکن است برخی قابلیت‌ها کار نکنند.",
   serverConnectionNotConfigured: "این سرور هنوز برای ورود راه‌اندازی نشده است.",
   serverConnectionMismatch:
     "این نشانی با نشانی‌ای که سرور اعلام می‌کند یکسان نیست. تنظیمات سرور را باز کنید و اتصال را آزمایش کنید.",

@@ -190,6 +190,8 @@ export const ca: Translations = {
   serverConnectionUnreachable: "No s'ha pogut contactar amb aquest servidor.",
   serverConnectionIncompatible:
     "Aquest servidor no ofereix l'API necessària de Beancount.io.",
+  serverConnectionOlder:
+    "Aquest servidor és més antic que l'aplicació. Pots connectar-te, però algunes funcions potser no funcionen.",
   serverConnectionNotConfigured:
     "Aquest servidor encara no està configurat per iniciar la sessió.",
   serverConnectionMismatch:

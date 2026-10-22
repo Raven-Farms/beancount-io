@@ -188,6 +188,8 @@ export const sk: Translations = {
   serverConnectionUnreachable: "Tento server sa nepodarilo kontaktovať.",
   serverConnectionIncompatible:
     "Tento server neposkytuje požadované API Beancount.io.",
+  serverConnectionOlder:
+    "Tento server je starší ako aplikácia. Môžete sa pripojiť, ale niektoré funkcie nemusia fungovať.",
   serverConnectionNotConfigured:
     "Tento server ešte nie je nastavený na prihlasovanie.",
   serverConnectionMismatch:

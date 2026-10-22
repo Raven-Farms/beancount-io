@@ -176,6 +176,8 @@ export const en = {
   serverConnectionUnreachable: "Could not reach that server.",
   serverConnectionIncompatible:
     "This server does not expose the required Beancount.io API.",
+  serverConnectionOlder:
+    "This server is older than the app. You can connect, but some features may not work.",
   serverConnectionNotConfigured: "This server is not set up for sign-in yet.",
   serverConnectionMismatch:
     "This address does not match the one the server reports. Open Server settings and test the connection.",

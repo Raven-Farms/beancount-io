@@ -3,6 +3,7 @@ describe("server URL utilities", () => {
   let validateServerUrl: typeof import("../server-url").validateServerUrl;
   let endpointFor: typeof import("../server-url").endpointFor;
   let testServerConnection: typeof import("../server-url").testServerConnection;
+  let isOlderSchema: typeof import("../server-url").isOlderSchema;
 
   beforeAll(() => {
     const Module = require("module");
@@ -35,6 +36,7 @@ describe("server URL utilities", () => {
       validateServerUrl,
       endpointFor,
       testServerConnection,
+      isOlderSchema,
     } = require("../server-url"));
   });
 
@@ -164,6 +166,9 @@ describe("server URL utilities", () => {
         "https://ledger.example.com/base/api-gateway/",
         "https://ledger.example.com/.well-known/oauth-protected-resource/base/v1",
         "https://ledger.example.com/.well-known/oauth-authorization-server/base",
+        // Then the schema probe (w21/593); a server that does not answer it
+        // with an introspection result reads as connected.
+        "https://ledger.example.com/base/api-gateway/",
       ]);
     } finally {
       global.fetch = originalFetch;
@@ -216,5 +221,111 @@ describe("server URL utilities", () => {
     } finally {
       global.fetch = originalFetch;
     }
+  });
+
+  // w21/593: "Connected" for a server whose schema lacks what the app selects.
+  describe("the schema probe", () => {
+    const current = {
+      data: {
+        errorType: {
+          fields: [{ name: "filename" }, { name: "message" }, { name: "hint" }],
+        },
+        setupType: { name: "LedgerSetupInput" },
+      },
+    };
+
+    it("reads a current schema as current and a pre-hint or pre-setup one as older", () => {
+      expect(isOlderSchema(current)).toBe(false);
+      expect(
+        isOlderSchema({
+          data: {
+            errorType: { fields: [{ name: "filename" }, { name: "message" }] },
+            setupType: { name: "LedgerSetupInput" },
+          },
+        }),
+      ).toBe(true);
+      expect(
+        isOlderSchema({
+          data: { errorType: current.data.errorType, setupType: null },
+        }),
+      ).toBe(true);
+    });
+
+    it("cannot tell when introspection is off or the answer is odd", () => {
+      expect(
+        isOlderSchema({ errors: [{ message: "introspection disabled" }] }),
+      ).toBe(false);
+      expect(isOlderSchema({ data: { errorType: null } })).toBe(false);
+      expect(isOlderSchema(null)).toBe(false);
+      expect(isOlderSchema("OK")).toBe(false);
+    });
+
+    it("turns a reachable server with an older schema into its own result", async () => {
+      const originalFetch = global.fetch;
+      global.fetch = (async (
+        url: string | URL | Request,
+        init?: RequestInit,
+      ) => {
+        const value = String(url);
+        const body = String(init?.body ?? "");
+        if (value.includes("oauth-protected-resource")) {
+          return {
+            ok: true,
+            json: async () => ({
+              resource: "https://ledger.example.com/v1",
+              authorization_servers: ["https://ledger.example.com"],
+              scopes_supported: ["ledger.read", "ledger.write", "ledger.admin"],
+            }),
+          } as Response;
+        }
+        if (value.includes("oauth-authorization-server")) {
+          const issuer = "https://ledger.example.com";
+          return {
+            ok: true,
+            json: async () => ({
+              issuer,
+              authorization_endpoint: `${issuer}/api-gateway/oauth/auth`,
+              token_endpoint: `${issuer}/api-gateway/oauth/token`,
+              revocation_endpoint: `${issuer}/api-gateway/oauth/revoke`,
+              userinfo_endpoint: `${issuer}/api-gateway/oauth/me`,
+              response_types_supported: ["code"],
+              grant_types_supported: ["authorization_code", "refresh_token"],
+              scopes_supported: [
+                "openid",
+                "offline_access",
+                "ledger.read",
+                "ledger.write",
+                "ledger.admin",
+              ],
+              token_endpoint_auth_methods_supported: ["none"],
+              code_challenge_methods_supported: ["S256"],
+              authorization_response_iss_parameter_supported: true,
+            }),
+          } as Response;
+        }
+        if (body.includes("ServerSchemaProbe")) {
+          return {
+            ok: true,
+            json: async () => ({
+              data: {
+                errorType: { fields: [{ name: "message" }] },
+                setupType: null,
+              },
+            }),
+          } as Response;
+        }
+        return {
+          ok: true,
+          json: async () => ({ data: { health: "OK" } }),
+        } as Response;
+      }) as typeof fetch;
+      try {
+        expect(
+          await testServerConnection("https://ledger.example.com/"),
+        ).toEqual({ kind: "older" });
+      } finally {
+        global.fetch = originalFetch;
+      }
+    });
   });
 });
