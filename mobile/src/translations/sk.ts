@@ -515,6 +515,7 @@ export const sk: Translations = {
   notificationsChangesSection: "Nedávne zmeny",
   notificationsLedgerHealthy: "Kniha je v poriadku — žiadne chyby.",
   notificationsNoChanges: "Žiadne nedávne zmeny.",
+  notificationsShowOlder: "Zobraziť staršie zmeny",
   commitNoMessage: "(bez správy)",
   // commit detail
   commitDetailAuthor: "Autor",

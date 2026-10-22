@@ -511,6 +511,7 @@ export const en = {
   notificationsChangesSection: "Recent Changes",
   notificationsLedgerHealthy: "Ledger is healthy — no errors.",
   notificationsNoChanges: "No recent changes.",
+  notificationsShowOlder: "Show older changes",
   commitNoMessage: "(no message)",
   // commit detail
   commitDetailAuthor: "Author",

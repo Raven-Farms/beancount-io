@@ -507,6 +507,7 @@ export const nl: Translations = {
   notificationsChangesSection: "Recente wijzigingen",
   notificationsLedgerHealthy: "Het grootboek is in orde — geen fouten.",
   notificationsNoChanges: "Geen recente wijzigingen.",
+  notificationsShowOlder: "Oudere wijzigingen tonen",
   commitNoMessage: "(geen bericht)",
   // commit detail
   commitDetailAuthor: "Auteur",

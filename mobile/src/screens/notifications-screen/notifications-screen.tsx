@@ -8,7 +8,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Stack, router } from "expo-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Ionicons } from "@expo/vector-icons";
 import { ColorTheme } from "@/types/theme-props";
 import { fonts, useTheme } from "@/common/theme";
@@ -16,6 +16,11 @@ import { useThemeStyle } from "@/common/hooks";
 import { useTranslations } from "@/common/hooks/use-translations";
 import { useLedgerErrors } from "@/common/hooks/use-ledger-errors";
 import { selectSectionsPending } from "./section-state";
+import {
+  appendCommitPage,
+  COMMITS_PAGE_SIZE,
+  isLastCommitPage,
+} from "./commit-pages";
 import { useReactiveVar } from "@apollo/client";
 import { ledgerVar } from "@/common/vars";
 import { useListCommitsQuery } from "@/generated-graphql/graphql";
@@ -101,6 +106,16 @@ const getStyles = (theme: ColorTheme) =>
       fontSize: 14,
       color: theme.black80,
       lineHeight: 20,
+    },
+    olderRow: {
+      paddingHorizontal: 16,
+      paddingVertical: 14,
+      alignItems: "center",
+    },
+    olderText: {
+      fontSize: 15,
+      fontWeight: "500",
+      color: theme.primary,
     },
     changeRow: {
       paddingHorizontal: 16,
@@ -232,11 +247,43 @@ function NotificationsScreenImpl(): JSX.Element {
     loading: commitsLoading,
     error: commitsError,
     refetch: refetchCommits,
+    fetchMore: fetchMoreCommits,
   } = useListCommitsQuery({
-    variables: { ledgerId, branch: "main", page: 1, limit: 30 },
+    variables: { ledgerId, branch: "main", page: 1, limit: COMMITS_PAGE_SIZE },
     skip: !ledgerId,
     fetchPolicy: "cache-and-network",
   });
+
+  // "Show older" pages back through the history (w21/313): the next page, until
+  // one comes back short. A pull to refresh or another ledger starts over.
+  const [pagesLoaded, setPagesLoaded] = useState(1);
+  const [noOlder, setNoOlder] = useState(false);
+  const [loadingOlder, setLoadingOlder] = useState(false);
+  useEffect(() => {
+    setPagesLoaded(1);
+    setNoOlder(false);
+  }, [ledgerId]);
+  const showOlder = async () => {
+    if (loadingOlder) return;
+    setLoadingOlder(true);
+    try {
+      const result = await fetchMoreCommits({
+        variables: { page: pagesLoaded + 1 },
+        updateQuery: (previous, { fetchMoreResult }) => ({
+          listCommits: appendCommitPage(
+            previous.listCommits,
+            fetchMoreResult.listCommits,
+          ),
+        }),
+      });
+      setPagesLoaded((pages) => pages + 1);
+      if (isLastCommitPage(result.data.listCommits)) setNoOlder(true);
+    } catch {
+      // The rows already shown stay; the button is there to try again.
+    } finally {
+      setLoadingOlder(false);
+    }
+  };
 
   // Rows show the subject line only: git messages end in a newline, which
   // filled the two-line slot with a blank line (w0/032).
@@ -255,6 +302,8 @@ function NotificationsScreenImpl(): JSX.Element {
     setRefreshing(true);
     try {
       // Both halves: an error fixed outside the app clears on a pull too.
+      setPagesLoaded(1);
+      setNoOlder(false);
       await Promise.all([refetchCommits(), refetchErrors()]);
     } finally {
       setRefreshing(false);
@@ -379,6 +428,27 @@ function NotificationsScreenImpl(): JSX.Element {
               )}
             </FadeInView>
           )}
+
+          {!commitsPending &&
+          commits.length >= COMMITS_PAGE_SIZE &&
+          !noOlder ? (
+            <TouchableOpacity
+              testID="notifications-show-older"
+              style={styles.olderRow}
+              activeOpacity={0.7}
+              onPress={() => void showOlder()}
+              disabled={loadingOlder}
+              accessibilityRole="button"
+              accessibilityState={{
+                busy: loadingOlder,
+                disabled: loadingOlder,
+              }}
+            >
+              <Text style={styles.olderText}>
+                {t("notificationsShowOlder")}
+              </Text>
+            </TouchableOpacity>
+          ) : null}
         </ScrollView>
       </SafeAreaView>
     </>

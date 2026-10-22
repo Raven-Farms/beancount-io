@@ -511,6 +511,7 @@ export const ru: Translations = {
   notificationsChangesSection: "Последние изменения",
   notificationsLedgerHealthy: "С книгой всё в порядке — ошибок нет.",
   notificationsNoChanges: "Недавних изменений нет.",
+  notificationsShowOlder: "Показать более старые изменения",
   commitNoMessage: "(без сообщения)",
   // commit detail
   commitDetailAuthor: "Автор",

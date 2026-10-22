@@ -516,6 +516,7 @@ export const ca: Translations = {
   notificationsChangesSection: "Canvis recents",
   notificationsLedgerHealthy: "El llibre està en ordre: cap error.",
   notificationsNoChanges: "Cap canvi recent.",
+  notificationsShowOlder: "Mostra els canvis anteriors",
   commitNoMessage: "(sense missatge)",
   // commit detail
   commitDetailAuthor: "Autor",

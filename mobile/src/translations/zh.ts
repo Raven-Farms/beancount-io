@@ -458,6 +458,7 @@ export const zh: Translations = {
   notificationsChangesSection: "最近变更",
   notificationsLedgerHealthy: "账本正常 — 没有错误。",
   notificationsNoChanges: "暂无最近变更。",
+  notificationsShowOlder: "显示更早的更改",
   commitNoMessage: "（无提交说明）",
   // commit detail
   commitDetailAuthor: "作者",

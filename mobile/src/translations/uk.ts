@@ -510,6 +510,7 @@ export const uk: Translations = {
   notificationsChangesSection: "Останні зміни",
   notificationsLedgerHealthy: "З книгою все гаразд — помилок немає.",
   notificationsNoChanges: "Останніх змін немає.",
+  notificationsShowOlder: "Показати старіші зміни",
   commitNoMessage: "(без повідомлення)",
   // commit detail
   commitDetailAuthor: "Автор",

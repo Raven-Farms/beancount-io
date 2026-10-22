@@ -519,6 +519,7 @@ export const de: Translations = {
   notificationsChangesSection: "Letzte Änderungen",
   notificationsLedgerHealthy: "Hauptbuch in Ordnung — keine Fehler.",
   notificationsNoChanges: "Keine aktuellen Änderungen.",
+  notificationsShowOlder: "Ältere Änderungen anzeigen",
   commitNoMessage: "(keine Nachricht)",
   // commit detail
   commitDetailAuthor: "Autor",

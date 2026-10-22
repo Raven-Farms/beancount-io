@@ -497,6 +497,7 @@ export const fa: Translations = {
   notificationsChangesSection: "تغییرات اخیر",
   notificationsLedgerHealthy: "دفتر کل سالم است — بدون خطا.",
   notificationsNoChanges: "تغییر اخیری نیست.",
+  notificationsShowOlder: "نمایش تغییرات قدیمی‌تر",
   commitNoMessage: "(بدون پیام)",
   // commit detail
   commitDetailAuthor: "نویسنده",

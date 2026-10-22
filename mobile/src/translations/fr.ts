@@ -516,6 +516,7 @@ export const fr: Translations = {
   notificationsChangesSection: "Modifications récentes",
   notificationsLedgerHealthy: "Le grand livre est sain — aucune erreur.",
   notificationsNoChanges: "Aucune modification récente.",
+  notificationsShowOlder: "Afficher les modifications plus anciennes",
   commitNoMessage: "(sans message)",
   // commit detail
   commitDetailAuthor: "Auteur",
