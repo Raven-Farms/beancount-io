@@ -6,13 +6,19 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useApolloClient } from "@apollo/client";
 import {
   Alert,
+  BackHandler,
   FlatList,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from "react-native";
-import { router, useScrollToTop } from "expo-router";
+import {
+  router,
+  useFocusEffect,
+  useNavigation,
+  useScrollToTop,
+} from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { ColorTheme } from "@/types/theme-props";
 import {
@@ -333,6 +339,40 @@ export function LedgerFileBrowserScreen(): JSX.Element {
     }));
   const currentPath = pathStack[pathStack.length - 1];
   const inSubDir = pathStack.length > 1;
+
+  // Android's Back goes up a folder before it leaves the tab, and tapping the
+  // Files tab again goes back to the root (w21/274). The folder stack is
+  // component state, so without this Back left the tab from any depth.
+  const goUp = useCallback(
+    () =>
+      setPathState((prev) => ({
+        ledgerId,
+        stack: popPathStack(pathStackForLedger(prev, ledgerId)),
+      })),
+    [ledgerId],
+  );
+  useFocusEffect(
+    useCallback(() => {
+      if (!inSubDir) return undefined;
+      const subscription = BackHandler.addEventListener(
+        "hardwareBackPress",
+        () => {
+          goUp();
+          return true;
+        },
+      );
+      return () => subscription.remove();
+    }, [goUp, inSubDir]),
+  );
+  const navigation = useNavigation();
+  useEffect(() => {
+    if (!inSubDir) return undefined;
+    return navigation.addListener("tabPress" as never, () => {
+      if (navigation.isFocused()) {
+        setPathState({ ledgerId, stack: [""] });
+      }
+    });
+  }, [inSubDir, ledgerId, navigation]);
 
   const [refreshing, setRefreshing] = useState(false);
   const [createModalVisible, setCreateModalVisible] = useState(false);
