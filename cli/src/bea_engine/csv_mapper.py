@@ -140,20 +140,22 @@ _SYMBOL_CURRENCIES: dict[str, tuple[str, ...]] = {
 }
 
 
-def _cell_symbol_currency(value: str) -> tuple[str, tuple[str, ...]] | None:
-    """The commodities an amount cell's own symbol names, with the symbol.
+def _cell_symbol_currencies(value: str) -> list[tuple[str, tuple[str, ...]]]:
+    """Every distinct recognized symbol in an amount cell, in order, with the commodities it names.
 
     A cell is written by the bank, and `4,50 €` says euros no matter what the
     mapping or the ledger says. The symbol is still stripped before parsing —
     the number is the number — but it is no longer thrown away unread: a symbol
     that contradicts the currency the row would be posted in is a refusal, not a
-    relabelling of the money.
+    relabelling of the money. All of them are read, since `-£4.50€` agrees with
+    GBP only if the second symbol is ignored (w5/927).
     """
+    found: dict[str, tuple[str, ...]] = {}
     for character in value:
         currencies = _SYMBOL_CURRENCIES.get(character)
         if currencies is not None:
-            return character, currencies
-    return None
+            found.setdefault(character, currencies)
+    return list(found.items())
 
 
 def _negated(number: Decimal) -> Decimal:
@@ -1614,11 +1616,8 @@ class CsvImporter:
         keeps a `4,50 €` cell from being written as `-4.50 USD` under a USD
         ledger, with exit 0 and a green `bea check` over the wrong commodity.
         """
-        for column in amount_columns:
-            found = _cell_symbol_currency(row.get(column, ""))
-            if found is None:
-                continue
-            symbol, currencies = found
+        cells = [(name, found) for name in amount_columns for found in _cell_symbol_currencies(row.get(name, ""))]
+        for column, (symbol, currencies) in cells:
             if currency in currencies:
                 continue
             if len(currencies) == 1:
