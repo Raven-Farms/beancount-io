@@ -73,7 +73,6 @@
 - [959 — Treat repeated allowed currencies as one during transaction inference](./959.md) — minor CLI existing-ledger/native-import inference finding; USD/EUR and split-file controls reproduced 2026-10-21.
 - [958 — Keep unused unopened accounts out of remembered CSV settings](./958.md) — minor CLI memory-guard follow-up to 452/714; empty, skipped and fully categorized exports reproduced 2026-10-21.
 - [957 — Allow instrument units in the portfolio preset's holdings account](./957.md) — minor CLI first-purchase setup finding; reproduced twice in USD/EUR on 2026-10-21.
-- [921 — Classify report series by root components](./921.md) — major CLI accounting mismatch; prefix-sharing roots contaminate income and net-worth breakdowns while headlines remain correct, reproduced 2026-10-21.
 - [922 — Detect delimiters from complete CSV records](./922.md) — minor CLI separator/header-memory finding; multiline preambles and headers reproduced 2026-10-21/22.
 - [923 — Normalize repeated CSV page headers](./923.md) — minor CLI framing gap; byte-identical headers with supported normalized spellings are refused as data rows, reproduced 2026-10-21.
 - [924 — Refuse mismatched currency symbols missing from the CSV guard](./924.md) — major CLI wrong-commodity write; lari/tenge/tugrik/manat/guarani amounts silently become USD, reproduced 2026-10-21.
