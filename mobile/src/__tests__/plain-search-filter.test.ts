@@ -11,11 +11,14 @@ describe("toPlainSearchFilter", () => {
   });
 
   it("preserves apostrophes inside double quotes", () => {
-    expect(toPlainSearchFilter("O'Brien")).toBe('"O\'Brien"');
+    expect(toPlainSearchFilter("O'Brien")).toBe(`"O['\u2018\u2019]Brien"`);
   });
 
-  it("uses single quotes when the needle contains double quotes", () => {
-    expect(toPlainSearchFilter('say "hi"')).toBe("'say \"hi\"'");
+  it("double-quotes a needle that contains double quotes", () => {
+    // Always double-quoted, the double quote written as a regex escape.
+    expect(toPlainSearchFilter('say "hi"')).toBe(
+      '"say [\\x22\u201c\u201d]hi[\\x22\u201c\u201d]"',
+    );
   });
 
   describe("when both quote kinds appear", () => {
@@ -60,7 +63,7 @@ describe("toPlainSearchFilter", () => {
   });
 
   it("keeps an apostrophe payee inside double quotes", () => {
-    expect(toPlainSearchFilter("Lowe's")).toBe('"Lowe\'s"');
+    expect(toPlainSearchFilter("Lowe's")).toBe(`"Lowe['\u2018\u2019]s"`);
   });
 
   it("escapes a trailing period in a company suffix", () => {
@@ -69,8 +72,10 @@ describe("toPlainSearchFilter", () => {
     );
   });
 
-  it("falls back to single quotes for a payee with an embedded double quote", () => {
-    expect(toPlainSearchFilter('The "Best" Cafe')).toBe("'The \"Best\" Cafe'");
+  it("double-quotes a payee with an embedded double quote", () => {
+    expect(toPlainSearchFilter('The "Best" Cafe')).toBe(
+      '"The [\\x22\u201c\u201d]Best[\\x22\u201c\u201d] Cafe"',
+    );
   });
 });
 
@@ -101,5 +106,40 @@ describe("toPlainSearchFilter tags and links", () => {
     expect(toPlainSearchFilter("#")).toBe('"#"');
     expect(toPlainSearchFilter("coffee #work")).toBe('"coffee #work"');
     expect(toPlainSearchFilter("#café")).toBe('"#café"');
+  });
+});
+
+// w21/401: iOS Smart Punctuation turns a typed apostrophe into U+2019, which
+// matched nothing against the straight quote in the ledger, and the reverse.
+describe("toPlainSearchFilter and typographic quotes", () => {
+  const compile = (raw: string): RegExp => {
+    const filter = toPlainSearchFilter(raw);
+    if (filter === undefined) throw new Error("expected a filter");
+    const lexed = /^"[^"]*"$/.exec(filter);
+    if (!lexed) throw new Error(`not one STRING token: ${filter}`);
+    return new RegExp(filter.slice(1, -1), "i");
+  };
+
+  it("finds a straight apostrophe from the curly one iOS types, and the reverse", () => {
+    expect(compile("Trader Joe\u2019s").test("TRADER JOE'S #123")).toBe(true);
+    expect(compile("Trader Joe's").test("Trader Joe\u2019s")).toBe(true);
+    expect(compile("Trader Joe\u2018s").test("Trader Joe's")).toBe(true);
+    expect(compile("Trader Joe's").test("Trader Joes")).toBe(false);
+  });
+
+  it("finds straight double quotes from curly ones and the reverse", () => {
+    expect(
+      compile("E.B.'s \u201cBeer\u201d").test(`E.B.'s "Beer" and Wine`),
+    ).toBe(true);
+    expect(compile('The "Best" Cafe').test("The \u201cBest\u201d Cafe")).toBe(
+      true,
+    );
+    expect(compile('The "Best" Cafe').test("The Best Cafe")).toBe(false);
+  });
+
+  it("stays one lexable literal whatever quotes it holds", () => {
+    for (const text of [`a'b`, `a"b`, `a'b"c`, `\u2019\u201c`]) {
+      expect(/^"[^"]*"$/.test(toPlainSearchFilter(text) ?? "")).toBe(true);
+    }
   });
 });

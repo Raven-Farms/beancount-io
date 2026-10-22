@@ -34,21 +34,22 @@ export function toPlainSearchFilter(raw: string): string | undefined {
   return quoted(trimmed);
 }
 
-/** The text as one quoted STRING literal that matches it as typed. */
+/**
+ * The text as one quoted STRING literal that matches it as typed.
+ *
+ * The lexer's forms are `"[^"]*"` and `'[^']*'`, with no escape processing
+ * inside, so a double quote cannot appear in a double-quoted literal; it is
+ * written as the regex escape `\x22`. Quotes match their typographic forms
+ * too: iOS Smart Punctuation turns a typed `Trader Joe's` into `Trader Joe’s`,
+ * which matched nothing, and a ledger imported with curly quotes was not found
+ * by a straight one (w21/401). So an apostrophe is `['‘’]` and a double quote
+ * `[\x22“”]`, and the literal is always double-quoted. `escapeRegExp` escapes
+ * typed backslashes first, so a typed `\x22` stays literal text rather than
+ * becoming a quote.
+ */
 function quoted(trimmed: string): string {
-  // Lexer forms: `"[^"]*"` and `'[^']*'`, with no escape processing inside.
-  // Prefer double quotes; fall back to single quotes when the needle itself
-  // contains `"`. When both quote kinds appear, keep double quotes and encode
-  // each embedded `"` as the regex escape `\x22`, so the literal still lexes
-  // and still matches the quote. `escapeRegExp` escapes typed backslashes
-  // first, so a typed `\x22` stays literal text rather than becoming a quote.
-  const escaped = escapeRegExp(trimmed);
-
-  if (!escaped.includes('"')) {
-    return `"${escaped}"`;
-  }
-  if (!escaped.includes("'")) {
-    return `'${escaped}'`;
-  }
-  return `"${escaped.replace(/"/g, "\\x22")}"`;
+  const body = escapeRegExp(trimmed)
+    .replace(/['\u2018\u2019]/g, "['\u2018\u2019]")
+    .replace(/["\u201c\u201d]/g, "[\\x22\u201c\u201d]");
+  return `"${body}"`;
 }

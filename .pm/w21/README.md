@@ -77,7 +77,6 @@
 - [478](./478.md) — Create Ledger preview failure shows raw English, no Retry
 - [479](./479.md) — Create Ledger errors silent to VoiceOver (354 sibling)
 - [315](./blocked/315.md) — In-app commits signed with Gitea username and real email (no full_name, no noreply) — **blocked:** needs the owner's noreply-address and published-history decisions, and a production backfill of existing Gitea users that can't be verified here
-- [401](./401.md) — iOS smart quotes break apostrophe searches (Trader Joe’s)
 - [402](./402.md) — Search over 256 chars escaped fails the whole Transactions list
 - [403](./403.md) — Android status bar icons stay white after Scan Receipt
 - [404](./404.md) — "Give it a review" opens a web listing that can't take a review

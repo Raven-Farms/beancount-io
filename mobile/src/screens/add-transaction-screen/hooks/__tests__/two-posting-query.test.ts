@@ -6,7 +6,7 @@ import { twoPostingSuggestionsQuery } from "../two-posting-query";
 describe("twoPostingSuggestionsQuery", () => {
   it("quotes a payee with punctuation so the server reads it as text", () => {
     expect(twoPostingSuggestionsQuery("Dupar's")).toEqual({
-      filter: '"Dupar\'s"',
+      filter: `"Dupar['\u2018\u2019]s"`,
       limit: 50,
     });
     expect(twoPostingSuggestionsQuery("Mr. Marcel").filter).toBe(
