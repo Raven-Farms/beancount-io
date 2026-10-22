@@ -144,3 +144,9 @@ No grant is approved, no callback completes and no authenticated query or
 preview is claimed. The existing user settings, earlier Hub profile and
 retained Cursor grant are untouched. The ignored native evidence directory
 preserves the wizard transcript and prepared-consent screenshot.
+
+The listener later times out with “Timed out waiting for MCP OAuth authorization
+callback.” The CLI leaves the task entry saved and names “Authorize OAuth” as
+its retry action. After the exact grant is approved, start a fresh native
+authorization request and inspect its consent; the expired listener/page is not
+a working callback. No unchanged-scope retry is started while approval is pending.
