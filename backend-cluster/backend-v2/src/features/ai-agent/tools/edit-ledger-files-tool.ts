@@ -44,6 +44,12 @@ const oldString = z
   .string()
   .describe("Exact text to replace — must appear exactly once in the file.");
 const newString = z.string().describe("Replacement text.");
+const baseSha = z
+  .string()
+  .optional()
+  .describe(
+    "The file's `sha` from readLedgerFiles: refused if the file changed since. Without it, concurrent changes are overwritten.",
+  );
 
 const fileOpSchema = z.discriminatedUnion("operation", [
   z.object({
@@ -67,10 +73,12 @@ const fileOpSchema = z.discriminatedUnion("operation", [
       .describe(
         "Plain UTF-8 text content to overwrite the entire file with (NOT base64).",
       ),
+    sha: baseSha,
   }),
   z.object({
     operation: z.literal("delete"),
     path: filePath,
+    sha: baseSha,
   }),
 ]);
 
@@ -185,6 +193,17 @@ function foldOperations(
     // which made this NOT_FOUND only because of its wording (w5/051).
     if (current === undefined || current === null)
       throw new NotFoundError("File", f.path);
+    // A whole-file write or a delete from an old read would drop whatever
+    // landed since; the caller's `sha` names the version it read (w23/039).
+    if (
+      (f.operation === "replace" || f.operation === "delete") &&
+      f.sha !== undefined &&
+      f.sha !== fileCache.get(f.path)?.sha
+    )
+      throw new ConflictError(
+        "File",
+        `${f.path} changed since you read it; re-read it and retry`,
+      );
     const create = state?.create ?? false;
     if (f.operation === "replace") {
       touched.set(f.path, { content: f.content, create });
@@ -483,17 +502,17 @@ export const LEDGER_FILE_OPERATIONS = {
           new_string: newString,
         })
         .strict(),
-      z.object({ path: filePath, content: fullContent }).strict(),
+      z.object({ path: filePath, content: fullContent, sha: baseSha }).strict(),
     ]),
-    "Change existing text files in one atomic commit: per file, either replace an exact text (old_string must appear exactly once) with new_string, or overwrite the whole file with content. Several items for one file apply in order, each to the text the previous one produced.",
+    "Change existing text files in one atomic commit: per file, either replace an exact text (old_string must appear exactly once) with new_string, or overwrite the whole file with content (pass its sha from readLedgerFiles to refuse it if the file changed since). Several items for one file apply in order, each to the text the previous one produced.",
     (file) =>
       "content" in file
         ? { operation: "replace", ...file }
         : { operation: "update", ...file },
   ),
   delete: fileOperation(
-    z.object({ path: filePath }).strict(),
-    "Delete files in one atomic commit.",
+    z.object({ path: filePath, sha: baseSha }).strict(),
+    "Delete files in one atomic commit; pass each file's sha from readLedgerFiles to refuse the delete if it changed since.",
     (file) => ({ operation: "delete", ...file }),
   ),
 };

@@ -48,6 +48,11 @@ const readLedgerFileSectionSchema = z.object({
   endLine: z.number().int(),
   totalLines: z.number().int(),
   content: z.string(),
+  sha: z
+    .string()
+    .describe(
+      "The file's blob SHA; pass it to updateLedgerFiles content or deleteLedgerFiles to refuse the write if the file changed since.",
+    ),
   lossy: z
     .literal(true)
     .optional()
@@ -133,6 +138,7 @@ export async function executeReadLedgerFiles(
           // The terminator goes back on when the slice reaches the end, so a
           // whole-file read is still the file byte for byte.
           content: slice.join("\n") + (terminated && reachesEnd ? "\n" : ""),
+          sha: file.sha,
           ...(file.lossy && { lossy: true as const }),
         });
       }

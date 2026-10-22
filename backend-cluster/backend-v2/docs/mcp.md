@@ -388,8 +388,15 @@ One tool per kind of change, each batching its files into one commit:
 | Tool                | Each `files` item                                                                                                  |
 | ------------------- | ------------------------------------------------------------------------------------------------------------------ |
 | `createLedgerFiles` | `path`, `content`: a new file's text.                                                                              |
-| `updateLedgerFiles` | `path` with either `old_string`, `new_string` (an exact replacement; the old text must occur once) or `content` (the complete replacement text). |
-| `deleteLedgerFiles` | `path`.                                                                                                            |
+| `updateLedgerFiles` | `path` with either `old_string`, `new_string` (an exact replacement; the old text must occur once) or `content` (the complete replacement text) and an optional `sha`. |
+| `deleteLedgerFiles` | `path` and an optional `sha`.                                                                                      |
+
+`readLedgerFiles` returns each file's blob `sha`. Pass it back on a `content`
+rewrite or a delete: if another writer committed since you read the file, the
+write is refused as `CONFLICT` — "`<path>` changed since you read it" — and
+nothing changes. Without `sha`, a whole-file `content` write or a delete
+replaces whatever is there now, including changes you never saw. An
+`old_string` edit is guarded by its own text, which must still match.
 
 Several items may name the same file. They apply in order, each exact-text
 replacement matching the text the items before it produced, and the file is

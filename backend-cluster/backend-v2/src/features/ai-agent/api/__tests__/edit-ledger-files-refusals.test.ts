@@ -494,6 +494,80 @@ describe("editing a file that is not valid UTF-8", () => {
   );
 });
 
+/**
+ * w23/039. A whole-file rewrite or a delete carried the sha the tool fetched
+ * just before committing, so it overwrote whatever another writer committed
+ * after the agent read the file. The caller's sha now names its base.
+ */
+describe("a whole-file write or delete with the sha the caller read", () => {
+  const write = (
+    f: Awaited<ReturnType<typeof fixture>>,
+    name: string,
+    file: Record<string, string>,
+    dry_run = false,
+  ) =>
+    f.client.callTool({
+      name,
+      arguments: {
+        ledger: "alice/main",
+        description: "rewrite",
+        dry_run,
+        files: [{ path: "main.bean", ...file }],
+      },
+    });
+
+  it.each([
+    ["updateLedgerFiles", { content: "; rewritten\n" }],
+    ["deleteLedgerFiles", {}],
+  ])("%s refuses a sha the file has moved past", async (name, file) => {
+    const f = await fixture();
+    try {
+      for (const dryRun of [true, false]) {
+        const result = await write(f, name, { ...file, sha: "old" }, dryRun);
+        expect(result.isError).toBe(true);
+        expect(result.structuredContent).toMatchObject({
+          error: {
+            code: "CONFLICT",
+            message: expect.stringContaining(
+              "main.bean changed since you read it",
+            ),
+          },
+        });
+      }
+      expect(f.changeLedgerFiles).not.toHaveBeenCalled();
+    } finally {
+      await f.close();
+    }
+  });
+
+  it.each([
+    ["the current sha", { sha: "s1" }],
+    ["no sha", {}],
+  ])("commits a content rewrite with %s", async (_case, base) => {
+    const f = await fixture();
+    f.changeLedgerFiles.mockResolvedValue({
+      data: { success: true, data: {} },
+    });
+    try {
+      const result = await write(f, "updateLedgerFiles", {
+        content: "; rewritten\n",
+        ...base,
+      });
+      expect(result.isError).toBeFalsy();
+      const [, , body] = f.changeLedgerFiles.mock.calls[0] as [
+        string,
+        string,
+        { files: { operation: string; sha?: string }[] },
+      ];
+      expect(body.files).toEqual([
+        expect.objectContaining({ operation: "update", sha: "s1" }),
+      ]);
+    } finally {
+      await f.close();
+    }
+  });
+});
+
 /** w5/036: an ambiguous `old_string` is the caller's to fix, in production too. */
 describe("an old_string that matches more than once", () => {
   it("is refused as bad input with the count and a way forward", async () => {
