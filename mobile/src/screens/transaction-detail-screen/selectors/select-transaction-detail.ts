@@ -1,4 +1,5 @@
 import type { RootNames } from "../../../common/account-root";
+import { isolateLtr } from "../../../common/bidi";
 import {
   currencyMinorUnits,
   getCurrencySymbol,
@@ -257,10 +258,12 @@ export function postingBasisText(
     params: { amount: string },
   ) => string,
 ): string | null {
+  // Each amount isolated, so a right-to-left sentence keeps "185.00 USD" in
+  // order and its currency on the side the number was written (w21/536).
   if (row.cost && row.price) {
-    return `${t("postingCost", { amount: row.cost })} · ${t("postingPrice", { amount: row.price })}`;
+    return `${t("postingCost", { amount: isolateLtr(row.cost) })} · ${t("postingPrice", { amount: isolateLtr(row.price) })}`;
   }
-  if (row.cost) return t("postingCost", { amount: row.cost });
+  if (row.cost) return t("postingCost", { amount: isolateLtr(row.cost) });
   if (row.price) return `@ ${row.price}`;
   return null;
 }

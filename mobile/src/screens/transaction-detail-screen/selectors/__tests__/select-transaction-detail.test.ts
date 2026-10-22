@@ -1,4 +1,5 @@
 import fs from "fs";
+import { isolateLtr } from "../../../../common/bidi";
 import path from "path";
 import {
   hasEditableSource,
@@ -315,7 +316,11 @@ describe("selectPostingRows: cost and price", () => {
       cost: "$1.50",
       price: "$2.00",
     });
-    expect(postingBasisText(lot, t)).toBe("cost $1.50 · price $2.00");
+    // Each amount isolated, so Persian keeps its currency on the written side
+    // (w21/536).
+    expect(postingBasisText(lot, t)).toBe(
+      `cost ${isolateLtr("$1.50")} · price ${isolateLtr("$2.00")}`,
+    );
     expect(postingBasisText(cash, t)).toBe(null);
   });
 
@@ -328,7 +333,7 @@ describe("selectPostingRows: cost and price", () => {
         },
       ]),
     );
-    expect(postingBasisText(buy, t)).toBe("cost $1.50");
+    expect(postingBasisText(buy, t)).toBe(`cost ${isolateLtr("$1.50")}`);
     const [eur] = selectPostingRows(
       txn([
         {
@@ -364,7 +369,7 @@ describe("selectPostingRows: cost and price", () => {
         },
       ]),
     );
-    expect(postingBasisText(lot, t)).toBe("cost ≈$33.3333");
+    expect(postingBasisText(lot, t)).toBe(`cost ${isolateLtr("≈$33.3333")}`);
     const [dust] = selectPostingRows(
       txn([
         {

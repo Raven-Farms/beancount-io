@@ -23,7 +23,6 @@
 - [453](./blocked/453.md) — addEntries/bulkEntries have no idempotency key: a retry after a lost response can duplicate the entry (split from 351) — **blocked:** needs an owner-approved contract (field, bounds, retention) across REST/GraphQL/MCP and a backend-v2 deploy
 - [518](./blocked/518.md) — New Transaction books a plain first-row amount as money *into* the bank (Checking +4.50, Groceries −4.50) — **blocked:** needs an owner product decision on the default row signs (negative source row vs From/To labels)
 - [526](./blocked/526.md) — Transactions, Account and Merchant detail drop back to the newest 20 rows after a return to the app or any write; a stale "Couldn't load more" footer stays — **blocked:** needs an owner decision on how to keep loaded pages through a refresh (field policy vs refetch to depth vs accept page 1)
-- [536](./536.md) — In Persian, Money flow's cost/price line and the budget Delete alert put the currency on the wrong side (missed by w21/095 and w21/249)
 - [537](./537.md) — The pending badge is a literal English "P" in all 13 languages
 - [538](./538.md) — Scan Receipt's "Receipt read" shows a raw ISO date and an ungrouped total with no currency
 - [539](./539.md) — Budget and Home show a refund month's Actual without its minus sign ("Actual $50.00 · Variance −$404.84")

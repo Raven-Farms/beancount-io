@@ -28,6 +28,7 @@ import {
   type BudgetGroup,
   type BudgetHistoryRow,
 } from "@/screens/budget-screen/selectors/budget-selectors";
+import { isolateLtr } from "@/common/bidi";
 import { LEADING_TEXT_ALIGN } from "@/common/rtl";
 import { InlineError } from "@/components/inline-error";
 import { iconActionSize } from "@/common/theme/spacing";
@@ -132,7 +133,7 @@ export function BudgetHistoryRows({
       t("budgetDeleteTitle"),
       t("budgetDeleteMessage", {
         interval: t(intervalAdjectiveKey(interval)),
-        amount: formatBudgetEntryAmount(amount, group.currency),
+        amount: isolateLtr(formatBudgetEntryAmount(amount, group.currency)),
         account: group.account,
         // In the reader's language, not ISO (w21/366).
         date: formatLedgerDate(date, locale),
