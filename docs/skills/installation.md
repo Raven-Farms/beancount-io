@@ -170,20 +170,28 @@ preserve the explicitly unvalidated init scaffold, approved developer-tool
 writes and supported broker/migration flows. Descriptions and routing requests
 are unchanged. Protected [run39708894097](https://github.com/bex-co/beancount-io/actions/runs/39708894097)
 accepts all thirteen changed 1.0.4 submissions with exact fingerprints and clean
-credential removal. At 02:25 UTC nine current versions/90 authored files are public
-and install exactly in OpenClaw. Accruals, importer-author, property, reconcile
-still await promotion. Hermes current-version controls and standalone first
-queries continue; the [release record](clawhub-rehearsal.md#protected-038-release--2026-10-22-utc)
-retains the init policy refusal and import download discrepancy separately.
+credential removal. By 02:49 UTC ten current versions/97 authored files are
+public and install exactly in OpenClaw; Hermes allows nine versions/90 files
+across its suite and separate import-recovery profile. Init retains its policy
+refusal. Both hosts complete the standalone ask 1.0.4 first query through
+published bea 0.3.1 with unchanged synthetic ledgers. Accruals, property and
+reconcile still await current-version promotion even though all three normal
+scans finish clean and write back. The [dated follow-through](clawhub-rehearsal.md#current-version-follow-through--2026-10-22-0249-utc)
+preserves the original failures, recoveries and exact host limits.
 An upload receipt does not establish public availability or complete support.
 
-Hermes's default search now finds all eleven published suite listings:
+The tested Hermes default search finds the original eleven suite listings:
 
 ```sh
 hermes skills search beancount
 ```
 
-The source-filtered `--source clawhub` path still returns no results in the tested host. Use default search or the explicit publisher-qualified identifiers above. The [discovery evidence](clawhub-rehearsal.md#hermes-search-discovery) records the difference and the open follow-up.
+The 2026-10-22 v0.22.4 cohort finds those eleven names among fourteen results
+with `--source all --json --limit 30`, but omits the newly public roll-forward
+listing. The source-filtered `--source clawhub` path still returns no results.
+Use the explicit publisher-qualified identifiers for listings absent from
+search; the [dated evidence](clawhub-rehearsal.md#current-version-follow-through--2026-10-22-0249-utc)
+records discovery separately from version and installed-byte verification.
 
 ## Update
 

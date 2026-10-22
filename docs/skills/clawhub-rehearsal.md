@@ -394,3 +394,80 @@ newly eligible version without resubmission, duplicate scan jobs or force.
 The PM milestone is live again for those actionable current-version checks.
 Retained receipts, complete run logs, public ZIPs/file maps and actual host
 outputs are in ignored `scripts/skills/tmp/w6-scope-contract-20261022/`.
+
+### Current-version follow-through — 2026-10-22, 02:49 UTC
+
+Importer-author 1.0.4 subsequently becomes public. The ten public current
+versions now match 97/119 authored files: add, ask, close, import,
+importer-author, init, migrate, options, roll-forward and trade. Native
+OpenClaw 2026.10.5 (`1b58cb9`) installs all ten in one anonymous workspace with
+97/97 files matching; nine audits are Safe, options is Review and permitted by
+the default policy. No force or warning acknowledgement is used.
+
+Hermes v0.22.4 (`4d04303818b6`) allows nine current versions with 90/90 files
+matching. Eight are in the original suite profile; import is in a separate fresh
+profile. Its original fetch failure remains recorded: generic stale-index
+wording did not expose an HTTP status or establish a removed listing. Fresh
+owner-qualified detail, exact-version ZIP and version metadata requests all
+return 200, with 11/11 matching files. One documented native recovery then
+installs import SAFE/ALLOWED with 11/11 matching files. The original failure's
+transport cause remains unproven. Init 1.0.4 is still refused DANGEROUS with
+18 findings, no installed directory and no force.
+
+Both hosts separately install only the customer ask 1.0.4 bundle, with its eight
+authored files and license exact, and complete a real first-query conversation.
+Each executes published bea 0.3.1 and the June 2026 Expenses `sum(weight)` query,
+returning untruncated rows: Groceries 141.60 USD, Gas 50.00 USD and Streaming
+17.99 USD. Expected figures are scored after execution, not put in the prompts.
+Both synthetic ledgers and installed skill bytes remain unchanged.
+
+OpenClaw uses the explicitly selected embedded `openclaw` runtime,
+`gpt-6.1-sol`, low thinking: exit 0 in 83.221 seconds, no runtime fallback.
+Its native summary reports nine tool calls with zero failures; retained bridge
+evidence has four outer envelopes and five inner calls. Hermes uses its native
+gateway, existing-login `openai-codex` provider, `gpt-6.1-sol`, low reasoning:
+exit 0 in 32.052 seconds, five completed tools and zero errors. Its first launch
+exits 2 before inference because the gateway rejects `--run-budget`, despite
+chat help advertising it. One source-backed launch recovery removes only that
+optional flag, with the same provider/model/runtime and an outer timeout.
+Initial TTY setup attempts and that pre-inference failure remain retained.
+
+Official selective import mechanisms reuse the already-authorized existing
+Codex login. Task credential stores and the exact task-created OpenClaw backup
+are removed after verification; the original login is unchanged and no grant
+is revoked. The separately retained native Cursor QA connection is untouched.
+These are two synthetic query journeys, not general workflow or routing proof.
+
+A fresh anonymous Hermes discovery cohort completes without retries. Default
+search and `--source all --json --limit 30` expose the original eleven suite
+names among fourteen results. The JSON result does not include the newly
+public roll-forward listing, while public ClawHub search returns fifteen
+results including roll-forward and those eleven. Explicit `--source clawhub`
+still returns `[]` (exit 0, 30.478 seconds). Search results do not establish
+installed versions; use owner-qualified installs and byte checks. The separate
+[source-filter follow-up](../../.pm/w6/blocked/040.md) remains open.
+
+For the three remaining exact 1.0.4 submissions, one supported normal
+scan/writeback request per version is accepted at 02:39 UTC. By 02:45 UTC all
+three succeed, `writtenBack: true`, with primary ClawScan clean/benign and
+A.I.G clean/zero findings. Advisory findings remain in the complete reports;
+the primary reviews explicitly recognize the preserved workflow scope and
+approval/check rules. No duplicate request or verdict override is used.
+
+| Remaining listing | Existing scan ID | Public observation at 02:48 UTC |
+| --- | --- | --- |
+| accruals 1.0.4 | `w170jgfc3vem0t06hxsqffy7j18gsyds` | Listing metadata returns 404. |
+| property 1.0.4 | `w179576n1vmyrg7t0te7fzwnvh8grd5q` | Public latest remains 1.0.1. |
+| reconcile 1.0.4 | `w1700b49z91d0m81196zq83n5n8grck3` | Public latest remains 1.0.2. |
+
+Completed normal scan writeback does not finalize staged publication. ClawHub
+must promote these existing submissions before their current-version public
+byte checks and native installs can run. Do not resubmit identical content or
+repeat completed scan jobs. m6 closeout still requires all thirteen current
+versions and every written DoD, with Hermes compatibility gaps recorded.
+
+Private evidence remains under the ignored scope-contract scratch directory:
+`release-39708894097/`, `openclaw-current-1.0.4/`,
+`openclaw-standalone-ask-1.0.4/`, and
+`scopeFix/hermes-current-1.0.4/`. Root independently compares both completed
+query tool JSON results and verifies the unchanged-ledger/source invariants.

@@ -1,6 +1,6 @@
 # w6 · m6 — Publish the ledger skills to ClawHub for OpenClaw and Hermes Agent
 
-**Worker:** worker1 **Goal:** An OpenClaw or Hermes Agent user installs any `beancount-*` skill by name from ClawHub, and it works on its own without a Git checkout or this repository's link installer. **Status:** todo (t001–t012 done; all13 registry1.0.4 submissions accepted;9 public/90 files verified; per-target native follow-through active; four versions await promotion)
+**Worker:** worker1 **Goal:** An OpenClaw or Hermes Agent user installs any `beancount-*` skill by name from ClawHub, and it works on its own without a Git checkout or this repository's link installer. **Status:** todo (t001–t012 done; ten registry1.0.4 versions public/97 files/native OpenClaw verified; nine supported Hermes installs/90 files; both standalone first queries pass; three publication conditions remain; full queue audit continues)
 
 **Research date:** 2026-10-16. Sources: ClawHub's quickstart, how-it-works, and skill-format pages at `docs.openclaw.ai/clawhub/`; Hermes Agent's skills page at `hermes-agent.nousresearch.com/docs/user-guide/features/skills`. Re-check the CLI flags against `clawhub --help` and `hermes skills --help` before relying on them.
 
@@ -285,3 +285,44 @@ The milestone returns to the live tree because public promotion makes local
 verification actionable. The remaining four platform conditions stay recorded;
 they do not stop native tests for eligible targets. Close t013 only after every
 current-main listing and all written DoD hold. See the [release evidence](../../../docs/skills/clawhub-rehearsal.md#protected-038-release--2026-10-22-utc).
+
+
+## Current-version native verification — 2026-10-22, 02:49 UTC
+
+Ten current1.0.4 versions are publicly exact (97/119 authored files), including
+newly promoted importer-author. OpenClaw2026.10.5 installs all ten in one anonymous
+workspace with97/97matching files: nine Safe, optionsReview allowed under normal
+policy. Hermesv0.22.4 allows nine versions/90files across eight suite installs and
+one separate import-recovery profile. Init remains Dangerous/18findings with no
+installed directory. The original import fetch failure is retained; fresh exact
+owner/version routes return200 and one documented native recovery succeeds.
+Its original transport cause remains unproven.
+
+Both separately installed ask1.0.4 bundles complete actual model-backed first
+queries on published bea0.3.1: untruncated June Expenses rows141.60/50.00/17.99USD,
+unchanged synthetic ledgers and all eight authored files. OpenClaw explicitly
+uses its embedded runtime with no fallback. Hermes retains one pre-inference
+unsupported-option failure and one source-backed launch recovery on the same
+provider/model/runtime. Temporary imported auth copies are removed; the original
+Codex login and the retained native Cursor QA grant are unchanged and unrevoked.
+No new login consent is needed for these completed controls.
+
+A genuinely changed public catalog permits one fresh Hermes discovery cohort:
+default/all find the original eleven suite names among14results, explicit
+ClawHub returns0, and public registry search includes the newly public
+roll-forward absent from Hermes results. Keep039/040 independently open.
+
+The three remaining existing1.0.4 submissions each receive one normal scan at
+02:39UTC. By02:45 all succeed/write back, primaryclean/benign and AIGclean0:
+accruals `w170jgfc3vem0t06hxsqffy7j18gsyds`, property
+`w179576n1vmyrg7t0te7fzwnvh8grd5q`, reconcile
+`w1700b49z91d0m81196zq83n5n8grck3`. At02:48 accruals metadata is404,
+property publiclatest1.0.1 and reconcile1.0.2. Completed writeback is not staged
+publication finalization. Do not duplicate jobs, uploads or override verdicts.
+
+**Remaining condition:** ClawHub promotes these three existing versions; the
+repository worker verifies exact public owner/version/bytes and supported native
+installs, checks subsequent source changes and every DoD before closingt013.
+All eligible current-version/model checks above are complete; continue the full
+w6 queue audit before deciding whether any independent work remains. See the
+[dated follow-through](../../../docs/skills/clawhub-rehearsal.md#current-version-follow-through--2026-10-22-0249-utc).
