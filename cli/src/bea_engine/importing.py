@@ -1458,13 +1458,19 @@ def _lot_text(posting: Any, *, per_only: bool = False, historic: bool = False) -
     return cost + _price_text(posting)
 
 
-_Leg = tuple[str, _Lot | None]
+#: A source posting: its units and price as text, its stated lot, and the child account it posts to
+#: when an importer files its rows under a parent (empty for the account itself) (w5/912).
+_Leg = tuple[str, _Lot | None, str]
 
 
 def _legs(entry: Any, account: str) -> tuple[_Leg, ...]:
     """Each source posting's units and price as text, beside its stated lot."""
     return tuple(
-        (_exact_amount(p.units.number, p.units.currency) + _price_text(p), _lot(p))
+        (
+            _exact_amount(p.units.number, p.units.currency) + _price_text(p),
+            _lot(p),
+            "" if p.account == account else p.account,
+        )
         for p in _source_postings(entry, account)
     )
 
@@ -1495,8 +1501,8 @@ def _legs_agree(ours: Sequence[_Leg], theirs: Sequence[_Leg]) -> bool:
     def assign(position: int, left: list[_Leg]) -> bool:
         if position == len(order):
             return not left
-        text, lot = order[position]
-        for chosen in _booked_for(text, lot, left):
+        text, lot, owner = order[position]
+        for chosen in _booked_for(text, lot, owner, left):
             remaining = [leg for index, leg in enumerate(left) if index not in chosen]
             if assign(position + 1, remaining):
                 return True
@@ -1505,18 +1511,21 @@ def _legs_agree(ours: Sequence[_Leg], theirs: Sequence[_Leg]) -> bool:
     return assign(0, list(theirs))
 
 
-def _booked_for(text: str, lot: _Lot | None, left: list[_Leg]) -> Iterator[set[int]]:
+def _booked_for(text: str, lot: _Lot | None, owner: str, left: list[_Leg]) -> Iterator[set[int]]:
     """Each way the booked legs can stand for one incoming leg: one leg of its own, or the lots it spans."""
-    for index, (other, found) in enumerate(left):
-        if other == text and _lots_agree(lot, found):
+    for index, (other, found, holder) in enumerate(left):
+        if other == text and holder == owner and _lots_agree(lot, found):
             yield {index}
     if lot is None or lot[0] is not None:
         return
     number, currency, price = _units_of(text)
     compatible = [
         index
-        for index, (other, found) in enumerate(left)
-        if found is not None and _units_of(other)[1:] == (currency, price) and _lots_agree(lot, found)
+        for index, (other, found, holder) in enumerate(left)
+        if found is not None
+        and holder == owner
+        and _units_of(other)[1:] == (currency, price)
+        and _lots_agree(lot, found)
     ]
     # A sale booked across lots takes them in order, so these are the larger
     # candidate sets first; a long run of lots keeps the all-or-nothing reading.
@@ -1747,7 +1756,7 @@ _COUNTERPART_DAYS = 3
 def _amounts_key(fingerprint: tuple[Any, ...]) -> tuple[str, ...]:
     """The source amounts, summed by currency and price: one sale booked across lots is one amount (w5/603)."""
     totals: dict[tuple[str, str], Decimal] = {}
-    for text, _ in fingerprint[3]:
+    for text, _, _ in fingerprint[3]:
         number, currency, price = _units_of(text)
         totals[currency, price] = totals.get((currency, price), Decimal(0)) + number
     return tuple(
@@ -2637,7 +2646,13 @@ def _hash_import_ids(
     export does not change its id. Either way the narration-only spellings are
     returned for the group-wide claim instead of as plain lookups.
     """
-    legs = sorted((p.units.number, p.units.currency, _lot_text(p)) for p in _source_postings(entry, account))
+    # A row an importer files under a parent account is its child postings, and
+    # which child each posts to is part of what the row is (w5/912).
+    legs = sorted(
+        (p.units.number, p.units.currency, _lot_text(p) + ("" if p.account == account else f" [{p.account}]"))
+        for p in _source_postings(entry, account)
+    )
+    blind_legs = sorted((p.units.number, p.units.currency, _lot_text(p)) for p in _source_postings(entry, account))
     per_legs = sorted(
         (p.units.number, p.units.currency, _lot_text(p, per_only=True, historic=True))
         for p in _source_postings(entry, account)
@@ -2663,6 +2678,7 @@ def _hash_import_ids(
     exact = "+".join(_exact_amount(number, currency) + lot for number, currency, lot in legs)
     per_only = "+".join(_exact_amount(number, currency) + lot for number, currency, lot in per_legs)
     undated = "+".join(_exact_amount(number, currency) + lot for number, currency, lot in undated_legs)
+    blind = "+".join(_exact_amount(number, currency) + lot for number, currency, lot in blind_legs)
 
     single_base = _hash_base(date, exact, description, nfc_account)
     seen[single_base] = seen.get(single_base, 0) + 1
@@ -2703,6 +2719,14 @@ def _hash_import_ids(
         counter = f"units\0{units_base}"
         seen[counter] = seen.get(counter, 0) + 1
         older.append(_digest_import_id(units_base, seen[counter]))
+    if blind != exact:
+        # Written before the child account a parent-filed row posts to was part
+        # of the id: lookup-only and content-checked like every older spelling,
+        # so it matches the same child distribution and never another's (w5/912).
+        blind_base = _hash_base(date, blind, description, nfc_account)
+        blind_counter = f"blind\0{blind_base}"
+        seen[blind_counter] = seen.get(blind_counter, 0) + 1
+        older.append(_digest_import_id(blind_base, seen[blind_counter]))
     if undated != exact:
         # Written before the acquisition date an importer states was part of
         # the id: lookup-only and lot-gated like every older spelling, so it
@@ -2740,6 +2764,11 @@ def _hash_import_ids(
             units_counter = f"paired-units\0{units_paired}"
             seen[units_counter] = seen.get(units_counter, 0) + 1
             older.append(_digest_import_id(units_paired, seen[units_counter]))
+        if blind != exact:
+            blind_paired = _hash_base(date, blind, f"{payee}|{description}", nfc_account)
+            blind_paired_counter = f"paired-blind\0{blind_paired}"
+            seen[blind_paired_counter] = seen.get(blind_paired_counter, 0) + 1
+            older.append(_digest_import_id(blind_paired, seen[blind_paired_counter]))
         if undated != exact:
             undated_paired = _hash_base(date, undated, f"{payee}|{description}", nfc_account)
             undated_paired_counter = f"paired-undated\0{undated_paired}"

@@ -115,25 +115,28 @@ def test_a_real_lot_difference_is_still_a_conflict(tmp_path: Path) -> None:
     ("ours", "theirs", "agree"),
     [
         (
-            [("-4 HOOL @ 150 USD", (None, None, None)), ("-6 HOOL @ 150 USD", (None, None, None))],
+            [("-4 HOOL @ 150 USD", (None, None, None), ""), ("-6 HOOL @ 150 USD", (None, None, None), "")],
             [
-                ("-2 HOOL @ 150 USD", (Decimal(100), "USD", None)),
-                ("-2 HOOL @ 150 USD", (Decimal(110), "USD", None)),
-                ("-6 HOOL @ 150 USD", (Decimal(120), "USD", None)),
+                ("-2 HOOL @ 150 USD", (Decimal(100), "USD", None), ""),
+                ("-2 HOOL @ 150 USD", (Decimal(110), "USD", None), ""),
+                ("-6 HOOL @ 150 USD", (Decimal(120), "USD", None), ""),
             ],
             True,
         ),
         (
-            [("-4 HOOL @ 150 USD", (None, None, None))],
-            [("-2 HOOL @ 150 USD", (Decimal(100), "USD", None)), ("-3 HOOL @ 150 USD", (Decimal(110), "USD", None))],
+            [("-4 HOOL @ 150 USD", (None, None, None), "")],
+            [
+                ("-2 HOOL @ 150 USD", (Decimal(100), "USD", None), ""),
+                ("-3 HOOL @ 150 USD", (Decimal(110), "USD", None), ""),
+            ],
             False,
         ),
         (
-            [("-1 HOOL", (None, None, "X")), ("-1 HOOL", (Decimal(100), "USD", None))],
-            [("-1 HOOL", (Decimal(100), "USD", "X")), ("-1 HOOL", (Decimal(100), "USD", "Y"))],
+            [("-1 HOOL", (None, None, "X"), ""), ("-1 HOOL", (Decimal(100), "USD", None), "")],
+            [("-1 HOOL", (Decimal(100), "USD", "X"), ""), ("-1 HOOL", (Decimal(100), "USD", "Y"), "")],
             True,
         ),
-        ([("-1 HOOL", (None, None, "Z"))], [("-1 HOOL", (Decimal(100), "USD", "X"))], False),
+        ([("-1 HOOL", (None, None, "Z"), "")], [("-1 HOOL", (Decimal(100), "USD", "X"), "")], False),
     ],
     ids=["two-fills-three-lots", "units-do-not-add-up", "overlapping-selectors", "label-differs"],
 )
