@@ -1,4 +1,5 @@
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import { EditModeToolbar } from "../file-edit-mode";
 
@@ -174,5 +175,89 @@ describe("EditModeToolbar draft guard", () => {
     fireEvent.click(screen.getByText("ledgerEditor.leaveWithoutSaving"));
     expect(onDiscard).toHaveBeenCalledTimes(1);
     expect(blockerState.proceed).toHaveBeenCalled();
+  });
+});
+
+/**
+ * Cancelling the departure resumes editing (w4/964). The editor ref is backed
+ * by a real focusable input, so typing after the choice closes shows where
+ * focus actually landed; the dialog is the real Radix one.
+ */
+describe("EditModeToolbar returns to the editor after Stay", () => {
+  function renderBlocked() {
+    const input = document.createElement("textarea");
+    input.setAttribute("aria-label", "editor input");
+    input.value = "draft";
+    document.body.appendChild(input);
+    const editorRef = {
+      current: { focus: () => input.focus() },
+    } as unknown as Parameters<typeof EditModeToolbar>[0]["editorRef"];
+    blockerState.status = "blocked";
+    const props = {
+      editorRef,
+      editedContent: "draft",
+      plainContent: "saved",
+      onSave: vi.fn(),
+      onCancel: vi.fn(),
+      onDiscard: vi.fn(),
+      isSaving: false,
+    };
+    const view = render(<EditModeToolbar {...props} />);
+    // The router's reset or proceed unblocks; the dialog then closes.
+    const unblock = () => {
+      blockerState.status = "idle";
+      view.rerender(<EditModeToolbar {...props} />);
+    };
+    blockerState.reset.mockImplementation(unblock);
+    blockerState.proceed.mockImplementation(unblock);
+    return { input, props };
+  }
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    document.body.innerHTML = "";
+  });
+
+  it.each([
+    ["Enter on Stay", "stay"],
+    ["Escape", "escape"],
+  ])("puts typing back into the retained draft after %s", async (_, via) => {
+    const user = userEvent.setup();
+    const { input, props } = renderBlocked();
+    expect(
+      await screen.findByRole("dialog", {
+        name: "ledgerEditor.unsavedChanges",
+      }),
+    ).toBeInTheDocument();
+
+    if (via === "stay") {
+      screen.getByRole("button", { name: "ledgerEditor.stay" }).focus();
+      await user.keyboard("{Enter}");
+    } else {
+      await user.keyboard("{Escape}");
+    }
+
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    expect(blockerState.reset).toHaveBeenCalled();
+    expect(blockerState.proceed).not.toHaveBeenCalled();
+    expect(props.onDiscard).not.toHaveBeenCalled();
+    await waitFor(() => expect(input).toHaveFocus());
+    await user.keyboard("x");
+    expect(input).toHaveValue("draftx");
+  });
+
+  it("leaves focus to the departure after Leave without saving", async () => {
+    const user = userEvent.setup();
+    const { input, props } = renderBlocked();
+    await user.click(
+      await screen.findByRole("button", {
+        name: "ledgerEditor.leaveWithoutSaving",
+      }),
+    );
+
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    expect(props.onDiscard).toHaveBeenCalledTimes(1);
+    expect(blockerState.proceed).toHaveBeenCalledTimes(1);
+    expect(input).not.toHaveFocus();
   });
 });

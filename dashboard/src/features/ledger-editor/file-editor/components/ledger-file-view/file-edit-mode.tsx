@@ -1,4 +1,4 @@
-import type { RefObject } from "react";
+import { useRef, type RefObject } from "react";
 import { useBlocker } from "@tanstack/react-router";
 import type * as monaco from "monaco-editor";
 import { Button } from "@/common/components/ui/button";
@@ -75,6 +75,10 @@ export function EditModeToolbar({
     enableBeforeUnload: () => hasUnsavedChanges,
     withResolver: true,
   });
+
+  // Leave hands focus to wherever the departure lands; Stay, Escape and an
+  // outside dismissal resume editing the retained draft (w4/964).
+  const leaving = useRef(false);
 
   // Run an editor action against the shared editor instance, if mounted.
   const runEditorAction = (
@@ -179,7 +183,17 @@ export function EditModeToolbar({
         open={blocker.status === "blocked"}
         onOpenChange={(open) => !open && blocker.reset?.()}
       >
-        <DialogContent className="sm:max-w-md">
+        <DialogContent
+          className="sm:max-w-md"
+          onOpenAutoFocus={() => {
+            leaving.current = false;
+          }}
+          onCloseAutoFocus={(event) => {
+            if (leaving.current || !editorRef.current) return;
+            event.preventDefault();
+            editorRef.current.focus();
+          }}
+        >
           <DialogHeader>
             <DialogTitle>{t("ledgerEditor.unsavedChanges")}</DialogTitle>
             <DialogDescription>
@@ -197,6 +211,7 @@ export function EditModeToolbar({
             <Button
               variant="destructive"
               onClick={() => {
+                leaving.current = true;
                 onDiscard();
                 blocker.proceed?.();
               }}
