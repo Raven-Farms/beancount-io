@@ -21,5 +21,11 @@
 - [228](./blocked/228.md) — New Transaction stamps the first operating currency on every posting; no currency or price control — **blocked:** needs account-constraint currencies on the client, a price path (legacy field or typed mutation, deploy first) and an owner-approved form design
 - [304](./blocked/304.md) — Budgets on Liabilities/Assets get favourability backwards (owner decision) — **blocked:** needs an owner decision between deriving direction from the account root and limiting the picker to Income and Expenses, which reverses w1/023's "every root" rule
 - [453](./blocked/453.md) — addEntries/bulkEntries have no idempotency key: a retry after a lost response can duplicate the entry (split from 351) — **blocked:** needs an owner-approved contract (field, bounds, retention) across REST/GraphQL/MCP and a backend-v2 deploy
+- [509](./509.md) — New Transaction's payee suggestions list "Whole Foods" and "Whole  Foods" separately; Merchants merges them
+- [510](./510.md) — A resumed Create Ledger draft demands an opening balance "again" that was never entered (w21/500 false positive)
+- [511](./511.md) — Create Ledger: Create works while the preview loads, looks enabled after it fails, and the failure isn't announced (w21/478)
+- [512](./512.md) — Notifications' "Show older" hides one page early after a foreground refetch (w21/498 regression)
+- [513](./513.md) — Home's Recent Transactions misses its offline cache on a later day (daily window key; w21/471 regression)
+- [514](./514.md) — Add Budget refuses a decimal comma ("49,99") that New Transaction accepts
 - [508](./blocked/508.md) — Mobile guesses that an entry is a plugin copy from its first line; read the ledger's `generated_from` instead (split from 443) — **blocked:** production's GraphQL schema lacks `generated_from` until the ledger service and backend-v2 deploy; mobile's client is generated from it
 - [315](./blocked/315.md) — In-app commits signed with Gitea username and real email (no full_name, no noreply) — **blocked:** needs the owner's noreply-address and published-history decisions, and a production backfill of existing Gitea users that can't be verified here
