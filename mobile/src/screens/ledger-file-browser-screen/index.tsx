@@ -61,6 +61,7 @@ import {
   parentDirectory,
   isFolderGone,
   popPathStack,
+  popPathStackFrom,
   pushPathStack,
   sortEntries,
   pathStackForLedger,
@@ -590,6 +591,8 @@ export function LedgerFileBrowserScreen(): JSX.Element {
 
       deleteInFlightRef.current = true;
       setDeletingPath(entry.path);
+      // The folder this delete was tapped in; Back may move on before it ends.
+      const tappedIn = pathStack[pathStack.length - 1]!;
       try {
         await deleteLedgerFile({
           variables: {
@@ -606,7 +609,7 @@ export function LedgerFileBrowserScreen(): JSX.Element {
         });
         // The folder's last file takes the folder with it: list its parent.
         if (deleteEmptiesFolder(pathStack, sorted.length)) {
-          updatePathStack(popPathStack);
+          updatePathStack((stack) => popPathStackFrom(stack, tappedIn));
         }
         // Awaited: the delete buttons stay disabled until the row is actually
         // gone, so a second tap can't resend the sha we just spent.

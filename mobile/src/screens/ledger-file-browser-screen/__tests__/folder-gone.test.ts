@@ -1,6 +1,11 @@
 import fs from "fs";
 import path from "path";
-import { deleteEmptiesFolder, isFolderGone, popPathStack } from "../utils";
+import {
+  deleteEmptiesFolder,
+  isFolderGone,
+  popPathStack,
+  popPathStackFrom,
+} from "../utils";
 
 /**
  * w21/088: git keeps no empty folders, so deleting a folder's last file removes
@@ -41,6 +46,34 @@ describe("a folder that no longer exists", () => {
     ).toBe(true);
     expect(
       source.includes("const folderGone = isFolderGone(error, pathStack);"),
+    ).toBe(true);
+  });
+});
+
+// w21/448: Back tapped while the delete ran moved the browser up already, and
+// the delete then stepped up from where it had got to.
+describe("stepping up after the delete finishes", () => {
+  it("steps up from the folder it emptied", () => {
+    expect(popPathStackFrom(["", "a", "a/b"], "a/b")).toEqual(["", "a"]);
+  });
+
+  it("stays where the user went meanwhile", () => {
+    // Tapped in a/b, went up to a while it ran.
+    expect(popPathStackFrom(["", "a"], "a/b")).toEqual(["", "a"]);
+    expect(popPathStackFrom([""], "a/b")).toEqual([""]);
+  });
+
+  it("is wired with the folder the delete was tapped in", () => {
+    const source = fs
+      .readFileSync(path.join(__dirname, "..", "index.tsx"), "utf8")
+      .replace(/\s+/g, "");
+    expect(
+      source.includes(
+        "updatePathStack((stack)=>popPathStackFrom(stack,tappedIn))",
+      ),
+    ).toBe(true);
+    expect(
+      source.includes("consttappedIn=pathStack[pathStack.length-1]!"),
     ).toBe(true);
   });
 });

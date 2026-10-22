@@ -156,6 +156,16 @@ export function popPathStack(stack: string[]): string[] {
 }
 
 /**
+ * Step up from `folder`, but only if the browser is still in it. A delete that
+ * empties a folder finishes some time after it was tapped, and the user may
+ * have gone up meanwhile: popping the current top then landed one folder too
+ * high (w21/448).
+ */
+export function popPathStackFrom(stack: string[], folder: string): string[] {
+  return stack[stack.length - 1] === folder ? popPathStack(stack) : stack;
+}
+
+/**
  * Whether a listing failed because its folder no longer exists. Git keeps no
  * empty folders, so deleting a folder's last file removes the folder, and the
  * listing then answers NOT_FOUND; the browser read that as "Failed to load"
