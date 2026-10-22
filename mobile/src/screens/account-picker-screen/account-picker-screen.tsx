@@ -535,11 +535,16 @@ function AccountPickerScreenComponent(): JSX.Element {
   const showCreateRow =
     !closedMatch &&
     !futureMatch &&
-    showCreateAccountRow(query, visibleSections.length, {
-      canWrite,
-      loading: accessLoading,
-      error: accessError,
-    });
+    showCreateAccountRow(
+      query,
+      visibleSections.length,
+      {
+        canWrite,
+        loading: accessLoading,
+        error: accessError,
+      },
+      type,
+    );
 
   // Loose matches ("pets" in `Expenses:Transport:Tram`) must not hide Create
   // for a name the ledger does not have (w21/258).
@@ -547,11 +552,16 @@ function AccountPickerScreenComponent(): JSX.Element {
   const showCreateFooter =
     !closedMatch &&
     !futureMatch &&
-    showCreateBelowResults(query, searchResults, {
-      canWrite,
-      loading: accessLoading,
-      error: accessError,
-    });
+    showCreateBelowResults(
+      query,
+      searchResults,
+      {
+        canWrite,
+        loading: accessLoading,
+        error: accessError,
+      },
+      type,
+    );
 
   const createRow = (
     <TouchableOpacity

@@ -122,6 +122,14 @@ export interface LedgerWriteAccess {
 }
 
 /**
+ * A filter picker only reads: its Create row opened Open Account, whose Done
+ * would write an `open` from a filter (w21/528).
+ */
+function offersCreate(type?: string): boolean {
+  return type !== "filter";
+}
+
+/**
  * Whether the create-account row belongs in the empty state. It renders exactly
  * when a query matched nothing (no sections at all — see
  * `visibleAccountSections`) *and* the caller may write to this ledger:
@@ -136,8 +144,9 @@ export function showCreateAccountRow(
   query: string,
   visibleSectionCount: number,
   access: LedgerWriteAccess,
+  type?: string,
 ): boolean {
-  if (!access.canWrite || access.error) {
+  if (!offersCreate(type) || !access.canWrite || access.error) {
     return false;
   }
   return isSearchQuery(query) && visibleSectionCount === 0;
@@ -156,8 +165,14 @@ export function showCreateBelowResults(
   query: string,
   results: readonly string[],
   access: LedgerWriteAccess,
+  type?: string,
 ): boolean {
-  if (!access.canWrite || access.error || results.length === 0) {
+  if (
+    !offersCreate(type) ||
+    !access.canWrite ||
+    access.error ||
+    results.length === 0
+  ) {
     return false;
   }
   const words = query

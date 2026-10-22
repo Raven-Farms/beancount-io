@@ -425,3 +425,25 @@ describe("showCreateBelowResults", () => {
     ).toBe(true);
   });
 });
+
+// w21/528: the Transactions filter's picker offered Create, and Done on the
+// Open Account screen it led to wrote an `open` from a read-only control.
+describe("the filter picker never offers Create", () => {
+  const access = { canWrite: true };
+
+  it("not in the empty state", () => {
+    expect(showCreateAccountRow("QaTravel", 0, access, "filter")).toBe(false);
+    expect(showCreateAccountRow("QaTravel", 0, access, "posting")).toBe(true);
+    expect(showCreateAccountRow("QaTravel", 0, access)).toBe(true);
+  });
+
+  it("not under search results", () => {
+    const results = ["Expenses:Transport:Tram"];
+    expect(showCreateBelowResults("pets", results, access, "filter")).toBe(
+      false,
+    );
+    expect(showCreateBelowResults("pets", results, access, "budget")).toBe(
+      true,
+    );
+  });
+});
