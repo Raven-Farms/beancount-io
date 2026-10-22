@@ -185,6 +185,13 @@ export function AddTransactionScreen(): JSX.Element {
             <View key={key.value} style={styles.keyCell}>
               <Pressable
                 accessibilityRole="keyboardkey"
+                // The Delete key is a glyph only; without a label VoiceOver
+                // said just "key" (w21/358).
+                accessibilityLabel={
+                  key.display === "Del"
+                    ? i18n.t("deleteTransaction")
+                    : undefined
+                }
                 style={({ pressed }) => [
                   styles.key,
                   isNext && styles.nextKey,

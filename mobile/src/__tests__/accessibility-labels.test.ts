@@ -34,6 +34,9 @@ type AllowlistEntry = {
   reason: string;
 };
 
+const VECTOR_ICON =
+  /\b(?:Ionicons|Feather|MaterialCommunityIcons|MaterialIcons|FontAwesome[56]?|AntDesign|Entypo|EvilIcons|Octicons|SimpleLineIcons|Foundation|Fontisto)\b/;
+
 // The app's own Button renders PressableScale, which `Pressable\b` does not
 // match (no word boundary between "e" and "S"), so each is named explicitly.
 const OPEN_TAG = /<(TouchableOpacity|Pressable(?:Scale)?|Button)\b/g;
@@ -226,8 +229,10 @@ describe("accessibility labels on icon-only pressables (w4/m7)", () => {
 
           const openingTag = source.slice(tagStart, tagEnd);
           const following = source.slice(tagEnd, tagEnd + 400);
+          // Any @expo/vector-icons family, not only Ionicons: the keypad's
+          // Delete key was a Feather glyph and slipped through (w21/358).
           const hasIcon =
-            /\bIonicons\b/.test(following) || /<Image\b/.test(following);
+            VECTOR_ICON.test(following) || /<Image\b/.test(following);
           const hasText = following.includes("<Text");
           const hasLabel = openingTag.includes("accessibilityLabel");
 
@@ -326,5 +331,38 @@ describe("text fields name themselves (w21/355)", () => {
       .filter(({ tag }) => !/accessibilityLabel(ledBy)?=/.test(tag))
       .map(({ relFile, line }) => `${relFile}:${line}`);
     expect(unnamed).toEqual([]);
+  });
+});
+
+describe("the icon guardrail covers every vector-icon family (w21/358)", () => {
+  it("recognises the families the app can import", () => {
+    for (const family of [
+      "Ionicons",
+      "Feather",
+      "MaterialCommunityIcons",
+      "MaterialIcons",
+      "FontAwesome5",
+      "AntDesign",
+    ]) {
+      expect(VECTOR_ICON.test(`<${family} name="x" />`)).toBe(true);
+    }
+    expect(VECTOR_ICON.test("<Text>Delete</Text>")).toBe(false);
+  });
+
+  it("the keypad's Delete key is labelled", () => {
+    const src = fs
+      .readFileSync(
+        path.join(
+          SRC_ROOT,
+          "screens/add-transaction-screen/add-transaction-screen.tsx",
+        ),
+        "utf8",
+      )
+      .replace(/\s+/g, "");
+    expect(
+      src.includes(
+        'accessibilityLabel={key.display==="Del"?i18n.t("deleteTransaction"):undefined}',
+      ),
+    ).toBe(true);
   });
 });
