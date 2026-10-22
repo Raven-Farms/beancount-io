@@ -293,6 +293,8 @@ describe("statement adapter contracts", () => {
           equity: 2 * usd,
           // The accounts' own basis, not the series point's (w6/009).
           netWorth: 2 * usd + 2 * usd,
+          // The fixture's EUR side is stated, not summed as zero (w23/050).
+          otherCurrencies: { EUR: -182.4 },
           byAccount: [
             { account: "Assets", balance: usd },
             { account: "Assets", balance: usd },

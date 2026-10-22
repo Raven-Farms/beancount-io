@@ -735,10 +735,17 @@ those entries, including counterpart accounts; zero-count accounts are omitted
 and rows are sorted by account name.
 
 By default (`shape=summary`) REST and MCP return each statement as totals
-and the nonzero accounts behind them, in one stated `currency`. The balance
-sheet adds `valuation`: `units` (positions unconverted), `cost` (booked cost),
-or `latest-price` (a currency conversion or `at_value`, priced at the ledger's
-most recent price). `asOf` is the position cut-off, not the price date, so a
+and the nonzero accounts behind them, in one stated `currency`. Whatever the
+other currencies hold is not added in, but it is not hidden either: when the
+stated currency leaves something out, the summary carries `otherCurrencies`, a
+map from each other currency or commodity to the amount its headline number
+excludes — net worth on the balance sheet and overview, `net` on the income
+statement, each interval's `total` — so `conversion=units` on a ledger with
+stocks lists them there. The balance sheet adds `valuation`: `units`
+(positions unconverted), `cost` (booked cost), or `latest-price` (a currency
+conversion or `at_value`, priced at the ledger's most recent price). A
+conversion to a currency the ledger has no prices for converts nothing, so it
+reads `units` and reports in the currency the data does carry. `asOf` is the position cut-off, not the price date, so a
 historical window shows its positions at the latest recorded prices. `netWorth` is always
 `assets + liabilities`, on the same basis as `byAccount`. The income
 statement's `period` gives `to`, the statement's last day, and `time`, the
