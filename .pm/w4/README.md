@@ -4,6 +4,8 @@
 
 ## Inbox
 
+- [983 — Offer Try Again on the remaining QueryView read failures](./983.md) — minor; w4/m50 simplify reviews, 2026-10-22; Settings, Accounts, Errors, Documents and Events show a read error without Try Again, and three hand-rolled retries could adopt the shared hook; code-read, not yet reproduced.
+
 - [982 — Let Receipt Record accept exact decimals](./982.md) — minor residual of W1/028; both-width native12.345KWD corrections are blocked by fixed-cent step before transport; exact12.34 controls pass, no hosted writes.
 
 - [981 — Escape receipt text in the Beancount preview](./981.md) — minor; modeled parse/review at both widths,2026-10-22; actual Beancount parser rejects quoted merchant preview and changes raw backslashes; exact structured inputs preblocked, plain controls pass.
