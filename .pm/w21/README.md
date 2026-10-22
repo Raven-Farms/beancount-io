@@ -45,6 +45,10 @@
 - [446](./446.md) — File editor load/reload failures have no Retry or message
 - [447](./447.md) — Editor error banner matches a longer file name
 - [448](./448.md) — Back during a last-file delete lands one folder too high
+- [449](./449.md) — VoiceOver names a parent's (own) row as the parent
+- [450](./450.md) — (own) row drops the parent's own EUR/commodity holdings
+- [451](./451.md) — Fixed 0.005 tolerance folds BTC balances away
+- [452](./452.md) — Picker hides Create for a full name that prefixes an account
 - [315](./blocked/315.md) — In-app commits signed with Gitea username and real email (no full_name, no noreply) — **blocked:** needs the owner's noreply-address and published-history decisions, and a production backfill of existing Gitea users that can't be verified here
 - [351](./351.md) — Mid-save connection drop says "Nothing was saved"; retry duplicates
 - [352](./352.md) — Log out hangs ~60 s on a captive network, no busy state
