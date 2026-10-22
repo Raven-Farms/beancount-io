@@ -64,6 +64,48 @@ test("parseExactAmount accepts unambiguous thousands grouping", () => {
   expect(parseExactAmount("12,34.5")).toBe(null);
 });
 
+// w21/463: amounts written the way each language writes them were refused, and
+// the message asked for a format foreign to the language.
+test("parseExactAmount reads each locale's own formatting of 1234.56 and -12.5", () => {
+  const {
+    translationLocales,
+  } = require("../../../translations/__tests__/locale-parity");
+  for (const locale of translationLocales()) {
+    const format = (value: number) =>
+      new Intl.NumberFormat(locale, { minimumFractionDigits: 2 }).format(value);
+    expect([locale, parseExactAmount(format(1234.56))]).toEqual([
+      locale,
+      "1234.56",
+    ]);
+    expect([locale, parseExactAmount(format(-12.5))]).toEqual([
+      locale,
+      "-12.50",
+    ]);
+  }
+});
+
+test("parseExactAmount normalises the marks and groupings those formats use", () => {
+  // Point grouping with a decimal comma, and two point groups.
+  expect(parseExactAmount("1.234,56")).toBe("1234.56");
+  expect(parseExactAmount("-12.345,6")).toBe("-12345.6");
+  expect(parseExactAmount("1.234.567")).toBe("1234567");
+  // A bare point stays the decimal, as w21/031 decided.
+  expect(parseExactAmount("1.234")).toBe("1.234");
+  // Spaces of every width between groups, with and without a decimal comma.
+  for (const space of [" ", "\u00a0", "\u202f", "\u2009"]) {
+    expect(parseExactAmount(`1${space}234,56`)).toBe("1234.56");
+    expect(parseExactAmount(`1${space}234${space}567`)).toBe("1234567");
+  }
+  // The typographic minus, with or without direction marks.
+  expect(parseExactAmount("\u221212.50")).toBe("-12.50");
+  expect(parseExactAmount("\u200e\u221212.50")).toBe("-12.50");
+  expect(parseExactAmount("\u200f-\u200f12,50")).toBe("-12.50");
+  // Groupings that are not threes are still refused.
+  expect(parseExactAmount("1 23,45")).toBe(null);
+  expect(parseExactAmount("12.34.5")).toBe(null);
+  expect(parseExactAmount("1.23,456")).toBe(null);
+});
+
 // An unparsed amount added nothing, so the remainder read as a green balanced
 // zero while Done stayed disabled without a reason (w21/031).
 test("an unparsed amount is flagged, not counted as balanced", () => {

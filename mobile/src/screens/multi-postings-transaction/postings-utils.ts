@@ -35,13 +35,23 @@ type Scaled = { coeff: bigint; scale: number };
  * `.` decimal separator, or a single `,` as a decimal separator (`1,25` →
  * `1.25`). Thousands grouping is accepted only where it can't be a decimal
  * comma: with a `.` after the groups (`1,234.56`) or two groups or more
- * (`1,234,567`) (w21/031). `1,250` stays the decimal comma 1.250. A leading
+ * (`1,234,567`) (w21/031), and the other way round (`1.234,56`, `1.234.567`)
+ * or by a space (`1 234,56`) as most languages write it (w21/463). `1,250`
+ * stays the decimal comma 1.250. A leading
  * `.` reads as `0.` (`.5` → `0.5`). Rejects partial forms (`1.`, `-`, `.`)
  * and any other junk — never silently takes a
  * numeric prefix the way parseFloat does.
  */
 export function parseExactAmount(input: string): string | null {
-  let trimmed = toAsciiNumerals(input).trim();
+  let trimmed = toAsciiNumerals(input)
+    // Direction marks a right-to-left locale's formatting puts around a sign,
+    // and the typographic minus it uses (w21/463).
+    .replace(/[\u200e\u200f\u061c]/g, "")
+    .replace(/\u2212/g, "-")
+    // Grouping by a space, no-break or narrow no-break space, between digits
+    // and a group of three: "1 234,56" (French, Russian, …).
+    .replace(/(\d)[ \u00a0\u2009\u202f](?=\d{3}(?!\d))/g, "$1")
+    .trim();
   if (!trimmed) return null;
   // The Arabic thousands separator groups three digits and is never a decimal
   // mark: `۱٬۲۳۴` is 1,234, where the ASCII comma it was mapped to read as a
@@ -53,6 +63,15 @@ export function parseExactAmount(input: string): string | null {
   }
 
   let normalized = trimmed;
+  // A point as the grouping mark, where a comma decimal follows or there are
+  // two groups or more: "1.234,56" (German, Spanish, …) and "1.234.567". A bare
+  // "1.234" stays the decimal 1.234 (w21/031).
+  if (
+    /^-?\d{1,3}(\.\d{3})+,\d+$/.test(normalized) ||
+    /^-?\d{1,3}(\.\d{3}){2,}$/.test(normalized)
+  ) {
+    normalized = normalized.replace(/\./g, "").replace(",", ".");
+  }
   if (
     /^-?\d{1,3}(,\d{3})+\.\d+$/.test(normalized) ||
     /^-?\d{1,3}(,\d{3}){2,}$/.test(normalized)
