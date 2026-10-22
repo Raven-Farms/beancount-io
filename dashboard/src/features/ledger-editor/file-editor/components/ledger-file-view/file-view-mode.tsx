@@ -7,7 +7,7 @@ export interface ViewModeActionsProps {
   fileContent: NonNullable<GetLedgerFileQuery["getLedgerFile"]>;
   onEdit: () => void;
   /** Absent when the file cannot be deleted (the ledger's root main.bean). */
-  onDelete?: () => void;
+  onDelete?: () => void | Promise<void>;
   canEdit?: boolean;
 }
 

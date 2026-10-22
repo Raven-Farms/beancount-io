@@ -46,7 +46,7 @@ export interface NonTextFileViewProps {
   filePath: string;
   fileContent: NonNullable<GetLedgerFileQuery["getLedgerFile"]>;
   /** Absent when the file cannot be deleted (the ledger's root main.bean). */
-  onDelete?: () => void;
+  onDelete?: () => void | Promise<void>;
 }
 
 interface FileMetadataBarProps {
@@ -58,7 +58,7 @@ interface FileActionButtonsProps {
   fileContent: NonNullable<GetLedgerFileQuery["getLedgerFile"]>;
   onDownload: () => void;
   /** Absent when the file cannot be deleted (the ledger's root main.bean). */
-  onDelete?: () => void;
+  onDelete?: () => void | Promise<void>;
   canEdit?: boolean;
   onEdit?: () => void;
 }
@@ -115,10 +115,20 @@ export const FileActionButtons = ({
     setIsDeleteDialogOpen(true);
   };
 
-  const handleConfirmDelete = () => {
+  const handleConfirmDelete = async () => {
     deleteConfirmedRef.current = true;
-    onDelete?.();
     setIsDeleteDialogOpen(false);
+    try {
+      await onDelete?.();
+    } catch {
+      // The delete reported its own failure and this file is still here:
+      // give a reader whose focus was lost the actions back, not the top of
+      // the page (w4/306). A deliberate move while waiting is kept.
+      const active = document.activeElement;
+      if (!active || active === document.body) {
+        moreActionsTriggerRef.current?.focus();
+      }
+    }
   };
 
   const handleCancelDelete = () => {
@@ -206,8 +216,11 @@ export const FileActionButtons = ({
           onCloseAutoFocus={(event) => {
             if (deleteConfirmedRef.current) {
               deleteConfirmedRef.current = false;
-              // A confirmed delete owns navigation; keep its route focus.
+              // A confirmed delete owns navigation: once it has left this
+              // page, the new route keeps its focus. While it is still
+              // pending the actions stay usable (w4/306).
               event.preventDefault();
+              moreActionsTriggerRef.current?.focus();
               return;
             }
             restoreFocusOnDialogClose(event, moreActionsTriggerRef.current);

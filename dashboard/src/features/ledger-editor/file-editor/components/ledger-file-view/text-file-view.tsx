@@ -19,7 +19,7 @@ export interface TextFileViewProps {
   /** Saves `content` against `base`, the revision it was edited from. */
   onSave: (content: string, base: FileRevision) => Promise<void>;
   /** Absent when the file cannot be deleted (the ledger's root main.bean). */
-  onDelete?: () => void;
+  onDelete?: () => void | Promise<void>;
   isSaving: boolean;
   isEditMode?: boolean;
   readOnly?: boolean;
