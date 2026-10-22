@@ -198,6 +198,15 @@ function monthDayAnchor(
   eventDays: readonly number[],
   months: number,
 ): { anchor: number; lastDue: number } | null {
+  // Two or more gaps that are all about four weeks are not a month's: February
+  // is the only month that short, so it can be one gap of a monthly bill, never
+  // several. A four-weekly series that spans February puts two payments on the
+  // same day (02-02, 03-02) and read as "the 2nd", which made Next come five days
+  // late (w21/408).
+  if (months === 1 && eventDays.length >= 3) {
+    const gaps = eventDays.slice(1).map((day, i) => day - eventDays[i]!);
+    if (gaps.every((gap) => gap >= 27 && gap <= 29)) return null;
+  }
   const days = eventDays.map(calendarDay);
   const counts = new Map<number, number>();
   for (const d of days) counts.set(d.day, (counts.get(d.day) ?? 0) + 1);

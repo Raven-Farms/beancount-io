@@ -325,6 +325,26 @@ describe("next expected date for a bill kept on one day of the month", () => {
     );
   });
 
+  // w21/408: February's 28 days put two four-weekly payments on the same day
+  // (02-02, 03-02), and 03-30 sat within three days of April's 2nd, so the
+  // series read as "the 2nd" and Next came about five days late.
+  it("keeps the day-count step for every-four-weeks payments that span February", () => {
+    expect(next(["2026-02-02", "2026-03-02", "2026-03-30"])).toBe("2026-04-27");
+    expect(next(["2026-01-05", "2026-02-02", "2026-03-02", "2026-03-30"])).toBe(
+      "2026-04-27",
+    );
+  });
+
+  it("still anchors a monthly bill that crosses February", () => {
+    // One short gap among monthly ones is month-length wobble, not four weeks.
+    expect(next(["2026-01-02", "2026-02-02", "2026-03-02", "2026-04-02"])).toBe(
+      "2026-05-02",
+    );
+    expect(next(["2025-12-31", "2026-01-31", "2026-02-28", "2026-03-31"])).toBe(
+      "2026-04-30",
+    );
+  });
+
   it("flags overdue from the corrected date", () => {
     const series = pointsOn(["2026-07-25", "2026-08-25", "2026-09-25"], -30);
     // Next 2026-10-25, grace 8 days → still on time on Nov 2, late on Nov 3.

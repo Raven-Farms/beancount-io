@@ -78,7 +78,6 @@
 - [479](./479.md) — Create Ledger errors silent to VoiceOver (354 sibling)
 - [480](./480.md) — Budget pages past 500 never re-read on refresh (397 follow-up)
 - [315](./blocked/315.md) — In-app commits signed with Gitea username and real email (no full_name, no noreply) — **blocked:** needs the owner's noreply-address and published-history decisions, and a production backfill of existing Gitea users that can't be verified here
-- [408](./408.md) — Four-weekly series spanning Feb gets day anchor; Next ~5 days late (271 regression)
 - [409](./409.md) — Cancelled semiannual bill stays Overdue ~17 months (267/269 follow-up)
 - [410](./410.md) — Merchants splits NFC/NFD spellings of one payee
 - [411](./411.md) — New Transaction: changing payee keeps first payee's accounts
