@@ -159,6 +159,11 @@ export const zh: Translations = {
   serverConnectionTimeout: "服务器未及时响应。",
   serverConnectionUnreachable: "无法连接到该服务器。",
   serverConnectionIncompatible: "该服务器未提供所需的 Beancount.io API。",
+  serverConnectionNotConfigured: "此服务器尚未设置登录。",
+  serverConnectionMismatch:
+    "此地址与服务器报告的地址不一致。请打开服务器设置并测试连接。",
+  serverConnectionCanonical: "此服务器的地址是 {{url}}。",
+  serverUseCanonical: "使用该地址",
   serverConnectionAdvisory: "您仍可保存此 URL，并在服务器可用时登录。",
   restoreDefaultServer: "恢复 Beancount.io 默认服务器",
   backToSignIn: "返回登录",

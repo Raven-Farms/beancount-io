@@ -181,6 +181,12 @@ export const sk: Translations = {
   serverConnectionUnreachable: "Tento server sa nepodarilo kontaktovať.",
   serverConnectionIncompatible:
     "Tento server neposkytuje požadované API Beancount.io.",
+  serverConnectionNotConfigured:
+    "Tento server ešte nie je nastavený na prihlasovanie.",
+  serverConnectionMismatch:
+    "Táto adresa nezodpovedá adrese, ktorú server hlási. Otvorte nastavenia servera a otestujte pripojenie.",
+  serverConnectionCanonical: "Tento server sa identifikuje ako {{url}}.",
+  serverUseCanonical: "Použiť túto adresu",
   serverConnectionAdvisory:
     "Túto adresu môžete aj tak uložiť a prihlásiť sa, keď bude server dostupný.",
   restoreDefaultServer: "Obnoviť predvolený server Beancount.io",

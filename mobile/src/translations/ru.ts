@@ -181,6 +181,11 @@ export const ru: Translations = {
   serverConnectionUnreachable: "Не удалось подключиться к этому серверу.",
   serverConnectionIncompatible:
     "Этот сервер не предоставляет необходимый API Beancount.io.",
+  serverConnectionNotConfigured: "Этот сервер ещё не настроен для входа.",
+  serverConnectionMismatch:
+    "Этот адрес не совпадает с адресом, который сообщает сервер. Откройте настройки сервера и проверьте соединение.",
+  serverConnectionCanonical: "Этот сервер представляется как {{url}}.",
+  serverUseCanonical: "Использовать этот адрес",
   serverConnectionAdvisory:
     "Вы всё равно можете сохранить этот URL и войти, когда сервер станет доступен.",
   restoreDefaultServer: "Восстановить сервер Beancount.io по умолчанию",

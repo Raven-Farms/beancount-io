@@ -176,6 +176,11 @@ export const fa: Translations = {
   serverConnectionUnreachable: "دسترسی به این سرور ممکن نبود.",
   serverConnectionIncompatible:
     "این سرور API لازم Beancount.io را ارائه نمی‌کند.",
+  serverConnectionNotConfigured: "این سرور هنوز برای ورود راه‌اندازی نشده است.",
+  serverConnectionMismatch:
+    "این نشانی با نشانی‌ای که سرور اعلام می‌کند یکسان نیست. تنظیمات سرور را باز کنید و اتصال را آزمایش کنید.",
+  serverConnectionCanonical: "این سرور خود را با نشانی {{url}} معرفی می‌کند.",
+  serverUseCanonical: "استفاده از آن نشانی",
   serverConnectionAdvisory:
     "می‌توانید همچنان این نشانی را ذخیره کنید و وقتی سرور در دسترس است وارد شوید.",
   restoreDefaultServer: "بازگرداندن پیش‌فرض Beancount.io",

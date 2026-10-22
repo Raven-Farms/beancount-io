@@ -83,13 +83,47 @@ export class OAuthDiscoveryError extends Error {
   constructor(
     readonly kind: "unreachable" | "incompatible",
     message: string,
+    readonly detail?: DiscoveryDetail,
   ) {
     super(message);
   }
 }
 
-const incompatible = (message: string) =>
-  new OAuthDiscoveryError("incompatible", message);
+/**
+ * What an incompatible server said that the user can act on (w21/214): it
+ * answered but is not set up for sign-in, or it is a Beancount.io server that
+ * names itself by another address, one the app would accept (`canonicalUrl`).
+ */
+export type DiscoveryDetail =
+  { reason: "not_configured" } | { reason: "mismatch"; canonicalUrl: string };
+
+const incompatible = (message: string, detail?: DiscoveryDetail) =>
+  new OAuthDiscoveryError("incompatible", message, detail);
+
+/**
+ * The address a server names itself by, when it is a valid server URL other
+ * than the one asked about.
+ */
+function canonicalServerUrl(
+  claimed: unknown,
+  selectedServerUrl: string,
+): string | undefined {
+  if (typeof claimed !== "string") return undefined;
+  const validation = validateServerUrl(claimed);
+  if (!validation.ok) return undefined;
+  return issuerForServer(validation.url) === issuerForServer(selectedServerUrl)
+    ? undefined
+    : validation.url;
+}
+
+/** A server that names no usable address of its own is just incompatible. */
+const mismatch = (message: string, canonicalUrl?: string) =>
+  incompatible(
+    message,
+    canonicalUrl === undefined
+      ? undefined
+      : { reason: "mismatch", canonicalUrl },
+  );
 
 async function fetchJson(url: string, fetcher: Fetch, signal?: AbortSignal) {
   let response: Response;
@@ -104,7 +138,18 @@ async function fetchJson(url: string, fetcher: Fetch, signal?: AbortSignal) {
       error instanceof Error ? error.message : "Could not reach the server",
     );
   }
-  if (!response.ok) throw incompatible("OAuth metadata is unavailable");
+  if (!response.ok) {
+    // The backend answers 503 `oauth_not_configured` until its signing keys
+    // are set: a server problem the user can name, not a wrong address.
+    const failure: unknown =
+      response.status === 503 ? await response.json().catch(() => null) : null;
+    throw incompatible(
+      "OAuth metadata is unavailable",
+      isObject(failure) && failure.error === "oauth_not_configured"
+        ? { reason: "not_configured" }
+        : undefined,
+    );
+  }
   // A server answered, so a body that is not JSON (a proxy's HTML fallback
   // under 200) is a server problem, never a rejected sign-in.
   let body: unknown;
@@ -145,20 +190,30 @@ export async function discoverOAuthServer(
     fetcher,
     signal,
   );
-  if (resourceMetadata.resource !== resource) {
-    throw incompatible(
-      "Protected-resource metadata does not match the selected server",
-    );
-  }
   const authorizationServers = stringArray(
     resourceMetadata.authorization_servers,
   );
+  // Where the server says it lives, for the mismatch cases below: its single
+  // authorization server, else its resource without the trailing /v1.
+  const claimed =
+    authorizationServers.length === 1
+      ? authorizationServers[0]
+      : typeof resourceMetadata.resource === "string"
+        ? resourceMetadata.resource.replace(/\/v1$/, "")
+        : undefined;
+  if (resourceMetadata.resource !== resource) {
+    throw mismatch(
+      "Protected-resource metadata does not match the selected server",
+      canonicalServerUrl(claimed, serverUrl),
+    );
+  }
   if (
     authorizationServers.length !== 1 ||
     authorizationServers[0] !== expectedIssuer
   ) {
-    throw incompatible(
+    throw mismatch(
       "Authorization server does not match the selected server",
+      canonicalServerUrl(claimed, serverUrl),
     );
   }
   if (
@@ -175,7 +230,10 @@ export async function discoverOAuthServer(
     signal,
   );
   if (metadata.issuer !== expectedIssuer) {
-    throw incompatible("Authorization-server issuer mismatch");
+    throw mismatch(
+      "Authorization-server issuer mismatch",
+      canonicalServerUrl(metadata.issuer, serverUrl),
+    );
   }
   if (
     !stringArray(metadata.response_types_supported).includes("code") ||

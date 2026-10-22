@@ -178,6 +178,12 @@ export const nl: Translations = {
   serverConnectionUnreachable: "Deze server kan niet worden bereikt.",
   serverConnectionIncompatible:
     "Deze server biedt niet de vereiste Beancount.io-API.",
+  serverConnectionNotConfigured:
+    "Deze server is nog niet ingesteld voor inloggen.",
+  serverConnectionMismatch:
+    "Dit adres komt niet overeen met het adres dat de server opgeeft. Open de serverinstellingen en test de verbinding.",
+  serverConnectionCanonical: "Deze server meldt zich aan als {{url}}.",
+  serverUseCanonical: "Dat adres gebruiken",
   serverConnectionAdvisory:
     "Je kunt deze URL toch opslaan en inloggen wanneer de server beschikbaar is.",
   restoreDefaultServer: "Standaardinstelling van Beancount.io herstellen",

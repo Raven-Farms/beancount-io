@@ -182,6 +182,12 @@ export const de: Translations = {
   serverConnectionUnreachable: "Dieser Server ist nicht erreichbar.",
   serverConnectionIncompatible:
     "Dieser Server stellt die erforderliche Beancount.io-API nicht bereit.",
+  serverConnectionNotConfigured:
+    "Dieser Server ist noch nicht für die Anmeldung eingerichtet.",
+  serverConnectionMismatch:
+    "Diese Adresse stimmt nicht mit der vom Server gemeldeten überein. Öffnen Sie die Servereinstellungen und testen Sie die Verbindung.",
+  serverConnectionCanonical: "Dieser Server meldet sich als {{url}}.",
+  serverUseCanonical: "Diese Adresse verwenden",
   serverConnectionAdvisory:
     "Sie können diese URL trotzdem speichern und sich anmelden, wenn der Server verfügbar ist.",
   restoreDefaultServer: "Beancount.io-Standard wiederherstellen",

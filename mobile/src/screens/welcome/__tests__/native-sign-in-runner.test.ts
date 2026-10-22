@@ -42,6 +42,24 @@ describe("runNativeSignIn", () => {
     ).toBe("incompatible");
   });
 
+  it("tells a server that is not set up for sign-in from one at another address (w21/214)", async () => {
+    expect(
+      await runNativeSignIn("sign_in", async () => {
+        throw new OAuthDiscoveryError("incompatible", "unavailable", {
+          reason: "not_configured",
+        });
+      }),
+    ).toBe("not_configured");
+    expect(
+      await runNativeSignIn("sign_in", async () => {
+        throw new OAuthDiscoveryError("incompatible", "mismatch", {
+          reason: "mismatch",
+          canonicalUrl: "https://app.example.test/",
+        });
+      }),
+    ).toBe("mismatch");
+  });
+
   it("counts an unexpected exception as a rejection", async () => {
     const outcome = await runNativeSignIn("sign_in", async () => {
       throw new TypeError("something else entirely");

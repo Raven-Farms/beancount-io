@@ -126,7 +126,7 @@ function validationMessage(
 
 function connectionMessage(
   result: ServerConnectionResult,
-  t: (key: string) => string,
+  t: (key: string, options?: Record<string, string>) => string,
 ): string {
   switch (result.kind) {
     case "connected":
@@ -138,8 +138,28 @@ function connectionMessage(
     case "unreachable":
       return t("serverConnectionUnreachable");
     case "incompatible":
+      // Say what the server told us, so the fix is a tap rather than a guess
+      // (w21/214); only a server that answered without a hint gets the
+      // generic words.
+      if (result.detail?.reason === "not_configured") {
+        return t("serverConnectionNotConfigured");
+      }
+      if (result.detail?.reason === "mismatch") {
+        return t("serverConnectionCanonical", {
+          url: result.detail.canonicalUrl,
+        });
+      }
       return t("serverConnectionIncompatible");
   }
+}
+
+/** The address a mismatched server names itself by, when it offered one. */
+function canonicalAddress(
+  result: ServerConnectionResult | undefined,
+): string | undefined {
+  return result?.kind === "incompatible" && result.detail?.reason === "mismatch"
+    ? result.detail.canonicalUrl
+    : undefined;
 }
 
 export function ServerSettingsScreen(): JSX.Element {
@@ -182,6 +202,23 @@ export function ServerSettingsScreen(): JSX.Element {
     setConnection(result);
   }, [testing, testGate, validate]);
 
+  // One tap from "this server identifies as X": take X and test it, so the
+  // user does not retype an address the server already told us (w21/214).
+  const onUseCanonical = useCallback(
+    async (canonical: string) => {
+      setUrl(canonical);
+      setValidationError(undefined);
+      const token = testGate.start();
+      setTesting(true);
+      setConnection(undefined);
+      const result = await testServerConnection(canonical);
+      if (!testGate.isCurrent(token)) return;
+      setTesting(false);
+      setConnection(result);
+    },
+    [testGate],
+  );
+
   const onSave = useCallback(async () => {
     if (saving) {
       return;
@@ -210,6 +247,7 @@ export function ServerSettingsScreen(): JSX.Element {
     setSaving(false);
   }, [saving, testGate]);
 
+  const canonical = canonicalAddress(connection);
   const connectionIsSuccess = connection?.kind === "connected";
   const connectionIsError = connection !== undefined && !connectionIsSuccess;
 
@@ -264,6 +302,20 @@ export function ServerSettingsScreen(): JSX.Element {
               >
                 {connectionMessage(connection, t)}
               </Text>
+            )}
+            {canonical !== undefined && (
+              <PressableScale
+                style={styles.restoreButton}
+                accessibilityRole="button"
+                accessibilityLabel={t("serverUseCanonical")}
+                testID="use-canonical-server"
+                disabled={saving || testing}
+                onPress={() => void onUseCanonical(canonical)}
+              >
+                <Text style={styles.restoreText}>
+                  {t("serverUseCanonical")}
+                </Text>
+              </PressableScale>
             )}
             {connectionIsError && (
               <Text style={styles.helper}>{t("serverConnectionAdvisory")}</Text>

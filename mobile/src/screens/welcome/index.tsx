@@ -94,6 +94,10 @@ function failureMessageKey(
       return "serverConnectionUnreachable";
     case "incompatible":
       return "serverConnectionIncompatible";
+    case "not_configured":
+      return "serverConnectionNotConfigured";
+    case "mismatch":
+      return "serverConnectionMismatch";
     case "rejected":
       return failure.flow === "sign_up" ? "signUpFailed" : "signInFailed";
   }

@@ -170,6 +170,11 @@ export const en = {
   serverConnectionUnreachable: "Could not reach that server.",
   serverConnectionIncompatible:
     "This server does not expose the required Beancount.io API.",
+  serverConnectionNotConfigured: "This server is not set up for sign-in yet.",
+  serverConnectionMismatch:
+    "This address does not match the one the server reports. Open Server settings and test the connection.",
+  serverConnectionCanonical: "This server identifies as {{url}}.",
+  serverUseCanonical: "Use that address",
   serverConnectionAdvisory:
     "You can still save this URL and try signing in when the server is available.",
   restoreDefaultServer: "Restore Beancount.io default",

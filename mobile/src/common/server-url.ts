@@ -14,7 +14,11 @@ import {
   validateServerUrl,
   type ServerUrlErrorCode,
 } from "./server-url-validation";
-import { discoverOAuthServer } from "./oauth/discovery";
+import {
+  discoverOAuthServer,
+  OAuthDiscoveryError,
+  type DiscoveryDetail,
+} from "./oauth/discovery";
 
 export function defaultRuntimeServerUrl(): string {
   const configured = validateServerUrl(defaultServerUrl, {
@@ -28,7 +32,7 @@ export type ServerConnectionResult =
   | { kind: "invalid"; code: ServerUrlErrorCode }
   | { kind: "timeout" }
   | { kind: "unreachable" }
-  | { kind: "incompatible" };
+  | { kind: "incompatible"; detail?: DiscoveryDetail };
 
 const HEALTH_QUERY = "query ServerHealth { health }";
 const CONNECTION_TIMEOUT_MS = 8_000;
@@ -61,7 +65,15 @@ export async function testServerConnection(
     ]);
     if (controller.signal.aborted) return { kind: "timeout" };
     if (healthResult.status === "rejected") return { kind: "unreachable" };
-    if (oauthResult.status === "rejected") return { kind: "incompatible" };
+    if (oauthResult.status === "rejected") {
+      const reason: unknown = oauthResult.reason;
+      return {
+        kind: "incompatible",
+        ...(reason instanceof OAuthDiscoveryError && reason.detail
+          ? { detail: reason.detail }
+          : {}),
+      };
+    }
 
     const response = healthResult.value;
     if (!response.ok) {
