@@ -514,7 +514,11 @@ describe("LedgerWorkflow", () => {
               setup: { preset: "personal@1" },
             },
           }),
-        ).rejects.toThrow("mutually exclusive");
+        ).rejects.toMatchObject({
+          message:
+            "Validation failed for setup: setup and template are mutually exclusive",
+          metadata: { field: "setup" },
+        });
         expect(mockFavaApiClient.ledgers.createLedger).not.toHaveBeenCalled();
       });
 
@@ -537,6 +541,32 @@ describe("LedgerWorkflow", () => {
         expect(mockFavaApiClient.ledgers.createLedger).toHaveBeenCalledTimes(1);
       });
 
+      it("refuses a reused requestId with a changed request, naming requestId as the field (w21/438)", async () => {
+        const { withStore } = workflowWithStore();
+        await withStore.createLedger({
+          identity: IDENTITY,
+          input: {
+            name: "setup-ledger",
+            requestId: "req-1",
+            setup: { preset: "blank@1" as const },
+          },
+        });
+        await expect(
+          withStore.createLedger({
+            identity: IDENTITY,
+            input: {
+              name: "setup-ledger",
+              requestId: "req-1",
+              setup: { preset: "blank@1" as const, title: "Changed" },
+            },
+          }),
+        ).rejects.toMatchObject({
+          message:
+            "Validation failed for requestId: requestId was already used with a different creation request",
+          metadata: { field: "requestId" },
+        });
+      });
+
       it("refuses an empty or oversized requestId and a too-long setup title, as REST and MCP do (w21/203)", async () => {
         const { withStore } = workflowWithStore();
         for (const requestId of ["", "r".repeat(201)]) {
@@ -545,7 +575,11 @@ describe("LedgerWorkflow", () => {
               identity: IDENTITY,
               input: { name: "setup-ledger", requestId },
             }),
-          ).rejects.toThrow("requestId must be 1-200 characters");
+          ).rejects.toMatchObject({
+            message:
+              "Validation failed for requestId: requestId must be 1-200 characters",
+            metadata: { field: "requestId" },
+          });
         }
         await expect(
           withStore.createLedger({

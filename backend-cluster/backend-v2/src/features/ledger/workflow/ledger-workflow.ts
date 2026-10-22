@@ -548,8 +548,8 @@ export class LedgerWorkflow implements ILedgerWorkflow {
     const userId = identity.userId;
     if (input.setup && input.template) {
       throw new ValidationError(
-        "setup and template are mutually exclusive",
         "setup",
+        "setup and template are mutually exclusive",
       );
     }
     if (
@@ -559,8 +559,8 @@ export class LedgerWorkflow implements ILedgerWorkflow {
     ) {
       // An empty id would silently turn idempotency off below.
       throw new ValidationError(
-        `requestId must be 1-${CREATE_REQUEST_ID_MAX} characters`,
         "requestId",
+        `requestId must be 1-${CREATE_REQUEST_ID_MAX} characters`,
       );
     }
     const ledgerCreate: LedgerCreate = {
@@ -608,8 +608,8 @@ export class LedgerWorkflow implements ILedgerWorkflow {
         if (record) {
           if (record.requestHash !== idempotency.hash) {
             throw new ValidationError(
-              "requestId was already used with a different creation request",
               "requestId",
+              "requestId was already used with a different creation request",
             );
           }
           if (record.status === "done" && record.ledger) {

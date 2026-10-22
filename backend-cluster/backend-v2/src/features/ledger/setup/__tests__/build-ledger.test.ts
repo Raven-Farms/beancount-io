@@ -118,6 +118,29 @@ describe("buildLedgerFiles (w3/m53/t002)", () => {
     ).toThrow(ValidationError);
   });
 
+  // w21/438: the arguments were swapped, so `field` held the whole sentence and
+  // the message read "Validation failed for Unsupported operating currency …: setup".
+  it("names the setup as the field and the problem as the reason", () => {
+    let thrown: unknown;
+    try {
+      buildLedgerFiles(
+        { preset: "personal@1", operatingCurrency: "XX" },
+        "2026-01-01",
+      );
+    } catch (error) {
+      thrown = error;
+    }
+    expect(thrown).toBeInstanceOf(ValidationError);
+    const error = thrown as ValidationError;
+    expect(error.metadata).toMatchObject({ field: "setup" });
+    expect(String(error.metadata?.reason)).toContain(
+      "Unsupported operating currency",
+    );
+    expect(error.message).toMatch(
+      /^Validation failed for setup: .*Unsupported operating currency/,
+    );
+  });
+
   it("matches every clean conformance fixture (w3/m53/t005)", () => {
     const clean = fixturesJson.fixtures.filter((fixture) =>
       fixture.id.endsWith("-clean"),

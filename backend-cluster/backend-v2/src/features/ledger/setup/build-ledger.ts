@@ -35,7 +35,7 @@ const AMOUNT_PATTERN = /^-?\d+(\.\d+)?$/;
 const OPENING_EQUITY = "Equity:OpeningBalances";
 
 const fail = (message: string): never => {
-  throw new ValidationError(message, "setup");
+  throw new ValidationError("setup", message);
 };
 
 const dayBefore = (date: string): string => {
