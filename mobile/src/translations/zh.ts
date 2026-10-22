@@ -301,6 +301,11 @@ export const zh: Translations = {
   chooseCurrency: "选择币种",
   openAccountNamePlaceholder: "Bank:Checking",
   openAccountNoCurrency: "未选择币种",
+  openAccountOtherCurrency: "其他…",
+  openAccountOtherCurrencyTitle: "其他币种",
+  openAccountOtherCurrencyMessage: "请输入币种或证券代码，例如 EUR 或 VTI。",
+  openAccountCurrencyInvalid:
+    "请使用大写字母、数字和 ' . _ -，并以字母开头，例如 EUR 或 VTI。",
   openAccountSaving: "正在开户...",
   openAccountFailed: "开户失败，请重试。",
   ledgerWouldBreak: "这会给你的账本带来一个错误：{{detail}}",

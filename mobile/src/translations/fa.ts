@@ -328,6 +328,12 @@ export const fa: Translations = {
   chooseCurrency: "واحد پول را انتخاب کنید",
   openAccountNamePlaceholder: "Bank:Checking",
   openAccountNoCurrency: "بدون واحد پول",
+  openAccountOtherCurrency: "دیگر…",
+  openAccountOtherCurrencyTitle: "ارز دیگر",
+  openAccountOtherCurrencyMessage:
+    "کد ارز یا دارایی را وارد کنید، مثلاً EUR یا VTI.",
+  openAccountCurrencyInvalid:
+    "از حروف بزرگ انگلیسی، ارقام و ' . _ - استفاده کنید و با یک حرف شروع کنید، مانند EUR یا VTI.",
   openAccountSaving: "در حال افتتاح...",
   openAccountFailed: "افتتاح حساب ناموفق بود. دوباره تلاش کنید.",
   ledgerWouldBreak: "این کار یک خطا به دفتر شما اضافه می‌کند: {{detail}}",

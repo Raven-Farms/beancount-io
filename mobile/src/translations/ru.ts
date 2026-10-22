@@ -340,6 +340,12 @@ export const ru: Translations = {
   chooseCurrency: "Выберите валюту",
   openAccountNamePlaceholder: "Bank:Checking",
   openAccountNoCurrency: "Валюта не выбрана",
+  openAccountOtherCurrency: "Другая…",
+  openAccountOtherCurrencyTitle: "Другая валюта",
+  openAccountOtherCurrencyMessage:
+    "Введите код валюты или актива, например EUR или VTI.",
+  openAccountCurrencyInvalid:
+    "Используйте заглавные буквы, цифры и ' . _ -, начиная с буквы, например EUR или VTI.",
   openAccountSaving: "Открываем...",
   openAccountFailed: "Не удалось открыть счёт. Попробуйте ещё раз.",
   ledgerWouldBreak: "Это добавит ошибку в вашу книгу: {{detail}}",

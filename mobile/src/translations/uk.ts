@@ -338,6 +338,12 @@ export const uk: Translations = {
   chooseCurrency: "Оберіть валюту",
   openAccountNamePlaceholder: "Bank:Checking",
   openAccountNoCurrency: "Валюту не обрано",
+  openAccountOtherCurrency: "Інша…",
+  openAccountOtherCurrencyTitle: "Інша валюта",
+  openAccountOtherCurrencyMessage:
+    "Введіть код валюти чи активу, наприклад EUR або VTI.",
+  openAccountCurrencyInvalid:
+    "Використовуйте великі літери, цифри та ' . _ -, починаючи з літери, як-от EUR або VTI.",
   openAccountSaving: "Відкриваємо...",
   openAccountFailed: "Не вдалося відкрити рахунок. Спробуйте ще раз.",
   ledgerWouldBreak: "Це додасть помилку до вашої книги: {{detail}}",

@@ -322,6 +322,12 @@ export const en = {
   chooseCurrency: "Choose currency",
   openAccountNamePlaceholder: "Bank:Checking",
   openAccountNoCurrency: "No currency",
+  openAccountOtherCurrency: "Other…",
+  openAccountOtherCurrencyTitle: "Other currency",
+  openAccountOtherCurrencyMessage:
+    "Enter a commodity code, such as EUR or VTI.",
+  openAccountCurrencyInvalid:
+    "Use capital letters, digits and ' . _ -, starting with a letter, like EUR or VTI.",
   openAccountSaving: "Opening...",
   openAccountFailed: "Couldn't open the account. Please try again.",
   ledgerWouldBreak: "This would add an error to your ledger: {{detail}}",

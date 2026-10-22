@@ -331,6 +331,12 @@ export const bg: Translations = {
   chooseCurrency: "Изберете валута",
   openAccountNamePlaceholder: "Bank:Checking",
   openAccountNoCurrency: "Няма валута",
+  openAccountOtherCurrency: "Друга…",
+  openAccountOtherCurrencyTitle: "Друга валута",
+  openAccountOtherCurrencyMessage:
+    "Въведете код на валута или актив, например EUR или VTI.",
+  openAccountCurrencyInvalid:
+    "Използвайте главни букви, цифри и ' . _ -, започващи с буква, например EUR или VTI.",
   openAccountSaving: "Открива се...",
   openAccountFailed: "Сметката не беше открита. Опитайте отново.",
   ledgerWouldBreak: "Това ще добави грешка в книгата ви: {{detail}}",

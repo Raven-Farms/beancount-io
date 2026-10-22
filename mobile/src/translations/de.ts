@@ -339,6 +339,12 @@ export const de: Translations = {
   chooseCurrency: "Währung wählen",
   openAccountNamePlaceholder: "Bank:Checking",
   openAccountNoCurrency: "Keine Währung",
+  openAccountOtherCurrency: "Andere …",
+  openAccountOtherCurrencyTitle: "Andere Währung",
+  openAccountOtherCurrencyMessage:
+    "Geben Sie ein Währungs- oder Wertpapierkürzel ein, zum Beispiel EUR oder VTI.",
+  openAccountCurrencyInvalid:
+    "Verwenden Sie Großbuchstaben, Ziffern und ' . _ -, beginnend mit einem Buchstaben, etwa EUR oder VTI.",
   openAccountSaving: "Wird eröffnet...",
   openAccountFailed:
     "Konto konnte nicht eröffnet werden. Bitte erneut versuchen.",

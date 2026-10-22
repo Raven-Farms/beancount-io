@@ -341,6 +341,12 @@ export const sk: Translations = {
   chooseCurrency: "Vyberte menu",
   openAccountNamePlaceholder: "Bank:Checking",
   openAccountNoCurrency: "Bez meny",
+  openAccountOtherCurrency: "Iná…",
+  openAccountOtherCurrencyTitle: "Iná mena",
+  openAccountOtherCurrencyMessage:
+    "Zadajte kód meny alebo aktíva, napríklad EUR alebo VTI.",
+  openAccountCurrencyInvalid:
+    "Použite veľké písmená, číslice a ' . _ -, začínajúce písmenom, napríklad EUR alebo VTI.",
   openAccountSaving: "Otvára sa...",
   openAccountFailed: "Účet sa nepodarilo otvoriť. Skúste to znova.",
   ledgerWouldBreak: "Toto by pridalo chybu do vašej knihy: {{detail}}",

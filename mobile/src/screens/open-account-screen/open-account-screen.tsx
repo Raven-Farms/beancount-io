@@ -35,6 +35,7 @@ import {
 import { DatePickerModal } from "@/components/date-picker-modal";
 import { useLedgerGuard } from "@/components/ledger-guard";
 import { Picker } from "@/components/picker";
+import { TextInputModal } from "@/components/text-input-modal";
 import { getRootIcon } from "@/components/account-type-icon/root-icon";
 import type { AccountRoot } from "@/common/account-root";
 import type { ColorTheme } from "@/types/theme-props";
@@ -44,6 +45,7 @@ import {
   typedSubPathIssue,
   ledgerRootName,
   openAccountCurrencyChoices,
+  typedCurrencyCode,
   peelTypedRoot,
   splitPrefillAccountName,
   type AccountNameValidationReason,
@@ -205,6 +207,12 @@ const getStyles = (theme: ColorTheme) =>
 
 type PickerKind = "root" | "currency" | null;
 
+/** A code shown in the empty typed-currency field; a code, not copy. */
+const EXAMPLE_CURRENCY = "EUR";
+
+/** The currency picker's row that opens the typed entry (w21/234). */
+const OTHER_CURRENCY = "__other_currency__";
+
 export function OpenAccountScreenComponent(): JSX.Element {
   const { t, locale } = useTranslations();
   const router = useRouter();
@@ -251,6 +259,9 @@ export function OpenAccountScreenComponent(): JSX.Element {
   const [currencyInitialized, setCurrencyInitialized] = useState(false);
   const [date, setDate] = useState(() => initialOpenDate(openDate, new Date()));
   const [picker, setPicker] = useState<PickerKind>(null);
+  // Currencies typed through "Other…" this visit, offered with the rest.
+  const [typedCurrencies, setTypedCurrencies] = useState<string[]>([]);
+  const [otherCurrencyVisible, setOtherCurrencyVisible] = useState(false);
   const [datePickerVisible, setDatePickerVisible] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   // A committed save disables submit: a cold-link form that fails to leave
@@ -315,9 +326,14 @@ export function OpenAccountScreenComponent(): JSX.Element {
   });
   const currencyItems = [
     { value: "", label: t("openAccountNoCurrency") },
-    ...openAccountCurrencyChoices(currencies, meta?.currencies ?? []).map(
-      (value) => ({ value, label: value }),
-    ),
+    ...openAccountCurrencyChoices(
+      currencies,
+      meta?.currencies ?? [],
+      typedCurrencies,
+    ).map((value) => ({ value, label: value })),
+    // A commodity the ledger has not posted yet (a first EUR or stock
+    // account) is typed, not picked (w21/234).
+    { value: OTHER_CURRENCY, label: t("openAccountOtherCurrency") },
   ];
 
   const handleSubmit = async () => {
@@ -536,6 +552,9 @@ export function OpenAccountScreenComponent(): JSX.Element {
         onSelect={(item) => {
           if (picker === "root") {
             setRootPrefix(item.value as AccountRootPrefix);
+          } else if (item.value === OTHER_CURRENCY) {
+            setPicker(null);
+            setOtherCurrencyVisible(true);
           } else {
             setCurrency(item.value);
             setCurrencyInitialized(true);
@@ -543,6 +562,32 @@ export function OpenAccountScreenComponent(): JSX.Element {
           setSubmitError(null);
         }}
         onCancel={() => setPicker(null)}
+      />
+      <TextInputModal
+        visible={otherCurrencyVisible}
+        title={t("openAccountOtherCurrencyTitle")}
+        message={t("openAccountOtherCurrencyMessage")}
+        placeholder={EXAMPLE_CURRENCY}
+        confirmButtonText={t("done")}
+        cancelButtonText={t("cancel")}
+        validateInput={(input) =>
+          input.trim() === ""
+            ? false
+            : typedCurrencyCode(input) !== null ||
+              t("openAccountCurrencyInvalid")
+        }
+        onConfirm={(input) => {
+          const code = typedCurrencyCode(input);
+          if (code === null) return;
+          setTypedCurrencies((known) =>
+            known.includes(code) ? known : [...known, code],
+          );
+          setCurrency(code);
+          setCurrencyInitialized(true);
+          setSubmitError(null);
+          setOtherCurrencyVisible(false);
+        }}
+        onCancel={() => setOtherCurrencyVisible(false)}
       />
       <DatePickerModal
         isVisible={datePickerVisible}

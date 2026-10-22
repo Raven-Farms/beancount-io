@@ -213,10 +213,32 @@ export function openAccountSubmitState(input: {
 export function openAccountCurrencyChoices(
   operating: readonly string[],
   all: readonly string[],
+  typed: readonly string[] = [],
 ): string[] {
   const first = [...new Set(operating)];
-  const rest = [...new Set(all)]
+  const rest = [...new Set([...all, ...typed])]
     .filter((currency) => !first.includes(currency))
     .sort();
   return [...first, ...rest];
+}
+
+/**
+ * Beancount's commodity grammar: one uppercase letter, or an uppercase letter
+ * then up to 22 of letters, digits and `'._-`, ending in a letter or digit
+ * (EUR, VTI, USDC, A1B). The same rule the backend applies to a posting amount
+ * (w21/190), so a typed code the app accepts the server accepts too.
+ */
+export function isCommodityCode(code: string): boolean {
+  return /^[A-Z](?:[A-Z0-9'._-]{0,22}[A-Z0-9])?$/.test(code);
+}
+
+/**
+ * A currency typed into Open Account's "Other…": trimmed and upper-cased, or
+ * null when it is not a commodity code. The picker lists only commodities the
+ * ledger has posted, so opening a first EUR, GBP or stock account had no way
+ * to name its commodity (w21/234).
+ */
+export function typedCurrencyCode(input: string): string | null {
+  const code = input.trim().toUpperCase();
+  return isCommodityCode(code) ? code : null;
 }

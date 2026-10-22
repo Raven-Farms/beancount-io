@@ -338,6 +338,12 @@ export const es: Translations = {
   chooseCurrency: "Elige la moneda",
   openAccountNamePlaceholder: "Bank:Checking",
   openAccountNoCurrency: "Sin moneda",
+  openAccountOtherCurrency: "Otra…",
+  openAccountOtherCurrencyTitle: "Otra moneda",
+  openAccountOtherCurrencyMessage:
+    "Introduce un código de moneda o activo, como EUR o VTI.",
+  openAccountCurrencyInvalid:
+    "Usa mayúsculas, dígitos y ' . _ -, empezando por una letra, como EUR o VTI.",
   openAccountSaving: "Abriendo...",
   openAccountFailed: "No se pudo abrir la cuenta. Inténtalo de nuevo.",
   ledgerWouldBreak: "Esto añadiría un error a tu libro: {{detail}}",

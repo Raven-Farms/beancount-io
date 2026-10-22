@@ -340,6 +340,12 @@ export const ca: Translations = {
   chooseCurrency: "Tria la moneda",
   openAccountNamePlaceholder: "Bank:Checking",
   openAccountNoCurrency: "Sense moneda",
+  openAccountOtherCurrency: "Altra…",
+  openAccountOtherCurrencyTitle: "Una altra moneda",
+  openAccountOtherCurrencyMessage:
+    "Introduïu un codi de moneda o actiu, com EUR o VTI.",
+  openAccountCurrencyInvalid:
+    "Feu servir majúscules, dígits i ' . _ -, començant per una lletra, com EUR o VTI.",
   openAccountSaving: "S'està obrint...",
   openAccountFailed: "No s'ha pogut obrir el compte. Torna-ho a provar.",
   ledgerWouldBreak: "Això afegiria un error al teu llibre: {{detail}}",

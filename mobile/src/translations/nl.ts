@@ -331,6 +331,12 @@ export const nl: Translations = {
   chooseCurrency: "Kies een valuta",
   openAccountNamePlaceholder: "Bank:Checking",
   openAccountNoCurrency: "Geen valuta",
+  openAccountOtherCurrency: "Overig…",
+  openAccountOtherCurrencyTitle: "Andere valuta",
+  openAccountOtherCurrencyMessage:
+    "Voer een valuta- of effectcode in, zoals EUR of VTI.",
+  openAccountCurrencyInvalid:
+    "Gebruik hoofdletters, cijfers en ' . _ -, beginnend met een letter, zoals EUR of VTI.",
   openAccountSaving: "Openen...",
   openAccountFailed: "Account openen is mislukt. Probeer het opnieuw.",
   ledgerWouldBreak: "Dit zou een fout aan je grootboek toevoegen: {{detail}}",

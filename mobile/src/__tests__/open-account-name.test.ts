@@ -3,10 +3,12 @@ import path from "path";
 import {
   ACCOUNT_ROOT_PREFIXES,
   composeAccountName,
+  isCommodityCode,
   openAccountCurrencyChoices,
   openAccountSubmitState,
   peelTypedRoot,
   splitPrefillAccountName,
+  typedCurrencyCode,
   typedSubPathIssue,
   type AccountNameValidationReason,
   validateAccountName,
@@ -505,9 +507,11 @@ describe("Open Account currencies", () => {
       true,
     );
     expect(
-      source.includes(
-        "...openAccountCurrencyChoices(currencies, meta?.currencies ?? []).map(",
-      ),
+      source
+        .replace(/\s+/g, "")
+        .includes(
+          "...openAccountCurrencyChoices(currencies,meta?.currencies??[],typedCurrencies,).map(",
+        ),
     ).toBe(true);
   });
 });
@@ -554,4 +558,69 @@ describe("validateAccountName against the engine's grammar", () => {
       expect(validateAccountName(name)).toEqual({ ok: false, reason });
     });
   }
+});
+
+// w21/234: the picker lists commodities the ledger has posted, so a first EUR,
+// GBP or stock account could not be constrained to its commodity.
+describe("Open Account's typed currency", () => {
+  it("accepts Beancount commodity codes, upper-cased and trimmed", () => {
+    for (const [typed, code] of [
+      ["EUR", "EUR"],
+      [" vti ", "VTI"],
+      ["usdc", "USDC"],
+      ["A1B", "A1B"],
+      ["V", "V"],
+      ["BRK.B", "BRK.B"],
+      ["TSLA23", "TSLA23"],
+    ]) {
+      expect(typedCurrencyCode(typed)).toBe(code);
+    }
+  });
+
+  it("refuses what the ledger would not read as a commodity", () => {
+    for (const bad of [
+      "",
+      "  ",
+      "1ABC",
+      "-EUR",
+      "EUR-",
+      "E UR",
+      "€",
+      "ABC!",
+      "A".repeat(25),
+    ]) {
+      expect(typedCurrencyCode(bad)).toBe(null);
+    }
+    expect(isCommodityCode("eur")).toBe(false);
+    expect(isCommodityCode("A".repeat(24))).toBe(true);
+  });
+
+  it("offers a typed currency with the others, after the operating ones", () => {
+    expect(
+      openAccountCurrencyChoices(["USD"], ["VTI"], ["EUR", "VTI"]),
+    ).toEqual(["USD", "EUR", "VTI"]);
+    expect(openAccountCurrencyChoices([], [], ["GBP"])).toEqual(["GBP"]);
+  });
+
+  it("is a row of the currency picker that opens the typed entry", () => {
+    const source = fs
+      .readFileSync(
+        path.join(
+          __dirname,
+          "..",
+          "screens",
+          "open-account-screen",
+          "open-account-screen.tsx",
+        ),
+        "utf8",
+      )
+      .replace(/\s+/g, "");
+    expect(
+      source.includes(
+        'value:OTHER_CURRENCY,label:t("openAccountOtherCurrency")',
+      ),
+    ).toBe(true);
+    expect(source.includes("item.value===OTHER_CURRENCY")).toBe(true);
+    expect(source.includes("setOtherCurrencyVisible(true)")).toBe(true);
+  });
 });
