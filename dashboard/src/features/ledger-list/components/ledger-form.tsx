@@ -235,6 +235,8 @@ export function LedgerForm({
   // Watch fields for dynamic UI updates
   const isPrivate = form.watch("private");
   const ledgerName = form.watch("name");
+  const openingAccount = form.watch("openingAccount");
+  const openingAmount = form.watch("openingAmount");
 
   // Calculate slugified name for preview
   const slugifiedName = useMemo(() => {
@@ -252,6 +254,19 @@ export function LedgerForm({
   const preset = SETUP_PRESETS.find((entry) => entry.id === presetId);
   const moneyAccounts =
     preset?.accounts.filter((account) => account.money) ?? [];
+
+  // An opening balance belongs to one of the preset's money accounts. A
+  // preset change drops an account the new preset does not offer, with its
+  // amount, so no hidden account from the earlier preset is sent (w4/316).
+  const choosePreset = (id: string) => {
+    setPresetId(id);
+    const account = form.getValues("openingAccount");
+    const offered = SETUP_PRESETS.find((entry) => entry.id === id)?.accounts;
+    if (account && !offered?.some((a) => a.money && a.name === account)) {
+      form.setValue("openingAccount", "");
+      form.setValue("openingAmount", "");
+    }
+  };
 
   const buildSetup = (data: LedgerFormData): LedgerSetupInput | undefined => {
     if (!preset) return undefined;
@@ -461,7 +476,7 @@ export function LedgerForm({
                         name="setup-preset"
                         value={entry.id}
                         checked={presetId === entry.id}
-                        onChange={() => setPresetId(entry.id)}
+                        onChange={() => choosePreset(entry.id)}
                         disabled={isLoading}
                         className="sr-only"
                       />
@@ -584,6 +599,13 @@ export function LedgerForm({
                             <FormControl>
                               <select
                                 {...field}
+                                onChange={(event) => {
+                                  field.onChange(event);
+                                  // Deciding later leaves no amount behind.
+                                  if (!event.target.value) {
+                                    form.setValue("openingAmount", "");
+                                  }
+                                }}
                                 disabled={isLoading}
                                 className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm"
                                 data-testid="ledger-opening-account"
@@ -613,9 +635,11 @@ export function LedgerForm({
                               {t("page.dashboard.setupOpeningAmount")}
                             </FormLabel>
                             <FormControl>
+                              {/* An amount needs its account first; one typed
+                                  without it would never be sent. */}
                               <Input
                                 {...field}
-                                disabled={isLoading}
+                                disabled={isLoading || !openingAccount}
                                 inputMode="decimal"
                                 placeholder="0"
                                 data-testid="ledger-opening-amount"
@@ -725,6 +749,24 @@ export function LedgerForm({
                       : t("page.dashboard.publicWarning")}
                   </dd>
                 </div>
+                {startKind === "preset" && moneyAccounts.length > 0 ? (
+                  <div className="flex justify-between gap-4">
+                    <dt className="text-muted-foreground">
+                      {t("page.dashboard.setupOpeningAccount")}
+                    </dt>
+                    <dd className="text-end">
+                      {openingAccount
+                        ? [
+                            openingAccount,
+                            openingAmount?.trim() &&
+                              `${openingAmount.trim()} ${(form.getValues("currency") || "USD").toUpperCase()}`,
+                          ]
+                            .filter(Boolean)
+                            .join(" · ")
+                        : t("page.dashboard.setupOpeningNone")}
+                    </dd>
+                  </div>
+                ) : null}
               </dl>
               {startKind === "preset" ? (
                 previewLoading ? (

@@ -142,4 +142,67 @@ describe("LedgerForm review step", () => {
     await toReview();
     expect(reviewed()).toBe("Freelance ledger");
   });
+
+  /** Details' opening balance controls and Review's opening row. */
+  const openingAccount = () =>
+    screen.getByTestId("ledger-opening-account") as HTMLSelectElement;
+  const openingAmount = () =>
+    screen.getByTestId("ledger-opening-amount") as HTMLInputElement;
+  const reviewedOpening = () =>
+    within(review()!).getByText("Opening account").nextElementSibling
+      ?.textContent;
+
+  it("sends only an opening account the chosen preset offers (w4/316)", async () => {
+    const user = userEvent.setup();
+    const onSubmit = vi.fn();
+    render(<LedgerForm onSubmit={onSubmit} onCancel={vi.fn()} />);
+    const toStart = async () => {
+      await user.click(button("Back"));
+      await user.click(button("Back"));
+    };
+
+    await user.click(screen.getByRole("radio", { name: /^Template/ }));
+    await user.click(button("Next"));
+    // No amount without an account to hold it.
+    expect(openingAmount()).toBeDisabled();
+    await user.selectOptions(openingAccount(), "Assets:Bank");
+    await user.type(openingAmount(), "2500");
+
+    // Freelance also offers Assets:Bank: the choice stays.
+    await user.click(button("Back"));
+    await user.click(screen.getByRole("radio", { name: /^Freelance ledger/ }));
+    await user.click(button("Next"));
+    expect(openingAccount()).toHaveValue("Assets:Bank");
+    expect(openingAmount()).toHaveValue("2500");
+    await user.click(button("Next"));
+    expect(reviewedOpening()).toBe("Assets:Bank · 2500 USD");
+
+    // Portfolio does not: account and amount are both dropped.
+    await toStart();
+    await user.click(screen.getByRole("radio", { name: /^Portfolio ledger/ }));
+    await user.click(button("Next"));
+    expect(openingAccount()).toHaveValue("");
+    expect(openingAmount()).toHaveValue("");
+    expect(openingAmount()).toBeDisabled();
+    await user.click(button("Next"));
+    expect(reviewedOpening()).toBe("Decide later");
+    await user.click(button("Create Ledger"));
+    await waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(1));
+    expect(onSubmit.mock.calls[0][0].setup).toMatchObject({
+      preset: "PORTFOLIO",
+    });
+    expect(onSubmit.mock.calls[0][0].setup.accounts).toBeUndefined();
+  });
+
+  it("clears an amount when its account goes back to Decide later (w4/316)", async () => {
+    const user = userEvent.setup();
+    render(<LedgerForm onSubmit={vi.fn()} onCancel={vi.fn()} />);
+    await user.click(screen.getByRole("radio", { name: /^Template/ }));
+    await user.click(button("Next"));
+    await user.selectOptions(openingAccount(), "Assets:Cash");
+    await user.type(openingAmount(), "40");
+    await user.selectOptions(openingAccount(), "");
+    expect(openingAmount()).toHaveValue("");
+    expect(openingAmount()).toBeDisabled();
+  });
 });
