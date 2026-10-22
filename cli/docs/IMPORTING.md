@@ -574,10 +574,13 @@ skills deduplicate against each other: the ledger itself is the dedup database.
   `import-id: "csv:sha256:<16 hex>"` hashed from
   `date|amount|description|account` per the convention: the ISO date, the
   exact source amount with its commodity and trailing zeros stripped
-  (`-54.2 USD`) — with the per-unit cost (and lot label) or price of a source
-  posting held at cost or priced (`10 AAPL {100 USD}`), so two same-day buys of
-  one share count at different prices are two rows; ids written before that
-  (units only) still match, but only the same lot. A cost the importer leaves
+  (`-54.2 USD`) — with the per-unit cost (and acquisition date and lot label,
+  when the importer states them) or price of a source posting held at cost or
+  priced (`10 AAPL {100 USD}`), so two same-day buys of one share count at
+  different prices, and two same-day sales selecting differently dated lots
+  (`{100 USD, 2024-01-02}` and `{100 USD, 2024-01-03}`), are two rows; ids
+  written before that (units only, or without the date) still match, but only
+  the same lot. A cost the importer leaves
   open (`-4 HOOL {}`) compares only what it states, so it matches the lot
   booking chose for the entry already in the ledger, or the lots it chose
   when the sale spans several (`-20 HOOL {}` against `-10 HOOL {150 USD}` and
