@@ -1,3 +1,4 @@
+import { isolateLtr } from "../bidi";
 import {
   balanceNotes,
   costBasisLine,
@@ -415,7 +416,7 @@ describe("balanceNotes", () => {
         t,
         "en",
       ),
-    ).toEqual(['atMarket({"amount":"$48,471.39"})']);
+    ).toEqual([`atMarket({"amount":"${isolateLtr("$48,471.39")}"})`]);
     expect(
       balanceNotes(
         {
@@ -427,7 +428,7 @@ describe("balanceNotes", () => {
         t,
         "en",
       ),
-    ).toEqual(['atCost({"amount":"$49,049.67"})']);
+    ).toEqual([`atCost({"amount":"${isolateLtr("$49,049.67")}"})`]);
   });
 
   it("claims no basis it does not know, and adds nothing to a figure with no value", () => {
@@ -486,7 +487,9 @@ describe("balanceNotes", () => {
         t,
         "en",
       ),
-    ).toEqual(['notInTotal({"amounts":"-13 VACHR, 18,000 IRAUSD"})']);
+    ).toEqual([
+      `notInTotal({"amounts":"${isolateLtr("-13 VACHR")}, ${isolateLtr("18,000 IRAUSD")}"})`,
+    ]);
     expect(
       balanceNotes({ kind: "money", value: 1, notInTotal: [] }, "USD", t, "en"),
     ).toEqual([]);

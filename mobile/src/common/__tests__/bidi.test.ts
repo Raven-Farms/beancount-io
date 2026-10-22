@@ -30,4 +30,36 @@ describe("isolateLtr", () => {
       true,
     );
   });
+
+  // w21/249: two more notes interpolated signed amounts into Persian sentences
+  // unwrapped: "-$540.00 به ارزش بازار" laid out as `$540.00- ...`.
+  it("is used for the at-market / at-cost note and the not-in-total list", () => {
+    const read = (...parts: string[]) =>
+      fs
+        .readFileSync(path.join(__dirname, "..", "..", ...parts), "utf8")
+        .replace(/\s+/g, "");
+    expect(
+      read("common", "valuation.ts").includes(
+        "amount:isolateLtr(formatSignedMoneyWithCurrency(value.amount,currency))",
+      ),
+    ).toBe(true);
+    expect(
+      read("common", "balance-display.ts").includes(
+        "holdings.map((holding)=>isolateLtr(formatHolding(holding)))",
+      ),
+    ).toBe(true);
+    expect(
+      read(
+        "screens",
+        "reports-screen",
+        "selectors",
+        "select-ranged-account-tree.ts",
+      ).includes("isolateLtr(`${formatHolding(holding)}(${account})`)"),
+    ).toBe(true);
+  });
+
+  it("keeps each holding in the list its own isolate", () => {
+    const list = ["-500 EUR", "20 GBP"].map(isolateLtr).join(", ");
+    expect(list).toBe("⁦-500 EUR⁩, ⁦20 GBP⁩");
+  });
 });

@@ -18,6 +18,7 @@
  *
  * Free of `@/` imports so the jest-lite runner can require it.
  */
+import { isolateLtr } from "./bidi";
 import { resolveCurrencyBalance } from "./balance-util";
 import { amountScale, formatUnits } from "./number-utils";
 import type { Valuation } from "./valuation";
@@ -134,7 +135,11 @@ export function notInTotalNotes(
     ? []
     : [
         t("notInTotal", {
-          amounts: holdings.map((holding) => formatHolding(holding)).join(", "),
+          // Each holding on its own, so the list keeps its order in a
+          // right-to-left sentence and no sign strays (w21/249).
+          amounts: holdings
+            .map((holding) => isolateLtr(formatHolding(holding)))
+            .join(", "),
         }),
       ];
 }

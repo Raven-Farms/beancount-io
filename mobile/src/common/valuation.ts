@@ -444,7 +444,9 @@ export function balanceNotes(
   if (value === null || value.basis === null) return [];
   return [
     t(value.basis === "market" ? "atMarket" : "atCost", {
-      amount: formatSignedMoneyWithCurrency(value.amount, currency),
+      // Isolated so a Persian sentence keeps the sign beside its number
+      // (w21/249).
+      amount: isolateLtr(formatSignedMoneyWithCurrency(value.amount, currency)),
     }),
   ];
 }

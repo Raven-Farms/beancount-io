@@ -1,3 +1,4 @@
+import { isolateLtr } from "../../../common/bidi";
 import {
   CATEGORY_SIGN,
   selectAccountTreeFromRoot,
@@ -257,8 +258,9 @@ export function notInTotalNote(
     ? null
     : t("notInTotal", {
         amounts: amounts
-          .map(
-            ({ account, holding }) => `${formatHolding(holding)} (${account})`,
+          // Each "50 EUR (Travel)" isolated (w21/249).
+          .map(({ account, holding }) =>
+            isolateLtr(`${formatHolding(holding)} (${account})`),
           )
           .join(", "),
       });

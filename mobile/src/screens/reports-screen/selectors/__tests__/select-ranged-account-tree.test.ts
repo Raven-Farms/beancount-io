@@ -1,3 +1,4 @@
+import { isolateLtr } from "../../../../common/bidi";
 import {
   notInTotalNote,
   selectRangedAccountTree,
@@ -257,7 +258,7 @@ describe("selectRangedAccountTree: other currencies", () => {
       { account: "Travel", holding: { currency: "EUR", number: 50, scale: 2 } },
     ]);
     expect(notInTotalNote(result.notInTotal, t)).toBe(
-      "notInTotal:50.00 EUR (Travel)",
+      `notInTotal:${isolateLtr("50.00 EUR (Travel)")}`,
     );
   });
 
