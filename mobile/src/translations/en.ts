@@ -719,6 +719,7 @@ export const en = {
   createLedgerDescription: "Description",
   createLedgerDescriptionPlaceholder: "Optional",
   createLedgerPrivate: "Private",
+  createLedgerPublic: "Public",
   createLedgerTemplate: "Template",
   createLedgerTemplateStarter: "Starter",
   createLedgerTemplateStarterHint:

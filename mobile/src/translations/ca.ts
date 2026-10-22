@@ -729,6 +729,7 @@ export const ca: Translations = {
   createLedgerDescription: "Descripció",
   createLedgerDescriptionPlaceholder: "Opcional",
   createLedgerPrivate: "Privat",
+  createLedgerPublic: "Públic",
   createLedgerTemplate: "Plantilla",
   createLedgerTemplateStarter: "Inicial",
   createLedgerTemplateStarterHint:

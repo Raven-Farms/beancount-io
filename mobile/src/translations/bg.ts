@@ -710,6 +710,7 @@ export const bg: Translations = {
   createLedgerDescription: "Описание",
   createLedgerDescriptionPlaceholder: "По избор",
   createLedgerPrivate: "Частна",
+  createLedgerPublic: "Публична",
   createLedgerTemplate: "Шаблон",
   createLedgerTemplateStarter: "Начална",
   createLedgerTemplateStarterHint: "Празна книга със стандартен сметкоплан.",

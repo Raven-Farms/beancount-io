@@ -13,12 +13,14 @@ export function slugifyLedgerName(text: string): string {
 
 /**
  * The slug to preview under the name field ("Will be created as …"), or null
- * when there is nothing worth showing: the name needs no change, or it
- * slugifies away entirely (the form's own validation reports that case).
+ * when there is nothing worth showing: the name is already the slug, or it
+ * slugifies away entirely (the form's own validation reports that case). A
+ * change of case alone is a change — "MyBook" is created as "mybook" — so the
+ * name is compared as typed, trimmed (w21/477).
  */
 export function ledgerSlugPreview(name: string): string | null {
   const slug = slugifyLedgerName(name);
-  return slug.length > 0 && slug !== name.trim().toLowerCase() ? slug : null;
+  return slug.length > 0 && slug !== name.trim() ? slug : null;
 }
 
 /**

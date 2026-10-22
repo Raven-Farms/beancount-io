@@ -714,6 +714,7 @@ export const nl: Translations = {
   createLedgerDescription: "Beschrijving",
   createLedgerDescriptionPlaceholder: "Optioneel",
   createLedgerPrivate: "Privé",
+  createLedgerPublic: "Openbaar",
   createLedgerTemplate: "Sjabloon",
   createLedgerTemplateStarter: "Start",
   createLedgerTemplateStarterHint:

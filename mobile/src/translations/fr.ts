@@ -729,6 +729,7 @@ export const fr: Translations = {
   createLedgerDescription: "Description du grand livre",
   createLedgerDescriptionPlaceholder: "Facultatif (laisser vide)",
   createLedgerPrivate: "Privé",
+  createLedgerPublic: "Public",
   createLedgerTemplate: "Modèle",
   createLedgerTemplateStarter: "Débutant",
   createLedgerTemplateStarterHint:

@@ -727,6 +727,7 @@ export const ru: Translations = {
   createLedgerDescription: "Описание",
   createLedgerDescriptionPlaceholder: "Необязательно",
   createLedgerPrivate: "Частная",
+  createLedgerPublic: "Публичная",
   createLedgerTemplate: "Шаблон",
   createLedgerTemplateStarter: "Стартовая",
   createLedgerTemplateStarterHint: "Пустая книга со стандартным планом счетов.",

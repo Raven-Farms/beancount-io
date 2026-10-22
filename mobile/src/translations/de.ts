@@ -729,6 +729,7 @@ export const de: Translations = {
   createLedgerDescription: "Beschreibung",
   createLedgerDescriptionPlaceholder: "Optional (leer lassen)",
   createLedgerPrivate: "Privat",
+  createLedgerPublic: "Öffentlich",
   createLedgerTemplate: "Vorlage",
   createLedgerTemplateStarter: "Einstieg",
   createLedgerTemplateStarterHint: "Leeres Hauptbuch mit Standard-Kontenplan.",

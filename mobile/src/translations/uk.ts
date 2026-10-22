@@ -725,6 +725,7 @@ export const uk: Translations = {
   createLedgerDescription: "Опис",
   createLedgerDescriptionPlaceholder: "Необовʼязково",
   createLedgerPrivate: "Приватна",
+  createLedgerPublic: "Публічна",
   createLedgerTemplate: "Шаблон",
   createLedgerTemplateStarter: "Стартова",
   createLedgerTemplateStarterHint:

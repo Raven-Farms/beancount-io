@@ -701,6 +701,7 @@ export const fa: Translations = {
   createLedgerDescription: "توضیح",
   createLedgerDescriptionPlaceholder: "اختیاری",
   createLedgerPrivate: "خصوصی",
+  createLedgerPublic: "عمومی",
   createLedgerTemplate: "قالب",
   createLedgerTemplateStarter: "شروع",
   createLedgerTemplateStarterHint: "دفترکل خالی با سرفصل‌های استاندارد.",

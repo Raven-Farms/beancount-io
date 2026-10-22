@@ -726,6 +726,7 @@ export const pt: Translations = {
   createLedgerDescription: "Descrição",
   createLedgerDescriptionPlaceholder: "Opcional",
   createLedgerPrivate: "Privado",
+  createLedgerPublic: "Público",
   createLedgerTemplate: "Modelo",
   createLedgerTemplateStarter: "Inicial",
   createLedgerTemplateStarterHint:

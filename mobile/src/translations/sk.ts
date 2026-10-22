@@ -731,6 +731,7 @@ export const sk: Translations = {
   createLedgerDescription: "Popis",
   createLedgerDescriptionPlaceholder: "Voliteľné",
   createLedgerPrivate: "Súkromná",
+  createLedgerPublic: "Verejná",
   createLedgerTemplate: "Šablóna",
   createLedgerTemplateStarter: "Úvodná",
   createLedgerTemplateStarterHint:

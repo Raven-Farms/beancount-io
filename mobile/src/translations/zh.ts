@@ -647,6 +647,7 @@ export const zh: Translations = {
   createLedgerDescription: "描述",
   createLedgerDescriptionPlaceholder: "可选",
   createLedgerPrivate: "私有",
+  createLedgerPublic: "公开",
   createLedgerTemplate: "模板",
   createLedgerTemplateStarter: "入门",
   createLedgerTemplateStarterHint: "带标准科目的空白账本。",

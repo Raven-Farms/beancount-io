@@ -395,6 +395,7 @@ export function CreateLedgerScreen(): JSX.Element {
     ? "createLedgerAmountOwed"
     : "createLedgerOpeningAmount";
   const slugPreview = ledgerSlugPreview(nameValue ?? "");
+  const privateValue = watch("private");
   const openingAmountInput = watch("openingAmount");
   const reviewOpening = preset
     ? openingSelection(
@@ -814,7 +815,16 @@ export function CreateLedgerScreen(): JSX.Element {
               <Text style={styles.hint}>
                 {t("createLedgerReviewDescription")}
               </Text>
-              <Text style={styles.hint}>{slugPreview || nameValue}</Text>
+              {/* What the server will make, not what was typed: it takes only
+                  lowercase letters, digits, "-" and "_" (w21/477). */}
+              <Text style={styles.hint}>
+                {slugifyLedgerName(nameValue ?? "") || nameValue}
+              </Text>
+              <Text style={styles.hint}>
+                {privateValue
+                  ? t("createLedgerPrivate")
+                  : t("createLedgerPublic")}
+              </Text>
               {startKind === "preset" ? (
                 previewLoading ? (
                   <ActivityIndicator color={theme.primary} />

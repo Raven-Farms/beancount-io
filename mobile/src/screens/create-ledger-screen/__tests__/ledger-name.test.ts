@@ -26,6 +26,17 @@ describe("ledgerSlugPreview", () => {
     expect(ledgerSlugPreview("")).toBe(null);
   });
 
+  // w21/477: the server takes only lowercase, so a name differing in case alone
+  // is created under another name than it was typed.
+  it("previews a name that differs from its slug in case alone", () => {
+    expect(ledgerSlugPreview("MyBook")).toBe("mybook");
+    expect(ledgerSlugPreview("Family")).toBe("family");
+    expect(ledgerSlugPreview("My-Book")).toBe("my-book");
+    expect(ledgerSlugPreview("HOUSEHOLD_2026")).toBe("household_2026");
+    // Surrounding spaces are not part of the name.
+    expect(ledgerSlugPreview("  my-book  ")).toBe(null);
+  });
+
   it("shows nothing when the name slugifies away, instead of a dangling hint", () => {
     expect(ledgerSlugPreview("!!!")).toBe(null);
     expect(ledgerSlugPreview("---")).toBe(null);
@@ -167,5 +178,40 @@ describe("a create request's id", () => {
       ),
     ).toBe(true);
     expect(source.includes("if(isRequestIdReuse(error)){")).toBe(true);
+  });
+});
+
+describe("the Review step", () => {
+  const source = require("fs")
+    .readFileSync(
+      require("path").join(__dirname, "..", "create-ledger-screen.tsx"),
+      "utf8",
+    )
+    .replace(/\s+/g, "") as string;
+
+  it("shows the name the ledger will get, and whether it is private (w21/477)", () => {
+    expect(
+      source.includes('{slugifyLedgerName(nameValue??"")||nameValue}'),
+    ).toBe(true);
+    expect(source.includes("{slugPreview||nameValue}")).toBe(false);
+    expect(
+      source.includes(
+        '{privateValue?t("createLedgerPrivate"):t("createLedgerPublic")}',
+      ),
+    ).toBe(true);
+  });
+
+  it("has the visibility words in every language", () => {
+    const fs = require("fs");
+    const dir = require("path").join(__dirname, "../../../translations");
+    const missing = (fs.readdirSync(dir) as string[])
+      .filter((name) => /^[a-z]{2}\.ts$/.test(name))
+      .filter(
+        (name) =>
+          !fs
+            .readFileSync(require("path").join(dir, name), "utf8")
+            .includes("createLedgerPublic:"),
+      );
+    expect(missing).toEqual([]);
   });
 });
