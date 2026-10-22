@@ -679,6 +679,8 @@ export const es: Translations = {
   budgetDeleteMessage:
     "¿Eliminar el presupuesto {{interval}} de {{amount}} para {{account}} vigente desde {{date}}? Esto elimina una sola entrada y no se puede deshacer.",
   budgetDeleteFailed: "Error al eliminar el presupuesto",
+  budgetDeleteChanged:
+    "Esta entrada de presupuesto cambió en otro lugar. Se actualizó el historial; inténtalo de nuevo.",
 
   // Ask Beancount.io — the agent chat
   agentTitle: "Pregunta a Beancount.io",

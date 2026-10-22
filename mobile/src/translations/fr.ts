@@ -680,6 +680,8 @@ export const fr: Translations = {
   budgetDeleteMessage:
     "Supprimer le budget {{interval}} de {{amount}} pour {{account}} en vigueur au {{date}} ? Cela supprime une seule entrée et est irréversible.",
   budgetDeleteFailed: "Échec de la suppression du budget",
+  budgetDeleteChanged:
+    "Cette entrée de budget a été modifiée ailleurs. L'historique a été actualisé ; réessayez.",
 
   // Ask Beancount.io — the agent chat
   agentTitle: "Demander à Beancount.io",

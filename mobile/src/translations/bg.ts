@@ -662,6 +662,8 @@ export const bg: Translations = {
   budgetDeleteMessage:
     "Да се изтрие ли {{interval}} бюджет от {{amount}} за {{account}}, в сила от {{date}}? Това премахва един запис и не може да бъде отменено.",
   budgetDeleteFailed: "Неуспешно изтриване на бюджета",
+  budgetDeleteChanged:
+    "Този бюджетен запис е променен другаде. Историята е опреснена; опитайте отново.",
 
   // Ask Beancount.io — the agent chat
   agentTitle: "Попитай Beancount.io",

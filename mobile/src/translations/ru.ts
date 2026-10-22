@@ -677,6 +677,8 @@ export const ru: Translations = {
   budgetDeleteMessage:
     "Удалить {{interval}} бюджет {{amount}} для {{account}}, действующий с {{date}}? Будет удалена одна запись, отменить это нельзя.",
   budgetDeleteFailed: "Не удалось удалить бюджет",
+  budgetDeleteChanged:
+    "Эта запись бюджета изменена в другом месте. История обновлена; попробуйте ещё раз.",
 
   // Ask Beancount.io — the agent chat
   agentTitle: "Спросить Beancount.io",

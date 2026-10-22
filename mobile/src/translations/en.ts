@@ -670,6 +670,8 @@ export const en = {
   budgetDeleteMessage:
     "Delete the {{interval}} budget of {{amount}} for {{account}} effective {{date}}? This removes a single entry and cannot be undone.",
   budgetDeleteFailed: "Failed to delete budget",
+  budgetDeleteChanged:
+    "This budget entry changed elsewhere. The history was refreshed; try again.",
 
   // Ask Beancount.io — the agent chat
   agentTitle: "Ask Beancount.io",

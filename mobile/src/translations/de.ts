@@ -680,6 +680,8 @@ export const de: Translations = {
   budgetDeleteMessage:
     "Das {{interval}} Budget von {{amount}} für {{account}} mit Wirkung zum {{date}} löschen? Dies entfernt einen einzelnen Eintrag und kann nicht rückgängig gemacht werden.",
   budgetDeleteFailed: "Budget konnte nicht gelöscht werden",
+  budgetDeleteChanged:
+    "Dieser Budgeteintrag wurde anderswo geändert. Der Verlauf wurde aktualisiert; versuchen Sie es erneut.",
 
   // Ask Beancount.io — the agent chat
   agentTitle: "Beancount.io fragen",

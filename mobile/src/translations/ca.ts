@@ -680,6 +680,8 @@ export const ca: Translations = {
   budgetDeleteMessage:
     "Vols eliminar el pressupost {{interval}} de {{amount}} per a {{account}} vigent des del {{date}}? Això elimina una sola entrada i no es pot desfer.",
   budgetDeleteFailed: "No s'ha pogut eliminar el pressupost",
+  budgetDeleteChanged:
+    "Aquesta entrada de pressupost ha canviat en un altre lloc. S'ha actualitzat l'historial; torneu-ho a provar.",
 
   // Ask Beancount.io — the agent chat
   agentTitle: "Pregunta a Beancount.io",

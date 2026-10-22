@@ -603,6 +603,7 @@ export const zh: Translations = {
   budgetDeleteMessage:
     "确定删除 {{account}} 自 {{date}} 起生效的{{interval}}预算 {{amount}} 吗？此操作仅删除一条记录且无法撤销。",
   budgetDeleteFailed: "删除预算失败",
+  budgetDeleteChanged: "此预算条目已在别处被更改。历史记录已刷新，请重试。",
 
   // Ask Beancount.io — the agent chat
   agentTitle: "问问 Beancount.io",

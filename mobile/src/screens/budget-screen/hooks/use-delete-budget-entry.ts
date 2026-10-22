@@ -10,6 +10,7 @@ import {
 } from "@/generated-graphql/graphql";
 import { invalidateLedgerData } from "@/common/apollo/invalidate-ledger";
 import { useLedgerAccess } from "@/common/hooks/use-ledger-access";
+import { classifyStaleDelete } from "@/screens/transaction-detail-screen/delete-transaction";
 import { type BudgetMutationResult } from "@/screens/budget-screen/hooks/use-budget-groups";
 
 /**
@@ -59,6 +60,14 @@ export function useDeleteBudgetEntry(ledgerId: string) {
         await invalidateLedgerData(client, "entries");
         return { ok: true };
       } catch (caught) {
+        // The entry changed or was removed elsewhere, so its hash no longer
+        // resolves (or the slice moved): every retry would fail the same way.
+        // Refresh the history and say so (w21/393, as w21/250 for a
+        // transaction).
+        if (classifyStaleDelete(caught) !== null) {
+          await invalidateLedgerData(client, "entries");
+          return { ok: false, message: i18n.t("budgetDeleteChanged") };
+        }
         return {
           ok: false,
           // In the user's language, not the transport's (w21/117).

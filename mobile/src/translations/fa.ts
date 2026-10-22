@@ -654,6 +654,8 @@ export const fa: Translations = {
   budgetDeleteMessage:
     "بودجه {{interval}} به مبلغ {{amount}} برای {{account}} با اعتبار از {{date}} حذف شود؟ این کار تنها یک مورد را حذف می‌کند و قابل بازگشت نیست.",
   budgetDeleteFailed: "حذف بودجه ناموفق بود",
+  budgetDeleteChanged:
+    "این مورد بودجه جای دیگری تغییر کرده است. تاریخچه به‌روز شد؛ دوباره تلاش کنید.",
 
   // Ask Beancount.io — the agent chat
   agentTitle: "از Beancount.io بپرس",

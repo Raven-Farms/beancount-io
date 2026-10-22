@@ -681,6 +681,8 @@ export const sk: Translations = {
   budgetDeleteMessage:
     "Odstrániť {{interval}} rozpočet {{amount}} pre {{account}} platný od {{date}}? Odstráni sa jeden záznam a nedá sa to vrátiť späť.",
   budgetDeleteFailed: "Odstránenie rozpočtu zlyhalo",
+  budgetDeleteChanged:
+    "Tento záznam rozpočtu bol inde zmenený. História sa obnovila; skúste to znova.",
 
   // Ask Beancount.io — the agent chat
   agentTitle: "Opýtaj sa Beancount.io",

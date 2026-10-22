@@ -666,6 +666,8 @@ export const nl: Translations = {
   budgetDeleteMessage:
     "Het {{interval}} budget van {{amount}} voor {{account}} met ingang van {{date}} verwijderen? Dit verwijdert één regel en kan niet ongedaan worden gemaakt.",
   budgetDeleteFailed: "Budget kon niet worden verwijderd",
+  budgetDeleteChanged:
+    "Deze budgetregel is elders gewijzigd. De geschiedenis is vernieuwd; probeer het opnieuw.",
 
   // Ask Beancount.io — the agent chat
   agentTitle: "Vraag het Beancount.io",

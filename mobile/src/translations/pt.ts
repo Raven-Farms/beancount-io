@@ -677,6 +677,8 @@ export const pt: Translations = {
   budgetDeleteMessage:
     "Excluir o orçamento {{interval}} de {{amount}} para {{account}} em vigor em {{date}}? Isso remove uma única entrada e não pode ser desfeito.",
   budgetDeleteFailed: "Falha ao excluir o orçamento",
+  budgetDeleteChanged:
+    "Este lançamento de orçamento mudou em outro lugar. O histórico foi atualizado; tente de novo.",
 
   // Ask Beancount.io — the agent chat
   agentTitle: "Pergunte ao Beancount.io",
