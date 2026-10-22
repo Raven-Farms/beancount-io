@@ -71,4 +71,5 @@
 - [500](./500.md) — 435 incomplete: resumed draft still creates without balance
 - [501](./501.md) — Stored draft fingerprint reveals opening amount (434 vs 053)
 - [502](./502.md) — Create retry across midnight mints new requestId (436+434)
+- [503](./503.md) — 454's sign-in failure still silent on iOS (role alert is no-op)
 - [315](./blocked/315.md) — In-app commits signed with Gitea username and real email (no full_name, no noreply) — **blocked:** needs the owner's noreply-address and published-history decisions, and a production backfill of existing Gitea users that can't be verified here
