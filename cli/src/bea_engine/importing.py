@@ -1677,6 +1677,18 @@ def _match_text(value: str | None) -> str:
 
 
 def _identities(entry: Any, account: str, keys: list[str]) -> list[tuple[str, str, str]]:
+    """The stable identifiers an entry carries, as lookup keys.
+
+    The loader reads ledger text as NFC while an incoming row keeps the form it
+    was typed in, so a decomposed `référence` never found the composed one the
+    ledger holds: an unchanged row fell through to fuzzy matching and a changed
+    amount was written as new. Both sides are keyed in NFC (w5/919); the text
+    that is written keeps the authored bytes.
+    """
+
+    def nfc(value: Any) -> str:
+        return unicodedata.normalize("NFC", str(value))
+
     meta = entry.meta or {}
     identities = []
     for key in ["import-id", *keys]:
@@ -1684,13 +1696,13 @@ def _identities(entry: Any, account: str, keys: list[str]) -> list[tuple[str, st
         if value in (None, ""):
             continue
         if key == "import-id":
-            identities.append((account, "import-id", str(value)))
+            identities.append((account, "import-id", nfc(value)))
         else:
-            identities.append((account, "bank", f"{_IDENTITY_KINDS.get(key, key)}:{value}"))
+            identities.append((account, "bank", f"{_IDENTITY_KINDS.get(key, key)}:{nfc(value)}"))
     if meta.get("import-id-2") not in (None, ""):
-        identities.append((account, "import-id", str(meta["import-id-2"])))
+        identities.append((account, "import-id", nfc(meta["import-id-2"])))
     if meta.get("bea_import_id"):
-        identities.append((account, "file", str(meta["bea_import_id"])))
+        identities.append((account, "file", nfc(meta["bea_import_id"])))
     # beancount-migrate writes the same digest under its source's prefix
     # (`monarch:sha256:…`), so a later bank import of that row must find it.
     for value in (meta.get("import-id"), meta.get("import-id-2")):
