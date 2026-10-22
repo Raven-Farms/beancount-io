@@ -14,12 +14,15 @@ describe("the Profile avatar caption", () => {
   const profile = read("screens", "profile", "profile-screen.tsx");
   const avatar = read("components", "user-avatar", "index.tsx");
 
-  it("learns from the avatar when its picture did not load", () => {
+  // w21/430: only the server's 404 says there is no Gravatar; a load that
+  // failed offline does not.
+  it("learns from the avatar when the server says there is no picture", () => {
     expect(
       avatar.includes(
-        "useEffect(()=>{onFallbackChange?.(!showImage);},[showImage,onFallbackChange]);",
+        "useEffect(()=>{onFallbackChange?.(noPicture);},[noPicture,onFallbackChange]);",
       ),
     ).toBe(true);
+    expect(avatar.includes("imageIsMissing(failedSource)")).toBe(true);
     expect(profile.includes("onFallbackChange={setAvatarFallback}")).toBe(true);
   });
 

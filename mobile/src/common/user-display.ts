@@ -44,6 +44,23 @@ export function avatarImageUri(
   return `${base}?${[...kept, `s=${Math.round(pixelSize)}`, "d=404"].join("&")}`;
 }
 
+/**
+ * Whether the server answers that there is no image at `uri` (a 404, which is
+ * what a Gravatar `d=404` says for someone without one). Any other outcome — no
+ * connection, a timeout, a server error — leaves it unknown, and unknown is
+ * not "missing" (w21/430).
+ */
+export async function imageIsMissing(
+  uri: string,
+  request: typeof fetch = fetch,
+): Promise<boolean> {
+  try {
+    return (await request(uri, { method: "HEAD" })).status === 404;
+  } catch {
+    return false;
+  }
+}
+
 export function isGravatarUrl(url: string | null | undefined): boolean {
   return /^(https?:)?\/\/([a-z0-9-]+\.)?gravatar\.com\//i.test(url ?? "");
 }
