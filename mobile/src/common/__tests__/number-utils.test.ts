@@ -68,12 +68,17 @@ describe("shortNumber", () => {
 
   it("handles very small positive numbers", () => {
     expect(shortNumber(0.1)).toBe("0.1");
-    expect(shortNumber(0.01)).toBe("0.0");
+    // Two significant digits below 1: one decimal read 0.01 as "0.0" and drew a
+    // BTC chart's axis as 0.0, 0.0, 0.0 (w21/236).
+    expect(shortNumber(0.01)).toBe("0.01");
+    expect(shortNumber(0.042)).toBe("0.042");
+    expect(shortNumber(0.25)).toBe("0.25");
+    expect(shortNumber(0.0005)).toBe("0.0005");
   });
 
   it("handles very small negative numbers", () => {
     expect(shortNumber(-0.1)).toBe("-0.1");
-    expect(shortNumber(-0.01)).toBe("-0.0");
+    expect(shortNumber(-0.01)).toBe("-0.01");
   });
 
   it("handles empty string", () => {

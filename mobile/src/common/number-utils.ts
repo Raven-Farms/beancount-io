@@ -96,6 +96,15 @@ const COMPACT_STYLES: Record<string, CompactStyle> = {
 const compactStyle = (locale: string): CompactStyle =>
   COMPACT_STYLES[locale.split(/[-_]/)[0]] ?? COMPACT_STYLES.en;
 
+/**
+ * A value below 1 with two significant digits: one decimal read 0.01, 0.02 and
+ * 0.03 as "0.0" on a BTC chart's axis (w21/236). Trailing zeros are dropped.
+ */
+const fractionDigits = (value: number): string => {
+  const places = Math.min(20, Math.max(1, 1 - Math.floor(Math.log10(value))));
+  return value.toFixed(places).replace(/\.?0+$/, "");
+};
+
 export const shortNumber = (number: number | string, locale = "en"): string => {
   // Convert string to number if needed
   const num = typeof number === "string" ? parseFloat(number) : number;
@@ -127,7 +136,10 @@ export const shortNumber = (number: number | string, locale = "en"): string => {
   // Whole values drop the decimal at every magnitude: "0", "50", "1K".
   const digits = Number.isInteger(shortNum)
     ? shortNum.toString()
-    : shortNum.toFixed(1).replace(".", style.decimal);
+    : (shortNum < 1 && tier === 0
+        ? fractionDigits(shortNum)
+        : shortNum.toFixed(1)
+      ).replace(".", style.decimal);
   return sign + digits + style.suffixes[tier];
 };
 

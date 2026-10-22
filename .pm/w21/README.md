@@ -19,7 +19,6 @@
 - [206](./blocked/206.md) — Refund/return receipts are always prefilled as a purchase — **blocked:** needs an owner-approved AI-quota evaluation and a parse-contract decision (`isRefund` vs signed amount)
 - [210](./blocked/210.md) — Holdings sheet labels a user-typed price "Live price" and applies the feed's staleness rule — **blocked:** needs an owner decision on exposing the feed's effective price dates (cross-package contract) and a deploy before mobile can read it
 - [228](./blocked/228.md) — New Transaction stamps the first operating currency on every posting; no currency or price control — **blocked:** needs account-constraint currencies on the client, a price path (legacy field or typed mutation, deploy first) and an owner-approved form design
-- [236](./236.md) — Bar charts never scale below 1 unit: BTC spending draws as slivers on a 0–1 axis
 - [237](./237.md) — Balance cards can read "+$0.00 (−0.00%)": percentage sign/colour from the unrounded change
 - [238](./238.md) — Create Ledger keeps a field's error after it's corrected (until Next)
 - [239](./239.md) — Account detail: a failed refresh swaps the loaded chart for a permanent skeleton, no stale banner
