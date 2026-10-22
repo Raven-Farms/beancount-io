@@ -40,7 +40,7 @@
 - [963 — Limit Codex eval sessions to the eval server, as Claude Code's are](./963.md) — minor backend-v2 eval-harness finding from the w5/m5 Codex measurement; observed 2026-10-21.
 - [962 — Accept "rejected … lacks `ledger.write`" as a read-only refusal](./962.md) — trivial backend-v2 eval scoring finding from the w5/m5 Codex measurement; observed 2026-10-21.
 - [961 — Keep QA writes and agent-eval resets off each other's ledger](./961.md) — minor eval/QA-contract finding from the w5/m5 Codex measurement; which ledger QA uses is the user's call; observed 2026-10-21.
-- [959 — Treat repeated allowed currencies as one during transaction inference](./959.md) — minor CLI existing-ledger inference finding; native USD/EUR and split-file controls reproduced 2026-10-21.
+- [959 — Treat repeated allowed currencies as one during transaction inference](./959.md) — minor CLI existing-ledger/native-import inference finding; USD/EUR and split-file controls reproduced 2026-10-21.
 - [958 — Keep unused unopened accounts out of remembered CSV settings](./958.md) — minor CLI memory-guard follow-up to 452/714; empty, skipped and fully categorized exports reproduced 2026-10-21.
 - [957 — Allow instrument units in the portfolio preset's holdings account](./957.md) — minor CLI first-purchase setup finding; reproduced twice in USD/EUR on 2026-10-21.
 - [873 — Correct imported-balance padding refusals and their command remedy](./873.md) — minor CLI diagnostic follow-up to 871; reproduced 2026-10-20.
