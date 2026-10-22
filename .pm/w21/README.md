@@ -40,5 +40,9 @@
 - [525](./525.md) — A guest journal link's filters follow the guest to every other example, and come back after Reset (w21/489 gap)
 - [526](./526.md) — Transactions, Account and Merchant detail drop back to the newest 20 rows after a return to the app or any write; a stale "Couldn't load more" footer stays
 - [527](./527.md) — A quick Back after deleting from a stacked detail still shows the deleted entry (w21/094 incomplete; w21/472 fixed only edit)
+- [528](./528.md) — The Transactions filter's account picker offers "Create", which writes an `open` to the ledger
+- [529](./529.md) — Month-end and quarter-end recurring bills show "Next" on the 30th instead of the 31st (w21/271 regression)
+- [530](./530.md) — A new every-two-weeks payment spanning February reads "Twice a month", with Next up to 6 days late
+- [531](./531.md) — The account picker offers "Create" for a closed account's short name, then Open Account refuses it
 - [508](./blocked/508.md) — Mobile guesses that an entry is a plugin copy from its first line; read the ledger's `generated_from` instead (split from 443) — **blocked:** production's GraphQL schema lacks `generated_from` until the ledger service and backend-v2 deploy; mobile's client is generated from it
 - [315](./blocked/315.md) — In-app commits signed with Gitea username and real email (no full_name, no noreply) — **blocked:** needs the owner's noreply-address and published-history decisions, and a production backfill of existing Gitea users that can't be verified here
