@@ -439,120 +439,188 @@ class TestBundle(Workspace):
         self.assertEqual([p.name for p in out.iterdir()], ["keep"])
 
 
+class TestSuiteBundle(Workspace):
+    def fixture(self):
+        source = self.root / "source/skills"
+        self.copy_suite(source)
+        repo = source.parent
+        shutil.copy2(SCRIPTS_DIR.parents[1] / "plugin.json", repo / "plugin.json")
+        (repo / ".claude-plugin").mkdir()
+        shutil.copy2(SCRIPTS_DIR.parents[1] / ".claude-plugin/marketplace.json", repo / ".claude-plugin/marketplace.json")
+        return source
+
+    def test_suite_keeps_every_authored_workflow_and_reference_once(self):
+        out = self.root / "suite"
+        before = suite_snapshot()
+        code, _, err = run("suite", out)
+        self.assertEqual(code, 0, err)
+        self.assertEqual(sorted(p.name for p in (out / "skills").iterdir()), skills.expected_skills())
+        for name in skills.expected_skills():
+            self.assertEqual((out / "skills" / name / "SKILL.md").read_bytes(), (SUITE / name / "SKILL.md").read_bytes())
+            for reference in (SUITE / name / "references").glob("*"):
+                self.assertEqual((out / "skills" / name / "references" / reference.name).read_bytes(), reference.read_bytes())
+            self.assertEqual(skills.skill_problems(out / "skills", name, skills.expected_skills(), skills.expected_skills()), [])
+        self.assertEqual(list(out.rglob("LICENSE")), [out / "LICENSE"])
+        self.assertEqual((out / "LICENSE").read_bytes(), (SUITE / "LICENSE").read_bytes())
+        self.assertFalse(list(out.rglob("evals")))
+        self.assertFalse((out / ".agents").exists())
+        manifest = json.loads((out / "plugin.json").read_text())
+        self.assertEqual(manifest["version"], json.loads((out / ".claude-plugin/plugin.json").read_text())["version"])
+        self.assertEqual(manifest["version"], json.loads((out / "openclaw.plugin.json").read_text())["version"])
+        self.assertNotIn("extensions", json.loads((out / "openclaw.plugin.json").read_text()))
+        self.assertFalse((out / "package.json").exists())
+        self.assertEqual(suite_snapshot(), before)
+        second = self.root / "same-suite"
+        self.assertEqual(run("suite", second)[0], 0)
+        self.assertEqual(snapshot(out), snapshot(second))
+
+    def test_manifest_drift_or_missing_contract_never_leaves_a_publishable_tree(self):
+        source = self.fixture()
+        manifest_path = source.parent / "plugin.json"
+        manifest = json.loads(manifest_path.read_text())
+        manifest["version"] = "99.0.0"
+        manifest_path.write_text(json.dumps(manifest))
+        out = self.root / "suite"
+        with mock.patch.object(skills, "SOURCE_DIR", source):
+            code, _, err = run("suite", out)
+        self.assertEqual(code, 1)
+        self.assertIn("disagree on version", err)
+        self.assertFalse(out.exists())
+        shutil.copy2(SCRIPTS_DIR.parents[1] / "plugin.json", manifest_path)
+        (source / "beancount-init/references/bea-cli.md").unlink()
+        with mock.patch.object(skills, "SOURCE_DIR", source):
+            self.assertEqual(run("suite", out)[0], 1)
+        self.assertFalse(out.exists())
+
+    def test_hidden_credentials_are_excluded_and_reference_symlinks_refused(self):
+        source = self.fixture()
+        (source / "beancount-ask/.env").write_text("synthetic private configuration")
+        out = self.root / "suite"
+        with mock.patch.object(skills, "SOURCE_DIR", source):
+            self.assertEqual(run("suite", out)[0], 0)
+        self.assertFalse(list(out.rglob(".env")))
+        reference = source / "beancount-ask/references/bql-recipes.md"
+        reference.unlink()
+        reference.symlink_to(self.ledger)
+        with mock.patch.object(skills, "SOURCE_DIR", source):
+            code, _, err = run("suite", self.root / "refused")
+        self.assertEqual(code, 1)
+        self.assertIn("symlinks are not suite content", err)
+        self.assertFalse((self.root / "refused").exists())
+
+    def test_existing_destination_is_preserved(self):
+        out = self.root / "suite"
+        out.mkdir()
+        (out / "personal.txt").write_text("keep")
+        before = snapshot(out)
+        self.assertEqual(run("suite", out)[0], 1)
+        self.assertEqual(snapshot(out), before)
+
+
 class TestClawHubWorkflow(Workspace):
-    def run_publish(self, version: str, malformed: bool = False):
-        workflow = (SCRIPTS_DIR.parents[1] / ".github/workflows/publish-clawhub.yml").read_text()
-        match = re.search(
-            r"^      - name: Publish the release commit's bundles\n        run: \|\n((?:          .*\n)*)",
-            workflow, re.MULTILINE,
-        )
-        self.assertIsNotNone(match)
-        command = "\n".join(line[10:] for line in match[1].splitlines())
-        package = self.root / "publisher"
-        for name in ("beancount-add", "beancount-ask"):
-            folder = package / "tmp/clawhub-bundles" / name
-            folder.mkdir(parents=True)
-            (folder / "SKILL.md").write_text(name)
+    def release(self, mode="publish", scenario="missing", **changes):
+        folder = self.root / "suite"
+        self.assertEqual(run("suite", folder)[0], 0)
         executable = self.root / "bin/clawhub"
         executable.parent.mkdir()
         executable.write_text(
             "#!/usr/bin/env python3\n"
-            "import json, os, sys\n"
+            "import json, os, sys, pathlib, hashlib\n"
             "args = sys.argv[1:]\n"
-            "with open(os.environ['PUBLISH_CALLS'], 'a') as log:\n"
-            "    log.write(json.dumps(args) + '\\n')\n"
-            "if '--dry-run' in args and os.environ['MALFORMED_PLAN'] == '1':\n"
-            "    print('invalid JSON')\n"
-            "else:\n"
-            "    slug = args[args.index('--slug') + 1]\n"
-            "    print(json.dumps({'status': 'unchanged' if slug == 'beancount-ask' else 'would-publish'}))\n"
+            "with open(os.environ['PUBLISH_CALLS'], 'a') as log: log.write(json.dumps(args)+'\\n')\n"
+            "scenario=os.environ['SCENARIO']\n"
+            "if 'inspect' in args:\n"
+            "    if scenario in ('missing', 'upload-fails'):\n"
+            "        print('Package not found or not visible to this account.', file=sys.stderr); sys.exit(1)\n"
+            "    if scenario == 'pending':\n"
+            "        print('Could not resolve latest version', file=sys.stderr); sys.exit(1)\n"
+            "    folder=pathlib.Path(os.environ['SUITE_FOLDER'])\n"
+            "    files=[{'path':p.relative_to(folder).as_posix(), 'sha256':hashlib.sha256(p.read_bytes()).hexdigest()} for p in folder.rglob('*') if p.is_file()]\n"
+            "    if scenario == 'drift': files[0]['sha256']='0'*64\n"
+            "    print(json.dumps({'version':{'version':json.loads((folder/'plugin.json').read_text())['version'],'files':files,'verification':{'scanStatus':'pending' if scenario == 'pending-release' else 'clean'}}}))\n"
+            "elif scenario == 'upload-fails': sys.exit(7)\n"
+            "else: print(json.dumps({'status':'pending-publication'}))\n"
         )
         executable.chmod(0o755)
         calls_file = self.root / "calls.jsonl"
         env = {
             **os.environ,
             "PATH": os.pathsep.join((str(executable.parent), str(Path(sys.executable).parent), os.environ["PATH"])),
-            "CLAWHUB_OWNER": "fixture-owner",
-            "CLAWHUB_RELEASE_VERSION": version,
-            "GITHUB_SHA": "a" * 40,
-            "GITHUB_REF": "refs/heads/main",
-            "GITHUB_REPOSITORY": "example/fixture",
-            "PUBLISH_CALLS": str(calls_file),
-            "MALFORMED_PLAN": "1" if malformed else "0",
+            "CLAWHUB_OWNER": "fixture-owner", "CLAWHUB_MIT0_APPROVED": "true",
+            "GITHUB_SHA": "a" * 40, "GITHUB_REF": "refs/heads/main", "GITHUB_EVENT_NAME": "workflow_dispatch",
+            "GITHUB_REPOSITORY": "example/fixture", "PUBLISH_CALLS": str(calls_file),
+            "SCENARIO": scenario, "SUITE_FOLDER": str(folder), **changes,
         }
         env.pop("CLAWHUB_TOKEN", None)
-        result = subprocess.run(["bash", "-euc", command], cwd=package, env=env, capture_output=True, text=True)
+        result = subprocess.run([sys.executable, str(SCRIPTS_DIR / "publish-clawhub-suite.py"), mode, str(folder)], env=env, capture_output=True, text=True)
         calls = [json.loads(line) for line in calls_file.read_text().splitlines()] if calls_file.exists() else []
         return result, calls
 
-    def test_explicit_version_uploads_only_changed_bundles(self):
-        result, calls = self.run_publish("1.0.4")
+    def test_preview_is_one_credential_free_versioned_package(self):
+        result, calls = self.release(mode="preview")
         self.assertEqual(result.returncode, 0, result.stderr)
-        previews = [call for call in calls if "--dry-run" in call]
-        uploads = [call for call in calls if "--dry-run" not in call]
-        self.assertEqual(len(previews), 2)
-        self.assertEqual(len(uploads), 1)
-        upload = uploads[0]
-        self.assertEqual(upload[upload.index("--slug") + 1], "beancount-add")
-        self.assertIn("--version", upload)
-        self.assertEqual(upload[upload.index("--version") + 1], "1.0.4")
-        self.assertEqual(upload[upload.index("--source-repo") + 1], "example/fixture")
-        self.assertTrue(all("--version" not in call for call in previews))
-
-    def test_default_version_keeps_the_original_cli_skip_path(self):
-        result, calls = self.run_publish("")
-        self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertEqual(len(calls), 2)
-        self.assertTrue(all("--version" not in call and "--dry-run" not in call for call in calls))
-
-    def test_invalid_preview_stops_before_upload(self):
-        result, calls = self.run_publish("1.0.4", malformed=True)
-        self.assertNotEqual(result.returncode, 0)
         self.assertEqual(len(calls), 1)
-        self.assertIn("--dry-run", calls[0])
+        call = calls[0]
+        self.assertEqual(call[:3], ["--no-input", "package", "publish"])
+        self.assertIn("--dry-run", call)
+        self.assertEqual(call[call.index("--family") + 1], "bundle-plugin")
+        self.assertEqual(call[call.index("--name") + 1], "@fixture-owner/beancount-io")
+        self.assertEqual(call[call.index("--version") + 1], json.loads((self.root / "suite/plugin.json").read_text())["version"])
 
-    def test_validate_publishes_dry_runs_of_the_real_self_contained_bundles(self):
-        workflow = (SCRIPTS_DIR.parents[1] / ".github/workflows/publish-clawhub.yml").read_text()
-        validate = workflow.split("\n  validate:\n", 1)[1].split("\n  publish:\n", 1)[0]
+    def test_new_release_uploads_only_one_suite_with_provenance_and_waits(self):
+        result, calls = self.release()
+        self.assertEqual(result.returncode, 0, result.stderr)
+        uploads = [call for call in calls if "publish" in call]
+        self.assertEqual(len(uploads), 1)
+        call = uploads[0]
+        self.assertIn("--wait", call)
+        self.assertEqual(call[call.index("--source-commit") + 1], "a" * 40)
+        self.assertEqual(call[call.index("--source-repo") + 1], "example/fixture")
+        self.assertNotIn("--force", call)
+        self.assertNotIn("skill", call)
 
-        def command(step: str) -> str:
-            match = re.search(
-                rf"^      - name: {re.escape(step)}\n        run: (.+)\n((?:          .*\n)*)",
-                validate, re.MULTILINE,
-            )
-            self.assertIsNotNone(match, f"missing runnable validation step: {step}")
-            return "\n".join(line[10:] for line in match[2].splitlines()) if match[1] == "|" else match[1]
+    def test_matching_public_release_is_skipped_without_upload(self):
+        result, calls = self.release(scenario="same")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn('"status": "unchanged"', result.stdout)
+        self.assertEqual(len(calls), 1)
+        self.assertIn("inspect", calls[0])
 
-        package = self.root / "scripts/skills"
-        package.mkdir(parents=True)
-        shutil.copyfile(SCRIPTS_DIR / "beancount-skills.py", package / "beancount-skills.py")
-        self.copy_suite(self.root / "skills")
-        executable = self.root / "bin/clawhub"
-        executable.parent.mkdir()
-        executable.write_text("#!/usr/bin/env python3\nimport json, sys\nprint(json.dumps(sys.argv[1:]))\n")
-        executable.chmod(0o755)
-        env = {**os.environ, "PATH": os.pathsep.join((str(executable.parent), str(Path(sys.executable).parent), os.environ["PATH"]))}
-        env.pop("CLAWHUB_TOKEN", None)
+    def test_existing_version_with_different_bytes_is_refused(self):
+        result, calls = self.release(scenario="drift")
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("bump the shared suite version", result.stderr)
+        self.assertTrue(all("publish" not in call for call in calls))
 
-        for step in ("Build self-contained bundles", "Preview every bundle without credentials"):
-            result = subprocess.run(
-                ["bash", "-euc", command(step)], cwd=package, env=env, capture_output=True, text=True,
-            )
-            self.assertEqual(result.returncode, 0, result.stderr)
-        calls = [json.loads(line) for line in result.stdout.splitlines()]
-        names = skills.expected_skills()
-        self.assertCountEqual([Path(call[3]).name for call in calls], names)
-        for call in calls:
-            self.assertEqual(call[:3], ["--no-input", "skill", "publish"])
-            self.assertIn("--dry-run", call)
-            self.assertIn("--json", call)
-            folder = package / call[3]
-            self.assertEqual(call[call.index("--slug") + 1], folder.name)
-            self.assertTrue((folder / "SKILL.md").is_file())
-            self.assertEqual((folder / "LICENSE").read_bytes(), (SUITE / "LICENSE").read_bytes())
-            missing, _ = skills.missing_references(folder.parent, folder.name, names, [folder.name])
-            self.assertEqual(missing, {})
-            self.assertFalse((folder / "evals").exists())
+    def test_pending_lookup_error_stops_before_upload(self):
+        result, calls = self.release(scenario="pending")
+        self.assertNotEqual(result.returncode, 0)
+        self.assertTrue(all("publish" not in call for call in calls))
+
+    def test_visible_pending_release_is_not_republished_or_reported_complete(self):
+        result, calls = self.release(scenario="pending-release")
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("inspect the existing attempt", result.stderr)
+        self.assertTrue(all("publish" not in call for call in calls))
+
+    def test_cli_publication_failure_is_propagated(self):
+        result, _ = self.release(scenario="upload-fails")
+        self.assertEqual(result.returncode, 7)
+
+    def test_branch_event_and_approval_guards_run_before_registry_access(self):
+        result, calls = self.release(GITHUB_REF="refs/heads/feature")
+        self.assertNotEqual(result.returncode, 0)
+        self.assertEqual(calls, [])
+
+    def test_non_dispatch_event_is_refused_before_registry_access(self):
+        result, calls = self.release(GITHUB_EVENT_NAME="push")
+        self.assertNotEqual(result.returncode, 0)
+        self.assertEqual(calls, [])
+
+    def test_unapproved_license_is_refused_before_registry_access(self):
+        result, calls = self.release(CLAWHUB_MIT0_APPROVED="false")
+        self.assertNotEqual(result.returncode, 0)
+        self.assertEqual(calls, [])
 
 
 class TestUninstall(Workspace):

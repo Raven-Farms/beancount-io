@@ -1,6 +1,6 @@
 # Install the Beancount skills
 
-Install the thirteen `beancount-*` ledger skills for Claude Code, Codex, or both, from any directory. You keep one Git checkout of the skills and link it into each agent's skill directory. Updating the checkout updates every agent, and the helper script never touches skills it did not install. [OpenClaw and Hermes Agent](#openclaw-and-hermes-agent) use standalone ClawHub bundles, with the availability and host limits below.
+Install the thirteen `beancount-*` ledger skills for Claude Code, Codex, or both, from any directory. You keep one Git checkout of the skills and link it into each agent's skill directory. Updating the checkout updates every agent, and the helper script never touches skills it did not install. [OpenClaw and Hermes Agent](#openclaw-and-hermes-agent) have the suite and legacy registry routes described below, with their actual availability and host limits.
 
 Rehearsed on macOS with Claude Code and Codex (see [tested with](first-query.md#tested-with)). Linux uses the same commands but has not been rehearsed. Windows is not covered.
 
@@ -132,6 +132,16 @@ Keep **one method per client**. A client holding the suite twice (say, linked in
 Remove the old install **before** installing by another method — two copies of one skill name leave the agent choosing between duplicates, and the link installer refuses a name a copy already holds. Removal per method: link installer — `python3 "$SKILLS_SRC/scripts/skills/beancount-skills.py" uninstall <dirs>` (see [Remove](#remove)); `npx skills` — `remove` above; `gh skill` — delete the folders `gh skill list` shows; Hermes — `uninstall` per name. Then install by the new method and re-run step 3's listing.
 
 ## OpenClaw and Hermes Agent
+
+### One suite release
+
+Subsequent ClawHub releases use one **`@puncsky/beancount-io` bundle plugin**, sharing the existing Claude Code/Codex suite version. All thirteen workflows keep their names, instructions and sibling references. The [suite distribution record](suite-distribution.md) carries the exact publication state, supported install/update commands, and migration evidence. The 0.4.0 release is being prepared; the earlier individual listings remain usable during review.
+
+Hermes v0.22.4 cannot currently admit the complete portable suite: it rejects nested host metadata and its plugin scanner blocks init's intended instruction-file creation. Keep the already verified standalone skills for Hermes. The full-suite limitation is tracked by w6/m6.5, alongside the existing init-policy finding w6/039; no forced install or scanner configuration change is part of this route.
+
+### Legacy standalone releases
+
+Existing `@puncsky/beancount-*` records and immutable versions are retained. The release workflow now targets the suite package instead of uploading each skill separately; the following historical standalone commands and evidence remain available for compatibility.
 
 The publisher is [`puncsky` on ClawHub](https://clawhub.ai/puncsky). Registry bundles include their shared command references and the MIT-0 license, so `beancount-ask` can be installed alone without cloning this repository. Workflows such as migration and close name the sibling skills they hand off to; install those separately when needed.
 

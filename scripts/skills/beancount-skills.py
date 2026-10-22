@@ -10,17 +10,20 @@ directory in a destination is a symlink into this checkout, so Claude Code
     beancount-skills.py verify    DEST [DEST ...]
     beancount-skills.py uninstall DEST [DEST ...]
     beancount-skills.py bundle    OUT
+    beancount-skills.py suite     OUT
 
 `install` changes nothing when any owned name is already taken by something
 else, `verify` never writes, and `uninstall` removes only links into this
 checkout. `bundle` writes one self-contained copy per skill into an empty OUT,
-for registries such as ClawHub that install a single folder.
+for legacy single-skill installs. `suite` builds one versioned plugin containing
+all customer skills for suite publication and native plugin installation.
 """
 
 from __future__ import annotations
 
 import argparse
 import filecmp
+import json
 import os
 import re
 import shutil
@@ -342,7 +345,74 @@ def bundle(out: Path) -> int:
     return 0
 
 
-ACTIONS = {"install": install, "verify": verify, "uninstall": uninstall, "bundle": bundle}
+def suite(out: Path) -> int:
+    """Build a content-only plugin from the canonical suite, without vendored duplicates."""
+    if os.path.lexists(out) and (not out.is_dir() or out.is_symlink() or any(out.iterdir())):
+        print(f"FAIL {out} must be an empty or new directory. Nothing was written.", file=sys.stderr)
+        return 1
+    repo = SOURCE_DIR.parent
+    names = expected_skills()
+    try:
+        manifest = json.loads((repo / "plugin.json").read_text(encoding="utf-8"))
+        entry, = json.loads((repo / ".claude-plugin/marketplace.json").read_text(encoding="utf-8"))["plugins"]
+        if not names or manifest["name"] != "beancount-io" or manifest["license"] != "MIT-0":
+            raise ValueError("expected the MIT-0 beancount-io customer suite")
+        if not re.fullmatch(r"\d+\.\d+\.\d+", manifest["version"]):
+            raise ValueError("suite version must be semver X.Y.Z")
+        for field in ("name", "version", "description", "license"):
+            if entry[field] != manifest[field]:
+                raise ValueError(f"suite manifests disagree on {field}")
+        if sorted(entry["skills"]) != [f"./{name}" for name in names]:
+            raise ValueError("marketplace inventory differs from customer skills")
+        with tempfile.TemporaryDirectory() as temp:
+            staging = Path(temp)
+            shutil.copy2(repo / "plugin.json", staging / "plugin.json")
+            shutil.copy2(SOURCE_DIR / "LICENSE", staging / "LICENSE")
+            # ClawHub requires this metadata even for content-only bundle plugins.
+            # The Claude marker below selects OpenClaw's bundle loader, with no runtime entrypoint.
+            native = {
+                "id": manifest["name"], "name": "Beancount.io", "version": manifest["version"],
+                "description": manifest["description"], "skills": ["./skills"],
+                "configSchema": {"type": "object", "additionalProperties": False, "properties": {}},
+            }
+            (staging / "openclaw.plugin.json").write_text(json.dumps(native, indent=2) + "\n")
+            claude = {key: value for key, value in manifest.items() if key != "$schema"}
+            (staging / ".claude-plugin").mkdir()
+            (staging / ".claude-plugin/plugin.json").write_text(json.dumps(claude, indent=2) + "\n")
+            for name in names:
+                source = SOURCE_DIR / name
+                for path in sorted(source.rglob("*")):
+                    relative = path.relative_to(source)
+                    if any(part.startswith(".") or part in {"evals", "__pycache__"} for part in relative.parts):
+                        continue
+                    if path.is_symlink():
+                        raise ValueError(f"{name}/{relative}: symlinks are not suite content")
+                    if not path.is_file():
+                        continue
+                    if relative.parts[0] not in {"SKILL.md", "references", "scripts", "assets"}:
+                        raise ValueError(f"{name}/{relative}: unexpected runtime file")
+                    target = staging / "skills" / name / relative
+                    target.parent.mkdir(parents=True, exist_ok=True)
+                    shutil.copy2(path, target)
+            problems = [problem for name in names for problem in skill_problems(staging / "skills", name, names, names)]
+            if problems:
+                raise ValueError("; ".join(problems))
+            readme = (
+                f"# Beancount.io ledger skills\n\nSuite {manifest['version']}. {manifest['description']}\n\n"
+                "Install and update the suite as one plugin. Each workflow retains its own name and instructions.\n\n"
+                "[Installation and host compatibility](https://github.com/bex-co/beancount-io/blob/main/docs/skills/installation.md)\n\n"
+                "## Workflows\n\n" + "\n".join(f"- `{name}`" for name in names) + "\n\nLicense: MIT-0 (LICENSE).\n"
+            )
+            (staging / "README.md").write_text(readme, encoding="utf-8")
+            shutil.copytree(staging, out, dirs_exist_ok=True)
+    except (OSError, ValueError, KeyError, TypeError) as error:
+        print(f"FAIL {error}. Suite was not published.", file=sys.stderr)
+        return 1
+    print(f"suite {out}: {len(names)} customer skills, version {manifest['version']}")
+    return 0
+
+
+ACTIONS = {"install": install, "verify": verify, "uninstall": uninstall, "bundle": bundle, "suite": suite}
 
 
 def main(argv: list[str] | None = None) -> int:

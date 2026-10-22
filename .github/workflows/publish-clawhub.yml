@@ -18,13 +18,9 @@ on:
   workflow_dispatch:
     inputs:
       publish:
-        description: "Publish the bundles (unset: dry run only)"
+        description: "Publish the Beancount.io suite (unset: dry run only)"
         type: boolean
         default: false
-      version:
-        description: "Optional explicit version for changed bundles (for fixes beyond an existing pending version)"
-        type: string
-        default: ""
 
 permissions: {}
 
@@ -42,7 +38,7 @@ defaults:
 
 jobs:
   validate:
-    name: dry-run every bundle
+    name: dry-run the suite
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -57,22 +53,17 @@ jobs:
           node-version: 22
       - name: Install the pinned publisher
         run: npm install --global "clawhub@$CLAWHUB_VERSION"
-      - name: Build self-contained bundles
-        run: python3 beancount-skills.py bundle tmp/clawhub-bundles
-      - name: Preview every bundle without credentials
-        run: |
-          set -euo pipefail
-          for bundle in tmp/clawhub-bundles/beancount-*; do
-            test -f "$bundle/SKILL.md"
-            clawhub --no-input skill publish "$bundle" \
-              --slug "$(basename "$bundle")" --dry-run --json
-          done
+      - name: Build the customer suite
+        run: python3 beancount-skills.py suite tmp/clawhub-suite
+      - name: Preview the suite without credentials
+        run: python3 publish-clawhub-suite.py preview tmp/clawhub-suite
 
   publish:
     name: publish to ClawHub
     needs: validate
     if: github.event_name == 'workflow_dispatch' && inputs.publish && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     # Configure this environment with a required reviewer and main-only
     # deployment branches. A workflow's environment key alone does not do it.
     environment: clawhub-publish
@@ -82,7 +73,6 @@ jobs:
       CLAWHUB_CONFIG_PATH: ${{ github.workspace }}/scripts/skills/tmp/clawhub-publish.json
       CLAWHUB_OWNER: ${{ vars.CLAWHUB_OWNER }}
       CLAWHUB_MIT0_APPROVED: ${{ vars.CLAWHUB_MIT0_APPROVED }}
-      CLAWHUB_RELEASE_VERSION: ${{ inputs.version }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -107,8 +97,8 @@ jobs:
           node-version: 22
       - name: Install the pinned publisher
         run: npm install --global "clawhub@$CLAWHUB_VERSION"
-      - name: Build self-contained bundles
-        run: python3 beancount-skills.py bundle tmp/clawhub-bundles
+      - name: Build the customer suite
+        run: python3 beancount-skills.py suite tmp/clawhub-suite
       - name: Sign in with the environment token
         env:
           CLAWHUB_TOKEN: ${{ secrets.CLAWHUB_TOKEN }}
@@ -119,37 +109,15 @@ jobs:
             exit 1
           fi
           clawhub --no-input login --token "$CLAWHUB_TOKEN"
-      - name: Publish the release commit's bundles
-        run: |
-          set -euo pipefail
-          changelog="$(git log -1 --format=%s) (${GITHUB_SHA})"
-          for bundle in tmp/clawhub-bundles/beancount-*; do
-            test -f "$bundle/SKILL.md"
-            slug="$(basename "$bundle")"
-            publish_args=(--slug "$slug" --owner "$CLAWHUB_OWNER")
-            if [[ -n "$CLAWHUB_RELEASE_VERSION" ]]; then
-              # Preserve the ordinary unchanged-content skip: an explicit
-              # --version otherwise asks the CLI to publish identical files.
-              plan="$(clawhub --no-input skill publish "$bundle" \
-                --slug "$slug" --owner "$CLAWHUB_OWNER" --dry-run --json)"
-              plan_status="$(python3 -c 'import json, sys; print(json.load(sys.stdin)["status"])' <<<"$plan")"
-              if [[ "$plan_status" == unchanged ]]; then
-                printf '%s\n' "$plan"
-                continue
-              fi
-              if [[ "$plan_status" != would-publish ]]; then
-                echo "::error::Unexpected publication plan status: $plan_status"
-                exit 1
-              fi
-              publish_args+=(--version "$CLAWHUB_RELEASE_VERSION")
-            fi
-            clawhub --no-input skill publish "$bundle" \
-              "${publish_args[@]}" \
-              --changelog "$changelog" \
-              --source-repo "$GITHUB_REPOSITORY" --source-commit "$GITHUB_SHA" \
-              --source-ref "$GITHUB_REF" --source-path "skills/$slug" \
-              --json
-          done
+      - name: Publish the release commit's suite
+        run: python3 publish-clawhub-suite.py publish tmp/clawhub-suite
       - name: Remove the publisher credentials
         if: always()
         run: rm -f "$CLAWHUB_CONFIG_PATH"
+      - name: Retain suite publication evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: beancount-io-suite-${{ github.sha }}
+          path: scripts/skills/tmp/clawhub-suite
+          include-hidden-files: true

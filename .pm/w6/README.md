@@ -82,6 +82,8 @@ Prioritize the major correctness findings (PRINT/FROM/JOURNAL, authored location
 
 ## Milestones
 
+- [ ] **m6.5** — [Distribute the Beancount.io customer skills as one suite](./m6.5/README.md) (10 tasks; A3/A2/A1; ~6h) ← explicit owner request 2026-10-22; preserves completed m6 and existing standalone releases.
+
 - [ ] **m9** — [Reach developer marketplaces and galleries](./blocked/m9/README.md) (10 tasks; A3/A1) ← approved local roadmap, synchronized under `$loopx w6` on 2026-10-21 UTC; **blocked:** payloads prepared; cursor.directory entry in New/native OAuth/query/preview complete; native dedicated-QA journeys, final publisher agreement/operator request and external reviews remain
 - [ ] **m10** — [List the connector in independent web directories](./blocked/m10/README.md) (8 tasks; A3/A1) ← approved local roadmap, synchronized under `$loopx w6` on 2026-10-21 UTC; **blocked:** MCPServers.org and MCPMarket free submissions accepted into queues; LobeHub sign-in agreement approval pending
 
