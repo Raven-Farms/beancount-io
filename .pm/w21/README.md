@@ -149,3 +149,9 @@
 - [391](./391.md) — First offline launch after 244 drops the cached drawer list
 - [392](./392.md) — Add Budget refuses Persian/Arabic digits (230 sibling)
 - [393](./393.md) — Budget history delete after external change is a dead end (250 sibling)
+- [394](./394.md) — Zeroed income budget flips card to expense rules; missed month green
+- [395](./395.md) — Add Budget offers only operating currencies (USD fallback)
+- [396](./396.md) — Parent category (Expenses:Food) can't be budgeted without an open
+- [397](./397.md) — Mobile loads ≤500 budget directives; oldest budget card vanishes
+- [398](./398.md) — Budget on a closed account runs forever and outranks real overspends
+- [399](./399.md) — Income budget history/alert/placeholder show raw negative amount
