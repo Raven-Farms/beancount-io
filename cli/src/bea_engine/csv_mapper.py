@@ -98,7 +98,6 @@ _ZERO_DECIMAL_CURRENCIES = frozenset(
         "VND",
         "VUV",
         "XAF",
-        "XCD",
         "XOF",
         "XPF",
     }

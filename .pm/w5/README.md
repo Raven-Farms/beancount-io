@@ -65,7 +65,6 @@
 - [959 — Treat repeated allowed currencies as one during transaction inference](./959.md) — minor CLI existing-ledger/native-import inference finding; USD/EUR and split-file controls reproduced 2026-10-21.
 - [958 — Keep unused unopened accounts out of remembered CSV settings](./958.md) — minor CLI memory-guard follow-up to 452/714; empty, skipped and fully categorized exports reproduced 2026-10-21.
 - [957 — Allow instrument units in the portfolio preset's holdings account](./957.md) — minor CLI first-purchase setup finding; reproduced twice in USD/EUR on 2026-10-21.
-- [907 — Correct XCD's minor-unit import advice](./907.md) — trivial CLI advisory follow-up to 753; checked against SIX and reproduced 2026-10-21.
 - [908 — Keep known zero holding values visible in account trees](./908.md) — trivial CLI report-display follow-up to w3/357 and w1/072; zero-cost and zero-price cases reproduced 2026-10-21.
 - [909 — Keep cost lots in the funded-close check](./909.md) — minor CLI closing-guard follow-up to w2/092; offsetting quantities with a residual book balance reproduced 2026-10-21.
 - [910 — Check funded children closed by `close_tree`](./910.md) — minor CLI closing-guard follow-up to w2/092; generated descendant closes reproduced 2026-10-21.
