@@ -38,6 +38,15 @@ describe("the read context gate", () => {
     ).toBe(true);
   });
 
+  // w21/574: a pull re-read only the statement, so "Failed to load" and the stale
+  // banner, which also follow the read context, outlived the network's return.
+  it("Reports' pull to refresh re-reads the read context with the statement", () => {
+    const src = read("screens/reports-screen/reports-screen.tsx");
+    const pull = src.slice(src.indexOf("constonRefresh=useCallback("));
+    const body = pull.slice(0, pull.indexOf("},["));
+    expect(body.includes("incomeRefetch(),ledgerMetaRefetch(),")).toBe(true);
+  });
+
   it("Reports leaves Recent transactions out on a failure, so it cannot say 'No transactions yet'", () => {
     const src = read("screens/reports-screen/reports-screen.tsx");
     expect(src.includes("{failed?null:(<AccountTransactionsCard")).toBe(true);

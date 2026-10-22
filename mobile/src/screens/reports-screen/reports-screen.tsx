@@ -125,8 +125,12 @@ const ReportsScreenImpl = (): JSX.Element => {
     try {
       // The scheduled-entry check is cached too: an entry pre-entered
       // elsewhere is not in it (w21/470).
+      // The read context too: the failure state and the stale banner depend on
+      // it, and a pull that left it alone kept both after the network returned
+      // (w21/574).
       await Promise.all([
         incomeRefetch(),
+        ledgerMetaRefetch(),
         scheduledRefetch(),
         scheduled ? toTodayRefetch() : undefined,
       ]);
@@ -135,7 +139,13 @@ const ReportsScreenImpl = (): JSX.Element => {
     } finally {
       setRefreshing(false);
     }
-  }, [incomeRefetch, scheduledRefetch, scheduled, toTodayRefetch]);
+  }, [
+    incomeRefetch,
+    ledgerMetaRefetch,
+    scheduledRefetch,
+    scheduled,
+    toTodayRefetch,
+  ]);
 
   const rangeOptions = TIME_RANGES.map((key) => ({
     key,
