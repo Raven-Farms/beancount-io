@@ -33,5 +33,7 @@
 - [518](./518.md) — New Transaction books a plain first-row amount as money *into* the bank (Checking +4.50, Groceries −4.50); needs a product call
 - [519](./519.md) — Payee suggestions, usual accounts and merchants miss a Smart Punctuation apostrophe ("Trader Joe’s") (sibling of w21/401)
 - [520](./520.md) — New Transaction writes USD into a ledger without `operating_currency` (missed by w21/415 and w21/395)
+- [521](./521.md) — The file editor's error banner drops the fix hint Notifications shows (w21/424 incomplete)
+- [522](./522.md) — After Overwrite or Recreate, the editor keeps the first-loaded text as its baseline, so a revert is never saved and Back loses it silently
 - [508](./blocked/508.md) — Mobile guesses that an entry is a plugin copy from its first line; read the ledger's `generated_from` instead (split from 443) — **blocked:** production's GraphQL schema lacks `generated_from` until the ledger service and backend-v2 deploy; mobile's client is generated from it
 - [315](./blocked/315.md) — In-app commits signed with Gitea username and real email (no full_name, no noreply) — **blocked:** needs the owner's noreply-address and published-history decisions, and a production backfill of existing Gitea users that can't be verified here
