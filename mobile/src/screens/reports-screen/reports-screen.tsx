@@ -1,4 +1,7 @@
-import { selectCardLoadState } from "@/common/apollo/card-load-state";
+import {
+  selectCardLoadState,
+  selectReadContextState,
+} from "@/common/apollo/card-load-state";
 import { CardLoadFailure } from "@/components/card-load-failure";
 import { useCallback, useMemo, useState } from "react";
 import { StyleSheet, View } from "react-native";
@@ -68,6 +71,7 @@ const ReportsScreenImpl = (): JSX.Element => {
     currencies,
     data: ledgerMeta,
     error: ledgerMetaError,
+    refetch: ledgerMetaRefetch,
   } = useLedgerReadContext(ledgerId);
   const currency = getPrimaryCurrency(currencies);
   // The ledger may rename its roots (`option "name_expenses" "Gastos"`), and
@@ -166,7 +170,13 @@ const ReportsScreenImpl = (): JSX.Element => {
     hasData: incomeData !== undefined,
     error: incomeError,
   });
-  const isLoading = statementState === "loading";
+  // Until the read context lands, the currency is a blind "USD" and the roots
+  // the English names: a EUR ledger drew USD charts of 0, and a renamed-root
+  // ledger read "No transactions yet". Held like the statement, and a failed
+  // context is a failure, not a quiet fallback (w21/406).
+  const contextState = selectReadContextState(ledgerMeta, ledgerMetaError);
+  const isLoading = statementState === "loading" || contextState === "loading";
+  const failed = statementState === "failed" || contextState === "failed";
   const showStale = isShowingStaleDataFromQueries([
     { data: incomeData, error: incomeError },
     { data: ledgerMeta, error: ledgerMetaError },
@@ -186,9 +196,15 @@ const ReportsScreenImpl = (): JSX.Element => {
         onRefresh={onRefresh}
         contentContainerStyle={reportScrollStyles.content}
       >
-        {statementState === "failed" ? (
+        {failed ? (
           <DashboardCard>
-            <CardLoadFailure onRetry={() => void incomeRefetch()} />
+            <CardLoadFailure
+              onRetry={() =>
+                void Promise.all([incomeRefetch(), ledgerMetaRefetch()]).catch(
+                  () => undefined,
+                )
+              }
+            />
           </DashboardCard>
         ) : (
           <>
@@ -275,16 +291,18 @@ const ReportsScreenImpl = (): JSX.Element => {
           </>
         )}
 
-        <AccountTransactionsCard
-          ledgerId={ledgerId}
-          accountPrefix={moneyRoots}
-          titleKey="recentTransactions"
-          emptyKey="recentTransactionsEmpty"
-          timeRange={timeRange}
-          anchorMonth={anchorMonth}
-          statementLoading={isLoading}
-          refreshing={refreshing}
-        />
+        {failed ? null : (
+          <AccountTransactionsCard
+            ledgerId={ledgerId}
+            accountPrefix={moneyRoots}
+            titleKey="recentTransactions"
+            emptyKey="recentTransactionsEmpty"
+            timeRange={timeRange}
+            anchorMonth={anchorMonth}
+            statementLoading={isLoading}
+            refreshing={refreshing}
+          />
+        )}
       </DashboardScrollView>
     </View>
   );

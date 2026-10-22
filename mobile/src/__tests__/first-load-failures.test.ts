@@ -79,12 +79,10 @@ describe("the Home budget panel", () => {
 describe("Reports and Accounts", () => {
   it("Reports replaces the statement cards with a retry when nothing loaded", () => {
     const source = read("screens", "reports-screen", "reports-screen.tsx");
-    expect(source.includes('statementState === "failed" ? (')).toBe(true);
-    expect(
-      source.includes(
-        "<CardLoadFailure onRetry={() => void incomeRefetch()} />",
-      ),
-    ).toBe(true);
+    // The context failing is a failure too (w21/406); one retry reads both.
+    expect(source.includes("{failed ? (")).toBe(true);
+    expect(source.includes("<CardLoadFailure")).toBe(true);
+    expect(source.includes("incomeRefetch(), ledgerMetaRefetch()")).toBe(true);
   });
 
   it("Accounts shows a retry rather than No accounts", () => {
@@ -104,9 +102,11 @@ describe("account detail after a failed refresh", () => {
       "account-detail-screen",
       "account-detail-screen.tsx",
     );
-    expect(source.includes("sections={isInitialLoading ? [] : sections}")).toBe(
-      true,
-    );
+    expect(
+      source.includes(
+        "sections={isInitialLoading || contextFailed ? [] : sections}",
+      ),
+    ).toBe(true);
     expect(source.includes("{ data: journalData, error: journalError },")).toBe(
       true,
     );

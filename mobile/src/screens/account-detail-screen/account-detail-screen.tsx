@@ -16,6 +16,7 @@ import { fontSizes, fontWeights, useTheme } from "@/common/theme";
 import { useThemeStyle } from "@/common/hooks";
 import { useTranslations } from "@/common/hooks/use-translations";
 import { getPrimaryCurrency } from "@/common/currency-util";
+import { selectReadContextState } from "@/common/apollo/card-load-state";
 import { BalanceChartCard, StaleDataBanner } from "@/components";
 import { isShowingStaleDataFromQueries } from "@/common/apollo/stale-data";
 import { selectChartFailed } from "./selectors/select-chart-failed";
@@ -132,8 +133,12 @@ const AccountDetailScreenImpl = ({
   const {
     currencies,
     data: ledgerReadData,
+    error: ledgerReadError,
     refetch: ledgerMetaRefetch,
   } = useLedgerReadContext(ledgerId);
+  // Until the read context lands the currency is a blind "USD"; a failed one
+  // leaves it so for good. Held like the account's own reads (w21/406).
+  const contextState = selectReadContextState(ledgerReadData, ledgerReadError);
   const currency = getPrimaryCurrency(currencies);
   // Income, Expenses and Equity mirror net worth, so their changes color the
   // other way round; the figures themselves keep the ledger's sign (w0/033).
@@ -316,7 +321,8 @@ const AccountDetailScreenImpl = ({
   );
   const isLoadingMore = networkStatus === NetworkStatus.fetchMore;
   const isInitialLoading =
-    (journalLoading || unitsReportPending) && items.length === 0;
+    ((journalLoading || unitsReportPending) && items.length === 0) ||
+    contextState === "loading";
 
   // The list whose next page failed to load, so another account or ledger
   // starts clean. While set, scrolling to the end does not ask again; Retry
@@ -443,14 +449,18 @@ const AccountDetailScreenImpl = ({
     [],
   );
 
-  const chartFailed = selectChartFailed({
-    unitsCurrency,
-    report: { data: reportData, error: reportError },
-    unitsReport: { data: unitsReportData, error: unitsReportError },
-  });
+  const contextFailed = contextState === "failed";
+  const chartFailed =
+    contextFailed ||
+    selectChartFailed({
+      unitsCurrency,
+      report: { data: reportData, error: reportError },
+      unitsReport: { data: unitsReportData, error: unitsReportError },
+    });
   const retryChart = useCallback(() => {
+    void ledgerMetaRefetch().catch(() => undefined);
     void (unitsCurrency ? unitsReportRefetch() : reportRefetch());
-  }, [unitsCurrency, unitsReportRefetch, reportRefetch]);
+  }, [unitsCurrency, unitsReportRefetch, reportRefetch, ledgerMetaRefetch]);
 
   const listHeader = useMemo(
     () => (
@@ -471,7 +481,12 @@ const AccountDetailScreenImpl = ({
             // Skeleton only on first load: a pull-to-refresh keeps the chart
             // visible under the RefreshControl spinner rather than collapsing
             // it back to a tile.
-            loading={reportPending || unitsReportPending || valuationPending}
+            loading={
+              reportPending ||
+              unitsReportPending ||
+              valuationPending ||
+              contextState === "loading"
+            }
             // Only a first load with nothing to draw is an error card; a failed
             // refresh keeps the chart under the stale banner (w21/239).
             error={chartFailed}
@@ -494,6 +509,7 @@ const AccountDetailScreenImpl = ({
       reportPending,
       unitsReportPending,
       valuationPending,
+      contextState,
       chartFailed,
       retryChart,
       styles.sectionTitle,
@@ -517,7 +533,7 @@ const AccountDetailScreenImpl = ({
       <SectionList
         // A failed refresh keeps the rows already loaded, under the stale
         // banner; only a failed first load has nothing to list (w21/081).
-        sections={isInitialLoading ? [] : sections}
+        sections={isInitialLoading || contextFailed ? [] : sections}
         renderItem={renderItem}
         renderSectionHeader={renderSectionHeader}
         keyExtractor={(item) => item.key}
@@ -537,7 +553,11 @@ const AccountDetailScreenImpl = ({
         ListEmptyComponent={
           <AccountJournalListEmpty
             loading={isInitialLoading}
-            message={journalError ? t("journalLoadError") : t("noEntries")}
+            message={
+              journalError || contextFailed
+                ? t("journalLoadError")
+                : t("noEntries")
+            }
           />
         }
         ListFooterComponent={
