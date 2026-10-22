@@ -8,6 +8,7 @@ import { graphql } from "graphql";
 import { LedgerCollaboratorsQueryResolver } from "@/features/ledger/api/resolvers/ledger-collaborators-resolver.query";
 import { LedgerCollaboratorsMutationResolver } from "@/features/ledger/api/resolvers/ledger-collaborators-resolver.mutation";
 import { LedgerCollaboratorsWorkflow } from "@/features/ledger/workflow/ledger-collaborators-workflow";
+import { FavaApiError } from "@/foundation/fava";
 import {
   AuthorizationService,
   SourceBackedRelationshipEvaluator,
@@ -82,7 +83,8 @@ const surfaces: Surface[] = ["rest", "mcp", "gql"];
 async function fixture(
   initialIdentity = token(),
   // Make "alice" an account on Free, so her ledger's collaborator limit is 1.
-  { ownerOnFree = false } = {},
+  // A public ledger is readable by any signed-in user, member or not.
+  { ownerOnFree = false, publicLedger = false } = {},
 ) {
   let identity = initialIdentity;
   const members = new Map<string, string>([
@@ -93,7 +95,17 @@ async function fixture(
     async (caller: string, owner: string, name: string) => {
       if (owner !== "alice" || name !== "main") throw { status: 404 };
       const login = caller.slice(4);
-      if (login !== owner && !members.has(login)) throw { status: 404 };
+      const member = login === owner || members.has(login);
+      if (!member && !publicLedger) throw { status: 404 };
+      if (!member) {
+        return {
+          data: {
+            id: 42,
+            private: false,
+            permissions: { admin: false, push: false, pull: true },
+          },
+        };
+      }
       return {
         data: {
           id: 42,
@@ -161,11 +173,34 @@ async function fixture(
     deleteLedgerCollaborator: remove,
   };
   const getPublicApiClient = jest.fn(async () => ({ collaborators }));
+  // What a content-read check consults: the ledger's visibility, and the
+  // caller's own grant, which the ledger service answers 404 without.
+  const accessCollaborators = {
+    getLedgerCollaboratorPermission: async (
+      _owner: string,
+      _name: string,
+      login: string,
+    ) => {
+      if (!members.has(login)) {
+        throw new FavaApiError("Not Found", 404, {
+          success: false,
+          error: "Not Found",
+        });
+      }
+      return envelope({ permission: members.get(login) });
+    },
+  };
   const fava = {
     getPublicApiClient,
-    getAdminClient: () => ({ collaborators }),
+    getAdminClient: () => ({
+      collaborators,
+      ledgers: {
+        getLedger: async () => envelope({ id: 42, private: !publicLedger }),
+      },
+    }),
     getApiContext: async (id: string) => ({
       favaUser: { username: id.slice(4) },
+      favaApiClient: { collaborators: accessCollaborators },
     }),
   };
   const models = {
@@ -173,6 +208,8 @@ async function fixture(
       getById: async (_db: unknown, id: string) => ({
         ledger_username: id.slice(4),
       }),
+      getUserByUsername: async (_db: unknown, username: string) =>
+        username === "alice" ? { id: "usr_alice" } : undefined,
     },
     paidCustomer: {
       findByUserIdWithActivePeriod: async () => null,
@@ -774,6 +811,78 @@ describe("collaborators through actual adapters, workflow, PDP, and relationship
       await f.close();
     }
   });
+  // w23/063: the owner's leave answered "Ledger not found" for a ledger it
+  // had just read — the concealment meant for callers who cannot see it.
+  it.each(surfaces)(
+    "tells a caller who can read the ledger why it cannot leave via %s",
+    async (surface) => {
+      const leaveError = async (f: Awaited<ReturnType<typeof fixture>>) => {
+        if (surface === "mcp") {
+          const result = await f.client.callTool(
+            perOperation({ operation: "leave", ledger: "alice/main" }),
+          );
+          return (
+            result.structuredContent as {
+              error: { code: string; message: string };
+            }
+          ).error;
+        }
+        if (surface === "rest") {
+          const response = await f.request("leave", "POST", {});
+          return (
+            (await response.json()) as {
+              error: { code: string; message: string };
+            }
+          ).error;
+        }
+        const result = await f.gql(
+          'mutation { leaveLedger(ledgerId: "alice/main") { success } }',
+        );
+        const error = result.errors?.[0];
+        return {
+          code: (error?.originalError as { category?: string }).category,
+          message: error?.message,
+        };
+      };
+
+      const owned = await fixture();
+      try {
+        expect(await leaveError(owned)).toMatchObject({
+          code: "OPERATION_NOT_ALLOWED",
+          message: expect.stringContaining(
+            "alice owns this ledger; an owner can't leave it",
+          ),
+        });
+      } finally {
+        await owned.close();
+      }
+
+      const shared = await fixture(token("carol"), { publicLedger: true });
+      try {
+        expect(await leaveError(shared)).toMatchObject({
+          code: "OPERATION_NOT_ALLOWED",
+          message: expect.stringContaining(
+            "carol is not a collaborator on this ledger",
+          ),
+        });
+      } finally {
+        await shared.close();
+      }
+
+      // Who cannot see the ledger still learns nothing about it.
+      const hidden = await fixture(token("carol"));
+      try {
+        expect(await leaveError(hidden)).toMatchObject({
+          code: "NOT_FOUND",
+          message: expect.stringContaining("Ledger not found"),
+        });
+        expect(hidden.remove).not.toHaveBeenCalled();
+      } finally {
+        await hidden.close();
+      }
+    },
+  );
+
   it.each(surfaces)(
     "leaves as the caller and refuses owners or stale membership via %s",
     async (surface) => {

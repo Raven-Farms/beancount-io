@@ -668,7 +668,10 @@ credential can omit it.
 | `leaveLedger`              | No collaborator or permission argument                                       | Remove the authenticated caller. Owners cannot leave their own ledger.                                                        |
 
 These tools apply immediately; preview is not supported. Undeclared arguments,
-including `dry_run`, are rejected. A membership removal affects the next
+including `dry_run`, are rejected. Only an explicit collaborator can leave: the
+owner, or a reader of a public ledger who holds no grant, gets
+`OPERATION_NOT_ALLOWED` saying why, while a caller who cannot see the ledger
+still gets `NOT_FOUND` (w23/063). A membership removal affects the next
 protected call.
 
 ## Resources

@@ -9,6 +9,8 @@ import { getUserTier } from "@/features/stripe/operations/get-user-tier";
 import { parseLedgerId } from "@/shared/str";
 import {
   BadUserInputError,
+  DomainError,
+  ErrorCategory,
   InternalServerError,
   OperationNotAllowedError,
   ResourceLimitReachedError,
@@ -415,11 +417,21 @@ export class LedgerCollaboratorsWorkflow implements ILedgerCollaboratorsWorkflow
     ledgerId: string;
   }): Promise<{ success: boolean; message?: string }> {
     const { identity, ledgerId } = params;
-    await this.authorization.authorizeOrThrow({
-      principal: identity,
-      action: AUTHORIZATION_ACTIONS.LEDGER_COLLABORATORS_LEAVE,
-      resource: ledgerResource(ledgerId),
-    });
+    try {
+      await this.authorization.authorizeOrThrow({
+        principal: identity,
+        action: AUTHORIZATION_ACTIONS.LEDGER_COLLABORATORS_LEAVE,
+        resource: ledgerResource(ledgerId),
+      });
+    } catch (error) {
+      if (
+        error instanceof DomainError &&
+        error.category === ErrorCategory.NOT_FOUND
+      ) {
+        await this.refuseUnleavable(identity, ledgerId);
+      }
+      throw error;
+    }
     const userId = identity.userId;
     const { favaUser } = await this.favaClientFactory.getApiContext(userId);
     const favaAdminApiClient = this.favaClientFactory.getAdminClient();
@@ -440,5 +452,40 @@ export class LedgerCollaboratorsWorkflow implements ILedgerCollaboratorsWorkflow
     }
 
     throw new InternalServerError("Failed to remove self from repository");
+  }
+
+  /**
+   * Only an explicit collaborator can leave; anyone else is denied, and the
+   * denial is concealed as "Ledger not found" so a ledger stays invisible
+   * to who cannot see it. A caller who can read it — its owner, or a reader
+   * of a public ledger — was told it did not exist, and an agent concluded
+   * it was gone (w23/063). Those callers get the real reason.
+   */
+  private async refuseUnleavable(
+    identity: Identity,
+    ledgerId: string,
+  ): Promise<void> {
+    const readable = await this.authorization.authorize({
+      principal: identity,
+      action: AUTHORIZATION_ACTIONS.LEDGER_METADATA_READ,
+      resource: ledgerResource(ledgerId),
+    });
+    if (!readable.allowed) return;
+    const { favaUser } = await this.favaClientFactory.getApiContext(
+      identity.userId,
+    );
+    const { ledgerOwner } = parseLedgerId(ledgerId);
+    if (favaUser.username.toLowerCase() === ledgerOwner.toLowerCase()) {
+      throw new OperationNotAllowedError(
+        "leave ledger",
+        `${favaUser.username} owns this ledger; an owner can't leave it`,
+        "An owner's access comes with owning the ledger. To give it up, delete the ledger with `deleteLedger`.",
+      );
+    }
+    throw new OperationNotAllowedError(
+      "leave ledger",
+      `${favaUser.username} is not a collaborator on this ledger, so there is nothing to leave`,
+      "Leaving removes your own collaborator grant; you can read this ledger without one.",
+    );
   }
 }
