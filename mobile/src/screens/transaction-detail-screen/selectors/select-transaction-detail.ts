@@ -92,6 +92,7 @@ export type PostingDisplayRow = {
 function formatPostingUnits(
   number: string,
   currency: string,
+  heldAtCost = false,
 ): {
   amount: string;
   sign: -1 | 0 | 1;
@@ -108,8 +109,12 @@ function formatPostingUnits(
   // Padded to a known currency's own minor units, as the headline above is: 4.5
   // EUR read "4.5 EUR" under "-4.50 EUR", and 1500 JPY stays whole (w21/445). A
   // commodity that is not a currency (a share count) keeps its recorded digits.
+  // A ticker can also be a currency code (BND, AMD, NOK), so units held at a
+  // cost are a commodity whatever their name says (w21/506).
   const minorUnits =
-    getCurrencySymbol(currency) !== "" ? currencyMinorUnits(currency) : 0;
+    !heldAtCost && getCurrencySymbol(currency) !== ""
+      ? currencyMinorUnits(currency)
+      : 0;
   const displayFrac =
     fracPart.length < minorUnits ? fracPart.padEnd(minorUnits, "0") : fracPart;
   const groupedInt = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
@@ -219,6 +224,7 @@ export function selectPostingRows(
     const { amount, sign } = formatPostingUnits(
       p.units.number,
       p.units.currency,
+      Boolean(p.cost?.number && p.cost.currency),
     );
     return {
       account: p.account,

@@ -539,4 +539,24 @@ describe("selectPostingRows amounts", () => {
     expect(amounts("10", "QAX")).toBe("+10 QAX");
     expect(amounts("0.5", "QAX")).toBe("+0.5 QAX");
   });
+
+  // w21/506: BND, AMD and NOK are also currency codes, so a share count of
+  // them read as money.
+  it("leaves units held at a cost at their recorded digits", () => {
+    const held = (number: string, currency: string) =>
+      selectPostingRows(
+        txn([
+          {
+            ...posting("Assets:Brokerage", number, currency),
+            cost: { number: "80", currency: "USD", date: "2026-07-06" },
+          },
+        ]),
+      )[0]!.amount;
+    expect(held("10", "BND")).toBe("+10 BND");
+    expect(held("10", "AMD")).toBe("+10 AMD");
+    expect(held("3", "NOK")).toBe("+3 NOK");
+    // Without a cost the same codes are currencies, as before.
+    expect(amounts("4.5", "EUR")).toBe("+4.50 EUR");
+    expect(amounts("10", "NOK")).toBe("+10.00 NOK");
+  });
 });
