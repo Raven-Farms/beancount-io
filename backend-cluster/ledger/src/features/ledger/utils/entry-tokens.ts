@@ -126,19 +126,17 @@ export function assertEntryTokens(
   });
 }
 
-/**
- * Whether rendered entry text holds exactly one directive: one line that
- * starts at column zero outside a string, the rest indented or blank. A
- * defense behind `assertEntryTokens` for whatever it does not anticipate.
- */
-export function isSingleDirective(text: string): boolean {
-  let starts = 0;
+/** The lines of `text` that start at column zero outside a string. */
+function topLevelLines(text: string): string[] {
+  const lines: string[] = [];
   let inString = false;
   let lineStart = true;
   for (let i = 0; i < text.length; i += 1) {
     const char = text[i]!;
-    if (lineStart && !inString && char !== "\n" && !/\s/.test(char))
-      starts += 1;
+    if (lineStart && !inString && char !== "\n" && !/\s/.test(char)) {
+      const end = text.indexOf("\n", i);
+      lines.push(text.slice(i, end === -1 ? undefined : end));
+    }
     lineStart = false;
     if (inString) {
       if (char === "\\") i += 1;
@@ -152,5 +150,55 @@ export function isSingleDirective(text: string): boolean {
       while (i + 1 < text.length && text[i + 1] !== "\n") i += 1;
     } else if (char === "\n") lineStart = true;
   }
-  return starts === 1;
+  return lines;
+}
+
+/**
+ * Whether rendered entry text holds exactly one directive: one line that
+ * starts at column zero outside a string, the rest indented or blank. A
+ * defense behind `assertEntryTokens` for whatever it does not anticipate.
+ */
+export function isSingleDirective(text: string): boolean {
+  return topLevelLines(text).length === 1;
+}
+
+const CONFIGURATION_KEYWORDS = new Set(["option", "plugin", "include"]);
+
+/**
+ * Refuse replacement text for one entry unless it is exactly one dated
+ * directive with its indented lines; comments may surround it. Spliced in
+ * as-is, an `option` line or a second entry was committed and reported as
+ * an update of the entry it replaced (w23/036).
+ */
+export function assertSingleEntryText(text: string, field: string): void {
+  const directives = topLevelLines(text).filter(
+    (line) => !line.startsWith(";"),
+  );
+  if (directives.length === 0) {
+    throw new BadUserInputError(
+      `${field} holds no entry; remove the entry with deleteEntrySource instead`,
+      field,
+    );
+  }
+  for (const line of directives) {
+    const keyword = /^([a-z]+)\b/.exec(line)?.[1];
+    if (keyword && CONFIGURATION_KEYWORDS.has(keyword)) {
+      throw new BadUserInputError(
+        `\`${keyword}\` configures the ledger and is not an entry; change it with updateLedgerFiles: ${line.trim()}`,
+        field,
+      );
+    }
+    if (!/^\d{4}-\d{2}-\d{2}\s/.test(line)) {
+      throw new BadUserInputError(
+        `${field} must be one dated directive: ${line.trim()}`,
+        field,
+      );
+    }
+  }
+  if (directives.length > 1) {
+    throw new BadUserInputError(
+      `${field} holds ${directives.length} entries; edit them one at a time or use updateLedgerFiles`,
+      field,
+    );
+  }
 }

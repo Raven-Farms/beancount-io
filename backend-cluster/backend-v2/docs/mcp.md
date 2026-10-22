@@ -1409,6 +1409,9 @@ Three tools reach the existing journal service:
 - `updateEntrySource`: `entryHash`, `sha256sum`, and `newContent`; returns
   `message`, `newSha256sum`, and `newEntryHash` — the request's `entryHash` is
   stale after the commit, so use `newEntryHash` for the next edit.
+  `newContent` must be exactly one dated directive with its indented lines
+  (comments may surround it); an `option`, `plugin` or `include` line, a
+  second entry, or nothing at all is refused as `BAD_USER_INPUT`.
 - `deleteEntrySource`: `entryHash` and `sha256sum`; returns `message` and
   `entryHash`.
 - `deleteEntrySources`: `entries: [{entryHash, sha256sum}]`; returns `message`

@@ -29,6 +29,5 @@
 - [039](./039.md) — MCP whole-file `content` replace and delete take no base `sha` (REST requires one): a read-modify-write silently drops commits made in between
 - [038](./038.md) — `commits` silently caps `limit` at 50 (1000 → 50), undeclared on every surface
 - [037](./037.md) — over-long ledger description refused with raw "[Description]: MaxSize"; no surface declares the limit
-- [036](./036.md) — `updateEntrySource` accepts `option`/`include`/several directives as one entry's replacement (018 class on the source-slice path)
 - [022](./blocked/022.md) — report rustledger BQL gaps upstream (`cost(sum(position))`, `neg`/`filter_currency`, `meta('lineno')`, `AT value`, `BALANCES FROM`) — **blocked:** filing in an external tracker needs the user's approval
 - [026](./blocked/026.md) — streaming archive route for MCP OAuth clients over 8 MiB (option 1 from 023) — **blocked:** an ADR 0007 trust-boundary decision for the owner

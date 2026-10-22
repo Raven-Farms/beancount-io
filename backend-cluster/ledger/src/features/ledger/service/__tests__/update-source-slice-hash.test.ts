@@ -234,3 +234,42 @@ describe("updateSourceSlice directive-limit exemption", () => {
     expect(commitMock.mock.calls[0][5]).toEqual({ directiveLimit: {} });
   });
 });
+
+// w23/036: newContent was spliced in unchecked, so an `option` line or a
+// second entry committed as an "update" of the entry it replaced.
+describe("updateSourceSlice newContent", () => {
+  it.each([
+    ['option "title" "qa-option"', "configures the ledger"],
+    ['include "other.bean"', "configures the ledger"],
+    [`${TXN_NEW}\n${TXN_OLD}`, "holds 2 entries"],
+    ["", "holds no entry"],
+    ["; only a comment\n", "holds no entry"],
+    ["pushtag #trip", "must be one dated directive"],
+  ])("refuses %p without touching the file", async (newContent, problem) => {
+    await expect(
+      service().updateSourceSlice({
+        ledgerId: "alice/main",
+        userId: "user-1",
+        entryHash: OLD_ID,
+        sha256sum: sliceSha256(TXN_OLD),
+        newContent,
+      }),
+    ).rejects.toMatchObject({
+      category: "BAD_USER_INPUT",
+      message: expect.stringContaining(problem),
+    });
+    expect(commitMock).not.toHaveBeenCalled();
+    expect(files["main.bean"]).toBe(MAIN_PRE);
+  });
+
+  it("still commits one entry with a comment above it", async () => {
+    await service().updateSourceSlice({
+      ledgerId: "alice/main",
+      userId: "user-1",
+      entryHash: OLD_ID,
+      sha256sum: sliceSha256(TXN_OLD),
+      newContent: `; tea, not coffee\n${TXN_NEW}`,
+    });
+    expect(files["main.bean"]).toContain('"Tea edit"');
+  });
+});

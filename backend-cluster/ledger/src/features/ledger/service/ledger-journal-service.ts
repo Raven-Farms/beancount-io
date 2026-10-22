@@ -6,6 +6,7 @@ import {
   OperationNotAllowedError,
   type LedgerWriteAction,
 } from "@/shared/errors";
+import { assertSingleEntryText } from "@/features/ledger/utils/entry-tokens";
 import type {
   DirectiveType,
   TransactionSubtype,
@@ -996,6 +997,7 @@ export class LedgerJournalService implements ILedgerJournalService {
   }): Promise<UpdateSliceResult> {
     const { ledgerId, userId, entryHash, sha256sum, newContent, allowInvalid } =
       params;
+    assertSingleEntryText(newContent, "newContent");
     const loaded = await this.loadFileMap(ledgerId, userId);
     const { files, entryPoint, repoPaths, managedPricePaths } = loaded;
     const sourceEntryHash = await this.resolveSourceEntryId(
