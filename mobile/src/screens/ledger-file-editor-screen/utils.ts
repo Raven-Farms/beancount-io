@@ -19,10 +19,15 @@ function messageNamesFile(message: string, filePath: string): boolean {
   let from = message.indexOf(fileName);
   while (from >= 0) {
     const start = message.slice(0, from).search(/\S*$/);
-    const named = message.slice(start, from + fileName.length);
+    const end = from + fileName.length;
+    const named = message.slice(start, end);
+    // The name must end there: `main.bean` is not the start of `main.beancount`
+    // or `main.bean.bak` (w21/447). A sentence's own full stop does not count.
+    const continues = /^(?:[\w-]|\.[\w-])/.test(message.slice(end));
     if (
-      (named === fileName && fileName === filePath) ||
-      sameLedgerFile(named, filePath)
+      !continues &&
+      ((named === fileName && fileName === filePath) ||
+        sameLedgerFile(named, filePath))
     )
       return true;
     from = message.indexOf(fileName, from + 1);
