@@ -784,7 +784,9 @@ access, even though they do not modify data:
 - `beancount://{owner}/{name}/collaborators{?page,limit}` lists members and their
   permissions, defaulting to page `1` and limit `10`, at most 50 per page.
 - `beancount://{owner}/{name}/collaborators/permission{?collaborator}` reads one
-  member's permission and user information. `collaborator` is required.
+  member's permission and user information. `collaborator` is required and
+  must be the owner or a collaborator; any other name, whether or not the
+  account exists, answers `NOT_FOUND` with the same message.
 
 Optional user fields omitted in REST/MCP appear as `null` when selected in
 GraphQL. The workflow preserves its existing behavior: a failed per-member
