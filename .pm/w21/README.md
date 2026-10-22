@@ -83,6 +83,8 @@
 - [484](./484.md) — Profile, server settings, budget delete errors not announced (354 sibling)
 - [485](./485.md) — Files Up and budget Delete targets under 44pt
 - [486](./486.md) — Regression (398): closed parent with open children budgets $0, leaves Home
+- [487](./487.md) — Recent changes and commit detail show no time; same-day commits indistinguishable
+- [488](./488.md) — Invite Friends read twice by VoiceOver; summary never spoken
 - [315](./blocked/315.md) — In-app commits signed with Gitea username and real email (no full_name, no noreply) — **blocked:** needs the owner's noreply-address and published-history decisions, and a production backfill of existing Gitea users that can't be verified here
 - [420](./420.md) — Account detail chart ignores price moves between postings, then jumps
 - [421](./421.md) — FX conversion row shows only operating-currency leg
