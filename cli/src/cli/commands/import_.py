@@ -1406,7 +1406,8 @@ def import_entries(
             try:
                 from cli.csv_mapper import read_header
 
-                headers = read_header(source, encoding=csv_encoding, skip=csv_skip or 0)
+                # With the separator in force, so the header remembered is the one read (w5/922).
+                headers = read_header(source, delimiter=csv_delimiter, encoding=csv_encoding, skip=csv_skip or 0)
                 prior = _find_csv_entry(file, headers, csv_run_account or "")
             except UsageError:
                 headers = None

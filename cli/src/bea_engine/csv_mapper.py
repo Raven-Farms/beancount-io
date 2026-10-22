@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import csv
 import hashlib
+import io
 import re
 import unicodedata
 from collections import Counter
@@ -986,6 +987,8 @@ def _decode_usage_error(source: Path, exc: UnicodeDecodeError, encoding: str) ->
 _CANDIDATE_DELIMITERS = (",", ";", "\t", "|")
 
 _SAMPLE_LINES = 5
+#: How much of a file is read to choose a separator (a quoted cell may span many lines).
+_SAMPLE_CHARS = 262144
 
 
 def _field_count(line: str, delim: str) -> int | None:
@@ -996,8 +999,35 @@ def _field_count(line: str, delim: str) -> int | None:
         return None
 
 
+def _sample_records(text: str, delim: str, skip: int, *, truncated: bool) -> tuple[list[list[str]], bool]:
+    """The first non-empty records after `skip`, read as complete CSV records under `delim`.
+
+    Quoted cells may span lines, so a preamble title or a header cell with a
+    newline is one record here, as extraction reads it; sampling physical lines
+    saw its inside and chose a separator from there (w5/922). The second value
+    is False when this separator cannot parse the sample at all.
+    """
+    records: list[list[str]] = []
+    try:
+        reader = csv.reader(io.StringIO(text), delimiter=delim, strict=True)
+        for _ in range(skip):
+            if next(reader, None) is None:
+                break
+        for record in reader:
+            if record:
+                records.append(record)
+            if len(records) > _SAMPLE_LINES:
+                break
+    except csv.Error:
+        return records, False
+    if truncated and len(records) <= _SAMPLE_LINES and records:
+        # The sample ended inside a record: the last one is partial.
+        records.pop()
+    return records[:_SAMPLE_LINES], True
+
+
 def detect_delimiter(source: Path, encoding: str = "utf-8", skip: int = 0) -> str:
-    """Pick comma, semicolon, tab, or pipe from the first non-empty lines after ``skip``.
+    """Pick comma, semicolon, tab, or pipe from the first non-empty records after ``skip``.
 
     Bank exports often use ``;`` (EU), tabs, or ``|`` (brokers). Prefer the
     separator on which the header and every sampled body row agree on one
@@ -1007,34 +1037,31 @@ def detect_delimiter(source: Path, encoding: str = "utf-8", skip: int = 0) -> st
     on the real separator only. A separator the body agrees on but the header
     does not (a merged header cell) comes next, provided the header splits on
     it at all; when nothing is consistent the most fields on the header line
-    wins.
+    wins. Records, not lines: see `_sample_records`.
     """
     _refuse_utf16(source)
     try:
         with open(source, encoding=_read_codec(encoding), newline="") as stream:
-            for _ in range(skip):
-                if next(stream, None) is None:
-                    break
-            sample = []
-            for line in stream:
-                if line.strip():
-                    sample.append(line.rstrip("\r\n"))
-                    if len(sample) >= _SAMPLE_LINES:
-                        break
+            text = stream.read(_SAMPLE_CHARS)
+            truncated = len(text) >= _SAMPLE_CHARS
     except UnicodeDecodeError as exc:
         raise _decode_usage_error(source, exc, encoding) from None
-    if not sample:
+    if not text.strip():
         return ","
-    header, body = sample[0], sample[1:]
     agreed: tuple[int, str] | None = None
     body_only: tuple[int, str] | None = None
+    header_counts: dict[str, int | None] = {}
     for delim in _CANDIDATE_DELIMITERS:
-        counts = {_field_count(line, delim) for line in body}
+        sample, parsed = _sample_records(text, delim, skip, truncated=truncated)
+        header_counts[delim] = len(sample[0]) if sample else None
+        if not parsed or not sample:
+            continue
+        counts = {len(record) for record in sample[1:]}
         if len(counts) != 1:
             continue
         (count,) = counts
-        header_count = _field_count(header, delim)
-        if count is None or count < 2 or header_count is None or header_count < 2:
+        header_count = len(sample[0])
+        if count < 2 or header_count < 2:
             continue
         if header_count == count:
             if agreed is None or count > agreed[0]:
@@ -1048,9 +1075,9 @@ def detect_delimiter(source: Path, encoding: str = "utf-8", skip: int = 0) -> st
     best = ","
     best_count = 0
     for delim in _CANDIDATE_DELIMITERS:
-        count = _field_count(header, delim)
-        if count is not None and count > best_count:
-            best, best_count = delim, count
+        header_fields = header_counts.get(delim)
+        if header_fields is not None and header_fields > best_count:
+            best, best_count = delim, header_fields
     return best
 
 
