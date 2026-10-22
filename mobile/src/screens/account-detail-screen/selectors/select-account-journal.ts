@@ -171,14 +171,42 @@ export function accountJournalItemKey(item: AccountJournalItem): string {
 }
 
 /**
- * Merge a freshly-fetched page onto the already-loaded items, appending only
- * entries not already present (dedup by key). Guards against overlapping
- * offsets or refetch races producing duplicate rows.
+ * A unique key per item, in order: its identity key, and for each further item
+ * with the same one (identical twins that net to no change, such as a transfer
+ * between two children of a parent account) its ordinal, so twins on one screen
+ * do not share a React key or a lookup slot (w21/613).
+ */
+export function accountJournalItemKeys(items: AccountJournalItem[]): string[] {
+  const counts = new Map<string, number>();
+  return items.map((item) => {
+    const key = accountJournalItemKey(item);
+    const n = counts.get(key) ?? 0;
+    counts.set(key, n + 1);
+    return n === 0 ? key : `${key}#${n}`;
+  });
+}
+
+/**
+ * Merge a freshly-fetched page onto the already-loaded items. With the list's
+ * `total` unchanged since it was loaded nothing moved, so a repeated key is a
+ * real second entry (identical twins share even their change and balance on a
+ * parent account) and the page is appended as it is; dropping the twin read as
+ * "the list moved" and reloaded from page 1 forever (w21/613). When the total
+ * changed, or is not known, the page may overlap what is loaded, and only
+ * entries not already present are appended.
  */
 export function mergeAccountJournalItems(
   existing: AccountJournalItem[],
   incoming: AccountJournalItem[],
+  totals?: { loaded?: number | null; page?: number | null },
 ): AccountJournalItem[] {
+  if (
+    totals?.loaded != null &&
+    totals?.page != null &&
+    totals.loaded === totals.page
+  ) {
+    return [...existing, ...incoming];
+  }
   const seen = new Set(existing.map(accountJournalItemKey));
   const merged = [...existing];
   for (const item of incoming) {
@@ -422,9 +450,10 @@ export function selectAccountJournalRows(
     units || !items.some((item) => postingsOf(item.entry).length > 0)
       ? Infinity
       : Math.max(currencyMinorUnits(currency), recordedScale(items, currency));
-  return items.map((item) => {
+  const keys = accountJournalItemKeys(items);
+  return items.map((item, index) => {
     const row = {
-      key: accountJournalItemKey(item),
+      key: keys[index],
       title: entryTitle(item.entry),
       date: asString(item.entry.date),
       flag: asString(item.entry.flag) || undefined,

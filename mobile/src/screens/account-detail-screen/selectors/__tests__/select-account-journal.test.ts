@@ -2,6 +2,7 @@ import {
   AccountJournalItem,
   AccountJournalRow,
   accountJournalItemKey,
+  accountJournalItemKeys,
   accountJournalPageOverlapped,
   hasMoreAccountJournal,
   mergeAccountJournalItems,
@@ -1044,5 +1045,38 @@ describe("the title of a bare transaction", () => {
         "constname=entryRowTitle(entry)??untitledLabel;",
       ),
     ).toBe(true);
+  });
+});
+
+// w21/613: a transfer between two children of a parent nets to no change, so
+// identical twins share the whole key; the second was dropped as a repeat and the
+// list reloaded from page 1 on every scroll.
+describe("identical twins on a parent account", () => {
+  const twin = () =>
+    item({ entry_hash: "twin", date: "2025-01-01" }, {}, { USD: 100 });
+
+  it("appends a twin on the next page when the total has not moved", () => {
+    const merged = mergeAccountJournalItems([twin()], [twin()], {
+      loaded: 2,
+      page: 2,
+    });
+    expect(merged.length).toBe(2);
+    expect(accountJournalPageOverlapped({ incoming: 1, added: 1 })).toBe(false);
+  });
+
+  it("still drops a repeat when the total moved under the user", () => {
+    const merged = mergeAccountJournalItems([twin()], [twin()], {
+      loaded: 2,
+      page: 3,
+    });
+    expect(merged.length).toBe(1);
+  });
+
+  it("gives twins different row keys", () => {
+    const keys = accountJournalItemKeys([twin(), twin(), twin()]);
+    expect(new Set(keys).size).toBe(3);
+    expect(keys[0]).toBe(accountJournalItemKey(twin()));
+    const rows = selectAccountJournalRows("USD", [twin(), twin()]);
+    expect(rows[0].key === rows[1].key).toBe(false);
   });
 });

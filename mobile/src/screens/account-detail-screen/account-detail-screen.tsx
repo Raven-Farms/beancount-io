@@ -49,7 +49,7 @@ import {
   AccountJournalItem,
   AccountJournalRow,
   AccountJournalSection,
-  accountJournalItemKey,
+  accountJournalItemKeys,
   hasMoreAccountJournal,
   accountJournalPageOverlapped,
   mergeAccountJournalItems,
@@ -306,9 +306,8 @@ const AccountDetailScreenImpl = ({
   // key so a tapped row can hand its full entry to the detail screen.
   const itemsByKey = useMemo(() => {
     const map = new Map<string, AccountJournalItem>();
-    for (const item of items) {
-      map.set(accountJournalItemKey(item), item);
-    }
+    const keys = accountJournalItemKeys(items);
+    items.forEach((item, index) => map.set(keys[index], item));
     return map;
   }, [items]);
 
@@ -359,6 +358,10 @@ const AccountDetailScreenImpl = ({
             const merged = mergeAccountJournalItems(
               prev.getLedgerAccountJournal.items,
               incoming,
+              {
+                loaded: prev.getLedgerAccountJournal.total,
+                page: fetchMoreResult.getLedgerAccountJournal.total,
+              },
             );
             const page = {
               incoming: incoming.length,
