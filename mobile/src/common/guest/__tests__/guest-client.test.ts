@@ -216,6 +216,50 @@ describe("guest read isolation", () => {
     ]);
   });
 
+  // w21/292: one failed refresh or scroll blanked the whole example though its
+  // rows were still on screen.
+  it("keeps the example when a connection fails after something loaded", async () => {
+    await client.query({ query, variables });
+    globalThis.fetch = async () => {
+      throw new Error("offline");
+    };
+    await rejects(() =>
+      client.query({ query, variables, fetchPolicy: "network-only" }),
+    );
+    // A second failing read (a scroll, a pull to refresh) is no different.
+    await rejects(() =>
+      client.query({ query, variables, fetchPolicy: "network-only" }),
+    );
+    expect(failures).toEqual([]);
+    // The rows are still in the cache for the screens to show.
+    const cached = client.readQuery({ query, variables });
+    expect(cached?.getLedger.id).toBe(variables.ledgerId);
+  });
+
+  it("still blanks it when the first load never arrives", async () => {
+    globalThis.fetch = async () => {
+      throw new Error("offline");
+    };
+    await rejects(() => client.query({ query, variables }));
+    expect(failures).toEqual(["connection"]);
+  });
+
+  it("still reports lost access after a load, and an error result is not a load", async () => {
+    response = {
+      errors: [
+        { message: "Example unavailable", extensions: { code: "NOT_FOUND" } },
+      ],
+    };
+    await rejects(() => client.query({ query, variables }));
+    globalThis.fetch = async () => {
+      throw new Error("offline");
+    };
+    await rejects(() =>
+      client.query({ query, variables, fetchPolicy: "network-only" }),
+    );
+    expect(failures).toEqual(["unavailable", "connection"]);
+  });
+
   it("cannot populate a replacement client with a late old response", async () => {
     let release!: (response: Response) => void;
     globalThis.fetch = () =>

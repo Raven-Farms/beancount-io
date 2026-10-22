@@ -48,11 +48,28 @@ const PUBLIC_OPERATIONS = new Set([
   "AccountJournal",
 ]);
 
+/**
+ * Whether a failure should blank the whole example. Losing access always does;
+ * a connection failure does only while nothing has loaded yet. After that the
+ * rows on screen are still true, and the screens show them under their own
+ * stale banner or per-card retry, as they do signed in: one failed scroll or
+ * refresh used to replace the example with "Couldn't load this example" and
+ * the next foreground remounted it, dropping filters and the open transaction
+ * (w21/292).
+ */
+function flagsSession(
+  failure: GuestReadFailure,
+  anythingLoaded: boolean,
+): boolean {
+  return failure === "unavailable" || !anythingLoaded;
+}
+
 export function createGuestClient(
   serverUrl: string,
   ledgerId: ExampleId | null,
   onFailure?: (failure: GuestReadFailure) => void,
 ) {
+  let anythingLoaded = false;
   const gate = new ApolloLink((operation, forward) => {
     const definition = getMainDefinition(operation.query);
     if (
@@ -76,8 +93,15 @@ export function createGuestClient(
     cache: new InMemoryCache(),
     link: ApolloLink.from([
       gate,
+      new ApolloLink((operation, forward) =>
+        forward(operation).map((result) => {
+          if (!result.errors?.length) anythingLoaded = true;
+          return result;
+        }),
+      ),
       onError((error) => {
-        onFailure?.(guestReadFailure(error));
+        const failure = guestReadFailure(error);
+        if (flagsSession(failure, anythingLoaded)) onFailure?.(failure);
       }),
       new HttpLink({
         uri: endpointFor(serverUrl, "api-gateway/"),
