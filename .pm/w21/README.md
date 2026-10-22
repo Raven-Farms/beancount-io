@@ -51,5 +51,10 @@
 - [536](./536.md) — In Persian, Money flow's cost/price line and the budget Delete alert put the currency on the wrong side (missed by w21/095 and w21/249)
 - [537](./537.md) — The pending badge is a literal English "P" in all 13 languages
 - [538](./538.md) — Scan Receipt's "Receipt read" shows a raw ISO date and an ungrouped total with no currency
+- [539](./539.md) — Budget and Home show a refund month's Actual without its minus sign ("Actual $50.00 · Variance −$404.84")
+- [540](./540.md) — Cash flow cuts off "(income)"/"(expenses)" on group names of 7+ characters, so both read "Interest …" (w0/034 incomplete)
+- [541](./541.md) — Cash flow drops flows under 0.005 units whatever the currency, so BTC ledgers lose nodes and Savings is wrong
+- [542](./542.md) — The balance chart's dashed start line and VoiceOver's "From" use the first point, while the change row uses the opening balance
+- [543](./543.md) — VoiceOver says "+$0.00 since start" where the header shows a neutral "$0.00" (w21/416 half)
 - [508](./blocked/508.md) — Mobile guesses that an entry is a plugin copy from its first line; read the ledger's `generated_from` instead (split from 443) — **blocked:** production's GraphQL schema lacks `generated_from` until the ledger service and backend-v2 deploy; mobile's client is generated from it
 - [315](./blocked/315.md) — In-app commits signed with Gitea username and real email (no full_name, no noreply) — **blocked:** needs the owner's noreply-address and published-history decisions, and a production backfill of existing Gitea users that can't be verified here
