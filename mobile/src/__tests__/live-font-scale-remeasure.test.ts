@@ -410,9 +410,15 @@ describe("read-only file notice live font-scale remeasurement", () => {
 const HOME_CARD_TEXTS: [string, string[]][] = [
   [
     "screens/home-screen/components/spending-card.tsx",
-    // The subtitle, and the two "not in total" notes: this month's and last
-    // month's (w21/263).
-    ["{styles.subtitle}", "{styles.note}", "{styles.note}"],
+    // The subtitle, the empty text or the totals under the bars (w21/418), and
+    // the two "not in total" notes: this month's and last month's (w21/263).
+    [
+      "{styles.subtitle}",
+      "{styles.empty}",
+      "{styles.totals}",
+      "{styles.note}",
+      "{styles.note}",
+    ],
   ],
   [
     "screens/home-screen/components/budget-card.tsx",

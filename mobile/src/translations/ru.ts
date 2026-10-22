@@ -459,6 +459,7 @@ export const ru: Translations = {
   spendingSubtitle: "Этот месяц и прошлый",
   spendingChartSummary:
     "Расходы: в прошлом месяце {{lastMonth}}, в этом месяце {{thisMonth}}.",
+  spendingEmpty: "Пока нет расходов",
   thisMonth: "Этот месяц",
   lastMonth: "Прошлый месяц",
   range1M: "1М",

@@ -247,3 +247,57 @@ describe("the Spending card's notes", () => {
     expect(card.includes("lastMonthNotInTotal")).toBe(true);
   });
 });
+
+// w21/418: the two monthly totals were only in the VoiceOver label, and an
+// empty ledger drew two 2 pt bars over a $0 to $1 axis.
+describe("the spending card's totals and empty state", () => {
+  const {
+    spendingTotalsCaption,
+    noSpending,
+  } = require("../select-spending-compare");
+  const labels = { thisMonth: "This month", lastMonth: "Last month" };
+
+  it("prints both totals under the bars", () => {
+    expect(
+      spendingTotalsCaption(
+        { thisMonth: 1234.56, lastMonth: 987.65 },
+        "USD",
+        labels,
+      ),
+    ).toBe("This month $1,234.56 · Last month $987.65");
+  });
+
+  it("isolates each amount for right-to-left text", () => {
+    expect(
+      spendingTotalsCaption(
+        { thisMonth: 5, lastMonth: 0 },
+        "USD",
+        labels,
+        (text: string) => `[${text}]`,
+      ),
+    ).toBe("This month [$5.00] · Last month [$0.00]");
+  });
+
+  it("is empty only when neither month has spending", () => {
+    expect(noSpending({ lastMonth: 0, thisMonth: 0 })).toBe(true);
+    expect(noSpending({ lastMonth: 0, thisMonth: 0.01 })).toBe(false);
+    expect(noSpending({ lastMonth: 12, thisMonth: 0 })).toBe(false);
+  });
+
+  it("is what the card renders: the empty text, or the chart with its totals", () => {
+    const src = require("fs")
+      .readFileSync(
+        require("path").join(__dirname, "../../components/spending-card.tsx"),
+        "utf8",
+      )
+      .replace(/\s+/g, "");
+    expect(src.includes("{noSpending({lastMonth,thisMonth})?(")).toBe(true);
+    expect(src.includes('t("spendingEmpty")')).toBe(true);
+    expect(src.includes('testID="spending-totals"')).toBe(true);
+    expect(
+      src.includes(
+        '{thisMonth:t("thisMonth"),lastMonth:t("lastMonth")},isolateLtr,',
+      ),
+    ).toBe(true);
+  });
+});

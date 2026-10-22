@@ -408,6 +408,7 @@ export const zh: Translations = {
   spending: "支出",
   spendingSubtitle: "本月与上月对比",
   spendingChartSummary: "支出：上月 {{lastMonth}}，本月 {{thisMonth}}。",
+  spendingEmpty: "暂无支出",
   thisMonth: "本月",
   lastMonth: "上月",
   range1M: "近1月",

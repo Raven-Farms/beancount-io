@@ -462,6 +462,7 @@ export const sk: Translations = {
   spendingSubtitle: "Tento mesiac oproti minulému",
   spendingChartSummary:
     "Výdavky: minulý mesiac {{lastMonth}}, tento mesiac {{thisMonth}}.",
+  spendingEmpty: "Zatiaľ žiadne výdavky",
   thisMonth: "Tento mesiac",
   lastMonth: "Minulý mesiac",
   range1M: "1M",

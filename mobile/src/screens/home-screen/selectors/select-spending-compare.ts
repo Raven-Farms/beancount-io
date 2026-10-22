@@ -128,3 +128,28 @@ export function spendingChartSummary(
   });
   return note ? `${summary}. ${note}` : summary;
 }
+
+/**
+ * The two monthly totals as text under the bars, "This month $1,234.56 · Last
+ * month $987.65": the exact amounts were only in the VoiceOver label, and a
+ * sighted reader had the bars and short ticks (w21/418). `isolate` keeps an
+ * amount's characters in order inside right-to-left text.
+ */
+export function spendingTotalsCaption(
+  { lastMonth, thisMonth }: Pick<SpendingCompare, "lastMonth" | "thisMonth">,
+  currency: string,
+  labels: { thisMonth: string; lastMonth: string },
+  isolate: (text: string) => string = (text) => text,
+): string {
+  const amount = (value: number) =>
+    isolate(formatMoneyWithCurrency(value, currency));
+  return `${labels.thisMonth} ${amount(thisMonth)} · ${labels.lastMonth} ${amount(lastMonth)}`;
+}
+
+/** Whether neither month has any spending in the card's currency. */
+export function noSpending({
+  lastMonth,
+  thisMonth,
+}: Pick<SpendingCompare, "lastMonth" | "thisMonth">): boolean {
+  return lastMonth === 0 && thisMonth === 0;
+}

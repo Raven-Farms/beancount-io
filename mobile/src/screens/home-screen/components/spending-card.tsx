@@ -15,8 +15,10 @@ import {
   useLedgerReadContextQuery,
 } from "@/generated-graphql/graphql";
 import {
+  noSpending,
   selectSpendingCompare,
   spendingChartSummary,
+  spendingTotalsCaption,
   spendingWindow,
 } from "@/screens/home-screen/selectors/select-spending-compare";
 import { CardLoadFailure } from "@/components/card-load-failure";
@@ -43,6 +45,20 @@ const getStyles = (theme: ColorTheme) =>
       paddingHorizontal: 16,
       marginBottom: 12,
       fontSize: fontSizes.sm,
+      color: theme.black80,
+      textAlign: LEADING_TEXT_ALIGN,
+    },
+    totals: {
+      paddingHorizontal: 16,
+      marginTop: 8,
+      fontSize: fontSizes.sm,
+      color: theme.text01,
+      textAlign: LEADING_TEXT_ALIGN,
+    },
+    empty: {
+      paddingHorizontal: 16,
+      paddingVertical: 24,
+      fontSize: fontSizes.md,
       color: theme.black80,
       textAlign: LEADING_TEXT_ALIGN,
     },
@@ -185,17 +201,45 @@ export function SpendingCard({
         <LoadingTile height={BAR_CHART_HEIGHT} mx={16} />
       ) : (
         <FadeInView>
-          <BarChartD3
-            currency={currency}
-            labels={SPENDING_LABELS}
-            numbers={[lastMonth, thisMonth]}
-            accessibilityLabel={spendingChartSummary(
-              { lastMonth, thisMonth },
-              currency,
-              t,
-              note,
-            )}
-          />
+          {noSpending({ lastMonth, thisMonth }) ? (
+            // Two 2 pt bars over a $0 to $1 axis suggested cents of spending.
+            <Text
+              key={`empty-${fontScale}`}
+              testID="spending-empty"
+              style={styles.empty}
+            >
+              {t("spendingEmpty")}
+            </Text>
+          ) : (
+            <>
+              <BarChartD3
+                currency={currency}
+                labels={SPENDING_LABELS}
+                numbers={[lastMonth, thisMonth]}
+                accessibilityLabel={spendingChartSummary(
+                  { lastMonth, thisMonth },
+                  currency,
+                  t,
+                  note,
+                )}
+              />
+              {/* The chart's label already speaks the amounts. */}
+              <Text
+                key={`totals-${fontScale}`}
+                testID="spending-totals"
+                style={styles.totals}
+                accessibilityElementsHidden
+                importantForAccessibility="no-hide-descendants"
+              >
+                {spendingTotalsCaption(
+                  { lastMonth, thisMonth },
+                  currency,
+                  { thisMonth: t("thisMonth"), lastMonth: t("lastMonth") },
+                  isolateLtr,
+                )}
+              </Text>
+            </>
+          )}
           {note ? (
             <Text
               key={`note-${fontScale}`}

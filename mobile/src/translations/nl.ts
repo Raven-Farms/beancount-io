@@ -454,6 +454,7 @@ export const nl: Translations = {
   spendingSubtitle: "Deze maand vergeleken met vorige maand",
   spendingChartSummary:
     "Uitgaven: vorige maand {{lastMonth}}, deze maand {{thisMonth}}.",
+  spendingEmpty: "Nog geen uitgaven",
   thisMonth: "Deze maand",
   lastMonth: "Vorige maand",
   range1M: "1M",

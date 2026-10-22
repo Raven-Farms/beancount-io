@@ -464,6 +464,7 @@ export const ca: Translations = {
   spendingSubtitle: "Aquest mes en comparació amb l'anterior",
   spendingChartSummary:
     "Despeses: el mes passat {{lastMonth}}, aquest mes {{thisMonth}}.",
+  spendingEmpty: "Encara no hi ha despeses",
   thisMonth: "Aquest mes",
   lastMonth: "Mes passat",
   range1M: "1M",
