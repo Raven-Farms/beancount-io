@@ -376,10 +376,12 @@ def ledger_root_names(file: Path) -> dict[str, str]:
     on a ledger with `option "name_expenses" "Aufwand"` a model following them
     queried roots that hold nothing and read the 0 rows as no data (w5/403).
     Read as text: the frontend never loads the ledger, and Beancount takes
-    these options from the root file, the last one winning.
+    these options from the root file, the last one winning. A leading UTF-8
+    BOM is dropped, or it hid the first option when that was the rename
+    (w5/891).
     """
     try:
-        text = file.read_text(encoding="utf-8", errors="replace")
+        text = file.read_text(encoding="utf-8-sig", errors="replace")
     except OSError:
         return {}
     named = {_DEFAULT_ROOTS[key]: name for key, name in _ROOT_OPTION.findall(text)}
