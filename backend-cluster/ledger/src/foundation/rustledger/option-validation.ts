@@ -40,3 +40,81 @@ export function reconcileOptionErrors(
     return [error];
   });
 }
+
+/** `option "name" "value"`, a top-level directive: a comment never matches. */
+const OPTION_RE = /^[^\S\r\n]*option[^\S\r\n]+"([^"]*)"[^\S\r\n]+"([^"]*)"/gmu;
+
+/** An engine option error: its `[E70xx]` tag leads the message and `code` is null. */
+const OPTION_ERROR = /^\[(E70\d\d)\] ([\s\S]*)$/u;
+
+/**
+ * The directive line of each `option` in one file's text, with its 1-based
+ * line. Lines are counted between matches, so a large file is scanned once.
+ */
+function optionDeclarations(
+  content: string,
+): Array<{ name: string; value: string; line: number }> {
+  const declarations: Array<{ name: string; value: string; line: number }> = [];
+  let line = 1;
+  let scanned = 0;
+  for (const match of content.matchAll(OPTION_RE)) {
+    const index = match.index ?? 0;
+    for (let i = scanned; i < index; i += 1) {
+      if (content.charCodeAt(i) === 10) line += 1;
+    }
+    scanned = index;
+    declarations.push({ name: match[1], value: match[2], line });
+  }
+  return declarations;
+}
+
+/**
+ * Put option errors on the `option` line they are about, with their code.
+ *
+ * The engine reports `[E7001] Invalid option "bogus_option"` with no file, line
+ * or code (the code is a tag in the message), so the row could not be opened in
+ * the editor and no banner listed it, where Beancount names the option's file
+ * and line. The option is found from the names and values the message quotes: a
+ * line naming it and carrying the quoted value wins, then one naming it, then one
+ * whose value was quoted (a bad account leaf names no option); among equals the
+ * last line, which is the one that wins (and the one a duplicate is reported
+ * on). An error that matches no line is left as it was. The `[E7006]` document
+ * root error has its own reconciliation and is not touched (w21/309).
+ */
+export function locateOptionErrors(
+  errors: readonly BeancountError[],
+  files: Readonly<Record<string, string>>,
+  entryPoint: string,
+): BeancountError[] {
+  const content = files[entryPoint];
+  if (content === undefined) return [...errors];
+  let options: ReturnType<typeof optionDeclarations> | undefined;
+  return errors.map((error) => {
+    if (error.file || error.code) return error;
+    const tagged = OPTION_ERROR.exec(error.message);
+    if (!tagged || tagged[1] === "E7006") return error;
+    options ??= optionDeclarations(content);
+    const quoted = new Set(
+      [...tagged[2].matchAll(/"([^"]*)"|'([^']*)'/gu)].map(
+        (match) => match[1] ?? match[2],
+      ),
+    );
+    let best: { line: number; score: number } | null = null;
+    for (const option of options) {
+      const score =
+        (quoted.has(option.name) ? 2 : 0) + (quoted.has(option.value) ? 1 : 0);
+      if (score > 0 && (best === null || score >= best.score)) {
+        best = { line: option.line, score };
+      }
+    }
+    if (best === null) return error;
+    return {
+      ...error,
+      code: tagged[1],
+      message: tagged[2],
+      file: entryPoint,
+      line: best.line,
+      column: error.column ?? 1,
+    };
+  });
+}

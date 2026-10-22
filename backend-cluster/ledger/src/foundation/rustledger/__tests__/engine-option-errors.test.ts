@@ -31,6 +31,7 @@ jest.mock("@/foundation/rustledger/loader", () => ({
             "[E7007] Option 'account_rounding' is accepted for compatibility but has no effect: no rounding residual is produced.",
           ),
           wasmError("[E7002] Invalid leaf account name: 'rounding'"),
+          wasmError('[E7001] Invalid option "bogus_option"'),
         ],
         getOptions: () => ({ title: null, operating_currencies: [] }),
         getDirectives: () => [],
@@ -59,7 +60,7 @@ describe("parseLedgerFilesInProcess with Beancount's default options", () => {
     const snapshot = await parseLedgerFilesInProcess(
       {
         "main.bean":
-          'option "account_previous_balances" "Opening-Balances"\noption "account_rounding" "Rounding"\n',
+          'option "account_previous_balances" "Opening-Balances"\noption "account_rounding" "Rounding"\noption "bogus_option" "x"\n',
       },
       "main.bean",
       { repoPaths: ["main.bean"] },
@@ -70,10 +71,35 @@ describe("parseLedgerFilesInProcess with Beancount's default options", () => {
         error.message.slice(0, 7),
       ]),
     ).toEqual([
-      ["warning", "[E7007]"],
+      ["warning", "Option "],
+      // An unplaceable one keeps its text, tag included.
       ["error", "[E7002]"],
+      ["error", "Invalid"],
     ]);
     // The genuinely invalid leaf is still an error, so the ledger is invalid.
     expect(snapshot.valid).toBe(false);
+  });
+});
+
+describe("the same parse", () => {
+  beforeEach(() => clearLedgerSnapshotCache());
+
+  it("places the option errors on their lines, with their codes (w21/309)", async () => {
+    const snapshot = await parseLedgerFilesInProcess(
+      {
+        "main.bean":
+          'option "account_previous_balances" "Opening-Balances"\noption "account_rounding" "Rounding"\noption "bogus_option" "x"\n',
+      },
+      "main.bean",
+      { repoPaths: ["main.bean"] },
+    );
+    expect(
+      snapshot.errors.map((error) => [error.code, error.file, error.line]),
+    ).toEqual([
+      ["E7007", "main.bean", 2],
+      // The leaf 'rounding' matches no option's value: left unplaced.
+      [null, null, null],
+      ["E7001", "main.bean", 3],
+    ]);
   });
 });

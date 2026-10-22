@@ -1,5 +1,8 @@
 import type { BeancountError } from "@rustledger/wasm";
-import { reconcileOptionErrors } from "../option-validation";
+import {
+  locateOptionErrors,
+  reconcileOptionErrors,
+} from "../option-validation";
 
 // w21/308: Beancount's own default `account_previous_balances` and
 // `account_rounding` raised red E7002 / E7007 errors that bean-check accepts.
@@ -59,5 +62,78 @@ describe("reconcileOptionErrors", () => {
       error("note", "warning"),
     ];
     expect(reconcileOptionErrors(others)).toEqual(others);
+  });
+});
+
+// w21/309: option errors came with no file, line or code, so their rows could
+// not be tapped and no editor banner listed them.
+describe("locateOptionErrors", () => {
+  const main = [
+    '; an option here must not match: option "bogus_option" "x"',
+    'option "bogus_option" "x"',
+    'option "operating_currency" "USD"',
+    'option "render_commas" "maybe"',
+    'option "title" "A"',
+    'option "title" "B"',
+    'option "name_assets" "assets"',
+    'option "account_rounding" "Rounding"',
+    "",
+  ].join("\n");
+  const files = { "main.bean": main, "sub.bean": 'option "title" "C"\n' };
+  const locate = (message: string) =>
+    locateOptionErrors([error(message)], files, "main.bean")[0]!;
+
+  it("puts an invalid option on its line and moves the tag into code", () => {
+    expect(locate('[E7001] Invalid option "bogus_option"')).toMatchObject({
+      code: "E7001",
+      message: 'Invalid option "bogus_option"',
+      file: "main.bean",
+      line: 2,
+    });
+  });
+
+  it("finds the option by the value a message quotes", () => {
+    expect(
+      locate(
+        '[E7002] Invalid value "maybe" for option "render_commas": expected TRUE, FALSE, 1 or 0',
+      ),
+    ).toMatchObject({ code: "E7002", file: "main.bean", line: 4 });
+    expect(
+      locate("[E7008] Invalid account type name: 'assets' cannot begin"),
+    ).toMatchObject({
+      code: "E7008",
+      line: 7,
+    });
+  });
+
+  it("puts a repeated option on its last line", () => {
+    expect(
+      locate(
+        '[E7003] Option "title" is set more than once; the last value wins',
+      ),
+    ).toMatchObject({ code: "E7003", line: 6 });
+  });
+
+  it("keeps the severity and locates a warning too", () => {
+    const [located] = locateOptionErrors(
+      [error("[E7007] Option 'account_rounding' has no effect", "warning")],
+      files,
+      "main.bean",
+    );
+    expect(located).toMatchObject({
+      severity: "warning",
+      code: "E7007",
+      line: 8,
+    });
+  });
+
+  it("leaves what it cannot place, what is placed and the document root alone", () => {
+    const unknown = error('[E7001] Invalid option "not_in_the_file"');
+    const placed = { ...error("Balance failed"), file: "main.bean", line: 9 };
+    const root = error("[E7006] Document root 'x' does not exist");
+    expect(
+      locateOptionErrors([unknown, placed, root], files, "main.bean"),
+    ).toEqual([unknown, placed, root]);
+    expect(locateOptionErrors([unknown], {}, "main.bean")).toEqual([unknown]);
   });
 });
