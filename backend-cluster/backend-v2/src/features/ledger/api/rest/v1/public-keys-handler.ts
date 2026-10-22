@@ -1,4 +1,5 @@
 import { z } from "@/shared/zod-openapi-setup";
+import { HOST_PAGE_MAX } from "@/shared/host-page";
 import { v1Route } from "@/server/rest/v1-route";
 import { json } from "@/server/rest/v1-schemas";
 
@@ -12,8 +13,8 @@ const publicKeySchema = z.object({
 });
 const publicKeyListQuery = z
   .object({
-    page: z.coerce.number().optional(),
-    limit: z.coerce.number().optional(),
+    page: z.coerce.number().int().min(1).optional(),
+    limit: z.coerce.number().int().min(1).max(HOST_PAGE_MAX).optional(),
   })
   .strict();
 // A key id is a positive integer. A fraction would be truncated downstream and

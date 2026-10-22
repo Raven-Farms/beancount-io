@@ -1,4 +1,5 @@
 import { type IStripeService } from "@/features/stripe/service/stripe-service";
+import { assertHostPage } from "@/shared/host-page";
 import { type IFavaClientFactory } from "@/foundation/clients/fava-client-factory";
 import {
   getTierLimits,
@@ -284,6 +285,7 @@ export class LedgerCollaboratorsWorkflow implements ILedgerCollaboratorsWorkflow
     limit?: number;
   }): Promise<CollaboratorData[]> {
     const { identity, ledgerId, page = 1, limit = 10 } = params;
+    assertHostPage(page, limit);
     await this.authorization.authorizeOrThrow({
       principal: identity,
       action: AUTHORIZATION_ACTIONS.LEDGER_COLLABORATORS_LIST,

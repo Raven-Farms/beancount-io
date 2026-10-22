@@ -1,4 +1,5 @@
 import { publicAvatarUrl } from "@/shared/gitea-utils";
+import { assertHostPage } from "@/shared/host-page";
 import type { DbExecutor } from "@/drizzle/drizzle";
 import type { IModels } from "@/foundation/models";
 import type { IGiteaClientFactory } from "@/foundation/clients/gitea-client-factory";
@@ -359,6 +360,8 @@ export class UserProfileService implements IUserProfileService {
     page = 1,
     limit = 20,
   ): Promise<UserListResponse> {
+    // Outside the try: a refusal is not an upstream failure (w23/038).
+    assertHostPage(page, limit);
     try {
       const giteaClient = this.giteaClientFactory.getAdminApiClient();
       const response = await giteaClient.users.userListFollowers(
@@ -391,6 +394,8 @@ export class UserProfileService implements IUserProfileService {
     page = 1,
     limit = 20,
   ): Promise<UserListResponse> {
+    // Outside the try: a refusal is not an upstream failure (w23/038).
+    assertHostPage(page, limit);
     try {
       const giteaClient = this.giteaClientFactory.getAdminApiClient();
       const response = await giteaClient.users.userListFollowing(
@@ -424,6 +429,8 @@ export class UserProfileService implements IUserProfileService {
     limit = 20,
     viewerUserId?: string,
   ): Promise<RepositoryListResponse> {
+    // Outside the try: a refusal is not an upstream failure (w23/038).
+    assertHostPage(page, limit);
     try {
       // Gitea lists private stars only to the user themselves, and the admin
       // client never is: a user's own starred private ledger was missing from

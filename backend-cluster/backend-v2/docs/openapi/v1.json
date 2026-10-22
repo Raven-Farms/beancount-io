@@ -6146,8 +6146,8 @@
           },
           {
             "schema": {
-              "type": "number",
-              "nullable": true,
+              "type": "integer",
+              "minimum": 1,
               "default": 1
             },
             "required": false,
@@ -6156,8 +6156,9 @@
           },
           {
             "schema": {
-              "type": "number",
-              "nullable": true,
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50,
               "default": 10
             },
             "required": false,
@@ -7032,8 +7033,8 @@
         "parameters": [
           {
             "schema": {
-              "type": "number",
-              "nullable": true
+              "type": "integer",
+              "minimum": 1
             },
             "required": false,
             "name": "page",
@@ -7041,8 +7042,9 @@
           },
           {
             "schema": {
-              "type": "number",
-              "nullable": true
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50
             },
             "required": false,
             "name": "limit",
@@ -20510,8 +20512,8 @@
           },
           {
             "schema": {
-              "type": "number",
-              "nullable": true
+              "type": "integer",
+              "minimum": 1
             },
             "required": false,
             "name": "page",
@@ -20519,8 +20521,9 @@
           },
           {
             "schema": {
-              "type": "number",
-              "nullable": true
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50
             },
             "required": false,
             "name": "limit",
@@ -20690,8 +20693,8 @@
           },
           {
             "schema": {
-              "type": "number",
-              "nullable": true
+              "type": "integer",
+              "minimum": 1
             },
             "required": false,
             "name": "page",
@@ -20699,8 +20702,9 @@
           },
           {
             "schema": {
-              "type": "number",
-              "nullable": true
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50
             },
             "required": false,
             "name": "limit",
@@ -20870,8 +20874,8 @@
           },
           {
             "schema": {
-              "type": "number",
-              "nullable": true
+              "type": "integer",
+              "minimum": 1
             },
             "required": false,
             "name": "page",
@@ -20879,8 +20883,9 @@
           },
           {
             "schema": {
-              "type": "number",
-              "nullable": true
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50
             },
             "required": false,
             "name": "limit",

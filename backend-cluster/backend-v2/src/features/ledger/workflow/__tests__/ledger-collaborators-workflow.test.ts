@@ -122,6 +122,22 @@ describe("LedgerCollaboratorsWorkflow authorization", () => {
     },
   );
 
+  // w23/038: the host answers an out-of-range page or limit with its own.
+  it.each([
+    [1, 51],
+    [0, 10],
+    [1, 2.5],
+  ])(
+    "refuses page %p and limit %p before the decision or the host",
+    async (page, limit) => {
+      await expect(
+        workflow.listCollaborators({ identity, ledgerId, page, limit }),
+      ).rejects.toMatchObject({ category: "BAD_USER_INPUT" });
+      expect(authorizeOrThrow).not.toHaveBeenCalled();
+      expect(listLedgerCollaborators).not.toHaveBeenCalled();
+    },
+  );
+
   it("keeps collaborator reads behind the decision and preserves paging", async () => {
     await expect(
       workflow.listCollaborators({ identity, ledgerId, page: 3, limit: 20 }),

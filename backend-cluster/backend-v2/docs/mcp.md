@@ -735,7 +735,7 @@ Collaborator reads also require `ledger.admin` and current administrative
 access, even though they do not modify data:
 
 - `beancount://{owner}/{name}/collaborators{?page,limit}` lists members and their
-  permissions, defaulting to page `1` and limit `10`.
+  permissions, defaulting to page `1` and limit `10`, at most 50 per page.
 - `beancount://{owner}/{name}/collaborators/permission{?collaborator}` reads one
   member's permission and user information. `collaborator` is required.
 
@@ -1216,7 +1216,8 @@ All three require repository read access to the URI's ledger:
 - `beancount://{owner}/{name}/latest-commit{?branchName}` returns the latest
   commit, or `null` for an empty repository. `branchName` defaults to `main`.
 - `beancount://{owner}/{name}/commits{?branch,page,limit}` returns commit history.
-  Defaults are `main`, page `1`, and limit `30`.
+  Defaults are `main`, page `1`, and limit `30`; a page holds at most 50, so
+  page through with `page`.
 - `beancount://{owner}/{name}/commit-details{?sha}` requires `sha` and returns
   metadata, parents, file statistics, and a unified diff.
 
@@ -1273,7 +1274,7 @@ The MCP resources below match public REST routes and GraphQL list queries:
 | `beancount://social/starred-repositories` | `/api-gateway/v1/social/starred-repositories` | `getUserStarredRepos` |
 
 Every route/resource requires a `username` query argument and accepts `page`
-and `limit`, defaulting to 1 and 20. Encode query values once. Responses retain
+and `limit`, defaulting to 1 and 20, at most 50 per page. Encode query values once. Responses retain
 user/repository fields and ISO timestamps. `total` is the returned page's size,
 not the overall collection size. The shared service currently returns an empty
 page on upstream failure, so an empty result does not establish that the user

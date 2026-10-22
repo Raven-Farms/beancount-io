@@ -140,6 +140,27 @@ describe("UserProfileService", () => {
     },
   );
 
+  // w23/038: the host answers more than 50 with 50, which read as the last
+  // page; the refusal must not be swallowed into the empty upstream-failure
+  // page these reads return.
+  it.each([
+    ["getUserFollowers", "userListFollowers"],
+    ["getUserFollowing", "userListFollowing"],
+    ["getUserStarredRepos", "userListStarred"],
+  ] as const)(
+    "%s refuses a limit above 50 before the host",
+    async (method, upstream) => {
+      await expect(service[method]("testuser", 1, 51)).rejects.toMatchObject({
+        category: "BAD_USER_INPUT",
+        message: "limit must be at most 50",
+      });
+      await expect(service[method]("testuser", 0, 10)).rejects.toMatchObject({
+        category: "BAD_USER_INPUT",
+      });
+      expect(mockGiteaClient.users[upstream]).not.toHaveBeenCalled();
+    },
+  );
+
   describe("getUserProfile", () => {
     it("should fetch and transform user profile successfully", async () => {
       const mockUser = createMockGiteaUser();

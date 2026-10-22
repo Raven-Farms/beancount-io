@@ -1,4 +1,5 @@
 import type { IGiteaClientFactory } from "@/foundation/clients/gitea-client-factory";
+import { assertHostPage, HOST_PAGE_MAX } from "@/shared/host-page";
 import { parseLedgerId } from "@/shared/str";
 import type {
   CommitListItem,
@@ -13,7 +14,6 @@ import {
   type IAuthorizationService,
 } from "@/server/api/authorization";
 import {
-  BadUserInputError,
   DomainError,
   InternalServerError,
   NotFoundError,
@@ -221,7 +221,7 @@ export interface ICommitsService {
  * short page as the end stopped early (w21/314). It is refused here instead, on
  * REST, GraphQL and MCP alike, and published in each surface's schema.
  */
-export const MAX_COMMITS_PAGE_SIZE = 50;
+export const MAX_COMMITS_PAGE_SIZE = HOST_PAGE_MAX;
 
 export class CommitsService implements ICommitsService {
   constructor(
@@ -239,20 +239,7 @@ export class CommitsService implements ICommitsService {
     // Gitea answers an out-of-range page or limit with its own defaults, so
     // `limit=-1` and `page=0` returned a full first page as if they had been
     // honoured. Checked here because GraphQL's Int arguments arrive unchecked.
-    for (const [name, value] of [
-      ["page", page],
-      ["limit", limit],
-    ] as const) {
-      if (!Number.isInteger(value) || value < 1) {
-        throw new BadUserInputError(`${name} must be a positive integer`, name);
-      }
-    }
-    if (limit > MAX_COMMITS_PAGE_SIZE) {
-      throw new BadUserInputError(
-        `limit must be at most ${MAX_COMMITS_PAGE_SIZE}`,
-        "limit",
-      );
-    }
+    assertHostPage(page, limit);
     await this.authorization.authorizeOrThrow({
       principal: identity ?? anonymousPrincipal(),
       action: AUTHORIZATION_ACTIONS.LEDGER_REPOSITORY_READ,
