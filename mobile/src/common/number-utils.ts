@@ -1,4 +1,8 @@
-import { currencyMinorUnits, getCurrencySymbol } from "./currency-util";
+import {
+  currencyMinorUnits,
+  getCurrencySymbol,
+  isFiatCurrency,
+} from "./currency-util";
 
 const SHORT_NUMBER_SUFFIXES = [
   { value: 1, symbol: "" },
@@ -289,6 +293,31 @@ const annotateCurrency = (
     : `${sign}${absAmount} ${currency}`;
 };
 
+/** Most fraction digits a commodity shown as money keeps (a satoshi). */
+const COMMODITY_MONEY_DIGITS = 8;
+
+/**
+ * The fraction digits a money figure in `currency` is shown with. A national
+ * currency keeps its minor unit (or `minScale`, when more). A commodity, BTC as
+ * a ledger's operating currency, keeps the digits the value has, from two up to
+ * eight: "Wallet (own) 0.00 BTC" for 0.004 and "Assets 1.51 BTC" for 1.507 hid
+ * the very amounts the account journal showed (w21/595).
+ */
+const moneyDigits = (
+  value: number,
+  currency: string,
+  minScale: number,
+): number => {
+  const base = Math.max(currencyMinorUnits(currency), minScale);
+  if (isFiatCurrency(currency) || !Number.isFinite(value)) return base;
+  const trimmed = Math.abs(value)
+    .toFixed(COMMODITY_MONEY_DIGITS)
+    .replace(/0+$/, "");
+  const dot = trimmed.indexOf(".");
+  const natural = dot < 0 ? 0 : trimmed.length - dot - 1;
+  return Math.max(base, natural);
+};
+
 /**
  * An unsigned money string annotated with its currency (e.g. "$1,234.50",
  * "¥1,500" or "1,234.50 MUSD"), at the currency's minor unit or `minScale`
@@ -303,7 +332,7 @@ export const formatMoneyWithCurrency = (
 ): string =>
   annotateCurrency(
     "",
-    groupThousands(value, Math.max(currencyMinorUnits(currency), minScale)),
+    groupThousands(value, moneyDigits(value, currency, minScale)),
     currency,
   );
 
@@ -325,7 +354,7 @@ export const formatSignedMoneyWithCurrency = (
   const { sign, amount } = signedAmount(
     value,
     includePlus,
-    Math.max(currencyMinorUnits(currency), minScale),
+    moneyDigits(value, currency, minScale),
   );
   return annotateCurrency(sign, amount, currency);
 };

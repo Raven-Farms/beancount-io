@@ -72,3 +72,12 @@ const MINOR_UNITS: Record<string, number> = {
  */
 export const currencyMinorUnits = (currency: string): number =>
   MINOR_UNITS[currency] ?? 2;
+
+/**
+ * Whether `currency` is a national currency the app knows (it has a symbol or
+ * an ISO 4217 minor unit), as opposed to a commodity: BTC, a stock, a custom
+ * unit. Money in a commodity is not given the two cents of a fiat currency
+ * (w21/595).
+ */
+export const isFiatCurrency = (currency: string): boolean =>
+  currency in MINOR_UNITS || getCurrencySymbol(currency) !== "";
