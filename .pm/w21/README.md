@@ -39,6 +39,9 @@
 - [440](./440.md) — Remaining section titles not headings (320 follow-up)
 - [441](./441.md) — Home charts announced without curve name; iOS-only hint
 - [442](./442.md) — Android reinstall never sets account-choice mark (318 sibling)
+- [443](./443.md) — Delete/Edit on a plugin copy acts on the whole series
+- [444](./444.md) — Padding entry detail turns "removed" after another entry opens
+- [445](./445.md) — Money flow pads decimals only for USD
 - [315](./blocked/315.md) — In-app commits signed with Gitea username and real email (no full_name, no noreply) — **blocked:** needs the owner's noreply-address and published-history decisions, and a production backfill of existing Gitea users that can't be verified here
 - [337](./337.md) — After 184, Home's budget panel/Spending count this month's pre-entered entries (panel "Above target" vs Budget $0)
 - [338](./338.md) — File editor: Enter twice after a posting indents the next transaction ("unexpected INDENT")
