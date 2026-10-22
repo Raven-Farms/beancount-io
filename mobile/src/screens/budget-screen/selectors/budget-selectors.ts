@@ -342,6 +342,21 @@ export function periodsThrough(
 }
 
 /**
+ * Whether the figures for the current period are in. A windowed range ends
+ * today on the server, so it always is; all time ends at the last posting and
+ * reads the current period on its own (w21/168, w21/332), and until that read
+ * has data (pending, or failed offline) the period is unknown, not zero: the
+ * series must not invent a $0 actual for it, nor judge the budget on it
+ * (w21/455).
+ */
+export function currentPeriodKnown(
+  time: string | undefined,
+  currentWindowData: unknown,
+): boolean {
+  return time !== undefined || currentWindowData !== undefined;
+}
+
+/**
  * The fraction digits a budget's amounts are recorded at: 3 for `0.003 BTC`,
  * 0 for `1500 JPY`. For display, where the currency's own minor units already
  * set the floor — a floor of cents here printed "¥1,016.13" (w21/425).

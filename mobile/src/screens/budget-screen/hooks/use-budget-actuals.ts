@@ -5,6 +5,7 @@ import { getFormatDate } from "@/common/format-util";
 import {
   budgetForInterval,
   allTimeThroughToday,
+  currentPeriodKnown,
   currentPeriodRange,
   periodsThrough,
   prepareBudgetHistory,
@@ -124,7 +125,7 @@ export function useBudgetActuals({
     // posting, so carry it on through today with the periods nothing was
     // spent in, as YTD and 1Y show them (w21/010).
     const last = items[items.length - 1];
-    if (time === undefined && last) {
+    if (time === undefined && last && currentPeriodKnown(time, currentData)) {
       for (const date of periodsThrough(last.date, group.interval, today)) {
         points.push(point(date, 0));
       }
@@ -142,5 +143,9 @@ export function useBudgetActuals({
     today,
   ]);
 
-  return { series, loading, error };
+  // Whether the series ends on a period whose figures are in; until then the
+  // card shows no judged stats (w21/455).
+  const settled = !error && currentPeriodKnown(time, currentData);
+
+  return { series, loading, error, settled };
 }

@@ -192,7 +192,7 @@ export function BudgetGroupCard({
 
   // A budget on a closed account ends with it (w21/398).
   const closeDates = useAccountCloseDates(ledgerId);
-  const { series, loading, error } = useBudgetActuals({
+  const { series, loading, error, settled } = useBudgetActuals({
     ledgerId,
     group,
     currency,
@@ -201,7 +201,9 @@ export function BudgetGroupCard({
     endsOn: closeDates.get(group.account),
   });
 
-  const stats = selectBudgetCardStats(group, series, today);
+  // While the current period's read is pending or failed there is nothing to
+  // judge: the budget alone, never a $0 actual and a green "Below target".
+  const stats = selectBudgetCardStats(group, settled ? series : [], today);
   const favorables = selectPointFavorability(
     series,
     direction,

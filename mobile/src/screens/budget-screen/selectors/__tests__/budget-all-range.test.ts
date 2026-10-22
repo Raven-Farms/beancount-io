@@ -88,7 +88,14 @@ describe("Budget card on ALL", () => {
       path.join(__dirname, "..", "..", "hooks", "use-budget-actuals.ts"),
       "utf8",
     );
-    expect(source.includes("if (time === undefined && last)")).toBe(true);
+    // …and only once the current period's own read is in (w21/455).
+    expect(
+      source
+        .replace(/\s+/gu, "")
+        .includes(
+          "if(time===undefined&&last&&currentPeriodKnown(time,currentData)){",
+        ),
+    ).toBe(true);
     expect(
       source.includes("periodsThrough(last.date, group.interval, today)"),
     ).toBe(true);
