@@ -4,6 +4,8 @@
 
 ## Inbox
 
+- [977 — Let the shared Dialog hold dismissal while a write is pending](./977.md) — maintenance; w4/m47 simplify altitude review, 2026-10-22; six dialogs copy the pending close guard and treat the Close button inconsistently; one Dialog prop would own it.
+
 
 - [974 — Preserve BQL result focus when the editor loads](./974.md) — minor; public dashboard QA with unchanged delayed stylesheet,2026-10-22; native-Tab result focus transfers to the late editor at both widths; untouched autofocus and settled navigation/CSV controls pass, no writes.
 
