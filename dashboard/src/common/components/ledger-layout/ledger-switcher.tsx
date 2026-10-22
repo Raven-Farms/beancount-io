@@ -204,9 +204,11 @@ function LedgerAuthenticatedSwitcher({
           to: `/ledger/${ledgerOwner}/${ledgerName}`,
         });
       }
+      return true;
     } catch (error) {
       toast.error(formatError(error));
       console.error("Failed to create ledger:", error);
+      return false;
     }
   };
 

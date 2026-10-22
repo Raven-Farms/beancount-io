@@ -100,7 +100,14 @@ const createLedgerFormSchema = (t: (key: string) => string) =>
 
 interface LedgerFormProps {
   initialData?: Partial<CreateLedgerMutationVariables>;
-  onSubmit: (data: CreateLedgerMutationVariables) => void | Promise<void>;
+  /**
+   * Resolves `true` once the ledger is created. Only then is the creation
+   * draft (its choices and requestId) cleared: a failed create keeps it for
+   * the retry, and an edit never touches it (w4/320).
+   */
+  onSubmit: (
+    data: CreateLedgerMutationVariables,
+  ) => boolean | void | Promise<boolean | void>;
   isLoading?: boolean;
   onCancel?: () => void;
   hideLimitIndicator?: boolean;
@@ -321,7 +328,8 @@ export function LedgerForm({
       // (for example after an OTP round-trip) cannot duplicate the ledger.
       ...(isCreate ? { requestId: requestIdRef.current } : {}),
     };
-    await onSubmit(submitData);
+    const created = await onSubmit(submitData);
+    if (!isCreate || created !== true) return;
     try {
       sessionStorage.removeItem(DRAFT_KEY);
     } catch {

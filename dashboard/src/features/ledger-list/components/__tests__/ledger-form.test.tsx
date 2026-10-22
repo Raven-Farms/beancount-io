@@ -818,7 +818,8 @@ describe("LedgerForm", () => {
 describe("LedgerForm draft resume (w3/m54/t006)", () => {
   it("resumes the step and requestId after leaving and returning", async () => {
     const user = userEvent.setup();
-    const onSubmit = vi.fn().mockResolvedValue(undefined);
+    // Resolving true reports a created ledger (w4/320).
+    const onSubmit = vi.fn().mockResolvedValue(true);
     const first = render(<LedgerForm onSubmit={onSubmit} onCancel={vi.fn()} />);
     await user.click(screen.getByRole("button", { name: "Next" }));
     expect(screen.getByTestId("ledger-create-step")).toHaveTextContent(

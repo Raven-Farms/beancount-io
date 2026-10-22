@@ -482,6 +482,85 @@ describe("DashboardSidebar", () => {
     });
   });
 
+  // The creation draft (choices and requestId) is cleared only by a created
+  // ledger: a failed create keeps it, and an edit never touches it (w4/320).
+  describe("creation draft ownership", () => {
+    const DRAFT = "ledger-create-draft";
+    const draftRequestId = () =>
+      JSON.parse(sessionStorage.getItem(DRAFT) ?? "null")?.requestId as
+        | string
+        | undefined;
+
+    beforeEach(() => sessionStorage.clear());
+
+    it("keeps the draft through a failed create, a close and a reopen", async () => {
+      const consoleError = vi
+        .spyOn(console, "error")
+        .mockImplementation(() => {});
+      const user = userEvent.setup();
+      setLedgerQueryResult({ data: { listLedgers: [] }, loading: false });
+      mockCreateMutation.mockRejectedValueOnce(new Error("offline"));
+      renderSidebar();
+
+      await user.click(screen.getByTestId("create-ledger-btn"));
+      await user.click(screen.getByRole("button", { name: "Next" }));
+      await user.click(screen.getByRole("button", { name: "Next" }));
+      await user.click(screen.getByRole("button", { name: "Create Ledger" }));
+      await waitFor(() => expect(toast.error).toHaveBeenCalled());
+      const firstId = mockCreateMutation.mock.calls[0][0].variables.requestId;
+      expect(draftRequestId()).toBe(firstId);
+
+      await user.keyboard("{Escape}");
+      await waitFor(() =>
+        expect(screen.queryByTestId("create-ledger-dialog")).toBeNull(),
+      );
+      await user.click(screen.getByTestId("create-ledger-btn"));
+      // The reopened flow resumes at Review and retries the same identity.
+      mockCreateMutation.mockResolvedValueOnce({
+        data: { createLedger: makeLedger({ id: "alice/my-book" }) },
+      });
+      await user.click(
+        await screen.findByRole("button", { name: "Create Ledger" }),
+      );
+      await waitFor(() => expect(mockCreateMutation).toHaveBeenCalledTimes(2));
+      expect(mockCreateMutation.mock.calls[1][0].variables.requestId).toBe(
+        firstId,
+      );
+      // That success clears the finished draft.
+      await waitFor(() => expect(sessionStorage.getItem(DRAFT)).toBeNull());
+      consoleError.mockRestore();
+    });
+
+    it("leaves a parked creation draft alone when an edit save fails", async () => {
+      const consoleError = vi
+        .spyOn(console, "error")
+        .mockImplementation(() => {});
+      const user = userEvent.setup();
+      setLedgerQueryResult({
+        data: { listLedgers: [adminLedger] },
+        loading: false,
+      });
+      mockUpdateMutation.mockRejectedValue(new Error("offline"));
+      renderSidebar();
+
+      await user.click(screen.getByTestId("create-ledger-btn"));
+      await user.click(screen.getByRole("button", { name: "Next" }));
+      await user.keyboard("{Escape}");
+      const parked = draftRequestId();
+      expect(parked).toEqual(expect.any(String));
+
+      await user.click(screen.getByTestId("ledger-settings-btn"));
+      await user.click(
+        await screen.findByRole("menuitem", { name: "Edit Ledger" }),
+      );
+      await user.click(await screen.findByRole("button", { name: "Save" }));
+      await waitFor(() => expect(mockUpdateMutation).toHaveBeenCalled());
+      await waitFor(() => expect(toast.error).toHaveBeenCalled());
+      expect(draftRequestId()).toBe(parked);
+      consoleError.mockRestore();
+    });
+  });
+
   describe("accessibility", () => {
     it("gives the home control an accessible name and a decorative logo", () => {
       setLedgerQueryResult({ data: { listLedgers: [] }, loading: false });
