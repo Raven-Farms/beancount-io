@@ -1,6 +1,6 @@
 import { routeText } from "@/common/route-text";
 import { memo, useEffect, useRef, useState } from "react";
-import { Alert, StyleSheet, View } from "react-native";
+import { AccessibilityInfo, Alert, StyleSheet, View } from "react-native";
 import { useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import * as ImagePicker from "expo-image-picker";
@@ -33,6 +33,9 @@ const styles = StyleSheet.create({
  * not a transition; the animations inside it are what the budget governs.
  */
 const REVEAL_DWELL_MS = 1200;
+// A screen reader needs the time to say what was read before the form opens
+// (w21/284).
+const REVEAL_DWELL_SCREEN_READER_MS = 4500;
 
 // Minimal 1×1 white JPEG used in __DEV__ test mode to bypass the camera.
 // XCUITest (used by expo-mcp) dismisses native camera UI on attach.
@@ -51,6 +54,19 @@ const ReceiptCaptureScreenImpl = () => {
   const handedOff = useRef(false);
   const failed = useRef(false);
   const revealTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const screenReader = useRef(false);
+  useEffect(() => {
+    void AccessibilityInfo.isScreenReaderEnabled().then((on) => {
+      screenReader.current = on;
+    });
+    const subscription = AccessibilityInfo.addEventListener(
+      "screenReaderChanged",
+      (on) => {
+        screenReader.current = on;
+      },
+    );
+    return () => subscription.remove();
+  }, []);
 
   // No permission request in front of this. For this call shape — images only,
   // no `allowsEditing`, not the camera — expo-image-picker presents the iOS
@@ -151,19 +167,22 @@ const ReceiptCaptureScreenImpl = () => {
 
     haptics.success();
 
-    revealTimer.current = setTimeout(() => {
-      router.replace({
-        pathname: "/(app)/add-transaction",
-        params: {
-          prefillDate: phase.date,
-          prefillPayee: routeText(phase.payee),
-          prefillNarration: routeText(phase.description),
-          prefillSourceAccount: phase.sourceAccount,
-          prefillTargetAccount: phase.targetAccount,
-          prefillAmount: receiptAmountText(phase.amount),
-        },
-      });
-    }, REVEAL_DWELL_MS);
+    revealTimer.current = setTimeout(
+      () => {
+        router.replace({
+          pathname: "/(app)/add-transaction",
+          params: {
+            prefillDate: phase.date,
+            prefillPayee: routeText(phase.payee),
+            prefillNarration: routeText(phase.description),
+            prefillSourceAccount: phase.sourceAccount,
+            prefillTargetAccount: phase.targetAccount,
+            prefillAmount: receiptAmountText(phase.amount),
+          },
+        });
+      },
+      screenReader.current ? REVEAL_DWELL_SCREEN_READER_MS : REVEAL_DWELL_MS,
+    );
   }, [workflow.phase, router, ledgerId]);
 
   // A failed parse should feel different from a successful one, not just read

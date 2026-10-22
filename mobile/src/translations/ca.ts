@@ -488,6 +488,7 @@ export const ca: Translations = {
   receiptUploadingProgress: "S'està pujant la foto… {{percent}}%",
   receiptParsing: "La IA està llegint el teu rebut…",
   receiptRevealTitle: "Això és el que hem llegit",
+  receiptRevealSpoken: "Rebut llegit: {{summary}}",
   // Deliberately a proposal: nothing is written to the ledger until the user
   // saves on the next screen.
   receiptRevealHint:

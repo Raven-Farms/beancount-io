@@ -483,6 +483,7 @@ export const ru: Translations = {
   receiptUploadingProgress: "Загрузка фото… {{percent}}%",
   receiptParsing: "ИИ читает ваш чек…",
   receiptRevealTitle: "Вот что мы прочитали",
+  receiptRevealSpoken: "Чек прочитан: {{summary}}",
   // Deliberately a proposal: nothing is written to the ledger until the user
   // saves on the next screen.
   receiptRevealHint:

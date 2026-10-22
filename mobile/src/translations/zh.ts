@@ -435,6 +435,7 @@ export const zh: Translations = {
   receiptUploadingProgress: "正在上传照片… {{percent}}%",
   receiptParsing: "AI 正在识别小票…",
   receiptRevealTitle: "识别结果如下",
+  receiptRevealSpoken: "已读取收据：{{summary}}",
   // Deliberately a proposal: nothing is written to the ledger until the user
   // saves on the next screen.
   receiptRevealHint: "尚未保存 — 请在下一屏核对详情。",

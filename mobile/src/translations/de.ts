@@ -490,6 +490,7 @@ export const de: Translations = {
   receiptUploadingProgress: "Foto wird hochgeladen… {{percent}} %",
   receiptParsing: "Die KI liest Ihren Beleg…",
   receiptRevealTitle: "Das haben wir gelesen",
+  receiptRevealSpoken: "Beleg gelesen: {{summary}}",
   // Deliberately a proposal: nothing is written to the ledger until the user
   // saves on the next screen.
   receiptRevealHint:

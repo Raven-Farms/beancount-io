@@ -470,6 +470,7 @@ export const fa: Translations = {
   receiptUploadingProgress: "در حال بارگذاری عکس… {{percent}}٪",
   receiptParsing: "هوش مصنوعی رسید شما را می‌خواند…",
   receiptRevealTitle: "این چیزی است که خواندیم",
+  receiptRevealSpoken: "رسید خوانده شد: {{summary}}",
   // Deliberately a proposal: nothing is written to the ledger until the user
   // saves on the next screen.
   receiptRevealHint:

@@ -487,6 +487,7 @@ export const sk: Translations = {
   receiptUploadingProgress: "Nahrávam fotografiu… {{percent}} %",
   receiptParsing: "AI číta vašu účtenku…",
   receiptRevealTitle: "Toto sme prečítali",
+  receiptRevealSpoken: "Doklad prečítaný: {{summary}}",
   // Deliberately a proposal: nothing is written to the ledger until the user
   // saves on the next screen.
   receiptRevealHint:

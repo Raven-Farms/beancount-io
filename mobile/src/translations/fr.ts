@@ -488,6 +488,7 @@ export const fr: Translations = {
   receiptUploadingProgress: "Envoi de la photo… {{percent}} %",
   receiptParsing: "L'IA lit votre reçu…",
   receiptRevealTitle: "Voici ce que nous avons lu",
+  receiptRevealSpoken: "Reçu lu : {{summary}}",
   // Deliberately a proposal: nothing is written to the ledger until the user
   // saves on the next screen.
   receiptRevealHint:

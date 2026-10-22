@@ -1,4 +1,6 @@
+import { useEffect } from "react";
 import {
+  AccessibilityInfo,
   ActivityIndicator,
   Image,
   Pressable,
@@ -111,6 +113,28 @@ export const PreviewView = ({
         ? t("receiptParsing")
         : null;
 
+  // The focused button disappears when Upload is tapped, so each state that
+  // replaces the controls is said aloud: uploading, parsing, the error and what
+  // was read (w21/284). The percent is left out so a progress tick does not
+  // repeat it.
+  const announcement =
+    status === "uploading"
+      ? t("receiptUploading")
+      : status === "parsing"
+        ? t("receiptParsing")
+        : status === "error"
+          ? (errorMessage ?? null)
+          : status === "revealed" && reveal
+            ? t("receiptRevealSpoken", {
+                summary: [reveal.payee, reveal.amount, reveal.date]
+                  .filter(Boolean)
+                  .join(", "),
+              })
+            : null;
+  useEffect(() => {
+    if (announcement) AccessibilityInfo.announceForAccessibility(announcement);
+  }, [announcement]);
+
   return (
     <View style={styles.container}>
       <Image
@@ -168,7 +192,9 @@ export const PreviewView = ({
 
       {status === "error" ? (
         <View style={styles.scrim}>
-          <Text style={styles.errorText}>{errorMessage}</Text>
+          <Text style={styles.errorText} accessibilityRole="alert">
+            {errorMessage}
+          </Text>
           <View style={styles.errorActions}>
             <Pressable
               testID="receipt-error-cancel"

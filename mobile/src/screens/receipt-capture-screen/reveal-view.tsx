@@ -87,7 +87,9 @@ export const RevealView = ({
       <Animated.View entering={FadeIn.duration(durations.base)}>
         <Ionicons name="sparkles" size={28} color={CHROME.icon} />
       </Animated.View>
-      <Text style={styles.title}>{t("receiptRevealTitle")}</Text>
+      <Text style={styles.title} accessibilityRole="header">
+        {t("receiptRevealTitle")}
+      </Text>
       {/* Staggered so the eye lands on the payee, then the amount, in the
           order the fields are read back. */}
       <Animated.View entering={FadeInDown.duration(durations.base)}>

@@ -484,6 +484,7 @@ export const en = {
   receiptUploadingProgress: "Uploading photo… {{percent}}%",
   receiptParsing: "AI is reading your receipt…",
   receiptRevealTitle: "Here's what we read",
+  receiptRevealSpoken: "Receipt read: {{summary}}",
   // Deliberately a proposal: nothing is written to the ledger until the user
   // saves on the next screen.
   receiptRevealHint:

@@ -476,6 +476,7 @@ export const bg: Translations = {
   receiptUploadingProgress: "Снимката се качва… {{percent}}%",
   receiptParsing: "ИИ разчита бележката ви…",
   receiptRevealTitle: "Ето какво разчетохме",
+  receiptRevealSpoken: "Разчетена разписка: {{summary}}",
   // Deliberately a proposal: nothing is written to the ledger until the user
   // saves on the next screen.
   receiptRevealHint:

@@ -479,6 +479,7 @@ export const nl: Translations = {
   receiptUploadingProgress: "Foto uploaden… {{percent}}%",
   receiptParsing: "AI leest je bon…",
   receiptRevealTitle: "Dit hebben we gelezen",
+  receiptRevealSpoken: "Bon gelezen: {{summary}}",
   // Deliberately a proposal: nothing is written to the ledger until the user
   // saves on the next screen.
   receiptRevealHint:
