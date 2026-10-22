@@ -103,6 +103,13 @@ export function shiftLedgerMonths(
   return `${String(nextYear).padStart(4, "0")}-${String(nextMonth).padStart(2, "0")}-${String(nextDay).padStart(2, "0")}`;
 }
 
+/** How many distinct days a `${date}\0${currency}` series has events on. */
+function distinctDates(byKey: ReadonlyMap<string, number>): number {
+  const dates = new Set<string>();
+  for (const key of byKey.keys()) dates.add(key.slice(0, key.indexOf("\0")));
+  return dates.size;
+}
+
 /** Cutoff date for the series window ending on `today`. */
 export function payeeSeriesCutoff(today: string): string | null {
   return shiftLedgerMonths(today, -PAYEE_SERIES_WINDOW_MONTHS);
@@ -159,9 +166,16 @@ export function mapPayeeSeries(
     forPayee.set(key, (forPayee.get(key) ?? 0) + amount);
   }
 
-  // A payee that is only ever a transfer reads its debited legs instead.
+  // A payee whose events are mostly transfers reads its debited legs instead:
+  // whichever of the two series has more distinct dates, ties going to the
+  // money legs. Deciding on the mere presence of a money leg lost a whole
+  // transfer series to one ATM fee (an Expenses leg) anywhere in the window
+  // (w21/334).
   for (const [payee, byKey] of transfers) {
-    if (!sums.has(payee)) sums.set(payee, byKey);
+    const money = sums.get(payee);
+    if (!money || distinctDates(byKey) > distinctDates(money)) {
+      sums.set(payee, byKey);
+    }
   }
 
   for (const [payee, byKey] of sums) {

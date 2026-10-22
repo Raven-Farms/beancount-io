@@ -167,6 +167,43 @@ describe("a payee that is only ever a transfer", () => {
     expect(mapped.get("Grocer")!.map((p) => p.amount)).toEqual([40]);
   });
 
+  // w21/334: one ATM fee (an Expenses leg) anywhere in the window made the
+  // payee read money legs only, which left a one-event series.
+  it("keeps the transfer series when a single fee leg is on file", () => {
+    const rows = [
+      ...saturdays.map((date) => [
+        date,
+        "QA SWEEP",
+        "100.00",
+        "USD",
+        "Assets:Cash",
+      ]),
+      ["2026-07-03", "QA SWEEP", "2.50", "USD", "Expenses:Bank:Fees"],
+      // And a fee on a day that also has a transfer.
+      ["2026-10-10", "QA SWEEP", "2.50", "USD", "Expenses:Bank:Fees"],
+    ];
+    const series = mapPayeeSeries(table(rows, WITH_ACCOUNT)).get("QA SWEEP")!;
+    expect(series.length).toBe(7);
+    expect(series.every((point) => point.amount === 100)).toBe(true);
+    const verdict = detectRecurrence(series, "2026-10-21");
+    expect(verdict?.cadence).toBe("weekly");
+    expect(verdict?.typicalAmountByCurrency.USD).toBe(100);
+    expect(verdict?.isApproximate).toBe(false);
+  });
+
+  it("still prefers the money legs when they cover more days", () => {
+    const rows = [
+      ["2026-10-01", "Grocer", "40.00", "USD", "Expenses:Food"],
+      ["2026-10-08", "Grocer", "45.00", "USD", "Expenses:Food"],
+      ["2026-10-02", "Grocer", "5.00", "USD", "Assets:Cash"],
+    ];
+    expect(
+      mapPayeeSeries(table(rows, WITH_ACCOUNT))
+        .get("Grocer")!
+        .map((p) => p.amount),
+    ).toEqual([40, 45]);
+  });
+
   it("asks for debited legs alongside the money legs", () => {
     const bql = buildPayeeSeriesBql("2023-07-20");
     expect(bql.includes(", account WHERE")).toBe(true);
