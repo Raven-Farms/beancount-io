@@ -100,6 +100,17 @@ const frCommodities: Record<string, TranslationEntry> = {
     message: "Impossible d'actualiser les prix",
     description: "Toast shown when refreshing managed prices fails",
   },
+  "page.commodities.chartsReloadFailed": {
+    message:
+      "Les prix ont été actualisés, mais les graphiques n'ont pas pu être rechargés.",
+    description:
+      "Shown on the managed price sources card when a refresh was acknowledged but reading the price charts again failed",
+  },
+  "page.commodities.reloadCharts": {
+    message: "Recharger les graphiques",
+    description:
+      "Button that reads the price charts again after a failed reload, without refreshing the managed feeds",
+  },
 };
 
 export default frCommodities;

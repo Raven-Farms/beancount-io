@@ -100,6 +100,17 @@ const deCommodities: Record<string, TranslationEntry> = {
     message: "Preise konnten nicht aktualisiert werden",
     description: "Toast shown when refreshing managed prices fails",
   },
+  "page.commodities.chartsReloadFailed": {
+    message:
+      "Die Preise wurden aktualisiert, aber die Diagramme konnten nicht neu geladen werden.",
+    description:
+      "Shown on the managed price sources card when a refresh was acknowledged but reading the price charts again failed",
+  },
+  "page.commodities.reloadCharts": {
+    message: "Diagramme neu laden",
+    description:
+      "Button that reads the price charts again after a failed reload, without refreshing the managed feeds",
+  },
 };
 
 export default deCommodities;

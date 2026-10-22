@@ -100,6 +100,16 @@ const faCommodities: Record<string, TranslationEntry> = {
     message: "به‌روزرسانی قیمت‌ها ممکن نشد",
     description: "Toast shown when refreshing managed prices fails",
   },
+  "page.commodities.chartsReloadFailed": {
+    message: "قیمت‌ها به‌روز شدند، اما بارگذاری دوبارهٔ نمودارها ممکن نشد.",
+    description:
+      "Shown on the managed price sources card when a refresh was acknowledged but reading the price charts again failed",
+  },
+  "page.commodities.reloadCharts": {
+    message: "بارگذاری دوبارهٔ نمودارها",
+    description:
+      "Button that reads the price charts again after a failed reload, without refreshing the managed feeds",
+  },
 };
 
 export default faCommodities;
