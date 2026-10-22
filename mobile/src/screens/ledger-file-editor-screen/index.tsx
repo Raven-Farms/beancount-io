@@ -256,28 +256,9 @@ function ErrorBanner({
           // can outgrow `maxHeight` and has to scroll.
           scrollEnabled
         >
-          {errors.map((err, i) => (
-            <View key={`${err.lineno ?? "unknown"}-${i}`}>
-              <TouchableOpacity
-                style={styles.errorRow}
-                activeOpacity={err.lineno != null ? 0.7 : 1}
-                onPress={() => err.lineno != null && onJump(err.lineno)}
-                // A row that jumps to its line is a button; the label keeps
-                // the warning and arrow glyphs out of its name (w21/141).
-                accessibilityRole={err.lineno != null ? "button" : "text"}
-                accessibilityHint={
-                  err.lineno != null
-                    ? t("ledgerEditorJumpToLine", { line: err.lineno })
-                    : undefined
-                }
-                // A row with no line has nowhere to jump (w21/276).
-                disabled={err.lineno == null}
-                accessibilityLabel={
-                  err.lineno != null
-                    ? `${err.message}, ${t("ledgerEditorErrorLine", { line: err.lineno })}`
-                    : err.message
-                }
-              >
+          {errors.map((err, i) => {
+            const body = (
+              <>
                 <Ionicons
                   name="warning-outline"
                   size={14}
@@ -299,10 +280,41 @@ function ErrorBanner({
                     color={theme.black60}
                   />
                 )}
-              </TouchableOpacity>
-              {i < errors.length - 1 && <View style={styles.errorDivider} />}
-            </View>
-          ))}
+              </>
+            );
+            return (
+              <View key={`${err.lineno ?? "unknown"}-${i}`}>
+                {err.lineno != null ? (
+                  <TouchableOpacity
+                    style={styles.errorRow}
+                    activeOpacity={0.7}
+                    onPress={() => onJump(err.lineno!)}
+                    // A row that jumps to its line is a button; the label keeps
+                    // the warning and arrow glyphs out of its name (w21/141).
+                    accessibilityRole="button"
+                    accessibilityHint={t("ledgerEditorJumpToLine", {
+                      line: err.lineno,
+                    })}
+                    accessibilityLabel={`${err.message}, ${t("ledgerEditorErrorLine", { line: err.lineno })}`}
+                  >
+                    {body}
+                  </TouchableOpacity>
+                ) : (
+                  // No line to jump to: plain text, not a disabled button
+                  // VoiceOver reads as "dimmed" (w21/276, w21/428).
+                  <View
+                    style={styles.errorRow}
+                    accessible
+                    accessibilityRole="text"
+                    accessibilityLabel={err.message}
+                  >
+                    {body}
+                  </View>
+                )}
+                {i < errors.length - 1 && <View style={styles.errorDivider} />}
+              </View>
+            );
+          })}
         </ScrollView>
       )}
     </View>

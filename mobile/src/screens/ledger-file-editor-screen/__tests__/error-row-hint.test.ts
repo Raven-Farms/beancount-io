@@ -12,13 +12,21 @@ describe("the file editor's error rows", () => {
   it("hint where a tap goes", () => {
     expect(
       source.includes(
-        'accessibilityHint={err.lineno!=null?t("ledgerEditorJumpToLine",{line:err.lineno}):undefined}',
+        'accessibilityHint={t("ledgerEditorJumpToLine",{line:err.lineno,})}',
       ),
     ).toBe(true);
     expect(en.ledgerEditorJumpToLine).toBe("Jump to line {{line}}");
   });
 
-  it("are inert when they have no line", () => {
-    expect(source.includes("disabled={err.lineno==null}")).toBe(true);
+  // w21/428: a disabled touchable is read as "dimmed"; a row with no line is
+  // plain text instead.
+  it("are plain text when they have no line, not a disabled button", () => {
+    expect(source.includes("disabled={err.lineno")).toBe(false);
+    expect(source.includes("{err.lineno!=null?(<TouchableOpacity")).toBe(true);
+    expect(
+      source.includes(
+        'accessibilityRole="text"accessibilityLabel={err.message}',
+      ),
+    ).toBe(true);
   });
 });
