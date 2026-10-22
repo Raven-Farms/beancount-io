@@ -69,3 +69,47 @@ describe("formatNumber with a currency (w0/010)", () => {
     expect(formatNumber(4559.8, true, "en")).toBe("4,559.8");
   });
 });
+
+describe("formatNumber with source fraction digits (w4/m45)", () => {
+  it("keeps every digit a non-ISO source decimal carried", () => {
+    expect(formatNumber(4.00995, true, "en", "ETH", 5)).toBe("4.00995");
+    expect(formatNumber(4.00995, false, "en", "ETH", 5)).toBe("4.00995");
+    expect(formatNumber(-4.00995, true, "en", "ETH", 5)).toBe("-4.00995");
+    expect(formatNumber(0.0004, true, "en", "BTC", 4)).toBe("0.0004");
+    expect(formatNumber(1234.56789, true, "en", "ETH", 5)).toBe("1,234.56789");
+    expect(formatNumber(1234.56789, false, "en", "ETH", 5)).toBe("1234.56789");
+    expect(formatNumber(1234.56789, true, "fr", "ETH", 5)).toMatch(
+      /^1.234,56789$/,
+    );
+  });
+
+  it("rounds computed residue to the recorded precision", () => {
+    expect(formatNumber(0.1 + 0.2, true, "en", "ETH", 1)).toBe("0.3");
+    expect(formatNumber(0.00039999999999999996, true, "en", "BTC", 4)).toBe(
+      "0.0004",
+    );
+  });
+
+  it("never drops below the cash fallback's own digits", () => {
+    // Fewer source digits than the fallback shows change nothing, in either
+    // render_commas mode, so every existing caller formats as before.
+    for (const value of [0.16, 68033, 1.2345, 22.580645, -0.5]) {
+      for (const digits of [0, 1, 2]) {
+        expect(formatNumber(value, true, "en", "BTC", digits)).toBe(
+          formatNumber(value, true, "en", "BTC"),
+        );
+        expect(formatNumber(value, false, "en", "BTC", digits)).toBe(
+          formatNumber(value, false, "en", "BTC"),
+        );
+      }
+    }
+    expect(formatNumber(1.2345, true, "en", "BTC")).toBe("1.235");
+    expect(formatNumber(1.2345, false, "en", "BTC")).toBe("1.23");
+  });
+
+  it("leaves an ISO currency at its minor units", () => {
+    expect(formatNumber(68033, true, "en", "USD", 5)).toBe("68,033.00");
+    expect(formatNumber(4.00995, true, "en", "USD", 5)).toBe("4.01");
+    expect(formatNumber(1234.5, true, "en", "JPY", 3)).toBe("1,235");
+  });
+});

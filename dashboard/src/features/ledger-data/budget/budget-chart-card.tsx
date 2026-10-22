@@ -1,4 +1,4 @@
-import { useId, useMemo, useState } from "react";
+import { useCallback, useId, useMemo, useState } from "react";
 import { format } from "date-fns";
 import { useQuery } from "@apollo/client/react";
 import { AlertCircle, Loader2, Plus } from "lucide-react";
@@ -32,6 +32,7 @@ import {
 import { ReactECharts } from "@/common/components/react-echarts";
 import { LedgerWritePermission } from "@/common/components/ledger-permission/write";
 import { useFormatNumber } from "@/common/hooks/use-format-number";
+import { fractionDigitsOf } from "@/common/lib/format/format-number";
 import { useTranslations } from "@/common/hooks/use-translations";
 import { formatYAxisNumber } from "@/common/lib/chart/chart";
 import { getChartColors } from "@/common/lib/chart/color";
@@ -157,6 +158,24 @@ export function BudgetChartCard({
     ],
   );
 
+  // A commodity is shown at the finest precision the ledger recorded for this
+  // budget's targets and actuals, so 0.0004 BTC is not read as 0 BTC; prorated
+  // targets and the variance round to it (w4/m45). ISO currencies keep their
+  // minor units.
+  const quantityDigits = Math.max(
+    ...group.budgetHistory.map((entry) =>
+      fractionDigitsOf(entry.amount.trim().split(/\s+/)[0]),
+    ),
+    ...chartData.map((item) =>
+      fractionDigitsOf(String(item.balance[displayCurrency])),
+    ),
+  );
+  const showAmount = useCallback(
+    (value: number) =>
+      `${formatNum(value, displayCurrency, quantityDigits)} ${displayCurrency}`,
+    [formatNum, displayCurrency, quantityDigits],
+  );
+
   // The headline describes the period containing today, not whichever bucket
   // the selected span happens to end on: "This year" ends in December, and a
   // rolling window clips (and so prorates) the current month.
@@ -258,10 +277,7 @@ export function BudgetChartCard({
         let result = `<div><strong>${params[0].name}</strong></div>`;
         params.forEach((param) => {
           const value = param.value as number;
-          const formatted =
-            typeof value === "number"
-              ? `${formatNum(value, displayCurrency)} ${displayCurrency}`
-              : "0";
+          const formatted = typeof value === "number" ? showAmount(value) : "0";
           result += `<div style="color:${param.color}">
             <span style="display:inline-block;margin-right:4px;border-radius:10px;width:10px;height:10px;background-color:${param.color};"></span>
             ${param.seriesName}: <strong>${formatted}</strong>
@@ -325,10 +341,9 @@ export function BudgetChartCard({
     periodRows,
     chartData.length,
     chartInterval,
-    displayCurrency,
     group.budgetHistory.length,
     t,
-    formatNum,
+    showAmount,
   ]);
 
   return (
@@ -388,7 +403,7 @@ export function BudgetChartCard({
             <p className="font-mono text-lg font-semibold tabular-nums">
               {comparisonBudgetValue === null
                 ? "—"
-                : `${formatNum(comparisonBudgetValue, displayCurrency)} ${displayCurrency}`}
+                : showAmount(comparisonBudgetValue)}
             </p>
           </div>
           {latestActual !== null && variance !== null && (
@@ -398,7 +413,7 @@ export function BudgetChartCard({
                   {t("page.budget.budgetLatestSpending")}
                 </p>
                 <p className="font-mono text-lg font-semibold tabular-nums">
-                  {formatNum(latestActual, displayCurrency)} {displayCurrency}
+                  {showAmount(latestActual)}
                 </p>
               </div>
               <div className="space-y-1">
@@ -439,7 +454,7 @@ export function BudgetChartCard({
                   )}
                 >
                   {variance > 0 ? "+" : ""}
-                  {formatNum(variance, displayCurrency)} {displayCurrency}
+                  {showAmount(variance)}
                 </p>
               </div>
             </>
@@ -517,12 +532,10 @@ export function BudgetChartCard({
                         {row.date}
                       </TableCell>
                       <TableCell className="whitespace-nowrap text-right font-mono text-sm tabular-nums">
-                        {formatNum(row.budget, displayCurrency)}{" "}
-                        {displayCurrency}
+                        {showAmount(row.budget)}
                       </TableCell>
                       <TableCell className="whitespace-nowrap text-right font-mono text-sm tabular-nums">
-                        {formatNum(row.actual, displayCurrency)}{" "}
-                        {displayCurrency}
+                        {showAmount(row.actual)}
                       </TableCell>
                     </TableRow>
                   ))}

@@ -105,7 +105,7 @@
 
 - [ ] **m46** — [Preserve editor drafts through ledger refresh](./m46/README.md) (6 tasks) ← continuous dashboard QA,2026-10-21; both-width native Refresh loses file and unexecuted BQL drafts, removing original editor/main nodes; fixtures cleaned and responsible current/served sources match.
 
-- [ ] **m45** — [Keep commodity quantities precise in Budget and statements](./m45/README.md) (6 tasks) ← promoted331 and actual public statement QA,2026-10-21; minor,4.00995ETH becomes4.01 in shared hierarchy; modeled Budget loses fine BTC digits.
+- [x] **m45** — [Keep commodity quantities precise in Budget and statements](./done/m45/README.md) (6 tasks) ← promoted 331 and actual public statement QA, 2026-10-21; minor. Done 2026-10-22: statement cells and Budget readouts keep source commodity digits (4.00995 ETH, 0.0004 BTC) through one opt-in digit count on the shared formatter; ISO cash unchanged.
 
 - [x] **m44** — [Refuse CSV currency-symbol conflicts before importing](./done/m44/README.md) (6 tasks) ← dashboard QA, 2026-10-21; major, accepted euro/pound tokens prepare as USD/EUR without conflict guidance; five real-UI requests preblocked, no hosted import.
 
@@ -185,7 +185,7 @@
 
 ## Dropped
 
-- ~~**331**~~ — Preserve fractional commodity values in Budget readouts — dropped2026-10-21: promoted to [m45](./m45/README.md), preserving all modeled Budget evidence and adding actual Trial Balance/Balance Sheet precision loss; two renderers and computed precision regressions exceed one hour.
+- ~~**331**~~ — Preserve fractional commodity values in Budget readouts — dropped2026-10-21: promoted to [m45](./done/m45/README.md), preserving all modeled Budget evidence and adding actual Trial Balance/Balance Sheet precision loss; two renderers and computed precision regressions exceed one hour.
 
 - ~~**273**~~ — Keep active picker options identifiable in forced colors — dropped 2026-10-21: promoted to [m43](./done/m43/README.md), preserving all evidence and adding independently reproduced JournalFilters/default Tabs label backplates; four styling targets and rendered acceptance exceed one hour.
 

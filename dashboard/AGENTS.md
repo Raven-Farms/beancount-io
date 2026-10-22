@@ -132,6 +132,7 @@ For Search Console evidence, run `yarn search-console-report --markdown --days 2
 - Keep server-only configuration and calls out of browser bundles. Use the established `*.server.ts`/server-function boundaries.
 - Reuse common responsive and accessibility primitives before adding another abstraction.
 - Charts use ECharts 6; keep report-specific transformation close to its feature and test transformations independently from rendering.
+- Format ledger amounts with `useFormatNumber()(value, currency, fractionDigitsOf(source))`. ISO currencies keep their minor units. Any other commodity keeps the digits its source decimal carried, so 4.00995 ETH never reads as 4.01. Read the digits from the API string, not from a computed double.
 - Ledger dates are canonical `yyyy-MM-dd` strings, never local `Date` instants. `DatePicker` takes and emits that string, forms validate it with `z.iso.date()` and send it unchanged, and defaults use `todayIsoDate()`. `date-picker-utils.ts` parses, formats and drives the calendar through a UTC-backed date, so a day the browser zone skipped (Pacific/Apia, 2011-12-30) stays enterable.
 
 ## Deploy skew and error details
