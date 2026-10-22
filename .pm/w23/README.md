@@ -10,6 +10,7 @@
 
 ## Inbox
 
+- [071](./071.md) — a structured `budget` for an account the ledger doesn't have (not opened, no opened children) is accepted and never applies
 - [070](./070.md) — REST answers a rejected bearer token (MCP audience, expired, malformed) with "send `Authorization: Bearer <token>`"
 - [069](./069.md) — admin actions (collaborators, rename, delete) on a ledger the caller can read answer "Ledger not found"; 063 fixed leave only
 - [068](./068.md) — file writes accept a path differing from an existing one only by case (`MAIN.bean` beside `main.bean`), which collides on macOS/Windows checkouts
