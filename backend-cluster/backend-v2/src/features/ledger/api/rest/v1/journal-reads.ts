@@ -1,9 +1,10 @@
 import { z } from "@/shared/zod-openapi-setup";
 import { booleanQuery } from "@/server/rest/v1-schemas";
 import { JOURNAL_KINDS } from "@/features/ledger/utils/journal-kinds";
-import type {
-  JournalQueryParams,
-  AccountJournalQueryParams,
+import {
+  PLAINTEXT_PAGE_MAX,
+  type JournalQueryParams,
+  type AccountJournalQueryParams,
 } from "@/features/ledger/service/ledger-journal-service";
 import type { ServiceLayer } from "@/foundation/composition";
 import type { Identity } from "@/server/api/identity";
@@ -73,6 +74,18 @@ const journalQuerySchema = filters.extend({
   documentSubtypes: jsonStringArrayQuery.optional(),
   customSubtypes: jsonStringArrayQuery.optional(),
 });
+const plaintextJournalQuery = filters.extend({
+  limit: z.coerce
+    .number()
+    .int()
+    .min(1)
+    .max(PLAINTEXT_PAGE_MAX)
+    .optional()
+    .describe(
+      "Entries per page. Omitted, REST and GraphQL return every entry; MCP returns 200.",
+    ),
+  offset: z.coerce.number().int().min(0).optional(),
+});
 const accountJournalQuery = filters.extend({
   account: z.string(),
   /** Shared report-stream AccountFilter; same wire name as the ledger service. */
@@ -109,7 +122,14 @@ export const JOURNAL_READS = [
     name: "ledgerPlaintextJournal",
     summary:
       "Read Beancount journal text with account, time, and expression filters",
-    query: filters,
+    query: plaintextJournalQuery,
+    /**
+     * A whole ledger's text is a context blowup for an agent (w23/044), so
+     * an MCP read without `limit` gets a page; REST and GraphQL keep the
+     * whole export the dashboard downloads. `total` and `truncated` say what
+     * is left either way.
+     */
+    mcpDefaultLimit: 200,
     fetch: (services: Services, params: ReadParams) =>
       services.ledgerJournal.plaintextJournal(params),
   },

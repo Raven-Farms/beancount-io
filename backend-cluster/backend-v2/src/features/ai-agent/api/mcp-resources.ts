@@ -673,10 +673,14 @@ export const MCP_RESOURCES: readonly McpResourceDescriptor[] = [
       queryNames: Object.keys(read.query.shape),
       read: async (context, variables) => {
         const { owner: _owner, name: _name, ...query } = variables;
+        const parsed = read.query.parse(query);
         const result = await read.fetch(context.services, {
           identity: context.identity,
           ledgerId: resolveLedgerId(context, variables),
-          query: read.query.parse(query),
+          query:
+            "mcpDefaultLimit" in read && parsed.limit === undefined
+              ? { ...parsed, limit: read.mcpDefaultLimit }
+              : parsed,
         });
         return JSON.stringify(result);
       },

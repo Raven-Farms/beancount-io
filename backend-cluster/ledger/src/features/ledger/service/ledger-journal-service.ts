@@ -308,7 +308,16 @@ export function attachResolvedSourceMeta(
   };
 }
 
-export type PlaintextJournalResult = { content: string };
+export type PlaintextJournalResult = {
+  content: string;
+  /** Entries the filters select, before `offset`/`limit` (w23/044). */
+  total: number;
+  /** Whether entries remain after this page. */
+  truncated: boolean;
+};
+
+/** The paging a plaintext export takes; omitted, it holds every entry. */
+type PlaintextPage = { limit?: number; offset?: number };
 
 export type AccountJournalResult = {
   items: {
@@ -395,7 +404,11 @@ interface ILedgerJournalService {
   plaintextJournal(params: {
     ledgerId: string;
     userId: string | undefined;
-    query?: { account?: string; filter?: string; time?: string };
+    query?: {
+      account?: string;
+      filter?: string;
+      time?: string;
+    } & PlaintextPage;
   }): Promise<PlaintextJournalResult>;
 
   getAccountJournal(params: {
@@ -759,9 +772,23 @@ export class LedgerJournalService implements ILedgerJournalService {
   async plaintextJournal(params: {
     ledgerId: string;
     userId: string | undefined;
-    query?: { account?: string; filter?: string; time?: string };
+    query?: {
+      account?: string;
+      filter?: string;
+      time?: string;
+    } & PlaintextPage;
   }): Promise<PlaintextJournalResult> {
     const { ledgerId, userId, query } = params;
+    const { limit, offset = 0 } = query ?? {};
+    if (limit !== undefined && (!Number.isInteger(limit) || limit < 1)) {
+      throw new BadUserInputError("limit must be a positive integer", "limit");
+    }
+    if (!Number.isInteger(offset) || offset < 0) {
+      throw new BadUserInputError(
+        "offset must be a non-negative integer",
+        "offset",
+      );
+    }
     const snapshot = await this.loadSnapshot(ledgerId, userId);
     const filtered = await this.clampForJournal(snapshot.directives, {
       account: query?.account || undefined,
@@ -798,11 +825,21 @@ export class LedgerJournalService implements ILedgerJournalService {
     const exported = plaintextExportDirectives(filtered, {
       windowed: Boolean(query?.time),
     });
-    for (const directive of exported) {
+    // Every page keeps the option header, so each one loads on its own; the
+    // whole ledger in one read was a context blowup for agents (w23/044).
+    const page =
+      limit === undefined
+        ? exported.slice(offset)
+        : exported.slice(offset, offset + limit);
+    for (const directive of page) {
       content += `${directiveToText(directive)}\n`;
     }
 
-    return { content };
+    return {
+      content,
+      total: exported.length,
+      truncated: offset + page.length < exported.length,
+    };
   }
 
   async getAccountJournal(params: {

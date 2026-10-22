@@ -71,7 +71,25 @@ export type EntryContextResult = {
   generated_from: string | null;
 };
 
-export type PlaintextJournalResult = { content: string };
+export type PlaintextJournalResult = {
+  content: string;
+  /** Entries the filters select, before `offset`/`limit` (w23/044). */
+  total: number;
+  /** Whether entries remain after this page. */
+  truncated: boolean;
+};
+
+/** The most entries one page of the plaintext export may hold. */
+export const PLAINTEXT_PAGE_MAX = 1000;
+
+type PlaintextJournalQuery = {
+  account?: string;
+  filter?: string;
+  time?: string;
+  /** Omitted, every entry: the dashboard's export reads the whole ledger. */
+  limit?: number | null;
+  offset?: number | null;
+};
 
 export type AccountJournalResult = {
   items: {
@@ -155,7 +173,7 @@ export interface ILedgerJournalService {
   plaintextJournal(params: {
     ledgerId: string;
     identity: Identity | undefined;
-    query?: { account?: string; filter?: string; time?: string };
+    query?: PlaintextJournalQuery;
   }): Promise<PlaintextJournalResult>;
 
   getAccountJournal(params: {
@@ -277,9 +295,27 @@ export class LedgerJournalService
   async plaintextJournal(params: {
     ledgerId: string;
     identity: Identity | undefined;
-    query?: { account?: string; filter?: string; time?: string };
+    query?: PlaintextJournalQuery;
   }): Promise<PlaintextJournalResult> {
     const { ledgerId, identity, query } = params;
+    // GraphQL's Int arguments arrive unchecked; REST and MCP parse the same
+    // bounds in their query schema.
+    const { limit, offset } = query ?? {};
+    if (
+      limit != null &&
+      (!Number.isInteger(limit) || limit < 1 || limit > PLAINTEXT_PAGE_MAX)
+    ) {
+      throw new BadUserInputError(
+        `limit must be an integer from 1 to ${PLAINTEXT_PAGE_MAX}`,
+        "limit",
+      );
+    }
+    if (offset != null && (!Number.isInteger(offset) || offset < 0)) {
+      throw new BadUserInputError(
+        "offset must be a non-negative integer",
+        "offset",
+      );
+    }
     const { favaApiClient, ledgerOwner, ledgerName } = await this.getClient(
       ledgerId,
       identity,
@@ -291,10 +327,16 @@ export class LedgerJournalService
         account: query?.account || undefined,
         filter: query?.filter || undefined,
         time: query?.time || undefined,
+        limit: limit ?? undefined,
+        offset: offset ?? undefined,
       }),
       "get plaintext journal",
     );
-    return { content: data.content };
+    return {
+      content: data.content,
+      total: data.total,
+      truncated: data.truncated,
+    };
   }
 
   async getAccountJournal(params: {

@@ -2157,6 +2157,16 @@ export interface PlaintextJournalResponse {
    * Plaintext journal content
    */
   content: string;
+  /**
+   * Total
+   * Entries the filters select, before offset and limit
+   */
+  total: number;
+  /**
+   * Truncated
+   * Whether entries remain after this page
+   */
+  truncated: boolean;
 }
 
 /**
@@ -5858,6 +5868,16 @@ export class Api<
          * Time filter
          */
         time?: string | null;
+        /**
+         * Limit
+         * Entries per page; omitted, every entry
+         */
+        limit?: number | null;
+        /**
+         * Offset
+         * Entries to skip
+         */
+        offset?: number | null;
       },
       params: RequestParams = {},
     ) =>

@@ -51,7 +51,7 @@ export function setJournalHandler(router: Router): void {
     });
   });
 
-  // operationId: plaintextJournal — wire {content}
+  // operationId: plaintextJournal — wire {content, total, truncated}
   router.get(`${base}/plaintext`, authMiddleware, async (ctx) => {
     const { journal } = servicesForRequest(ctx);
     ctx.body = successResponse(
@@ -62,6 +62,8 @@ export function setJournalHandler(router: Router): void {
           account: strQuery(ctx.query.account),
           filter: strQuery(ctx.query.filter),
           time: strQuery(ctx.query.time),
+          limit: intQuery(ctx.query.limit),
+          offset: intQuery(ctx.query.offset),
         },
       }),
     );

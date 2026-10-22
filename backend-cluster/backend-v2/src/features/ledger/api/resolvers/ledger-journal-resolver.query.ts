@@ -2,6 +2,7 @@ import {
   Arg,
   Ctx,
   Field,
+  Int,
   ObjectType,
   InputType,
   Query,
@@ -90,6 +91,16 @@ class JournalQueryInput {
 class PlaintextJournalResponse {
   @Field(() => String)
   content: string;
+
+  @Field(() => Int, {
+    description: "Entries the filters select, before offset and limit.",
+  })
+  total: number;
+
+  @Field(() => Boolean, {
+    description: "Whether entries remain after this page.",
+  })
+  truncated: boolean;
 }
 
 @ObjectType()
@@ -129,6 +140,15 @@ class PlaintextJournalQueryInput {
 
   @Field(() => String, { nullable: true })
   time?: string;
+
+  @Field(() => Int, {
+    nullable: true,
+    description: "Entries per page, 1 to 1000; omitted, every entry.",
+  })
+  limit?: number;
+
+  @Field(() => Int, { nullable: true })
+  offset?: number;
 }
 
 @InputType()

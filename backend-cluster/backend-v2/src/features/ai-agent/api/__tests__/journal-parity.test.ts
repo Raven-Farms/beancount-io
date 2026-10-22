@@ -48,6 +48,8 @@ async function fixture() {
       envelope({
         content:
           '2026-01-02 * "café"\n  Expenses:Café  12.34 USD\n  Assets:Bank\n',
+        total: 1,
+        truncated: false,
       }),
     ),
     getAccountJournal: jest.fn().mockResolvedValue(
@@ -219,7 +221,7 @@ describe("journal adapter contracts", () => {
       path: "plaintext-journal",
       field: "getLedgerPlaintextJournal",
       params: { account: "Assets:Bank", filter: "#travel", time: "2026" },
-      selection: "content",
+      selection: "content total truncated",
     },
     {
       path: "account-journal",
@@ -267,7 +269,7 @@ describe("journal adapter contracts", () => {
           ? f.journal.plaintextJournal
           : f.journal.getAccountJournal;
       expect(method).toHaveBeenCalledTimes(3);
-      for (const call of method.mock.calls)
+      for (const [index, call] of method.mock.calls.entries())
         expect(call).toEqual([
           "alice",
           "main",
@@ -297,8 +299,47 @@ describe("journal adapter contracts", () => {
                   }),
                 ),
               }
-            : entry.params,
+            : // MCP, the second call, pages the export by default (w23/044).
+              { ...entry.params, ...(index === 1 && { limit: 200 }) },
         ]);
+    } finally {
+      await f.close();
+    }
+  });
+
+  // w23/044: one read returned the whole ledger's text; MCP now pages it by
+  // default while REST and GraphQL keep the whole export the dashboard reads.
+  it("pages the plaintext export on request on every surface", async () => {
+    const f = await fixture();
+    try {
+      const rest = await (
+        await f.rest("plaintext-journal?limit=2&offset=2")
+      ).json();
+      expect(rest).toMatchObject({ total: 1, truncated: false });
+      expect(await f.mcp("plaintext-journal?limit=2&offset=2")).toEqual(rest);
+      const gql = await f.gql(
+        'getLedgerPlaintextJournal(ledgerId: "alice/main", query: { limit: 2, offset: 2 }) { content total truncated }',
+      );
+      expect(gql.data?.getLedgerPlaintextJournal).toEqual(rest);
+      for (const [, , query] of f.journal.plaintextJournal.mock.calls)
+        expect(query).toMatchObject({ limit: 2, offset: 2 });
+    } finally {
+      await f.close();
+    }
+  });
+
+  it("refuses a plaintext page above 1000 entries on every surface", async () => {
+    const f = await fixture();
+    try {
+      expect((await f.rest("plaintext-journal?limit=1001")).status).toBe(400);
+      await expect(f.mcp("plaintext-journal?limit=1001")).rejects.toThrow();
+      const gql = await f.gql(
+        'getLedgerPlaintextJournal(ledgerId: "alice/main", query: { limit: 1001 }) { content }',
+      );
+      expect(gql.errors?.[0]?.message).toContain(
+        "limit must be an integer from 1 to 1000",
+      );
+      expect(f.journal.plaintextJournal).not.toHaveBeenCalled();
     } finally {
       await f.close();
     }

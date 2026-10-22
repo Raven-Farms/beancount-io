@@ -280,6 +280,12 @@ the milestone open even if all currently implemented tests pass.
   block's lead line still gives the whole result's row count and says the
   output was truncated. REST and GraphQL `queryShell`/`queryShellText` return
   the full result (w23/010).
+- Deliberate protocol difference: the `plaintext-journal` MCP resource pages
+  its export at 200 entries when no `limit` is given, because a whole ledger's
+  text can run to hundreds of kilobytes in an agent's context. REST and GraphQL
+  keep returning every entry by default, the export the dashboard downloads.
+  All three accept the same `limit` (1–1,000) and `offset` and return `total`
+  and `truncated` (w23/044).
 
 The live registry now has 0 REST and 0 MCP deferred operations. The frozen
 baseline remains unchanged; none of these changes closes the milestone or

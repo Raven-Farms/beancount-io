@@ -5866,6 +5866,44 @@
               "title": "Time"
             },
             "description": "Time filter"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Entries per page; omitted, every entry",
+              "title": "Limit"
+            },
+            "description": "Entries per page; omitted, every entry"
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Entries to skip",
+              "title": "Offset"
+            },
+            "description": "Entries to skip"
           }
         ],
         "responses": {
@@ -11952,11 +11990,23 @@
             "type": "string",
             "title": "Content",
             "description": "Plaintext journal content"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total",
+            "description": "Entries the filters select, before offset and limit"
+          },
+          "truncated": {
+            "type": "boolean",
+            "title": "Truncated",
+            "description": "Whether entries remain after this page"
           }
         },
         "type": "object",
         "required": [
-          "content"
+          "content",
+          "total",
+          "truncated"
         ],
         "title": "PlaintextJournalResponse",
         "description": "Response schema for plaintext journal."

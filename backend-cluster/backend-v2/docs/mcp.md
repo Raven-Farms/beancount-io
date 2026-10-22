@@ -701,7 +701,13 @@ spelling `addLedgerEntries` takes) selects the same entries as `"Transaction"`.
 takes `cleared`, `pending`, and `other`; `documentSubtypes` takes `discovered`
 and `linked`; `customSubtypes` takes `budget`. Any other value is refused with
 `BAD_USER_INPUT` on every surface, rather than matching nothing.
-Plaintext journal returns `{ "content": "..." }`.
+Plaintext journal returns `{ "content": "...", "total": N, "truncated": … }`
+and takes `limit` (1–1,000 entries) and `offset`. Every page keeps the
+ledger's option header, so each one loads on its own; `total` counts the
+entries the filters select and `truncated` says whether more remain. Without
+`limit`, the MCP resource returns the first 200 entries — a whole ledger's text
+can run to hundreds of kilobytes — while REST and GraphQL return every entry,
+the export the dashboard downloads.
 
 Account journal requires `account`, accepts `filter`, `time`, `limit`, `offset`,
 `with_children`, and `conversion`, and defaults to 20 entries, offset 0,

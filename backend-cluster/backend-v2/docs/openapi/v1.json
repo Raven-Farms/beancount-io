@@ -8482,6 +8482,28 @@
             "description": "Fava time expression: a day (2026-09-05), month (2026-09), year, or range. It bounds transactions only — undated structural directives such as `open` and `close` carry the epoch date and appear in every window, so a single-day journal still lists them. Use directiveTypes to ask for transactions alone.",
             "name": "time",
             "in": "query"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 1000,
+              "description": "Entries per page. Omitted, REST and GraphQL return every entry; MCP returns 200."
+            },
+            "required": false,
+            "description": "Entries per page. Omitted, REST and GraphQL return every entry; MCP returns 200.",
+            "name": "limit",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "nullable": true,
+              "minimum": 0
+            },
+            "required": false,
+            "name": "offset",
+            "in": "query"
           }
         ],
         "responses": {
