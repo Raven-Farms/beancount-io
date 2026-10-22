@@ -7,7 +7,11 @@ import { useThemeStyle } from "@/common/hooks/use-theme-style";
 import { useTranslations } from "@/common/hooks/use-translations";
 import { useToday } from "@/common/hooks/use-today";
 import { RecentTransactionsSkeleton } from "./home-skeletons";
-import { recentTransactionsWindow } from "../selectors/recent-window";
+import {
+  RECENT_FUTURE_BUFFER,
+  recentTransactionsUpTo,
+  recentTransactionsWindow,
+} from "../selectors/recent-window";
 import { FadeInView } from "@/components/crossfade";
 import { DashboardCard } from "@/components";
 import { useGetLedgerJournalQuery } from "@/generated-graphql/graphql";
@@ -60,9 +64,11 @@ export function RecentTransactionsCard({
       ledgerId: ledgerId!,
       query: {
         offset: 0,
-        limit: RECENT_LIMIT,
+        limit: RECENT_LIMIT + RECENT_FUTURE_BUFFER,
         directiveTypes: [DirectiveType.TRANSACTION],
-        // What has happened, not what is booked for later (w21/471).
+        // What has happened, not what is booked for later (w21/471); the
+        // window holds still through the month so the offline copy keeps its
+        // key (w21/513).
         time: recentTransactionsWindow(today),
       },
     },
@@ -76,8 +82,11 @@ export function RecentTransactionsCard({
     }
   }, [refreshSignal, ledgerId, refetch]);
 
-  const entries = (data?.getLedgerJournal.data ??
-    []) as unknown as JournalDirectiveType[];
+  const entries = recentTransactionsUpTo(
+    (data?.getLedgerJournal.data ?? []) as unknown as JournalDirectiveType[],
+    today,
+    RECENT_LIMIT,
+  );
 
   const onSeeAll = () => {
     if (guest) {
