@@ -582,6 +582,8 @@ export const es: Translations = {
   ledgerFileNameExists: "Ya existe un archivo llamado {{name}}",
   ledgerFileNameExtension: "Usa un nombre .bean o .beancount",
   ledgerFileNamePath: "Usa un nombre sin \\, .. ni nombres de carpeta vacíos",
+  ledgerFileNamePortable:
+    'Evita < > : " | ? *, partes que terminen en punto o espacio y nombres como con o nul',
   ledgerDeleteFile: "Eliminar {{name}}",
   ledgerFilesFolderLabel: "{{name}}, carpeta",
   ledgerFilesFileLabel: "{{name}}, archivo",

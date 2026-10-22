@@ -578,6 +578,8 @@ export const en = {
   ledgerFileNameExists: "A file named {{name}} already exists",
   ledgerFileNameExtension: "Use a .bean or .beancount name",
   ledgerFileNamePath: "Use a name without \\, .. or empty folder names",
+  ledgerFileNamePortable:
+    'Avoid < > : " | ? *, a part ending in a dot or space, and names like con or nul',
   ledgerDeleteFile: "Delete {{name}}",
   ledgerFilesFolderLabel: "{{name}}, folder",
   ledgerFilesFileLabel: "{{name}}, file",

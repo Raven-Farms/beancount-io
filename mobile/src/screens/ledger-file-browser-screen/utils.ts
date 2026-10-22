@@ -6,7 +6,7 @@ export type LedgerFileNameCheck =
   | { ok: true; filename: string }
   | {
       ok: false;
-      issue: "empty" | "path" | "extension" | "exists";
+      issue: "empty" | "path" | "portable" | "extension" | "exists";
       filename?: string;
     };
 
@@ -39,6 +39,39 @@ function withBeanExtension(name: string): string {
   return OTHER_EXTENSIONS.has(suffix.toLowerCase()) ? name : `${name}.bean`;
 }
 
+/** Windows device names, with or without an extension (backend-v2's rule). */
+const DEVICE_NAME = /^(?:con|prn|aux|nul|com[1-9]|lpt[1-9])(?:\..*)?$/i;
+
+/** UTF-8 length of a string, without needing `TextEncoder`. */
+function utf8Length(text: string): number {
+  let bytes = 0;
+  for (const char of text) {
+    const code = char.codePointAt(0)!;
+    bytes += code < 0x80 ? 1 : code < 0x800 ? 2 : code < 0x10000 ? 3 : 4;
+  }
+  return bytes;
+}
+
+/**
+ * Whether a new file's path breaks the server's portable-path rule, which
+ * refuses what Windows cannot store or what resists an `include`: bidirectional
+ * and control characters, `<>:"|?*`, a part ending in a dot or space, a Windows
+ * device name, a part over 255 bytes. A copy of backend-v2's
+ * `assertPortableRepoPath`, pinned by `check-ledger-file-name.test.ts`; without
+ * it the dialog closed and a raw English toast followed (w21/565).
+ */
+function breaksPortablePath(path: string): boolean {
+  if (/[\p{Cc}\u2028\u2029]/u.test(path)) return true;
+  if (/\p{Bidi_Control}/u.test(path)) return true;
+  if (/[<>:"|?*]/.test(path)) return true;
+  return path
+    .split("/")
+    .some(
+      (part) =>
+        /[. ]$/.test(part) || DEVICE_NAME.test(part) || utf8Length(part) > 255,
+    );
+}
+
 /**
  * Check a typed new-file name. A relative path into folders (`sub/notes`)
  * is allowed, as the server and the dashboard allow it (w3/196): each segment
@@ -68,6 +101,7 @@ export function checkLedgerFileName(
     return { ok: false, issue: "extension" };
   }
   const filename = [...segments.slice(0, -1), named].join("/");
+  if (breaksPortablePath(filename)) return { ok: false, issue: "portable" };
   if (existingNames.includes(filename)) {
     return { ok: false, issue: "exists", filename };
   }

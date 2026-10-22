@@ -579,6 +579,8 @@ export const uk: Translations = {
   ledgerFileNameExtension:
     "Використайте назву з розширенням .bean або .beancount",
   ledgerFileNamePath: "Використайте назву без \\, .. чи порожніх назв тек",
+  ledgerFileNamePortable:
+    'Не можна використовувати < > : " | ? *, частини назви, що закінчуються крапкою чи пробілом, і імена на кшталт con або nul',
   ledgerDeleteFile: "Видалити {{name}}",
   ledgerFilesFolderLabel: "{{name}}, тека",
   ledgerFilesFileLabel: "{{name}}, файл",

@@ -567,6 +567,8 @@ export const bg: Translations = {
   ledgerFileNameExists: "Файл с име {{name}} вече съществува",
   ledgerFileNameExtension: "Използвайте име с .bean или .beancount",
   ledgerFileNamePath: "Използвайте име без \\, .. или празни имена на папки",
+  ledgerFileNamePortable:
+    'Избягвайте < > : " | ? *, части, завършващи с точка или интервал, и имена като con или nul',
   ledgerDeleteFile: "Изтрий {{name}}",
   ledgerFilesFolderLabel: "{{name}}, папка",
   ledgerFilesFileLabel: "{{name}}, файл",

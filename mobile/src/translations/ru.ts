@@ -580,6 +580,8 @@ export const ru: Translations = {
   ledgerFileNameExists: "Файл с именем {{name}} уже существует",
   ledgerFileNameExtension: "Используйте имя с расширением .bean или .beancount",
   ledgerFileNamePath: "Используйте имя без \\, .. и пустых имён папок",
+  ledgerFileNamePortable:
+    'Нельзя использовать < > : " | ? *, части имени, оканчивающиеся точкой или пробелом, и имена вроде con или nul',
   ledgerDeleteFile: "Удалить {{name}}",
   ledgerFilesFolderLabel: "{{name}}, папка",
   ledgerFilesFileLabel: "{{name}}, файл",

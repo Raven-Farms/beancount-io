@@ -584,6 +584,8 @@ export const sk: Translations = {
   ledgerFileNameExtension: "Použite názov s príponou .bean alebo .beancount",
   ledgerFileNamePath:
     "Použite názov bez \\, .. alebo prázdnych názvov priečinkov",
+  ledgerFileNamePortable:
+    'Vyhnite sa < > : " | ? *, častiam končiacim bodkou alebo medzerou a názvom ako con alebo nul',
   ledgerDeleteFile: "Odstrániť {{name}}",
   ledgerFilesFolderLabel: "{{name}}, priečinok",
   ledgerFilesFileLabel: "{{name}}, súbor",

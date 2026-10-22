@@ -1,5 +1,6 @@
 import fs from "fs";
 import path from "path";
+import { translationLocales } from "../../../translations/__tests__/locale-parity";
 import { checkLedgerFileName, listingHasFile, parentDirectory } from "../utils";
 
 // New Ledger File used to grey out Create with no reason, and refused folder
@@ -136,5 +137,63 @@ describe("a new file into a folder that already holds it", () => {
     const lookup = source.indexOf("query:GetLedgerDirContentDocument");
     const closes = source.indexOf("setCreateModalVisible(false);try{");
     expect(lookup > -1 && lookup < closes).toBe(true);
+  });
+});
+
+// w21/565: backend-v2's portable-path rule (w23/054) refuses what Windows cannot
+// store, so the dialog closed and a raw English toast followed. The client now
+// shows it inline, with Create disabled. The cases restate the server's.
+describe("checkLedgerFileName against the server's portable-path rule", () => {
+  const issue = (input: string) => {
+    const check = checkLedgerFileName(input);
+    return check.ok ? "ok" : check.issue;
+  };
+
+  it("refuses names Windows cannot store, translated inline", () => {
+    for (const name of [
+      "Q1: taxes",
+      "a?b",
+      'say "hi"',
+      "a|b",
+      "x<y",
+      "con",
+      "nul.txt.bean",
+      "COM1",
+      "lpt9",
+      "dir./notes",
+      "dir /notes",
+      "a‮b",
+    ]) {
+      expect(issue(name)).toBe("portable");
+    }
+  });
+
+  it("refuses a part over 255 bytes, counted in UTF-8", () => {
+    // The name is counted with the ".bean" it gets (5 bytes).
+    expect(issue(`${"a".repeat(250)}`)).toBe("ok");
+    expect(issue(`${"a".repeat(251)}`)).toBe("portable");
+    expect(issue(`${"é".repeat(126)}`)).toBe("portable");
+    expect(issue(`${"é".repeat(125)}`)).toBe("ok");
+  });
+
+  it("keeps accepting names the server accepts", () => {
+    for (const name of [
+      "notes",
+      "2026/january",
+      "accounts/bank.beancount",
+      "my-book_2",
+      "contacts",
+      "console.bean",
+    ]) {
+      expect(issue(name)).toBe("ok");
+    }
+  });
+
+  it("is worded in every shipped language", () => {
+    for (const locale of translationLocales()) {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const catalog = require(`../../../translations/${locale}`)[locale];
+      expect(typeof catalog.ledgerFileNamePortable).toBe("string");
+    }
   });
 });

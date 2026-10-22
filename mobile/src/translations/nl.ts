@@ -569,6 +569,8 @@ export const nl: Translations = {
   ledgerFileNameExists: "Er bestaat al een bestand met de naam {{name}}",
   ledgerFileNameExtension: "Gebruik een naam op .bean of .beancount",
   ledgerFileNamePath: "Gebruik een naam zonder \\, .. of lege mapnamen",
+  ledgerFileNamePortable:
+    'Vermijd < > : " | ? *, delen die op een punt of spatie eindigen en namen als con of nul',
   ledgerDeleteFile: "{{name}} verwijderen",
   ledgerFilesFolderLabel: "{{name}}, map",
   ledgerFilesFileLabel: "{{name}}, bestand",

@@ -468,6 +468,8 @@ export function LedgerFileBrowserScreen(): JSX.Element {
           return t("ledgerFileNameExtension");
         case "path":
           return t("ledgerFileNamePath");
+        case "portable":
+          return t("ledgerFileNamePortable");
       }
     },
     [entries, knownExisting, t],
