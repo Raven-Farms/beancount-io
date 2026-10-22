@@ -29,3 +29,18 @@ export function renameLedgerKeys<T>(
     ]),
   );
 }
+
+/**
+ * A value stored with the ledger it was meant for (the Transactions filters),
+ * moved to the renamed owner. Readers drop it when its ledger is not the
+ * selected one, so left behind it vanished with no message (w21/644).
+ */
+export function renamedLedgerScope<T extends { ledgerId: string | null }>(
+  scoped: T,
+  oldOwner: string,
+  newOwner: string,
+): T {
+  if (scoped.ledgerId === null) return scoped;
+  const ledgerId = renamedLedgerId(scoped.ledgerId, oldOwner, newOwner);
+  return ledgerId === scoped.ledgerId ? scoped : { ...scoped, ledgerId };
+}

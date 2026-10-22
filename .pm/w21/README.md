@@ -65,7 +65,6 @@
 - [641](./641.md) — A pre-entered entry dated next month moves Home's charts onto next month: 1M shows only November's rent and drops October (w21/491 on Home)
 - [642](./642.md) — Typing an account's exact name doesn't rank it first once a longer match was picked before ("rent" → Rental-Car first)
 - [643](./643.md) — On a back-dated New Transaction, the account picker opens blank with "No matching accounts", with no hint that the accounts open later
-- [644](./644.md) — Changing your username silently clears the Transactions filters (gap in w21/226's rename handling)
 - [646](./blocked/646.md) — The same "1M"/"3M" pills mean a rolling window on Transactions but calendar months on Reports (Food $60 vs $100) — **blocked:** needs an owner product decision on what a 1M/3M/1Y pill means (calendar months everywhere vs relabelled rolling windows on Transactions and Budget)
 - [508](./blocked/508.md) — Mobile guesses that an entry is a plugin copy from its first line; read the ledger's `generated_from` instead (split from 443) — **blocked:** production's GraphQL schema lacks `generated_from` until the ledger service and backend-v2 deploy; mobile's client is generated from it
 - [315](./blocked/315.md) — In-app commits signed with Gitea username and real email (no full_name, no noreply) — **blocked:** needs the owner's noreply-address and published-history decisions, and a production backfill of existing Gitea users that can't be verified here

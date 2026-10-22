@@ -1,4 +1,5 @@
 import { makeVar } from "@apollo/client";
+import { renamedLedgerScope } from "@/common/ledger-owner-rename";
 import {
   NO_SCOPED_FILTERS,
   ScopedTransactionFilters,
@@ -43,4 +44,18 @@ export function setTransactionFiltersForLedger(
   filters: TransactionFilters,
 ): void {
   transactionFiltersVar({ ledgerId, filters });
+}
+
+/**
+ * Keep the filters on their ledger when the account's username changes: left
+ * on the old id, readers dropped them and the full journal showed with no
+ * message (w21/644).
+ */
+export function renameTransactionFiltersOwner(
+  oldOwner: string,
+  newOwner: string,
+): void {
+  transactionFiltersVar(
+    renamedLedgerScope(transactionFiltersVar(), oldOwner, newOwner),
+  );
 }
