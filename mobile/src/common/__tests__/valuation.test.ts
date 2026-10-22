@@ -161,6 +161,38 @@ describe("selectValuation", () => {
     expect(valuation.valuesHoldings).toBe(false);
   });
 
+  it("values a commodity held with and without a cost (w21/278)", () => {
+    const mixed = {
+      ...EXAMPLE,
+      market: { USD: "5100", ETH: "0.05" },
+      cost: { USD: "4100", ETH: "0.05" },
+      units: { USD: "100", ETH: "2.05" },
+    };
+    const valuation = selectValuation(mixed);
+    expect(valuation.valuesHoldings).toBe(true);
+    // The converted part is what is valued; the remainder stays out.
+    expect(valuation.notInTotal).toEqual([
+      { currency: "ETH", number: 0.05, scale: 2 },
+    ]);
+    const held = [...valuation.priced, ...valuation.atCostNoPrice];
+    expect(held.map((holding) => holding.number)).toEqual([2]);
+    // Control without the reward lot.
+    const control = selectValuation({
+      ...mixed,
+      market: { USD: "5100" },
+      cost: { USD: "4100" },
+      units: { USD: "100", ETH: "2" },
+    });
+    expect(control.valuesHoldings).toBe(true);
+    // Only cost-less units stay unvalued.
+    const none = selectValuation({
+      ...mixed,
+      market: { USD: "100", ETH: "2.05" },
+      cost: { USD: "100", ETH: "2.05" },
+    });
+    expect(none.valuesHoldings).toBe(false);
+  });
+
   it("values nothing on a cash-only ledger", () => {
     const valuation = selectValuation({
       ...EXAMPLE,
@@ -411,6 +443,7 @@ describe("balanceNotes", () => {
           kind: "units",
           units: rgagx,
           value: { amount: 48471.38532, basis: "market" },
+          notInTotal: [],
         },
         "USD",
         t,
@@ -423,12 +456,32 @@ describe("balanceNotes", () => {
           kind: "units",
           units: rgagx,
           value: { amount: 49049.66613, basis: "cost" },
+          notInTotal: [],
         },
         "USD",
         t,
         "en",
       ),
     ).toEqual([`atCost({"amount":"${isolateLtr("$49,049.67")}"})`]);
+  });
+
+  it("names the cost-less remainder under a units figure's value (w21/278)", () => {
+    expect(
+      balanceNotes(
+        {
+          kind: "units",
+          units: { currency: "ETH", number: 2.05, scale: 2 },
+          value: { amount: 5000, basis: "market" },
+          notInTotal: [{ currency: "ETH", number: 0.05, scale: 2 }],
+        },
+        "USD",
+        t,
+        "en",
+      ),
+    ).toEqual([
+      `atMarket({"amount":"${isolateLtr("$5,000.00")}"})`,
+      `notInTotal({"amounts":"${isolateLtr("0.05 ETH")}"})`,
+    ]);
   });
 
   it("claims no basis it does not know, and adds nothing to a figure with no value", () => {
@@ -438,6 +491,7 @@ describe("balanceNotes", () => {
           kind: "units",
           units: rgagx,
           value: { amount: 48471.38532, basis: null },
+          notInTotal: [],
         },
         "USD",
         t,
@@ -450,6 +504,7 @@ describe("balanceNotes", () => {
           kind: "units",
           units: { currency: "VACHR", number: -13, scale: 0 },
           value: null,
+          notInTotal: [],
         },
         "USD",
         t,

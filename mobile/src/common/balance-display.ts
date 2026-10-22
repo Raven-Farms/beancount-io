@@ -63,6 +63,12 @@ export type BalanceDisplay =
        * unknown.
        */
       value: { amount: number; basis: ValueBasis | null } | null;
+      /**
+       * The part of this commodity the value leaves out: lots with no cost,
+       * which the ledger keeps in units beside the lots it converted. Empty
+       * when nothing was converted, where the units already say it all.
+       */
+      notInTotal: Holding[];
     };
 
 /**
@@ -111,13 +117,20 @@ export function selectBalanceDisplay(
   const held = unitsHeld.length > 0 ? unitsHeld : holdingsOf(valued);
 
   if (held.length === 1 && held[0].currency !== currency) {
+    // Some of the commodity converted (its lots with a cost) and some did not
+    // (cost-less ones, `@ price` rewards): the value stands, and names the
+    // remainder, rather than being dropped for it (w21/278).
+    const partial = notInTotal.every(
+      (holding) => holding.currency === held[0].currency,
+    );
+    const valued = partial && value !== 0;
     return {
       kind: "units",
       units: held[0],
-      value:
-        notInTotal.length === 0 && value !== 0
-          ? { amount: value, basis: basisOf(held[0].currency) }
-          : null,
+      value: valued
+        ? { amount: value, basis: basisOf(held[0].currency) }
+        : null,
+      notInTotal: valued ? notInTotal : [],
     };
   }
   return { kind: "money", value, notInTotal };

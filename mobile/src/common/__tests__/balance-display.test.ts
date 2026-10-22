@@ -19,6 +19,7 @@ describe("selectBalanceDisplay", () => {
       kind: "units",
       units: { currency: "RGAGX", number: 597.748, scale: 3 },
       value: { amount: 48471.38532, basis: "market" },
+      notInTotal: [],
     });
   });
 
@@ -38,6 +39,7 @@ describe("selectBalanceDisplay", () => {
       kind: "units",
       units: { currency: "STARTUP", number: 1000, scale: 0 },
       value: { amount: 1000, basis: "cost" },
+      notInTotal: [],
     });
   });
 
@@ -48,6 +50,7 @@ describe("selectBalanceDisplay", () => {
       kind: "units",
       units: { currency: "RGAGX", number: 597.748, scale: 3 },
       value: { amount: 48471.38532, basis: null },
+      notInTotal: [],
     });
   });
 
@@ -57,6 +60,7 @@ describe("selectBalanceDisplay", () => {
       kind: "units",
       units: { currency: "VACHR", number: -13, scale: 0 },
       value: null,
+      notInTotal: [],
     };
     expect(selectBalanceDisplay(vacation, vacation, "USD")).toEqual(expected);
     // The valued read alone is enough: the units read may not have landed.
@@ -145,6 +149,7 @@ describe("notInTotalOf", () => {
       kind: "units",
       units: { currency: "USD", number: 50, scale: 2 },
       value: null,
+      notInTotal: [],
     });
   });
 
@@ -174,5 +179,30 @@ describe("amountIn", () => {
   it("reads a missing currency as zero, without the USD fallback", () => {
     expect(amountIn({ USD: "5" }, "RGAGX")).toEqual({ number: 0, scale: 0 });
     expect(amountIn(undefined, "USD")).toEqual({ number: 0, scale: 0 });
+  });
+});
+
+// w21/278: a commodity held with and without a cost basis lost its value.
+describe("a commodity held with and without a cost", () => {
+  const rewards = { USD: "5000", ETH: "0.05" };
+  const held = { ETH: "2.05" };
+
+  it("keeps the converted value and names the cost-less remainder", () => {
+    expect(selectBalanceDisplay(rewards, held, "USD", () => "market")).toEqual({
+      kind: "units",
+      units: { currency: "ETH", number: 2.05, scale: 2 },
+      value: { amount: 5000, basis: "market" },
+      notInTotal: [{ currency: "ETH", number: 0.05, scale: 2 }],
+    });
+  });
+
+  it("says nothing extra when nothing was converted", () => {
+    const display = selectBalanceDisplay({ ETH: "2.05" }, held, "USD");
+    expect(display).toEqual({
+      kind: "units",
+      units: { currency: "ETH", number: 2.05, scale: 2 },
+      value: null,
+      notInTotal: [],
+    });
   });
 });

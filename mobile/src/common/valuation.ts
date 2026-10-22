@@ -278,11 +278,22 @@ export function selectValuation({
   const marketValue = resolveCurrencyBalance(market, currency);
   const costValue =
     cost == null ? null : resolveCurrencyBalance(cost, currency);
-  const converted = holdingsOf(units).filter(
-    (holding) =>
-      holding.currency !== currency &&
-      amountIn(market, holding.currency).number === 0,
-  );
+  // A commodity is converted when more of it is held than the market map
+  // still carries: a cost-less lot beside lots with a cost stays in the map,
+  // and used to switch the valuation off for all of it (w21/278). What is
+  // priced is the converted part.
+  const converted = holdingsOf(units).flatMap((holding) => {
+    if (holding.currency === currency) return [];
+    const { number: left, scale } = amountIn(market, holding.currency);
+    if (Math.abs(holding.number) <= Math.abs(left)) return [];
+    // Rounded at the recorded scale: 2.05 − 0.05 is not 2 in floating point.
+    const part = Number(
+      (holding.number - left).toFixed(
+        Math.min(100, Math.max(holding.scale, scale)),
+      ),
+    );
+    return [{ ...holding, number: part }];
+  });
   const reference = date !== undefined && date < today ? date : today;
 
   const priced: PricedHolding[] = [];
@@ -448,5 +459,6 @@ export function balanceNotes(
       // (w21/249).
       amount: isolateLtr(formatSignedMoneyWithCurrency(value.amount, currency)),
     }),
+    ...notInTotalNotes(display.notInTotal, t),
   ];
 }

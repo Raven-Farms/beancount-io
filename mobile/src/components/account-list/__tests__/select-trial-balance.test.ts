@@ -417,11 +417,13 @@ describe("selectTrialBalanceDisplays", () => {
       kind: "units",
       units: { currency: "RGAGX", number: 597.748, scale: 3 },
       value: { amount: 48471.38532, basis: "market" },
+      notInTotal: [],
     });
     expect(displays.get("Assets:Hoogle:Vacation")).toEqual({
       kind: "units",
       units: { currency: "VACHR", number: -13, scale: 0 },
       value: null,
+      notInTotal: [],
     });
   });
 
@@ -455,6 +457,7 @@ describe("selectTrialBalanceDisplays", () => {
       kind: "units",
       units: { currency: "RGAGX", number: 597.748, scale: 3 },
       value: { amount: 49049.66613, basis: "cost" },
+      notInTotal: [],
     });
     const assets = displays.get("assets");
     expect(assets?.kind === "money" && assets.valuation?.atCostNoPrice).toEqual(

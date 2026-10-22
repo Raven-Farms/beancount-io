@@ -67,6 +67,7 @@ describe("selectAccountBalanceDisplay", () => {
       kind: "units",
       units: { currency: "RGAGX", number: 597.748, scale: 3 },
       value: { amount: 48471.38532, basis: "market" },
+      notInTotal: [],
     });
   });
 
@@ -77,6 +78,7 @@ describe("selectAccountBalanceDisplay", () => {
       kind: "units",
       units: { currency: "RGAGX", number: 597.748, scale: 3 },
       value: { amount: 48656.6872, basis: "market" },
+      notInTotal: [],
     });
   });
 
