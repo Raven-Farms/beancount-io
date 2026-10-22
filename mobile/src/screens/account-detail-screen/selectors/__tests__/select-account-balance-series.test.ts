@@ -513,3 +513,29 @@ describe("selectAccountBalanceSeries for an account whose only posting is still 
     ).toEqual([]);
   });
 });
+
+// w21/517: 1M read "+3 VOO" for next month's buy and left out this month's.
+describe("selectAccountUnitsSeries with a posting dated after today", () => {
+  const voo = createReport([
+    { date: "2026-09-15", balance: { VOO: 12 } },
+    { date: "2026-10-05", balance: { VOO: 13 } },
+    { date: "2026-11-01", balance: { VOO: 16 } },
+  ]);
+
+  it("ends at today's holding, not next month's", () => {
+    const series = selectAccountUnitsSeries("VOO", voo, "2026-10-22");
+    expect(series).toEqual([
+      { date: "2026-09-15", value: 12 },
+      { date: "2026-10-05", value: 13 },
+    ]);
+  });
+
+  it("is unchanged when nothing is dated after today", () => {
+    expect(selectAccountUnitsSeries("VOO", voo, "2026-12-01")).toEqual([
+      { date: "2026-09-15", value: 12 },
+      { date: "2026-10-05", value: 13 },
+      { date: "2026-11-01", value: 16 },
+      { date: "2026-12-01", value: 16 },
+    ]);
+  });
+});

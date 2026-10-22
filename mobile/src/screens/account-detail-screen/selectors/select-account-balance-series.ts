@@ -83,10 +83,15 @@ export function selectAccountUnitsSeries(
   data?: AccountReportQuery,
   today?: string,
 ): SeriesPoint[] {
+  const points = data?.getLedgerAccountReport?.linechartData;
   const series = forwardFillMonths(
     pointsToMonthlySeries(
       commodity,
-      data?.getLedgerAccountReport?.linechartData,
+      // Postings dated after today have not happened: a buy pre-entered for
+      // next month stood in for this month's balance (w21/517).
+      today === undefined
+        ? points
+        : points?.filter((point) => point.date <= today),
       (balance, currency) => amountIn(balance, currency).number,
     ),
   );
