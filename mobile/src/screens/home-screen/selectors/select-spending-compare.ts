@@ -146,10 +146,24 @@ export function spendingTotalsCaption(
   return `${labels.thisMonth} ${amount(thisMonth)} · ${labels.lastMonth} ${amount(lastMonth)}`;
 }
 
-/** Whether neither month has any spending in the card's currency. */
+/**
+ * Whether neither month has any spending at all: none in the card's currency
+ * and none held back as not in the total. A month spent only in another
+ * currency is not "No spending yet" (w21/493).
+ */
 export function noSpending({
   lastMonth,
   thisMonth,
-}: Pick<SpendingCompare, "lastMonth" | "thisMonth">): boolean {
-  return lastMonth === 0 && thisMonth === 0;
+  notInTotal = [],
+  lastMonthNotInTotal = [],
+}: Pick<SpendingCompare, "lastMonth" | "thisMonth"> &
+  Partial<
+    Pick<SpendingCompare, "notInTotal" | "lastMonthNotInTotal">
+  >): boolean {
+  return (
+    lastMonth === 0 &&
+    thisMonth === 0 &&
+    notInTotal.length === 0 &&
+    lastMonthNotInTotal.length === 0
+  );
 }

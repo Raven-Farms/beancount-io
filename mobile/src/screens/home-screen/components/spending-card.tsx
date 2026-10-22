@@ -211,7 +211,12 @@ export function SpendingCard({
         <LoadingTile height={BAR_CHART_HEIGHT} mx={16} />
       ) : (
         <FadeInView>
-          {noSpending({ lastMonth, thisMonth }) ? (
+          {noSpending({
+            lastMonth,
+            thisMonth,
+            notInTotal,
+            lastMonthNotInTotal,
+          }) ? (
             // Two 2 pt bars over a $0 to $1 axis suggested cents of spending.
             <Text
               key={`empty-${fontScale}`}

@@ -284,6 +284,17 @@ describe("the spending card's totals and empty state", () => {
     expect(noSpending({ lastMonth: 12, thisMonth: 0 })).toBe(false);
   });
 
+  // w21/493: "No spending yet" over its own "Not in total: 80.00 EUR".
+  it("is not empty when a month was spent in another currency", () => {
+    const eur = [{ currency: "EUR", number: 80, scale: 2 }];
+    const base = { lastMonth: 0, thisMonth: 0 };
+    expect(noSpending({ ...base, notInTotal: eur })).toBe(false);
+    expect(noSpending({ ...base, lastMonthNotInTotal: eur })).toBe(false);
+    expect(
+      noSpending({ ...base, notInTotal: [], lastMonthNotInTotal: [] }),
+    ).toBe(true);
+  });
+
   it("is what the card renders: the empty text, or the chart with its totals", () => {
     const src = require("fs")
       .readFileSync(
@@ -291,7 +302,11 @@ describe("the spending card's totals and empty state", () => {
         "utf8",
       )
       .replace(/\s+/g, "");
-    expect(src.includes("{noSpending({lastMonth,thisMonth})?(")).toBe(true);
+    expect(
+      src.includes(
+        "{noSpending({lastMonth,thisMonth,notInTotal,lastMonthNotInTotal,})?(",
+      ),
+    ).toBe(true);
     expect(src.includes('t("spendingEmpty")')).toBe(true);
     expect(src.includes('testID="spending-totals"')).toBe(true);
     expect(
