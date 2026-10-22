@@ -28,6 +28,7 @@ import {
   BudgetBarChartD3,
   LEGEND_HEIGHT,
 } from "@/common/d3/budget-bar-chart-d3";
+import { useToday } from "@/common/hooks/use-today";
 import { useBudgetActuals } from "@/screens/budget-screen/hooks/use-budget-actuals";
 import {
   budgetDirection,
@@ -185,6 +186,8 @@ export function BudgetGroupCard({
 
   const direction = budgetDirection(group.value);
   const { currency } = group;
+  // The day a budget dated after it has not started on (w21/301).
+  const today = useToday();
 
   const { series, loading, error } = useBudgetActuals({
     ledgerId,
@@ -194,11 +197,12 @@ export function BudgetGroupCard({
     direction,
   });
 
-  const stats = selectBudgetCardStats(group, series);
+  const stats = selectBudgetCardStats(group, series, today);
   const favorables = selectPointFavorability(
     series,
     direction,
     group.budgetHistory,
+    today,
   );
 
   // One object so the chart and its spoken summary can never describe different

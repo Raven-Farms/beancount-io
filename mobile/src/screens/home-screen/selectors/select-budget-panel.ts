@@ -69,20 +69,24 @@ export function selectBudgetPanelRows(
     // panel cares about, sign-corrected the way the card's series already is.
     const direction = budgetDirection(group.value);
     const scale = budgetScale(group.budgetHistory);
-    const stats = selectBudgetCardStats(group, [
-      {
-        date: periodEnd,
-        actual: (actual ?? 0) * direction,
-        budget:
-          calculateBudgetForInterval(
-            periodEnd,
-            group.interval,
-            group.budgetHistory,
-            asOf,
-            windowStart,
-          ) * direction,
-      },
-    ]);
+    const stats = selectBudgetCardStats(
+      group,
+      [
+        {
+          date: periodEnd,
+          actual: (actual ?? 0) * direction,
+          budget:
+            calculateBudgetForInterval(
+              periodEnd,
+              group.interval,
+              group.budgetHistory,
+              asOf,
+              windowStart,
+            ) * direction,
+        },
+      ],
+      asOf,
+    );
     const spent = stats.actual ?? 0;
     const noBudget = stats.budget <= 0;
     if (stats.startsOn !== null) {

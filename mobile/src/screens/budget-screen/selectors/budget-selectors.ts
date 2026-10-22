@@ -422,10 +422,24 @@ export function budgetForInterval(
   // so skip it. Without this a yearly budget walks 365 days per chart point,
   // and the server returns up to 100 points. A partial period (a window ending
   // mid-month) must take the walk, or it would read the whole period's target.
+  // The first directive back-fills the period it falls in: a budget set on the
+  // 21st is a budget for that month, not for its last ten days, so the first
+  // period is not judged as a spend of the whole month against a target for the
+  // tail of it (w21/301; the dashboard budgets the full month too). Only once
+  // the directive is in effect: one dated after `end` has not started.
+  const firstDate = ordered[0]?.date;
+  const backfilled =
+    firstDate !== undefined &&
+    firstDate > periodStart &&
+    firstDate <= intervalEnd &&
+    firstDate <= end;
+  const effectiveFrom = (index: number): string =>
+    index === 0 && backfilled ? periodStart : ordered[index].date;
+
   const only = ordered.length === 1 ? ordered[0] : null;
   if (
     only &&
-    only.date <= start &&
+    effectiveFrom(0) <= start &&
     start === periodStart &&
     normalizeInterval(only.interval) === normalizeInterval(chartInterval) &&
     end === addDaysISO(nextIntervalStartISO(start, chartInterval), -1)
@@ -444,7 +458,7 @@ export function budgetForInterval(
     let changed = false;
     while (
       activeIndex + 1 < ordered.length &&
-      ordered[activeIndex + 1].date <= day
+      effectiveFrom(activeIndex + 1) <= day
     ) {
       activeIndex += 1;
       changed = true;

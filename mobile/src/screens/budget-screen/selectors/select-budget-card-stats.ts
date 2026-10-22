@@ -50,14 +50,21 @@ function firstBudgetDate(
   );
 }
 
-/** A period that ended before the first directive had no target to miss. */
+/**
+ * A period with no target to miss: it ended before the first directive, or the
+ * first directive has not started yet (dated after `today`, so the period holds
+ * a zero budget that is no target at all). A period the first directive falls
+ * in carries a back-filled target and is judged against it (w21/301).
+ */
 function beforeFirstBudget(
   point: BudgetSeriesPoint,
   firstBudget: string | null,
+  today?: string,
 ): boolean {
-  // A zero budget only: a period the first directive starts partway through
-  // carries a prorated target and is judged against it.
-  return point.budget === 0 && firstBudget !== null && point.date < firstBudget;
+  if (point.budget !== 0 || firstBudget === null) return false;
+  return (
+    point.date < firstBudget || (today !== undefined && firstBudget > today)
+  );
 }
 
 /**
@@ -74,11 +81,12 @@ export function selectPointFavorability(
   series: BudgetSeriesPoint[],
   direction: 1 | -1,
   budgetHistory: readonly { date: string; amount?: string }[] = [],
+  today?: string,
 ): (boolean | null)[] {
   const firstBudget = firstBudgetDate(budgetHistory);
   const scale = budgetScale(budgetHistory);
   return series.map((point) =>
-    beforeFirstBudget(point, firstBudget)
+    beforeFirstBudget(point, firstBudget, today)
       ? null
       : isFavorableVariance(
           varianceStatus(point.actual - Math.abs(point.budget), scale),
@@ -90,6 +98,7 @@ export function selectPointFavorability(
 export function selectBudgetCardStats(
   group: BudgetGroup,
   series: BudgetSeriesPoint[],
+  today?: string,
 ): BudgetCardStats {
   const direction = budgetDirection(group.value);
   const latest = series.length > 0 ? series[series.length - 1] : null;
@@ -106,7 +115,7 @@ export function selectBudgetCardStats(
   // variance: its zero budget read every dollar as "Above target" in red over
   // an all-grey chart (w21/101).
   const firstBudget = firstBudgetDate(group.budgetHistory);
-  if (latest && beforeFirstBudget(latest, firstBudget)) {
+  if (latest && beforeFirstBudget(latest, firstBudget, today)) {
     return {
       budget,
       actual,

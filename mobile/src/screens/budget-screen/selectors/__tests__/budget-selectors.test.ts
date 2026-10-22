@@ -134,11 +134,25 @@ describe("calculateBudgetForInterval", () => {
     );
   });
 
-  it("does not apply a directive before its effective date", () => {
+  it("budgets the first directive's whole period, not only the days after its date (w21/301)", () => {
+    // A monthly 310 set on January 16 is January's budget: the actuals it is
+    // judged against cover the whole month.
     const history = [historyEntry("2025-01-16", "monthly", "310 USD")];
 
     expect(calculateBudgetForInterval("2025-01-31", "monthly", history)).toBe(
-      160,
+      310,
+    );
+  });
+
+  it("does not apply a later directive before its effective date", () => {
+    // Only the first directive back-fills; a raise still starts on its date.
+    const history = [
+      historyEntry("2025-01-01", "monthly", "310 USD"),
+      historyEntry("2025-01-16", "monthly", "620 USD"),
+    ];
+
+    expect(calculateBudgetForInterval("2025-01-31", "monthly", history)).toBe(
+      470,
     );
   });
 
