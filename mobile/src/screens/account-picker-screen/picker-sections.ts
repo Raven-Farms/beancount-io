@@ -167,6 +167,28 @@ export function showCreateBelowResults(
     .split(/\s+/)
     .filter(Boolean);
   if (words.length === 0) return false;
+  // A query that starts at a root account ("Expenses:Food") is a whole name,
+  // not a piece of one: it is a hit only when the ledger has exactly that
+  // account, so a new "Expenses:Food" beside "Expenses:Food:Groceries" can
+  // still be created (w21/452). A partial path ("food:groc") stays a piece.
+  const wholeName = query
+    .normalize("NFC")
+    .toLowerCase()
+    .split(":")
+    .map((part) => part.trim())
+    .join(":");
+  const rootOf = (name: string) => name.split(":")[0];
+  if (
+    wholeName.includes(":") &&
+    results.some(
+      (account) =>
+        rootOf(account.normalize("NFC").toLowerCase()) === rootOf(wholeName),
+    )
+  ) {
+    return !results.some(
+      (account) => account.normalize("NFC").toLowerCase() === wholeName,
+    );
+  }
   return !results.some((account) => {
     const name = account.normalize("NFC").toLowerCase();
     return words.every((word) => name.includes(word));

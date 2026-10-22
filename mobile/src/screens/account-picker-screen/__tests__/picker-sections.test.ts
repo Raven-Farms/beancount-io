@@ -382,6 +382,20 @@ describe("showCreateBelowResults", () => {
     expect(below("FOOD:groc")).toBe(false);
   });
 
+  // w21/452: a full new name is a piece of a longer account's name.
+  it("offers Create for a whole new name inside a longer account", () => {
+    expect(below("Expenses:Food")).toBe(true);
+    expect(below("Assets:Bank:Check")).toBe(true);
+    expect(below("expenses: housing")).toBe(true);
+    // A name the ledger has exactly is a real hit, in any case or spelling.
+    expect(below("Expenses:Food:Groceries")).toBe(false);
+    expect(below("expenses:food:GROCERIES")).toBe(false);
+    expect(below("Assets:Cash")).toBe(false);
+    // Starting below a root, it is still a search for a piece of a name.
+    expect(below("FOOD:groc")).toBe(false);
+    expect(below("food:groceries")).toBe(false);
+  });
+
   it("is left to the empty state when there are no results", () => {
     expect(showCreateBelowResults("zzzz", [], writer)).toBe(false);
   });
