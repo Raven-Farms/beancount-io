@@ -5,6 +5,8 @@
  * Kept free of any `@/` value imports so the jest-lite runner can require it.
  */
 
+import { merchantKey } from "../../../common/merchant-key";
+
 import {
   asCount,
   asString,
@@ -130,9 +132,10 @@ export function aggregatePayees(
     const firstDate = asString(row[columns.firstDate]) ?? "";
     const lastDate = asString(row[columns.lastDate]) ?? "";
 
-    const existing = byPayee.get(payee.toLowerCase());
+    const key = merchantKey(payee);
+    const existing = byPayee.get(key);
     if (!existing) {
-      byPayee.set(payee.toLowerCase(), {
+      byPayee.set(key, {
         payee,
         transactionCount,
         firstDate,
@@ -187,12 +190,12 @@ export function filterMerchants(
   merchants: readonly MerchantAggregate[],
   query: string,
 ): MerchantAggregate[] {
-  const needle = query.trim().toLowerCase();
+  const needle = merchantKey(query);
   if (!needle) {
     return [...merchants];
   }
   return merchants.filter((merchant) =>
-    merchant.payee.toLowerCase().includes(needle),
+    merchantKey(merchant.payee).includes(needle),
   );
 }
 

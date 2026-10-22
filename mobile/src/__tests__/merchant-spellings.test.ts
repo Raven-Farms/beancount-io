@@ -119,3 +119,40 @@ describe("a merchant spelled with trailing whitespace", () => {
     ]);
   });
 });
+
+// w21/410: a decomposed "Café" and a composed one look the same and are two
+// strings, so Merchants listed two identical-looking rows with half the history.
+describe("a merchant spelled composed and decomposed", () => {
+  const NFC = "Café Central";
+  const NFD = "Café Central";
+  const data = table([
+    [NFC, 1, "2026-10-01", "2026-10-01"],
+    [NFD, 1, "2026-10-05", "2026-10-05"],
+  ]);
+
+  it("is one merchant with both transactions and both spellings kept", () => {
+    expect(NFC.length === NFD.length).toBe(false);
+    const merchants = aggregatePayees(data);
+    expect(merchants.length).toBe(1);
+    expect(merchants[0].transactionCount).toBe(2);
+    expect(
+      [merchants[0].payee, ...(merchants[0].otherSpellings ?? [])].sort(),
+    ).toEqual([NFC, NFD].sort());
+    expect(merchants[0].lastDate).toBe("2026-10-05");
+  });
+
+  it("is found by a search typed in either form", () => {
+    const {
+      filterMerchants,
+    } = require("../screens/merchants-screen/selectors/aggregate-payees");
+    const merchants = aggregatePayees(data);
+    expect(filterMerchants(merchants, "café").length).toBe(1);
+    expect(filterMerchants(merchants, "café").length).toBe(1);
+  });
+
+  it("shares one merchant key, so recurrence sees the whole history", () => {
+    const { merchantKey } = require("../common/merchant-key");
+    expect(merchantKey(NFC)).toBe(merchantKey(NFD));
+    expect(merchantKey(` ${NFD} `)).toBe(merchantKey(NFC.toUpperCase()));
+  });
+});
