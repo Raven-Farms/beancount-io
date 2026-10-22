@@ -45,6 +45,29 @@ export function checkLedgerFileName(
   return { ok: true, filename };
 }
 
+/**
+ * Whether a listing of the folder a new file targets already holds it. The
+ * name check only sees the current folder, so `sub/notes` passed at the root
+ * even when `sub/notes.bean` existed, and the server refused the create after
+ * the dialog had closed (w21/222).
+ */
+export function listingHasFile(
+  entries: readonly { path: string; type: string }[],
+  filePath: string,
+): boolean {
+  const wanted = filePath.replace(/^\/+/, "");
+  return entries.some(
+    (entry) =>
+      entry.type !== "dir" && entry.path.replace(/^\/+/, "") === wanted,
+  );
+}
+
+/** The folder part of a relative path, or "" at the root. */
+export function parentDirectory(path: string): string {
+  const slash = path.replace(/\/+$/, "").lastIndexOf("/");
+  return slash < 0 ? "" : path.slice(0, slash);
+}
+
 export function normalizeLedgerFileName(input: string): string | null {
   const check = checkLedgerFileName(input);
   return check.ok ? check.filename : null;

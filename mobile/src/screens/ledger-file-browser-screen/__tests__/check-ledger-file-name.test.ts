@@ -1,6 +1,6 @@
 import fs from "fs";
 import path from "path";
-import { checkLedgerFileName } from "../utils";
+import { checkLedgerFileName, listingHasFile, parentDirectory } from "../utils";
 
 // New Ledger File used to grey out Create with no reason, and refused folder
 // paths the server accepts (w21/014). Each refusal now names its rule.
@@ -93,5 +93,48 @@ describe("New Ledger File dialog", () => {
         'const inputError = typeof validation === "string" ? validation : null;',
       ),
     ).toBe(true);
+  });
+});
+
+// w21/222: `sub/notes` passed at the root even when `sub/notes.bean` existed;
+// the dialog closed and the create failed.
+describe("a new file into a folder that already holds it", () => {
+  it("is refused once the folder's listing says so", () => {
+    const folder = [
+      { path: "sub/notes.bean", type: "file" },
+      { path: "sub/inner", type: "dir" },
+    ];
+    expect(listingHasFile(folder, "sub/notes.bean")).toBe(true);
+    expect(listingHasFile(folder, "/sub/notes.bean")).toBe(true);
+    expect(listingHasFile(folder, "sub/other.bean")).toBe(false);
+    // A folder of that name is not the file.
+    expect(listingHasFile(folder, "sub/inner")).toBe(false);
+    expect(listingHasFile([], "sub/notes.bean")).toBe(false);
+  });
+
+  it("names the clash in the dialog by treating the found file as existing", () => {
+    // The bare current-folder names do not see it...
+    expect(checkLedgerFileName("sub/notes", ["main.bean", "sub"]).ok).toBe(
+      true,
+    );
+    // ...and once the listing found it, the same input is refused with its name.
+    expect(
+      checkLedgerFileName("sub/notes", ["main.bean", "sub", "sub/notes.bean"]),
+    ).toEqual({ ok: false, issue: "exists", filename: "sub/notes.bean" });
+  });
+
+  it("finds the folder to look in", () => {
+    expect(parentDirectory("sub/notes.bean")).toBe("sub");
+    expect(parentDirectory("a/b/c.bean")).toBe("a/b");
+    expect(parentDirectory("main.bean")).toBe("");
+  });
+
+  it("checks that folder before the dialog closes", () => {
+    const source = fs
+      .readFileSync(path.join(__dirname, "..", "index.tsx"), "utf8")
+      .replace(/\s+/g, "");
+    const lookup = source.indexOf("query:GetLedgerDirContentDocument");
+    const closes = source.indexOf("setCreateModalVisible(false);");
+    expect(lookup > -1 && lookup < closes).toBe(true);
   });
 });

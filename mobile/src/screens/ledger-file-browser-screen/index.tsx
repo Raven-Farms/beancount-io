@@ -27,6 +27,8 @@ import { useThemeStyle } from "@/common/hooks/use-theme-style";
 import { useTranslations } from "@/common/hooks/use-translations";
 import { useToast } from "@/common/hooks/use-toast";
 import {
+  GetLedgerDirContentDocument,
+  type GetLedgerDirContentQuery,
   useCreateLedgerFileMutation,
   useDeleteLedgerFileMutation,
   useGetLedgerDirContentQuery,
@@ -46,6 +48,8 @@ import {
   canDeleteLedgerFile,
   checkLedgerFileName,
   deleteEmptiesFolder,
+  listingHasFile,
+  parentDirectory,
   isFolderGone,
   popPathStack,
   pushPathStack,
@@ -332,6 +336,12 @@ export function LedgerFileBrowserScreen(): JSX.Element {
 
   const [refreshing, setRefreshing] = useState(false);
   const [createModalVisible, setCreateModalVisible] = useState(false);
+  // Names into other folders found to exist already, shown as "already exists".
+  const [knownExisting, setKnownExisting] = useState<string[]>([]);
+  const openCreateDialog = useCallback(() => {
+    setKnownExisting([]);
+    setCreateModalVisible(true);
+  }, [setKnownExisting, setCreateModalVisible]);
   const [deletingPath, setDeletingPath] = useState<string | null>(null);
   const isHere = useIsHere();
   const createInFlightRef = useRef(false);
@@ -385,10 +395,10 @@ export function LedgerFileBrowserScreen(): JSX.Element {
   // Create is disabled with the reason under the field, never silently.
   const validateNewFilename = useCallback(
     (input: string): boolean | string => {
-      const check = checkLedgerFileName(
-        input,
-        entries.map((entry) => entry.name),
-      );
+      const check = checkLedgerFileName(input, [
+        ...entries.map((entry) => entry.name),
+        ...knownExisting,
+      ]);
       if (check.ok) return true;
       switch (check.issue) {
         case "empty":
@@ -401,20 +411,43 @@ export function LedgerFileBrowserScreen(): JSX.Element {
           return t("ledgerFileNamePath");
       }
     },
-    [entries, t],
+    [entries, knownExisting, t],
   );
 
   const handleCreate = useCallback(
     async (input: string) => {
-      const check = checkLedgerFileName(
-        input,
-        entries.map((entry) => entry.name),
-      );
+      const check = checkLedgerFileName(input, [
+        ...entries.map((entry) => entry.name),
+        ...knownExisting,
+      ]);
       if (!check.ok || !canWrite || createInFlightRef.current) return;
       const { filename } = check;
 
       const filePath = buildLedgerFilePath(currentPath, filename);
       createInFlightRef.current = true;
+      // A name into another folder is checked against that folder's listing
+      // while the dialog is still open, so a clash shows under the field with
+      // the typed name kept, instead of a failed create after it closed
+      // (w21/222). If the listing cannot be read, the server stays the judge.
+      if (filename.includes("/")) {
+        try {
+          const folder = await client.query<GetLedgerDirContentQuery>({
+            query: GetLedgerDirContentDocument,
+            variables: { ledgerId, dirPath: parentDirectory(filePath) },
+            fetchPolicy: "network-only",
+          });
+          if (
+            listingHasFile(folder.data?.getLedgerDirContent ?? [], filePath)
+          ) {
+            setKnownExisting((known) => [...known, filename]);
+            createInFlightRef.current = false;
+            return;
+          }
+        } catch {
+          // Unreadable or absent folder: nothing to clash with, or the server
+          // will say so.
+        }
+      }
       setCreateModalVisible(false);
       try {
         const result = await createLedgerFile({
@@ -469,6 +502,7 @@ export function LedgerFileBrowserScreen(): JSX.Element {
       createLedgerFile,
       currentPath,
       entries,
+      knownExisting,
       ledgerId,
       refetch,
       t,
@@ -578,7 +612,7 @@ export function LedgerFileBrowserScreen(): JSX.Element {
         action={
           canWrite && {
             accessibilityLabel: t("ledgerCreateFile"),
-            onPress: () => setCreateModalVisible(true),
+            onPress: openCreateDialog,
             icon: (
               <Ionicons
                 name="add-circle-outline"
@@ -653,7 +687,7 @@ export function LedgerFileBrowserScreen(): JSX.Element {
                     style={styles.emptyAction}
                     activeOpacity={0.7}
                     disabled={creating}
-                    onPress={() => setCreateModalVisible(true)}
+                    onPress={openCreateDialog}
                     accessibilityRole="button"
                     accessibilityLabel={t("ledgerCreateFile")}
                     accessibilityState={{ disabled: creating }}
