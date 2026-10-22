@@ -404,6 +404,7 @@ export const de: Translations = {
   custom: "Eigene",
   cleared: "Bestätigt",
   pending: "Offen",
+  entryUpcoming: "Bevorstehend",
   other: "Sonstige",
   budget: "Budget",
   metadata: "Metadaten",

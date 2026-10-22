@@ -400,6 +400,7 @@ export const sk: Translations = {
   custom: "Vlastné",
   cleared: "Potvrdené",
   pending: "Čakajúce",
+  entryUpcoming: "Nadchádzajúce",
   other: "Ostatné",
   budget: "Rozpočet",
   metadata: "Metaúdaje",

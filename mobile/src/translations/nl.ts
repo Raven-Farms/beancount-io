@@ -393,6 +393,7 @@ export const nl: Translations = {
   custom: "Eigen",
   cleared: "Bevestigd",
   pending: "In afwachting",
+  entryUpcoming: "Aankomend",
   other: "Overige",
   budget: "Budget",
   metadata: "Metadata",

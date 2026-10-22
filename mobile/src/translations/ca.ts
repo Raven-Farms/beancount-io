@@ -402,6 +402,7 @@ export const ca: Translations = {
   custom: "Personalitzada",
   cleared: "Conciliada",
   pending: "Pendent",
+  entryUpcoming: "Properament",
   other: "Altres",
   budget: "Pressupost",
   metadata: "Metadades",

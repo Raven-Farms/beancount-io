@@ -402,6 +402,7 @@ export const fr: Translations = {
   custom: "Personnalisée",
   cleared: "Pointée",
   pending: "En attente",
+  entryUpcoming: "À venir",
   other: "Autres",
   budget: "Budget",
   metadata: "Métadonnées",

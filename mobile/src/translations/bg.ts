@@ -390,6 +390,7 @@ export const bg: Translations = {
   custom: "Собствена",
   cleared: "Потвърдени",
   pending: "Чакащи",
+  entryUpcoming: "Предстоящо",
   other: "Други",
   budget: "Бюджет",
   metadata: "Метаданни",

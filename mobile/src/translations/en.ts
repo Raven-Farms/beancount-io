@@ -383,6 +383,7 @@ export const en = {
   custom: "Custom",
   cleared: "Cleared",
   pending: "Pending",
+  entryUpcoming: "Upcoming",
   other: "Other",
   budget: "Budget",
   metadata: "Metadata",

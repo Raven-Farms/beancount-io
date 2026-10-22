@@ -396,6 +396,7 @@ export const ru: Translations = {
   custom: "Своя запись",
   cleared: "Проведено",
   pending: "В ожидании",
+  entryUpcoming: "Предстоит",
   other: "Прочее",
   budget: "Бюджет",
   metadata: "Метаданные",

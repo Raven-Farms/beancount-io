@@ -384,6 +384,7 @@ export const fa: Translations = {
   custom: "سفارشی",
   cleared: "تأییدشده",
   pending: "در انتظار",
+  entryUpcoming: "آینده",
   other: "سایر",
   budget: "بودجه",
   metadata: "فراداده",

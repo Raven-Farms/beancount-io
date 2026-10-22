@@ -401,6 +401,7 @@ export const es: Translations = {
   custom: "Personalizada",
   cleared: "Conciliada",
   pending: "Pendiente",
+  entryUpcoming: "Próximo",
   other: "Otras",
   budget: "Presupuesto",
   metadata: "Metadatos",

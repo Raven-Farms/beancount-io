@@ -34,6 +34,7 @@ import { getEntryPostings } from "../utils/entry-utils";
 import { LEADING_TEXT_ALIGN } from "@/common/rtl";
 import { selectEntryRowAmount } from "./format-entry-row-amount";
 import { entryRowSecondaryText } from "./entry-row-secondary";
+import { entryRowDateLine } from "./entry-row-date";
 import { entryRowAccessibilityLabel } from "./entry-row-accessibility-label";
 
 const getStyles = (theme: ColorTheme) =>
@@ -153,15 +154,24 @@ const getDisplayInfo = (
 interface EntryRowProps {
   entry: JournalDirectiveType;
   onPress?: () => void;
+  /**
+   * Show the entry's date under its name, judged against this day (the cards
+   * that list recent entries have no date headers; w21/261).
+   */
+  dateToday?: string;
 }
 
-export const EntryRow: React.FC<EntryRowProps> = ({ entry, onPress }) => {
+export const EntryRow: React.FC<EntryRowProps> = ({
+  entry,
+  onPress,
+  dateToday,
+}) => {
   const styles = useThemeStyle(getStyles);
   const theme = useTheme().colorTheme;
   const { fontScale } = useWindowDimensions();
   const stacked = prefersStackedLayout(fontScale);
 
-  const { t } = useTranslations();
+  const { t, locale } = useTranslations();
   const operatingCurrency = useOperatingCurrency();
   const roots = useLedgerRootNames();
   const { name, amountStr, isPositive } = getDisplayInfo(
@@ -171,9 +181,19 @@ export const EntryRow: React.FC<EntryRowProps> = ({ entry, onPress }) => {
     operatingCurrency,
     roots,
   );
-  const secondary = isJournalTransaction(entry)
+  const narration = isJournalTransaction(entry)
     ? entryRowSecondaryText(entry)
     : null;
+  const secondary =
+    dateToday === undefined
+      ? narration
+      : entryRowDateLine({
+          date: entry.date,
+          today: dateToday,
+          locale,
+          upcomingLabel: t("entryUpcoming"),
+          secondary: narration,
+        });
   const isPending = isJournalTransaction(entry) && entry.flag === "!";
   // Brand text for the logo: payee/narration only (not the directive_type
   // fallback), so non-transactions match on their account instead.

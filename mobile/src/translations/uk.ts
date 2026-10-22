@@ -395,6 +395,7 @@ export const uk: Translations = {
   custom: "Власний запис",
   cleared: "Проведені",
   pending: "Очікують",
+  entryUpcoming: "Майбутнє",
   other: "Інші",
   budget: "Бюджет",
   metadata: "Метадані",

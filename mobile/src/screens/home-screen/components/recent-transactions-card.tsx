@@ -5,6 +5,7 @@ import { ColorTheme } from "@/types/theme-props";
 import { fontSizes } from "@/common/theme";
 import { useThemeStyle } from "@/common/hooks/use-theme-style";
 import { useTranslations } from "@/common/hooks/use-translations";
+import { useToday } from "@/common/hooks/use-today";
 import { LoadingTile } from "@/components/loading-tile";
 import { FadeInView } from "@/components/crossfade";
 import { DashboardCard } from "@/components";
@@ -49,6 +50,8 @@ export function RecentTransactionsCard({
   const styles = useThemeStyle(getStyles);
   const { t } = useTranslations();
   const router = useRouter();
+  // The day each row's date is judged against, kept current past midnight.
+  const today = useToday();
   const guest = useGuest();
 
   const { data, loading, error, refetch } = useGetLedgerJournalQuery({
@@ -114,6 +117,7 @@ export function RecentTransactionsCard({
               <EntryRow
                 key={entry.entry_hash || index}
                 entry={entry}
+                dateToday={today}
                 onPress={
                   isJournalTransaction(entry)
                     ? () =>

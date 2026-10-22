@@ -352,6 +352,7 @@ export const zh: Translations = {
   custom: "自定义",
   cleared: "已确认",
   pending: "待确认",
+  entryUpcoming: "即将到来",
   other: "其他",
   budget: "预算",
   metadata: "元数据",
