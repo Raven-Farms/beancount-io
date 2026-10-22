@@ -2199,7 +2199,7 @@ def _csv_cost(cost: dict[str, Any]) -> str:
     parts = [f"{cost['number']} {cost['currency']}"]
     if cost.get("date"):
         parts.append(str(cost["date"]))
-    if cost.get("label"):
+    if cost.get("label") is not None:
         label = str(cost["label"]).replace("\\", "\\\\").replace('"', '\\"')
         parts.append(f'"{label}"')
     return ", ".join(parts)
