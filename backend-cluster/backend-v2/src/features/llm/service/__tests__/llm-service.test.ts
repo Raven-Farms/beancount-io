@@ -129,3 +129,64 @@ describe("LLMService receipt formats", () => {
     expect(generateDownloadUrl).not.toHaveBeenCalled();
   });
 });
+
+// w21/325: a statement import sent a HEIC to the model too, and it failed as a
+// generic parse error; only receipts had the allowlist.
+describe("LLMService statement formats", () => {
+  const user: Identity = {
+    userId: "usr_1",
+    method: "session",
+    scopes: new Set(),
+  };
+  const getObjectMetadata = jest.fn();
+  const generateDownloadUrl = jest.fn();
+
+  function makeService() {
+    return new LLMService(
+      { getApiContext: jest.fn() } as never,
+      { getObjectMetadata, generateDownloadUrl } as never,
+      {
+        check: jest.fn().mockResolvedValue({ allowed: true }),
+        addTokenUsage: jest.fn(),
+      } as never,
+      { blockeden: { accessKey: "test-key" } } as never,
+      new AuthorizationService({ check: async () => true }),
+    );
+  }
+
+  beforeEach(() => {
+    getObjectMetadata.mockReset();
+    generateDownloadUrl.mockReset();
+  });
+
+  it.each(["image/heic", "image/heif", "image/tiff", "image/bmp; charset=x"])(
+    "refuses %s with the accepted formats, before the model sees it",
+    async (contentType) => {
+      getObjectMetadata.mockResolvedValue({ contentType });
+      await expect(
+        makeService().parseFile(user, "tmp/usr_1/statement.heic", "image"),
+      ).rejects.toMatchObject({
+        category: "BAD_USER_INPUT",
+        message: expect.stringContaining("JPEG, PNG, GIF, WEBP"),
+      });
+      expect(generateDownloadUrl).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each([
+    "text/csv",
+    "application/pdf",
+    "application/x-ofx",
+    "image/jpeg",
+    "image/png; charset=binary",
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  ])("lets %s through to the model as before", async (contentType) => {
+    getObjectMetadata.mockResolvedValue({ contentType });
+    // Past the format check the service asks for the download URL.
+    generateDownloadUrl.mockRejectedValue(new Error("stop here"));
+    await expect(
+      makeService().parseFile(user, "tmp/usr_1/statement.csv", "csv"),
+    ).rejects.toThrow("stop here");
+    expect(generateDownloadUrl).toHaveBeenCalled();
+  });
+});
