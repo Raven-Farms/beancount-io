@@ -1,5 +1,9 @@
 import { makeVar } from "@apollo/client";
-import { NO_SCOPED_FILTERS, ScopedTransactionFilters } from "./types";
+import {
+  NO_SCOPED_FILTERS,
+  ScopedTransactionFilters,
+  TransactionFilters,
+} from "./types";
 
 /**
  * The transactions tab's active filters, together with the ledger they were
@@ -28,4 +32,15 @@ export const transactionFiltersVar =
  */
 export function resetTransactionFilters(): void {
   transactionFiltersVar(NO_SCOPED_FILTERS);
+}
+
+/**
+ * Replace the filters with ones chosen outside the filter modal, such as a
+ * journal app link's (w21/344), owned by the ledger they were meant for.
+ */
+export function setTransactionFiltersForLedger(
+  ledgerId: string,
+  filters: TransactionFilters,
+): void {
+  transactionFiltersVar({ ledgerId, filters });
 }

@@ -6,6 +6,7 @@ import {
   type GetLedgerQuery,
 } from "@/generated-graphql/graphql";
 import { ledgerVar } from "@/common/vars";
+import { setTransactionFiltersForLedger } from "@/screens/transactions-screen/filters/var";
 import { confirmDiscardUnsavedEdits } from "@/common/unsaved-edits-guard";
 import type { AppLinkTarget } from "./resolve-app-link";
 export { isOAuthCallbackUrl } from "./oauth-callback-url";
@@ -40,6 +41,7 @@ function canonicalAppLinkTarget(
   if (!ledgerId || ledgerId === target.ledgerFullName) return target;
   const { href } = target;
   return {
+    ...target,
     ledgerFullName: ledgerId,
     href:
       typeof href === "object" && href.params?.ledger === target.ledgerFullName
@@ -100,6 +102,10 @@ export async function openAppLinkTarget(args: {
   }
 
   ledgerVar(target.ledgerFullName);
+  // A journal link replaces the filter left in the app with its own (w21/344).
+  if (target.filters) {
+    setTransactionFiltersForLedger(target.ledgerFullName, target.filters);
+  }
   if (args.navigation === "push") {
     if (target.href !== "/") router.push(target.href as Href);
     return { ok: true };

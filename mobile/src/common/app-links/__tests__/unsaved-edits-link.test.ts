@@ -39,6 +39,9 @@ function load() {
     },
     "@/common/unsaved-edits-guard": guard,
     "./oauth-callback-url": { isOAuthCallbackUrl: () => false },
+    "@/screens/transactions-screen/filters/var": {
+      setTransactionFiltersForLedger: () => undefined,
+    },
   };
   vm.runInNewContext(source, {
     exports,

@@ -1,5 +1,7 @@
 import { routeText } from "../route-text";
 import { Href } from "expo-router";
+import type { TransactionFilters } from "../../screens/transactions-screen/filters/types";
+import { journalLinkFilters } from "./journal-link-filters";
 
 /** Hosted production origin — always accepted by the resolver. */
 export const HOSTED_APP_ORIGIN = "https://beancount.io";
@@ -7,6 +9,8 @@ export const HOSTED_APP_ORIGIN = "https://beancount.io";
 export type AppLinkTarget = {
   ledgerFullName: string;
   href: Href;
+  /** Transactions filters the link sets; absent for every other target. */
+  filters?: TransactionFilters;
 };
 
 export type ResolveAppLinkOptions = {
@@ -115,7 +119,11 @@ export function resolveAppLink(
       };
     }
     case "journal":
-      return { ledgerFullName, href: "/transactions" };
+      return {
+        ledgerFullName,
+        href: "/transactions",
+        filters: journalLinkFilters(parsed.searchParams),
+      };
     case "commit": {
       if (tail.length !== 1 || !tail[0]) {
         return { ledgerFullName, href: "/" };

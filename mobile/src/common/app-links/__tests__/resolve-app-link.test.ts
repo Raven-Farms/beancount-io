@@ -35,6 +35,7 @@ describe("resolveAppLink", () => {
     ).toEqual({
       ledgerFullName: LEDGER,
       href: "/transactions",
+      filters: { statuses: [], range: "all" },
     });
     expect(
       resolveAppLink(`${ORIGIN}/ledger/${LEDGER}/commit/abc123`, {
@@ -141,6 +142,7 @@ describe("resolveAppLink", () => {
     ).toEqual({
       ledgerFullName: LEDGER,
       href: "/transactions",
+      filters: { statuses: [], range: "all" },
     });
     // Hosted domain still works even when a self-host is selected.
     expect(
