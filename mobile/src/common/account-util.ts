@@ -33,3 +33,14 @@ export function dropRoot(account: string): string {
   const parts = account.split(SEGMENT_SEPARATOR);
   return parts.length > 1 ? parts.slice(1).join(SEGMENT_SEPARATOR) : account;
 }
+
+/**
+ * The account with a zero-width space after each separator, so a line breaks
+ * between its components. At the largest text sizes an account is one unbroken
+ * token and wrapped mid-word ("Assets:Bank:Checkin" / "g"); this wraps it as
+ * "Assets:Bank:" / "Checking" (w21/627). For display only: the account itself,
+ * and what VoiceOver reads, are unchanged.
+ */
+export function breakableAccount(account: string): string {
+  return account.split(SEGMENT_SEPARATOR).join(`${SEGMENT_SEPARATOR}​`);
+}

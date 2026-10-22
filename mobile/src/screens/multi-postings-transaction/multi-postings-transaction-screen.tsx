@@ -1,3 +1,4 @@
+import { breakableAccount } from "@/common/account-util";
 import {
   currencyMinorUnits,
   ledgerPrimaryCurrency,
@@ -383,7 +384,11 @@ const PostingRow = ({
             // Stacked, the leaf is what tells two accounts apart.
             ellipsizeMode={stacked ? "head" : "middle"}
           >
-            {posting.account || t("postingAccount")}
+            {posting.account
+              ? stacked
+                ? breakableAccount(posting.account)
+                : posting.account
+              : t("postingAccount")}
           </Text>
         </TouchableOpacity>
 
