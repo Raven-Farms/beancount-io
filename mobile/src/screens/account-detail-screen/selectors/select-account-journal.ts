@@ -143,6 +143,7 @@ function entryPostings(entry: AccountJournalItem["entry"]): PostingLite[] {
     .map((p) => ({
       account: p.account as string,
       amount: p?.units?.number != null ? Number(p.units.number) : undefined,
+      ...(p?.units?.currency ? { currency: p.units.currency } : {}),
     }));
   if (result.length > 0) return result;
   const account = asString(entry.account);

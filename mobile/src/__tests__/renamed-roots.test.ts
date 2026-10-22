@@ -131,7 +131,7 @@ describe("transaction rows on a renamed-roots ledger", () => {
     ).toBe(true);
     expect(
       read("components", "account-type-icon", "index.tsx").includes(
-        "resolveGlyph(postings, roots)",
+        "resolveGlyph(postings, roots, operatingCurrency)",
       ),
     ).toBe(true);
   });

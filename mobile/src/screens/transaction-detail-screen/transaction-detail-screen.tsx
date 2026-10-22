@@ -561,6 +561,7 @@ const TransactionDetailImpl = ({
   const iconPostings = entry.postings.map((posting) => ({
     account: posting.account,
     amount: Number.parseFloat(posting.units.number),
+    currency: posting.units.currency,
   }));
   const entryMeta = userMetadataLines(entry.meta);
   const hasMetadata = Boolean(

@@ -10,6 +10,8 @@ export type PostingLite = {
   account: string;
   /** Signed amount in the posting's currency; omit when unknown. */
   amount?: number;
+  /** The amount's currency; omit when unknown. Amounts compare only within one. */
+  currency?: string;
 };
 
 /** Sentinel returned by {@link pickPrimaryAccount} for account-to-account moves. */
@@ -20,13 +22,41 @@ export const TRANSFER = "transfer" as const;
 const CATEGORY_ROOTS = new Set<AccountRoot>(["expenses", "income", "equity"]);
 
 /**
+ * The one currency category legs are compared in: the ledger's operating
+ * currency when a leg is in it, else the currency an Expenses leg is in (a
+ * flight that earns miles is spending, not the miles), else the alphabetically
+ * first, so the pick never depends on posting order.
+ */
+function comparableCurrency(
+  legs: PostingLite[],
+  roots: RootNames,
+  operatingCurrency?: string,
+): string {
+  const currencies = Array.from(new Set(legs.map((p) => p.currency ?? "")));
+  if (currencies.length === 1) return currencies[0];
+  if (operatingCurrency && currencies.includes(operatingCurrency)) {
+    return operatingCurrency;
+  }
+  const spent = currencies
+    .filter((currency) =>
+      legs.some(
+        (p) =>
+          (p.currency ?? "") === currency &&
+          getAccountRoot(p.account, roots) === "expenses",
+      ),
+    )
+    .sort();
+  return spent[0] ?? currencies.sort()[0];
+}
+
+/**
  * Pick the single account whose icon best represents a transaction.
  *
  * A transaction has many postings, so we choose the one that explains its
  * purpose, not the account it was paid from:
  *
  * 1. Among the category legs (Expenses / Income / Equity), the one with the
- *    largest absolute amount wins. This makes a paycheck read as Income even
+ *    largest absolute amount, within one currency, wins. This makes a paycheck read as Income even
  *    though it also has a tax Expense leg, and a split purchase read as its
  *    dominant category — while a plain two-leg expense trivially returns its
  *    single category leg. When amounts are unknown it falls back to root
@@ -41,6 +71,7 @@ const CATEGORY_ROOTS = new Set<AccountRoot>(["expenses", "income", "equity"]);
 export function pickPrimaryAccount(
   postings: PostingLite[],
   roots: RootNames = {},
+  operatingCurrency?: string,
 ): string | typeof TRANSFER | null {
   const categoryLegs = postings.filter((p) => {
     const root = getAccountRoot(p.account, roots);
@@ -52,7 +83,14 @@ export function pickPrimaryAccount(
       (p) => typeof p.amount === "number" && !Number.isNaN(p.amount),
     );
     if (withAmount.length > 0) {
-      return withAmount.reduce((best, p) =>
+      // 1,500 miles are not more than 500 dollars: legs compare only within
+      // one currency (w21/211).
+      const comparable = withAmount.filter(
+        (p) =>
+          (p.currency ?? "") ===
+          comparableCurrency(withAmount, roots, operatingCurrency),
+      );
+      return comparable.reduce((best, p) =>
         Math.abs(p.amount as number) > Math.abs(best.amount as number)
           ? p
           : best,

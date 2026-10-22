@@ -5,6 +5,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useTheme, withAlpha } from "@/common/theme";
 import { getAccountRoot, type RootNames } from "@/common/account-root";
 import { useLedgerRootNames } from "@/common/hooks/use-ledger-root-names";
+import { useOperatingCurrency } from "@/common/hooks/use-operating-currency";
 import {
   resolveBrandDomain,
   buildLogoUrl,
@@ -67,11 +68,12 @@ const styles = StyleSheet.create({
 function resolveGlyph(
   postings: PostingLite[],
   roots: RootNames,
+  operatingCurrency: string | undefined,
 ): {
   glyph: GlyphName;
   tone: RootIcon["tone"];
 } {
-  const primary = pickPrimaryAccount(postings, roots);
+  const primary = pickPrimaryAccount(postings, roots, operatingCurrency);
   const base = getRootIcon(
     primary && primary !== TRANSFER ? getAccountRoot(primary, roots) : null,
   );
@@ -111,6 +113,7 @@ export const AccountTypeIcon: React.FC<AccountTypeIconProps> = ({
 
   // A ledger's renamed roots (`Gastos:…`) still read as expenses (w21/073).
   const roots = useLedgerRootNames();
+  const operatingCurrency = useOperatingCurrency();
   const accounts = postings.map((p) => p.account);
   const domain = resolveBrandDomain(payee, accounts, roots);
   const serverUrl =
@@ -144,7 +147,7 @@ export const AccountTypeIcon: React.FC<AccountTypeIconProps> = ({
     );
   }
 
-  const { glyph, tone } = resolveGlyph(postings, roots);
+  const { glyph, tone } = resolveGlyph(postings, roots, operatingCurrency);
   const color = tone(colorTheme);
   const alpha = name === "dark" ? TINT_ALPHA.dark : TINT_ALPHA.light;
 
