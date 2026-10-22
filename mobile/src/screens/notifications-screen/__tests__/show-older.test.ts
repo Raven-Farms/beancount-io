@@ -5,6 +5,7 @@ import {
   appendCommitPage,
   COMMITS_PAGE_SIZE,
   isLastCommitPage,
+  shownCommitPages,
 } from "../commit-pages";
 
 // w21/313: Recent changes showed only the last 30 commits, with no way to reach
@@ -42,6 +43,37 @@ describe("paging Recent changes", () => {
   });
 });
 
+// w21/431: a refetch drops the list to its first page; the page counter kept
+// beside it stayed at 2 and the next Show older skipped a page.
+describe("the page the list is at", () => {
+  it("follows the rows shown, not a counter", () => {
+    expect(shownCommitPages(0)).toBe(1);
+    expect(shownCommitPages(30)).toBe(1);
+    expect(shownCommitPages(60)).toBe(2);
+    expect(shownCommitPages(46)).toBe(2);
+    // A refetch back to page one asks for page two again, not three.
+    expect(shownCommitPages(30) + 1).toBe(2);
+  });
+
+  it("rounds a list with a shifted duplicate removed up to its page", () => {
+    expect(shownCommitPages(59)).toBe(2);
+    expect(shownCommitPages(61)).toBe(3);
+  });
+
+  it("brings the button back when the list is reset below the last page", () => {
+    const source = fs
+      .readFileSync(
+        path.join(__dirname, "..", "notifications-screen.tsx"),
+        "utf8",
+      )
+      .replace(/\s+/g, "");
+    expect(
+      source.includes("constnoOlder=lastPage!==null&&shownPages>=lastPage;"),
+    ).toBe(true);
+    expect(source.includes("pagesLoaded")).toBe(false);
+  });
+});
+
 describe("the Notifications screen's Show older", () => {
   const source = fs
     .readFileSync(
@@ -51,9 +83,7 @@ describe("the Notifications screen's Show older", () => {
     .replace(/\s+/g, "");
 
   it("asks for the next page and merges it", () => {
-    expect(
-      source.includes("fetchMoreCommits({variables:{page:pagesLoaded+1}"),
-    ).toBe(true);
+    expect(source.includes("fetchMoreCommits({variables:{page}")).toBe(true);
     expect(
       source.includes(
         "appendCommitPage(previous.listCommits,fetchMoreResult.listCommits",
@@ -61,7 +91,7 @@ describe("the Notifications screen's Show older", () => {
     ).toBe(true);
     expect(
       source.includes(
-        "if(isLastCommitPage(result.data.listCommits))setNoOlder(true);",
+        "if(isLastCommitPage(result.data.listCommits))setLastPage(page);",
       ),
     ).toBe(true);
   });
@@ -80,7 +110,7 @@ describe("the Notifications screen's Show older", () => {
     expect(
       refresh
         .slice(0, refresh.indexOf("finally"))
-        .includes("setPagesLoaded(1);setNoOlder(false);"),
+        .includes("setLastPage(null);"),
     ).toBe(true);
   });
 });

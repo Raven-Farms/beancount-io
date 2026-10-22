@@ -22,7 +22,6 @@
 - [304](./blocked/304.md) — Budgets on Liabilities/Assets get favourability backwards (owner decision) — **blocked:** needs an owner decision between deriving direction from the account root and limiting the picker to Income and Expenses, which reverses w1/023's "every root" rule
 - [424](./blocked/424.md) — Mobile does not show the ledger service's fix hints (split from 311) — **blocked:** production's GraphQL schema lacks `code`/`hint` until backend-v2 deploys; mobile's client is generated from it
 - [453](./blocked/453.md) — addEntries/bulkEntries have no idempotency key: a retry after a lost response can duplicate the entry (split from 351) — **blocked:** needs an owner-approved contract (field, bounds, retention) across REST/GraphQL/MCP and a backend-v2 deploy
-- [431](./431.md) — Show older skips a page / vanishes after any write (313 regression)
 - [432](./432.md) — Error text and Entry Context source not copyable
 - [433](./433.md) — Entry Context location truncates the line number first
 - [434](./434.md) — Resumed Create Ledger draft reuses requestId with changed request: generic failure 24h

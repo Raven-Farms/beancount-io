@@ -18,3 +18,15 @@ export function appendCommitPage<T extends { sha: string }>(
 export function isLastCommitPage(page: readonly unknown[]): boolean {
   return page.length < COMMITS_PAGE_SIZE;
 }
+
+/**
+ * How many pages the commits shown add up to. The list, not a counter kept
+ * beside it, says where the next page starts: a write or a foreground refresh
+ * refetches the first page and drops the rest, and a counter left at 2 then
+ * skipped a page (w21/431). A commit listed once across a shifted page leaves
+ * the count a few short of a whole number of pages, which still rounds up to
+ * the page it came from.
+ */
+export function shownCommitPages(count: number): number {
+  return Math.max(1, Math.ceil(count / COMMITS_PAGE_SIZE));
+}

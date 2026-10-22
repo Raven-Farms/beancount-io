@@ -20,6 +20,7 @@ import {
   appendCommitPage,
   COMMITS_PAGE_SIZE,
   isLastCommitPage,
+  shownCommitPages,
 } from "./commit-pages";
 import { useReactiveVar } from "@apollo/client";
 import { ledgerVar } from "@/common/vars";
@@ -255,20 +256,23 @@ function NotificationsScreenImpl(): JSX.Element {
   });
 
   // "Show older" pages back through the history (w21/313): the next page, until
-  // one comes back short. A pull to refresh or another ledger starts over.
-  const [pagesLoaded, setPagesLoaded] = useState(1);
-  const [noOlder, setNoOlder] = useState(false);
+  // one comes back short. The page to ask for follows from the rows shown, and
+  // the end is remembered as the page that came back short, so a refetch that
+  // drops the list to its first page brings the button back (w21/431).
+  const shownPages = shownCommitPages(commitsData?.listCommits.length ?? 0);
+  const [lastPage, setLastPage] = useState<number | null>(null);
+  const noOlder = lastPage !== null && shownPages >= lastPage;
   const [loadingOlder, setLoadingOlder] = useState(false);
   useEffect(() => {
-    setPagesLoaded(1);
-    setNoOlder(false);
+    setLastPage(null);
   }, [ledgerId]);
   const showOlder = async () => {
     if (loadingOlder) return;
     setLoadingOlder(true);
+    const page = shownPages + 1;
     try {
       const result = await fetchMoreCommits({
-        variables: { page: pagesLoaded + 1 },
+        variables: { page },
         updateQuery: (previous, { fetchMoreResult }) => ({
           listCommits: appendCommitPage(
             previous.listCommits,
@@ -276,8 +280,7 @@ function NotificationsScreenImpl(): JSX.Element {
           ),
         }),
       });
-      setPagesLoaded((pages) => pages + 1);
-      if (isLastCommitPage(result.data.listCommits)) setNoOlder(true);
+      if (isLastCommitPage(result.data.listCommits)) setLastPage(page);
     } catch {
       // The rows already shown stay; the button is there to try again.
     } finally {
@@ -302,8 +305,7 @@ function NotificationsScreenImpl(): JSX.Element {
     setRefreshing(true);
     try {
       // Both halves: an error fixed outside the app clears on a pull too.
-      setPagesLoaded(1);
-      setNoOlder(false);
+      setLastPage(null);
       await Promise.all([refetchCommits(), refetchErrors()]);
     } finally {
       setRefreshing(false);
