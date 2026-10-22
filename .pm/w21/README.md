@@ -69,5 +69,11 @@
 - [554](./554.md) — A holding that is also another lot's cost currency drops out of the holdings sheet, so BTC's stale price is never flagged
 - [555](./555.md) — A commodity bought in two currencies shows bare "1.0 BTC" on its Accounts row, with no value or note
 - [556](./556.md) — A holding priced only in an unrelated currency the account holds is labelled priced, though the ledger values it at cost
+- [557](./557.md) — VoiceOver users can't remove a posting: "Remove posting" exists only as a swipe action
+- [558](./558.md) — Menu items read their icon glyph as part of their name (MenuButton, missed by w21/141)
+- [559](./559.md) — Account detail rows leave the type chip (Open, Close, Pad, Note) out of their VoiceOver label
+- [560](./560.md) — Time-range pills are named only by abbreviations ("1M", "YTD", "1Г") for VoiceOver
+- [561](./561.md) — The posting sign toggle reads only "Toggle amount sign": no plus or minus, and no posting named
+- [562](./562.md) — The file editor's shortcut keys mostly read as just "Insert" (symbols unspoken, ⇥, raw ISO date)
 - [508](./blocked/508.md) — Mobile guesses that an entry is a plugin copy from its first line; read the ledger's `generated_from` instead (split from 443) — **blocked:** production's GraphQL schema lacks `generated_from` until the ledger service and backend-v2 deploy; mobile's client is generated from it
 - [315](./blocked/315.md) — In-app commits signed with Gitea username and real email (no full_name, no noreply) — **blocked:** needs the owner's noreply-address and published-history decisions, and a production backfill of existing Gitea users that can't be verified here
