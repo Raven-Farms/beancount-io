@@ -1,6 +1,7 @@
 import { useAccountCloseDates } from "@/common/hooks/use-account-close-dates";
 import { formatLedgerDate } from "@/common/date-format";
 import { InlineError } from "@/components/inline-error";
+import { CardLoadFailure } from "@/components/card-load-failure";
 import { useEffect, useState } from "react";
 import {
   Pressable,
@@ -222,7 +223,12 @@ export function OpenAccountScreenComponent(): JSX.Element {
   const styles = useThemeStyle(getStyles);
   const ledgerId = useLedgerGuard();
   const { userId } = useSession();
-  const { data: meta, currencies } = useLedgerMeta(userId, ledgerId);
+  const {
+    data: meta,
+    currencies,
+    error: metaError,
+    refetch: refetchMeta,
+  } = useLedgerMeta(userId, ledgerId);
   const { openAccount, loading } = useOpenAccount(ledgerId);
   const isHere = useIsHere();
 
@@ -545,6 +551,15 @@ export function OpenAccountScreenComponent(): JSX.Element {
         {submitError ? (
           <InlineError style={styles.error} message={submitError} />
         ) : null}
+        {
+          // Without the ledger's accounts the form cannot tell whether the name
+          // is taken, and Done stayed grey with nothing said (w21/630).
+          meta === undefined && metaError ? (
+            <CardLoadFailure
+              onRetry={() => void refetchMeta().catch(() => {})}
+            />
+          ) : null
+        }
       </ScrollView>
 
       <Picker
