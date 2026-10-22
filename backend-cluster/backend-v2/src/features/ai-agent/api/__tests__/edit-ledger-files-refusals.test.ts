@@ -31,7 +31,12 @@ const identity: Identity = {
 };
 
 async function fixture() {
-  const existing = new Set(["main.bean", "accounts.bean", "qa-latin1.txt"]);
+  const existing = new Set([
+    "main.bean",
+    "accounts.bean",
+    "extra.bean",
+    "qa-latin1.txt",
+  ]);
   const getLedgerFilesContent = jest.fn(
     async (_owner: string, _name: string, { files }: { files: string[] }) => ({
       data: {
@@ -209,9 +214,10 @@ describe("one call to a file tool", () => {
     ],
     [
       "deleteLedgerFiles",
-      [{ path: "main.bean" }, { path: "accounts.bean" }],
+      // Not main.bean: the entry point cannot be deleted (w23/031).
+      [{ path: "extra.bean" }, { path: "accounts.bean" }],
       [
-        { operation: "delete", path: "main.bean", text: undefined },
+        { operation: "delete", path: "extra.bean", text: undefined },
         { operation: "delete", path: "accounts.bean", text: undefined },
       ],
     ],
@@ -389,7 +395,7 @@ describe("several changes to one file in one call", () => {
     ],
     [
       "deleteLedgerFiles",
-      [{ path: "main.bean" }, { path: "main.bean" }],
+      [{ path: "accounts.bean" }, { path: "accounts.bean" }],
       "deleted twice",
     ],
   ])(

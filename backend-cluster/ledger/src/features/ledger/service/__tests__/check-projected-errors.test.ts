@@ -77,6 +77,25 @@ describe("checkProjectedErrors", () => {
     });
   });
 
+  // w23/031: the engine threw on the missing entry point, so a preview of
+  // deleting main.bean answered SERVICE_UNAVAILABLE.
+  it("reports a projection without the entry point as an error, not a throw", async () => {
+    const errors = await service().checkProjectedErrors({
+      ledgerId: "alice/main",
+      userId: "user-1",
+      overlays: [{ path: "main.bean", content: null }],
+    });
+    expect(errors).toEqual([
+      expect.objectContaining({
+        message: expect.stringContaining(
+          "Entry point main.bean does not exist",
+        ),
+        severity: "error",
+      }),
+    ]);
+    expect(parseMock).not.toHaveBeenCalled();
+  });
+
   it("returns the mapped errors, code and engine hint included", async () => {
     // The code is what a consumer classifies on (w2/013) — dropping it here
     // is what forced backend-v2 to regex "does not balance" out of the prose.
@@ -154,7 +173,9 @@ describe("checkProjectedErrors", () => {
       service().checkProjectedErrors({
         ledgerId: "alice/main",
         userId: "user-1",
-        overlays: [{ path: virtual, content: b64("2026-09-15 price BTC 2 USD\n") }],
+        overlays: [
+          { path: virtual, content: b64("2026-09-15 price BTC 2 USD\n") },
+        ],
       }),
     ).rejects.toThrow(
       `Operation 'edit managed price source' not allowed: ${virtual} is a managed price feed resolved from a URL include and is read-only`,

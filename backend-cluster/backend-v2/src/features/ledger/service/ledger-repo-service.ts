@@ -13,6 +13,7 @@ import {
 } from "@/features/ledger/utils/authorize-ledger";
 import { AUTHORIZATION_ACTIONS } from "@/server/api/authorization/authorization-contract";
 import { assertSafeRepoPath } from "@/features/ledger/utils/safe-repo-path";
+import { assertKeepsEntryPoint } from "@/features/ledger/utils/ledger-entry-point";
 import { assertExplicitFileContentSize } from "@/features/ledger/utils/explicit-file-size";
 import { BadUserInputError, ConflictError } from "@/shared/errors";
 import { listDirectory } from "@/features/ledger/utils/directory-listing";
@@ -295,6 +296,19 @@ export class LedgerRepoService
     );
     operations.forEach((operation, index) => {
       assertSafeRepoPath(operation.path, `operations[${index}].path`);
+      // A batch that creates the path again keeps the entry point.
+      if (
+        operation.operation === "delete" &&
+        !operations.some(
+          (other) =>
+            other.operation === "create" && other.path === operation.path,
+        )
+      )
+        assertKeepsEntryPoint(
+          operation.path,
+          "deleted",
+          `operations[${index}].path`,
+        );
       if (operation.from_path !== null && operation.from_path !== undefined) {
         assertSafeRepoPath(
           operation.from_path,

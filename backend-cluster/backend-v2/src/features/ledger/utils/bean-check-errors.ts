@@ -32,6 +32,12 @@ export interface WriteValidation {
   readonly errorsBefore: number;
   readonly errorsAfter: number;
   readonly newErrors: BeanCheckError[];
+  /**
+   * `false` when bean-check could not run before or after the write, so the
+   * counts above say nothing; `checkError` says why (w23/031).
+   */
+  readonly checked?: false;
+  readonly checkError?: string;
 }
 
 /**

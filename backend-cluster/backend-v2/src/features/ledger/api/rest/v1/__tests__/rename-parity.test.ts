@@ -692,3 +692,42 @@ describe.each(["rest", "gql", "mcp"])("rename around a non-UTF-8 file via %s", (
     }
   });
 });
+
+
+/** w23/031: renaming or deleting the entry point leaves a ledger that cannot load. */
+describe.each(["rest", "gql", "mcp"])("the entry point via %s", (surface) => {
+  it("cannot be renamed", async () => {
+    const f = await fixture(identity, { "main.bean": "; main\n" });
+    try {
+      const outcome = await f.call(surface, "main.bean", "ledger.bean", { updateIncludes: true });
+      expect(outcome.success).toBe(false);
+      if (surface === "rest")
+        expect(outcome.result).toMatchObject({
+          error: { code: "BAD_USER_INPUT", message: "main.bean is the ledger's entry point and can't be renamed" },
+        });
+      expect(f.change).not.toHaveBeenCalled();
+      expect(f.files.has("main.bean")).toBe(true);
+    } finally {
+      await f.close();
+    }
+  });
+
+  if (surface === "gql")
+    it("cannot be deleted through deleteLedgerFile", async () => {
+      const f = await fixture(identity, { "main.bean": "; main\n" });
+      try {
+        const result = await graphql({
+          schema,
+          source: 'mutation { deleteLedgerFile(ledgerId: "alice/main", path: "main.bean", sha: "sha-0-main.bean") { path } }',
+          contextValue: { identity, getCurrentIdentity: () => identity },
+        });
+        expect(result.errors?.[0]?.originalError).toMatchObject({
+          category: "BAD_USER_INPUT",
+        });
+        expect(result.errors?.[0]?.message).toBe("main.bean is the ledger's entry point and can't be deleted");
+        expect(f.change).not.toHaveBeenCalled();
+      } finally {
+        await f.close();
+      }
+    });
+});

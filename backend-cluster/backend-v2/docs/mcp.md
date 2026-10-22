@@ -395,6 +395,11 @@ may not be created twice, created and then deleted, or changed after it is
 deleted in one call; those are refused as `BAD_USER_INPUT` before anything is
 read.
 
+`main.bean` is the ledger's entry point, so deleting it (`deleteLedgerFiles`,
+REST `DELETE`, GraphQL `deleteLedgerFile`) and renaming it away are refused as
+`BAD_USER_INPUT`; replace its content to rewrite it. A preview of any change
+that would leave the ledger without it reports that as a new error.
+
 A file that is not valid UTF-8 (a Windows-1252 export, say) reads back from
 `readLedgerFiles` and REST `GET …/files/{path}` with `lossy: true`: its
 undecodable bytes show as U+FFFD, and GraphQL `getLedgerFile` returns the exact
@@ -1431,7 +1436,10 @@ quota policy. Every write result carries the write outcome first: a `summary`
 of what was written and how many new bean-check errors it introduced, then
 `wrote` (files touched), `entryHashes`, and `validation` (`errorsBefore`,
 `errorsAfter`, `newErrors`) — learn about a broken ledger from the write
-result itself instead of re-reading the errors resource. A transaction with at
+result itself instead of re-reading the errors resource. When bean-check cannot
+run before or after the write, `validation` adds `checked: false` and
+`checkError`, and the summary says the ledger is unverified instead of
+claiming no new errors; the write itself still stands. A transaction with at
 most one amount omitted is written elided; any other imbalance is refused with
 `UNBALANCED`. Like `appendLedgerText`, it bean-checks the projected ledger
 before committing: entries that would add new errors — a second `open` for an

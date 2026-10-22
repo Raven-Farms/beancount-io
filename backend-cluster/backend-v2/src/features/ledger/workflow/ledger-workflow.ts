@@ -94,6 +94,7 @@ import {
   userResource,
 } from "@/server/api/authorization";
 import { assertSafeRepoPath } from "@/features/ledger/utils/safe-repo-path";
+import { assertKeepsEntryPoint } from "@/features/ledger/utils/ledger-entry-point";
 import { assertExplicitFileContentSize } from "@/features/ledger/utils/explicit-file-size";
 import { assertWritableText, decodeFileContent } from "@/shared/file-content";
 import {
@@ -911,9 +912,7 @@ export class LedgerWorkflow implements ILedgerWorkflow {
     const userId = identity.userId;
     const { ledgerOwner, ledgerName } = parseLedgerId(ledgerId);
     assertSafeRepoPath(input.path);
-    if (input.path === "main.bean") {
-      throw new BadUserInputError("main.bean file cannot be deleted");
-    }
+    assertKeepsEntryPoint(input.path, "deleted");
 
     const fileOptions: LedgerDeleteFileOptions = {
       path: input.path,
@@ -954,6 +953,7 @@ export class LedgerWorkflow implements ILedgerWorkflow {
     const userId = identity.userId;
     assertSafeRepoPath(input.oldPath, "oldPath");
     assertSafeRepoPath(input.newPath, "newPath");
+    assertKeepsEntryPoint(input.oldPath, "renamed", "oldPath");
     if (input.oldPath === input.newPath) {
       throw new BadUserInputError("oldPath and newPath are the same file");
     }

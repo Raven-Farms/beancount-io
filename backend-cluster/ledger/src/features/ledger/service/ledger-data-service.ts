@@ -495,6 +495,20 @@ export class LedgerDataService implements ILedgerDataService {
       }
       projected[overlay.path] = text;
     });
+    // The engine throws on a missing entry point, which reached callers as an
+    // outage; a projection that removes it is a ledger that will not load,
+    // and that is an error to preview like any other (w23/031).
+    if (!Object.hasOwn(projected, entryPoint)) {
+      return [
+        {
+          message: `Entry point ${entryPoint} does not exist; the ledger would not load`,
+          source: null,
+          code: null,
+          hint: `Keep ${entryPoint}: replace its content instead of deleting or renaming it.`,
+          severity: "error",
+        },
+      ];
+    }
     const snapshot = await parseLedgerFiles(projected, entryPoint, {
       repoPaths,
     });
