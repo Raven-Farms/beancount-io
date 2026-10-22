@@ -26,6 +26,8 @@ type TrialBalanceRoot =
 type TrialBalanceNode = {
   account: string;
   balanceChildren: BalanceMap;
+  /** The account's own postings, without its descendants. */
+  balance?: BalanceMap;
   children?: unknown;
 };
 
@@ -67,6 +69,11 @@ function treeNodes(
     treeNodes(child, out);
   }
   return out;
+}
+
+/** Whether a node has accounts beneath it. */
+function hasChildren(node: TrialBalanceNode): boolean {
+  return ((node.children as unknown[] | null) ?? []).length > 0;
 }
 
 /**
@@ -165,13 +172,13 @@ export function selectTrialBalanceDisplays(
     const unitsRoot = rootOf(units, key);
     const rowKey = (node: TrialBalanceNode, top: TrialBalanceNode) =>
       node === top ? key : node.account;
-    const unitsByRow = new Map<string, BalanceMap>(
+    const unitsNodes = new Map<string, TrialBalanceNode>(
       unitsRoot
-        ? treeNodes(unitsRoot).map((node) => [
-            rowKey(node, unitsRoot),
-            node.balanceChildren,
-          ])
+        ? treeNodes(unitsRoot).map((node) => [rowKey(node, unitsRoot), node])
         : [],
+    );
+    const unitsByRow = new Map<string, BalanceMap>(
+      [...unitsNodes].map(([row, node]) => [row, node.balanceChildren]),
     );
     for (const node of treeNodes(root)) {
       const row = rowKey(node, root);
@@ -197,6 +204,20 @@ export function selectTrialBalanceDisplays(
             }
           : display,
       );
+      // A parent's own postings are a row of their own ("X (own)"), read like a
+      // leaf: its euros or shares are its own to show (w21/450). Keyed as
+      // `flattenRows` keys that row.
+      if (node !== root && node.balance != null && hasChildren(node)) {
+        displays.set(
+          `${node.account}\0own`,
+          selectBalanceDisplay(
+            node.balance,
+            unitsNodes.get(row)?.balance,
+            currency,
+            basisOf,
+          ),
+        );
+      }
     }
   }
   return displays;

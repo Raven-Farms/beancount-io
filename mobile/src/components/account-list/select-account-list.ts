@@ -116,6 +116,12 @@ type RawChild = {
  * `ZeroBalanceOptions`) the holdings that value cannot express count too.
  */
 type TreeRules = {
+  /**
+   * Whether a parent's own postings earn a row of their own beyond what their
+   * operating-currency value says: its euros or shares, when the whole balance
+   * counts (w21/450).
+   */
+  ownHoldsMore: (balance: RawChild["balance"]) => boolean;
   /** Spares a node the zero-value filter would otherwise drop. */
   keep: (node: AccountNode) => boolean;
   /** Whether `children` hold exactly what `parent` does, beyond the value. */
@@ -149,7 +155,10 @@ function toNode(
   const ownValue = raw.balance
     ? sign * resolveCurrencyBalance(raw.balance, currency)
     : 0;
-  if (children.length > 0 && !sameAmount(ownValue, 0)) {
+  if (
+    children.length > 0 &&
+    (!sameAmount(ownValue, 0) || rules.ownHoldsMore(raw.balance))
+  ) {
     children.push({
       account: raw.account,
       name: leafName(raw.account),
@@ -297,7 +306,11 @@ function treeRules(
   wholeBalance = false,
 ): TreeRules {
   if (!wholeBalance) {
-    return { keep: (node) => keep.has(node.account), sameHoldings: () => true };
+    return {
+      ownHoldsMore: () => false,
+      keep: (node) => keep.has(node.account),
+      sameHoldings: () => true,
+    };
   }
   const unconverted = new Map(
     rawNodes(raw).map((node) => [
@@ -306,6 +319,8 @@ function treeRules(
     ]),
   );
   return {
+    ownHoldsMore: (balance) =>
+      balance != null && notInTotalOf(balance, currency).length > 0,
     keep: (node) =>
       keep.has(node.account) ||
       (unconverted.get(node.account)?.length ?? 0) > 0,
