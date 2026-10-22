@@ -4,8 +4,6 @@
 
 ## Inbox
 
-- [985 — Stop Create Ledger's Next from submitting the ledger before Review](./985.md) — major; found verifying 313, 2026-10-22; Details → Next sends CreateLedger before Review at both widths by pointer and Enter (blocked locally); shared button slot flips to submit.
-
 - [984 — Keep cached Activity cards after a failed refresh](./984.md) — minor; real cached dashboard reads with injected offset0 failure,2026-10-22; ten cards become zero at both widths despite retained query data; initial-error/retry controls pass, no writes.
 
 - [983 — Offer Try Again on the remaining QueryView read failures](./983.md) — minor; w4/m50 simplify reviews plus live QA,2026-10-22; Accounts, Documents and Events lack retry at both widths, with real reload controls; Settings/Errors and older retry migrations remain source-derived.
@@ -200,6 +198,8 @@
 - [x] **m13** — [Preserve ledger pages through loading and hydration](./done/m13/README.md) (6 tasks) ← repeated dashboard QA, promoted w4/073, 2026-09-17
 
 ## Dropped
+
+- ~~**985**~~ — Stop Create Ledger's Next from submitting the ledger before Review — dropped 2026-10-22: duplicate of [314](./314.md), the earlier and fuller report of the same Details → Next CreateLedger defect, filed without finding it.
 
 - ~~**328**~~ — Offer a retry after a statement or Account Journal read fails — dropped 2026-10-22: promoted to [m50](./done/m50/README.md), preserving all evidence and adding independently repeated Commodities primary-read failure; six observer integrations plus regressions exceed one hour, with no new historical group.
 
