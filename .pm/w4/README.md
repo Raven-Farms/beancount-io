@@ -80,7 +80,6 @@
 
 - [335 — Keep the active profile tab visible on narrow screens](./335.md) — minor; public dashboard QA,2026-10-21; English/Persian Followers selection clips its label at390px; native keyboard and both-direction manual scrolling controls retained,1440px fits.
 
-- [334 — Validate required New Entry text after trimming](./334.md) — minor; dashboard QA,2026-10-21; whitespace-only Account/Currency/Note content prepare empty required values; fresh desktop/narrow controls, eight requests preblocked, no hosted writes.
 
 
 
