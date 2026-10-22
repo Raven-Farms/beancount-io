@@ -470,6 +470,7 @@ export const bg: Translations = {
   receiptTryAgain: "Опитай отново",
   receiptUpload: "Качи",
   receiptOpenSettings: "Отвори настройките",
+  receiptAllowCamera: "Разреши камерата",
   receiptCancel: "Отказ",
   receiptUploading: "Снимката се качва…",
   receiptUploadingProgress: "Снимката се качва… {{percent}}%",

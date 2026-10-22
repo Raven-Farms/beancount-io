@@ -484,6 +484,7 @@ export const de: Translations = {
   receiptTryAgain: "Erneut versuchen",
   receiptUpload: "Hochladen",
   receiptOpenSettings: "Einstellungen öffnen",
+  receiptAllowCamera: "Kamera erlauben",
   receiptCancel: "Abbrechen",
   receiptUploading: "Foto wird hochgeladen…",
   receiptUploadingProgress: "Foto wird hochgeladen… {{percent}} %",

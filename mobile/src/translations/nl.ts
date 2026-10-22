@@ -473,6 +473,7 @@ export const nl: Translations = {
   receiptTryAgain: "Opnieuw proberen",
   receiptUpload: "Uploaden",
   receiptOpenSettings: "Instellingen openen",
+  receiptAllowCamera: "Camera toestaan",
   receiptCancel: "Annuleren",
   receiptUploading: "Foto uploaden…",
   receiptUploadingProgress: "Foto uploaden… {{percent}}%",

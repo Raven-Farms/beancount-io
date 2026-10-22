@@ -482,6 +482,7 @@ export const es: Translations = {
   receiptTryAgain: "Reintentar",
   receiptUpload: "Subir",
   receiptOpenSettings: "Abrir Ajustes",
+  receiptAllowCamera: "Permitir la cámara",
   receiptCancel: "Cancelar",
   receiptUploading: "Subiendo la foto…",
   receiptUploadingProgress: "Subiendo la foto… {{percent}}%",

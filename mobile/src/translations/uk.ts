@@ -476,6 +476,7 @@ export const uk: Translations = {
   receiptTryAgain: "Спробувати ще раз",
   receiptUpload: "Завантажити",
   receiptOpenSettings: "Відкрити налаштування",
+  receiptAllowCamera: "Дозволити камеру",
   receiptCancel: "Скасувати",
   receiptUploading: "Завантажуємо фото…",
   receiptUploadingProgress: "Завантаження фото… {{percent}}%",

@@ -477,6 +477,7 @@ export const ru: Translations = {
   receiptTryAgain: "Повторить",
   receiptUpload: "Загрузить",
   receiptOpenSettings: "Открыть настройки",
+  receiptAllowCamera: "Разрешить камеру",
   receiptCancel: "Отмена",
   receiptUploading: "Загружаем фото…",
   receiptUploadingProgress: "Загрузка фото… {{percent}}%",

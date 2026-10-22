@@ -481,6 +481,7 @@ export const sk: Translations = {
   receiptTryAgain: "Skúsiť znova",
   receiptUpload: "Nahrať",
   receiptOpenSettings: "Otvoriť nastavenia",
+  receiptAllowCamera: "Povoliť fotoaparát",
   receiptCancel: "Zrušiť",
   receiptUploading: "Nahráva sa fotka…",
   receiptUploadingProgress: "Nahrávam fotografiu… {{percent}} %",

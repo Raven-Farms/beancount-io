@@ -482,6 +482,7 @@ export const ca: Translations = {
   receiptTryAgain: "Torna-ho a provar",
   receiptUpload: "Puja",
   receiptOpenSettings: "Obre la Configuració",
+  receiptAllowCamera: "Permet la càmera",
   receiptCancel: "Cancel·la",
   receiptUploading: "S'està pujant la foto…",
   receiptUploadingProgress: "S'està pujant la foto… {{percent}}%",

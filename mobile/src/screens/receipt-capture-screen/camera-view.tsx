@@ -1,5 +1,12 @@
 import { useEffect, useRef, useState } from "react";
-import { Linking, Pressable, StyleSheet, Text, View } from "react-native";
+import {
+  AppState,
+  Linking,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import {
   CameraView as ExpoCameraView,
@@ -92,7 +99,7 @@ export const CameraView = ({
 }) => {
   const insets = useSafeAreaInsets();
   const { t } = useTranslations();
-  const [permission, requestPermission] = useCameraPermissions();
+  const [permission, requestPermission, getPermission] = useCameraPermissions();
   const cameraRef = useRef<ExpoCameraView>(null);
   const [flash, setFlash] = useState<"off" | "on">("off");
   const [capturing, setCapturing] = useState(false);
@@ -104,6 +111,16 @@ export const CameraView = ({
       if (permission.canAskAgain) requestPermission();
     }
   }, [permission, requestPermission]);
+
+  // The hook reads the permission once, on mount, and Android does not restart
+  // the app when access is granted in Settings: read it again on return, so
+  // the camera appears instead of the stale "Camera access is needed" (w21/283).
+  useEffect(() => {
+    const subscription = AppState.addEventListener("change", (state) => {
+      if (state === "active") void getPermission().catch(() => undefined);
+    });
+    return () => subscription.remove();
+  }, [getPermission]);
 
   const handleShutter = async () => {
     // takePictureAsync resolves well after the tap; without this guard a double
@@ -175,7 +192,11 @@ export const CameraView = ({
                   : Linking.openSettings()
               }
             >
-              <Text style={styles.pillText}>{t("receiptOpenSettings")}</Text>
+              <Text style={styles.pillText}>
+                {permission.canAskAgain
+                  ? t("receiptAllowCamera")
+                  : t("receiptOpenSettings")}
+              </Text>
             </Pressable>
           </View>
         </View>

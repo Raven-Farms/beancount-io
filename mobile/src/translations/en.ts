@@ -478,6 +478,7 @@ export const en = {
   receiptTryAgain: "Try again",
   receiptUpload: "Upload",
   receiptOpenSettings: "Open Settings",
+  receiptAllowCamera: "Allow Camera",
   receiptCancel: "Cancel",
   receiptUploading: "Uploading photo…",
   receiptUploadingProgress: "Uploading photo… {{percent}}%",

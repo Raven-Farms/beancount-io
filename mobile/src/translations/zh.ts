@@ -429,6 +429,7 @@ export const zh: Translations = {
   receiptTryAgain: "重试",
   receiptUpload: "上传",
   receiptOpenSettings: "打开设置",
+  receiptAllowCamera: "允许使用相机",
   receiptCancel: "取消",
   receiptUploading: "正在上传照片…",
   receiptUploadingProgress: "正在上传照片… {{percent}}%",

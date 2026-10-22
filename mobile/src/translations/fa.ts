@@ -464,6 +464,7 @@ export const fa: Translations = {
   receiptTryAgain: "تلاش دوباره",
   receiptUpload: "بارگذاری",
   receiptOpenSettings: "باز کردن تنظیمات",
+  receiptAllowCamera: "اجازهٔ دوربین",
   receiptCancel: "لغو",
   receiptUploading: "در حال بارگذاری عکس…",
   receiptUploadingProgress: "در حال بارگذاری عکس… {{percent}}٪",
