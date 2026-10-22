@@ -2,7 +2,11 @@ import { PlaidSyncService } from "../plaid-sync-service";
 import { systemIdentity } from "@/server/api/identity";
 import { assertLedgerAccess } from "@/features/ledger/utils/ledger-access-check";
 import { buildBeancountTransaction } from "../../utils/plaid-mapper";
-import { BadUserInputError, ForbiddenError } from "@/shared/errors";
+import {
+  BadUserInputError,
+  ForbiddenError,
+  ResourceLimitReachedError,
+} from "@/shared/errors";
 import { parseBankConnectionResource } from "@/server/api/authorization";
 
 // Mock logger
@@ -1250,6 +1254,62 @@ describe("PlaidSyncService", () => {
         ),
       ).rejects.toThrow('Target file "missing.bean" not found in ledger');
 
+      expect(mockFavaApiClient.entries.addBulkEntries).not.toHaveBeenCalled();
+      expect(mockPlaidTransactionModel.markAsSynced).not.toHaveBeenCalled();
+    });
+
+    // w5/904: the commit is refused at the ledger service when the owner's
+    // directive limit is crossed, so the preview has to refuse it too.
+    it("submit preview is refused when the write would cross the directive limit", async () => {
+      mockPlaidTransactionModel.getByTransactionIds.mockResolvedValue([
+        {
+          id: "ptxn_1",
+          transactionId: "tx_1",
+          plaidAccountId: "pacc_1",
+          syncedToLedger: false,
+          date: new Date("2024-01-15"),
+          amount: "12.50",
+          name: "Coffee Shop",
+        },
+      ]);
+      mockPlaidAccountModel.getById.mockResolvedValue(enabledAccount);
+      mockPlaidItemModel.getById.mockResolvedValue({
+        id: "pacc_1",
+        userId,
+        ledgerRepoId: 42,
+      });
+      const assertRoom = jest
+        .fn()
+        .mockRejectedValue(
+          new ResourceLimitReachedError("Directive", 1000, 1001, "over"),
+        );
+      const limited = new PlaidSyncService(
+        mockPlaidClient as any,
+        mockFavaClientFactory as any,
+        mockModels,
+        mockDb,
+        mockAuthorization as any,
+        { assertRoom },
+      );
+
+      await expect(
+        limited.submitTransactionsToLedger(
+          systemIdentity(userId),
+          "testuser",
+          "personal",
+          [{ transactionId: "tx_1", targetAccount: "Expenses:Food" }],
+          undefined,
+          true,
+        ),
+      ).rejects.toBeInstanceOf(ResourceLimitReachedError);
+
+      expect(assertRoom).toHaveBeenCalledWith(
+        expect.objectContaining({
+          owner: "testuser",
+          repo: "personal",
+          adding: 1,
+        }),
+      );
       expect(mockFavaApiClient.entries.addBulkEntries).not.toHaveBeenCalled();
       expect(mockPlaidTransactionModel.markAsSynced).not.toHaveBeenCalled();
     });

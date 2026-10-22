@@ -1,5 +1,7 @@
 import { type BcioOptionsPublic, unwrapFavaResponse } from "@/foundation/fava";
 import { logger } from "@/shared/logger";
+import { parseLedgerId } from "@/shared/str";
+import type { DirectiveLimitPreview } from "@/features/ledger/operations/directive-limit-preview";
 import { BadUserInputError } from "@/shared/errors";
 import { resolveEntryFile } from "@/features/ledger/utils/entry-file-resolver";
 import { parseDirectiveDate } from "@/features/ledger/utils/directive-date";
@@ -77,6 +79,8 @@ export class DirectiveAppendWorkflow implements IDirectiveAppendWorkflow {
   constructor(
     private readonly ledgerRepo: RepoDeps,
     private readonly favaClientFactory: IFavaClientFactory,
+    /** Lets a preview refuse what the commit would (w5/904); absent, a preview does not look. */
+    private readonly limitPreview?: DirectiveLimitPreview,
   ) {}
 
   /**
@@ -207,6 +211,21 @@ export class DirectiveAppendWorkflow implements IDirectiveAppendWorkflow {
         content: withIncludes(LEDGER_ENTRY_POINT, entryPoint.content),
         lines: [],
         appended: false,
+      });
+    }
+
+    // Only a preview asks here: a commit is checked where it lands, by the
+    // ledger service, and a second look would only add a count to every write.
+    if (dryRun && this.limitPreview) {
+      const { ledgerOwner, ledgerName } = parseLedgerId(ledgerId);
+      await this.limitPreview.assertRoom({
+        client: await this.favaClientFactory.getPublicApiClient(
+          ledgerId,
+          identity.userId,
+        ),
+        owner: ledgerOwner,
+        repo: ledgerName,
+        adding: directives.length,
       });
     }
 

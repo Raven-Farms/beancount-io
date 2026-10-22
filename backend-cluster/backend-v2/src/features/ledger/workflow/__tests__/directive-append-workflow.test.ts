@@ -1,6 +1,7 @@
 import { DirectiveAppendWorkflow } from "../directive-append-workflow";
 import { MAX_APPENDED_DIRECTIVES } from "@/features/ledger/utils/directive-text-contract";
 import type { Identity } from "@/server/api/identity";
+import { ResourceLimitReachedError } from "@/shared/errors";
 
 /**
  * w2/012 — the append coordinates over the repository service.
@@ -47,6 +48,8 @@ function fixture(
     unloaded?: string[];
     /** The closure lookup fails, as against a ledger without the route. */
     closureFails?: boolean;
+    /** What a preview asks about the directive limit; none unless set. */
+    limitPreview?: { assertRoom: jest.Mock };
   } = {},
 ) {
   const files = new Map(Object.entries(options.files ?? {}));
@@ -121,6 +124,7 @@ function fixture(
     workflow: new DirectiveAppendWorkflow(
       ledgerRepo as never,
       favaClientFactory as never,
+      options.limitPreview as never,
     ),
   };
 }
@@ -332,6 +336,70 @@ describe("DirectiveAppendWorkflow", () => {
     expect(result.dryRun).toBe(true);
     expect(result.wrote).toEqual([]);
     expect(result.diff[0].diff).toContain("Cafe");
+  });
+
+  // w5/904: a preview exists so the caller can approve what will happen, so it
+  // refuses what the commit's directive limit would.
+  describe("directive limit", () => {
+    const refusal = () =>
+      new ResourceLimitReachedError("Directive", 1000, 1001, "over the limit");
+
+    it("refuses a dry run the commit would refuse, writing nothing", async () => {
+      const limitPreview = {
+        assertRoom: jest.fn().mockRejectedValue(refusal()),
+      };
+      const { workflow, ledgerRepo } = fixture({
+        files: { "main.bean": 'option "title" "T"\n' },
+        limitPreview,
+      });
+
+      await expect(
+        workflow.appendDirectiveText({
+          identity: IDENTITY,
+          ledgerId: LEDGER_ID,
+          input: { text: TXN, dryRun: true },
+        }),
+      ).rejects.toBeInstanceOf(ResourceLimitReachedError);
+
+      expect(limitPreview.assertRoom).toHaveBeenCalledWith(
+        expect.objectContaining({ owner: "alice", repo: "main", adding: 1 }),
+      );
+      expect(ledgerRepo.changeGeneratedFiles).not.toHaveBeenCalled();
+    });
+
+    it("previews normally when there is room", async () => {
+      const limitPreview = {
+        assertRoom: jest.fn().mockResolvedValue(undefined),
+      };
+      const { workflow } = fixture({
+        files: { "main.bean": 'option "title" "T"\n' },
+        limitPreview,
+      });
+
+      const result = await workflow.appendDirectiveText({
+        identity: IDENTITY,
+        ledgerId: LEDGER_ID,
+        input: { text: TXN, dryRun: true },
+      });
+
+      expect(result.dryRun).toBe(true);
+    });
+
+    it("leaves a real write to the ledger service's own check", async () => {
+      const limitPreview = { assertRoom: jest.fn() };
+      const { workflow } = fixture({
+        files: { "main.bean": 'option "title" "T"\n' },
+        limitPreview,
+      });
+
+      await workflow.appendDirectiveText({
+        identity: IDENTITY,
+        ledgerId: LEDGER_ID,
+        input: { text: TXN },
+      });
+
+      expect(limitPreview.assertRoom).not.toHaveBeenCalled();
+    });
   });
 
   it("refuses an unsafe explicit path before reading anything", async () => {

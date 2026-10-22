@@ -23,6 +23,7 @@ import {
 } from "@/server/api/authorization";
 import { operationNotAllowedFromCause } from "@/features/ledger/utils/operation-not-allowed-from-cause";
 import { createLedgerId, parseLedgerId } from "@/shared/str";
+import type { DirectiveLimitPreview } from "@/features/ledger/operations/directive-limit-preview";
 import type { IPlaidClient } from "./plaid-client";
 import { decryptToken } from "../utils/encryption";
 import type { TransactionToCategorize } from "@/features/llm/types";
@@ -121,6 +122,8 @@ export class PlaidSyncService implements IPlaidSyncService {
     >,
     private readonly db: DbExecutor,
     private readonly authorization: IAuthorizationService,
+    /** Lets a preview refuse what the commit would (w5/904); absent, a preview does not look. */
+    private readonly limitPreview?: DirectiveLimitPreview,
   ) {}
 
   private async authorizeBankAction(
@@ -753,6 +756,14 @@ export class PlaidSyncService implements IPlaidSyncService {
     // access, already-synced checks, account mapping, and the target file — so
     // a preview here is the exact set the write would append, not an estimate.
     if (dryRun) {
+      // The write is refused at the ledger service's commit when the owner's
+      // directive limit is crossed; the preview refuses it the same way.
+      await this.limitPreview?.assertRoom({
+        client: favaApiClient,
+        owner: ledgerOwner,
+        repo: ledgerName,
+        adding: beancountTransactions.length,
+      });
       return {
         success: true,
         addedCount: 0,

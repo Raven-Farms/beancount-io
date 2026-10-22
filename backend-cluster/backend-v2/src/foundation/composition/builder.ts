@@ -1,3 +1,4 @@
+import { createDirectiveLimitPreview } from "@/features/ledger/operations/directive-limit-preview";
 import { LegacyEntryWorkflow } from "@/features/ledger/workflow/legacy-entry-workflow";
 import { LedgerArchiveService } from "@/features/ledger/service/ledger-archive-service";
 import { PullRequestWorkflow } from "@/features/gitea/pull-request/workflow/pull-request-workflow";
@@ -115,9 +116,17 @@ export function buildServiceLayer(input: {
     input.clients.favaClientFactory,
     authorization,
   );
+  // The one question the ledger service asks at commit, asked of a preview too (w5/904).
+  const directiveLimitPreview = createDirectiveLimitPreview({
+    models: input.database.models,
+    db: input.database.db,
+    stripe,
+    cacheHelper: input.clients.cacheHelper,
+  });
   const directiveAppend = new DirectiveAppendWorkflow(
     ledgerRepo,
     input.clients.favaClientFactory,
+    directiveLimitPreview,
   );
   const authMail = new AuthMailService(
     input.database.models,
@@ -199,6 +208,7 @@ export function buildServiceLayer(input: {
       input.database.models,
       input.database.db,
       authorization,
+      directiveLimitPreview,
     ),
     account: new AccountService(
       input.database.models,
