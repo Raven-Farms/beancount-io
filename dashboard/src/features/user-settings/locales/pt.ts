@@ -498,6 +498,10 @@ const ptUserSettings: Record<string, TranslationEntry> = {
     message: "{used} tokens usados este mês (ilimitado)",
     description: "AI CFO usage display for unlimited tier",
   },
+  "userSettings.aiCfoUsageUnavailable": {
+    message: "O uso não está disponível no momento.",
+    description: "Shown in place of AI token usage when its read fails",
+  },
   "userSettings.currentPlan": {
     message: "Plano atual",
     description: "Badge label for the user's current subscription tier",

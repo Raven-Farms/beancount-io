@@ -500,6 +500,10 @@ const deUserSettings: Record<string, TranslationEntry> = {
     message: "{used} Tokens in diesem Monat verbraucht (unbegrenzt)",
     description: "AI CFO usage display for unlimited tier",
   },
+  "userSettings.aiCfoUsageUnavailable": {
+    message: "Der Verbrauch ist derzeit nicht verfügbar.",
+    description: "Shown in place of AI token usage when its read fails",
+  },
   "userSettings.currentPlan": {
     message: "Aktueller Plan",
     description: "Badge label for the user's current subscription tier",

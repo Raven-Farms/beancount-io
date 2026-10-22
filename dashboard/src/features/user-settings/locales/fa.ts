@@ -496,6 +496,10 @@ const faUserSettings: Record<string, TranslationEntry> = {
     message: "{used} توکن در این ماه استفاده شده (نامحدود)",
     description: "AI CFO usage display for unlimited tier",
   },
+  "userSettings.aiCfoUsageUnavailable": {
+    message: "میزان استفاده در حال حاضر در دسترس نیست.",
+    description: "Shown in place of AI token usage when its read fails",
+  },
   "userSettings.currentPlan": {
     message: "طرح فعلی",
     description: "Badge label for the user's current subscription tier",

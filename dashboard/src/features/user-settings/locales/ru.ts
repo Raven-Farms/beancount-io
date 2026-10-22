@@ -498,6 +498,10 @@ const ruUserSettings: Record<string, TranslationEntry> = {
     message: "Использовано {used} токенов в этом месяце (без ограничений)",
     description: "AI CFO usage display for unlimited tier",
   },
+  "userSettings.aiCfoUsageUnavailable": {
+    message: "Данные об использовании сейчас недоступны.",
+    description: "Shown in place of AI token usage when its read fails",
+  },
   "userSettings.currentPlan": {
     message: "Текущий тарифный план",
     description: "Badge label for the user's current subscription tier",

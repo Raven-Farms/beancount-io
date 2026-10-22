@@ -497,6 +497,10 @@ const skUserSettings: Record<string, TranslationEntry> = {
     message: "{used} tokenov využitých tento mesiac (neobmedzené)",
     description: "AI CFO usage display for unlimited tier",
   },
+  "userSettings.aiCfoUsageUnavailable": {
+    message: "Využitie momentálne nie je dostupné.",
+    description: "Shown in place of AI token usage when its read fails",
+  },
   "userSettings.currentPlan": {
     message: "Aktuálny plán",
     description: "Badge label for the user's current subscription tier",

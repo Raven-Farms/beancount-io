@@ -493,6 +493,10 @@ const zhUserSettings: Record<string, TranslationEntry> = {
     message: "本月已使用 {used} 词元（无限制）",
     description: "AI CFO usage display for unlimited tier",
   },
+  "userSettings.aiCfoUsageUnavailable": {
+    message: "暂时无法显示用量。",
+    description: "Shown in place of AI token usage when its read fails",
+  },
   "userSettings.currentPlan": {
     message: "当前计划",
     description: "Badge label for the user's current subscription tier",

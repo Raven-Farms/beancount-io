@@ -498,6 +498,10 @@ const ukUserSettings: Record<string, TranslationEntry> = {
     message: "Використано {used} токенів цього місяця (необмежено)",
     description: "AI CFO usage display for unlimited tier",
   },
+  "userSettings.aiCfoUsageUnavailable": {
+    message: "Дані про використання зараз недоступні.",
+    description: "Shown in place of AI token usage when its read fails",
+  },
   "userSettings.currentPlan": {
     message: "Поточний план",
     description: "Badge label for the user's current subscription tier",

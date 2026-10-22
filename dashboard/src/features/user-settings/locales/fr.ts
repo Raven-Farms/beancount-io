@@ -499,6 +499,10 @@ const frUserSettings: Record<string, TranslationEntry> = {
     message: "{used} jetons utilisés ce mois-ci (illimité)",
     description: "AI CFO usage display for unlimited tier",
   },
+  "userSettings.aiCfoUsageUnavailable": {
+    message: "L'utilisation est indisponible pour le moment.",
+    description: "Shown in place of AI token usage when its read fails",
+  },
   "userSettings.currentPlan": {
     message: "Forfait actuel",
     description: "Badge label for the user's current subscription tier",

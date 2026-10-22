@@ -498,6 +498,10 @@ const bgUserSettings: Record<string, TranslationEntry> = {
     message: "{used} токена използвани този месец (неограничено)",
     description: "AI CFO usage display for unlimited tier",
   },
+  "userSettings.aiCfoUsageUnavailable": {
+    message: "Използването в момента не е достъпно.",
+    description: "Shown in place of AI token usage when its read fails",
+  },
   "userSettings.currentPlan": {
     message: "Текущ план",
     description: "Badge label for the user's current subscription tier",

@@ -491,6 +491,10 @@ const koUserSettings: Record<string, TranslationEntry> = {
     message: "이번 달 {used} 요청 사용됨 (무제한)",
     description: "AI CFO usage display for unlimited tier",
   },
+  "userSettings.aiCfoUsageUnavailable": {
+    message: "지금은 사용량을 표시할 수 없습니다.",
+    description: "Shown in place of AI token usage when its read fails",
+  },
   "userSettings.currentPlan": {
     message: "현재 플랜",
     description: "Badge label for the user's current subscription tier",

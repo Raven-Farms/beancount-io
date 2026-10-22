@@ -492,6 +492,10 @@ const jaUserSettings: Record<string, TranslationEntry> = {
     message: "今月 {used} リクエスト使用済み（無制限）",
     description: "AI CFO usage display for unlimited tier",
   },
+  "userSettings.aiCfoUsageUnavailable": {
+    message: "現在、使用量を表示できません。",
+    description: "Shown in place of AI token usage when its read fails",
+  },
   "userSettings.currentPlan": {
     message: "現在のプラン",
     description: "Badge label for the user's current subscription tier",

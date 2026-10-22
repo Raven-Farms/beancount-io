@@ -499,6 +499,10 @@ const esUserSettings: Record<string, TranslationEntry> = {
     message: "{used} tokens usados este mes (ilimitado)",
     description: "AI CFO usage display for unlimited tier",
   },
+  "userSettings.aiCfoUsageUnavailable": {
+    message: "El uso no está disponible en este momento.",
+    description: "Shown in place of AI token usage when its read fails",
+  },
   "userSettings.currentPlan": {
     message: "Plan actual",
     description: "Badge label for the user's current subscription tier",

@@ -497,6 +497,10 @@ const nlUserSettings: Record<string, TranslationEntry> = {
     message: "{used} tokens gebruikt deze maand (onbeperkt)",
     description: "AI CFO usage display for unlimited tier",
   },
+  "userSettings.aiCfoUsageUnavailable": {
+    message: "Het verbruik is momenteel niet beschikbaar.",
+    description: "Shown in place of AI token usage when its read fails",
+  },
   "userSettings.currentPlan": {
     message: "Huidig abonnement",
     description: "Badge label for the user's current subscription tier",

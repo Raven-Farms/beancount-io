@@ -123,10 +123,29 @@ export function SubscriptionSection({
     refetch: refetchUserLimits,
   } = useUserLimits();
   const {
+    usage: aiCfoUsage,
     aiCfoTokensUsed,
     aiCfoTokensMax,
     isLoading: aiCfoLoading,
+    error: aiCfoError,
+    refetch: refetchAiCfoUsage,
   } = useAiCfoUsage();
+  // Usage is unknown only while no read has succeeded: a failed refresh
+  // keeps the counts an earlier read returned (w4/312).
+  const [retryingAiCfoUsage, setRetryingAiCfoUsage] = useState(false);
+  const aiUsageUnavailable =
+    !aiCfoUsage && (aiCfoError || retryingAiCfoUsage)
+      ? {
+          retrying: retryingAiCfoUsage,
+          onRetry: () => {
+            if (retryingAiCfoUsage) return;
+            setRetryingAiCfoUsage(true);
+            void refetchAiCfoUsage()
+              .catch(() => undefined)
+              .finally(() => setRetryingAiCfoUsage(false));
+          },
+        }
+      : null;
   const { quotas: tierQuotas, isLoading: quotasLoading } = useAllTierQuotas();
 
   const {
@@ -226,7 +245,10 @@ export function SubscriptionSection({
     setSheetTarget({ tier: tierKey, cycle, surface: "settings_billing" });
 
   const isLoading =
-    limitsLoading || subscriptionLoading || aiCfoLoading || quotasLoading;
+    limitsLoading ||
+    subscriptionLoading ||
+    (aiCfoLoading && !aiUsageUnavailable) ||
+    quotasLoading;
 
   const formatMoney = useMoneyFormat();
   const formatCount = useQuotaNumberFormat();
@@ -401,6 +423,7 @@ export function SubscriptionSection({
                   limits={limits}
                   aiCfoTokensUsed={aiCfoTokensUsed}
                   aiCfoTokensMax={aiCfoTokensMax}
+                  aiUsageUnavailable={aiUsageUnavailable}
                   t={t}
                 />
               </>
