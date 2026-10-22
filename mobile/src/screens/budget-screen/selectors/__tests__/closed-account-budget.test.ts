@@ -152,11 +152,11 @@ describe("a budget on an account that closed", () => {
       fs
         .readFileSync(path.join(__dirname, "../../..", relative), "utf8")
         .replace(/\s+/g, "");
+    const card = read("budget-screen/components/budget-group-card.tsx");
     expect(
-      read("budget-screen/components/budget-group-card.tsx").includes(
-        "endsOn:budgetEndsOn(group.account,closeDates),",
-      ),
+      card.includes("constendsOn=budgetEndsOn(group.account,closeDates);"),
     ).toBe(true);
+    expect(card.includes("direction,endsOn,});")).toBe(true);
     const home = read("home-screen/components/budget-card.tsx");
     expect(
       home.includes(

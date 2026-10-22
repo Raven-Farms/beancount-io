@@ -30,7 +30,7 @@ import {
 } from "@/common/d3/budget-bar-chart-d3";
 import { useToday } from "@/common/hooks/use-today";
 import { useAccountCloseDates } from "@/common/hooks/use-account-close-dates";
-import { budgetEndsOn } from "@/common/account-close-dates";
+import { budgetEndsOn, budgetHasEnded } from "@/common/account-close-dates";
 import { useBudgetActuals } from "@/screens/budget-screen/hooks/use-budget-actuals";
 import {
   groupDirection,
@@ -201,13 +201,14 @@ export function BudgetGroupCard({
 
   // A budget on a closed account ends with it (w21/398).
   const closeDates = useAccountCloseDates(ledgerId);
+  const endsOn = budgetEndsOn(group.account, closeDates);
   const { series, loading, error, stale, settled } = useBudgetActuals({
     ledgerId,
     group,
     currency,
     time,
     direction,
-    endsOn: budgetEndsOn(group.account, closeDates),
+    endsOn,
   });
 
   // While the current period's read is pending or failed there is nothing to
@@ -259,7 +260,7 @@ export function BudgetGroupCard({
           >
             {group.account}
           </Text>
-          {onUpdate && (
+          {onUpdate && !budgetHasEnded(endsOn, today) && (
             <TouchableOpacity
               style={[
                 styles.updateButton,

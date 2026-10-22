@@ -41,6 +41,18 @@ export function closeDatesOf(
 }
 
 /**
+ * Whether a budget that ends on `endsOn` (`budgetEndsOn`) has ended by `today`.
+ * Its card offers no Update then: the new directive would be written and never
+ * apply, the budget staying $0 after the close (w21/624).
+ */
+export function budgetHasEnded(
+  endsOn: string | undefined,
+  today: string,
+): boolean {
+  return endsOn !== undefined && endsOn <= today;
+}
+
+/**
  * The day a budget on `account` ends: the account's close date, once every
  * account beneath it is closed too, else null. The budget's actuals roll up
  * every descendant, and Beancount refuses postings only to the closed account

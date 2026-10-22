@@ -1,4 +1,5 @@
 import {
+  budgetHasEnded,
   closeDatesOf,
   closedAccountNamed,
   firstOpeningAfter,
@@ -335,5 +336,38 @@ describe("firstOpeningAfter", () => {
     expect(
       firstOpeningAfter(["Assets:Cash"], "2023-12-31", closeDatesOf(undefined)),
     ).toBe(null);
+  });
+});
+
+// w21/624: Update on a closed account's card wrote a directive that never applied.
+describe("budgetHasEnded", () => {
+  it("is true once the account's close date has come", () => {
+    expect(budgetHasEnded("2026-06-15", "2026-10-22")).toBe(true);
+    expect(budgetHasEnded("2026-10-22", "2026-10-22")).toBe(true);
+  });
+
+  it("is false for an open account or a close date still ahead", () => {
+    expect(budgetHasEnded(undefined, "2026-10-22")).toBe(false);
+    expect(budgetHasEnded("2026-12-31", "2026-10-22")).toBe(false);
+  });
+
+  it("is what hides Update on the card", () => {
+    const card = require("fs")
+      .readFileSync(
+        require("path").join(
+          __dirname,
+          "..",
+          "..",
+          "screens",
+          "budget-screen",
+          "components",
+          "budget-group-card.tsx",
+        ),
+        "utf8",
+      )
+      .replace(/\s+/g, "");
+    expect(card.includes("{onUpdate&&!budgetHasEnded(endsOn,today)&&(")).toBe(
+      true,
+    );
   });
 });
