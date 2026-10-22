@@ -1,6 +1,6 @@
 import fs from "fs";
 import path from "path";
-import { changePercent } from "../d3/change-percent";
+import { changePercent, formatChangePercent } from "../d3/change-percent";
 
 const pct = (baseline: number, value: number) =>
   changePercent(baseline, value)?.toFixed(2) ?? null;
@@ -38,5 +38,55 @@ describe("balance chart change row", () => {
     );
     expect(source.includes("changePercent(baseline, shownValue)")).toBe(true);
     expect(source.includes("Math.abs(baseline)")).toBe(false);
+  });
+});
+
+// w21/237: the percentage took its sign from the raw change and could print
+// "-0.00%", beside an amount that already followed the rounded value.
+describe("formatChangePercent", () => {
+  const row = (baseline: number, value: number) => {
+    const pct = changePercent(baseline, value);
+    return pct === null ? null : formatChangePercent(pct);
+  };
+
+  it("reads a large balance's small drop as flat, not as -0.00%", () => {
+    // 2,500,000 to 2,499,988: -$12.00 (0.00%).
+    expect(row(2_500_000, 2_499_988)).toEqual({ text: "0.00%", flat: true });
+  });
+
+  it("reads a sub-cent move as flat, without a stray sign", () => {
+    // 10234.567891 to 10234.565.
+    expect(row(10234.567891, 10234.565)).toEqual({ text: "0.00%", flat: true });
+    expect(row(10234.565, 10234.567891)).toEqual({ text: "0.00%", flat: true });
+  });
+
+  it("signs the rounded value", () => {
+    expect(formatChangePercent(12.345)).toEqual({
+      text: "+12.35%",
+      flat: false,
+    });
+    expect(formatChangePercent(-3.2)).toEqual({ text: "-3.20%", flat: false });
+    expect(formatChangePercent(0.004)).toEqual({ text: "0.00%", flat: true });
+    expect(formatChangePercent(-0.004)).toEqual({ text: "0.00%", flat: true });
+    expect(formatChangePercent(0.006)).toEqual({ text: "+0.01%", flat: false });
+    expect(formatChangePercent(-0.006)).toEqual({
+      text: "-0.01%",
+      flat: false,
+    });
+  });
+});
+
+describe("the change row", () => {
+  it("shows the rounded percentage and reads a flat change in the neutral colour", () => {
+    const chart = fs
+      .readFileSync(
+        path.join(__dirname, "..", "d3", "interactive-line-chart.tsx"),
+        "utf8",
+      )
+      .replace(/\s+/g, "");
+    expect(chart.includes("formatChangePercent(changePct)")).toBe(true);
+    expect(chart.includes("shownPct?.flat?neutralColor:color")).toBe(true);
+    // No percentage is built from the raw change any more.
+    expect(chart.includes('change>=0?"+":""')).toBe(false);
   });
 });

@@ -48,7 +48,7 @@ import {
 import { LEADING_TEXT_ALIGN, LTR_PLOT } from "@/common/rtl";
 import { ChartErrorBoundary } from "./chart-chrome";
 import { HERO_AMOUNT_FIT } from "@/components/amount-text/hero-amount-fit";
-import { changePercent } from "./change-percent";
+import { changePercent, formatChangePercent } from "./change-percent";
 
 // Created once at module scope: building these inside the component would give
 // React a new component type on every render and remount the node each time.
@@ -388,6 +388,8 @@ function ScrubHeader({
 }: ScrubHeaderProps): JSX.Element {
   const styles = useThemeStyle(getStyles);
   const { t } = useTranslations();
+  // A change that rounds to nothing is neither good nor bad (w21/237).
+  const neutralColor = useTheme().colorTheme.black60;
 
   const [{ index, motion }, setHeadline] = useState<{
     index: number;
@@ -439,10 +441,9 @@ function ScrubHeader({
   // The amount always reads; the percentage only when it means something.
   const changePct = changePercent(baseline, shownValue);
   const changeAmount = format(change, true);
+  const shownPct = changePct === null ? null : formatChangePercent(changePct);
   const changeText =
-    changePct === null
-      ? changeAmount
-      : `${changeAmount} (${change >= 0 ? "+" : ""}${changePct.toFixed(2)}%)`;
+    shownPct === null ? changeAmount : `${changeAmount} (${shownPct.text})`;
 
   // The heading stays put while scrubbing: where it is the card's only title,
   // swapping it for a month would leave the card unlabeled mid-gesture. The
@@ -466,7 +467,14 @@ function ScrubHeader({
         {...HERO_AMOUNT_FIT}
       />
       <View style={styles.changeRow}>
-        <AmountText style={[styles.change, { color }]}>{changeText}</AmountText>
+        <AmountText
+          style={[
+            styles.change,
+            { color: shownPct?.flat ? neutralColor : color },
+          ]}
+        >
+          {changeText}
+        </AmountText>
         {scrubLabel !== null && (
           <Text style={styles.scrubLabel}>{`· ${scrubLabel}`}</Text>
         )}

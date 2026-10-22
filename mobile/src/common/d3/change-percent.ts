@@ -14,3 +14,22 @@ export function changePercent(baseline: number, value: number): number | null {
   }
   return ((value - baseline) / Math.abs(baseline)) * 100;
 }
+
+/**
+ * The change row's percentage as it is shown: rounded to two places first, a
+ * rounded -0 normalised to 0, and the sign and the verdict taken from the
+ * rounded value, as the amount's sign is (w21/055). Prefixed from the raw
+ * change, a move of -$12 on 2,500,000 read "-$12.00 (-0.00%)" in the
+ * unfavourable colour, and a sub-cent gain "+$0.00 (-0.00%)" (w21/237).
+ * `flat` is true when it rounds to nothing, which reads in the neutral colour.
+ */
+export function formatChangePercent(pct: number): {
+  text: string;
+  flat: boolean;
+} {
+  const rounded = Math.round(pct * 100) / 100 + 0;
+  return {
+    text: `${rounded > 0 ? "+" : ""}${rounded.toFixed(2)}%`,
+    flat: rounded === 0,
+  };
+}
