@@ -61,6 +61,10 @@ class SimpleCounterInventory(dict[str, Decimal]):
     def __neg__(self) -> SimpleCounterInventory:
         return SimpleCounterInventory({key: -num for key, num in self.items()})
 
+    def _empty_result(self) -> SimpleCounterInventory:
+        """The inventory a reduction accumulates into."""
+        return SimpleCounterInventory()
+
     def reduce(
         self,
         reducer: Callable[Concatenate[Position, P], Amount],
@@ -68,12 +72,29 @@ class SimpleCounterInventory(dict[str, Decimal]):
         **_kwargs: P.kwargs,
     ) -> SimpleCounterInventory:
         """Reduce inventory."""
-        counter = SimpleCounterInventory()
+        counter = self._empty_result()
         for currency, number in self.items():
             pos = _Position(_Amount(number, currency), None)
             amount = reducer(pos, *args)  # type: ignore[call-arg]
             counter.add(amount.currency, amount.number)
         return counter
+
+
+class KeptZeroInventory(SimpleCounterInventory):
+    """A converted inventory that keeps a net of exactly zero as a known zero.
+
+    An inventory drops a position the moment it nets to zero. A conversion's
+    result for one nonzero position that is worth zero (a zero quote, a zero
+    cost) is a known value in a named currency, not an empty account; reducing
+    into this type keeps the currency so the display can say `0 USD` (w5/908).
+    """
+
+    def add(self, key: str, number: Decimal) -> None:
+        """Add a number to key, keeping the key at zero."""
+        self[key] = number + self.get(key, ZERO)
+
+    def _empty_result(self) -> SimpleCounterInventory:
+        return KeptZeroInventory()
 
 
 class CounterInventory(dict[InventoryKey, Decimal]):
@@ -101,6 +122,10 @@ class CounterInventory(dict[InventoryKey, Decimal]):
     def __iter__(self) -> Iterator[InventoryKey]:
         raise NotImplementedError
 
+    def _empty_result(self) -> SimpleCounterInventory:
+        """The inventory a reduction accumulates into."""
+        return SimpleCounterInventory()
+
     def to_strings(self) -> list[str]:
         """Print as a list of strings (e.g. for snapshot tests)."""
         strings = []
@@ -123,7 +148,7 @@ class CounterInventory(dict[InventoryKey, Decimal]):
         Note that this returns a simple :class:`CounterInventory` with just
         currencies as keys.
         """
-        counter = SimpleCounterInventory()
+        counter = self._empty_result()
         for (currency, cost), number in self.items():
             pos = _Position(_Amount(number, currency), cost)
             amount = reducer(pos, *args)  # type: ignore[call-arg]
@@ -159,3 +184,10 @@ class CounterInventory(dict[InventoryKey, Decimal]):
                     self.pop(key, None)
                 else:
                     self[key] = new_num
+
+
+class KeptZeroSource(CounterInventory):
+    """One position to convert, whose result keeps a known zero (see `KeptZeroInventory`)."""
+
+    def _empty_result(self) -> SimpleCounterInventory:
+        return KeptZeroInventory()
