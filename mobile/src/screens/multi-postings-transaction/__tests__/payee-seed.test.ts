@@ -192,3 +192,68 @@ describe("picking a second payee", () => {
     ).toBe(true);
   });
 });
+
+// w21/412: FROM and TO were ranked separately, so the filled pair could be one
+// never used together, even the same account twice.
+describe("a payee's usual pair", () => {
+  const paypal = [
+    txn("PAYPAL", "Assets:Bank:Checking", "Assets:PayPal", "25"),
+    txn("PAYPAL", "Assets:Bank:Checking", "Assets:PayPal", "40"),
+    txn("PAYPAL", "Assets:Bank:Checking", "Assets:PayPal", "10"),
+    txn("PAYPAL", "Assets:PayPal", "Expenses:Shopping", "25"),
+    txn("PAYPAL", "Assets:PayPal", "Expenses:Games", "12"),
+    txn("PAYPAL", "Assets:PayPal", "Expenses:Books", "8"),
+    txn("PAYPAL", "Assets:PayPal", "Expenses:Music", "5"),
+  ];
+  const suggest = (entries: unknown[], payee: string) =>
+    deriveTwoPostingSuggestions(entries as never, payee);
+
+  it("fills the most common pair, not the most common side of each", () => {
+    const { from, to } = suggest(paypal, "PAYPAL");
+    // Sides alone: FROM = PayPal (4), TO = PayPal (3): the same account twice.
+    expect([from.autoFill, to.autoFill]).toEqual([
+      "Assets:Bank:Checking",
+      "Assets:PayPal",
+    ]);
+  });
+
+  it("keeps a pair that occurs together, with the other accounts as chips", () => {
+    const entries = [
+      txn("AMAZON", "Liabilities:Card", "Expenses:Shopping"),
+      txn("AMAZON", "Liabilities:Card", "Expenses:Shopping"),
+      txn("AMAZON", "Assets:Checking", "Expenses:Subscriptions"),
+      txn("AMAZON", "Assets:Checking", "Expenses:Subscriptions"),
+      txn("AMAZON", "Assets:Checking", "Expenses:Subscriptions"),
+    ];
+    const { from, to } = suggest(entries, "AMAZON");
+    expect([from.autoFill, to.autoFill]).toEqual([
+      "Assets:Checking",
+      "Expenses:Subscriptions",
+    ]);
+    expect(from.chips.map((c) => c.account)).toEqual(["Liabilities:Card"]);
+    expect(to.chips.map((c) => c.account)).toEqual(["Expenses:Shopping"]);
+  });
+
+  it("breaks a tie toward the pair seen first, and ignores a self-transfer in history", () => {
+    const tied = [
+      txn("A", "Assets:X", "Expenses:Y"),
+      txn("A", "Assets:P", "Expenses:Q"),
+    ];
+    expect(suggest(tied, "A").from.autoFill).toBe("Assets:X");
+    const loops = [
+      txn("B", "Assets:Z", "Assets:Z"),
+      txn("B", "Assets:Z", "Assets:Z"),
+    ];
+    expect(suggest(loops, "B").from.autoFill).toBe("Assets:Z");
+  });
+
+  it("never seeds the same account on both sides", () => {
+    const initial = opened();
+    expect(
+      seedPostingsFromPayee(initial, initial, {
+        from: { autoFill: "Assets:PayPal" },
+        to: { autoFill: "Assets:PayPal" },
+      }),
+    ).toBe(null);
+  });
+});

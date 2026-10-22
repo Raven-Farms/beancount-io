@@ -54,7 +54,9 @@ export function seedPostingsFromPayee(
 ): Posting[] | null {
   const from = history.from.autoFill;
   const to = history.to.autoFill;
-  if (!from || !to) return null;
+  // Never fill the same account on both sides: a self-transfer saves with no
+  // warning (w21/412).
+  if (!from || !to || from === to) return null;
   if (!untouched(current, initial) && !unchangedSinceSeed(current, lastSeed)) {
     return null;
   }
