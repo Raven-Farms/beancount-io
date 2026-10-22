@@ -118,6 +118,23 @@ def _preset_accounts(preset: str) -> tuple[str, ...]:
     raise UsageError(f"--preset {preset!r}: Unknown preset. Choose one of: {known}. Nothing was created.")
 
 
+def _preset_currency(value: str) -> str:
+    """A currency the setup catalog supports, from the engine's copy of its list (w5/878).
+
+    A preset ledger takes only catalog currencies; checking just the symbol
+    grammar let `BTC` through to a refusal after every question was answered.
+    """
+    import json
+
+    from cli.engine.paths import helper_source_root
+
+    currency = _currency(value)
+    path = helper_source_root() / "bea_engine" / "setup_currencies.json"
+    if currency not in json.loads(path.read_text(encoding="utf-8"))["supportedCurrencies"]:
+        raise typer.BadParameter(f"Unsupported operating currency {currency!r} for a preset ledger.")
+    return currency
+
+
 def _opening_amount(value: str) -> Decimal:
     try:
         return parse_decimal_number(value)
@@ -228,9 +245,10 @@ def init(
     # Every option is checked before the first question, naming itself: a bad
     # `--date` or `--opening-balance` was refused only after the prompts were
     # answered, as `Invalid value: …` with no option named (w5/588).
+    check_currency = _currency if preset is None else _preset_currency
     if currency is not None:
         try:
-            currency = _currency(currency)
+            currency = check_currency(currency)
         except typer.BadParameter as exc:
             raise UsageError(f"--currency {currency!r}: {exc.message}") from None
     given_day = None
@@ -264,8 +282,8 @@ def init(
     if currency is None:
         if not ctx.can_prompt:
             raise UsageError("Choose an operating currency with --currency USD (or EUR, etc.).")
-        currency = ctx.prompt("Operating currency", default="USD", value_proc=_currency)
-    currency = _currency(currency)
+        currency = ctx.prompt("Operating currency", default="USD", value_proc=check_currency)
+    currency = check_currency(currency)
     warnings = []
     if not re.fullmatch(r"[A-Z]{3}", currency):
         warnings.append(
