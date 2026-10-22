@@ -4,6 +4,8 @@
 
 ## Inbox
 
+- [994 — Keep collapsed BQL history cards closed when another card is deleted](./994.md) — minor residual of 253; live QA, 2026-10-22; deleting the top card reopens an untouched collapsed neighbor at both widths; same nodes/cache and zero extra reads.
+
 - [993 — Compare Net Worth changes within the same currency](./993.md) — minor; live QA,2026-10-22; valid USD1000→JPY100000 series displays +99000JPY at both widths; current-producer and matching-currency controls, zero hosted writes.
 
 - [992 — Keep keyboard focus on Refresh prices while it refreshes](./992.md) — minor; found in the 332 native check, 2026-10-22; the disabled button drops focus to BODY on every refresh outcome at both widths; Reload charts control keeps focus, no hosted writes.
@@ -11,8 +13,6 @@
 - [991 — Return focus to visible report filters after the header changes layout](./991.md) — minor residual of W3/m20; live QA,2026-10-22; Close/Escape target a hidden opener after resize or sidebar collapse; visible-opener controls pass, zero hosted writes.
 
 - [990 — Keep newer filter drafts when earlier changes finish](./990.md) — minor; live QA,2026-10-22; new Time text is replaced by the previous navigation at both widths; Account repeats at390; genuine reads held unchanged, zero hosted writes.
-
-- [990 — Keep a newer Time draft when an earlier filter change finishes](./990.md) — minor; live QA,2026-10-22; focused September text is replaced by the previous August navigation at both widths; genuine reads held unchanged, zero hosted writes.
 
 - [989 — Keep a newer BQL draft when its earlier submission finishes URL navigation](./989.md) — minor residual of W3/m12; live QA,2026-10-22; genuine delayed navigation replaces a later unexecuted draft at both widths; no hosted writes.
 
