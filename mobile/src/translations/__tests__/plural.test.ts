@@ -5,6 +5,7 @@
  */
 import { I18n } from "i18n-js";
 import {
+  builtinPluralCategory,
   pluralCategory,
   pluralCategoryMismatches,
   pluralKeys,
@@ -164,5 +165,92 @@ describe("chart summaries", () => {
     expect(months("sk", 1).includes("za 1 mesiac.")).toBe(true);
     expect(months("sk", 2).includes("za 2 mesiace.")).toBe(true);
     expect(months("sk", 5).includes("za 5 mesiacov.")).toBe(true);
+  });
+});
+
+// w21/248: Hermes has no Intl.PluralRules, so on a device every count fell back
+// to English's rule: Russian "5 ошибки", Ukrainian "2 запису", Slovak "2 chýb",
+// French "0 erreurs". These tests ran under Node, which has the rules.
+describe("the built-in CLDR rules", () => {
+  it("agree with the runtime's for every shipped language and count", () => {
+    for (const locale of translationLocales()) {
+      const rules = new Intl.PluralRules(locale);
+      for (let count = 0; count <= 1000; count++) {
+        expect(
+          `${locale}:${count}:${builtinPluralCategory(locale, count)}`,
+        ).toBe(`${locale}:${count}:${rules.select(count)}`);
+      }
+    }
+  });
+
+  it("agree for the fractions a count can carry", () => {
+    for (const locale of ["en", "ru", "uk", "sk", "fr", "pt", "de"]) {
+      const rules = new Intl.PluralRules(locale);
+      for (const count of [0.5, 1.5, 2.5, 5.5]) {
+        expect(
+          `${locale}:${count}:${builtinPluralCategory(locale, count)}`,
+        ).toBe(`${locale}:${count}:${rules.select(count)}`);
+      }
+    }
+  });
+
+  it("read the note's examples", () => {
+    expect(
+      [1, 2, 5, 21, 11, 12, 101, 111].map((n) =>
+        builtinPluralCategory("ru", n),
+      ),
+    ).toEqual(["one", "few", "many", "one", "many", "many", "one", "many"]);
+    expect(builtinPluralCategory("uk", 2)).toBe("few");
+    expect(builtinPluralCategory("sk", 2)).toBe("few");
+    expect(builtinPluralCategory("sk", 5)).toBe("other");
+    expect(builtinPluralCategory("fr", 0)).toBe("one");
+    expect(builtinPluralCategory("pt", 0)).toBe("one");
+    expect(builtinPluralCategory("en", 0)).toBe("other");
+    expect(builtinPluralCategory("zh", 1)).toBe("other");
+  });
+});
+
+describe("without Intl.PluralRules", () => {
+  const withoutIntlRules = <T>(run: () => T): T => {
+    const intl = Intl as unknown as { PluralRules?: unknown };
+    const original = intl.PluralRules;
+    intl.PluralRules = undefined;
+    try {
+      return run();
+    } finally {
+      intl.PluralRules = original;
+    }
+  };
+
+  it("counts take their language's forms, as on the device", () => {
+    withoutIntlRules(() => {
+      // Region-tagged locales no earlier test has cached.
+      expect(pluralCategory("ru-KG", 5)).toBe("many");
+      expect(pluralCategory("ru-KG", 21)).toBe("one");
+      expect(pluralCategory("uk-UA", 2)).toBe("few");
+      expect(pluralCategory("sk-SK", 2)).toBe("few");
+      expect(pluralCategory("fr-CA", 0)).toBe("one");
+      expect(pluralKeys("ru-BY", 5)).toEqual(["many", "other"]);
+    });
+  });
+
+  it("render Russian errors, Ukrainian records and Slovak errors correctly", () => {
+    const i18n = new I18n({
+      "ru-MD": {
+        errors: {
+          one: "%{count} ошибка",
+          few: "%{count} ошибки",
+          many: "%{count} ошибок",
+          other: "%{count} ошибки",
+        },
+      },
+    });
+    i18n.locale = "ru-MD";
+    withoutIntlRules(() => {
+      registerPluralizers(i18n, ["ru-MD"]);
+      expect(i18n.t("errors", { count: 5 })).toBe("5 ошибок");
+      expect(i18n.t("errors", { count: 2 })).toBe("2 ошибки");
+      expect(i18n.t("errors", { count: 21 })).toBe("21 ошибка");
+    });
   });
 });
