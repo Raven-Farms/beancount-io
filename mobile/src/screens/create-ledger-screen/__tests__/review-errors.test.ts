@@ -62,7 +62,7 @@ describe("Create Ledger's preview failure", () => {
   it("shows a translated failure with a retry, and the server's words only for a refusal", () => {
     expect(
       source.includes(
-        'previewFailureKind(previewError)==="refused"?(<Textstyle={styles.error}>{previewError.message}</Text>):(<CardLoadFailureonRetry={retryPreview}/>)',
+        'previewFailureKind(previewError)==="refused"?(<InlineErrorstyle={styles.error}message={previewError.message}/>):(<CardLoadFailureonRetry={retryPreview}/>)',
       ),
     ).toBe(true);
     expect(

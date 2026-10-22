@@ -56,6 +56,7 @@ import { useLedgerDirectory } from "@/common/ledger-directory/ledger-directory-p
 import { ledgerVar } from "@/common/vars";
 import { LEADING_TEXT_ALIGN, leadingInputTextAlign } from "@/common/rtl";
 import { CardLoadFailure } from "@/components/card-load-failure";
+import { InlineError } from "@/components/inline-error";
 import type { ColorTheme } from "@/types/theme-props";
 import {
   classifyCreateLedgerError,
@@ -650,7 +651,7 @@ export function CreateLedgerScreen(): JSX.Element {
               ) : null}
             </View>
             {errors.name?.message ? (
-              <Text style={styles.error}>{errors.name.message}</Text>
+              <InlineError style={styles.error} message={errors.name.message} />
             ) : null}
 
             <View style={[styles.row, styles.rowDivider]}>
@@ -712,7 +713,10 @@ export function CreateLedgerScreen(): JSX.Element {
                 )}
               />
               {errors.currency?.message ? (
-                <Text style={styles.error}>{errors.currency.message}</Text>
+                <InlineError
+                  style={styles.error}
+                  message={errors.currency.message}
+                />
               ) : null}
             </View>
             <View style={[styles.row, styles.rowDivider]}>
@@ -735,7 +739,10 @@ export function CreateLedgerScreen(): JSX.Element {
                 )}
               />
               {errors.historyStart?.message ? (
-                <Text style={styles.error}>{errors.historyStart.message}</Text>
+                <InlineError
+                  style={styles.error}
+                  message={errors.historyStart.message}
+                />
               ) : null}
             </View>
             {moneyAccounts.length > 0 ? (
@@ -806,9 +813,10 @@ export function CreateLedgerScreen(): JSX.Element {
                       )}
                     />
                     {errors.openingAmount?.message ? (
-                      <Text style={styles.error}>
-                        {errors.openingAmount.message}
-                      </Text>
+                      <InlineError
+                        style={styles.error}
+                        message={errors.openingAmount.message}
+                      />
                     ) : null}
                   </View>
                 ) : null}
@@ -840,7 +848,10 @@ export function CreateLedgerScreen(): JSX.Element {
                   <ActivityIndicator color={theme.primary} />
                 ) : previewError ? (
                   previewFailureKind(previewError) === "refused" ? (
-                    <Text style={styles.error}>{previewError.message}</Text>
+                    <InlineError
+                      style={styles.error}
+                      message={previewError.message}
+                    />
                   ) : (
                     <CardLoadFailure onRetry={retryPreview} />
                   )
@@ -879,7 +890,7 @@ export function CreateLedgerScreen(): JSX.Element {
         ) : null}
 
         {errors.root?.message ? (
-          <Text style={styles.formError}>{errors.root.message}</Text>
+          <InlineError style={styles.formError} message={errors.root.message} />
         ) : null}
       </ScrollView>
     </SafeAreaView>

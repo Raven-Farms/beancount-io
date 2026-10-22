@@ -174,6 +174,8 @@ function screen(refreshFails: boolean) {
           return { ledgerVar: () => events.push("select") };
         if (id === "@/common/rtl") return {};
         if (id === "./ledger-name") return names;
+        if (id === "@/components/inline-error")
+          return { InlineError: () => null };
         if (id === "@/components/card-load-failure")
           return { CardLoadFailure: () => null };
         throw new Error(`Unexpected dependency: ${id}`);

@@ -63,8 +63,35 @@ describe("live regions and VoiceOver", () => {
       "screens/add-budget-screen/add-budget-screen.tsx",
       "screens/edit-transaction-screen/edit-transaction-screen.tsx",
       "components/text-input-modal/index.tsx",
+      "screens/create-ledger-screen/create-ledger-screen.tsx",
     ]) {
       expect(read(path.join(srcDir, file)).includes("<InlineError")).toBe(true);
     }
+  });
+
+  // w21/479: Create Ledger's name, currency, Books begin, opening amount,
+  // preview and form errors were plain Text, so VoiceOver never heard a refused
+  // or conflicting Create.
+  it("Create Ledger announces each of its errors", () => {
+    const src = read(
+      path.join(
+        srcDir,
+        "screens/create-ledger-screen/create-ledger-screen.tsx",
+      ),
+    ).replace(/\s+/g, "");
+    for (const message of [
+      "errors.name.message",
+      "errors.currency.message",
+      "errors.historyStart.message",
+      "errors.openingAmount.message",
+      "previewError.message",
+      "errors.root.message",
+    ]) {
+      expect(src.includes(`message={${message}}`)).toBe(true);
+      expect(src.includes(`<Textstyle={styles.error}>{${message}}`)).toBe(
+        false,
+      );
+    }
+    expect(src.includes("<Textstyle={styles.formError}>")).toBe(false);
   });
 });
