@@ -1,3 +1,5 @@
+import { INSERT_INDENT } from "../code-editor/indent-unit";
+
 export type KeyboardShortcutButton = {
   label: string;
   insert: string;
@@ -36,9 +38,17 @@ export function buildKeyboardShortcutButtons(
     { label: '""', insert: '""', cursorOffset: 1 },
     { label: ":", insert: ":" },
     ...currencyButtons,
-    { label: "⇥", insert: "  " },
+    { label: "⇥", insert: INSERT_INDENT },
     { label: "-", insert: "-" },
     { label: "#", insert: "#" },
     { label: "^", insert: "^" },
   ];
+}
+
+/**
+ * The bar of a file that is not Beancount: just ⇥, since a hardware Tab is the
+ * only other way to indent and a touch keyboard has none (w21/339).
+ */
+export function buildPlainTextButtons(): KeyboardShortcutButton[] {
+  return [{ label: "⇥", insert: INSERT_INDENT }];
 }

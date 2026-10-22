@@ -21,7 +21,12 @@ import {
   Prec,
   Text,
 } from "@codemirror/state";
-import { defaultKeymap, history, historyKeymap } from "@codemirror/commands";
+import {
+  defaultKeymap,
+  history,
+  historyKeymap,
+  indentWithTab,
+} from "@codemirror/commands";
 import {
   StreamLanguage,
   indentService,
@@ -32,6 +37,7 @@ import {
 import { tags } from "@lezer/highlight";
 import type { EditorTheme } from "@/types/theme-props";
 import { isSameEditorTheme } from "./editor-theme";
+import { detectIndentUnit, INSERT_INDENT, wrapSelection } from "./indent-unit";
 import {
   beancountIndent,
   copyBeancountState,
@@ -172,7 +178,10 @@ function buildExtensions(
     highlightActiveLine(),
     highlightActiveLineGutter(),
     drawSelection(),
-    indentUnit.of("  "),
+    // The document's own: a tab for a tab-indented file (w21/339).
+    indentUnit.compute(["doc"], (state) =>
+      detectIndentUnit(state.doc.toString()),
+    ),
     // Wrapping is not a language concern: a phone-width editor wraps every
     // file, and only Beancount files add the language mode.
     EditorView.lineWrapping,
@@ -206,7 +215,7 @@ function buildExtensions(
         },
       ]),
     ),
-    keymap.of([...defaultKeymap, ...historyKeymap]),
+    keymap.of([indentWithTab, ...defaultKeymap, ...historyKeymap]),
   ];
 }
 
@@ -443,16 +452,39 @@ export default function CodeEditor({
     if (insertSpec.seq === prevInsertSeq.current) return;
     prevInsertSeq.current = insertSpec.seq;
     const { from, to } = view.state.selection.main;
+    // ⇥ stands for one unit of this document's indentation.
+    const text =
+      insertSpec.text === INSERT_INDENT
+        ? view.state.facet(indentUnit)
+        : insertSpec.text;
+    // A pair (`""`) around a selection wraps it rather than replacing it.
+    const wrapped = wrapSelection(
+      text,
+      insertSpec.cursorOffset,
+      view.state.sliceDoc(from, to),
+    );
+    if (wrapped) {
+      view.dispatch(
+        view.state.update({
+          changes: { from, to, insert: wrapped.text },
+          selection: {
+            anchor: from + wrapped.selectFrom,
+            head: from + wrapped.selectTo,
+          },
+          scrollIntoView: true,
+          userEvent: "input",
+        }),
+      );
+      view.focus();
+      return;
+    }
     const cursorOffset = Math.max(
       0,
-      Math.min(
-        insertSpec.cursorOffset ?? insertSpec.text.length,
-        insertSpec.text.length,
-      ),
+      Math.min(insertSpec.cursorOffset ?? text.length, text.length),
     );
     view.dispatch(
       view.state.update({
-        changes: { from, to, insert: insertSpec.text },
+        changes: { from, to, insert: text },
         selection: { anchor: from + cursorOffset },
         scrollIntoView: true,
         userEvent: "input",

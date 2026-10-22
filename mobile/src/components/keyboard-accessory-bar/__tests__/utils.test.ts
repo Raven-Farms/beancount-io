@@ -1,4 +1,5 @@
-import { buildKeyboardShortcutButtons } from "../utils";
+import { INSERT_INDENT } from "../../code-editor/indent-unit";
+import { buildKeyboardShortcutButtons, buildPlainTextButtons } from "../utils";
 
 test("keyboard shortcuts follow the transaction entry flow", () => {
   const buttons = buildKeyboardShortcutButtons("2026-07-29", ["USD"]);
@@ -63,5 +64,14 @@ test("keyboard shortcuts insert useful multi-character syntax", () => {
     insert: '""',
     cursorOffset: 1,
   });
-  expect(buttons[5].insert).toBe("  ");
+  // ⇥ stands for one unit of the document's indentation (w21/339).
+  expect(buttons[5].insert).toBe(INSERT_INDENT);
+});
+
+// w21/339: a plain-text file's bar is ⇥ and the dismiss control; ⇥ is one unit
+// of the document's own indentation.
+test("a plain-text file's bar offers only the indent key", () => {
+  const buttons = buildPlainTextButtons();
+  expect(buttons.map((button) => button.label)).toEqual(["⇥"]);
+  expect(buttons[0].insert).toBe(INSERT_INDENT);
 });
