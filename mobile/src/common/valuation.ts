@@ -303,8 +303,12 @@ export function selectValuation({
   // those cost currencies, so a lot bought in EUR is priced by an EUR price,
   // not the operating currency's: the caption said "at cost (no price)" over
   // a market value, and "priced" over a cost (w21/124).
-  const costCurrencies =
-    cost == null ? [] : holdingsOf(cost).map((holding) => holding.currency);
+  // Callers that read no `at_cost` map (the Accounts root, the account detail)
+  // pass none: the market map then names them, since a lot priced against its
+  // cost currency is left in that currency there (w21/291).
+  const costCurrencies = holdingsOf(cost ?? market).map(
+    (holding) => holding.currency,
+  );
   if (prices !== undefined) {
     for (const holding of converted) {
       const candidates = costCurrencies.filter(

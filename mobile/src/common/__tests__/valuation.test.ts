@@ -625,3 +625,51 @@ describe("a holding bought in a non-operating currency", () => {
     ]);
   });
 });
+
+// w21/291: the Accounts root and the account detail read no `at_cost` map, so a
+// holding priced in its cost currency was captioned "at cost (no price)" while
+// Home showed it priced.
+describe("a priced cost-currency holding without an at_cost read", () => {
+  // 1000 USD cash and 10 VEUR bought at 50 EUR, priced 52 EUR on 2026-06-01:
+  // at_value leaves the lot in EUR (520), which names its cost currency.
+  const base = {
+    market: { USD: "1000", EUR: "520" },
+    units: { USD: "1000", VEUR: "10" },
+    currency: "USD",
+    today: "2026-10-21",
+    prices: [pair("VEUR", "EUR", ["2026-06-01"])],
+  };
+
+  it("is priced, with its stale price warned, as Home shows it", () => {
+    const valuation = selectValuation(base);
+    expect(valuation.atCostNoPrice).toEqual([]);
+    expect(valuation.priced.map((holding) => holding.currency)).toEqual([
+      "VEUR",
+    ]);
+    expect(valuation.priced[0]?.priceDate).toBe("2026-06-01");
+    expect(valuation.priced[0]?.stale).toBe(true);
+    expect(valuationStatus(valuation, t, "en")).toBe(
+      `atMarketValue · pricesNotUpdatedSince({"count":1,"date":"Jun 1, 2026"}) · notInTotalCount({"count":1})`,
+    );
+  });
+
+  it("agrees with the same read given an at_cost map", () => {
+    const withCost = selectValuation({
+      ...base,
+      cost: { USD: "1000", EUR: "500" },
+    });
+    expect(selectValuation(base).priced).toEqual(withCost.priced);
+  });
+
+  it("still calls a holding with no price in either currency at cost", () => {
+    const valuation = selectValuation({
+      ...base,
+      market: { USD: "1000", EUR: "500" },
+      prices: [],
+    });
+    expect(valuation.priced).toEqual([]);
+    expect(valuation.atCostNoPrice.map((holding) => holding.currency)).toEqual([
+      "VEUR",
+    ]);
+  });
+});
