@@ -64,6 +64,41 @@ describe("section and card titles are headings", () => {
     ).toBe(true);
   });
 
+  // w21/440: four more titles w21/320 missed.
+  it("marks the titles of Entry Context's balances, Notifications and the text-input suggestions", () => {
+    const compact = (relative: string) => read(relative).replace(/\s+/gu, "");
+    expect(
+      compact(
+        "screens/transactions-screen/entry-context/balance-section.tsx",
+      ).includes(
+        '<Textstyle={styles.balanceSectionHeaderText}accessibilityRole="header">{title}</Text>',
+      ),
+    ).toBe(true);
+    const notifications = compact(
+      "screens/notifications-screen/notifications-screen.tsx",
+    );
+    for (const key of ["notificationsErrorsSection"]) {
+      const at = notifications.indexOf(`t("${key}")`);
+      expect(at > -1).toBe(true);
+      expect(
+        notifications
+          .slice(notifications.lastIndexOf("<Text", at), at)
+          .includes('accessibilityRole="header"'),
+      ).toBe(true);
+    }
+    // The second title ("Recent changes") shares the style and the role.
+    expect(
+      notifications.split(
+        '<Textstyle={styles.sectionHeader}accessibilityRole="header">',
+      ).length,
+    ).toBe(3);
+    expect(
+      compact("components/text-input-screen/index.tsx").includes(
+        '<Textstyle={styles.sectionTitle}accessibilityRole="header">{i18n.t("suggestions").toUpperCase()}',
+      ),
+    ).toBe(true);
+  });
+
   it("reads a date header's day total as part of it", () => {
     expect(
       read("screens/transactions-screen/date-section-header.tsx").includes(

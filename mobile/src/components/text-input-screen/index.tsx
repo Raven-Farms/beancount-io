@@ -189,7 +189,7 @@ export const TextInputScreen: React.FC<TextInputScreenProps> = ({
         keyboardDismissMode="on-drag"
         showsVerticalScrollIndicator={false}
       >
-        <Text style={styles.sectionTitle}>
+        <Text style={styles.sectionTitle} accessibilityRole="header">
           {i18n.t("suggestions").toUpperCase()}
         </Text>
         <View style={styles.card}>

@@ -345,7 +345,7 @@ function NotificationsScreenImpl(): JSX.Element {
             />
           }
         >
-          <Text style={styles.sectionHeader}>
+          <Text style={styles.sectionHeader} accessibilityRole="header">
             {t("notificationsErrorsSection")}
           </Text>
           <View style={styles.divider} />
@@ -378,7 +378,7 @@ function NotificationsScreenImpl(): JSX.Element {
             </FadeInView>
           )}
 
-          <Text style={styles.sectionHeader}>
+          <Text style={styles.sectionHeader} accessibilityRole="header">
             {t("notificationsChangesSection")}
           </Text>
           <View style={styles.divider} />

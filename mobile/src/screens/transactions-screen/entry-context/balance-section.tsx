@@ -73,7 +73,12 @@ export const BalanceSection: React.FC<BalanceSectionProps> = ({
   return (
     <View style={styles.balanceSection}>
       <View style={styles.balanceSectionHeader}>
-        <Text style={styles.balanceSectionHeaderText}>{title}</Text>
+        <Text
+          style={styles.balanceSectionHeaderText}
+          accessibilityRole="header"
+        >
+          {title}
+        </Text>
       </View>
       {balances.map((balance, index) => (
         <View
