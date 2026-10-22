@@ -471,6 +471,13 @@ export const en = {
   range1Y: "1Y",
   rangeLastYear: "LY",
   rangeAll: "ALL",
+  rangeSpoken1M: "1 month",
+  rangeSpoken3M: "3 months",
+  rangeSpoken6M: "6 months",
+  rangeSpokenYTD: "Year to date",
+  rangeSpoken1Y: "1 year",
+  rangeSpokenLastYear: "Last year",
+  rangeSpokenAll: "All time",
   // edit / delete transaction
   editTransaction: "Edit Transaction",
   deleteTransaction: "Delete",

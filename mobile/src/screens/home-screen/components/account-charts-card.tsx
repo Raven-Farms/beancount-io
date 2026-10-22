@@ -13,6 +13,7 @@ import { fontSizes, fontWeights, space, useTheme } from "@/common/theme";
 import { directionalIcon } from "@/common/rtl";
 import {
   RANGE_LABEL_KEYS,
+  rangePillText,
   SeriesPoint,
   TimeRange,
   TIME_RANGES,
@@ -254,7 +255,7 @@ export function AccountChartsCard({
   ];
   const rangeOptions = TIME_RANGES.map((key) => ({
     key,
-    label: t(RANGE_LABEL_KEYS[key]),
+    ...rangePillText(t, RANGE_LABEL_KEYS[key]),
   }));
 
   const pages = charts.map(({ key, series }) => {

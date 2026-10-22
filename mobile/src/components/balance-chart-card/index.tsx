@@ -8,6 +8,7 @@ import { LoadingTile } from "@/components/loading-tile";
 import { CardLoadFailure } from "@/components/card-load-failure";
 import {
   RANGE_LABEL_KEYS,
+  rangePillText,
   SeriesPoint,
   TIME_RANGES,
   TimeRange,
@@ -96,7 +97,7 @@ export function BalanceChartCard({
   );
   const rangeOptions = TIME_RANGES.map((key) => ({
     key,
-    label: t(RANGE_LABEL_KEYS[key]),
+    ...rangePillText(t, RANGE_LABEL_KEYS[key]),
   }));
 
   return (

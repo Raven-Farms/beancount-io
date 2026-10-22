@@ -470,6 +470,13 @@ export const uk: Translations = {
   range1Y: "1Р",
   rangeLastYear: "Мин. рік",
   rangeAll: "УСЕ",
+  rangeSpoken1M: "1 місяць",
+  rangeSpoken3M: "3 місяці",
+  rangeSpoken6M: "6 місяців",
+  rangeSpokenYTD: "З початку року",
+  rangeSpoken1Y: "1 рік",
+  rangeSpokenLastYear: "Минулий рік",
+  rangeSpokenAll: "Весь час",
   // edit / delete transaction
   editTransaction: "Змінити транзакцію",
   deleteTransaction: "Видалити",

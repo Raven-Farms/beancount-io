@@ -24,7 +24,12 @@ import {
   LEGEND_HEIGHT,
 } from "@/common/d3/income-expense-bar-chart";
 import { TimeRangePills } from "@/components/time-range-pills";
-import { RANGE_LABEL_KEYS, TIME_RANGES, TimeRange } from "@/common/series-util";
+import {
+  RANGE_LABEL_KEYS,
+  TIME_RANGES,
+  TimeRange,
+  rangePillText,
+} from "@/common/series-util";
 import { useLedgerReadContext } from "@/common/hooks/use-ledger-read-context";
 import { isShowingStaleDataFromQueries } from "@/common/apollo/stale-data";
 import { useIncomeStatement } from "./hooks/use-income-statement";
@@ -134,7 +139,7 @@ const ReportsScreenImpl = (): JSX.Element => {
 
   const rangeOptions = TIME_RANGES.map((key) => ({
     key,
-    label: t(RANGE_LABEL_KEYS[key]),
+    ...rangePillText(t, RANGE_LABEL_KEYS[key]),
   }));
 
   // The current month caps every flow range (w21/166); `useToday` rolls it

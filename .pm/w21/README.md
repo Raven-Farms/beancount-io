@@ -27,7 +27,6 @@
 - [549](./blocked/549.md) — Create Ledger's "Amount owed" can't express a card in credit, and Review shows the opposite sign to the file — **blocked:** needs an owner decision on whether the setup API keeps "explicit negative = ledger sign" or changes its contract for REST, GraphQL and MCP
 - [554](./blocked/554.md) — A holding that is also another lot's cost currency drops out of the holdings sheet, so BTC's stale price is never flagged — **blocked:** needs a per-commodity cost-less balance the valuation reads do not carry (cross-package read contract and deploy)
 - [556](./blocked/556.md) — A holding priced only in an unrelated currency the account holds is labelled priced, though the ledger values it at cost — **blocked:** shares w21/554's blocker — a cost currency cannot be told from a cost-less holding of the same currency with the current reads
-- [560](./560.md) — Time-range pills are named only by abbreviations ("1M", "YTD", "1Г") for VoiceOver
 - [561](./561.md) — The posting sign toggle reads only "Toggle amount sign": no plus or minus, and no posting named
 - [562](./562.md) — The file editor's shortcut keys mostly read as just "Insert" (symbols unspoken, ⇥, raw ISO date)
 - [563](./563.md) — Reports' Income/Expenses transaction cards look only at the 200 newest transactions, so a busy month hides the salary (w21/011 on Reports)

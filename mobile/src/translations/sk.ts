@@ -474,6 +474,13 @@ export const sk: Translations = {
   range1Y: "1R",
   rangeLastYear: "MR",
   rangeAll: "VŠETKO",
+  rangeSpoken1M: "1 mesiac",
+  rangeSpoken3M: "3 mesiace",
+  rangeSpoken6M: "6 mesiacov",
+  rangeSpokenYTD: "Od začiatku roka",
+  rangeSpoken1Y: "1 rok",
+  rangeSpokenLastYear: "Minulý rok",
+  rangeSpokenAll: "Celé obdobie",
   // edit / delete transaction
   editTransaction: "Upraviť transakciu",
   deleteTransaction: "Odstrániť",

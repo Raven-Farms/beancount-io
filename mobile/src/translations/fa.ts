@@ -457,6 +457,13 @@ export const fa: Translations = {
   range1Y: "1س",
   rangeLastYear: "سال قبل",
   rangeAll: "همه",
+  rangeSpoken1M: "1 ماه",
+  rangeSpoken3M: "3 ماه",
+  rangeSpoken6M: "6 ماه",
+  rangeSpokenYTD: "از آغاز سال",
+  rangeSpoken1Y: "1 سال",
+  rangeSpokenLastYear: "سال قبل",
+  rangeSpokenAll: "همه زمان‌ها",
   // edit / delete transaction
   editTransaction: "ویرایش تراکنش",
   deleteTransaction: "حذف",

@@ -476,6 +476,13 @@ export const fr: Translations = {
   range1Y: "1A",
   rangeLastYear: "AP",
   rangeAll: "TOUT",
+  rangeSpoken1M: "1 mois",
+  rangeSpoken3M: "3 mois",
+  rangeSpoken6M: "6 mois",
+  rangeSpokenYTD: "Depuis le début de l'année",
+  rangeSpoken1Y: "1 an",
+  rangeSpokenLastYear: "Année dernière",
+  rangeSpokenAll: "Toute la période",
   // edit / delete transaction
   editTransaction: "Modifier la transaction",
   deleteTransaction: "Supprimer",

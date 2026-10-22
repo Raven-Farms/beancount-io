@@ -25,6 +25,7 @@ import { GetLedgerIntervalTotalsDocument } from "@/generated-graphql/graphql";
 import { LoadingTile } from "@/components/loading-tile";
 import { FadeInView } from "@/components/crossfade";
 import { Button, DashboardCard, TimeRangePills } from "@/components";
+import { rangePillText } from "@/common/series-util";
 import { LedgerGuard, useLedgerGuard } from "@/components/ledger-guard";
 import { ThemedRefreshControl } from "@/components/dashboard-scroll-view";
 import { useBudgetGroups } from "@/screens/budget-screen/hooks/use-budget-groups";
@@ -185,7 +186,7 @@ function BudgetScreenImpl(): JSX.Element {
           value={span}
           options={BUDGET_TIME_SPANS.map((key) => ({
             key,
-            label: t(TIME_SPAN_LABEL_KEYS[key]),
+            ...rangePillText(t, TIME_SPAN_LABEL_KEYS[key]),
           }))}
           onChange={setSpan}
         />

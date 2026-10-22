@@ -464,6 +464,13 @@ export const bg: Translations = {
   range1Y: "1Г",
   rangeLastYear: "МГ",
   rangeAll: "ВСИЧКИ",
+  rangeSpoken1M: "1 месец",
+  rangeSpoken3M: "3 месеца",
+  rangeSpoken6M: "6 месеца",
+  rangeSpokenYTD: "От началото на годината",
+  rangeSpoken1Y: "1 година",
+  rangeSpokenLastYear: "Миналата година",
+  rangeSpokenAll: "Цялото време",
   // edit / delete transaction
   editTransaction: "Редактиране на транзакция",
   deleteTransaction: "Изтрий",

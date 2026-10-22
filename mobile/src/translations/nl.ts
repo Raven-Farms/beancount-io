@@ -466,6 +466,13 @@ export const nl: Translations = {
   range1Y: "1J",
   rangeLastYear: "VJ",
   rangeAll: "ALLES",
+  rangeSpoken1M: "1 maand",
+  rangeSpoken3M: "3 maanden",
+  rangeSpoken6M: "6 maanden",
+  rangeSpokenYTD: "Dit jaar tot nu",
+  rangeSpoken1Y: "1 jaar",
+  rangeSpokenLastYear: "Vorig jaar",
+  rangeSpokenAll: "Alle tijd",
   // edit / delete transaction
   editTransaction: "Transactie bewerken",
   deleteTransaction: "Verwijderen",

@@ -26,6 +26,30 @@ export const RANGE_LABEL_KEYS: Record<TimeRange, string> = {
   ALL: "rangeAll",
 };
 
+/**
+ * What VoiceOver says for a range pill, by the key of its short label: "1M" was
+ * read as "1 M" and "YTD" spelled out letter by letter (w21/560).
+ */
+const SPOKEN_RANGE_KEYS: Record<string, string> = {
+  range1M: "rangeSpoken1M",
+  range3M: "rangeSpoken3M",
+  range6M: "rangeSpoken6M",
+  rangeYTD: "rangeSpokenYTD",
+  range1Y: "rangeSpoken1Y",
+  rangeLastYear: "rangeSpokenLastYear",
+  rangeAll: "rangeSpokenAll",
+};
+
+/** A range pill's short label and the full name that is spoken for it. */
+export function rangePillText(
+  t: (key: string) => string,
+  labelKey: string,
+): { label: string; spoken: string } {
+  const label = t(labelKey);
+  const spokenKey = SPOKEN_RANGE_KEYS[labelKey];
+  return { label, spoken: spokenKey ? t(spokenKey) : label };
+}
+
 // Fixed month-window lengths. "YTD" (year-to-date) and "ALL" are handled
 // specially in filterSeriesByRange, so they are excluded here.
 const RANGE_MONTHS: Record<Exclude<TimeRange, "ALL" | "YTD">, number> = {

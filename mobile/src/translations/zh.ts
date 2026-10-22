@@ -420,6 +420,13 @@ export const zh: Translations = {
   range1Y: "近1年",
   rangeLastYear: "去年",
   rangeAll: "全部",
+  rangeSpoken1M: "1个月",
+  rangeSpoken3M: "3个月",
+  rangeSpoken6M: "6个月",
+  rangeSpokenYTD: "年初至今",
+  rangeSpoken1Y: "1年",
+  rangeSpokenLastYear: "去年",
+  rangeSpokenAll: "全部时间",
   // edit / delete transaction
   editTransaction: "编辑交易",
   deleteTransaction: "删除",

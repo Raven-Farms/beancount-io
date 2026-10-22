@@ -476,6 +476,13 @@ export const ca: Translations = {
   range1Y: "1A",
   rangeLastYear: "AA",
   rangeAll: "TOT",
+  rangeSpoken1M: "1 mes",
+  rangeSpoken3M: "3 mesos",
+  rangeSpoken6M: "6 mesos",
+  rangeSpokenYTD: "Any fins avui",
+  rangeSpoken1Y: "1 any",
+  rangeSpokenLastYear: "Any passat",
+  rangeSpokenAll: "Tot el període",
   // edit / delete transaction
   editTransaction: "Edita la transacció",
   deleteTransaction: "Elimina",
