@@ -10,6 +10,7 @@
 
 ## Inbox
 
+- [063](./063.md) — `leaveLedger` by the owner answers `NOT_FOUND` "Ledger not found" instead of the documented "owners cannot leave" (w23/025 fixed set/remove only)
 - [062](./062.md) — auto-routed writes (`transaction_file "txns/{year}.bean"`) create a new year file nothing includes: the entry is committed, invisible to every report, and the write says "No new bean-check errors"
 - [061](./061.md) — after a ledger rename, `createLedger` with the old name says "Name already exists" (a host redirect, not a ledger); a pinned token's own `listLedgers` shows the new name but refuses it as outside its restriction
 - [060](./060.md) — `addLedgerEntries`/`appendLedgerText` always return `entryHashes: []`: an agent can't verify or undo the entry it just wrote without guessing via `listLedgerEntries` (pairs with w5/942)
