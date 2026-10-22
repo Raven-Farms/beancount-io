@@ -124,3 +124,23 @@ The prior browser-connection limitation is cleared for this observation. OAuth,
 authenticated discovery/query/preview and the actual submission/review gates
 remain open. Raw DOM and the rendered filter screenshot are retained under
 ignored `backend-cluster/backend-v2/tmp/w6-native-20261022T0818/`.
+
+## Native OAuth wizard preparation — 2026-10-22 UTC
+
+The supported CLI 3.0.73 `mcp add --transport streamableHttp` command, without
+`--yes`, opens an interactive wizard. Reusing an installed name stops at an
+explicit duplicate-name validation; it does not refresh that entry. A new,
+fully isolated task profile completes the name, Remote HTTP and canonical URL
+fields, selects OAuth and leaves the client ID empty for dynamic registration.
+The actual request reaches Beancount.io's consent page without any provider
+credentials or model call.
+
+The page identifies Cline, a loopback callback at `127.0.0.1:1456`, and the
+requested `openid offline_access ledger.read ledger.write ledger.admin` scopes.
+Only the synthetic QA ledger is selected; all-ledger access is unselected.
+Approval remains pending under the browser's action-time confirmation rule.
+The CLI says approved tokens will be saved in the isolated MCP settings.
+No grant is approved, no callback completes and no authenticated query or
+preview is claimed. The existing user settings, earlier Hub profile and
+retained Cursor grant are untouched. The ignored native evidence directory
+preserves the wizard transcript and prepared-consent screenshot.
