@@ -27,7 +27,6 @@
 - [466](./466.md) — Transactions search literal on NFC/NFD and spacing
 - [467](./467.md) — Android search field has no clear button
 - [468](./468.md) — Save to a deleted file answers SERVICE_UNAVAILABLE, not NOT_FOUND (378 server half)
-- [469](./469.md) — Regression (364): Home budget panel shows $0.00 actual for monthly budgets
 - [470](./470.md) — Pull to refresh skips Spending's to-today read (337 follow-up)
 - [471](./471.md) — Upcoming entries can fill all of Recent Transactions
 - [472](./472.md) — 388 not fixed natively: detail lacks new metadata after save

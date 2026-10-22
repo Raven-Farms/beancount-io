@@ -615,20 +615,26 @@ export function currentPeriodRange(
 }
 
 /**
- * The interval row in progress on `today`: the latest one that has begun. The
- * ledger returns a row for every interval in the window, empty future ones
- * included, so a window running to the end of the month ends on next week's
- * (or tomorrow's) row, which holds nothing and read as "$0 spent" for a weekly
- * or daily budget (w21/364). Null when no interval has begun.
+ * The interval row in progress on `today`: the first one that has not ended. The
+ * ledger dates each interval's row at its period's last day (`range.endInclusive`
+ * in interval-series.ts), so the row for October is dated 2026-10-31 and the
+ * first one on or after today is the period in progress. It returns a row for
+ * every interval in the window, empty future ones included, so a window running
+ * to the end of the month also holds next week's (or tomorrow's) row, which holds
+ * nothing and read as "$0 spent" for a weekly or daily budget (w21/364). The
+ * first version took the latest row dated on or before today, which assumed rows
+ * dated at the period's start and read last month's row for every monthly budget
+ * (w21/469). Null when every row has ended.
  */
 export function currentIntervalItem<T extends { date: string }>(
   items: readonly T[],
   today: string,
 ): T | null {
+  const day = today.slice(0, 10);
   let current: T | null = null;
   for (const item of items) {
-    if (item.date.slice(0, 10) <= today.slice(0, 10)) {
-      if (current === null || item.date >= current.date) current = item;
+    if (item.date.slice(0, 10) >= day) {
+      if (current === null || item.date < current.date) current = item;
     }
   }
   return current;
