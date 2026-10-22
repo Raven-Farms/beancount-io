@@ -52,6 +52,7 @@ function mount() {
     "@/common/vars/server-url": { getServerUrl: () => "https://books.example" },
     "./open-app-link": {
       isOAuthCallbackUrl: () => false,
+      afterNavigatorReady: async () => undefined,
       openAppLinkTarget: async ({
         target,
         isCurrentSession,
@@ -73,7 +74,16 @@ function mount() {
     "./pending-app-link": {
       routeIncomingAppLink: () => true,
       takePendingAppLink: () => null,
+      clearPendingAppLink: () => undefined,
     },
+    "expo-router": { router: { replace: () => undefined } },
+    "@/common/guest/guest-state": {
+      clearGuestVisit: () => undefined,
+      startGuestVisit: () => undefined,
+      updateGuestVisit: () => undefined,
+    },
+    "@/screens/examples/example-routes": { exampleRoutes: {} },
+    "./guest-link-visit": { guestLinkVisit: () => null },
     "./resolve-app-link": {
       resolveAppLink: (url: string): Target => ({
         ledgerFullName: url,

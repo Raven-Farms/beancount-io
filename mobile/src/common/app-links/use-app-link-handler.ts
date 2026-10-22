@@ -1,11 +1,27 @@
 import { useEffect, useRef } from "react";
 import { Linking as RnLinking } from "react-native";
+import { router } from "expo-router";
 import * as ExpoLinking from "expo-linking";
 import { useApolloClient, useReactiveVar } from "@apollo/client";
 import { sessionVar } from "@/common/vars";
 import { getServerUrl } from "@/common/vars/server-url";
-import { isOAuthCallbackUrl, openAppLinkTarget } from "./open-app-link";
-import { routeIncomingAppLink, takePendingAppLink } from "./pending-app-link";
+import {
+  clearGuestVisit,
+  startGuestVisit,
+  updateGuestVisit,
+} from "@/common/guest/guest-state";
+import { exampleRoutes } from "@/screens/examples/example-routes";
+import { guestLinkVisit } from "./guest-link-visit";
+import {
+  afterNavigatorReady,
+  isOAuthCallbackUrl,
+  openAppLinkTarget,
+} from "./open-app-link";
+import {
+  clearPendingAppLink,
+  routeIncomingAppLink,
+  takePendingAppLink,
+} from "./pending-app-link";
 import { resolveAppLink, type AppLinkTarget } from "./resolve-app-link";
 import { canonicalizeIncomingAppLinkUrl } from "./rewrite-system-path";
 
@@ -84,7 +100,23 @@ export function useAppLinkHandler(): void {
 
       if (routeIncomingAppLink(target, candidate, !!sessionRef.current)) {
         await open(target, candidate);
+        return;
       }
+      // Signed out, a link to a public example opens it as a guest instead of
+      // waiting behind the sign-in screen (w21/345).
+      const serverUrl = getServerUrl();
+      const guest = guestLinkVisit(target, serverUrl);
+      if (!guest) return;
+      clearPendingAppLink();
+      startGuestVisit(serverUrl);
+      updateGuestVisit(guest);
+      await afterNavigatorReady();
+      if (cancelled || sessionRef.current) {
+        // Signed in while waiting: the visit is stale.
+        clearGuestVisit();
+        return;
+      }
+      router.replace(exampleRoutes[guest.view]);
     };
 
     void handleUrl(ExpoLinking.getLinkingURL());

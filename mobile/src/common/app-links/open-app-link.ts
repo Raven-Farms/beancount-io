@@ -19,7 +19,7 @@ export type OpenAppLinkResult =
  * cold-start mount. An immediate replace from a Universal Link races the
  * Stack/Tabs initialRoute and loses — landing on Home instead of Reports.
  */
-function afterNavigatorReady(): Promise<void> {
+export function afterNavigatorReady(): Promise<void> {
   return new Promise((resolve) => {
     InteractionManager.runAfterInteractions(() => {
       // NativeTabs needs a beat after cold start before replace sticks.
