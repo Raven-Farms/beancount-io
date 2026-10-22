@@ -4,6 +4,10 @@
 
 ## Inbox
 
+- [982 — Let Receipt Record accept exact decimals](./982.md) — minor residual of W1/028; both-width native12.345KWD corrections are blocked by fixed-cent step before transport; exact12.34 controls pass, no hosted writes.
+
+- [981 — Escape receipt text in the Beancount preview](./981.md) — minor; modeled parse/review at both widths,2026-10-22; actual Beancount parser rejects quoted merchant preview and changes raw backslashes; exact structured inputs preblocked, plain controls pass.
+
 - [980 — Calculate Budget’s rolling range on selection](./980.md) — minor; real public-ledger reads with an owned Date fixture,2026-10-22; a tab opened the previous day sends yesterday’s range and prorated target at both widths; fresh-day/reload controls pass, no writes.
 
 - [979 — Keep an Entry Context draft through a cache refresh](./979.md) — minor; w4/m49 simplify altitude review, 2026-10-22; a cache refetch swaps a dirty entry editor for its loading view, so a write landing after the reader left can drop a newer draft; code-read, not yet reproduced.
