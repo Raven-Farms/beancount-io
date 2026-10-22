@@ -932,6 +932,7 @@ function LedgerFileEditorSession({
               editorTheme={theme.editor}
               beancount={beancount}
               keyboardInset={editorKeyboardInset}
+              fontScale={fontScale}
               insertSpec={insertSpec}
               jumpToLine={jumpToLine}
               // WKWebView adds its own form-navigation bar (∧ ∨ ✓) under the

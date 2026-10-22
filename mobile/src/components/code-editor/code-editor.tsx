@@ -39,6 +39,7 @@ import type { EditorTheme } from "@/types/theme-props";
 import { isSameEditorTheme } from "./editor-theme";
 import { detectIndentUnit, INSERT_INDENT, wrapSelection } from "./indent-unit";
 import { jumpScrollTop } from "./jump-scroll";
+import { editorFontSize } from "./editor-font";
 import {
   beancountIndent,
   copyBeancountState,
@@ -78,6 +79,8 @@ export type CodeEditorProps = {
   readOnly?: boolean;
   /** Bottom inset (px) so CM6 scrolls above the keyboard accessory and keyboard */
   keyboardInset: number;
+  /** The platform's text scale (`useWindowDimensions().fontScale`). */
+  fontScale: number;
   insertSpec: InsertSpec | null;
   jumpToLine: number | null;
 };
@@ -105,7 +108,7 @@ const beancountLanguage: Extension = [
 
 // ─── Theme extensions ─────────────────────────────────────────────────────────
 
-function buildThemeExtensions(c: EditorTheme): Extension[] {
+function buildThemeExtensions(c: EditorTheme, fontSize: number): Extension[] {
   const editorThemeExt = EditorView.theme(
     {
       "&": {
@@ -116,7 +119,7 @@ function buildThemeExtensions(c: EditorTheme): Extension[] {
       ".cm-content": {
         caretColor: c.cursor,
         fontFamily: "Menlo, Monaco, 'Courier New', monospace",
-        fontSize: "14px",
+        fontSize: `${fontSize}px`,
         lineHeight: "1.6",
         padding: "4px 8px",
       },
@@ -124,6 +127,7 @@ function buildThemeExtensions(c: EditorTheme): Extension[] {
       ".cm-selectionBackground, ::selection": { backgroundColor: c.selection },
       ".cm-activeLine": { backgroundColor: c.lineHighlight },
       ".cm-gutters": {
+        fontSize: `${fontSize}px`,
         backgroundColor: c.gutterBackground,
         color: c.gutterForeground,
         borderRight: `1px solid ${c.gutterBorder}`,
@@ -168,6 +172,7 @@ function buildExtensions(
   accessCompartment: Compartment,
   beancount: boolean,
   languageCompartment: Compartment,
+  fontSize: number,
 ): Extension[] {
   return [
     accessCompartment.of([
@@ -187,7 +192,7 @@ function buildExtensions(
     // file, and only Beancount files add the language mode.
     EditorView.lineWrapping,
     languageCompartment.of(beancount ? beancountLanguage : []),
-    themeCompartment.of(buildThemeExtensions(editorTheme)),
+    themeCompartment.of(buildThemeExtensions(editorTheme, fontSize)),
     // Disable autocorrect / autocapitalize on the contenteditable
     EditorView.contentAttributes.of({
       autocorrect: "off",
@@ -276,6 +281,7 @@ export default function CodeEditor({
   beancount,
   readOnly = false,
   keyboardInset,
+  fontScale,
   insertSpec,
   jumpToLine,
 }: CodeEditorProps) {
@@ -295,6 +301,8 @@ export default function CodeEditor({
   const languageCompartmentRef = useRef(new Compartment());
   const appliedAccessRef = useRef(readOnly);
   const appliedThemeRef = useRef(editorTheme);
+  const fontSize = editorFontSize(fontScale);
+  const appliedFontSizeRef = useRef(fontSize);
   const appliedLanguageRef = useRef(beancount);
   const prevInsertSeq = useRef<number | null>(null);
   // Tracks the most-recent jump target so the value effect can fire it
@@ -375,6 +383,7 @@ export default function CodeEditor({
         accessCompartmentRef.current,
         beancount,
         languageCompartmentRef.current,
+        appliedFontSizeRef.current,
       ),
     });
 
@@ -413,6 +422,7 @@ export default function CodeEditor({
             accessCompartmentRef.current,
             appliedLanguageRef.current,
             languageCompartmentRef.current,
+            appliedFontSizeRef.current,
           ),
         }),
       );
@@ -441,16 +451,22 @@ export default function CodeEditor({
   // changed, and reconfiguring on reference change alone would leak style
   // modules and re-highlight the document on every keyboard/dirty-flag tick.
   useEffect(() => {
-    if (isSameEditorTheme(appliedThemeRef.current, editorTheme)) return;
+    if (
+      isSameEditorTheme(appliedThemeRef.current, editorTheme) &&
+      appliedFontSizeRef.current === fontSize
+    ) {
+      return;
+    }
     appliedThemeRef.current = editorTheme;
+    appliedFontSizeRef.current = fontSize;
     const view = viewRef.current;
     if (!view) return;
     view.dispatch({
       effects: themeCompartmentRef.current.reconfigure(
-        buildThemeExtensions(editorTheme),
+        buildThemeExtensions(editorTheme, fontSize),
       ),
     });
-  }, [editorTheme]);
+  }, [editorTheme, fontSize]);
 
   useEffect(() => {
     appliedAccessRef.current = readOnly;

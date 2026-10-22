@@ -1,5 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Alert, Pressable, StyleSheet, Text, View } from "react-native";
+import {
+  Alert,
+  Pressable,
+  StyleSheet,
+  Text,
+  useWindowDimensions,
+  View,
+} from "react-native";
 import {
   SafeAreaView,
   useSafeAreaInsets,
@@ -108,6 +115,7 @@ const getStyles = (theme: ColorTheme) =>
   });
 
 export const EditTransactionScreen = (): JSX.Element => {
+  const { fontScale } = useWindowDimensions();
   const router = useRouter();
   const { t } = useTranslations();
   const styles = useThemeStyle(getStyles);
@@ -521,6 +529,7 @@ export const EditTransactionScreen = (): JSX.Element => {
               editorTheme={theme.editor}
               beancount
               keyboardInset={editorKeyboardInset}
+              fontScale={fontScale}
               insertSpec={insertSpec}
               jumpToLine={null}
               // WKWebView adds its own form-navigation bar (∧ ∨ ✓) under the
