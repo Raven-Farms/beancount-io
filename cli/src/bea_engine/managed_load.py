@@ -1718,6 +1718,21 @@ def export_portable(
             f"Cannot export: managed price source {names} is unavailable. "
             "Retry, or pass --allow-errors to export with its marker only."
         )
+    # A plugin that fails to import cannot be copied, and its active line would
+    # run whatever module an earlier snapshot left in the destination, changing
+    # the balances the copy reports (w5/929).
+    unimportable = [
+        match.group(1)
+        for error in loaded.errors
+        if (match := re.match(r'Error importing "([^"]+)"', str(getattr(error, "message", "")))) is not None
+    ]
+    if unimportable:
+        names = ", ".join(f'"{name}"' for name in dict.fromkeys(unimportable))
+        raise UsageError(
+            f"Cannot export: plugin {names} cannot be imported, so the snapshot's copy could not run it and an "
+            "older snapshot's module could stand in for it. Restore the module or remove its plugin line. "
+            "Nothing was written."
+        )
     target = expand_path(output or entry.parent / f"{entry.stem}-export", "--output")
     snapshot = LedgerSnapshot.capture(entry)
     # A refused URL include is no source, so the check above never saw it, and
@@ -1868,6 +1883,15 @@ def export_portable(
                 f"include pattern {claimed_by} matches that path. Choose a directory outside the ledger's includes. "
                 "Nothing was written."
             )
+    # An include that matches no file would resolve, in an existing output tree,
+    # to whatever an earlier snapshot left there: the deleted source's
+    # transactions came back and the copy passed `check` (w5/929).
+    missing = _unresolved_includes(snapshot)
+    if missing:
+        raise UsageError(
+            f"Cannot export: {'; '.join(missing)} — no such file, so the snapshot would load whatever an earlier "
+            "export left at that path instead. Restore the file or remove the include. Nothing was written."
+        )
     # And an export writes inside the directory it was given, or nowhere.
     for dest in planned:
         if not dest.resolve().is_relative_to(resolved_target):
@@ -2099,6 +2123,21 @@ def _export_attachments(
             + ". Keep documents beside the ledger and name them by relative path. Nothing was written."
         )
     return attachments
+
+
+def _unresolved_includes(snapshot: LedgerSnapshot) -> list[str]:
+    """Each local include in the captured graph that matches no file, as `file:line include "target"`."""
+    from bea_engine.ledger.text import iter_includes
+
+    empty = {pattern for pattern, matches in snapshot.patterns.items() if not matches}
+    if not empty:
+        return []
+    found = []
+    for path, content in snapshot.contents.items():
+        for span in iter_includes(content):
+            if "://" not in span.target and str(path.parent / span.target) in empty:
+                found.append(f'{path}:{span.line} include "{span.target}"')
+    return found
 
 
 def _export_plugin_modules(loaded: LoadedLedger, snapshot: LedgerSnapshot, target: Path) -> dict[Path, Path]:

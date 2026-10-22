@@ -31,6 +31,9 @@ def _books(tmp_path: Path, count: int, extra: str = "") -> Path:
 
 def test_wildcard_matching_grows_linearly(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     ledger = _books(tmp_path, 200, 'include "*/*.bean"\n')
+    # The wildcard must match a file, or the export refuses it as unresolved (w5/929).
+    (ledger.parent / "sub").mkdir()
+    (ledger.parent / "sub" / "x.bean").write_text('2026-01-03 note Assets:Checking "sub"\n')
     calls: list[tuple[Path, str]] = []
     original = write._included_new_file
 
@@ -41,10 +44,10 @@ def test_wildcard_matching_grows_linearly(tmp_path: Path, monkeypatch: pytest.Mo
     monkeypatch.setattr(write, "_included_new_file", counted)
     exported = managed_load.export_portable(ledger, tmp_path / "outside", offline=True, root=tmp_path / "cache")
 
-    assert len(exported.files) == 201
-    # One wildcard pattern, matched once against each of the 201 planned files
+    assert len(exported.files) == 202
+    # One wildcard pattern, matched once against each of the 202 planned files
     # and the one directory the export creates (w5/814).
-    assert len(calls) <= 202
+    assert len(calls) <= 204
     assert {pattern for _, pattern in calls} == {str(ledger.parent / "*/*.bean")}
 
 
