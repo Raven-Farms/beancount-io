@@ -710,3 +710,32 @@ describe("a new posting's amount field", () => {
     expect(hasUnparsedAmount(typed)).toBe(false);
   });
 });
+
+// w21/230: a Persian or Arabic keyboard types its own digits and decimal
+// separator, and every such amount was refused.
+test("parseExactAmount reads Persian, Arabic-Indic and fullwidth digits", () => {
+  // Extended Arabic-Indic (Persian): ۱۲٫۵۰
+  expect(parseExactAmount("۱۲٫۵۰")).toBe("12.50");
+  // Arabic-Indic: ١٢٫٥٠
+  expect(parseExactAmount("١٢٫٥٠")).toBe("12.50");
+  // Persian digits with an ASCII point, and ASCII digits with the Arabic one.
+  expect(parseExactAmount("۱۲.۵۰")).toBe("12.50");
+  expect(parseExactAmount("12٫50")).toBe("12.50");
+  // Fullwidth: １２.５
+  expect(parseExactAmount("１２.５")).toBe("12.5");
+  expect(parseExactAmount("１２．５")).toBe("12.5");
+});
+
+test("parseExactAmount keeps the sign and thousands grouping of such input", () => {
+  expect(parseExactAmount("-۱۲٫۵۰")).toBe("-12.50");
+  // ۱٬۲۳۴٫۵۰ with the Arabic thousands separator.
+  expect(parseExactAmount("۱٬۲۳۴٫۵۰")).toBe("1234.50");
+  // Devanagari ९९
+  expect(parseExactAmount("९९")).toBe("99");
+});
+
+test("parseExactAmount still refuses what is not a number in any script", () => {
+  expect(parseExactAmount("۱۲abc")).toBe(null);
+  expect(parseExactAmount("۱٫")).toBe(null);
+  expect(parseExactAmount("١٢٫٥٫٠")).toBe(null);
+});
