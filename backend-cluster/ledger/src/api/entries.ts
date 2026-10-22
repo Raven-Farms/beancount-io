@@ -24,6 +24,42 @@ import {
   assertEntryTokens,
   isSingleDirective,
 } from "@/features/ledger/utils/entry-tokens";
+import type { ReplacedSourceRange } from "@/foundation/rustledger";
+import { logger } from "@/shared/logger";
+
+const log = logger.child({ module: "entries-api" });
+
+const newlines = (text: string) => text.split("\n").length - 1;
+
+/**
+ * The hashes the committed entries now carry, in request order, so a caller
+ * can read, edit or delete what it just wrote (w23/060). Best-effort: the
+ * commit has landed, so a failed parse costs the hashes, not the write — and
+ * a partial list would not say which hash is which entry's.
+ */
+async function writtenEntryHashes(
+  data: ReturnType<typeof servicesForRequest>["data"],
+  ledgerId: string,
+  overlays: { path: string; content: string }[],
+  ranges: ReplacedSourceRange[],
+): Promise<string[]> {
+  try {
+    const ids = await data.projectedEntryIds({
+      ledgerId,
+      userId: undefined,
+      overlays,
+      ranges,
+      enforceInputLimits: false,
+    });
+    return ids.every((id): id is string => id !== null) ? ids : [];
+  } catch (error) {
+    log.warn("could not resolve the hashes of committed entries", {
+      ledgerId,
+      error: error instanceof Error ? error.message : String(error),
+    });
+    return [];
+  }
+}
 
 /**
  * Wire shape (Python `EntryAddBulkEntriesRequest`): a discriminated union of
@@ -104,7 +140,8 @@ function assertDecimalAmounts(rows: BulkEntryWire[]): void {
 }
 
 export function setEntriesHandler(router: Router): void {
-  // operationId: addBulkEntries — POST /entries/{o}/{r}/bulk → success(null)
+  // operationId: addBulkEntries — POST /entries/{o}/{r}/bulk →
+  // success({entry_hashes})
   router.post(
     "/entries/:owner/:repo_name/bulk",
     authMiddleware,
@@ -196,7 +233,7 @@ export function setEntriesHandler(router: Router): void {
       }
 
       // Build each entry's text (Python: build_directive → 400 "entry {idx}: {e}")
-      const byFile = new Map<string, string[]>();
+      const byFile = new Map<string, { index: number; text: string }[]>();
       rows.forEach((row, idx) => {
         let text: string;
         try {
@@ -215,19 +252,29 @@ export function setEntriesHandler(router: Router): void {
         const target = row.filename || defaultFilename;
         assertSafeRepoPath(target, `entries[${idx}].filename`);
         const list = byFile.get(target) ?? [];
-        list.push(text);
+        list.push({ index: idx, text });
         byFile.set(target, list);
       });
 
       const updates: Array<{ path: string; content: string; sha: string }> = [];
-      for (const [path, texts] of byFile) {
+      // Where each row's text lands, to find its hash once committed.
+      const ranges: ReplacedSourceRange[] = [];
+      for (const [path, written] of byFile) {
         const cached = currentContents.get(path);
         if (!cached) {
           throw new NotFoundDetailError(`File ${path} not found`);
         }
         // Python: current + "\n" + format_entries(directives); the engine's
         // entryInputToText is the format_entries block for one entry.
-        const newContents = cached.current + "\n" + texts.join("");
+        let newContents = cached.current + "\n";
+        for (const { index, text } of written) {
+          ranges[index] = {
+            file: path,
+            startLine: newlines(newContents),
+            lineCount: newlines(text.replace(/\n$/, "")) + 1,
+          };
+          newContents += text;
+        }
         updates.push({
           path,
           content: Buffer.from(newContents, "utf8").toString("base64"),
@@ -266,7 +313,7 @@ export function setEntriesHandler(router: Router): void {
         // receipt — asks whether the entries would be accepted, so a refusal
         // leaves nothing behind (w23/058).
         if (dryRun) {
-          ctx.body = successResponse(null);
+          ctx.body = successResponse({ entry_hashes: [] });
           return;
         }
         await client.repos.repoChangeFiles(owner, repoName, {
@@ -278,8 +325,17 @@ export function setEntriesHandler(router: Router): void {
           })),
           message: addEntriesCommitMessage(rows.length),
         });
+        ctx.body = successResponse({
+          entry_hashes: await writtenEntryHashes(
+            servicesForRequest(ctx).data,
+            ledgerIdOf(ctx),
+            updates.map(({ path, content }) => ({ path, content })),
+            ranges,
+          ),
+        });
+        return;
       }
-      ctx.body = successResponse(null);
+      ctx.body = successResponse({ entry_hashes: [] });
     },
   );
 }

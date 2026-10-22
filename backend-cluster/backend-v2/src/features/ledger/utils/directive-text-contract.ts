@@ -48,6 +48,11 @@ export interface AppendDirectiveTextResult {
   readonly count: number;
   /** Where each directive landed: file and 1-based line. */
   readonly wrote: readonly { path: string; line: number }[];
+  /**
+   * The hash each committed directive now carries, in text order; empty for
+   * a dry run, or when they could not be resolved after the commit.
+   */
+  readonly entryHashes: readonly string[];
   /** Unified diff per touched file. Populated on dry runs only. */
   readonly diff: readonly { path: string; diff: string }[];
   readonly errorsBefore: number;

@@ -247,6 +247,20 @@ describe("insertDirectives", () => {
     expect(result.inserted).toEqual([{ line: 1 }]);
   });
 
+  it("reports where each directive ends up when a later one lands above it", () => {
+    // w23/060: the lines locate the entries' hashes, so an earlier report
+    // must move down when a later directive is threaded in before it.
+    const directives = parseDirectiveText(
+      [txn("2026-04-01", "Apr"), "", txn("2026-02-01", "Feb")].join("\n"),
+    );
+    const result = insertDirectives(existing, directives);
+    const lines = result.content.split("\n");
+    expect(result.inserted.map(({ line }) => lines[line - 1])).toEqual([
+      '2026-04-01 * "Apr" "note"',
+      '2026-02-01 * "Feb" "note"',
+    ]);
+  });
+
   it("inserts several directives, each in its own place", () => {
     const directives = parseDirectiveText(
       [txn("2026-02-01", "Feb"), "", txn("2026-04-01", "Apr")].join("\n"),

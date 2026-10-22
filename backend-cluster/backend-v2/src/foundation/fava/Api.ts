@@ -3566,6 +3566,70 @@ export interface LedgerCheckFile {
   content: string;
 }
 
+/** EntryAddBulkEntriesResult */
+export interface EntryAddBulkEntriesResult {
+  /**
+   * Entry Hashes
+   * The entry hash each committed entry now carries, in request order; empty for a dry run, or when they could not be resolved after the commit.
+   */
+  entry_hashes: string[];
+}
+
+/** SuccessResponse[EntryAddBulkEntriesResult] */
+export interface SuccessResponseEntryAddBulkEntriesResult {
+  /**
+   * Success
+   * @default true
+   */
+  success?: boolean;
+  data: EntryAddBulkEntriesResult;
+}
+
+/** SourceLineLocation */
+export interface SourceLineLocation {
+  /** Path */
+  path: string;
+  /**
+   * Line
+   * 1-based line the directive starts on.
+   * @min 1
+   */
+  line: number;
+}
+
+/** LedgerProjectedEntryIdsOptions */
+export interface LedgerProjectedEntryIdsOptions {
+  /**
+   * Files
+   * Projected file contents: base64 UTF-8 text, or null to project a deletion.
+   */
+  files: ProjectedFileOverlay[];
+  /**
+   * Locations
+   * @maxItems 200
+   */
+  locations: SourceLineLocation[];
+}
+
+/** ProjectedEntryIds */
+export interface ProjectedEntryIds {
+  /**
+   * Entry Hashes
+   * One per location, in order; null where no directive starts on that line.
+   */
+  entry_hashes: (string | null)[];
+}
+
+/** SuccessResponse[ProjectedEntryIds] */
+export interface SuccessResponseProjectedEntryIds {
+  /**
+   * Success
+   * @default true
+   */
+  success?: boolean;
+  data: ProjectedEntryIds;
+}
+
 export type QueryParamsType = Record<string | number, any>;
 export type ResponseFormat = keyof Omit<Body, "body" | "bodyUsed">;
 
@@ -4997,6 +5061,29 @@ export class Api<
       }),
 
     /**
+     * @description The entry ID of the directive starting on each 1-based line of the projected ledger (base64 text; null deletes), or null where none does. How a write that commits these files reports the hashes it created.
+     *
+     * @tags reports
+     * @name GetProjectedEntryIds
+     * @summary Resolve projected entry IDs
+     * @request POST:/reports/{owner}/{repo_name}/entry-ids
+     */
+    getProjectedEntryIds: (
+      owner: string,
+      repoName: string,
+      data: LedgerProjectedEntryIdsOptions,
+      params: RequestParams = {},
+    ) =>
+      this.request<SuccessResponseProjectedEntryIds, ErrorResponse>({
+        path: `/reports/${encodeURIComponent(owner)}/${encodeURIComponent(repoName)}/entry-ids`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
      * @description Get the account hierarchy of a specific ledger.
      *
      * @tags reports
@@ -5694,7 +5781,7 @@ export class Api<
       data: EntryAddBulkEntriesRequest,
       params: RequestParams = {},
     ) =>
-      this.request<SuccessResponseNoneType, ErrorResponse>({
+      this.request<SuccessResponseEntryAddBulkEntriesResult, ErrorResponse>({
         path: `/entries/${encodeURIComponent(owner)}/${encodeURIComponent(repoName)}/bulk`,
         method: "POST",
         body: data,

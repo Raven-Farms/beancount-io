@@ -15,6 +15,10 @@ import {
   parseFavaOptions,
   resolveConversion,
 } from "@/foundation/rustledger";
+import { BadUserInputError } from "@/shared/errors";
+
+/** An append writes at most 50 directives; this leaves room, not a ledger. */
+const MAX_LOCATIONS = 200;
 
 /** The shared `time`/`filter`/`account` selector triple. */
 function selectors(ctx: Parameters<typeof ledgerIdOf>[0]) {
@@ -85,6 +89,50 @@ export function setReportsHandler(router: Router): void {
         overlays: body.files ?? [],
       }),
     );
+  });
+
+  // operationId: getProjectedEntryIds — POST /reports/{o}/{r}/entry-ids
+  // The entry ID of the directive starting on each `{path, line}` (1-based)
+  // of the projected ledger, `null` where none does: how a write that
+  // commits these files tells its caller the hashes it created (w23/060).
+  router.post(`${base}/entry-ids`, authMiddleware, async (ctx) => {
+    const { data } = servicesForRequest(ctx);
+    const body = (ctx.request.body ?? {}) as {
+      files?: { path: string; content: string | null }[];
+      locations?: { path: string; line: number }[];
+    };
+    const locations = body.locations ?? [];
+    if (!Array.isArray(locations) || locations.length > MAX_LOCATIONS) {
+      throw new BadUserInputError(
+        `at most ${MAX_LOCATIONS} locations may be resolved at once`,
+      );
+    }
+    const ranges = locations.map((location, index) => {
+      if (
+        location === null ||
+        typeof location !== "object" ||
+        typeof location.path !== "string" ||
+        !Number.isInteger(location.line) ||
+        location.line < 1
+      ) {
+        throw new BadUserInputError(
+          `locations[${index}] must name a path and a 1-based line`,
+        );
+      }
+      return {
+        file: location.path,
+        startLine: location.line - 1,
+        lineCount: 1,
+      };
+    });
+    ctx.body = successResponse({
+      entry_hashes: await data.projectedEntryIds({
+        ledgerId: ledgerIdOf(ctx),
+        userId: undefined,
+        overlays: body.files ?? [],
+        ranges,
+      }),
+    });
   });
 
   // operationId: checkLedgerFiles — POST /reports/check-files

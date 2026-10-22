@@ -132,6 +132,11 @@ export type AddBulkEntriesResult = {
   success: boolean;
   message?: string;
   files?: string[];
+  /**
+   * The hash each committed entry now carries, in request order; empty when
+   * they could not be resolved after the commit (w23/060).
+   */
+  entryHashes?: string[];
 };
 
 type BulkEntries = EntryAddBulkEntriesRequest["entries"];
@@ -358,7 +363,7 @@ class FavaLedgerEntryWriter implements ILedgerEntryWriter {
       );
     }
 
-    await this.addEntries(
+    const entryHashes = await this.addEntries(
       favaApiClient,
       ledgerOwner,
       ledgerName,
@@ -373,6 +378,7 @@ class FavaLedgerEntryWriter implements ILedgerEntryWriter {
       success: true,
       message: `Added ${inputs.length} ${noun} successfully`,
       files: distinctFiles,
+      entryHashes,
     };
   }
 
@@ -566,8 +572,8 @@ class FavaLedgerEntryWriter implements ILedgerEntryWriter {
     platform: "web" | "mobile" = "web",
     allowInvalid = false,
     dryRun = false,
-  ): Promise<void> {
-    await unwrapFavaResponse(
+  ): Promise<string[]> {
+    const written = await unwrapFavaResponse(
       favaApiClient.entries.addBulkEntries(
         ledgerOwner,
         ledgerName,
@@ -577,6 +583,8 @@ class FavaLedgerEntryWriter implements ILedgerEntryWriter {
       "add entries",
       (cause) => operationNotAllowedFromCause("add entries", cause),
     );
+    // A ledger service older than w23/060 answers `null`.
+    return (written as typeof written | null)?.entry_hashes ?? [];
   }
 }
 

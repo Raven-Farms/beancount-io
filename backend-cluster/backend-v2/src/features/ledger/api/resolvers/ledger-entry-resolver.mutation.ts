@@ -49,6 +49,10 @@ registerEnumType(LedgerEntryType, {
   description: "Discriminator selecting which entry payload to add",
 });
 
+/** What a write created, for a follow-up read, edit or delete (w23/060). */
+const ENTRY_HASHES_DESCRIPTION =
+  "The hash each committed entry now carries, in request order, for getLedgerEntryContext and the source-slice update and delete; empty on a dry run, or when it could not be resolved after the commit";
+
 @ObjectType()
 class AddLedgerEntryResponse {
   @Field(() => Boolean)
@@ -56,6 +60,9 @@ class AddLedgerEntryResponse {
 
   @Field(() => String, { nullable: true })
   message?: string;
+
+  @Field(() => [String], { description: ENTRY_HASHES_DESCRIPTION })
+  entryHashes: string[];
 }
 
 @InputType()
@@ -343,6 +350,8 @@ class AppendDirectiveTextResponse {
   @Field(() => Number, { description: "Directives parsed out of the text" })
   count!: number;
   @Field(() => [AppendedDirective]) wrote!: AppendedDirective[];
+  @Field(() => [String], { description: ENTRY_HASHES_DESCRIPTION })
+  entryHashes!: string[];
   @Field(() => [DirectiveTextDiff], {
     description: "Unified diff per touched file; populated on dry runs only",
   })
@@ -377,7 +386,7 @@ export class LedgerEntryMutationResolver {
     allowInvalid?: boolean,
   ): Promise<AddLedgerEntryResponse> {
     const { ledgerOwner, ledgerName } = parseLedgerId(ledgerId);
-    return this.ledgerEntry.addBulkEntries(
+    const result = await this.ledgerEntry.addBulkEntries(
       ctx.getCurrentIdentity(),
       ledgerOwner,
       ledgerName,
@@ -385,6 +394,7 @@ export class LedgerEntryMutationResolver {
       ctx.platform,
       allowInvalid ?? false,
     );
+    return { ...result, entryHashes: result.entryHashes ?? [] };
   }
 
   @Authenticated()
@@ -434,6 +444,7 @@ export class LedgerEntryMutationResolver {
     return {
       ...result,
       wrote: [...result.wrote],
+      entryHashes: [...result.entryHashes],
       diff: [...result.diff],
       newErrors: [...result.newErrors],
       appendedUnsorted: [...result.appendedUnsorted],

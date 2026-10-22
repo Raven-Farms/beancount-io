@@ -22,6 +22,10 @@ let baselineErrors: {
 const committed: { files: { path: string; content: string }[] }[] = [];
 // Paths the handler read; a refused amount must not read any file.
 const reads: string[] = [];
+// The ranges each committed write asked to locate (w23/060), and whether the
+// scripted locator fails or finds nothing.
+const located: { file: string; startLine: number; lineCount: number }[][] = [];
+let locator: "lines" | "throws" | "misses" = "lines";
 
 jest.mock("@/server/auth", () => ({
   authMiddleware: async (_ctx: unknown, next: () => Promise<void>) => next(),
@@ -83,6 +87,28 @@ jest.mock("../service-context", () => ({
       }) => {
         const main = overlays.find((overlay) => overlay.path === "main.bean");
         return errorsOf(main ? fromB64(main.content) : MAIN);
+      },
+      // A stand-in for the engine's entry IDs: the dated line a range starts
+      // on, so a test sees which line each entry was located at.
+      projectedEntryIds: async ({
+        overlays,
+        ranges,
+      }: {
+        overlays: { path: string; content: string }[];
+        ranges: { file: string; startLine: number; lineCount: number }[];
+      }) => {
+        located.push(ranges);
+        if (locator === "throws") throw new Error("parse failed");
+        return ranges.map(({ file, startLine, lineCount }, index) => {
+          if (locator === "misses" && index === 1) return null;
+          const overlay = overlays.find((candidate) => candidate.path === file);
+          const lines = fromB64(overlay?.content ?? "").split("\n");
+          return (
+            lines
+              .slice(startLine, startLine + lineCount)
+              .find((line) => /^\d{4}-/.test(line)) ?? null
+          );
+        });
       },
     },
   }),
@@ -411,5 +437,97 @@ describe("bulk entries dry run", () => {
   it("still commits without dryRun", async () => {
     expect((await post({ entries: [txn("2.00")] })).status).toBe(200);
     expect(committed).toHaveLength(1);
+  });
+});
+
+// w23/060: the write returned no hashes, so an agent could not verify or undo
+// the entry it had just added without guessing through a listing.
+describe("bulk entries return the hashes they wrote", () => {
+  let server: http.Server;
+  let url: string;
+
+  beforeAll(async () => {
+    const app = new Koa();
+    const router = new Router();
+    setEntriesHandler(router);
+    app.use(restErrorMiddleware());
+    app.use(bodyParser());
+    app.use(router.routes());
+    server = http.createServer(app.callback());
+    url = await listen(server);
+  });
+
+  afterAll(() => new Promise<void>((resolve) => server.close(() => resolve())));
+
+  beforeEach(() => {
+    baselineErrors = [];
+    committed.length = 0;
+    located.length = 0;
+    locator = "lines";
+  });
+
+  const post = async (entries: unknown[]) => {
+    const response = await fetch(`${url}/entries/alice/books/bulk`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ entries }),
+    });
+    expect(response.status).toBe(200);
+    return (
+      (await response.json()) as { data: { entry_hashes: (string | null)[] } }
+    ).data.entry_hashes;
+  };
+  const txn = (date: string, narration: string) => ({
+    type: "transaction",
+    item: {
+      date,
+      flag: "*",
+      narration,
+      postings: [
+        { account: "Assets:Cash", units: { number: "-2.00", currency: "USD" } },
+        {
+          account: "Equity:Opening",
+          units: { number: "2.00", currency: "USD" },
+        },
+      ],
+    },
+  });
+  const entries = [
+    txn("2026-08-30", "first"),
+    {
+      type: "balance",
+      item: {
+        date: "2026-08-31",
+        account: "Assets:Cash",
+        amount: { number: "-2.00", currency: "USD" },
+      },
+    },
+    txn("2026-09-01", "third"),
+  ];
+
+  it("locates every entry on its own lines and answers in request order", async () => {
+    const hashes = await post(entries);
+
+    expect(hashes).toHaveLength(3);
+    expect(hashes[0]).toMatch(/^2026-08-30 \* "first"/);
+    expect(hashes[1]).toMatch(/^2026-08-31 balance Assets:Cash/);
+    expect(hashes[2]).toMatch(/^2026-09-01 \* "third"/);
+    // Each range ends before the next begins, inside the committed text.
+    const [ranges] = located;
+    ranges.slice(1).forEach((range, index) => {
+      const previous = ranges[index];
+      expect(previous.startLine + previous.lineCount).toBeLessThanOrEqual(
+        range.startLine,
+      );
+    });
+    expect(committed).toHaveLength(1);
+  });
+
+  it("keeps the commit and answers no hashes when they cannot be resolved", async () => {
+    locator = "throws";
+    expect(await post(entries)).toEqual([]);
+    locator = "misses";
+    expect(await post(entries)).toEqual([]);
+    expect(committed).toHaveLength(2);
   });
 });

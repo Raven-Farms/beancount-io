@@ -336,7 +336,7 @@ export function insertDirectives(
     (head, i) => i === 0 || dated[i - 1].date! <= head.date!,
   );
 
-  const inserted: InsertedDirective[] = [];
+  const inserted: { line: number }[] = [];
   const working = [...lines];
   // Applied newest-first would shift the offsets of the ones after it, so
   // each insertion recomputes against the file as it now stands.
@@ -349,7 +349,14 @@ export function insertDirectives(
     // exists, so this is the whole condition.
     const prefix = at > 0 && !isBlank(working[at - 1]) ? [""] : [];
     working.splice(at, 0, ...prefix, ...block);
-    inserted.push({ line: at + prefix.length + 1 });
+    // A directive already placed at or below this one moves down with it;
+    // the reported lines locate the entries' hashes (w23/060).
+    for (const earlier of inserted) {
+      if (earlier.line > at) earlier.line += prefix.length + block.length;
+    }
+    // A later directive's text carries the blank line that separated it.
+    const head = block.findIndex((line) => !isBlank(line));
+    inserted.push({ line: at + prefix.length + Math.max(head, 0) + 1 });
   }
 
   const content = `${working.join("\n").replace(/\n+$/, "")}\n`;

@@ -1,5 +1,5 @@
 import { loadCachedFileMapForRepo } from "@/foundation/clients/load-cached-ledger-file-map";
-import { parseLedgerFiles } from "@/foundation/rustledger";
+import { hashEntry, parseLedgerFiles } from "@/foundation/rustledger";
 import { LedgerDataService } from "@/features/ledger/service/ledger-data-service";
 
 jest.mock("@/foundation/clients/load-cached-ledger-file-map", () => ({
@@ -215,6 +215,58 @@ describe("checkLedgerFiles", () => {
       category: "BAD_USER_INPUT",
       message: expect.stringContaining(message),
     });
+    expect(parseMock).not.toHaveBeenCalled();
+  });
+});
+
+// w23/060: a write locates the entries it committed in the projected ledger.
+describe("projectedEntryIds", () => {
+  const extra =
+    '2026-09-01 * "lunch"\n  Expenses:Food 1.00 USD\n  Assets:Cash -1.00 USD\n';
+  const lunch = {
+    type: "transaction",
+    date: "2026-09-01",
+    flag: "*",
+    narration: "lunch",
+    tags: [],
+    links: [],
+    postings: [],
+  };
+
+  it("parses the projection with source details and resolves each range", async () => {
+    parseMock.mockResolvedValue({
+      errors: [],
+      directives: [lunch],
+      sourceDetails: {
+        [hashEntry(lunch as never)]: { filename: "main.bean", lineno: 4 },
+      },
+    });
+    const ids = await service().projectedEntryIds({
+      ledgerId: "alice/main",
+      userId: "user-1",
+      overlays: [{ path: "main.bean", content: b64(`${MAIN}\n${extra}`) }],
+      ranges: [
+        { file: "main.bean", startLine: 3, lineCount: 3 },
+        { file: "main.bean", startLine: 0, lineCount: 1 },
+      ],
+    });
+    expect(parseMock.mock.calls[0]?.[0]).toEqual({
+      "main.bean": `${MAIN}\n${extra}`,
+    });
+    expect(parseMock.mock.calls[0]?.[2]).toMatchObject({
+      includeSourceDetails: true,
+    });
+    expect(ids).toEqual([hashEntry(lunch as never), null]);
+  });
+
+  it("answers nothing for a projection without its entry point", async () => {
+    const ids = await service().projectedEntryIds({
+      ledgerId: "alice/main",
+      userId: "user-1",
+      overlays: [{ path: "main.bean", content: null }],
+      ranges: [{ file: "main.bean", startLine: 0, lineCount: 1 }],
+    });
+    expect(ids).toEqual([null]);
     expect(parseMock).not.toHaveBeenCalled();
   });
 });

@@ -62,7 +62,7 @@ export interface IDirectiveAppendWorkflow {
 /** Exactly the repository capabilities an append needs, and no others. */
 type RepoDeps = Pick<
   ILedgerRepoService,
-  "getFilesContent" | "checkProjectedFiles"
+  "getFilesContent" | "checkProjectedFiles" | "projectedEntryHashes"
 > &
   ILedgerGeneratedFileWriter;
 
@@ -184,6 +184,10 @@ export class DirectiveAppendWorkflow implements IDirectiveAppendWorkflow {
     const paths = targets.map((target) => target.path);
     const noun = directives.length === 1 ? "directive" : "directives";
     const summary = `${directives.length} ${noun} to ${paths.join(", ")}`;
+    const wrote = targets.flatMap((target) =>
+      target.lines.map((line) => ({ path: target.path, line })),
+    );
+    let entryHashes: string[] = [];
     if (!dryRun) {
       await this.ledgerRepo.changeGeneratedFiles({
         ledgerId,
@@ -201,6 +205,12 @@ export class DirectiveAppendWorkflow implements IDirectiveAppendWorkflow {
         count: directives.length,
         paths,
       });
+      entryHashes = await this.writtenEntryHashes(
+        ledgerId,
+        identity,
+        targets,
+        wrote,
+      );
     }
 
     return {
@@ -208,11 +218,8 @@ export class DirectiveAppendWorkflow implements IDirectiveAppendWorkflow {
       message: dryRun ? `Would add ${summary}` : `Added ${summary}`,
       dryRun,
       count: directives.length,
-      wrote: dryRun
-        ? []
-        : targets.flatMap((target) =>
-            target.lines.map((line) => ({ path: target.path, line })),
-          ),
+      wrote: dryRun ? [] : wrote,
+      entryHashes,
       // A commit's diff is the ledger's history; a preview's diff is the only
       // place the caller can see what it approved — so it is only computed
       // when it will be read. A line-by-line diff of a whole ledger file is
@@ -230,6 +237,37 @@ export class DirectiveAppendWorkflow implements IDirectiveAppendWorkflow {
         .filter((target) => target.appended)
         .map((target) => target.path),
     };
+  }
+
+  /**
+   * The hashes the committed directives now carry, in text order, so the
+   * caller can read, edit or delete what it wrote (w23/060). Best-effort:
+   * the commit has landed, so a failed lookup costs the hashes, not the
+   * write — and a partial list would not say which hash is whose.
+   */
+  private async writtenEntryHashes(
+    ledgerId: string,
+    identity: Identity,
+    targets: { path: string; content: string }[],
+    wrote: { path: string; line: number }[],
+  ): Promise<string[]> {
+    try {
+      const hashes = await this.ledgerRepo.projectedEntryHashes({
+        ledgerId,
+        identity,
+        overlays: targets.map(({ path, content }) => ({ path, content })),
+        locations: wrote,
+      });
+      return hashes.every((hash): hash is string => hash !== null)
+        ? hashes
+        : [];
+    } catch (error) {
+      this.logger.warn("Could not resolve the appended entries' hashes", {
+        ledgerId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return [];
+    }
   }
 
   private async checkProjected(

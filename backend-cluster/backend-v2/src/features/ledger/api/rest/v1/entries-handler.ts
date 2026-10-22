@@ -175,12 +175,19 @@ const directiveTextBodySchema = z
     description: "Beancount directive text to append to the ledger",
   });
 
+/** What a write created, for a follow-up read, edit or delete (w23/060). */
+const entryHashesSchema = z.array(z.string()).openapi({
+  description:
+    "The hash each committed entry now carries, in request order — what getEntryContext, the source-slice update and delete take. Empty on a dry run, or when the hashes could not be resolved after the commit.",
+});
+
 const directiveTextResultSchema = z.strictObject({
   success: z.boolean(),
   message: z.string(),
   dryRun: z.boolean(),
   count: z.number().int(),
   wrote: z.array(z.strictObject({ path: z.string(), line: z.number().int() })),
+  entryHashes: entryHashesSchema,
   diff: z.array(z.strictObject({ path: z.string(), diff: z.string() })),
   errorsBefore: z.number().int(),
   errorsAfter: z.number().int(),
@@ -218,6 +225,7 @@ export const ENTRY_ROUTES = [
         z.strictObject({
           success: z.boolean(),
           message: nullToUndefined(z.string()),
+          entryHashes: entryHashesSchema,
         }),
       ),
     },
@@ -237,8 +245,12 @@ export const ENTRY_ROUTES = [
         body.allowInvalid ?? false,
       );
       // The service also reports which files the batch landed in for MCP's
-      // write outcome; the v1 contract stays `{success, message}`.
-      return { success: result.success, message: result.message };
+      // write outcome; v1 adds only the hashes (w23/060).
+      return {
+        success: result.success,
+        message: result.message,
+        entryHashes: result.entryHashes ?? [],
+      };
     },
   }),
 

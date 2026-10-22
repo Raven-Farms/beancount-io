@@ -3331,6 +3331,68 @@
         }
       }
     },
+    "/reports/{owner}/{repo_name}/entry-ids": {
+      "post": {
+        "tags": [
+          "reports"
+        ],
+        "summary": "Resolve projected entry IDs",
+        "description": "The entry ID of the directive starting on each 1-based line of the projected ledger (base64 text; null deletes), or null where none does. How a write that commits these files reports the hashes it created.",
+        "operationId": "getProjectedEntryIds",
+        "parameters": [
+          {
+            "name": "owner",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Owner"
+            }
+          },
+          {
+            "name": "repo_name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Repo Name"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LedgerProjectedEntryIdsOptions"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SuccessResponse_ProjectedEntryIds_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/reports/{owner}/{repo_name}/hierarchy": {
       "get": {
         "tags": [
@@ -5153,7 +5215,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/SuccessResponse_NoneType_"
+                  "$ref": "#/components/schemas/SuccessResponse_EntryAddBulkEntriesResult_"
                 }
               }
             }
@@ -14934,6 +14996,127 @@
           "content"
         ],
         "title": "LedgerCheckFile"
+      },
+      "EntryAddBulkEntriesResult": {
+        "properties": {
+          "entry_hashes": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Entry Hashes",
+            "description": "The entry hash each committed entry now carries, in request order; empty for a dry run, or when they could not be resolved after the commit."
+          }
+        },
+        "type": "object",
+        "required": [
+          "entry_hashes"
+        ],
+        "title": "EntryAddBulkEntriesResult"
+      },
+      "SuccessResponse_EntryAddBulkEntriesResult_": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success",
+            "default": true
+          },
+          "data": {
+            "$ref": "#/components/schemas/EntryAddBulkEntriesResult"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "title": "SuccessResponse[EntryAddBulkEntriesResult]"
+      },
+      "SourceLineLocation": {
+        "properties": {
+          "path": {
+            "type": "string",
+            "title": "Path"
+          },
+          "line": {
+            "type": "integer",
+            "minimum": 1,
+            "title": "Line",
+            "description": "1-based line the directive starts on."
+          }
+        },
+        "type": "object",
+        "required": [
+          "path",
+          "line"
+        ],
+        "title": "SourceLineLocation"
+      },
+      "LedgerProjectedEntryIdsOptions": {
+        "properties": {
+          "files": {
+            "items": {
+              "$ref": "#/components/schemas/ProjectedFileOverlay"
+            },
+            "type": "array",
+            "title": "Files",
+            "description": "Projected file contents: base64 UTF-8 text, or null to project a deletion."
+          },
+          "locations": {
+            "items": {
+              "$ref": "#/components/schemas/SourceLineLocation"
+            },
+            "type": "array",
+            "maxItems": 200,
+            "title": "Locations"
+          }
+        },
+        "type": "object",
+        "required": [
+          "files",
+          "locations"
+        ],
+        "title": "LedgerProjectedEntryIdsOptions"
+      },
+      "ProjectedEntryIds": {
+        "properties": {
+          "entry_hashes": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Entry Hashes",
+            "description": "One per location, in order; null where no directive starts on that line."
+          }
+        },
+        "type": "object",
+        "required": [
+          "entry_hashes"
+        ],
+        "title": "ProjectedEntryIds"
+      },
+      "SuccessResponse_ProjectedEntryIds_": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success",
+            "default": true
+          },
+          "data": {
+            "$ref": "#/components/schemas/ProjectedEntryIds"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "title": "SuccessResponse[ProjectedEntryIds]"
       }
     },
     "securitySchemes": {

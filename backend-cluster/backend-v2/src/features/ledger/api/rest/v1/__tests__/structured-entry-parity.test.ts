@@ -148,7 +148,12 @@ async function fixture(
       );
     }
     committed.push(...body.entries);
-    return envelope(null);
+    // The ledger answers each committed entry's hash (w23/060).
+    return envelope({
+      entry_hashes: body.entries.map(
+        (_entry: unknown, index: number) => `hash-${index}`,
+      ),
+    });
   });
   const createFile = jest.fn();
   const fava = {
@@ -260,7 +265,7 @@ async function fixture(
         const response = await graphql({
           schema,
           source:
-            'mutation($entries:[AddEntryInput!]!,$allowInvalid:Boolean) { bulkEntries(ledgerId:"alice/main",entries:$entries,allowInvalid:$allowInvalid) { success message } }',
+            'mutation($entries:[AddEntryInput!]!,$allowInvalid:Boolean) { bulkEntries(ledgerId:"alice/main",entries:$entries,allowInvalid:$allowInvalid) { success message entryHashes } }',
           variableValues: { entries: input, ...opts },
           contextValue: {
             identity: caller,
@@ -303,9 +308,14 @@ it.each([identity, { ...identity, ledgerScope: undefined }])(
     for (const surface of ["rest", "gql", "mcp"]) {
       const f = await fixture(caller);
       try {
-        // REST and GraphQL keep the `{success, message}` contract; MCP
-        // carries the write outcome (summary first, then wrote, entryHashes,
-        // validation) around the same committed batch.
+        // REST and GraphQL keep the `{success, message}` contract plus the
+        // committed entries' hashes (w23/060); MCP carries the write outcome
+        // (summary first, then wrote, entryHashes, validation) around the
+        // same committed batch.
+        const entryHashes = Array.from(
+          { length: 10 },
+          (_hash, index) => `hash-${index}`,
+        );
         const { success, result } = await f.call(surface);
         expect({ success, result }).toEqual({
           success: true,
@@ -318,14 +328,18 @@ it.each([identity, { ...identity, ledgerScope: undefined }])(
                   message: "Added 10 entries successfully",
                   files: ["main.bean"],
                   wrote: [{ path: "main.bean" }],
-                  entryHashes: [],
+                  entryHashes,
                   validation: {
                     errorsBefore: 0,
                     errorsAfter: 0,
                     newErrors: [],
                   },
                 }
-              : { success: true, message: "Added 10 entries successfully" },
+              : {
+                  success: true,
+                  message: "Added 10 entries successfully",
+                  entryHashes,
+                },
         });
         expect(f.write).toHaveBeenCalledTimes(1);
         expect(f.committed).toHaveLength(10);
@@ -381,7 +395,7 @@ it("reports an unbalanced write in the MCP validation envelope", async () => {
         message: "Added 1 entry successfully",
         files: ["main.bean"],
         wrote: [{ path: "main.bean" }],
-        entryHashes: [],
+        entryHashes: ["hash-0"],
         validation: {
           errorsBefore: 0,
           errorsAfter: 1,

@@ -120,6 +120,18 @@ export interface ILedgerRepoService {
     identity: Identity;
     overlays: { path: string; content: string | null }[];
   }): Promise<BeancountErrorPublic[]>;
+
+  /**
+   * The entry hash of the directive starting on each 1-based `line` of the
+   * projected files, `null` where none does: how a write that committed them
+   * reports what it created (w23/060). Gated like `checkProjectedFiles`.
+   */
+  projectedEntryHashes(params: {
+    ledgerId: string;
+    identity: Identity;
+    overlays: { path: string; content: string }[];
+    locations: { path: string; line: number }[];
+  }): Promise<(string | null)[]>;
 }
 
 export class LedgerRepoService
@@ -444,5 +456,39 @@ export class LedgerRepoService
       }),
       "check projected files",
     );
+  }
+
+  async projectedEntryHashes(params: {
+    ledgerId: string;
+    identity: Identity;
+    overlays: { path: string; content: string }[];
+    locations: { path: string; line: number }[];
+  }): Promise<(string | null)[]> {
+    const { ledgerId, identity, overlays, locations } = params;
+    await authorizeLedger(
+      identity,
+      ledgerId,
+      AUTHORIZATION_ACTIONS.LEDGER_FILES_WRITE,
+      this.authDeps,
+    );
+    overlays.forEach((overlay, index) =>
+      assertSafeRepoPath(overlay.path, `overlays[${index}].path`),
+    );
+    const { ledgerOwner, ledgerName } = parseLedgerId(ledgerId);
+    const favaApiClient = await this.favaClientFactory.getPublicApiClient(
+      ledgerId,
+      identity.userId,
+    );
+    const { entry_hashes } = await unwrapFavaResponse(
+      favaApiClient.reports.getProjectedEntryIds(ledgerOwner, ledgerName, {
+        files: overlays.map((overlay) => ({
+          path: overlay.path,
+          content: Buffer.from(overlay.content, "utf8").toString("base64"),
+        })),
+        locations,
+      }),
+      "resolve projected entry hashes",
+    );
+    return entry_hashes;
   }
 }

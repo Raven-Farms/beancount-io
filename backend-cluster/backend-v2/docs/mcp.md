@@ -1477,7 +1477,12 @@ quota policy. Every write result carries the write outcome first: a `summary`
 of what was written and how many new bean-check errors it introduced, then
 `wrote` (files touched), `entryHashes`, and `validation` (`errorsBefore`,
 `errorsAfter`, `newErrors`) — learn about a broken ledger from the write
-result itself instead of re-reading the errors resource. When bean-check cannot
+result itself instead of re-reading the errors resource. `addLedgerEntries`
+and `appendLedgerText` return one hash per entry they committed, in request
+order — what `getEntryContext`, `updateEntrySource` and `deleteEntrySource`
+take — and REST and GraphQL return the same `entryHashes` (w23/060). The
+list is empty on a dry run, or when the hashes could not be resolved after
+the commit; the write still stands. When bean-check cannot
 run before or after the write, `validation` adds `checked: false` and
 `checkError`, and the summary says the ledger is unverified instead of
 claiming no new errors; the write itself still stands. A transaction with at

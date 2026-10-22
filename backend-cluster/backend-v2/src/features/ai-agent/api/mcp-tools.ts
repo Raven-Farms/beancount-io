@@ -421,7 +421,7 @@ export const MCP_TOOLS: readonly McpToolDescriptor[] = [
           ),
           ...written,
           wrote: files.map((path) => ({ path })),
-          entryHashes: [],
+          entryHashes: written.entryHashes ?? [],
           validation: outcome.validation,
         },
       };

@@ -41,6 +41,8 @@ function fixture(
     projectedErrors?: BeanError[];
     /** The ledger's errors before the write (the projection of no change). */
     baselineErrors?: BeanError[];
+    /** How the ledger locates committed entries; echoes `path:line` unless set. */
+    locate?: "throws" | "misses";
   } = {},
 ) {
   const files = new Map(Object.entries(options.files ?? {}));
@@ -64,6 +66,17 @@ function fixture(
     changeGeneratedFiles: jest.fn(
       async (_params: { operations: { path: string; content?: string }[] }) =>
         undefined,
+    ),
+    projectedEntryHashes: jest.fn(
+      async (params: {
+        overlays: { path: string; content: string }[];
+        locations: { path: string; line: number }[];
+      }) => {
+        if (options.locate === "throws") throw new Error("ledger down");
+        return params.locations.map(({ path, line }, index) =>
+          options.locate === "misses" && index > 0 ? null : `${path}:${line}`,
+        );
+      },
     ),
   };
   const favaClientFactory = {
@@ -391,5 +404,78 @@ describe("DirectiveAppendWorkflow", () => {
       }),
     ).rejects.toThrow(/not a calendar date/);
     expect(ledgerRepo.getFilesContent).not.toHaveBeenCalled();
+  });
+
+  // w23/060: the result said `entryHashes: []`, so an agent could not act on
+  // what it had just written without guessing through a listing.
+  describe("entry hashes", () => {
+    const at = (date: string, payee: string) =>
+      TXN.replace("2026-02-05", date).replace("Cafe", payee);
+    const EXISTING = [at("2026-01-10", "Jan"), at("2026-03-10", "Mar")].join(
+      "\n",
+    );
+
+    it("locates each committed directive where it landed, in text order", async () => {
+      const { workflow, ledgerRepo } = fixture({
+        files: { "main.bean": EXISTING },
+      });
+      const result = await workflow.appendDirectiveText({
+        identity: IDENTITY,
+        ledgerId: LEDGER_ID,
+        input: {
+          text: `${at("2026-04-01", "Apr")}\n${at("2026-02-01", "Feb")}`,
+        },
+      });
+
+      const [{ overlays, locations }] =
+        ledgerRepo.projectedEntryHashes.mock.calls[0]!;
+      const committed =
+        ledgerRepo.changeGeneratedFiles.mock.calls[0]![0].operations[0]!;
+      expect(overlays).toEqual([
+        { path: "main.bean", content: committed.content },
+      ]);
+      expect(locations).toEqual(result.wrote);
+      const lines = committed.content!.split("\n");
+      expect(locations.map(({ line }) => lines[line - 1])).toEqual([
+        '2026-04-01 * "Apr" "Coffee"',
+        '2026-02-01 * "Feb" "Coffee"',
+      ]);
+      expect(result.entryHashes).toEqual(
+        locations.map(({ path, line }) => `${path}:${line}`),
+      );
+    });
+
+    it("locates nothing on a dry run", async () => {
+      const { workflow, ledgerRepo } = fixture({
+        files: { "main.bean": EXISTING },
+      });
+      const result = await workflow.appendDirectiveText({
+        identity: IDENTITY,
+        ledgerId: LEDGER_ID,
+        input: { text: at("2026-02-01", "Feb"), dryRun: true },
+      });
+      expect(result.entryHashes).toEqual([]);
+      expect(ledgerRepo.projectedEntryHashes).not.toHaveBeenCalled();
+    });
+
+    it.each(["throws", "misses"] as const)(
+      "keeps the commit and answers no hashes when the lookup %s",
+      async (locate) => {
+        const { workflow, ledgerRepo } = fixture({
+          files: { "main.bean": EXISTING },
+          locate,
+        });
+        const result = await workflow.appendDirectiveText({
+          identity: IDENTITY,
+          ledgerId: LEDGER_ID,
+          input: {
+            text: `${at("2026-04-01", "Apr")}\n${at("2026-02-01", "Feb")}`,
+          },
+        });
+        expect(ledgerRepo.changeGeneratedFiles).toHaveBeenCalledTimes(1);
+        expect(result.wrote).toHaveLength(2);
+        expect(result.entryHashes).toEqual([]);
+      },
+    );
   });
 });

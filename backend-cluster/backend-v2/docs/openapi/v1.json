@@ -10330,10 +10330,18 @@
                     "message": {
                       "type": "string",
                       "nullable": true
+                    },
+                    "entryHashes": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      },
+                      "description": "The hash each committed entry now carries, in request order — what getEntryContext, the source-slice update and delete take. Empty on a dry run, or when the hashes could not be resolved after the commit."
                     }
                   },
                   "required": [
-                    "success"
+                    "success",
+                    "entryHashes"
                   ],
                   "additionalProperties": false
                 }
@@ -10522,6 +10530,13 @@
                         "additionalProperties": false
                       }
                     },
+                    "entryHashes": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      },
+                      "description": "The hash each committed entry now carries, in request order — what getEntryContext, the source-slice update and delete take. Empty on a dry run, or when the hashes could not be resolved after the commit."
+                    },
                     "diff": {
                       "type": "array",
                       "items": {
@@ -10578,6 +10593,7 @@
                     "dryRun",
                     "count",
                     "wrote",
+                    "entryHashes",
                     "diff",
                     "errorsBefore",
                     "errorsAfter",

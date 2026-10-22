@@ -112,6 +112,23 @@ async function fixture(caller = identity) {
       envelope(body.files.length === 0 ? [] : state.projectedErrors),
   );
 
+  // The ledger's entry IDs, scripted as the location each was asked for.
+  const getProjectedEntryIds = jest.fn(
+    async (
+      _o,
+      _n,
+      body: {
+        files: { path: string; content: string }[];
+        locations: { path: string; line: number }[];
+      },
+    ) =>
+      envelope({
+        entry_hashes: body.locations.map(
+          ({ path, line }) => `hash-${path}:${line}`,
+        ),
+      }),
+  );
+
   const fava = {
     getAdminClient: () => ({
       ledgers: { getLedger: async () => envelope({ id: 42, private: true }) },
@@ -133,6 +150,7 @@ async function fixture(caller = identity) {
             transaction_file: state.routeTransactionsTo,
           }),
         checkProjectedErrors,
+        getProjectedEntryIds,
         getLedgerSourceFiles: async () =>
           envelope(state.sourceFiles ?? [...state.files.keys()]),
       },
@@ -218,6 +236,7 @@ async function fixture(caller = identity) {
     commits,
     changeLedgerFiles,
     checkProjectedErrors,
+    getProjectedEntryIds,
     call: async (surface: "rest" | "gql" | "mcp", args: Args) => {
       if (surface === "rest") {
         const response = await fetch(
@@ -236,7 +255,7 @@ async function fixture(caller = identity) {
       if (surface === "gql") {
         const result = await graphql({
           schema,
-          source: `mutation { appendLedgerText(ledgerId: "alice/main", text: ${JSON.stringify(args.text)}${args.path ? `, path: ${JSON.stringify(args.path)}` : ""}${args.dryRun ? ", dryRun: true" : ""}${args.allowInvalid ? ", allowInvalid: true" : ""}) { success message dryRun count wrote { path line } diff { path diff } errorsBefore errorsAfter newErrors { message } appendedUnsorted } }`,
+          source: `mutation { appendLedgerText(ledgerId: "alice/main", text: ${JSON.stringify(args.text)}${args.path ? `, path: ${JSON.stringify(args.path)}` : ""}${args.dryRun ? ", dryRun: true" : ""}${args.allowInvalid ? ", allowInvalid: true" : ""}) { success message dryRun count wrote { path line } entryHashes diff { path diff } errorsBefore errorsAfter newErrors { message } appendedUnsorted } }`,
           contextValue: {
             identity: caller,
             getCurrentIdentity: () => caller,
@@ -287,6 +306,12 @@ describe("appending Beancount text through the real adapters", () => {
         expect(f.state.files.get("main.bean")!.split("\n")[6]).toBe(
           '2026-02-05 * "Cafe" "Coffee"',
         );
+        // Its hash, located in the committed text (w23/060).
+        expect(data.entryHashes).toEqual(["hash-main.bean:7"]);
+        const [, , located] = f.getProjectedEntryIds.mock.calls[0]!;
+        expect(
+          Buffer.from(located.files[0]!.content, "base64").toString("utf8"),
+        ).toBe(f.state.files.get("main.bean"));
         expect(data.appendedUnsorted).toEqual([]);
 
         const dates = [
@@ -478,6 +503,8 @@ describe("appending Beancount text through the real adapters", () => {
         ).toContain('+2026-02-05 * "Cafe" "Coffee"');
         expect(f.changeLedgerFiles).not.toHaveBeenCalled();
         expect(f.state.files.get("main.bean")).toBe(EXISTING);
+        expect(data.entryHashes).toEqual([]);
+        expect(f.getProjectedEntryIds).not.toHaveBeenCalled();
       } finally {
         await f.close();
       }
