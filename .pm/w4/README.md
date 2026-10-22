@@ -4,7 +4,6 @@
 
 ## Inbox
 
-- [331 — Preserve fractional commodity values in Budget readouts](./331.md) — minor; dashboard QA with client-only responses and a month-end clock, 2026-10-21; small BTC targets/actuals/variance lose digits in headlines, period rows and tooltip; exact history and larger-BTC/USD controls pass.
 
 - [330 — Open Help Center in the dashboard's selected language](./330.md) — minor; dashboard QA, 2026-10-21; German/Persian menu actions open English despite translated pages returning200; English/navigation/focus controls pass.
 
@@ -75,6 +74,8 @@
 - [289 — Preserve long amount digits in portrait statement print output](./blocked/289.md) — minor; dashboard QA, 2026-10-20. — **blocked:** fix shipped in `68e973700`; awaiting portrait PDF check
 
 ## Milestones
+
+- [ ] **m45** — [Keep commodity quantities precise in Budget and statements](./m45/README.md) (6 tasks) ← promoted331 and actual public statement QA,2026-10-21; minor,4.00995ETH becomes4.01 in shared hierarchy; modeled Budget loses fine BTC digits.
 
 - [ ] **m44** — [Refuse CSV currency-symbol conflicts before importing](./m44/README.md) (6 tasks) ← dashboard QA, 2026-10-21; major, accepted euro/pound tokens prepare as USD/EUR without conflict guidance; five real-UI requests preblocked, no hosted import.
 
@@ -153,6 +154,8 @@
 - [x] **m13** — [Preserve ledger pages through loading and hydration](./done/m13/README.md) (6 tasks) ← repeated dashboard QA, promoted w4/073, 2026-09-17
 
 ## Dropped
+
+- ~~**331**~~ — Preserve fractional commodity values in Budget readouts — dropped2026-10-21: promoted to [m45](./m45/README.md), preserving all modeled Budget evidence and adding actual Trial Balance/Balance Sheet precision loss; two renderers and computed precision regressions exceed one hour.
 
 - ~~**273**~~ — Keep active picker options identifiable in forced colors — dropped 2026-10-21: promoted to [m43](./m43/README.md), preserving all evidence and adding independently reproduced JournalFilters/default Tabs label backplates; four styling targets and rendered acceptance exceed one hour.
 
