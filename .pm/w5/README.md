@@ -38,7 +38,7 @@
 
 - [976 — Honor shared-ID transfer reservations before skipping rows](./976.md) — major CLI follow-up to 882; one transfer is offered twice under a reused shared reference and skip drops a real gift, reproduced 2026-10-22.
 
-- [975 — Retain transfer history under a reused native reference](./975.md) — major CLI follow-up to 598/882; an older bank-shared reference disappears after reuse and the other side of its transfer is booked again, reproduced 2026-10-22.
+- [975 — Retain transfer history under a reused native reference](./975.md) — major CLI follow-up to 598/882; monthly reuse or collisions between individually unique sender references hide the older transfer, reproduced 2026-10-22.
 
 - [974 — Keep native IDs when lot matching is incomplete](./974.md) — major CLI follow-up to 881; filtered Cash/Stock sale reimports lose native-ID ownership at the open-lot guard, reproduced 2026-10-22.
 
