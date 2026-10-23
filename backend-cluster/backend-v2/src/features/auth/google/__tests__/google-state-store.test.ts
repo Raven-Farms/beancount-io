@@ -6,9 +6,10 @@ jest.mock("@/foundation/redis/redis-utils", () => ({
 }));
 
 /**
- * A fake with Redis's semantics for the two commands the store uses:
- * SET ... NX PX (only if absent, with expiry) and GETDEL (read and delete in
- * one step). Time is the jest clock, so expiry is real.
+ * A fake of the bounded client's EVAL with Redis's semantics for the two
+ * scripts the store runs: SET ... PX ... NX (only if absent, with expiry) and
+ * GETDEL (read and delete in one step). Time is the jest clock, so expiry is
+ * real.
  */
 function fakeRedis() {
   const data = new Map<string, { value: string; expiresAt: number }>();
@@ -19,18 +20,25 @@ function fakeRedis() {
   };
   return {
     data,
-    set: jest.fn(
-      async (key: string, value: string, opts: { PX: number; NX: true }) => {
-        if (opts.NX && live(key)) return null;
-        data.set(key, { value, expiresAt: Date.now() + opts.PX });
-        return "OK";
+    eval: jest.fn(
+      async (
+        script: string,
+        { keys, arguments: args }: { keys: string[]; arguments: string[] },
+      ) => {
+        const [key] = keys;
+        if (script.includes("'SET'") && script.includes("'NX'")) {
+          if (live(key)) return null;
+          data.set(key, { value: args[0], expiresAt: Date.now() + Number(args[1]) });
+          return "OK";
+        }
+        if (script.includes("'GETDEL'")) {
+          const entry = live(key);
+          data.delete(key);
+          return entry ? entry.value : null;
+        }
+        throw new Error(`unexpected script: ${script}`);
       },
     ),
-    getDel: jest.fn(async (key: string) => {
-      const entry = live(key);
-      data.delete(key);
-      return entry ? entry.value : null;
-    }),
   };
 }
 
@@ -49,13 +57,18 @@ describe("redisGoogleStateStore", () => {
 
   it("stores with NX and a 10-minute expiry, and consumes with GETDEL", async () => {
     await redisGoogleStateStore.put("s1", record);
-    expect(redis.set).toHaveBeenCalledWith(
-      "auth:google_state:s1",
-      JSON.stringify(record),
-      { PX: 600_000, NX: true },
+    expect(redis.eval).toHaveBeenCalledWith(
+      expect.stringMatching(/'SET'.*'PX'.*'NX'/),
+      {
+        keys: ["auth:google_state:s1"],
+        arguments: [JSON.stringify(record), "600000"],
+      },
     );
     expect(await redisGoogleStateStore.consume("s1")).toEqual(record);
-    expect(redis.getDel).toHaveBeenCalledWith("auth:google_state:s1");
+    expect(redis.eval).toHaveBeenLastCalledWith(
+      expect.stringContaining("'GETDEL'"),
+      { keys: ["auth:google_state:s1"], arguments: [] },
+    );
   });
 
   it("redeems a state once, even when two callbacks race", async () => {
@@ -100,11 +113,11 @@ describe("redisGoogleStateStore", () => {
   });
 
   it("propagates Redis errors instead of treating them as success", async () => {
-    redis.set.mockRejectedValueOnce(new Error("connection reset"));
+    redis.eval.mockRejectedValueOnce(new Error("connection reset"));
     await expect(redisGoogleStateStore.put("s1", record)).rejects.toThrow(
       /connection reset/,
     );
-    redis.getDel.mockRejectedValueOnce(new Error("connection reset"));
+    redis.eval.mockRejectedValueOnce(new Error("connection reset"));
     await expect(redisGoogleStateStore.consume("s1")).rejects.toThrow(
       /connection reset/,
     );
