@@ -2143,6 +2143,35 @@ def root_read_hint(file: Path) -> str | None:
     )
 
 
+def _nearest_includers(file: Path) -> list[Path]:
+    """The ledgers that include `file` and include no other such ledger.
+
+    The scan yields every ancestor in the include closure. A ledger that also
+    includes another includer of the leaf, like a forecast view over the
+    working ledger, is reached by climbing from that includer, where the
+    overlay rule applies. Started on its own, its closure held the working
+    ledger's opens, so it passed for a second defining root and the write was
+    refused as ambiguous (w5/933). Two includers neither of which reaches the
+    other are still two roots.
+    """
+    found = list(including_roots(file))
+    if len(found) < 2:
+        return found
+    closures: dict[Path, set[Path]] = {}
+    for candidate in found:
+        try:
+            closures[candidate] = {path.resolve() for path in LedgerSnapshot.capture(candidate).contents}
+        except Exception:  # noqa: BLE001 - unreadable here is reported by the load itself
+            closures[candidate] = set()
+    nearest = [
+        candidate
+        for candidate in found
+        if not any(other != candidate and other.resolve() in closures[candidate] for other in found)
+    ]
+    # An include cycle makes each the other's ancestor: keep them all.
+    return nearest or found
+
+
 def write_through_root(file: Path, into: Path | None) -> tuple[Path, Path | None, str | None]:
     """The root and `--into` a write aimed at an included leaf is validated through, and the note saying so.
 
@@ -2165,7 +2194,7 @@ def write_through_root(file: Path, into: Path | None) -> tuple[Path, Path | None
     # stayed out of the check (w5/346). Climb past pass-through intermediates
     # to the highest defining root, stopping below an overlay (w5/774).
     tops: list[Path] = []
-    for first in including_roots(file):
+    for first in _nearest_includers(file):
         top = defining_root(file, first=first)
         if top is None or any(_same_file(top, known) for known in tops):
             continue
