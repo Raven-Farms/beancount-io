@@ -175,9 +175,15 @@ export type BcioOptions = {
 
 export type BeancountError = {
   __typename?: 'BeancountError';
+  /** Stable engine error code, e.g. E3001 for a transaction that does not balance. Classify on this, not on the message. The same value REST and MCP return. */
+  code?: Maybe<Scalars['String']['output']>;
   filename?: Maybe<Scalars['String']['output']>;
+  /** The engine's own remediation hint for this error, when it has one. The same value REST and MCP return. */
+  hint?: Maybe<Scalars['String']['output']>;
   lineno?: Maybe<Scalars['Float']['output']>;
   message: Scalars['String']['output'];
+  /** `error` for what bean-check fails on; the engine's `warning`s are not returned by getLedgerErrors. */
+  severity: Scalars['String']['output'];
 };
 
 /** Budget recurrence interval */
@@ -213,6 +219,12 @@ export type ChartItemV2 = {
   budgets?: Maybe<Scalars['JSONObject']['output']>;
   date: Scalars['String']['output'];
 };
+
+/** Where a Checkout began, so an abandoned one returns there: the pricing page (the default) or Billing settings. */
+export enum CheckoutReturnTo {
+  Billing = 'BILLING',
+  Pricing = 'PRICING'
+}
 
 export type CliAuthClientInfoInput = {
   /** Machine name the client runs on. */
@@ -280,6 +292,10 @@ export type CommitFileChange = {
   additions: Scalars['Int']['output'];
   deletions: Scalars['Int']['output'];
   filename: Scalars['String']['output'];
+  /** The path before a rename; null unless status is renamed. */
+  previousFilename?: Maybe<Scalars['String']['output']>;
+  /** What the commit did to the file: added, removed, modified or renamed. */
+  status: Scalars['String']['output'];
 };
 
 export type CommitListItem = {
@@ -397,6 +413,8 @@ export type DeleteMultiSourceSliceItemInput = {
 };
 
 export type DeleteMultiSourceSlicesInput = {
+  /** Delete the entries even when that would add bean-check errors (VALIDATION_FAILED), instead of refusing */
+  allowInvalid?: InputMaybe<Scalars['Boolean']['input']>;
   entries: Array<DeleteMultiSourceSliceItemInput>;
 };
 
@@ -412,6 +430,8 @@ export type DeletePublicKeyResponse = {
 };
 
 export type DeleteSourceSliceInput = {
+  /** Delete the entry even when that would add bean-check errors (VALIDATION_FAILED), instead of refusing */
+  allowInvalid?: InputMaybe<Scalars['Boolean']['input']>;
   entryHash: Scalars['String']['input'];
   sha256sum: Scalars['String']['input'];
 };
@@ -460,6 +480,8 @@ export type EntryContext = {
   balances_after?: Maybe<Scalars['JSONObject']['output']>;
   balances_before?: Maybe<Scalars['JSONObject']['output']>;
   entry: Scalars['JSONObject']['output'];
+  /** The entry hash of the source entry when this entry is a copy a plugin or a pad generated from it (amortize_over, forecast, padding). A copy shares its source's text and checksum, so editing or deleting it changes the source and every other copy. */
+  generated_from?: Maybe<Scalars['String']['output']>;
   /** The feed URL when the entry comes from a managed price include; such an entry is read-only. */
   managed_source?: Maybe<Scalars['String']['output']>;
   sha256sum: Scalars['String']['output'];
@@ -1283,6 +1305,7 @@ export type MutationCreateStripePortalSessionArgs = {
 export type MutationCreateSubscriptionSessionArgs = {
   clientId: Scalars['String']['input'];
   priceId: Scalars['String']['input'];
+  returnTo?: InputMaybe<CheckoutReturnTo>;
 };
 
 
@@ -1747,12 +1770,19 @@ export type PlaidTransactionType = {
 export type PlaintextJournalQueryInput = {
   account?: InputMaybe<Scalars['String']['input']>;
   filter?: InputMaybe<Scalars['String']['input']>;
+  /** Entries per page, 1 to 1000; omitted, every entry. */
+  limit?: InputMaybe<Scalars['Int']['input']>;
+  offset?: InputMaybe<Scalars['Int']['input']>;
   time?: InputMaybe<Scalars['String']['input']>;
 };
 
 export type PlaintextJournalResponse = {
   __typename?: 'PlaintextJournalResponse';
   content: Scalars['String']['output'];
+  /** Entries the filters select, before offset and limit. */
+  total: Scalars['Int']['output'];
+  /** Whether entries remain after this page. */
+  truncated: Scalars['Boolean']['output'];
 };
 
 export enum PlanChangeEffect {
@@ -1807,13 +1837,19 @@ export enum PlanChangeRefusal {
 
 export type PlanChangeResult = {
   __typename?: 'PlanChangeResult';
+  /** With ACTIVE or REQUIRES_ACTION: what the change's invoice charges, in the currency's minor unit (cents). Paid with ACTIVE; to be approved by the bank with REQUIRES_ACTION. */
+  amountCharged?: Maybe<Scalars['Int']['output']>;
   /** With REQUIRES_ACTION: confirm the payment with Stripe.js. */
   clientSecret?: Maybe<Scalars['String']['output']>;
+  /** With ACTIVE or REQUIRES_ACTION: the invoice's currency. */
+  currency?: Maybe<Scalars['String']['output']>;
   currentPeriodEnd?: Maybe<Scalars['DateTimeISO']['output']>;
   /** With SCHEDULED: when the new price takes over. Nothing is charged until then. */
   effectiveAt?: Maybe<Scalars['DateTimeISO']['output']>;
   /** Stripe's hosted page to pay or authenticate this change's invoice. */
   hostedInvoiceUrl?: Maybe<Scalars['String']['output']>;
+  /** With ACTIVE or REQUIRES_ACTION: the invoice this change charges, a stable id to count the purchase once. */
+  invoiceId?: Maybe<Scalars['String']['output']>;
   kind?: Maybe<PlanChangeKind>;
   message?: Maybe<Scalars['String']['output']>;
   newTier?: Maybe<Scalars['String']['output']>;
@@ -1972,7 +2008,7 @@ export type Query = {
   getLedgerEntriesCountPerType: Array<EntriesByType>;
   /** Get context for a specific journal entry */
   getLedgerEntryContext: EntryContext;
-  /** Get all errors from the ledger */
+  /** Get the ledger's errors: what bean-check fails on. The engine's warnings (a one-posting entry, closing an account with a balance) are not listed. */
   getLedgerErrors: Array<BeancountError>;
   /** Export events from a specific ledger with optional filtering */
   getLedgerEvents: Array<Event>;
@@ -2150,7 +2186,7 @@ export type QueryGetLedgerAccountLastEntriesArgs = {
 export type QueryGetLedgerAccountReportArgs = {
   account?: InputMaybe<Scalars['String']['input']>;
   accountName: Scalars['String']['input'];
-  conversion?: Scalars['String']['input'];
+  conversion?: InputMaybe<Scalars['String']['input']>;
   filter?: InputMaybe<Scalars['String']['input']>;
   interval?: Scalars['String']['input'];
   ledgerId: Scalars['String']['input'];
@@ -2182,7 +2218,7 @@ export type QueryGetLedgerAttributesArgs = {
 
 export type QueryGetLedgerBalanceSheetArgs = {
   account?: InputMaybe<Scalars['String']['input']>;
-  conversion?: Scalars['String']['input'];
+  conversion?: InputMaybe<Scalars['String']['input']>;
   filter?: InputMaybe<Scalars['String']['input']>;
   interval?: Scalars['String']['input'];
   ledgerId: Scalars['String']['input'];
@@ -2255,7 +2291,7 @@ export type QueryGetLedgerFileArgs = {
 
 export type QueryGetLedgerIncomeStatementArgs = {
   account?: InputMaybe<Scalars['String']['input']>;
-  conversion?: Scalars['String']['input'];
+  conversion?: InputMaybe<Scalars['String']['input']>;
   filter?: InputMaybe<Scalars['String']['input']>;
   interval?: Scalars['String']['input'];
   ledgerId: Scalars['String']['input'];
@@ -2266,7 +2302,7 @@ export type QueryGetLedgerIncomeStatementArgs = {
 export type QueryGetLedgerIntervalTotalsArgs = {
   account?: InputMaybe<Scalars['String']['input']>;
   accountName: Scalars['String']['input'];
-  conversion?: Scalars['String']['input'];
+  conversion?: InputMaybe<Scalars['String']['input']>;
   filter?: InputMaybe<Scalars['String']['input']>;
   interval?: Scalars['String']['input'];
   ledgerId: Scalars['String']['input'];
@@ -2308,7 +2344,7 @@ export type QueryGetLedgerOptionsArgs = {
 
 export type QueryGetLedgerOverviewArgs = {
   account?: InputMaybe<Scalars['String']['input']>;
-  conversion?: Scalars['String']['input'];
+  conversion?: InputMaybe<Scalars['String']['input']>;
   filter?: InputMaybe<Scalars['String']['input']>;
   interval?: Scalars['String']['input'];
   ledgerId: Scalars['String']['input'];
@@ -2359,7 +2395,7 @@ export type QueryGetLedgerTagsArgs = {
 
 export type QueryGetLedgerTrialBalanceArgs = {
   account?: InputMaybe<Scalars['String']['input']>;
-  conversion?: Scalars['String']['input'];
+  conversion?: InputMaybe<Scalars['String']['input']>;
   filter?: InputMaybe<Scalars['String']['input']>;
   interval?: Scalars['String']['input'];
   ledgerId: Scalars['String']['input'];
@@ -2724,6 +2760,8 @@ export type Subscription = {
   currentPeriodStart: Scalars['DateTimeISO']['output'];
   id: Scalars['ID']['output'];
   items: Array<SubscriptionItem>;
+  /** The latest invoice and what it collected, discounts applied; on the full subscription view. */
+  latestInvoice?: Maybe<SubscriptionInvoice>;
   /** With past_due: when Stripe next retries the failed renewal. The plan is kept until it stops retrying. */
   nextPaymentAttempt?: Maybe<Scalars['DateTimeISO']['output']>;
   /** The card renewals and plan changes charge, when known. */
@@ -2737,6 +2775,17 @@ export type SubscriptionActionResult = {
   __typename?: 'SubscriptionActionResult';
   message?: Maybe<Scalars['String']['output']>;
   success: Scalars['Boolean']['output'];
+};
+
+export type SubscriptionInvoice = {
+  __typename?: 'SubscriptionInvoice';
+  /** Collected, in minor units, discounts applied. */
+  amountPaid: Scalars['Int']['output'];
+  billingReason?: Maybe<Scalars['String']['output']>;
+  /** When Stripe created the invoice. */
+  created: Scalars['DateTimeISO']['output'];
+  currency: Scalars['String']['output'];
+  id: Scalars['ID']['output'];
 };
 
 export type SubscriptionItem = {
@@ -2827,6 +2876,8 @@ export type TrialBalanceData = {
 };
 
 export type UpdateSourceSliceInput = {
+  /** Commit the edit even when it would add bean-check errors (VALIDATION_FAILED), instead of refusing */
+  allowInvalid?: InputMaybe<Scalars['Boolean']['input']>;
   entryHash: Scalars['String']['input'];
   newContent: Scalars['String']['input'];
   sha256sum: Scalars['String']['input'];

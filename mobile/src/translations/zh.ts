@@ -362,6 +362,8 @@ export const zh: Translations = {
   transactionDetailUnavailable: "所选账本中没有这笔交易。",
   transactionDetailRemoved: "此交易已被更改或删除。返回即可查看最新列表。",
   transactionErrorOpenFile: "在文件编辑器中打开",
+  pluginCopyNotice: "此条目由插件根据另一条目生成，因此无法在此编辑或删除。",
+  pluginCopyOpenSource: "打开源条目",
   merchantDetailUnavailable: "所选账本中没有这个商家。",
   commitDetailUnavailable: "所选账本中没有这项更改。",
   commitDetailGone: "此提交已不可用。",

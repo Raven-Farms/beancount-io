@@ -49,8 +49,9 @@ function sliceHeader(slice: string): {
  * `amortize_over` or `forecast` generated from another entry. A copy answers
  * with its source's slice and checksum, so deleting or editing "it" removes or
  * rewrites the source and every other copy (w21/443). The ledger names the
- * source on newer servers (`generated_from`); until then the copy gives itself
- * away by a day or a name its source's first line does not carry.
+ * source (`generated_from`, a hash or null), and that decides it (w21/508). On
+ * a server older than the field, or before it loads (undefined), the copy gives
+ * itself away by a day or a name its source's first line does not carry.
  *
  * Conservative: a slice that cannot be read, or a string with an escape other than a quote or backslash, is not
  * judged, so an ordinary entry keeps its Edit and Delete.
@@ -58,7 +59,9 @@ function sliceHeader(slice: string): {
 export function isPluginCopy(
   entry: { date: string; payee?: string | null; narration?: string | null },
   slice: string | null | undefined,
+  generatedFrom?: string | null,
 ): boolean {
+  if (generatedFrom !== undefined) return generatedFrom !== null;
   if (!slice) return false;
   const header = sliceHeader(slice);
   if (!header) return slice.trim() !== "" && sliceOpensAnotherKind(slice);

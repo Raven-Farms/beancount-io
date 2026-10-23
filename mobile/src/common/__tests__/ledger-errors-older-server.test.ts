@@ -14,8 +14,10 @@ import {
  * ledger looked clean.
  */
 const root = path.join(__dirname, "..", "..");
+// The schema a server from before 2026-10-21 serves: the committed snapshot as
+// it stood then, kept when the client was regenerated (w21/508).
 const snapshot = fs.readFileSync(
-  path.join(root, "generated-graphql", "schema.graphql"),
+  path.join(__dirname, "fixtures", "older-server.schema.graphql"),
   "utf8",
 );
 const document = (name: string) =>
@@ -25,7 +27,7 @@ const document = (name: string) =>
   );
 
 describe("the errors read against a server without code and hint", () => {
-  it("has a document the committed (older) schema accepts", () => {
+  it("has a document the older schema accepts", () => {
     const schema = buildSchema(snapshot);
     expect(validate(schema, parse(document("getLedgerErrorsBasic")))).toEqual(
       [],
@@ -124,5 +126,40 @@ describe("the errors read against a server without code and hint", () => {
         "after=awaitqueryLedgerErrors(client,ledgerId);",
       ),
     ).toBe(true);
+  });
+});
+
+// w21/508: transaction detail selects `generated_from`, which a server older
+// than 2026-10-21 rejects; it then reads the context without it.
+describe("the entry context read against a server without generated_from", () => {
+  it("rejects the full document, and accepts the one without the field", () => {
+    const schema = buildSchema(snapshot);
+    expect(
+      validate(schema, parse(document("getLedgerTransactionContext"))).some(
+        (error) => /generated_from/.test(error.message),
+      ),
+    ).toBe(true);
+    expect(validate(schema, parse(document("getLedgerEntryContext")))).toEqual(
+      [],
+    );
+  });
+
+  it("falls back on that rejection, as the errors read does", () => {
+    const hook = fs
+      .readFileSync(
+        path.join(
+          root,
+          "screens",
+          "transaction-detail-screen",
+          "use-transaction-context.ts",
+        ),
+        "utf8",
+      )
+      .replace(/\s+/g, "");
+    expect(
+      hook.includes("constolderServer=isUnsupportedDocumentError(full.error);"),
+    ).toBe(true);
+    expect(hook.includes("skip:skip||!olderServer")).toBe(true);
+    expect(hook.includes("generatedFrom:olderServer?undefined")).toBe(true);
   });
 });

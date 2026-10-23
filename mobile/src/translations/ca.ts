@@ -416,6 +416,9 @@ export const ca: Translations = {
   transactionDetailRemoved:
     "Aquesta transacció s'ha canviat o eliminat. Torna enrere per veure la llista actual.",
   transactionErrorOpenFile: "Obre a l'editor de fitxers",
+  pluginCopyNotice:
+    "Un connector ha generat aquesta entrada a partir d'una altra, per això no es pot editar ni suprimir aquí.",
+  pluginCopyOpenSource: "Obre l'entrada d'origen",
   merchantDetailUnavailable:
     "Aquest comerç no està disponible al llibre seleccionat.",
   commitDetailUnavailable:

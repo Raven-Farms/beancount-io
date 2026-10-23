@@ -400,6 +400,9 @@ export const fa: Translations = {
   transactionDetailRemoved:
     "این تراکنش تغییر کرده یا حذف شده است. برای دیدن فهرست فعلی برگردید.",
   transactionErrorOpenFile: "باز کردن در ویرایشگر فایل",
+  pluginCopyNotice:
+    "یک افزونه این ورودی را از ورودی دیگری ساخته است، پس اینجا نمی‌توان آن را ویرایش یا حذف کرد.",
+  pluginCopyOpenSource: "باز کردن ورودی منبع",
   merchantDetailUnavailable: "این فروشنده در دفتر کل انتخاب‌شده موجود نیست.",
   commitDetailUnavailable: "این تغییر در دفتر کل انتخاب‌شده موجود نیست.",
   commitDetailGone: "این تغییر دیگر در دسترس نیست.",

@@ -8,10 +8,7 @@
       "name": "Mutation",
       "kind": "OBJECT"
     },
-    "subscriptionType": {
-      "name": "Subscription",
-      "kind": "OBJECT"
-    },
+    "subscriptionType": null,
     "types": [
       {
         "kind": "OBJECT",
@@ -1640,8 +1637,32 @@
         "isOneOf": null,
         "fields": [
           {
+            "name": "code",
+            "description": "Stable engine error code, e.g. E3001 for a transaction that does not balance. Classify on this, not on the message. The same value REST and MCP return.",
+            "args": [],
+            "type": {
+              "kind": "SCALAR",
+              "name": "String",
+              "ofType": null
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
             "name": "filename",
             "description": null,
+            "args": [],
+            "type": {
+              "kind": "SCALAR",
+              "name": "String",
+              "ofType": null
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "hint",
+            "description": "The engine's own remediation hint for this error, when it has one. The same value REST and MCP return.",
             "args": [],
             "type": {
               "kind": "SCALAR",
@@ -1666,6 +1687,22 @@
           {
             "name": "message",
             "description": null,
+            "args": [],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": {
+                "name": "String",
+                "kind": "SCALAR",
+                "ofType": null
+              }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "severity",
+            "description": "`error` for what bean-check fails on; the engine's `warning`s are not returned by getLedgerErrors.",
             "args": [],
             "type": {
               "kind": "NON_NULL",
@@ -1922,6 +1959,30 @@
         "inputFields": null,
         "interfaces": [],
         "enumValues": null,
+        "possibleTypes": null
+      },
+      {
+        "kind": "ENUM",
+        "name": "CheckoutReturnTo",
+        "description": "Where a Checkout began, so an abandoned one returns there: the pricing page (the default) or Billing settings.",
+        "isOneOf": null,
+        "fields": null,
+        "inputFields": null,
+        "interfaces": null,
+        "enumValues": [
+          {
+            "name": "BILLING",
+            "description": null,
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "PRICING",
+            "description": null,
+            "isDeprecated": false,
+            "deprecationReason": null
+          }
+        ],
         "possibleTypes": null
       },
       {
@@ -2467,6 +2528,34 @@
           {
             "name": "filename",
             "description": null,
+            "args": [],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": {
+                "name": "String",
+                "kind": "SCALAR",
+                "ofType": null
+              }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "previousFilename",
+            "description": "The path before a rename; null unless status is renamed.",
+            "args": [],
+            "type": {
+              "kind": "SCALAR",
+              "name": "String",
+              "ofType": null
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "status",
+            "description": "What the commit did to the file: added, removed, modified or renamed.",
             "args": [],
             "type": {
               "kind": "NON_NULL",
@@ -3425,6 +3514,18 @@
         "fields": null,
         "inputFields": [
           {
+            "name": "allowInvalid",
+            "description": "Delete the entries even when that would add bean-check errors (VALIDATION_FAILED), instead of refusing",
+            "type": {
+              "kind": "SCALAR",
+              "name": "Boolean",
+              "ofType": null
+            },
+            "defaultValue": null,
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
             "name": "entries",
             "description": null,
             "type": {
@@ -3532,6 +3633,18 @@
         "isOneOf": false,
         "fields": null,
         "inputFields": [
+          {
+            "name": "allowInvalid",
+            "description": "Delete the entry even when that would add bean-check errors (VALIDATION_FAILED), instead of refusing",
+            "type": {
+              "kind": "SCALAR",
+              "name": "Boolean",
+              "ofType": null
+            },
+            "defaultValue": null,
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
           {
             "name": "entryHash",
             "description": null,
@@ -3923,6 +4036,18 @@
                 "kind": "SCALAR",
                 "ofType": null
               }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "generated_from",
+            "description": "The entry hash of the source entry when this entry is a copy a plugin or a pad generated from it (amortize_over, forecast, padding). A copy shares its source's text and checksum, so editing or deleting it changes the source and every other copy.",
+            "args": [],
+            "type": {
+              "kind": "SCALAR",
+              "name": "String",
+              "ofType": null
             },
             "isDeprecated": false,
             "deprecationReason": null
@@ -10544,6 +10669,18 @@
                 "defaultValue": null,
                 "isDeprecated": false,
                 "deprecationReason": null
+              },
+              {
+                "name": "returnTo",
+                "description": null,
+                "type": {
+                  "kind": "ENUM",
+                  "name": "CheckoutReturnTo",
+                  "ofType": null
+                },
+                "defaultValue": null,
+                "isDeprecated": false,
+                "deprecationReason": null
               }
             ],
             "type": {
@@ -14652,6 +14789,30 @@
             "deprecationReason": null
           },
           {
+            "name": "limit",
+            "description": "Entries per page, 1 to 1000; omitted, every entry.",
+            "type": {
+              "kind": "SCALAR",
+              "name": "Int",
+              "ofType": null
+            },
+            "defaultValue": null,
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "offset",
+            "description": null,
+            "type": {
+              "kind": "SCALAR",
+              "name": "Int",
+              "ofType": null
+            },
+            "defaultValue": null,
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
             "name": "time",
             "description": null,
             "type": {
@@ -14683,6 +14844,38 @@
               "name": null,
               "ofType": {
                 "name": "String",
+                "kind": "SCALAR",
+                "ofType": null
+              }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "total",
+            "description": "Entries the filters select, before offset and limit.",
+            "args": [],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": {
+                "name": "Int",
+                "kind": "SCALAR",
+                "ofType": null
+              }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "truncated",
+            "description": "Whether entries remain after this page.",
+            "args": [],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": {
+                "name": "Boolean",
                 "kind": "SCALAR",
                 "ofType": null
               }
@@ -15081,8 +15274,32 @@
         "isOneOf": null,
         "fields": [
           {
+            "name": "amountCharged",
+            "description": "With ACTIVE or REQUIRES_ACTION: what the change's invoice charges, in the currency's minor unit (cents). Paid with ACTIVE; to be approved by the bank with REQUIRES_ACTION.",
+            "args": [],
+            "type": {
+              "kind": "SCALAR",
+              "name": "Int",
+              "ofType": null
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
             "name": "clientSecret",
             "description": "With REQUIRES_ACTION: confirm the payment with Stripe.js.",
+            "args": [],
+            "type": {
+              "kind": "SCALAR",
+              "name": "String",
+              "ofType": null
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "currency",
+            "description": "With ACTIVE or REQUIRES_ACTION: the invoice's currency.",
             "args": [],
             "type": {
               "kind": "SCALAR",
@@ -15119,6 +15336,18 @@
           {
             "name": "hostedInvoiceUrl",
             "description": "Stripe's hosted page to pay or authenticate this change's invoice.",
+            "args": [],
+            "type": {
+              "kind": "SCALAR",
+              "name": "String",
+              "ofType": null
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "invoiceId",
+            "description": "With ACTIVE or REQUIRES_ACTION: the invoice this change charges, a stable id to count the purchase once.",
             "args": [],
             "type": {
               "kind": "SCALAR",
@@ -16682,15 +16911,11 @@
                 "name": "conversion",
                 "description": null,
                 "type": {
-                  "kind": "NON_NULL",
-                  "name": null,
-                  "ofType": {
-                    "name": "String",
-                    "kind": "SCALAR",
-                    "ofType": null
-                  }
+                  "kind": "SCALAR",
+                  "name": "String",
+                  "ofType": null
                 },
-                "defaultValue": "\"USD\"",
+                "defaultValue": null,
                 "isDeprecated": false,
                 "deprecationReason": null
               },
@@ -16951,15 +17176,11 @@
                 "name": "conversion",
                 "description": null,
                 "type": {
-                  "kind": "NON_NULL",
-                  "name": null,
-                  "ofType": {
-                    "name": "String",
-                    "kind": "SCALAR",
-                    "ofType": null
-                  }
+                  "kind": "SCALAR",
+                  "name": "String",
+                  "ofType": null
                 },
-                "defaultValue": "\"USD\"",
+                "defaultValue": null,
                 "isDeprecated": false,
                 "deprecationReason": null
               },
@@ -17421,7 +17642,7 @@
           },
           {
             "name": "getLedgerErrors",
-            "description": "Get all errors from the ledger",
+            "description": "Get the ledger's errors: what bean-check fails on. The engine's warnings (a one-posting entry, closing an account with a balance) are not listed.",
             "args": [
               {
                 "name": "ledgerId",
@@ -17602,15 +17823,11 @@
                 "name": "conversion",
                 "description": null,
                 "type": {
-                  "kind": "NON_NULL",
-                  "name": null,
-                  "ofType": {
-                    "name": "String",
-                    "kind": "SCALAR",
-                    "ofType": null
-                  }
+                  "kind": "SCALAR",
+                  "name": "String",
+                  "ofType": null
                 },
-                "defaultValue": "\"USD\"",
+                "defaultValue": null,
                 "isDeprecated": false,
                 "deprecationReason": null
               },
@@ -17719,15 +17936,11 @@
                 "name": "conversion",
                 "description": null,
                 "type": {
-                  "kind": "NON_NULL",
-                  "name": null,
-                  "ofType": {
-                    "name": "String",
-                    "kind": "SCALAR",
-                    "ofType": null
-                  }
+                  "kind": "SCALAR",
+                  "name": "String",
+                  "ofType": null
                 },
-                "defaultValue": "\"USD\"",
+                "defaultValue": null,
                 "isDeprecated": false,
                 "deprecationReason": null
               },
@@ -18074,15 +18287,11 @@
                 "name": "conversion",
                 "description": null,
                 "type": {
-                  "kind": "NON_NULL",
-                  "name": null,
-                  "ofType": {
-                    "name": "String",
-                    "kind": "SCALAR",
-                    "ofType": null
-                  }
+                  "kind": "SCALAR",
+                  "name": "String",
+                  "ofType": null
                 },
-                "defaultValue": "\"USD\"",
+                "defaultValue": null,
                 "isDeprecated": false,
                 "deprecationReason": null
               },
@@ -18522,15 +18731,11 @@
                 "name": "conversion",
                 "description": null,
                 "type": {
-                  "kind": "NON_NULL",
-                  "name": null,
-                  "ofType": {
-                    "name": "String",
-                    "kind": "SCALAR",
-                    "ofType": null
-                  }
+                  "kind": "SCALAR",
+                  "name": "String",
+                  "ofType": null
                 },
-                "defaultValue": "\"USD\"",
+                "defaultValue": null,
                 "isDeprecated": false,
                 "deprecationReason": null
               },
@@ -19586,7 +19791,7 @@
               },
               {
                 "name": "limit",
-                "description": null,
+                "description": "Commits per page, 1 to 50; a larger value is refused.",
                 "type": {
                   "kind": "NON_NULL",
                   "name": null,
@@ -21693,6 +21898,18 @@
             "deprecationReason": null
           },
           {
+            "name": "latestInvoice",
+            "description": "The latest invoice and what it collected, discounts applied; on the full subscription view.",
+            "args": [],
+            "type": {
+              "kind": "OBJECT",
+              "name": "SubscriptionInvoice",
+              "ofType": null
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
             "name": "nextPaymentAttempt",
             "description": "With past_due: when Stripe next retries the failed renewal. The plan is kept until it stops retrying.",
             "args": [],
@@ -21777,6 +21994,94 @@
               "name": null,
               "ofType": {
                 "name": "Boolean",
+                "kind": "SCALAR",
+                "ofType": null
+              }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          }
+        ],
+        "inputFields": null,
+        "interfaces": [],
+        "enumValues": null,
+        "possibleTypes": null
+      },
+      {
+        "kind": "OBJECT",
+        "name": "SubscriptionInvoice",
+        "description": null,
+        "isOneOf": null,
+        "fields": [
+          {
+            "name": "amountPaid",
+            "description": "Collected, in minor units, discounts applied.",
+            "args": [],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": {
+                "name": "Int",
+                "kind": "SCALAR",
+                "ofType": null
+              }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "billingReason",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "SCALAR",
+              "name": "String",
+              "ofType": null
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "created",
+            "description": "When Stripe created the invoice.",
+            "args": [],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": {
+                "name": "DateTimeISO",
+                "kind": "SCALAR",
+                "ofType": null
+              }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "currency",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": {
+                "name": "String",
+                "kind": "SCALAR",
+                "ofType": null
+              }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "id",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": {
+                "name": "ID",
                 "kind": "SCALAR",
                 "ofType": null
               }
@@ -22609,6 +22914,18 @@
         "isOneOf": false,
         "fields": null,
         "inputFields": [
+          {
+            "name": "allowInvalid",
+            "description": "Commit the edit even when it would add bean-check errors (VALIDATION_FAILED), instead of refusing",
+            "type": {
+              "kind": "SCALAR",
+              "name": "Boolean",
+              "ofType": null
+            },
+            "defaultValue": null,
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
           {
             "name": "entryHash",
             "description": null,

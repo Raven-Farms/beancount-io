@@ -33,10 +33,7 @@ import { useThemeStyle, useToast } from "@/common/hooks";
 import { useLedgerWrite } from "@/common/hooks/use-ledger-write";
 import { useTranslations } from "@/common/hooks/use-translations";
 import { LedgerGuard, useLedgerGuard } from "@/components/ledger-guard";
-import {
-  useDeleteLedgerEntrySourceSliceMutation,
-  useGetLedgerEntryContextQuery,
-} from "@/generated-graphql/graphql";
+import { useDeleteLedgerEntrySourceSliceMutation } from "@/generated-graphql/graphql";
 import {
   invalidateLedgerData,
   ledgerRevisionVar,
@@ -69,6 +66,7 @@ import {
   selectOwnEntry,
 } from "./selectors/select-own-entry";
 import { isPluginCopy } from "./selectors/select-plugin-copy";
+import { useTransactionContext } from "./use-transaction-context";
 import { shouldShowTransactionWriteActions } from "./selectors/select-transaction-write-actions";
 import {
   createRevisionCheck,
@@ -207,6 +205,20 @@ const getStyles = (theme: ColorTheme) =>
       fontSize: fontSizes.sm,
       fontWeight: fontWeights.medium,
       color: theme.primary,
+      textAlign: LEADING_TEXT_ALIGN,
+    },
+    copyNotice: {
+      borderWidth: 1,
+      borderColor: theme.controlBorder,
+      borderRadius: 12,
+      padding: 12,
+      gap: 8,
+      marginBottom: 8,
+    },
+    copyNoticeText: {
+      fontSize: fontSizes.sm,
+      lineHeight: 20,
+      color: theme.text01,
       textAlign: LEADING_TEXT_ALIGN,
     },
     card: {
@@ -357,10 +369,11 @@ const TransactionDetailImpl = ({
     loading,
     error,
     refetch: refetchContext,
-  } = useGetLedgerEntryContextQuery({
-    variables: { entryHash, ledgerId },
-    skip: !entryHash || !shouldLoadContext,
-  });
+    generatedFrom,
+  } = useTransactionContext(
+    { entryHash, ledgerId },
+    !entryHash || !shouldLoadContext,
+  );
   // A write made from a screen above this one (a delete, an editor fix) leaves
   // this entry's context cached as it was. Recheck on return, and only when
   // the ledger was written meanwhile; a NOT_FOUND then shows the gone state
@@ -613,10 +626,11 @@ const TransactionDetailImpl = ({
   // Source and balance context is read-only, so any reader of a
   // source-backed entry sees it; only edit/delete need write access.
   const showEntryContext = !isGenerated;
+  const pluginCopy = isPluginCopy(entry, contextSource?.slice, generatedFrom);
   const showWriteActions = shouldShowTransactionWriteActions(
     canWrite,
     sha256sum,
-    isPluginCopy(entry, contextSource?.slice),
+    pluginCopy,
   );
   const menuActions = selectTransactionMenuActions({
     isGenerated,
@@ -751,6 +765,31 @@ const TransactionDetailImpl = ({
             >
               {t("transactionErrorOpenFile")}
             </Text>
+          </View>
+        ) : null}
+
+        {pluginCopy ? (
+          // Edit and Delete are withheld from a copy, since they would change
+          // its source and every other copy: say so, and open the source when
+          // the ledger names it (w21/508).
+          <View style={styles.copyNotice} testID="transaction-plugin-copy">
+            <Text style={styles.copyNoticeText}>{t("pluginCopyNotice")}</Text>
+            {generatedFrom ? (
+              <Text
+                style={styles.errorAction}
+                accessibilityRole="button"
+                onPress={() =>
+                  router.push({
+                    pathname: guest
+                      ? "/examples/transaction-detail"
+                      : "/transaction-detail",
+                    params: { entry_hash: generatedFrom, ledger: ledgerId },
+                  })
+                }
+              >
+                {t("pluginCopyOpenSource")}
+              </Text>
+            ) : null}
           </View>
         ) : null}
 

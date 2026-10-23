@@ -218,8 +218,53 @@ describe("the write actions", () => {
       .replace(/\s+/g, "");
     expect(
       source.includes(
-        "shouldShowTransactionWriteActions(canWrite,sha256sum,isPluginCopy(entry,contextSource?.slice),)",
+        "constpluginCopy=isPluginCopy(entry,contextSource?.slice,generatedFrom);",
       ),
+    ).toBe(true);
+    expect(
+      source.includes(
+        "shouldShowTransactionWriteActions(canWrite,sha256sum,pluginCopy,)",
+      ),
+    ).toBe(true);
+  });
+});
+
+// w21/508: the ledger names a copy's source (`generated_from`), which decides it
+// over the first-line guess; the guess stays for a server older than the field.
+describe("isPluginCopy with the ledger's generated_from", () => {
+  const copy = {
+    date: "2026-07-01",
+    payee: "QA Insurer",
+    narration: "car insurance (2/12)",
+  };
+  const ordinary = {
+    date: "2026-06-01",
+    payee: "QA Insurer",
+    narration: "car insurance",
+  };
+
+  it("follows the ledger when it names the source, or says there is none", () => {
+    expect(isPluginCopy(ordinary, TEMPLATE, "abc123")).toBe(true);
+    expect(isPluginCopy(copy, TEMPLATE, null)).toBe(false);
+    // A copy whose first line happens to match is still a copy.
+    expect(isPluginCopy(ordinary, null, "abc123")).toBe(true);
+  });
+
+  it("guesses from the first line only when the ledger does not say", () => {
+    expect(isPluginCopy(copy, TEMPLATE, undefined)).toBe(true);
+    expect(isPluginCopy(ordinary, TEMPLATE, undefined)).toBe(false);
+  });
+
+  it("explains a copy and opens its source when the ledger names it", () => {
+    const source = fs
+      .readFileSync(
+        path.join(__dirname, "..", "..", "transaction-detail-screen.tsx"),
+        "utf8",
+      )
+      .replace(/\s+/g, "");
+    expect(source.includes('{t("pluginCopyNotice")}')).toBe(true);
+    expect(
+      source.includes("params:{entry_hash:generatedFrom,ledger:ledgerId}"),
     ).toBe(true);
   });
 });

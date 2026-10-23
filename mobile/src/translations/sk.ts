@@ -416,6 +416,9 @@ export const sk: Translations = {
   transactionDetailRemoved:
     "Táto transakcia bola zmenená alebo odstránená. Vráťte sa späť a pozrite si aktuálny zoznam.",
   transactionErrorOpenFile: "Otvoriť v editore súborov",
+  pluginCopyNotice:
+    "Tento záznam vytvoril doplnok z iného záznamu, preto ho tu nemožno upraviť ani odstrániť.",
+  pluginCopyOpenSource: "Otvoriť zdrojový záznam",
   merchantDetailUnavailable:
     "Tento obchodník nie je vo zvolenej knihe dostupný.",
   commitDetailUnavailable: "Táto zmena nie je vo zvolenej knihe dostupná.",

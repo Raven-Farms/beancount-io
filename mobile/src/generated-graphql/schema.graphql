@@ -1,7 +1,6 @@
 schema {
   query: Query
   mutation: Mutation
-  subscription: Subscription
 }
 
 type AccountBalance {
@@ -155,9 +154,21 @@ type BcioOptions {
 }
 
 type BeancountError {
+  """
+  Stable engine error code, e.g. E3001 for a transaction that does not balance. Classify on this, not on the message. The same value REST and MCP return.
+  """
+  code: String
   filename: String
+  """
+  The engine's own remediation hint for this error, when it has one. The same value REST and MCP return.
+  """
+  hint: String
   lineno: Float
   message: String!
+  """
+  `error` for what bean-check fails on; the engine's `warning`s are not returned by getLedgerErrors.
+  """
+  severity: String!
 }
 
 """Budget recurrence interval"""
@@ -190,6 +201,14 @@ type ChartItemV2 {
   balance: JSONObject!
   budgets: JSONObject
   date: String!
+}
+
+"""
+Where a Checkout began, so an abandoned one returns there: the pricing page (the default) or Billing settings.
+"""
+enum CheckoutReturnTo {
+  BILLING
+  PRICING
 }
 
 input CliAuthClientInfoInput {
@@ -255,6 +274,10 @@ type CommitFileChange {
   additions: Int!
   deletions: Int!
   filename: String!
+  """The path before a rename; null unless status is renamed."""
+  previousFilename: String
+  """What the commit did to the file: added, removed, modified or renamed."""
+  status: String!
 }
 
 type CommitListItem {
@@ -370,6 +393,10 @@ input DeleteMultiSourceSliceItemInput {
 }
 
 input DeleteMultiSourceSlicesInput {
+  """
+  Delete the entries even when that would add bean-check errors (VALIDATION_FAILED), instead of refusing
+  """
+  allowInvalid: Boolean
   entries: [DeleteMultiSourceSliceItemInput!]!
 }
 
@@ -383,6 +410,10 @@ type DeletePublicKeyResponse {
 }
 
 input DeleteSourceSliceInput {
+  """
+  Delete the entry even when that would add bean-check errors (VALIDATION_FAILED), instead of refusing
+  """
+  allowInvalid: Boolean
   entryHash: String!
   sha256sum: String!
 }
@@ -424,6 +455,10 @@ type EntryContext {
   balances_after: JSONObject
   balances_before: JSONObject
   entry: JSONObject!
+  """
+  The entry hash of the source entry when this entry is a copy a plugin or a pad generated from it (amortize_over, forecast, padding). A copy shares its source's text and checksum, so editing or deleting it changes the source and every other copy.
+  """
+  generated_from: String
   """
   The feed URL when the entry comes from a managed price include; such an entry is read-only.
   """
@@ -1094,7 +1129,7 @@ type Mutation {
   """
   Creates a Stripe-hosted checkout session. Requires a full signed-in session.
   """
-  createSubscriptionSession(clientId: String!, priceId: String!): SubscriptionSessionResult!
+  createSubscriptionSession(clientId: String!, priceId: String!, returnTo: CheckoutReturnTo): SubscriptionSessionResult!
   """delete user account and its associated data"""
   deleteAccount: Boolean!
   """Delete a specific ledger"""
@@ -1417,11 +1452,18 @@ type PlaidTransactionType {
 input PlaintextJournalQueryInput {
   account: String
   filter: String
+  """Entries per page, 1 to 1000; omitted, every entry."""
+  limit: Int
+  offset: Int
   time: String
 }
 
 type PlaintextJournalResponse {
   content: String!
+  """Entries the filters select, before offset and limit."""
+  total: Int!
+  """Whether entries remain after this page."""
+  truncated: Boolean!
 }
 
 enum PlanChangeEffect {
@@ -1478,8 +1520,14 @@ enum PlanChangeRefusal {
 }
 
 type PlanChangeResult {
+  """
+  With ACTIVE or REQUIRES_ACTION: what the change's invoice charges, in the currency's minor unit (cents). Paid with ACTIVE; to be approved by the bank with REQUIRES_ACTION.
+  """
+  amountCharged: Int
   """With REQUIRES_ACTION: confirm the payment with Stripe.js."""
   clientSecret: String
+  """With ACTIVE or REQUIRES_ACTION: the invoice's currency."""
+  currency: String
   currentPeriodEnd: DateTimeISO
   """
   With SCHEDULED: when the new price takes over. Nothing is charged until then.
@@ -1487,6 +1535,10 @@ type PlanChangeResult {
   effectiveAt: DateTimeISO
   """Stripe's hosted page to pay or authenticate this change's invoice."""
   hostedInvoiceUrl: String
+  """
+  With ACTIVE or REQUIRES_ACTION: the invoice this change charges, a stable id to count the purchase once.
+  """
+  invoiceId: String
   kind: PlanChangeKind
   message: String
   newTier: String
@@ -1632,7 +1684,7 @@ type Query {
   """Get the last entries of assets and liabilities accounts"""
   getLedgerAccountLastEntries(account: String, filter: String, ledgerId: String!, time: String): [AccountLastEntry!]!
   """Get the report of a specific account"""
-  getLedgerAccountReport(account: String, accountName: String!, conversion: String! = "USD", filter: String, interval: String! = "monthly", ledgerId: String!, time: String): AccountReport!
+  getLedgerAccountReport(account: String, accountName: String!, conversion: String, filter: String, interval: String! = "monthly", ledgerId: String!, time: String): AccountReport!
   """
   Get the accounts of a specific ledger. Optional status filter: 'open' (no closeDate) or 'closed' (has closeDate). Returns all accounts when omitted.
   """
@@ -1650,7 +1702,7 @@ type Query {
   """
   Get the balance sheet of a specific ledger, including report-only current earnings in equity and its interval series under the configured account names
   """
-  getLedgerBalanceSheet(account: String, conversion: String! = "USD", filter: String, interval: String! = "monthly", ledgerId: String!, time: String): BalanceSheetData!
+  getLedgerBalanceSheet(account: String, conversion: String, filter: String, interval: String! = "monthly", ledgerId: String!, time: String): BalanceSheetData!
   getLedgerCollaboratorPermission(collaborator: String!, ledgerId: String!): LedgerCollaborator!
   """Get the commodities of a specific ledger"""
   getLedgerCommodities(ledgerId: String!): [CommodityPairWithPrices!]!
@@ -1664,16 +1716,18 @@ type Query {
   getLedgerEntriesCountPerType(account: String, filter: String, ledgerId: String!, time: String): [EntriesByType!]!
   """Get context for a specific journal entry"""
   getLedgerEntryContext(entryHash: String!, ledgerId: String!): EntryContext!
-  """Get all errors from the ledger"""
+  """
+  Get the ledger's errors: what bean-check fails on. The engine's warnings (a one-posting entry, closing an account with a balance) are not listed.
+  """
   getLedgerErrors(ledgerId: String!): [BeancountError!]!
   """Export events from a specific ledger with optional filtering"""
   getLedgerEvents(account: String, filter: String, ledgerId: String!, time: String): [Event!]!
   """Get the content of a specific ledger file"""
   getLedgerFile(ledgerId: String!, path: String!): LedgerFileContent
   """Get the income statement of a specific ledger"""
-  getLedgerIncomeStatement(account: String, conversion: String! = "USD", filter: String, interval: String! = "monthly", ledgerId: String!, time: String): IncomeStatementData!
+  getLedgerIncomeStatement(account: String, conversion: String, filter: String, interval: String! = "monthly", ledgerId: String!, time: String): IncomeStatementData!
   """Get interval totals for a specific account"""
-  getLedgerIntervalTotals(account: String, accountName: String!, conversion: String! = "USD", filter: String, interval: String! = "monthly", ledgerId: String!, time: String): [IntervalTotalItem!]!
+  getLedgerIntervalTotals(account: String, accountName: String!, conversion: String, filter: String, interval: String! = "monthly", ledgerId: String!, time: String): [IntervalTotalItem!]!
   """Get journal entries for a specific ledger"""
   getLedgerJournal(ledgerId: String!, query: JournalQueryInput): JournalResponse!
   """Get the links of a specific ledger"""
@@ -1692,7 +1746,7 @@ type Query {
   """
   getLedgerOptions(ledgerId: String!): LedgerOptions!
   """Get the overview of a specific ledger"""
-  getLedgerOverview(account: String, conversion: String! = "USD", filter: String, interval: String! = "monthly", ledgerId: String!, time: String): LedgerOverview!
+  getLedgerOverview(account: String, conversion: String, filter: String, interval: String! = "monthly", ledgerId: String!, time: String): LedgerOverview!
   """Get the accounts for a payee"""
   getLedgerPayeeAccounts(ledgerId: String!, payee: String!): [String!]!
   """Get the most recent transaction for a payee, or null when none matches"""
@@ -1710,7 +1764,7 @@ type Query {
   """Get the tags of a specific ledger"""
   getLedgerTags(ledgerId: String!): [String!]!
   """Get the trial balance of a specific ledger"""
-  getLedgerTrialBalance(account: String, conversion: String! = "USD", filter: String, interval: String! = "monthly", ledgerId: String!, time: String): TrialBalanceData!
+  getLedgerTrialBalance(account: String, conversion: String, filter: String, interval: String! = "monthly", ledgerId: String!, time: String): TrialBalanceData!
   """Get the years of a specific ledger"""
   getLedgerYears(ledgerId: String!): [String!]!
   """Get all accounts for a specific Plaid Item"""
@@ -1795,7 +1849,13 @@ type Query {
   ): JournalEntriesResponse!
   """Get a specific ledger"""
   ledgerMeta(ledgerId: String, userId: String): LedgerMetaResponse!
-  listCommits(branch: String! = "main", ledgerId: String!, limit: Int! = 30, page: Int! = 1): [CommitListItem!]!
+  listCommits(
+    branch: String! = "main"
+    ledgerId: String!
+    """Commits per page, 1 to 50; a larger value is refused."""
+    limit: Int! = 30
+    page: Int! = 1
+  ): [CommitListItem!]!
   listLedgerCollaborators(ledgerId: String!, limit: Float, page: Float): [CollaboratorUser!]!
   """List all ledgers for the current user"""
   listLedgers(limit: Float, page: Float): [Ledger!]!
@@ -1964,6 +2024,10 @@ type Subscription {
   id: ID!
   items: [SubscriptionItem!]!
   """
+  The latest invoice and what it collected, discounts applied; on the full subscription view.
+  """
+  latestInvoice: SubscriptionInvoice
+  """
   With past_due: when Stripe next retries the failed renewal. The plan is kept until it stops retrying.
   """
   nextPaymentAttempt: DateTimeISO
@@ -1979,6 +2043,16 @@ type Subscription {
 type SubscriptionActionResult {
   message: String
   success: Boolean!
+}
+
+type SubscriptionInvoice {
+  """Collected, in minor units, discounts applied."""
+  amountPaid: Int!
+  billingReason: String
+  """When Stripe created the invoice."""
+  created: DateTimeISO!
+  currency: String!
+  id: ID!
 }
 
 type SubscriptionItem {
@@ -2059,6 +2133,10 @@ type TrialBalanceData {
 }
 
 input UpdateSourceSliceInput {
+  """
+  Commit the edit even when it would add bean-check errors (VALIDATION_FAILED), instead of refusing
+  """
+  allowInvalid: Boolean
   entryHash: String!
   newContent: String!
   sha256sum: String!

@@ -251,6 +251,14 @@ export type GetLedgerPayeesQueryVariables = Exact<{
 
 export type GetLedgerPayeesQuery = { getLedgerPayees: Array<string> };
 
+export type GetLedgerTransactionContextQueryVariables = Exact<{
+  entryHash: string;
+  ledgerId: string;
+}>;
+
+
+export type GetLedgerTransactionContextQuery = { getLedgerEntryContext: { slice: string, sha256sum: string, entry: Record<string, number | string>, balances_before: Record<string, number | string> | null, balances_after: Record<string, number | string> | null, generated_from: string | null } };
+
 export type IncomeStatementQueryVariables = Exact<{
   ledgerId: string;
   time?: string | null | undefined;
@@ -1838,6 +1846,55 @@ export type GetLedgerPayeesQueryHookResult = ReturnType<typeof useGetLedgerPayee
 export type GetLedgerPayeesLazyQueryHookResult = ReturnType<typeof useGetLedgerPayeesLazyQuery>;
 export type GetLedgerPayeesSuspenseQueryHookResult = ReturnType<typeof useGetLedgerPayeesSuspenseQuery>;
 export type GetLedgerPayeesQueryResult = Apollo.QueryResult<GetLedgerPayeesQuery, GetLedgerPayeesQueryVariables>;
+export const GetLedgerTransactionContextDocument = gql`
+    query GetLedgerTransactionContext($entryHash: String!, $ledgerId: String!) {
+  getLedgerEntryContext(entryHash: $entryHash, ledgerId: $ledgerId) {
+    slice
+    sha256sum
+    entry
+    balances_before
+    balances_after
+    generated_from
+  }
+}
+    `;
+
+/**
+ * __useGetLedgerTransactionContextQuery__
+ *
+ * To run a query within a React component, call `useGetLedgerTransactionContextQuery` and pass it any options that fit your needs.
+ * When your component renders, `useGetLedgerTransactionContextQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useGetLedgerTransactionContextQuery({
+ *   variables: {
+ *      entryHash: // value for 'entryHash'
+ *      ledgerId: // value for 'ledgerId'
+ *   },
+ * });
+ */
+export function useGetLedgerTransactionContextQuery(baseOptions: Apollo.QueryHookOptions<GetLedgerTransactionContextQuery, GetLedgerTransactionContextQueryVariables> & ({ variables: GetLedgerTransactionContextQueryVariables; skip?: boolean; } | { skip: boolean; }) ) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<GetLedgerTransactionContextQuery, GetLedgerTransactionContextQueryVariables>(GetLedgerTransactionContextDocument, options);
+      }
+export function useGetLedgerTransactionContextLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<GetLedgerTransactionContextQuery, GetLedgerTransactionContextQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<GetLedgerTransactionContextQuery, GetLedgerTransactionContextQueryVariables>(GetLedgerTransactionContextDocument, options);
+        }
+// @ts-ignore
+export function useGetLedgerTransactionContextSuspenseQuery(baseOptions?: Apollo.SuspenseQueryHookOptions<GetLedgerTransactionContextQuery, GetLedgerTransactionContextQueryVariables>): Apollo.UseSuspenseQueryResult<GetLedgerTransactionContextQuery, GetLedgerTransactionContextQueryVariables>;
+export function useGetLedgerTransactionContextSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<GetLedgerTransactionContextQuery, GetLedgerTransactionContextQueryVariables>): Apollo.UseSuspenseQueryResult<GetLedgerTransactionContextQuery | undefined, GetLedgerTransactionContextQueryVariables>;
+export function useGetLedgerTransactionContextSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<GetLedgerTransactionContextQuery, GetLedgerTransactionContextQueryVariables>) {
+          const options = baseOptions === Apollo.skipToken ? baseOptions : {...defaultOptions, ...baseOptions}
+          return Apollo.useSuspenseQuery<GetLedgerTransactionContextQuery, GetLedgerTransactionContextQueryVariables>(GetLedgerTransactionContextDocument, options);
+        }
+export type GetLedgerTransactionContextQueryHookResult = ReturnType<typeof useGetLedgerTransactionContextQuery>;
+export type GetLedgerTransactionContextLazyQueryHookResult = ReturnType<typeof useGetLedgerTransactionContextLazyQuery>;
+export type GetLedgerTransactionContextSuspenseQueryHookResult = ReturnType<typeof useGetLedgerTransactionContextSuspenseQuery>;
+export type GetLedgerTransactionContextQueryResult = Apollo.QueryResult<GetLedgerTransactionContextQuery, GetLedgerTransactionContextQueryVariables>;
 export const IncomeStatementDocument = gql`
     query IncomeStatement($ledgerId: String!, $time: String, $interval: String, $conversion: String) {
   getLedgerIncomeStatement(

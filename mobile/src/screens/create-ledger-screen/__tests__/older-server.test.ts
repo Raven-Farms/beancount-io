@@ -13,8 +13,15 @@ import { translationLocales } from "../../../translations/__tests__/locale-parit
  * setup".
  */
 const root = path.join(__dirname, "..", "..", "..");
+// An older server's schema, kept apart from the regenerated snapshot (w21/508).
 const snapshot = fs.readFileSync(
-  path.join(root, "generated-graphql", "schema.graphql"),
+  path.join(
+    root,
+    "common",
+    "__tests__",
+    "fixtures",
+    "older-server.schema.graphql",
+  ),
   "utf8",
 );
 const document = (name: string) => {

@@ -414,6 +414,9 @@ export const ru: Translations = {
   transactionDetailRemoved:
     "Эта транзакция была изменена или удалена. Вернитесь, чтобы увидеть актуальный список.",
   transactionErrorOpenFile: "Открыть в редакторе файлов",
+  pluginCopyNotice:
+    "Эта запись создана плагином из другой записи, поэтому её нельзя изменить или удалить здесь.",
+  pluginCopyOpenSource: "Открыть исходную запись",
   merchantDetailUnavailable: "Этот продавец недоступен в выбранной книге.",
   commitDetailUnavailable: "Это изменение недоступно в выбранной книге.",
   commitDetailGone: "Это изменение больше недоступно.",

@@ -399,6 +399,9 @@ export const en = {
   transactionDetailRemoved:
     "This transaction was changed or removed. Go back to see the current list.",
   transactionErrorOpenFile: "Open in the file editor",
+  pluginCopyNotice:
+    "A plugin generated this entry from another one, so it can't be edited or deleted here.",
+  pluginCopyOpenSource: "Open the source entry",
   merchantDetailUnavailable:
     "This merchant isn't available in the selected ledger.",
   commitDetailUnavailable:

@@ -413,6 +413,9 @@ export const uk: Translations = {
   transactionDetailRemoved:
     "Цю транзакцію змінено або видалено. Поверніться, щоб побачити актуальний список.",
   transactionErrorOpenFile: "Відкрити в редакторі файлів",
+  pluginCopyNotice:
+    "Цей запис створено плагіном з іншого запису, тож його не можна змінити чи видалити тут.",
+  pluginCopyOpenSource: "Відкрити вихідний запис",
   merchantDetailUnavailable: "Цей продавець недоступний у вибраній книзі.",
   commitDetailUnavailable: "Ця зміна недоступна у вибраній книзі.",
   commitDetailGone: "Ця зміна більше недоступна.",

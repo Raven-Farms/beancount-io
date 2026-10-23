@@ -416,6 +416,9 @@ export const fr: Translations = {
   transactionDetailRemoved:
     "Cette transaction a été modifiée ou supprimée. Revenez en arrière pour voir la liste à jour.",
   transactionErrorOpenFile: "Ouvrir dans l'éditeur de fichiers",
+  pluginCopyNotice:
+    "Un plugin a généré cette écriture à partir d'une autre ; elle ne peut donc pas être modifiée ni supprimée ici.",
+  pluginCopyOpenSource: "Ouvrir l'écriture source",
   merchantDetailUnavailable:
     "Ce marchand n'est pas disponible dans le grand livre sélectionné.",
   commitDetailUnavailable:

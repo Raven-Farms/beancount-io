@@ -407,6 +407,9 @@ export const bg: Translations = {
   transactionDetailRemoved:
     "Тази транзакция е променена или премахната. Върнете се, за да видите актуалния списък.",
   transactionErrorOpenFile: "Отвори в редактора на файлове",
+  pluginCopyNotice:
+    "Този запис е създаден от плъгин от друг запис, затова не може да се редактира или изтрие тук.",
+  pluginCopyOpenSource: "Отвори изходния запис",
   merchantDetailUnavailable: "Този търговец не е наличен в избраната книга.",
   commitDetailUnavailable: "Тази промяна не е налична в избраната книга.",
   commitDetailGone: "Тази промяна вече не е налична.",

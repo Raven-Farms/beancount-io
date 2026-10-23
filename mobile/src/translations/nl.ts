@@ -406,6 +406,9 @@ export const nl: Translations = {
   transactionDetailRemoved:
     "Deze transactie is gewijzigd of verwijderd. Ga terug om de actuele lijst te zien.",
   transactionErrorOpenFile: "Openen in de bestandseditor",
+  pluginCopyNotice:
+    "Een plug-in heeft deze boeking uit een andere gemaakt, dus je kunt hem hier niet bewerken of verwijderen.",
+  pluginCopyOpenSource: "Bronboeking openen",
   merchantDetailUnavailable:
     "Deze handelaar is niet beschikbaar in het geselecteerde grootboek.",
   commitDetailUnavailable:

@@ -419,6 +419,9 @@ export const de: Translations = {
   transactionDetailRemoved:
     "Diese Buchung wurde geändert oder entfernt. Gehen Sie zurück, um die aktuelle Liste zu sehen.",
   transactionErrorOpenFile: "Im Dateieditor öffnen",
+  pluginCopyNotice:
+    "Ein Plugin hat diesen Eintrag aus einem anderen erzeugt, daher kann er hier nicht bearbeitet oder gelöscht werden.",
+  pluginCopyOpenSource: "Quelleintrag öffnen",
   merchantDetailUnavailable:
     "Dieser Händler ist im ausgewählten Hauptbuch nicht verfügbar.",
   commitDetailUnavailable:
