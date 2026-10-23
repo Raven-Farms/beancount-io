@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useId } from "react";
 import { AlertCircle, CheckCircle } from "lucide-react";
 import {
   Card,
@@ -37,6 +37,7 @@ export function ImportPreviewTable({
   onResultChange,
 }: ImportPreviewTableProps) {
   const { t } = useTranslations();
+  const titleId = useId();
   const [editableRows, setEditableRows] = useState<ParsedRow[]>(() =>
     withStableRowIds(result.rows),
   );
@@ -106,7 +107,7 @@ export function ImportPreviewTable({
       <CardHeader>
         <div className="flex items-center justify-between">
           <div>
-            <CardTitle>{t("importer.preview.title")}</CardTitle>
+            <CardTitle id={titleId}>{t("importer.preview.title")}</CardTitle>
             <CardDescription>
               {t("importer.preview.description")}
             </CardDescription>
@@ -127,7 +128,7 @@ export function ImportPreviewTable({
       </CardHeader>
       <CardContent>
         <div className="rounded-md border">
-          <Table className="min-w-[760px]">
+          <Table className="min-w-[760px]" aria-labelledby={titleId}>
             <TableHeader>
               <TableRow>
                 <TableHead className="w-[60px]">

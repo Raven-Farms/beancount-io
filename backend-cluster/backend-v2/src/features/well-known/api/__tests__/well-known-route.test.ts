@@ -4,6 +4,7 @@ import path from "node:path";
 import Koa from "koa";
 import Router from "@koa/router";
 import type { AppConfig } from "@/config/config";
+import { MCP_PROMPTS } from "@/features/ai-agent/api/mcp-prompts";
 import { MCP_TOOLS } from "@/features/ai-agent/api/mcp-tools";
 import { API_SCOPES } from "@/server/api/identity";
 import {
@@ -77,7 +78,7 @@ describe("well-known routes", () => {
 
     expect(response.status).toBe(200);
     expect(response.headers.get("content-type")).toMatch(/^text\/plain/);
-    expect(body).toContain("Contact: mailto:hello@beancount.io");
+    expect(body).toContain("Contact: mailto:security@beancount.io");
     expect(body).toContain(
       "Canonical: https://beancount.io/.well-known/security.txt",
     );
@@ -121,6 +122,33 @@ describe("well-known routes", () => {
       name: expect.any(String),
       uriTemplate: expect.stringContaining("beancount://"),
     });
+  });
+
+  it("declares the prompt playbooks with their arguments", async () => {
+    const response = await fetch(`${origin}/.well-known/mcp.json`);
+    const body = (await response.json()) as {
+      capabilities: { prompts?: unknown };
+      prompts?: Array<{
+        name: string;
+        description: string;
+        arguments: Array<{ name: string; required: boolean }>;
+      }>;
+    };
+
+    // `initialize` advertises prompts; a manifest without them tells a client
+    // reading it first that the playbooks do not exist.
+    expect(body.capabilities.prompts).toBeDefined();
+    expect(body.prompts?.map(({ name }) => name)).toEqual(
+      MCP_PROMPTS.map(({ name }) => name),
+    );
+    for (const prompt of MCP_PROMPTS) {
+      const listed = body.prompts?.find(({ name }) => name === prompt.name);
+      expect(listed?.description).toBe(prompt.description);
+      expect(listed?.arguments.map(({ name }) => name)).toEqual(
+        Object.keys(prompt.argsSchema),
+      );
+      expect(listed?.arguments.every(({ required }) => !required)).toBe(true);
+    }
   });
 
   it("advertises query parameters and structured tool results", async () => {

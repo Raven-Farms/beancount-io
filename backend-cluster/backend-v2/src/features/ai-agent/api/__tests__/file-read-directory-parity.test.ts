@@ -21,6 +21,12 @@ import type { McpRequestContext } from "../mcp-context";
  * `LedgerRepoService` must refuse it instead, and still read real files.
  */
 const config = { api: { scopeEnforcement: "enforce" } } as AppConfig;
+// A Windows-1252 export: `E9` is "é" there and invalid UTF-8 (w23/030).
+const LATIN1 = Buffer.concat([
+  Buffer.from("; qa Caf"),
+  Buffer.from([0xe9]),
+  Buffer.from(" latin-1 comment\nqa-tail\n"),
+]);
 
 async function fixture() {
   const getLedgerFilesContent = jest.fn(
@@ -30,14 +36,27 @@ async function fixture() {
         data: files.map((path) =>
           path === "FY2026"
             ? { path, name: path, type: "dir", sha: "d1", size: 0 }
-            : {
-                path,
-                name: path,
-                type: "file",
-                sha: "f1",
-                size: 4,
-                content: "2026-01-01 open Assets:Cash\n",
-              },
+            : path === "latin1.txt" || path === "utf8.bean"
+              ? {
+                  path,
+                  name: path,
+                  type: "file",
+                  sha: "b1",
+                  size: 0,
+                  encoding: "base64",
+                  content: (path === "latin1.txt"
+                    ? LATIN1
+                    : Buffer.from("; Café\n")
+                  ).toString("base64"),
+                }
+              : {
+                  path,
+                  name: path,
+                  type: "file",
+                  sha: "f1",
+                  size: 4,
+                  content: "2026-01-01 open Assets:Cash\n",
+                },
         ),
       },
     }),
@@ -136,6 +155,46 @@ describe("reading a directory path as a file", () => {
       });
       const result = await f.tool("main.bean");
       expect(result.isError).not.toBe(true);
+    } finally {
+      await f.close();
+    }
+  });
+});
+
+describe("reading a file that is not valid UTF-8", () => {
+  it("marks the text lossy on REST and the MCP tool", async () => {
+    const f = await fixture();
+    try {
+      const text = "; qa Caf\uFFFD latin-1 comment\nqa-tail\n";
+      const response = await f.rest("latin1.txt");
+      expect(response.status).toBe(200);
+      expect(await response.json()).toEqual({
+        path: "latin1.txt",
+        content: text,
+        sha: "b1",
+        lossy: true,
+      });
+      const result = await f.tool("latin1.txt");
+      expect(
+        (result.structuredContent as { result: unknown[] }).result,
+      ).toEqual([expect.objectContaining({ content: text, lossy: true })]);
+    } finally {
+      await f.close();
+    }
+  });
+
+  it("leaves a valid UTF-8 file unmarked", async () => {
+    const f = await fixture();
+    try {
+      expect(await (await f.rest("utf8.bean")).json()).toEqual({
+        path: "utf8.bean",
+        content: "; Café\n",
+        sha: "b1",
+      });
+      const result = await f.tool("utf8.bean");
+      expect(
+        (result.structuredContent as { result: unknown[] }).result,
+      ).toEqual([expect.not.objectContaining({ lossy: expect.anything() })]);
     } finally {
       await f.close();
     }

@@ -366,3 +366,34 @@ class TestLogoutRevocationOutcome:
         assert not (bea_config_dir / "credentials.json").exists()
         if json_output:
             assert json.loads(result.stderr)["error"]["category"] == category
+
+
+@pytest.mark.parametrize("json_output", [False, True], ids=["human", "json"])
+def test_plan_limit_reads_as_the_server_says_not_as_a_permission_problem(
+    logged_in: None, httpx_mock: HTTPXMock, json_output: bool
+) -> None:
+    """A plan limit answers 403, but it is not a credential problem (w1/181)."""
+    message = "Your Free plan allows 1 ledger, and you own 3. Upgrade for more, or delete one you no longer need."
+    httpx_mock.add_response(
+        status_code=403,
+        json={
+            "ok": False,
+            "error": {
+                "code": "RESOURCE_LIMIT_REACHED",
+                "message": message,
+                "metadata": {"resource": "Ledger", "limit": 1, "current": 3},
+            },
+        },
+        headers={"X-Request-Id": "synthetic-plan-limit"},
+    )
+
+    result = CliRunner().invoke(
+        app, [*(["--json"] if json_output else []), "cloud", "ledger", "create", "qa-synthetic"]
+    )
+
+    assert result.exit_code == 1, result.stderr
+    assert message in result.stderr
+    assert "Not authorized" not in result.stderr
+    assert "permission" not in result.stderr.lower()
+    if json_output:
+        assert json.loads(result.stderr)["error"]["category"] == "validation"

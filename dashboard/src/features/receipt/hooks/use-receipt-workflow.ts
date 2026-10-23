@@ -1,6 +1,6 @@
 import { useState, useCallback } from "react";
 import { useMutation } from "@apollo/client/react";
-import { format } from "date-fns";
+import { CombinedGraphQLErrors } from "@apollo/client/errors";
 import { useTranslations } from "@/common/hooks/use-translations";
 import { useErrorMessage } from "@/common/lib/errors/error-message";
 import {
@@ -24,7 +24,8 @@ export interface ParsedReceipt {
 }
 
 export interface ReviewFormData {
-  date: Date;
+  /** `yyyy-MM-dd` civil day. */
+  date: string;
   payee: string;
   description: string;
   amount: string;
@@ -38,8 +39,13 @@ type WorkflowState =
   | { step: "idle" }
   | { step: "uploading" }
   | { step: "parsing"; objectKey: string }
-  | { step: "review"; objectKey: string; parsed: ParsedReceipt }
-  | { step: "submitting"; objectKey: string; parsed: ParsedReceipt }
+  | {
+      step: "review";
+      objectKey: string;
+      parsed: ParsedReceipt;
+      /** Why the last Record failed; the review keeps what was sent. */
+      error?: string;
+    }
   | { step: "success"; formData: ReviewFormData }
   | { step: "error"; message: string };
 
@@ -53,6 +59,34 @@ export function receiptPostingAmounts(
 ): [expense: string, payment: string] {
   const amount = parseDecimalNumber(typed) ?? typed.trim();
   return [amount, negateDecimalNumber(amount)];
+}
+
+/**
+ * Codes for a request the server refused before writing anything. A lost
+ * connection, a server fault or an unknown code may still have recorded the
+ * receipt.
+ */
+const REFUSAL_CODES = new Set([
+  "UNAUTHENTICATED",
+  "FORBIDDEN",
+  "NOT_FOUND",
+  "BAD_USER_INPUT",
+  "VALIDATION_FAILED",
+  "CONFLICT",
+  "RATE_LIMITED",
+  "RESOURCE_LIMIT_REACHED",
+  "OPERATION_NOT_ALLOWED",
+  "PREMIUM_REQUIRED",
+  "UNBALANCED",
+]);
+
+function wasRefused(err: unknown): boolean {
+  return (
+    CombinedGraphQLErrors.is(err) &&
+    err.errors.every(({ extensions }) =>
+      REFUSAL_CODES.has(String(extensions?.code)),
+    )
+  );
 }
 
 export function useReceiptWorkflow(ledgerId: string) {
@@ -99,22 +133,29 @@ export function useReceiptWorkflow(ledgerId: string) {
     [uploadFile, parseReceiptMutation, ledgerId, t, formatError],
   );
 
+  /** Records the reviewed receipt; `true` once the transaction is written. */
   const submit = useCallback(
     async (formData: ReviewFormData) => {
-      if (state.step !== "review") return;
+      if (state.step !== "review") return false;
       const { objectKey, parsed } = state;
+      // A failed Record returns to the review it was sent from. The form
+      // stays mounted with the reader's corrections, and the uploaded receipt
+      // is kept, so they can retry without uploading or parsing again (w4/m48).
+      const failed = (error: string) => {
+        setState({ step: "review", objectKey, parsed, error });
+        return false;
+      };
 
       const [expenseAmount, paymentAmount] = receiptPostingAmounts(
         formData.amount,
       );
-      setState({ step: "submitting", objectKey, parsed });
       try {
         const result = await insertReceiptTransaction({
           variables: {
             ledgerId,
             receiptObjectKey: objectKey,
             input: {
-              date: format(formData.date, "yyyy-MM-dd"),
+              date: formData.date,
               payee: formData.payee,
               description: formData.description,
               postings: [
@@ -135,17 +176,16 @@ export function useReceiptWorkflow(ledgerId: string) {
         });
 
         const data = result.data?.insertReceiptTransaction;
-        if (!data?.success) {
-          setState({
-            step: "error",
-            message: t("receipt.workflow.failedToRecord"),
-          });
-          return;
-        }
+        if (!data?.success) return failed(t("receipt.workflow.failedToRecord"));
 
         setState({ step: "success", formData });
+        return true;
       } catch (err) {
-        setState({ step: "error", message: formatError(err) });
+        return failed(
+          wasRefused(err)
+            ? formatError(err)
+            : `${formatError(err)} ${t("receipt.workflow.recordUnconfirmed")}`,
+        );
       }
     },
     [state, ledgerId, insertReceiptTransaction, t, formatError],

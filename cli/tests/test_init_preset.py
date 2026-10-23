@@ -1,0 +1,95 @@
+"""`bea init --preset` builds the setup-catalog chart, not the fixed one (w3/m53/t004)."""
+
+from __future__ import annotations
+
+import json
+import os
+import subprocess
+import sys
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+
+
+def _bea(tmp_path: Path, *args: str) -> subprocess.CompletedProcess[str]:
+    env = {k: v for k, v in os.environ.items() if not k.startswith("BEA_")}
+    env.update(
+        BEA_CONFIG_DIR=str(tmp_path / "config"),
+        XDG_CACHE_HOME=str(tmp_path / "cache"),
+        XDG_DATA_HOME=str(tmp_path / "data"),
+        BEA_NO_UPDATE_NOTIFIER="1",
+        PYTHONPATH=str(ROOT / "src"),
+        TERM="dumb",
+        NO_COLOR="1",
+    )
+    return subprocess.run(
+        [sys.executable, "-m", "cli.main", *args],
+        env=env,
+        cwd=tmp_path,
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+
+
+def test_init_preset_personal_with_known_opening(tmp_path: Path) -> None:
+    books = tmp_path / "books"
+    result = _bea(
+        tmp_path,
+        "--json",
+        "init",
+        str(books),
+        "--preset",
+        "personal@1",
+        "--currency",
+        "EUR",
+        "--date",
+        "2026-02-01",
+        "--opening-balance",
+        "Assets:Cash 100",
+    )
+    assert result.returncode == 0, result.stderr or result.stdout
+    data = json.loads(result.stdout)["data"]
+    assert data["preset"] == "personal@1"
+    assert "Expenses:Food" in data["accounts"]
+    assert "Assets:Checking" not in data["accounts"]
+
+    ledger = (books / "main.bean").read_text(encoding="utf-8")
+    assert 'option "operating_currency" "EUR"' in ledger
+    # Opening posts the day before the boundary and asserts on it, matching
+    # the hosted builder's fixture for the same specification.
+    assert '2026-01-31 * "Opening balance"' in ledger
+    assert "2026-02-01 balance Assets:Cash" in ledger
+
+    checked = _bea(tmp_path, "--file", str(books / "main.bean"), "check")
+    assert checked.returncode == 0, checked.stderr or checked.stdout
+
+
+def test_init_preset_rejects_unknown_preset_and_account(tmp_path: Path) -> None:
+    unknown = _bea(tmp_path, "--no-input", "init", str(tmp_path / "a"), "--preset", "nope@1", "--currency", "USD")
+    assert unknown.returncode != 0
+    assert not (tmp_path / "a").exists()
+
+    bad_account = _bea(
+        tmp_path,
+        "--no-input",
+        "init",
+        str(tmp_path / "b"),
+        "--preset",
+        "personal@1",
+        "--currency",
+        "USD",
+        "--date",
+        "2026-02-01",
+        "--opening-balance",
+        "Assets:Checking 100",
+    )
+    assert bad_account.returncode != 0
+    assert not (tmp_path / "b").exists()
+
+
+def test_init_without_preset_keeps_the_fixed_chart(tmp_path: Path) -> None:
+    books = tmp_path / "books"
+    result = _bea(tmp_path, "--json", "init", str(books), "--currency", "USD", "--date", "2026-08-01")
+    assert result.returncode == 0, result.stderr or result.stdout
+    assert "Assets:Checking" in json.loads(result.stdout)["data"]["accounts"]

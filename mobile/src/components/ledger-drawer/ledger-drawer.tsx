@@ -33,6 +33,7 @@ import {
   fontWeights,
   gutter,
   prefersStackedLayout,
+  relaxLineHeights,
   space,
   useTheme,
 } from "@/common/theme";
@@ -58,6 +59,7 @@ import { SearchBar } from "@/components/search-bar";
 import { UserAvatar } from "@/components/user-avatar";
 import { useCurrentUser } from "@/common/hooks/use-current-user";
 import { type DrawerLedger, getDrawerSections } from "./drawer-ledgers";
+import { InlineError } from "@/components/inline-error";
 
 const skeletonWidths = [140, 112, 160];
 const IDENTITY_AVATAR_SIZE = 24;
@@ -309,6 +311,7 @@ const getStyles = (theme: ColorTheme) =>
       lineHeight: 24,
       fontWeight: fontWeights.regular,
       color: theme.text01,
+      textAlign: LEADING_TEXT_ALIGN,
     },
     // The avatar takes the icon's place in a menu row. It is drawn a little
     // larger than the 20pt icons so initials stay legible, but lays out at
@@ -322,11 +325,27 @@ const getStyles = (theme: ColorTheme) =>
     identityNameSkeleton: { flex: 1, paddingVertical: 4 },
   });
 
+/**
+ * The drawer's styles, their fixed line heights dropped once text is enlarged.
+ * Pinned point line heights clipped "Ledgers", "+ New" and every ledger name
+ * at AX2 (w21/111), but growing them as well double-scaled what React Native
+ * already scales (w21/247): at large sizes the platform's natural line height
+ * applies instead.
+ */
+function useDrawerStyles() {
+  const styles = useThemeStyle(getStyles);
+  const { fontScale } = useWindowDimensions();
+  return useMemo(
+    () => relaxLineHeights(styles, fontScale),
+    [styles, fontScale],
+  );
+}
+
 /** Who is signed in, pinned under the drawer's menu. It is also the drawer's
  * way into Settings (Profile lives there), so it opens Settings in every
  * state: a skeleton while the profile loads, a plain Settings row if it can't. */
 function DrawerIdentityRow({ onPress }: { onPress: () => void }): JSX.Element {
-  const styles = useThemeStyle(getStyles);
+  const styles = useDrawerStyles();
   const { t } = useTranslations();
   const { user, displayName, loading } = useCurrentUser();
 
@@ -398,7 +417,7 @@ function DrawerMenuRow({
   onPress: () => void;
   disabled?: boolean;
 }): JSX.Element {
-  const styles = useThemeStyle(getStyles);
+  const styles = useDrawerStyles();
   const theme = useTheme().colorTheme;
 
   return (
@@ -433,7 +452,7 @@ export type LedgerDrawerData = {
     serverUrl: string;
     signInLabel: string;
     signInPending: boolean;
-    signInFailed: boolean;
+    signInFailure: string | null;
     onSignIn: () => void;
     onExit: () => void;
   };
@@ -467,7 +486,7 @@ export function LedgerDrawer({
   children,
   data,
 }: LedgerDrawerProps): JSX.Element {
-  const styles = useThemeStyle(getStyles);
+  const styles = useDrawerStyles();
   const theme = useTheme().colorTheme;
   const { t } = useTranslations();
   const toast = useToast();
@@ -707,10 +726,11 @@ export function LedgerDrawer({
     <View style={styles.navSection}>
       {guest ? (
         <>
-          {guest.signInFailed && (
-            <Text accessibilityRole="alert" style={styles.stateText}>
-              {t("signInFailed")}
-            </Text>
+          {guest.signInFailure && (
+            <InlineError
+              style={styles.stateText}
+              message={guest.signInFailure}
+            />
           )}
           <DrawerMenuRow
             testID="guest-sign-in"
@@ -923,7 +943,14 @@ export function LedgerDrawer({
                     disabled={item.disabled}
                     activeOpacity={0.7}
                     accessibilityRole="button"
-                    accessibilityLabel={item.fullName}
+                    // A dimmed row says why, as its caption does (w21/142).
+                    accessibilityLabel={
+                      item.statusLabel
+                        ? `${item.name}, ${item.statusLabel}`
+                        : item.subtitle
+                          ? `${item.name}, ${item.subtitle}`
+                          : item.fullName
+                    }
                     accessibilityState={{
                       selected: isSelected,
                       disabled: Boolean(item.disabled),
@@ -937,6 +964,9 @@ export function LedgerDrawer({
                     >
                       {item.name}
                     </Text>
+                    {item.subtitle ? (
+                      <Text style={styles.caption}>{item.subtitle}</Text>
+                    ) : null}
                     {item.statusLabel && (
                       <Text style={styles.caption}>{item.statusLabel}</Text>
                     )}
@@ -1006,17 +1036,26 @@ export function LedgerDrawer({
             ListFooterComponent={
               <>
                 {error && drawerLedgers.length > 0 ? (
-                  <TouchableOpacity
-                    testID="drawer-directory-retry"
-                    style={styles.emptyAction}
-                    onPress={handleRefresh}
-                    accessibilityRole="button"
-                    accessibilityLabel={t("discoveryLoadError")}
-                  >
+                  // The message is a caption on the drawer; the filled button
+                  // carries its own label in white. Gray text on the green fill
+                  // was 1.01:1 (w21/382).
+                  <View style={styles.stateContainer}>
                     <Text style={styles.stateText}>
                       {t("discoveryLoadError")}
                     </Text>
-                  </TouchableOpacity>
+                    <TouchableOpacity
+                      testID="drawer-directory-retry"
+                      style={styles.emptyAction}
+                      onPress={handleRefresh}
+                      accessibilityRole="button"
+                      accessibilityLabel={t("discoveryRetry")}
+                      accessibilityHint={t("discoveryLoadError")}
+                    >
+                      <Text style={styles.emptyActionText}>
+                        {t("discoveryRetry")}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
                 ) : null}
                 {stacked ? navigation : null}
               </>
@@ -1036,6 +1075,9 @@ export function LedgerDrawer({
           {revealed && (
             <Pressable
               testID="ledger-drawer-backdrop"
+              // A tap-outside target, not a control: VoiceOver closes the
+              // drawer with its own escape gesture.
+              accessible={false}
               style={StyleSheet.absoluteFill}
               onPress={onClose}
             />

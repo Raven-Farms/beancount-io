@@ -192,3 +192,74 @@ describe("occurrence-disambiguated entry IDs", () => {
     expect(ids.get(c)).toBe(hashEntry(other));
   });
 });
+
+// w21/476: a custom directive's hash ignored its values, so every same-day
+// budget (any account, any amount) shared one identity and a stale delete
+// removed a different or changed budget.
+describe("custom directive identity", () => {
+  const budget = (
+    account: string,
+    number: string,
+    date = "2026-03-01",
+  ): DirectiveJson =>
+    ({
+      type: "custom",
+      date,
+      custom_type: "budget",
+      values: [
+        { type: "account", value: account },
+        { type: "string", value: "monthly" },
+        { type: "amount", value: { number, currency: "USD" } },
+      ],
+      meta: {},
+    }) as unknown as DirectiveJson;
+
+  it("tells two same-day budgets of different accounts apart", () => {
+    expect(hashEntry(budget("Expenses:QaA", "100.00"))).not.toBe(
+      hashEntry(budget("Expenses:QaB", "200.00")),
+    );
+    expect(hashEntry(budget("Expenses:QaA", "100.00"))).not.toBe(
+      hashEntry(budget("Expenses:QaB", "100.00")),
+    );
+  });
+
+  it("changes with the amount, so a stale hash no longer finds the entry", () => {
+    expect(hashEntry(budget("Income:QaGig", "0.00"))).not.toBe(
+      hashEntry(budget("Income:QaGig", "0.50")),
+    );
+  });
+
+  it("is stable for the same directive and still 32 hex characters", () => {
+    const hash = hashEntry(budget("Expenses:QaA", "100.00"));
+    expect(hashEntry(budget("Expenses:QaA", "100.00"))).toBe(hash);
+    expect(hash).toMatch(/^[0-9a-f]{32}$/);
+    // Another day or another custom type is another entry.
+    expect(hashEntry(budget("Expenses:QaA", "100.00", "2026-04-01"))).not.toBe(
+      hash,
+    );
+  });
+
+  it("treats a custom directive without values as before (date and type)", () => {
+    const bare = {
+      type: "custom",
+      date: "2026-03-01",
+      custom_type: "fava-option",
+      meta: {},
+    } as unknown as DirectiveJson;
+    expect(hashEntry(bare)).toMatch(/^[0-9a-f]{32}$/);
+    expect(hashEntry({ ...bare, values: [] } as DirectiveJson)).toBe(
+      hashEntry(bare),
+    );
+  });
+
+  it("keeps same-day budgets distinct entries in the id map", () => {
+    const a = budget("Expenses:QaA", "100.00");
+    const b = budget("Expenses:QaB", "200.00");
+    const ids = buildEntryIdMap([a, b]);
+    // Unique content hashes: no occurrence suffix, and a removal of one
+    // leaves the other's id unchanged.
+    expect(ids.get(a)).not.toContain(":");
+    expect(ids.get(b)).not.toContain(":");
+    expect(buildEntryIdMap([b]).get(b)).toBe(ids.get(b));
+  });
+});

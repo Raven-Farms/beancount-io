@@ -65,6 +65,13 @@ export const TransactionsHeader = ({
             hitSlop={8}
             accessibilityRole="button"
             accessibilityLabel={t("filters")}
+            // The dot is the only cue that the list is filtered; say it too
+            // (w21/305).
+            accessibilityValue={
+              activeFilterCount > 0
+                ? { text: t("filtersActive", { count: activeFilterCount }) }
+                : undefined
+            }
           >
             <Ionicons
               name="options-outline"

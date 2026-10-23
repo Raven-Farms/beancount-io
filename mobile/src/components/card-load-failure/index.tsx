@@ -14,7 +14,7 @@ const getStyles = (theme: ColorTheme) =>
     },
     message: {
       fontSize: fontSizes.md,
-      color: theme.black60,
+      color: theme.black80,
       textAlign: LEADING_TEXT_ALIGN,
     },
     retry: {

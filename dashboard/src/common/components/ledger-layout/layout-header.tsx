@@ -10,6 +10,7 @@ import {
   MessageCircle,
 } from "lucide-react";
 import { Button } from "@/common/components/ui/button.tsx";
+import { useSafeReturnPath } from "@/common/hooks/use-safe-return-path";
 import { SidebarTrigger, useSidebar } from "@/common/components/ui/sidebar.tsx";
 import {
   DropdownMenu,
@@ -33,6 +34,7 @@ import {
 import { Badge } from "@/common/components/ui/badge.tsx";
 import { LedgerSearchControls } from "@/common/components/ledger-search-controls";
 import { useTranslations } from "@/common/hooks/use-translations.ts";
+import { docsUrl } from "@/common/lib/docs-url";
 import { cn } from "@/common/lib/utils/utils";
 import { LedgerSearchParamsContext } from "@/common/providers/ledger-search-params-provider";
 import { Authenticated } from "../authenticated";
@@ -64,7 +66,8 @@ export function LayoutHeader({
 }) {
   const { isMobile, openMobile } = useSidebar();
   const location = useLocation();
-  const { t } = useTranslations();
+  const { t, i18n } = useTranslations();
+  const returnPath = useSafeReturnPath();
   const { searchParams } = useContext(LedgerSearchParamsContext);
   const [filtersOpen, setFiltersOpen] = useState(false);
 
@@ -138,7 +141,12 @@ export function LayoutHeader({
           <Authenticated
             fallback={
               <Button variant="outline" size="sm" asChild>
-                <Link to="/auth/login" aria-label={t("auth.login")}>
+                <Link
+                  to="/auth/login"
+                  // Come back to this page, its filters and fragment (w4/237).
+                  search={{ next: returnPath }}
+                  aria-label={t("auth.login")}
+                >
                   <LogIn className="h-4 w-4 xs:mr-2" />
                   <span className="hidden xs:inline">{t("auth.login")}</span>
                 </Link>
@@ -166,7 +174,8 @@ export function LayoutHeader({
               <DropdownMenuContent align="end" className="w-64">
                 <DropdownMenuItem asChild>
                   <a
-                    href="https://beancount.io/docs/help-center"
+                    // In the reader's language; English is at the root (w4/330).
+                    href={docsUrl(i18n.language, "help-center")}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="items-start"

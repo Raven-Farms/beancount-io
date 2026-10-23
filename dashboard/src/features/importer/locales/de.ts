@@ -138,9 +138,15 @@ const deImporter: Record<string, TranslationEntry> = {
     message: "Der aktuelle Dateityp erfordert KI-gestützte Analyse",
     description: "Description of why premium is required",
   },
-  "importer.error.upgradeToPremium": {
-    message: "Auf Premium upgraden",
-    description: "Label for premium upgrade option",
+  "importer.error.upgradeToPlan": {
+    message: "Auf {plan} upgraden",
+    description:
+      "Heading over the paywall's upgrade button; {plan} is the plan the button recommends (the next tier up).",
+  },
+  "importer.error.upgradePlan": {
+    message: "Tarif upgraden",
+    description:
+      "Heading over the paywall's upgrade button when no higher self-serve plan exists.",
   },
   "importer.error.upgradeDescription": {
     message: "PDF-, OFX- und Bilddateien automatisch mit KI analysieren",
@@ -170,6 +176,15 @@ const deImporter: Record<string, TranslationEntry> = {
   "importer.error.failedToParse": {
     message: "Datei konnte nicht analysiert werden",
     description: "Title for parse failure error",
+  },
+  "importer.error.notUtf8": {
+    message: "Datei ist kein UTF-8-Text",
+    description: "Title when an uploaded CSV is not UTF-8 text",
+  },
+  "importer.error.notUtf8Description": {
+    message:
+      "Diese CSV enthält Zeichen, die kein gültiges UTF-8 sind; ein Import würde Empfänger- und Beschreibungstexte verändern. Speichern Sie sie in Ihrer Bank- oder Tabellen-App erneut als CSV UTF-8 und laden Sie diese Datei hoch.",
+    description: "How to re-save a CSV that is not UTF-8 text",
   },
   "importer.error.serverError": {
     message:
@@ -312,6 +327,24 @@ const deImporter: Record<string, TranslationEntry> = {
     message: "Währung für alle Transaktionen",
     description: "Hint text for currency field",
   },
+  "importer.configure.currencyConflict_one": {
+    message:
+      "{count} Zeile ({rows}) ist in {symbol} ({currencies}) angegeben, dieser Import würde sie aber als {currency} buchen.",
+    description:
+      "Import refusal: a selected row's amount carries a currency symbol that is not the chosen import currency. {count} is 1, {rows} the row number, {symbol} the symbol from the bank file (€, £…), {currencies} the currencies it can mean, {currency} the selected currency code",
+  },
+  "importer.configure.currencyConflict_other": {
+    message:
+      "{count} Zeilen ({rows}) sind in {symbol} ({currencies}) angegeben, dieser Import würde sie aber als {currency} buchen.",
+    description:
+      "Import refusal for several selected rows whose amounts carry a currency symbol other than the chosen import currency. {rows} lists their row numbers, possibly ending in …",
+  },
+  "importer.configure.currencyConflictRemedy": {
+    message:
+      "Ein Import bucht nur eine Währung. Wählen Sie die Währung dieser Zeilen oder heben Sie ihre Auswahl auf und importieren Sie sie separat. Es wurde nichts importiert.",
+    description:
+      "How to resolve a currency conflict before importing: no conversion happens, so the user picks the matching currency or splits the file",
+  },
   "importer.configure.assignTargetAccounts": {
     message: "Zielkonten zuweisen",
     description: "Heading for account mapping section",
@@ -449,6 +482,11 @@ const deImporter: Record<string, TranslationEntry> = {
   "importer.accountMapping.aiSuccessDescription_other": {
     message: "{count} Transaktionen erfolgreich kategorisiert",
     description: "Toast description for multiple transactions categorization",
+  },
+  "importer.accountMapping.aiNoneApplied": {
+    message: "Kein Vorschlag war sicher genug, um ein Zielkonto auszufüllen.",
+    description:
+      "Toast description when AI Fill completed but no suggestion was confident enough to fill a target",
   },
   "importer.accountMapping.aiFailed": {
     message: "KI-Kategorisierung fehlgeschlagen",

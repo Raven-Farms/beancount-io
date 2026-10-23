@@ -5,6 +5,8 @@
  * Kept free of any `@/` value imports so the jest-lite runner can require it.
  */
 
+import { merchantKey } from "../../../common/merchant-key";
+
 import {
   asCount,
   asString,
@@ -24,6 +26,12 @@ export interface MerchantAggregate {
   transactionCount: number;
   firstDate: string;
   lastDate: string;
+  /**
+   * The other spellings this row merged ("Qa Cafe" beside "QA CAFE"), sorted;
+   * absent when it has one. The detail screen matches every spelling, so it
+   * covers what the row counted (w21/046).
+   */
+  otherSpellings?: string[];
 }
 
 export type MerchantSort = "count" | "alphabetical";
@@ -79,8 +87,9 @@ function resolveColumns(types: ReadonlyArray<QueryColumnLike>): {
  *   into one directory row: counts sum, firstDate is the earlier, lastDate the
  *   later, and the display name is the variant with the most transactions
  *   (ties: the more recently used, then the lexicographically smaller). This is
- *   Monarch-style merge at the display layer only — tapping through opens the
- *   shown variant, and a real rename stays a ledger-source rewrite (see
+ *   Monarch-style merge at the display layer only — tapping through opens
+ *   every merged spelling (`otherSpellings`), and a real rename stays a
+ *   ledger-source rewrite (see
  *   `.pm` note `w1/032`). Exact-duplicate rows merge the same way.
  * - Default order matches the BQL: count desc, alphabetical tiebreak.
  */
@@ -98,7 +107,11 @@ export function aggregatePayees(
   /** Keyed by lowercased payee; tracks the best display variant seen so far. */
   const byPayee = new Map<
     string,
-    MerchantAggregate & { variantCount: number; variantLastDate: string }
+    MerchantAggregate & {
+      variantCount: number;
+      variantLastDate: string;
+      spellings: Set<string>;
+    }
   >();
 
   for (const row of table.rows) {
@@ -110,21 +123,30 @@ export function aggregatePayees(
     if (!payee || transactionCount === null) {
       continue;
     }
+    // The spelling as the ledger has it. Trimmed, a padded "Starbucks " was
+    // lost, and the detail's exact `payee =` statements never counted its
+    // rows while its list showed them (w21/093). Grouping and display stay
+    // trimmed.
+    const raw = row[columns.payee];
+    const spelling = typeof raw === "string" ? raw : payee;
     const firstDate = asString(row[columns.firstDate]) ?? "";
     const lastDate = asString(row[columns.lastDate]) ?? "";
 
-    const existing = byPayee.get(payee.toLowerCase());
+    const key = merchantKey(payee);
+    const existing = byPayee.get(key);
     if (!existing) {
-      byPayee.set(payee.toLowerCase(), {
+      byPayee.set(key, {
         payee,
         transactionCount,
         firstDate,
         lastDate,
         variantCount: transactionCount,
         variantLastDate: lastDate,
+        spellings: new Set([spelling]),
       });
       continue;
     }
+    existing.spellings.add(spelling);
     existing.transactionCount += transactionCount;
     if (firstDate && (!existing.firstDate || firstDate < existing.firstDate)) {
       existing.firstDate = firstDate;
@@ -146,12 +168,18 @@ export function aggregatePayees(
 
   return sortMerchants(
     [...byPayee.values()].map(
-      ({ payee, transactionCount, firstDate, lastDate }) => ({
-        payee,
-        transactionCount,
-        firstDate,
-        lastDate,
-      }),
+      ({ payee, transactionCount, firstDate, lastDate, spellings }) => {
+        const otherSpellings = [...spellings]
+          .filter((spelling) => spelling !== payee)
+          .sort();
+        return {
+          payee,
+          transactionCount,
+          firstDate,
+          lastDate,
+          ...(otherSpellings.length > 0 && { otherSpellings }),
+        };
+      },
     ),
     "count",
   );
@@ -162,12 +190,12 @@ export function filterMerchants(
   merchants: readonly MerchantAggregate[],
   query: string,
 ): MerchantAggregate[] {
-  const needle = query.trim().toLowerCase();
+  const needle = merchantKey(query);
   if (!needle) {
     return [...merchants];
   }
   return merchants.filter((merchant) =>
-    merchant.payee.toLowerCase().includes(needle),
+    merchantKey(merchant.payee).includes(needle),
   );
 }
 

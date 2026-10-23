@@ -47,6 +47,8 @@ tar.write(
 );
 contents.copy(tar, 512);
 const gzip = gzipSync(tar);
+const KNOWN_SHA = "0123456789abcdef0123456789abcdef01234567";
+const UNKNOWN_SHA = "deadbeef00000000000000000000000000000000";
 async function listen(server: http.Server) {
   await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
   return `http://127.0.0.1:${(server.address() as { port: number }).port}`;
@@ -56,8 +58,19 @@ async function fixture(identity = readOnlyToken) {
   let status = 200;
   // What the hosted repository answers today for both formats (w6/010).
   let contentType: string | undefined;
+  // Commits the repository has. Like Gitea, the origin takes an archive of an
+  // unknown full SHA on trust and never answers it (w23/003).
+  const commits = new Set<string>([KNOWN_SHA]);
   const origin = http.createServer((req, res) => {
     calls.push(req.url!);
+    const lookup = /\/git\/commits\/([^/?]+)/.exec(req.url!);
+    if (lookup) {
+      res.statusCode = commits.has(lookup[1]) ? 200 : 404;
+      res.end(JSON.stringify({ sha: lookup[1] }));
+      return;
+    }
+    const sha = /\/archive\/([0-9a-f]{40})\./.exec(req.url!);
+    if (sha && !commits.has(sha[1])) return;
     if (status !== 200) {
       res.statusCode = status;
       res.end("upstream failure");
@@ -85,7 +98,7 @@ async function fixture(identity = readOnlyToken) {
   };
   const config = {
     api: { scopeEnforcement: "enforce" },
-    favaApi: { baseUrl },
+    gitea: { internalBaseUrl: baseUrl },
   } as AppConfig;
   const service = new LedgerArchiveService(
     models as never,
@@ -130,6 +143,7 @@ async function fixture(identity = readOnlyToken) {
       fetch(`${legacyUrl}/api-gateway/ledgers/alice%2Fmain/archive/${archive}`),
     read: (uri: string) => client.readResource({ uri }),
     close: async () => {
+      origin.closeAllConnections();
       await client.close();
       await server.close();
       await rest.close();
@@ -217,6 +231,80 @@ describe("archive bytes through canonical adapters and the legacy REST twin", ()
       await f.close();
     }
   });
+  it.each(["main", "main.rar", "main.tar"])(
+    "refuses %p, which names no supported format, as bad input before upstream work",
+    async (name) => {
+      const f = await fixture();
+      try {
+        const response = await f.rest(name);
+        expect(response.status).toBe(400);
+        expect((await response.json()).error.code).toBe("BAD_USER_INPUT");
+        await expect(f.read(canonical(name))).rejects.toMatchObject({
+          data: { code: "BAD_USER_INPUT" },
+        });
+        expect(f.calls).toHaveLength(0);
+      } finally {
+        await f.close();
+      }
+    },
+  );
+
+  it("answers an unknown full commit SHA as not found without waiting on the archive", async () => {
+    const f = await fixture();
+    try {
+      const name = `${UNKNOWN_SHA}.zip`;
+      const started = Date.now();
+      const response = await f.rest(name);
+      expect(response.status).toBe(404);
+      expect((await response.json()).error.code).toBe("NOT_FOUND");
+      await expect(f.read(canonical(name))).rejects.toMatchObject({
+        data: { code: "NOT_FOUND" },
+      });
+      expect(Date.now() - started).toBeLessThan(5_000);
+      // Only the commit lookups reached the origin; no archive was requested.
+      expect(f.calls.every((url) => url.includes("/git/commits/"))).toBe(true);
+      expect(f.calls).toHaveLength(2);
+    } finally {
+      await f.close();
+    }
+  });
+
+  it("downloads a known full commit SHA after resolving it", async () => {
+    const f = await fixture();
+    try {
+      const name = `${KNOWN_SHA}.zip`;
+      const response = await f.rest(name);
+      expect(response.status).toBe(200);
+      expect(Buffer.from(await response.arrayBuffer())).toEqual(zip);
+      const content = (await f.read(canonical(name))).contents[0];
+      if (!("blob" in content)) throw new Error("Expected archive blob");
+      expect(Buffer.from(content.blob, "base64")).toEqual(zip);
+      expect(f.calls.map((url) => url.split("?")[0].split("/").at(-1))).toEqual(
+        [KNOWN_SHA, name, KNOWN_SHA, name],
+      );
+    } finally {
+      await f.close();
+    }
+  });
+
+  it.each([400, 422])(
+    "reports upstream %s for a reference as bad input, not an outage",
+    async (status) => {
+      const f = await fixture();
+      f.fail(status);
+      try {
+        const response = await f.rest("main.zip");
+        expect(response.status).toBe(400);
+        expect((await response.json()).error.code).toBe("BAD_USER_INPUT");
+        await expect(f.read(canonical("main.zip"))).rejects.toMatchObject({
+          data: { code: "BAD_USER_INPUT" },
+        });
+      } finally {
+        await f.close();
+      }
+    },
+  );
+
   it.each([404, 503])(
     "refuses upstream %s without returning archive bytes",
     async (status) => {

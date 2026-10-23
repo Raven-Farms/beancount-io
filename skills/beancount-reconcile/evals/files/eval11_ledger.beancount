@@ -1,0 +1,15 @@
+;; fixture — beancount-reconcile eval11 (first reconcile, opening gap, no prior assertion)
+option "operating_currency" "USD"
+
+2026-04-01 open Assets:Bank:Checking USD
+2026-04-01 open Income:Salary USD
+2026-04-01 open Expenses:Food:Groceries USD
+2026-04-01 open Equity:Opening-Balances
+
+2026-05-06 * "WHOLE FOODS"
+  Assets:Bank:Checking    -50.00 USD
+  Expenses:Food:Groceries
+
+2026-05-15 * "ACME CORP" "Payroll"
+  Assets:Bank:Checking    300.00 USD
+  Income:Salary

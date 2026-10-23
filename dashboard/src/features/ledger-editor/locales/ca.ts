@@ -9,6 +9,17 @@ const caLedgerEditor: Record<string, { message: string; description: string }> =
       message: "Crear fitxer",
       description: "Button label to create file",
     },
+    "ledgerEditor.branchNotFound": {
+      message:
+        "La branca «{branch}» no està disponible aquí. Els fitxers es mostren des de {main}.",
+      description:
+        "404 for a Files URL naming a branch other than the supported one (contains {branch} and {main})",
+    },
+    "ledgerEditor.browseMainFiles": {
+      message: "Explora els fitxers de {main}",
+      description:
+        "Link to the Files root on the supported branch (contains {main})",
+    },
     "ledgerEditor.files": {
       message: "Fitxers",
       description: "Ledger files management",
@@ -50,6 +61,12 @@ export default {
     message:
       "Aquest tipus de fitxer no és compatible per a la previsualització",
     description: "Unsupported preview message without a file type",
+  },
+  "ledgerEditor.notUtf8Text": {
+    message:
+      "Aquest fitxer no és text UTF-8, així que no es pot mostrar ni editar aquí sense canviar-ne els bytes. Baixeu-lo per obrir-lo en un altre programa.",
+    description:
+      "Shown instead of the editor for a text file whose bytes are not valid UTF-8",
   },
   "ledgerEditor.createFileCommit": {
     message: "Crea un fitxer {path}",

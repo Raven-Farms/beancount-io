@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import { SubscriptionSection } from "../subscription-section";
 import { UsageOverview } from "../subscription-usage-overview";
 import type { GetSubscriptionStatusQuery } from "@/graphql/definitions";
@@ -38,6 +38,10 @@ const {
 }));
 
 vi.mock("@apollo/client/react", () => ({
+  useLazyQuery: () => [
+    vi.fn(),
+    { data: undefined, loading: false, error: undefined },
+  ],
   useQuery: () => mockUseQuery(),
   useMutation: (document: {
     definitions?: Array<{ name?: { value?: string } }>;
@@ -160,31 +164,20 @@ vi.mock("@/common/components/ui/separator", () => ({
   Separator: () => <hr data-testid="separator" />,
 }));
 const mockAppLanguage = vi.hoisted(() => ({ current: "en" }));
+const mockT = vi.hoisted(() =>
+  vi.fn((key: string, params?: Record<string, string>) => {
+    let result = key;
+    for (const [k, v] of Object.entries(params ?? {}))
+      result = result.replace(`{${k}}`, v);
+    return result;
+  }),
+);
 vi.mock("@/common/hooks/use-translations", () => ({
   useTranslations: () => ({
-    t: (key: string, params?: Record<string, string>) => {
-      if (params) {
-        let result = key;
-        for (const [k, v] of Object.entries(params))
-          result = result.replace(`{${k}}`, v);
-        if (result === key) return key;
-        return result;
-      }
-      return key;
-    },
+    t: mockT,
     // The app-locale number formatter reads `i18n.language`.
     i18n: { language: mockAppLanguage.current },
   }),
-}));
-vi.mock("../stripe-config", () => ({
-  stripePlanConfig: {
-    clientId: "test-client",
-    premium: { monthly: "price_premium" },
-    growth: { monthly: "price_growth" },
-    organization: { monthly: "price_org" },
-    monthly: "price_monthly",
-    yearly: "price_yearly",
-  },
 }));
 
 function setUserLimits(
@@ -238,8 +231,12 @@ function setUserLimits(
 
 beforeEach(() => {
   vi.clearAllMocks();
+  mockAppLanguage.current = "en";
   setUserLimits();
 });
+
+/** The plan banner, apart from the plan row that names every tier too. */
+const banner = () => within(screen.getByTestId("current-plan-banner"));
 
 describe("Usage Overview", () => {
   it("should show AI tokens and ledgers usage", () => {
@@ -262,6 +259,23 @@ describe("Usage Overview", () => {
     expect(screen.getByText("userSettings.usage")).toBeInTheDocument();
     expect(screen.getByText("userSettings.aiCfoUsage")).toBeInTheDocument();
     expect(screen.getByText("userSettings.ledgers")).toBeInTheDocument();
+  });
+
+  it("writes the AI usage nudge's percentage in the app language", () => {
+    mockAppLanguage.current = "fa";
+    setUserLimits("PREMIUM", { aiCfoTokensUsed: 90, aiCfoTokensMax: 100 });
+    mockUseQuery.mockReturnValue({
+      data: mockActiveSubscriptionData,
+      loading: false,
+      error: null,
+      refetch: vi.fn(),
+    });
+
+    render(<SubscriptionSection />);
+
+    expect(mockT).toHaveBeenCalledWith("userSettings.aiUsageUpgradeNudge", {
+      percentage: "۹۰",
+    });
   });
 
   it("should show unlimited text for enterprise users", () => {
@@ -409,7 +423,7 @@ describe("Usage Overview - Detailed", () => {
     render(<SubscriptionSection />);
 
     // Banner should appear, but usage section should not
-    expect(screen.getByText("userSettings.freePlan")).toBeInTheDocument();
+    expect(banner().getByText("userSettings.freePlan")).toBeInTheDocument();
     expect(screen.queryByText("userSettings.usage")).not.toBeInTheDocument();
   });
 });
@@ -485,8 +499,8 @@ describe("Price Formatting", () => {
 
     render(<SubscriptionSection />);
 
-    // 2900 cents = $29.00
-    expect(screen.getByText(/29.00/)).toBeInTheDocument();
+    // 2900 cents = $29.00, stated by the banner and the billing section.
+    expect(screen.getAllByText(/29.00/)).toHaveLength(2);
   });
 
   it("should show price and interval", () => {
@@ -506,7 +520,10 @@ describe("Price Formatting", () => {
 
     render(<SubscriptionSection />);
 
-    // Billing price line shows the formatted amount with interval
-    expect(screen.getByText(/\$29\.00 \/ month/)).toBeInTheDocument();
+    // The amount in the app locale and a translated interval, not Stripe's
+    // raw "month".
+    // The plan banner and the billing details now read the same.
+    expect(screen.getAllByText("$29.00userSettings.perMonth")).toHaveLength(2);
+    expect(screen.queryByText(/\/ month/)).toBeNull();
   });
 });

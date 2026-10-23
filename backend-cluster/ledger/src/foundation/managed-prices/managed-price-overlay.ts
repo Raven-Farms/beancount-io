@@ -5,6 +5,7 @@ import {
   resolveIncludeTarget,
 } from "@/foundation/rustledger/file-map-loader";
 import { isIsoDate } from "@/foundation/rustledger/directive-filter";
+import { SKIPPED_LINE_OR_TOKEN_RE } from "@/foundation/rustledger/parseable-files";
 import { OperationNotAllowedError } from "@/shared/errors";
 import { logger } from "@/shared/logger";
 import { parseManagedPriceUrl } from "./managed-price-policy";
@@ -74,14 +75,12 @@ const SHADOWED_LINE = "; shadowed by a ledger-authored price for the same date";
 // runs up to the quote commodity rather than to the first space (w5/378).
 const LEDGER_PRICE_RE =
   /^([0-9]{4})[-/]([0-9]{1,2})[-/]([0-9]{1,2})[ \t]+price[ \t]+([A-Z](?:[A-Z0-9'._-]*[A-Z0-9])?)[ \t]+[-+*/(),.0-9 \t]+?([A-Z](?:[A-Z0-9'._-]*[A-Z0-9])?)(?![A-Za-z0-9'._-])/gmu;
-// What Beancount's lexer reads as one token before a line could start: a
-// string, which may span lines, and a comment, which may hold a `"`. A
-// price-shaped line inside a multi-line note is not a price (w5/378). A line
-// the lexer ignores outright (an org heading `*`, `:`, `#` or a flag
-// character first) is matched whole first: a `"` there opens no string, and
-// pairing it with the next quote in the file hid every price in between
-// (w5/625, as the CLI's w5/476).
-const STRING_OR_COMMENT_RE = /^[*:#!&?%][^\n]*|"(?:[^"\\]|\\.)*"|;[^\n]*/gmu;
+// What the engine reads as one token before a line could start
+// (`SKIPPED_LINE_OR_TOKEN_RE`): a string, which may span lines, a comment,
+// which may hold a `"`, and a line Beancount skips whole (an org heading `*`,
+// a `#` line, …), which the parse turns into a comment for the engine too
+// (w21/654, after w5/844). A price-shaped line inside a multi-line note is not
+// a price (w5/378).
 
 const pairKey = (date: string, base: string, quote: string): string =>
   `${date}\0${base}\0${quote}`;
@@ -102,7 +101,7 @@ export function collectLedgerPricePairs(
     // A leading byte-order mark would keep line 1 from starting with its date.
     const directives = (files[path] ?? "")
       .replace(/^\uFEFF/u, "")
-      .replace(STRING_OR_COMMENT_RE, (token) => (token.startsWith('"') ? "x" : token));
+      .replace(SKIPPED_LINE_OR_TOKEN_RE, (token) => (token.startsWith('"') ? "x" : token));
     for (const match of directives.matchAll(LEDGER_PRICE_RE)) {
       const [, year, month, day, base, quote] = match;
       const date = `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
@@ -123,7 +122,9 @@ export function applyLedgerPricePrecedence(
   feed: ManagedPriceFeedSummary,
   ledgerPairs: ReadonlySet<string>,
 ): { text: string; shadowedCount: number; effectiveDates: string[] } {
-  const lines = text.split(/\r\n|\r|\n/u);
+  // Lines as the engine counts them: a bare CR ends none (w5/844), and the
+  // validator refuses a body holding one.
+  const lines = text.split(/\r?\n/u);
   const effectiveDates: string[] = [];
   let shadowedCount = 0;
   for (const price of feed.prices) {

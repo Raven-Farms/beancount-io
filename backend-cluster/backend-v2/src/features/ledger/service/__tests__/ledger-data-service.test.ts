@@ -150,6 +150,27 @@ describe("LedgerDataService", () => {
     expect(result).toEqual(errors);
   });
 
+  // w21/188: the engine's warnings are not what bean-check fails on.
+  it("getErrors — leaves the engine's warnings out unless asked", async () => {
+    const warning = {
+      message: "Transaction has only one posting",
+      severity: "warning",
+    };
+    const error = { message: "does not balance", severity: "error" };
+    mockReports.getLedgerErrors.mockResolvedValue(ok([warning, error]));
+
+    expect(
+      await service.getErrors({ ledgerId: LEDGER_ID, identity: IDENTITY }),
+    ).toEqual([error]);
+    expect(
+      await service.getErrors({
+        ledgerId: LEDGER_ID,
+        identity: IDENTITY,
+        includeWarnings: true,
+      }),
+    ).toEqual([warning, error]);
+  });
+
   it("getManagedPrices — authorizes a report read, then returns the ledger's status records", async () => {
     const status = [
       {

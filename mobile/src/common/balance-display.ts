@@ -18,15 +18,26 @@
  *
  * Free of `@/` imports so the jest-lite runner can require it.
  */
-import { operatingKey, resolveCurrencyBalance } from "./balance-util";
-import { amountScale, formatUnits } from "./number-utils";
+import { isolateLtr } from "./bidi";
+import { resolveCurrencyBalance } from "./balance-util";
+import { amountScale, formatExactUnits, formatUnits } from "./number-utils";
 import type { Valuation } from "./valuation";
 
 /** A beancount balance map as the API returns it: currency → decimal. */
 export type BalanceMap = Record<string, number | string> | null | undefined;
 
 /** One commodity amount, with the scale the ledger recorded it at. */
-export type Holding = { currency: string; number: number; scale: number };
+export type Holding = {
+  currency: string;
+  number: number;
+  scale: number;
+  /**
+   * The exact decimal string, kept only when the amount needs more significant
+   * digits than a double holds (18 decimals of ETH), so it is shown as the
+   * ledger wrote it (w21/594).
+   */
+  exact?: string;
+};
 
 /**
  * The basis a commodity's value was read at: a market price, or its cost for
@@ -62,21 +73,38 @@ export type BalanceDisplay =
        * unknown.
        */
       value: { amount: number; basis: ValueBasis | null } | null;
+      /**
+       * The part of this commodity the value leaves out: lots with no cost,
+       * which the ledger keeps in units beside the lots it converted. Empty
+       * when nothing was converted, where the units already say it all.
+       */
+      notInTotal: Holding[];
+      /**
+       * What the value discloses about its prices, when the caller shows it: a
+       * root holding one commodity warns of a stale price as a money total
+       * does (w21/279).
+       */
+      valuation?: Valuation;
     };
 
 /**
  * One currency's entry in a balance map with its recorded scale, read strictly:
- * a missing or unparseable entry is zero, never the USD fallback.
+ * a missing or unparseable entry is zero.
  */
 export function amountIn(
   map: BalanceMap,
   currency: string,
-): { number: number; scale: number } {
+): { number: number; scale: number; exact?: string } {
   const raw = map?.[currency];
   const number = Number(raw);
-  return raw == null || !Number.isFinite(number)
-    ? { number: 0, scale: 0 }
-    : { number, scale: amountScale(String(raw)) };
+  if (raw == null || !Number.isFinite(number)) return { number: 0, scale: 0 };
+  const text = String(raw).trim();
+  const digits = text.replace(/\D/g, "").replace(/^0+/, "").length;
+  return {
+    number,
+    scale: amountScale(text),
+    ...(digits > 15 && /^[+-]?\d+(\.\d+)?$/.test(text) ? { exact: text } : {}),
+  };
 }
 
 /** Non-zero entries of a balance map, in the order the API returned them. */
@@ -89,8 +117,7 @@ export function holdingsOf(map: BalanceMap): Holding[] {
 
 /** Holdings a total in `currency` leaves out of the figure it shows. */
 export function notInTotalOf(map: BalanceMap, currency: string): Holding[] {
-  const key = operatingKey(map, currency);
-  return holdingsOf(map).filter((holding) => holding.currency !== key);
+  return holdingsOf(map).filter((holding) => holding.currency !== currency);
 }
 
 /**
@@ -108,23 +135,31 @@ export function selectBalanceDisplay(
   const value = resolveCurrencyBalance(valued, currency);
   const notInTotal = notInTotalOf(valued, currency);
   const unitsHeld = holdingsOf(units);
-  const [map, held]: [BalanceMap, Holding[]] =
-    unitsHeld.length > 0 ? [units, unitsHeld] : [valued, holdingsOf(valued)];
+  const held = unitsHeld.length > 0 ? unitsHeld : holdingsOf(valued);
 
-  if (held.length === 1 && held[0].currency !== operatingKey(map, currency)) {
+  if (held.length === 1 && held[0].currency !== currency) {
+    // Some of the commodity converted (its lots with a cost) and some did not
+    // (cost-less ones, `@ price` rewards, lots bought in a second currency that
+    // has no price): the value stands, and names the remainder, rather than
+    // being dropped for it (w21/278, w21/555). A balance of one commodity can
+    // leave only that commodity or its lots' cost currencies in the map.
+    const valued = value !== 0;
     return {
       kind: "units",
       units: held[0],
-      value:
-        notInTotal.length === 0 && value !== 0
-          ? { amount: value, basis: basisOf(held[0].currency) }
-          : null,
+      value: valued
+        ? { amount: value, basis: basisOf(held[0].currency) }
+        : null,
+      notInTotal: valued ? notInTotal : [],
     };
   }
   return { kind: "money", value, notInTotal };
 }
 
 export const formatHolding = (holding: Holding, includePlus = false): string =>
+  (holding.exact
+    ? formatExactUnits(holding.exact, holding.currency, includePlus)
+    : null) ??
   formatUnits(holding.number, holding.currency, holding.scale, includePlus);
 
 /** The note naming holdings a total leaves out, or nothing when it has none. */
@@ -136,7 +171,11 @@ export function notInTotalNotes(
     ? []
     : [
         t("notInTotal", {
-          amounts: holdings.map((holding) => formatHolding(holding)).join(", "),
+          // Each holding on its own, so the list keeps its order in a
+          // right-to-left sentence and no sign strays (w21/249).
+          amounts: holdings
+            .map((holding) => isolateLtr(formatHolding(holding)))
+            .join(", "),
         }),
       ];
 }

@@ -102,7 +102,7 @@ const getStyles = (theme: ColorTheme) =>
     },
     staleText: {
       fontSize: 14,
-      color: theme.warning,
+      color: theme.warningText,
     },
     footer: {
       padding: 16,
@@ -251,20 +251,12 @@ export function ValuationSheet({
               </View>
             ))}
           </ScrollView>
-          {(guest || canWrite) && (
+          {/* A guest reads a public example: signing in does not let them update
+              its prices, so a "Sign In" here read as a way to (w21/633). */}
+          {!guest && canWrite && (
             <View style={styles.footer}>
-              <Button
-                type="outline"
-                onPress={
-                  guest
-                    ? () => {
-                        onClose();
-                        guest.requestSignIn();
-                      }
-                    : openCommodities
-                }
-              >
-                {t(guest ? "signIn" : "updatePricesOnWeb")}
+              <Button type="outline" onPress={openCommodities}>
+                {t("updatePricesOnWeb")}
               </Button>
             </View>
           )}

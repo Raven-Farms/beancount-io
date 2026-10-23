@@ -76,10 +76,6 @@ vi.mock("@/common/hooks/use-format-number", () => ({
   useFormatNumber: () => (v: number) => String(v),
 }));
 
-vi.mock("@/common/hooks/use-format-quantity", () => ({
-  useFormatQuantity: () => (v: number, digits: number) => v.toFixed(digits),
-}));
-
 let language = "en";
 
 vi.mock("@/common/hooks/use-translations", () => ({
@@ -124,6 +120,36 @@ const multiMonth: DataSeries = [
 ];
 
 const singleMonth: DataSeries = [{ date: "2026-01-31", balance: { USD: 100 } }];
+
+/**
+ * The pressed view's secondary fill disappears in forced colors, so Chart and
+ * Table painted alike (w4/m43). Both carry `forced-selected` behind
+ * their pressed state; the paint was measured in a real browser.
+ */
+describe("NetWorthCard view controls under forced colors", () => {
+  it("gates the highlight on the pressed view", () => {
+    render(
+      <NetWorthCard
+        ledgerOwner="owner"
+        ledgerName="book"
+        valuation={null}
+        data={multiMonth}
+        primaryCurrency="USD"
+      />,
+    );
+    const chart = screen.getByRole("button", {
+      name: "page.overview.chartView",
+    });
+    const table = screen.getByRole("button", {
+      name: "page.overview.tableView",
+    });
+
+    expect(chart).toHaveClass("aria-pressed:forced-selected");
+    expect(table).toHaveClass("aria-pressed:forced-selected");
+    expect(chart).toHaveAttribute("aria-pressed", "true");
+    expect(table).toHaveAttribute("aria-pressed", "false");
+  });
+});
 
 describe("NetWorthCard chart series", () => {
   it("shows a visible marker for a single-point series", () => {

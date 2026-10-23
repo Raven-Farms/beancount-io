@@ -136,9 +136,15 @@ const nlImporter: Record<string, TranslationEntry> = {
     message: "Het huidige bestandstype vereist AI-analyse",
     description: "Description of why premium is required",
   },
-  "importer.error.upgradeToPremium": {
-    message: "Upgrade naar premium",
-    description: "Label for premium upgrade option",
+  "importer.error.upgradeToPlan": {
+    message: "Upgrade naar {plan}",
+    description:
+      "Heading over the paywall's upgrade button; {plan} is the plan the button recommends (the next tier up).",
+  },
+  "importer.error.upgradePlan": {
+    message: "Upgrade je abonnement",
+    description:
+      "Heading over the paywall's upgrade button when no higher self-serve plan exists.",
   },
   "importer.error.upgradeDescription": {
     message: "Analyseer PDF-, OFX- en afbeeldingsbestanden automatisch met AI",
@@ -168,6 +174,15 @@ const nlImporter: Record<string, TranslationEntry> = {
   "importer.error.failedToParse": {
     message: "Kon bestand niet analyseren",
     description: "Title for parse failure error",
+  },
+  "importer.error.notUtf8": {
+    message: "Bestand is geen UTF-8-tekst",
+    description: "Title when an uploaded CSV is not UTF-8 text",
+  },
+  "importer.error.notUtf8Description": {
+    message:
+      "Deze CSV bevat tekens die geen geldige UTF-8 zijn, dus importeren zou de tekst van begunstigden en omschrijvingen veranderen. Sla het bestand opnieuw op als CSV UTF-8 vanuit je bank of spreadsheet-app en upload dat bestand.",
+    description: "How to re-save a CSV that is not UTF-8 text",
   },
   "importer.error.serverError": {
     message:
@@ -310,6 +325,24 @@ const nlImporter: Record<string, TranslationEntry> = {
     message: "Valuta voor alle transacties",
     description: "Hint text for currency field",
   },
+  "importer.configure.currencyConflict_one": {
+    message:
+      "{count} rij ({rows}) staat in {symbol} ({currencies}), maar deze import zou hem boeken als {currency}.",
+    description:
+      "Import refusal: a selected row's amount carries a currency symbol that is not the chosen import currency. {count} is 1, {rows} the row number, {symbol} the symbol from the bank file (€, £…), {currencies} the currencies it can mean, {currency} the selected currency code",
+  },
+  "importer.configure.currencyConflict_other": {
+    message:
+      "{count} rijen ({rows}) staan in {symbol} ({currencies}), maar deze import zou ze boeken als {currency}.",
+    description:
+      "Import refusal for several selected rows whose amounts carry a currency symbol other than the chosen import currency. {rows} lists their row numbers, possibly ending in …",
+  },
+  "importer.configure.currencyConflictRemedy": {
+    message:
+      "Eén import boekt één valuta. Kies de valuta van die rijen, of deselecteer ze en importeer ze apart. Er is niets geïmporteerd.",
+    description:
+      "How to resolve a currency conflict before importing: no conversion happens, so the user picks the matching currency or splits the file",
+  },
   "importer.configure.assignTargetAccounts": {
     message: "Doelrekeningen toewijzen",
     description: "Heading for account mapping section",
@@ -447,6 +480,12 @@ const nlImporter: Record<string, TranslationEntry> = {
   "importer.accountMapping.aiSuccessDescription_other": {
     message: "{count} transacties succesvol gecategoriseerd",
     description: "Toast description for multiple transactions categorization",
+  },
+  "importer.accountMapping.aiNoneApplied": {
+    message:
+      "Geen enkele suggestie was zeker genoeg om een doelrekening in te vullen.",
+    description:
+      "Toast description when AI Fill completed but no suggestion was confident enough to fill a target",
   },
   "importer.accountMapping.aiFailed": {
     message: "AI-categorisering mislukt",

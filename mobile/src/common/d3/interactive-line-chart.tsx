@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { Platform, StyleSheet, Text, View } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Svg, {
   Path,
@@ -48,7 +48,17 @@ import {
 import { LEADING_TEXT_ALIGN, LTR_PLOT } from "@/common/rtl";
 import { ChartErrorBoundary } from "./chart-chrome";
 import { HERO_AMOUNT_FIT } from "@/components/amount-text/hero-amount-fit";
-import { changePercent } from "./change-percent";
+import {
+  changePercent,
+  describeChange,
+  formatChangePercent,
+} from "./change-percent";
+import {
+  CHART_STEP_REST_MS,
+  chartPointText,
+  chartSummaryLabel,
+  stepChartIndex,
+} from "./chart-accessibility";
 
 // Created once at module scope: building these inside the component would give
 // React a new component type on every render and remount the node each time.
@@ -69,6 +79,11 @@ type InteractiveLineChartProps = {
    * heading isn't duplicated.
    */
   label?: string;
+  /**
+   * Names the curve to a screen reader without drawing a heading, for a card
+   * whose tab already names the page (Home). `label` wins when both are set.
+   */
+  a11yLabel?: string;
   /**
    * Static line under the change row about the resting figure (e.g. Home's
    * "Cost $106,826.05 · Unrealized +$10,823.44"). Hidden, not removed, while
@@ -339,7 +354,7 @@ const getStyles = (theme: ColorTheme) =>
     },
     placeholderText: {
       fontSize: fontSizes.md,
-      color: theme.black60,
+      color: theme.black80,
       textAlign: "center",
     },
   });
@@ -388,6 +403,8 @@ function ScrubHeader({
 }: ScrubHeaderProps): JSX.Element {
   const styles = useThemeStyle(getStyles);
   const { t } = useTranslations();
+  // A change that rounds to nothing is neither good nor bad (w21/237).
+  const neutralColor = useTheme().colorTheme.black80;
 
   const [{ index, motion }, setHeadline] = useState<{
     index: number;
@@ -438,11 +455,14 @@ function ScrubHeader({
   const change = shownValue - baseline;
   // The amount always reads; the percentage only when it means something.
   const changePct = changePercent(baseline, shownValue);
-  const changeAmount = format(change, true);
+  const shownPct = changePct === null ? null : formatChangePercent(changePct);
+  const { amount: changeAmount, flat: changeFlat } = describeChange(
+    change,
+    shownPct,
+    format,
+  );
   const changeText =
-    changePct === null
-      ? changeAmount
-      : `${changeAmount} (${change >= 0 ? "+" : ""}${changePct.toFixed(2)}%)`;
+    shownPct === null ? changeAmount : `${changeAmount} (${shownPct.text})`;
 
   // The heading stays put while scrubbing: where it is the card's only title,
   // swapping it for a month would leave the card unlabeled mid-gesture. The
@@ -466,7 +486,11 @@ function ScrubHeader({
         {...HERO_AMOUNT_FIT}
       />
       <View style={styles.changeRow}>
-        <AmountText style={[styles.change, { color }]}>{changeText}</AmountText>
+        <AmountText
+          style={[styles.change, { color: changeFlat ? neutralColor : color }]}
+        >
+          {changeText}
+        </AmountText>
         {scrubLabel !== null && (
           <Text style={styles.scrubLabel}>{`· ${scrubLabel}`}</Text>
         )}
@@ -484,6 +508,7 @@ function ScrubHeader({
 
 function InteractiveLineChart({
   label,
+  a11yLabel,
   footnote,
   labels,
   periods,
@@ -711,9 +736,83 @@ function InteractiveLineChart({
     [hasSeries, chartWidth, count, scrub, swipeOwner],
   );
 
+  // Screen readers (w21/316): the plot is one adjustable element. Stepping
+  // writes the same `scrub` index the finger does, so the cursor and the header
+  // follow; the value text is state because VoiceOver reads it, and it rests
+  // back on the latest point a few seconds after the last step.
+  const [stepIndex, setStepIndex] = useState<number | null>(null);
+  const stepRest = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const a11yFormat = useCallback(
+    (value: number, includePlus?: boolean) =>
+      formatValue
+        ? formatValue(value, includePlus)
+        : formatSignedMoneyWithCurrency(value, currency, includePlus),
+    [currency, formatValue],
+  );
+  const a11ySeries = useMemo(
+    () => ({
+      labels,
+      periods,
+      numbers,
+      baseline,
+      format: a11yFormat,
+      translate: t,
+    }),
+    [labels, periods, numbers, baseline, a11yFormat, t],
+  );
+  const onAccessibilityAction = useCallback(
+    (event: { nativeEvent: { actionName: string } }) => {
+      const name = event.nativeEvent.actionName;
+      if (name !== "increment" && name !== "decrement") return;
+      const next = stepChartIndex(
+        stepIndex,
+        name === "increment" ? 1 : -1,
+        count,
+      );
+      setStepIndex(next);
+      scrub.value = next;
+      if (stepRest.current) clearTimeout(stepRest.current);
+      stepRest.current = setTimeout(() => {
+        stepRest.current = null;
+        setStepIndex(null);
+        scrub.value = SCRUB_IDLE;
+      }, CHART_STEP_REST_MS);
+    },
+    [stepIndex, count, scrub],
+  );
+  useEffect(
+    () => () => {
+      if (stepRest.current) clearTimeout(stepRest.current);
+    },
+    [],
+  );
+  // A new series (another range, another account) starts at rest. Callers hand
+  // back equal-but-new arrays on any re-render, which is no new series: stepping
+  // keeps its place, and the cursor, the header and the value text keep
+  // agreeing (w21/439).
+  const stepSeriesRef = useRef(numbers);
+  useEffect(() => {
+    const previous = stepSeriesRef.current;
+    stepSeriesRef.current = numbers;
+    if (sameSeries(previous, numbers)) return;
+    if (stepRest.current) {
+      clearTimeout(stepRest.current);
+      stepRest.current = null;
+      scrub.value = SCRUB_IDLE;
+    }
+    setStepIndex(null);
+  }, [numbers, scrub]);
+  const plotLabel = hasSeries
+    ? chartSummaryLabel(label ?? a11yLabel, a11ySeries)
+    : null;
+
+  // The dot and the cursor read the new series' coordinates at once, while the
+  // line and area morph through transition frames: on a range change they floated
+  // up to 48 px off the curve for the ~450 ms it takes. They wait for the morph
+  // to land instead (w21/317).
   const guideAnimatedProps = useAnimatedProps(() => {
     const index = activeScrubIndex(scrub.value, pointXs.length);
-    const active = index !== SCRUB_IDLE;
+    const active = index !== SCRUB_IDLE && morph.value >= 1;
     // Show/hide as opacity rather than as conditional JSX: mounting a node
     // mid-gesture is a React render, which is the thing this is avoiding.
     return {
@@ -725,7 +824,7 @@ function InteractiveLineChart({
 
   const cursorAnimatedProps = useAnimatedProps(() => {
     const index = activeScrubIndex(scrub.value, pointXs.length);
-    const active = index !== SCRUB_IDLE;
+    const active = index !== SCRUB_IDLE && morph.value >= 1;
     return {
       opacity: active ? 1 : 0,
       cx: active ? pointXs[index] : 0,
@@ -735,7 +834,7 @@ function InteractiveLineChart({
 
   // The resting end dot and the cursor are never on screen together.
   const endDotAnimatedProps = useAnimatedProps(() => ({
-    opacity: scrub.value === SCRUB_IDLE ? 1 : 0,
+    opacity: scrub.value === SCRUB_IDLE && morph.value >= 1 ? 1 : 0,
   }));
 
   return (
@@ -766,7 +865,34 @@ function InteractiveLineChart({
         </View>
 
         <GestureDetector gesture={scrubGesture}>
-          <View style={[styles.chartContainer, { width: chartWidth, height }]}>
+          <View
+            style={[styles.chartContainer, { width: chartWidth, height }]}
+            accessible={hasSeries}
+            accessibilityRole={hasSeries ? "adjustable" : undefined}
+            accessibilityLabel={plotLabel ?? undefined}
+            accessibilityHint={
+              hasSeries
+                ? t(
+                    Platform.OS === "android"
+                      ? "chartAdjustHintAndroid"
+                      : "chartAdjustHint",
+                  )
+                : undefined
+            }
+            accessibilityValue={
+              hasSeries
+                ? {
+                    text: chartPointText(a11ySeries, stepIndex ?? count - 1),
+                  }
+                : undefined
+            }
+            accessibilityActions={
+              hasSeries
+                ? [{ name: "increment" }, { name: "decrement" }]
+                : undefined
+            }
+            onAccessibilityAction={onAccessibilityAction}
+          >
             <Svg width={chartWidth} height={height}>
               <Defs>
                 <LinearGradient id="netWorthFill" x1="0" y1="0" x2="0" y2="1">

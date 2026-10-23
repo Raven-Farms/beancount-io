@@ -398,6 +398,12 @@ const deCommon: Record<string, TranslationEntry> = {
     message: "Herunterladen",
     description: "Auto-generated from code usage",
   },
+  "common.downloadFailed": {
+    message:
+      "Die Datei konnte nicht heruntergeladen werden. Bitte versuchen Sie es erneut.",
+    description:
+      "Error shown when the browser could not generate a file download",
+  },
   "common.moreActions": {
     message: "Weitere Aktionen",
     description: "Label for dropdown menu with additional actions",
@@ -737,6 +743,12 @@ const deCommon: Record<string, TranslationEntry> = {
     message: "Keine Konten gefunden",
     description: "Message when no accounts match search",
   },
+  "component.suggestions.unavailable": {
+    message:
+      "Vorschläge konnten nicht geladen werden. Sie können trotzdem einen Wert eingeben.",
+    description:
+      "Notice under a form field when its suggestions failed to load; the field still accepts typed text",
+  },
   "component.sourceFileCombobox.placeholder": {
     message: "Dateien suchen...",
     description: "Placeholder for ledger file search",
@@ -1067,6 +1079,25 @@ const deCommon: Record<string, TranslationEntry> = {
     message: "Du bist auf dem neuesten Stand",
     description:
       "Description under the What's new heading when every release has been read",
+  },
+  "common.failedRenewal": {
+    message:
+      "Wir konnten {card} für {plan} nicht belasten. Aktualisieren Sie sie bis {date}, um {plan} zu behalten.",
+    description:
+      "Banner while a renewal payment is past due: the card, the plan and the next retry date",
+  },
+  "common.failedRenewalUpdate": {
+    message: "Zahlungsmethode aktualisieren",
+    description: "Button that opens the billing portal to fix a failed renewal",
+  },
+  "common.failedRenewalYourCard": {
+    message: "Ihre Karte",
+    description: "Stands in for the card name when it is unknown",
+  },
+  "common.failedRenewalDismiss": {
+    message: "Vorerst ausblenden",
+    description:
+      "Accessible name of the button that hides the failed-renewal banner for this session",
   },
 };
 

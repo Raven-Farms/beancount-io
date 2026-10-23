@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import * as apolloClient from "@apollo/client/react";
@@ -254,6 +254,117 @@ describe("LedgerSwitcher", () => {
     await waitFor(() => {
       expect(mockNavigate).toHaveBeenCalled();
       expect(screen.getByTestId("open-mobile")).toHaveTextContent("closed");
+    });
+  });
+
+  /** A failed ledger read is not "no ledgers found" (w4/275). */
+  // An input method's Escape cancels its composition; it must not close the
+  // switcher and drop the search (w4/318).
+  it.each([
+    { isComposing: true, keyCode: 27 },
+    { isComposing: false, keyCode: 229 },
+  ])(
+    "keeps the search open for a composing Escape (%o), then closes on an ordinary one",
+    async (composing) => {
+      const user = userEvent.setup();
+      render(
+        <SidebarProvider>
+          <LedgerSwitcher
+            currentLedgerId="open_ledger/ledger-1"
+            currentLedgerName="ledger-1"
+            currentLedgerFullName="open_ledger/ledger-1"
+          />
+        </SidebarProvider>,
+      );
+      const opener = screen.getByRole("combobox", {
+        name: "ledger-1 — switch ledger",
+      });
+      await user.click(opener);
+      const search = screen.getByRole("combobox", { name: /search ledgers/i });
+      await user.type(search, "ledger-1");
+
+      fireEvent.keyDown(search, { key: "Escape", ...composing });
+      expect(search).toBeInTheDocument();
+      expect(search).toHaveValue("ledger-1");
+      expect(opener).toHaveAttribute("aria-expanded", "true");
+
+      fireEvent.keyDown(search, { key: "Escape", keyCode: 27 });
+      await waitFor(() =>
+        expect(opener).toHaveAttribute("aria-expanded", "false"),
+      );
+      expect(
+        screen.queryByRole("combobox", { name: /search ledgers/i }),
+      ).toBeNull();
+    },
+  );
+
+  describe("failed ledger read", () => {
+    const view = () => (
+      <SidebarProvider>
+        <LedgerSwitcher
+          currentLedgerId="open_ledger/ledger-1"
+          currentLedgerName="ledger-1"
+          currentLedgerFullName="open_ledger/ledger-1"
+        />
+      </SidebarProvider>
+    );
+
+    it("says the read failed and retries once, keeping search focus and text", async () => {
+      const refetch = vi.fn().mockResolvedValue({});
+      vi.mocked(apolloClient.useQuery).mockReturnValue({
+        data: undefined,
+        loading: false,
+        error: new Error("Failed to fetch"),
+        refetch,
+      } as unknown as ReturnType<typeof apolloClient.useQuery>);
+      const user = userEvent.setup();
+      render(view());
+      await user.click(
+        screen.getByRole("combobox", { name: "ledger-1 — switch ledger" }),
+      );
+      const search = screen.getByRole("combobox", { name: /search ledgers/i });
+      await user.type(search, "qa");
+
+      expect(await screen.findByRole("alert")).toBeInTheDocument();
+      expect(screen.queryByText(/no ledgers found/i)).toBeNull();
+      const retry = screen.getByRole("button", { name: "Try Again" });
+      retry.focus();
+      await user.keyboard("{Enter}");
+      expect(refetch).toHaveBeenCalledTimes(1);
+      expect(search).toHaveFocus();
+      expect(search).toHaveValue("qa");
+    });
+
+    it("keeps a successful empty result as no ledgers found", async () => {
+      vi.mocked(apolloClient.useQuery).mockReturnValue({
+        data: { listLedgers: [] },
+        loading: false,
+        error: undefined,
+        refetch: vi.fn(),
+      } as unknown as ReturnType<typeof apolloClient.useQuery>);
+      const user = userEvent.setup();
+      render(view());
+      await user.click(
+        screen.getByRole("combobox", { name: "ledger-1 — switch ledger" }),
+      );
+      expect(await screen.findByText(/no ledgers found/i)).toBeInTheDocument();
+      expect(screen.queryByRole("alert")).toBeNull();
+    });
+
+    it("keeps cached ledgers listed when only a refresh fails", async () => {
+      vi.mocked(apolloClient.useQuery).mockReturnValue({
+        data: { listLedgers: makeLedgers(2) },
+        loading: false,
+        error: new Error("Failed to fetch"),
+        refetch: vi.fn(),
+      } as unknown as ReturnType<typeof apolloClient.useQuery>);
+      const user = userEvent.setup();
+      render(view());
+      await user.click(
+        screen.getByRole("combobox", { name: "ledger-1 — switch ledger" }),
+      );
+      expect((await screen.findAllByRole("option")).length).toBeGreaterThan(0);
+      expect(screen.queryByRole("alert")).toBeNull();
     });
   });
 });

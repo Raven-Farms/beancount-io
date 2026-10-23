@@ -4,10 +4,16 @@ import { resolveCurrencyBalance } from "@/common/balance-util";
 import { getFormatDate } from "@/common/format-util";
 import {
   budgetForInterval,
+  allTimeThroughToday,
+  budgetActualsState,
+  currentPeriodKnown,
+  currentPeriodRange,
+  periodsThrough,
   prepareBudgetHistory,
   type BudgetGroup,
 } from "@/screens/budget-screen/selectors/budget-selectors";
 import type { BudgetSeriesPoint } from "@/screens/budget-screen/selectors/select-budget-card-stats";
+import { timeWindowStart } from "@/screens/budget-screen/selectors/budget-labels";
 
 /**
  * Budget compares raw account activity, so it asks fava for `units` rather than
@@ -52,33 +58,101 @@ export function useBudgetActuals({
   currency,
   time,
   direction,
+  endsOn,
 }: {
   ledgerId: string;
   group: BudgetGroup;
   currency: string;
   time?: string;
   direction: 1 | -1;
+  /** The last day the budget applies: the close date of its account. */
+  endsOn?: string;
 }) {
-  const { data, loading, error } = useGetLedgerIntervalTotalsQuery({
+  // Actuals stop at today, so the budget they are measured against does too.
+  const today = getFormatDate(new Date());
+  const all = useGetLedgerIntervalTotalsQuery({
     variables: budgetTotalsVariables({ ledgerId, group, time }),
-    fetchPolicy: "cache-first",
   });
+  // All time runs to the last posting, even a future one, so its current period
+  // is read again from its start to today, as a windowed range is (w21/168,
+  // w21/332).
+  const currentWindow = useGetLedgerIntervalTotalsQuery({
+    variables: budgetTotalsVariables({
+      ledgerId,
+      group,
+      time: `${currentPeriodRange(group.interval, today).start} - ${today}`,
+    }),
+    skip: time !== undefined,
+  });
+  const { data } = all;
+  const loading = all.loading || (time === undefined && currentWindow.loading);
+  const error =
+    all.error ?? (time === undefined ? currentWindow.error : undefined);
+  const currentData = currentWindow.data;
 
   const series: BudgetSeriesPoint[] = useMemo(() => {
-    const items = data?.getLedgerIntervalTotals ?? [];
+    const fetched = data?.getLedgerIntervalTotals ?? [];
+    const items =
+      time === undefined
+        ? allTimeThroughToday(
+            fetched,
+            currentData?.getLedgerIntervalTotals,
+            group.interval,
+            today,
+          )
+        : fetched;
     // Prepared once per group: `budgetForInterval` runs per charted period, and
     // the `all` span can return a hundred of them.
     const history = prepareBudgetHistory(group.budgetHistory);
-    // Actuals stop at today, so the budget they are measured against does too.
-    const today = getFormatDate(new Date());
-    return items.map((item) => ({
-      date: item.date,
-      actual: resolveCurrencyBalance(item.balance, currency) * direction,
+    // And start where the window does: its first period is often partial.
+    const windowStart = timeWindowStart(time, today);
+    const point = (date: string, actual: number) => ({
+      date,
+      actual: actual * direction,
       budget:
-        budgetForInterval(item.date, group.interval, history, today) *
-        direction,
-    }));
-  }, [data, currency, direction, group.interval, group.budgetHistory]);
+        budgetForInterval(
+          date,
+          group.interval,
+          history,
+          today,
+          windowStart,
+          endsOn,
+        ) * direction,
+    });
+    const points = items.map((item) =>
+      point(item.date, resolveCurrencyBalance(item.balance, currency)),
+    );
+    // A windowed range ends today on the server. All time ends at the last
+    // posting, so carry it on through today with the periods nothing was
+    // spent in, as YTD and 1Y show them (w21/010).
+    const last = items[items.length - 1];
+    if (time === undefined && last && currentPeriodKnown(time, currentData)) {
+      for (const date of periodsThrough(last.date, group.interval, today)) {
+        points.push(point(date, 0));
+      }
+    }
+    return points;
+  }, [
+    data,
+    currentData,
+    currency,
+    direction,
+    group.interval,
+    group.budgetHistory,
+    endsOn,
+    time,
+    today,
+  ]);
 
-  return { series, loading, error };
+  // Whether the series ends on a period whose figures are in; until then the
+  // card shows no judged stats (w21/455).
+  const state = budgetActualsState({ data, currentData, error, time });
+
+  return {
+    series,
+    loading,
+    error: state.error,
+    stale: state.stale,
+    settled: state.settled,
+  };
 }

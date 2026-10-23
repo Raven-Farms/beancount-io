@@ -48,6 +48,19 @@ describe("userInitials", () => {
     expect(userInitials("𠮷野 家")).toBe("𠮷家");
   });
 
+  // w21/645: one code point split a flag, a joined emoji, a skin tone and a
+  // letter's vowel sign.
+  it("takes whole graphemes: flags, emoji sequences and combined letters", () => {
+    expect(userInitials("🇩🇪 Hans")).toBe("🇩🇪H");
+    expect(userInitials("👩‍💻 Ada Lovelace")).toBe("👩‍💻L");
+    expect(userInitials("👍🏽 Sam")).toBe("👍🏽S");
+    expect(userInitials("दीपक कुमार")).toBe("दीकु");
+    expect(userInitials("क्षमा")).toBe("क्ष");
+    expect(userInitials("ﬁona Lee")).toBe("FL");
+    expect(userInitials("O\u0308mer Koc\u0327")).toBe("ÖK");
+    expect(userInitials("❤️ Lee")).toBe("❤️L");
+  });
+
   it("has a placeholder for an empty name", () => {
     expect(userInitials("  ")).toBe("?");
   });

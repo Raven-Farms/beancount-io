@@ -166,7 +166,8 @@ def test_a_filter_that_matches_nothing_still_matches_nothing(tmp_path: Path) -> 
     """Folding must not turn every filter into a match."""
     result = _bea(tmp_path, "--file", str(_ledger(tmp_path)), "list", "transaction", "--account", "Expenses:Rent")
     assert result.returncode == 0, result.stderr
-    assert "No transactions found." in result.stdout
+    assert "No transactions found." in result.stderr
+    assert result.stdout == ""
 
 
 def test_fold_account_twins_agree() -> None:

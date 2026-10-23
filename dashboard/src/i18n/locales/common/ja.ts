@@ -392,6 +392,11 @@ const jaCommon: Record<string, TranslationEntry> = {
     message: "ダウンロード",
     description: "Auto-generated from code usage",
   },
+  "common.downloadFailed": {
+    message: "ファイルをダウンロードできませんでした。もう一度お試しください。",
+    description:
+      "Error shown when the browser could not generate a file download",
+  },
   "common.moreActions": {
     message: "その他のアクション",
     description: "Label for dropdown menu with additional actions",
@@ -730,6 +735,11 @@ const jaCommon: Record<string, TranslationEntry> = {
     message: "口座が見つかりません",
     description: "Message when no accounts match search",
   },
+  "component.suggestions.unavailable": {
+    message: "候補を読み込めませんでした。値は直接入力できます。",
+    description:
+      "Notice under a form field when its suggestions failed to load; the field still accepts typed text",
+  },
   "component.sourceFileCombobox.placeholder": {
     message: "ファイルを検索...",
     description: "Placeholder for ledger file search",
@@ -1053,6 +1063,25 @@ const jaCommon: Record<string, TranslationEntry> = {
     message: "最新の状態です",
     description:
       "Description under the What's new heading when every release has been read",
+  },
+  "common.failedRenewal": {
+    message:
+      "{card} で {plan} のお支払いができませんでした。{plan} を継続するには、{date} までに更新してください。",
+    description:
+      "Banner while a renewal payment is past due: the card, the plan and the next retry date",
+  },
+  "common.failedRenewalUpdate": {
+    message: "お支払い方法を更新",
+    description: "Button that opens the billing portal to fix a failed renewal",
+  },
+  "common.failedRenewalYourCard": {
+    message: "お使いのカード",
+    description: "Stands in for the card name when it is unknown",
+  },
+  "common.failedRenewalDismiss": {
+    message: "今は閉じる",
+    description:
+      "Accessible name of the button that hides the failed-renewal banner for this session",
   },
 };
 

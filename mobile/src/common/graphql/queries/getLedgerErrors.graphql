@@ -3,5 +3,7 @@ query getLedgerErrors($ledgerId: String!) {
     filename
     lineno
     message
+    code
+    hint
   }
 }

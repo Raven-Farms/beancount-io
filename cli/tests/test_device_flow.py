@@ -10,14 +10,14 @@ from pytest_httpx import HTTPXMock
 
 from cli.api.client import make_client
 from cli.auth.device_flow import run_device_flow
-from cli.errors import AuthError
+from cli.errors import AuthError, UnreadableSuccess
 
 DEVICE_CODE = "device-code-kept-in-this-process"
 USER_CODE = "BCDF-GHJK"
 V1 = "https://api.v3.beancount.io/api-gateway/v1"
 
 
-def _mock_flow(httpx_mock: HTTPXMock, *statuses: str) -> None:
+def _mock_flow(httpx_mock: HTTPXMock, *statuses: str, expire_at: Any = "2099-01-31T00:00:00.000Z") -> None:
     httpx_mock.add_response(
         method="POST",
         url=f"{V1}/cli-sessions",
@@ -38,7 +38,7 @@ def _mock_flow(httpx_mock: HTTPXMock, *statuses: str) -> None:
         httpx_mock.add_response(
             method="POST",
             url=f"{V1}/cli-sessions/{DEVICE_CODE}/consume",
-            json={"token": "jwt-token", "expireAt": "2026-01-31T00:00:00.000Z"},
+            json={"token": "jwt-token", "expireAt": expire_at},
         )
 
 
@@ -84,7 +84,7 @@ class TestRunDeviceFlow:
         token, expire_at = run_device_flow(make_client(), "https://beancount.io")
 
         assert token == "jwt-token"
-        assert expire_at == "2026-01-31T00:00:00.000Z"
+        assert expire_at == "2099-01-31T00:00:00.000Z"
         polls = [r for r in httpx_mock.get_requests() if r.method == "GET"]
         assert [str(r.url) for r in polls] == [f"{V1}/cli-sessions/{DEVICE_CODE}"] * 2
         redemptions = [r for r in httpx_mock.get_requests() if str(r.url).endswith("/consume")]
@@ -95,7 +95,7 @@ class TestRunDeviceFlow:
 
         run_device_flow(make_client(), "https://beancount.io")
 
-        _no_waiting_or_browsing.save.assert_called_once_with("jwt-token", "2026-01-31T00:00:00.000Z")
+        _no_waiting_or_browsing.save.assert_called_once_with("jwt-token", "2099-01-31T00:00:00.000Z")
 
     def test_reports_the_device_it_is_asking_from(self, httpx_mock: HTTPXMock) -> None:
         _mock_flow(httpx_mock, "AUTHORIZED")
@@ -119,3 +119,28 @@ class TestRunDeviceFlow:
 
         with pytest.raises(AuthError, match="expired or already used"):
             run_device_flow(make_client(), "https://beancount.io")
+
+
+class TestUnusableGrants:
+    """A grant the next command would refuse is not a login (w5/894)."""
+
+    @pytest.mark.parametrize("expire_at", ["not-a-timestamp", "2099-01-01T00:00:00", 12345, None])
+    def test_an_unreadable_expiry_is_an_unexpected_response_and_saves_nothing(
+        self, _no_waiting_or_browsing: Any, httpx_mock: HTTPXMock, expire_at: Any
+    ) -> None:
+        _mock_flow(httpx_mock, "AUTHORIZED", expire_at=expire_at)
+
+        with pytest.raises(UnreadableSuccess, match=r"Unexpected server response \(HTTP 200\)\."):
+            run_device_flow(make_client(), "https://beancount.io")
+
+        _no_waiting_or_browsing.save.assert_not_called()
+
+    def test_an_already_expired_grant_is_an_auth_refusal_and_saves_nothing(
+        self, _no_waiting_or_browsing: Any, httpx_mock: HTTPXMock
+    ) -> None:
+        _mock_flow(httpx_mock, "AUTHORIZED", expire_at="2000-01-01T00:00:00Z")
+
+        with pytest.raises(AuthError, match="already expired"):
+            run_device_flow(make_client(), "https://beancount.io")
+
+        _no_waiting_or_browsing.save.assert_not_called()

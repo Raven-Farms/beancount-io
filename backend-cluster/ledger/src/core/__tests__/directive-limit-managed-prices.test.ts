@@ -9,18 +9,11 @@ import { getMaxDirectives } from "@/core/backend-v2-limits";
 // map the limit check hands it, so a virtual feed left in the map shows up.
 jest.mock("@/foundation/rustledger", () => ({
   ...jest.requireActual("@/foundation/rustledger"),
-  withLedger: async (
-    files: Record<string, string>,
-    _entry: string,
-    fn: (l: { directiveCount: () => number }) => number,
-  ) =>
-    fn({
-      directiveCount: () =>
-        Object.values(files)
-          .join("\n")
-          .split("\n")
-          .filter((line) => /^\d{4}-\d{2}-\d{2} /u.test(line)).length,
-    }),
+  countLedgerDirectives: async (files: Record<string, string>) =>
+    Object.values(files)
+      .join("\n")
+      .split("\n")
+      .filter((line) => /^\d{4}-\d{2}-\d{2} /u.test(line)).length,
 }));
 
 jest.mock("@/foundation/clients/load-cached-ledger-file-map", () => ({

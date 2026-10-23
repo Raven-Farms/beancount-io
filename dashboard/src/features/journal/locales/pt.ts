@@ -461,10 +461,6 @@ const ptJournal: Record<string, TranslationEntry> = {
     message: "Pendente",
     description: "Pending transaction status",
   },
-  "journal.blankStatus": {
-    message: "(em branco)",
-    description: "Blank transaction status option",
-  },
   "journal.addPosting": {
     message: "Adicionar lançamento",
     description: "Accessible name for adding a transaction posting row",

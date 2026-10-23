@@ -1,13 +1,20 @@
+import { useState } from "react";
+import { View } from "react-native";
 import { Path, Text as SvgText } from "react-native-svg";
 import { scaleLinear } from "d3-scale";
 import { contentPadding, ScreenWidth } from "@/common/screen-util";
+import { formatShortMoneyWithCurrency } from "@/common/number-utils";
 import { useTheme } from "@/common/theme";
 import { useTranslations } from "@/common/hooks/use-translations";
 import { AnimatedBar } from "./animated-bar";
+import { barChartValueDomain } from "./bar-chart-domain";
 import { useEntranceProgress } from "./use-entrance-progress";
 import { restingBarRect } from "./bar-geometry";
 import { ScrollableAxisChart } from "./scrollable-axis-chart";
+import { budgetColumnWidth } from "./budget-chart-columns";
+import { axisLabelWidth } from "./axis-label-width";
 import {
+  AXIS_FONT_SIZE,
   BOTTOM_PADDING,
   ChartErrorBoundary,
   ChartPlaceholder,
@@ -31,7 +38,8 @@ type BudgetBarChartProps = {
    * `labels`. Decided by the caller — expense and income budgets invert the
    * rule, and the selectors already own that decision.
    */
-  favorables: boolean[];
+  /** `null` for a period with no budget yet: drawn neutral, not judged. */
+  favorables: (boolean | null)[];
   currency: string;
   /**
    * Screen-reader summary of the series — `ScrollableAxisChart` wraps the plot in
@@ -67,10 +75,13 @@ function BudgetBarChart({
   height = 200,
 }: BudgetBarChartProps): JSX.Element {
   const theme = useTheme().colorTheme;
-  const { t } = useTranslations();
+  const { t, locale } = useTranslations();
 
   const chartHeight = height;
-  const availableWidth = ScreenWidth - contentPadding * 2 - LEFT_PADDING;
+  // The width the chart really has, once laid out. Until then, the screen less
+  // the Budget list's gutter and the card's own, so the first frame is close.
+  const [measured, setMeasured] = useState<number | null>(null);
+  const containerWidth = measured ?? ScreenWidth - contentPadding * 4;
 
   // Before the early return below: hooks cannot run conditionally.
   const entrance = useEntranceProgress(labels.length > 0);
@@ -79,20 +90,31 @@ function BudgetBarChart({
     return <ChartPlaceholder height={chartHeight} />;
   }
 
-  const columnWidth = Math.max(
-    MIN_COLUMN_WIDTH,
-    availableWidth / labels.length,
-  );
-  const plotWidth = columnWidth * labels.length;
-  const barWidth = columnWidth * (1 - BAR_INSET * 2);
-
-  const yMax = Math.max(1, ...actuals, ...budgets);
-  const yMin = Math.min(0, ...actuals, ...budgets);
+  // The series' own extent, as Spending's and Reports' charts take it: a floor
+  // of 1 left a BTC budget's bars as slivers on a 0 to 1 axis (w21/456).
+  const [yMin, yMax] = barChartValueDomain([...actuals, ...budgets]);
   const yScale = scaleLinear()
     .domain([yMin, yMax])
     .range([chartHeight - BOTTOM_PADDING, TOP_PADDING])
     .nice();
   const zeroY = yScale(0);
+  const yTicks = yScale.ticks(5);
+  // The y-axis column fits its widest tick: the fixed 50 px clipped "2,5 Tsd. $"
+  // to "5 Tsd. $" in German, so 2,500 and 1,500 read alike (w21/360).
+  const axisWidth = axisLabelWidth(
+    yTicks.map((tick) => formatShortMoneyWithCurrency(tick, currency, locale)),
+    AXIS_FONT_SIZE,
+    LEFT_PADDING,
+  );
+
+  const columnWidth = budgetColumnWidth(
+    containerWidth,
+    axisWidth,
+    labels.length,
+    MIN_COLUMN_WIDTH,
+  );
+  const plotWidth = columnWidth * labels.length;
+  const barWidth = columnWidth * (1 - BAR_INSET * 2);
 
   const columnX = (i: number) => i * columnWidth;
   const centerX = (i: number) => columnX(i) + columnWidth / 2;
@@ -111,65 +133,78 @@ function BudgetBarChart({
     .join(" ");
 
   return (
-    <ScrollableAxisChart
-      chartHeight={chartHeight}
-      plotWidth={plotWidth}
-      yTicks={yScale.ticks(5)}
-      yScale={yScale}
-      currency={currency}
-      accessibilityLabel={accessibilityLabel}
-      legend={
-        <>
-          <LegendItem color={theme.primary} label={t("budgetActual")} />
-          <LegendItem mark="line" color={theme.secondary} label={t("budget")} />
-        </>
-      }
-    >
-      {actuals.map((value, i) => {
-        const { y: barY, height: barHeight } = restingBarRect(
-          value,
-          yScale(value),
-          zeroY,
-        );
-        return (
-          <AnimatedBar
-            key={`bar-${labels[i]}-${i}`}
-            x={columnX(i) + columnWidth * BAR_INSET}
-            y={barY}
-            width={barWidth}
-            height={barHeight}
-            baselineY={zeroY}
-            fill={favorables[i] === false ? theme.error : theme.primary}
-            rx={2}
-            progress={entrance}
-            index={i}
-            count={actuals.length}
-          />
-        );
-      })}
+    <View onLayout={(event) => setMeasured(event.nativeEvent.layout.width)}>
+      <ScrollableAxisChart
+        chartHeight={chartHeight}
+        plotWidth={plotWidth}
+        yTicks={yTicks}
+        axisWidth={axisWidth}
+        yScale={yScale}
+        currency={currency}
+        accessibilityLabel={accessibilityLabel}
+        legend={
+          <>
+            <LegendItem color={theme.primary} label={t("budgetActual")} />
+            <LegendItem
+              mark="line"
+              color={theme.secondary}
+              label={t("budget")}
+            />
+          </>
+        }
+      >
+        {actuals.map((value, i) => {
+          const { y: barY, height: barHeight } = restingBarRect(
+            value,
+            yScale(value),
+            zeroY,
+          );
+          return (
+            <AnimatedBar
+              key={`bar-${labels[i]}-${i}`}
+              x={columnX(i) + columnWidth * BAR_INSET}
+              y={barY}
+              width={barWidth}
+              height={barHeight}
+              baselineY={zeroY}
+              fill={
+                favorables[i] === null
+                  ? theme.black40
+                  : favorables[i] === false
+                    ? theme.error
+                    : theme.primary
+              }
+              rx={2}
+              progress={entrance}
+              index={i}
+              count={actuals.length}
+            />
+          );
+        })}
 
-      {/* Budget reference: dashed, stepped, drawn over the bars. */}
-      <Path
-        d={budgetPath}
-        fill="none"
-        stroke={theme.secondary}
-        strokeWidth={2}
-        strokeDasharray="5,3"
-      />
+        {/* Budget reference: dashed, stepped, drawn over the bars. */}
+        <Path
+          d={budgetPath}
+          fill="none"
+          stroke={theme.secondary}
+          strokeWidth={2}
+          strokeDasharray="5,3"
+        />
 
-      {labels.map((label, i) => (
-        <SvgText
-          key={`x-${label}-${i}`}
-          x={centerX(i)}
-          y={chartHeight - 8}
-          fontSize={LABEL_FONT_SIZE}
-          fill={theme.text01}
-          textAnchor="middle"
-        >
-          {label}
-        </SvgText>
-      ))}
-    </ScrollableAxisChart>
+        {labels.map((label, i) => (
+          <SvgText
+            key={`x-${label}-${i}`}
+            x={centerX(i)}
+            y={chartHeight - 8}
+            fontSize={LABEL_FONT_SIZE}
+            fill={theme.text01}
+            textAnchor="middle"
+          >
+            {label}
+          </SvgText>
+        ))}
+      </ScrollableAxisChart>
+    </View>
   );
 }
 

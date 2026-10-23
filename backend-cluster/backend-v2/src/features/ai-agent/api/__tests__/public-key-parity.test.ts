@@ -221,6 +221,24 @@ describe("SSH public keys through actual adapters and exact-self authorization",
       }
     },
   );
+  // w23/038: the host caps a page at 50 and answers more with 50.
+  it("refuses a limit above the host's page size on REST and GraphQL", async () => {
+    const f = await fixture();
+    try {
+      const response = await f.request("?limit=51");
+      // REST refuses it in the query schema, as it does every bound.
+      expect(response.status).toBe(400);
+      expect(await response.json()).toMatchObject({
+        error: { code: "VALIDATION_FAILED" },
+      });
+      const g = await f.gql(`{listPublicKeys(limit:51){${fields}}}`);
+      expect(g.errors?.[0]?.message).toContain("limit must be at most 50");
+      expect(f.list).not.toHaveBeenCalled();
+      expect((await f.request("?limit=50")).status).toBe(200);
+    } finally {
+      await f.close();
+    }
+  });
   it("preserves pagination and empty pages", async () => {
     const f = await fixture();
     try {

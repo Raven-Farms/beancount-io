@@ -2,6 +2,7 @@ import type { Context, Next } from "koa";
 import { ZodError } from "zod";
 import { CATEGORY_HTTP_STATUS, DomainError } from "@/shared/errors";
 import { logger } from "@/shared/logger";
+import { isGiteaWriteConflict } from "@/features/gitea/utils/gitea-error";
 import { errorResponse, type ErrorEnvelope } from "./envelope";
 
 const log = logger.child({ module: "error-middleware" });
@@ -42,6 +43,22 @@ function giteaErrorMessage(err: GiteaHttpErrorLike): string {
   return `Gitea API error (${err.status})`;
 }
 
+/**
+ * A write conflict in words a caller can act on: a file that already exists
+ * is named, anything else is a lost race to re-read and retry.
+ */
+function conflictMessage(err: GiteaHttpErrorLike): string {
+  const message = giteaErrorMessage(err);
+  if (/already exists?/iu.test(message)) {
+    // Gitea: "repository file already exists [path: qa.bean]".
+    const path = /\[path: ([^\]]+)\]/u.exec(message)?.[1];
+    return path === undefined
+      ? message
+      : `${path} already exists; update it with its sha, or choose another path`;
+  }
+  return "the ledger changed under a concurrent write; re-read it and retry";
+}
+
 /** Map any thrown error to the Python service's error envelope + status. */
 export function toErrorResponse(err: unknown): {
   status: number;
@@ -51,8 +68,7 @@ export function toErrorResponse(err: unknown): {
     const status =
       err.httpStatusHint ?? CATEGORY_HTTP_STATUS[err.category] ?? 500;
     const metadata = err.metadata as
-      | { code?: string; details?: Record<string, number | string> }
-      | undefined;
+      { code?: string; details?: Record<string, number | string> } | undefined;
     return {
       status,
       body: errorResponse(
@@ -70,6 +86,18 @@ export function toErrorResponse(err: unknown): {
     return { status: 422, body: errorResponse(`Validation error: ${details}`) };
   }
   if (isGiteaHttpError(err)) {
+    // Gitea answers the loser of two commits racing for the branch ref with a
+    // 500. Forwarded as-is it read as "dependency down, retry with backoff";
+    // it is a lost compare-and-swap, which callers re-read and retry (w23/017).
+    // A stale sha or a create over an existing file is a 422 that backend-v2
+    // read as the caller's bad input, so its retry never ran (w23/032).
+    // The single-file delete answers a stale sha with 400 (w21/550).
+    if (
+      (err.status === 400 || err.status === 422 || err.status >= 500) &&
+      isGiteaWriteConflict(err)
+    ) {
+      return { status: 409, body: errorResponse(conflictMessage(err)) };
+    }
     return { status: err.status, body: errorResponse(giteaErrorMessage(err)) };
   }
   return { status: 500, body: errorResponse("Internal server error") };

@@ -404,6 +404,11 @@ const ruCommon: Record<string, TranslationEntry> = {
     message: "Скачать",
     description: "Auto-generated from code usage",
   },
+  "common.downloadFailed": {
+    message: "Не удалось скачать файл. Попробуйте ещё раз.",
+    description:
+      "Error shown when the browser could not generate a file download",
+  },
   "common.moreActions": {
     message: "Ещё действия",
     description: "Label for dropdown menu with additional actions",
@@ -743,6 +748,12 @@ const ruCommon: Record<string, TranslationEntry> = {
     message: "Счета не найдены",
     description: "Message when no accounts match search",
   },
+  "component.suggestions.unavailable": {
+    message:
+      "Не удалось загрузить подсказки. Вы всё равно можете ввести значение.",
+    description:
+      "Notice under a form field when its suggestions failed to load; the field still accepts typed text",
+  },
   "component.sourceFileCombobox.placeholder": {
     message: "Поиск файлов...",
     description: "Placeholder for ledger file search",
@@ -1076,6 +1087,25 @@ const ruCommon: Record<string, TranslationEntry> = {
     message: "Вы всё посмотрели",
     description:
       "Description under the What's new heading when every release has been read",
+  },
+  "common.failedRenewal": {
+    message:
+      "Не удалось списать оплату за {plan} с {card}. Обновите карту до {date}, чтобы сохранить {plan}.",
+    description:
+      "Banner while a renewal payment is past due: the card, the plan and the next retry date",
+  },
+  "common.failedRenewalUpdate": {
+    message: "Обновить способ оплаты",
+    description: "Button that opens the billing portal to fix a failed renewal",
+  },
+  "common.failedRenewalYourCard": {
+    message: "вашей карты",
+    description: "Stands in for the card name when it is unknown",
+  },
+  "common.failedRenewalDismiss": {
+    message: "Скрыть пока",
+    description:
+      "Accessible name of the button that hides the failed-renewal banner for this session",
   },
 };
 

@@ -9,6 +9,17 @@ const koLedgerEditor: Record<string, { message: string; description: string }> =
       message: "파일 생성",
       description: "Button label to create file",
     },
+    "ledgerEditor.branchNotFound": {
+      message:
+        "브랜치 “{branch}”은(는) 여기에서 사용할 수 없습니다. 파일은 {main}에서 표시됩니다.",
+      description:
+        "404 for a Files URL naming a branch other than the supported one (contains {branch} and {main})",
+    },
+    "ledgerEditor.browseMainFiles": {
+      message: "{main}의 파일 보기",
+      description:
+        "Link to the Files root on the supported branch (contains {main})",
+    },
     "ledgerEditor.files": {
       message: "파일",
       description: "Ledger files management",
@@ -48,6 +59,12 @@ export default {
   "ledgerEditor.unsupportedPreview": {
     message: "이 파일 형식은 미리보기가 지원되지 않습니다.",
     description: "Unsupported preview message without a file type",
+  },
+  "ledgerEditor.notUtf8Text": {
+    message:
+      "이 파일은 UTF-8 텍스트가 아니어서 바이트를 바꾸지 않고는 여기서 표시하거나 편집할 수 없습니다. 다운로드해서 다른 프로그램에서 여세요.",
+    description:
+      "Shown instead of the editor for a text file whose bytes are not valid UTF-8",
   },
   "ledgerEditor.createFileCommit": {
     message: "파일 만들기 {path}",

@@ -2,6 +2,8 @@
 
 **Worker:** worker3 **Goal:** preserve raw transaction values and complete row validity through CSV preview, inline repair and configuration **Status:** done
 
+**Residual verification 2026-10-22:** the previously unverified malformed-record obligation now fails independently at both widths: editing only Payee or Description drops a five-field CSV row's structural error and admits its truncated fields to a prepared import. Ordinary date repair remains working. The bounded remaining work and complete live evidence are tracked in [W4/972](../../../w4/972.md); this is the same historical validation group, not another implementation of the completed field/amount repairs.
+
 ## Tasks (in order)
 
 | id   | title                                                                | est | depends_on |

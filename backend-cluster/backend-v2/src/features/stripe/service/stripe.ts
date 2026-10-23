@@ -24,6 +24,15 @@ export enum SubscriptionTier {
   ENTERPRISE = "ENTERPRISE",
 }
 
+/** Each tier's plan name, as people read it in a message. */
+export const TIER_DISPLAY_NAMES: Record<SubscriptionTier, string> = {
+  [SubscriptionTier.FREE]: "Free",
+  [SubscriptionTier.PREMIUM]: "Premium",
+  [SubscriptionTier.GROWTH]: "Growth",
+  [SubscriptionTier.ORGANIZATION]: "Organization",
+  [SubscriptionTier.ENTERPRISE]: "Enterprise",
+};
+
 /**
  * Global tier limits configuration
  * Defines resource limits for each subscription tier
@@ -48,7 +57,7 @@ export const TIER_LIMITS = {
     maxDirectives: -1, // Unlimited
   },
   [SubscriptionTier.ORGANIZATION]: {
-    maxLedgers: 100,
+    maxLedgers: 500,
     maxCollaboratorsPerLedger: 50,
     aiCfoTokensMax: 10_000_000,
     maxDirectives: -1, // Unlimited
@@ -79,10 +88,12 @@ export function getTierLimits(tier: SubscriptionTier): TierLimits {
   return TIER_LIMITS[tier];
 }
 
+export type BillingInterval = "month" | "year";
+
 /**
  * Interface for plan configuration
  */
-interface PlanConfig {
+export interface PlanConfig {
   /** Price ID for this plan */
   priceId: string;
   /** Payment type (subscription or one-time) */
@@ -91,6 +102,13 @@ interface PlanConfig {
   description: string;
   /** Subscription tier associated with this plan */
   tier: SubscriptionTier;
+  /** Billing cycle, so plan changes classify without a Stripe call. */
+  interval: BillingInterval;
+  /**
+   * Still billed to, and resolved for, the subscribers on it, but never sold
+   * again: Checkout and plan changes both refuse it.
+   */
+  retired?: true;
 }
 
 /**
@@ -115,6 +133,12 @@ export interface StripeClientConfig {
   cancelUrl: string;
   /** URL to return to after leaving the Stripe customer portal */
   portalReturnUrl: string;
+  /**
+   * The billing portal configuration every portal session uses: payment
+   * methods, invoices and billing details only, so plan changes go through
+   * changePlan. Account-specific like the price IDs, and not a secret.
+   */
+  portalConfigurationId: string;
   /** Webhook URL for Stripe events */
   webhook: string;
 }
@@ -142,6 +166,7 @@ export const SUBSCRIPTION_CONFIG: SubscriptionConfigMap = {
       "price_1L9ccEEqsEqs2tLVKPRV17wb", // $9.99/month (legacy)
       "price_1L9ccEEqsEqs2tLVbeBgHm9p", // $99.99/year (legacy)
       "price_1RrSOGEqsEqs2tLVFnyB34qG", // $14.99/month (Premium)
+      "price_1US5htEqsEqs2tLVENCzLaZB", // $143.88/year (Premium)
       "price_1SyPdaEqsEqs2tLViLPUDoVi", // $99.99/month (Growth)
       "price_1SyPdbEqsEqs2tLV7PJyWZed", // $959.88/year (Growth)
       "price_1SyPdcEqsEqs2tLVCWEgU1PZ", // $499.99/month (Organization)
@@ -152,18 +177,32 @@ export const SUBSCRIPTION_CONFIG: SubscriptionConfigMap = {
         priceId: "price_1L9ccEEqsEqs2tLVKPRV17wb",
         type: PaymentType.RECURRING,
         description: "Beancount.io Basic - Monthly - $9.99/month (Legacy)",
+        interval: "month",
         tier: SubscriptionTier.PREMIUM,
+        retired: true,
       },
       {
         priceId: "price_1L9ccEEqsEqs2tLVbeBgHm9p",
         type: PaymentType.RECURRING,
         description: "Beancount.io Basic - Yearly - $99.99/year (Legacy)",
+        interval: "year",
         tier: SubscriptionTier.PREMIUM,
+        // Grandfathered (PRFAQ005 decision 3): its subscribers keep renewing.
+        retired: true,
       },
       {
         priceId: "price_1RrSOGEqsEqs2tLVFnyB34qG",
         type: PaymentType.RECURRING,
         description: "Beancount.io Premium - Monthly - $14.99/month",
+        interval: "month",
+        tier: SubscriptionTier.PREMIUM,
+      },
+      {
+        priceId: "price_1US5htEqsEqs2tLVENCzLaZB",
+        type: PaymentType.RECURRING,
+        description:
+          "Beancount.io Premium - Yearly - $11.99/month billed yearly ($143.88/year)",
+        interval: "year",
         tier: SubscriptionTier.PREMIUM,
       },
       {
@@ -171,6 +210,7 @@ export const SUBSCRIPTION_CONFIG: SubscriptionConfigMap = {
         type: PaymentType.RECURRING,
         description:
           "Beancount.io Growth - Monthly - $99.99/month (Smart Automation)",
+        interval: "month",
         tier: SubscriptionTier.GROWTH,
       },
       {
@@ -178,6 +218,7 @@ export const SUBSCRIPTION_CONFIG: SubscriptionConfigMap = {
         type: PaymentType.RECURRING,
         description:
           "Beancount.io Growth - Yearly - $79.99/month billed yearly (Smart Automation)",
+        interval: "year",
         tier: SubscriptionTier.GROWTH,
       },
       {
@@ -185,6 +226,7 @@ export const SUBSCRIPTION_CONFIG: SubscriptionConfigMap = {
         type: PaymentType.RECURRING,
         description:
           "Beancount.io Organization - Monthly - $499.99/month (Multi-Entity)",
+        interval: "month",
         tier: SubscriptionTier.ORGANIZATION,
       },
       {
@@ -192,17 +234,20 @@ export const SUBSCRIPTION_CONFIG: SubscriptionConfigMap = {
         type: PaymentType.RECURRING,
         description:
           "Beancount.io Organization - Yearly - $399.99/month billed yearly (Multi-Entity)",
+        interval: "year",
         tier: SubscriptionTier.ORGANIZATION,
       },
     ],
     webhookSecret: config.stripe.webhookSecret,
     stripePubKey: config.stripe.publicKey,
     stripePriKey: config.stripe.privateKey,
-    successUrl: "https://beancount.io/pricing/?success=true",
+    // The dashboard confirmation; Stripe fills in the session id.
+    successUrl:
+      "https://beancount.io/settings/billing?checkout=success&session_id={CHECKOUT_SESSION_ID}",
     cancelUrl: "https://beancount.io/pricing",
-    // The dashboard's subscription-management page — /profile/settings was a
-    // legacy-dashboard route that now 404s.
-    portalReturnUrl: "https://beancount.io/settings/general",
+    // The dashboard's Billing tab, where the plan is managed.
+    portalReturnUrl: "https://beancount.io/settings/billing",
+    portalConfigurationId: "bpc_1US5i0EqsEqs2tLVVF907WfA",
     webhook: "https://beancount.io/api-gateway/stripe/webhook",
   },
 };

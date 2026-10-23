@@ -14,6 +14,7 @@ import {
 } from "react-native-safe-area-context";
 import { nativeTabIcons, TabBarIcon } from "@/components/tab-bar-icon";
 import { HapticTab } from "@/components/haptic-tab";
+import { TAB_BAR_CONTENT_HEIGHT } from "./tab-bar-metrics";
 import {
   LedgerDrawerProvider,
   type LedgerDrawerData,
@@ -24,7 +25,6 @@ import { i18n } from "@/translations";
 import { localeVar } from "@/common/vars";
 import { useReactiveVar } from "@apollo/client";
 
-const TAB_BAR_CONTENT_HEIGHT = 80;
 const TAB_BAR_PILL_INSET = 6;
 const TAB_BAR_SIDE_INSET = 12;
 
@@ -152,6 +152,11 @@ function JavaScriptTabNavigator({
       initialRouteName="index"
       screenOptions={{
         headerShown: false,
+        // The bar is positioned over the screen, so every tab's content ends
+        // above it: without this the bottom 80dp plus the navigation bar stayed
+        // under the pill, and the last row and Transactions' Retry could not be
+        // tapped (w21/606). iOS's native tabs inset their content themselves.
+        sceneStyle: { paddingBottom: TAB_BAR_CONTENT_HEIGHT + bottomInset },
         tabBarButton: HapticTab,
         tabBarActiveTintColor: theme.primary,
         // Without an explicit inactive tint, react-navigation falls back to

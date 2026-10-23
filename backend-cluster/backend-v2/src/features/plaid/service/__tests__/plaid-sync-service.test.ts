@@ -2,7 +2,11 @@ import { PlaidSyncService } from "../plaid-sync-service";
 import { systemIdentity } from "@/server/api/identity";
 import { assertLedgerAccess } from "@/features/ledger/utils/ledger-access-check";
 import { buildBeancountTransaction } from "../../utils/plaid-mapper";
-import { BadUserInputError, ForbiddenError } from "@/shared/errors";
+import {
+  BadUserInputError,
+  ForbiddenError,
+  ResourceLimitReachedError,
+} from "@/shared/errors";
 import { parseBankConnectionResource } from "@/server/api/authorization";
 
 // Mock logger
@@ -653,6 +657,27 @@ describe("PlaidSyncService", () => {
       ).rejects.toThrow("Some transactions not found in database");
     });
 
+    // w5/m5/t004: an agent passed the staged row's `id` for its
+    // `transactionId` and got a refusal with nothing to go on.
+    it("names the id the lookup wants when a transaction is not found", async () => {
+      mockPlaidTransactionModel.getByTransactionIds.mockResolvedValue([]);
+
+      await expect(
+        service.submitTransactionsToLedger(
+          systemIdentity(userId),
+          ledgerOwner,
+          ledgerName,
+          txInputs,
+        ),
+      ).rejects.toMatchObject({
+        category: "BAD_USER_INPUT",
+        metadata: {
+          field: "transactionIds",
+          hint: expect.stringContaining("not its row `id`"),
+        },
+      });
+    });
+
     it("should throw when transaction already synced", async () => {
       mockPlaidTransactionModel.getByTransactionIds.mockResolvedValue([
         { ...mockTransactions[0], syncedToLedger: true },
@@ -959,7 +984,7 @@ describe("PlaidSyncService", () => {
           ledgerName,
           txInputs,
         ),
-      ).rejects.toThrow("Unauthorized access to transaction");
+      ).rejects.toThrow("Bank connection not found");
     });
 
     it("should reject when the item's ledgerRepoId matches but user binding differs", async () => {
@@ -989,7 +1014,7 @@ describe("PlaidSyncService", () => {
           ledgerName,
           txInputs,
         ),
-      ).rejects.toThrow("Unauthorized access to transaction");
+      ).rejects.toThrow("Bank connection not found");
     });
   });
 
@@ -1094,7 +1119,7 @@ describe("PlaidSyncService", () => {
           ledgerId,
           transactionIds,
         ),
-      ).rejects.toThrow("Unauthorized access to transaction");
+      ).rejects.toThrow("Bank connection not found");
     });
 
     it("should throw ForbiddenError when the caller only has read access", async () => {
@@ -1154,7 +1179,11 @@ describe("PlaidSyncService", () => {
       ]);
       mockPlaidClient.getAccounts.mockResolvedValue([
         { accountId: "account-ext-1", name: "Checking", type: "depository" },
-        { accountId: "account-ext-new", name: "New Savings", type: "depository" },
+        {
+          accountId: "account-ext-new",
+          name: "New Savings",
+          type: "depository",
+        },
       ]);
       mockPlaidClient.transactionsSync.mockResolvedValue({
         added: [
@@ -1225,6 +1254,62 @@ describe("PlaidSyncService", () => {
         ),
       ).rejects.toThrow('Target file "missing.bean" not found in ledger');
 
+      expect(mockFavaApiClient.entries.addBulkEntries).not.toHaveBeenCalled();
+      expect(mockPlaidTransactionModel.markAsSynced).not.toHaveBeenCalled();
+    });
+
+    // w5/904: the commit is refused at the ledger service when the owner's
+    // directive limit is crossed, so the preview has to refuse it too.
+    it("submit preview is refused when the write would cross the directive limit", async () => {
+      mockPlaidTransactionModel.getByTransactionIds.mockResolvedValue([
+        {
+          id: "ptxn_1",
+          transactionId: "tx_1",
+          plaidAccountId: "pacc_1",
+          syncedToLedger: false,
+          date: new Date("2024-01-15"),
+          amount: "12.50",
+          name: "Coffee Shop",
+        },
+      ]);
+      mockPlaidAccountModel.getById.mockResolvedValue(enabledAccount);
+      mockPlaidItemModel.getById.mockResolvedValue({
+        id: "pacc_1",
+        userId,
+        ledgerRepoId: 42,
+      });
+      const assertRoom = jest
+        .fn()
+        .mockRejectedValue(
+          new ResourceLimitReachedError("Directive", 1000, 1001, "over"),
+        );
+      const limited = new PlaidSyncService(
+        mockPlaidClient as any,
+        mockFavaClientFactory as any,
+        mockModels,
+        mockDb,
+        mockAuthorization as any,
+        { assertRoom },
+      );
+
+      await expect(
+        limited.submitTransactionsToLedger(
+          systemIdentity(userId),
+          "testuser",
+          "personal",
+          [{ transactionId: "tx_1", targetAccount: "Expenses:Food" }],
+          undefined,
+          true,
+        ),
+      ).rejects.toBeInstanceOf(ResourceLimitReachedError);
+
+      expect(assertRoom).toHaveBeenCalledWith(
+        expect.objectContaining({
+          owner: "testuser",
+          repo: "personal",
+          adding: 1,
+        }),
+      );
       expect(mockFavaApiClient.entries.addBulkEntries).not.toHaveBeenCalled();
       expect(mockPlaidTransactionModel.markAsSynced).not.toHaveBeenCalled();
     });

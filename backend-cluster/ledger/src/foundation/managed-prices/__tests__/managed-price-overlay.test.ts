@@ -279,9 +279,32 @@ describe("precedence helpers", () => {
       '; she said "hold\n2026-01-10 price BTC 90000 USD\n',
       ["2026-01-10\0BTC\0USD"],
     ],
+    // Beancount skips these lines whole, quotes and all, and the parse turns
+    // them into comments for the engine (w21/654; rustledger alone opened a
+    // string at the quote, w5/844), so the price after one is seen.
     [
-      "a quote on an org heading the lexer ignores (w5/625)",
+      "a quote on an org heading (w21/654)",
       '* Prices for the 12" binder\n2026-09-10 price BTC 70000 USD\n2026-09-12 * "Later"\n',
+      ["2026-09-10\0BTC\0USD"],
+    ],
+    [
+      "a quote on a # line (w21/654)",
+      '# Prices for the 12" binder\n2026-09-10 price BTC 70000 USD\n2026-09-12 * "Later"\n',
+      ["2026-09-10\0BTC\0USD"],
+    ],
+    [
+      "a quote on a % line (w5/844)",
+      '% Prices for the 12" binder\n2026-09-10 price BTC 70000 USD\n2026-09-12 * "Later"\n',
+      ["2026-09-10\0BTC\0USD"],
+    ],
+    [
+      "a quote on a : line (w21/654)",
+      ': Prices for the 12" binder\n2026-09-10 price BTC 70000 USD\n',
+      ["2026-09-10\0BTC\0USD"],
+    ],
+    [
+      "an org heading without a quote (w5/844)",
+      "* Prices\n2026-09-10 price BTC 70000 USD\n",
       ["2026-09-10\0BTC\0USD"],
     ],
     [
@@ -297,6 +320,23 @@ describe("precedence helpers", () => {
   ])("reads only directives around %s", (_label, text, expected) => {
     const pairs = collectLedgerPricePairs({ "a.bean": text }, ["a.bean"]);
     expect([...pairs]).toEqual(expected);
+  });
+
+  // The engine now sees an authored price after a quoted heading (w21/654),
+  // so it shadows the feed's point for that date, as any authored price does.
+  it("shadows the feed's point with an authored price after a quoted heading", () => {
+    const ledger =
+      'include "feed.bean"\n* Prices for the 12" binder\n2026-09-10 price BTC 70000 USD\n' +
+      '* Transactions\n2026-09-12 * "Later"\n  Assets:A  1 USD\n  Assets:B\n';
+    const feed = "2026-09-10 price BTC 69000 USD\n2026-09-11 price BTC 69500 USD\n";
+    const validation = validateManagedPriceText(feed);
+    if (!validation.ok) throw new Error(validation.reason);
+
+    const pairs = collectLedgerPricePairs({ "main.bean": ledger }, ["main.bean"]);
+    const result = applyLedgerPricePrecedence(feed, validation.feed, pairs);
+
+    expect(result.shadowedCount).toBe(1);
+    expect(result.effectiveDates).toEqual(["2026-09-11"]);
   });
 
   it("normalises slash and unpadded ledger dates and skips impossible ones (w1/163)", () => {

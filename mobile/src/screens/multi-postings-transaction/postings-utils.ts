@@ -1,3 +1,10 @@
+import {
+  amountScale,
+  formatSignedMoneyWithCurrency,
+} from "../../common/number-utils";
+import { currencyMinorUnits } from "../../common/currency-util";
+import { toAsciiNumerals } from "../../common/ascii-numerals";
+
 let _postingIdCounter = 0;
 const nextId = () => `posting-${++_postingIdCounter}`;
 
@@ -26,20 +33,58 @@ type Scaled = { coeff: bigint; scale: number };
 /**
  * Parse a complete decimal amount. Accepts optional leading `-`, a single
  * `.` decimal separator, or a single `,` as a decimal separator (`1,25` →
- * `1.25`). Rejects grouping commas, partial forms (`1.`, `-`), and any
- * other junk — never silently takes a numeric prefix the way parseFloat does.
+ * `1.25`). Thousands grouping is accepted only where it can't be a decimal
+ * comma: with a `.` after the groups (`1,234.56`) or two groups or more
+ * (`1,234,567`) (w21/031), and the other way round (`1.234,56`, `1.234.567`)
+ * or by a space (`1 234,56`) as most languages write it (w21/463). `1,250`
+ * stays the decimal comma 1.250. A leading
+ * `.` reads as `0.` (`.5` → `0.5`). Rejects partial forms (`1.`, `-`, `.`)
+ * and any other junk — never silently takes a
+ * numeric prefix the way parseFloat does.
  */
 export function parseExactAmount(input: string): string | null {
-  const trimmed = input.trim();
+  let trimmed = toAsciiNumerals(input)
+    // Direction marks a right-to-left locale's formatting puts around a sign,
+    // and the typographic minus it uses (w21/463).
+    .replace(/[\u200e\u200f\u061c]/g, "")
+    .replace(/\u2212/g, "-")
+    // Grouping by a space, no-break or narrow no-break space, between digits
+    // and a group of three: "1 234,56" (French, Russian, …).
+    .replace(/(\d)[ \u00a0\u2009\u202f](?=\d{3}(?!\d))/g, "$1")
+    .trim();
   if (!trimmed) return null;
+  // The Arabic thousands separator groups three digits and is never a decimal
+  // mark: `۱٬۲۳۴` is 1,234, where the ASCII comma it was mapped to read as a
+  // decimal comma and saved 1.234 (w21/386). A grouping that is not threes is
+  // refused, not guessed.
+  if (trimmed.includes("\u066c")) {
+    if (!/^-?\d{1,3}(\u066c\d{3})+(\.\d+)?$/.test(trimmed)) return null;
+    trimmed = trimmed.replace(/\u066c/g, "");
+  }
 
   let normalized = trimmed;
-  if (/^-?\d+,\d+$/.test(normalized)) {
+  // A point as the grouping mark, where a comma decimal follows or there are
+  // two groups or more: "1.234,56" (German, Spanish, …) and "1.234.567". A bare
+  // "1.234" stays the decimal 1.234 (w21/031).
+  if (
+    /^-?\d{1,3}(\.\d{3})+,\d+$/.test(normalized) ||
+    /^-?\d{1,3}(\.\d{3}){2,}$/.test(normalized)
+  ) {
+    normalized = normalized.replace(/\./g, "").replace(",", ".");
+  }
+  if (
+    /^-?\d{1,3}(,\d{3})+\.\d+$/.test(normalized) ||
+    /^-?\d{1,3}(,\d{3}){2,}$/.test(normalized)
+  ) {
+    normalized = normalized.replace(/,/g, "");
+  } else if (/^-?\d+,\d+$/.test(normalized)) {
     normalized = normalized.replace(",", ".");
   } else if (normalized.includes(",")) {
     return null;
   }
 
+  // The decimal pad lets "." come first: ".5" is 0.5 (w21/075).
+  normalized = normalized.replace(/^(-?)\./, "$10.");
   if (!/^-?\d+(\.\d+)?$/.test(normalized)) return null;
 
   const neg = normalized.startsWith("-");
@@ -94,26 +139,33 @@ function isZeroExact(a: string | null): boolean {
   return a === "0" || /^0\.0+$/.test(a) || /^-0(\.0+)?$/.test(a);
 }
 
-/** Format an exact amount for the amount field / auto-fill display. */
-export function formatExactAmount(amount: string): string {
+/**
+ * Format an exact amount for the amount field / auto-fill display and the
+ * entry payload, padded to the currency's minor unit (`minorUnits`: 2 for USD,
+ * 0 for JPY, 3 for KWD) but never truncating a longer exact value (1.005 stays
+ * 1.005). Padded to two for every currency, a typed 1500 JPY was written to
+ * the ledger as "1500.00 JPY" (w21/231).
+ */
+export function formatExactAmount(amount: string, minorUnits = 2): string {
   if (isZeroExact(amount)) {
-    const scale = amount.includes(".") ? amount.split(".")[1].length : 2;
-    return scale > 0 ? `0.${"0".repeat(scale)}` : "0.00";
+    const scale = amount.includes(".")
+      ? amount.split(".")[1].length
+      : minorUnits;
+    return scale > 0 ? `0.${"0".repeat(scale)}` : "0";
   }
-  // Prefer at least two fractional digits for ordinary two-decimal ledgers,
-  // but never truncate a longer exact value (1.005 stays 1.005).
   const neg = amount.startsWith("-");
   const body = neg ? amount.slice(1) : amount;
   const [whole, frac = ""] = body.split(".");
-  const padded = frac.length >= 2 ? frac : frac.padEnd(2, "0");
-  return `${neg ? "-" : ""}${whole}.${padded}`;
+  const padded =
+    frac.length >= minorUnits ? frac : frac.padEnd(minorUnits, "0");
+  return `${neg ? "-" : ""}${whole}${padded ? `.${padded}` : ""}`;
 }
 
 function amountOrZero(amount: string | null): string {
   return amount === null || isZeroExact(amount) ? "0" : amount;
 }
 
-function applyAutoFill(postings: Posting[]): Posting[] {
+function applyAutoFill(postings: Posting[], minorUnits = 2): Posting[] {
   const lastIdx = postings.length - 1;
   if (lastIdx < 1) return postings;
   const last = postings[lastIdx];
@@ -124,21 +176,33 @@ function applyAutoFill(postings: Posting[]): Posting[] {
     sumOfOthers = addExact(sumOfOthers, amountOrZero(p.amount));
   }
   const autoAmount = isZeroExact(sumOfOthers)
-    ? "0.00"
-    : formatExactAmount(negateExact(sumOfOthers));
+    ? formatExactAmount("0", minorUnits)
+    : formatExactAmount(negateExact(sumOfOthers), minorUnits);
   const parsed = parseExactAmount(autoAmount);
 
+  // A zero auto leg shows no text, so the "0.00" placeholder does: shown as
+  // text, a tap placed the caret after it and "12.50" became "0.0012.50"
+  // (w21/321).
+  const shown = isZeroExact(sumOfOthers) ? "" : autoAmount;
   return postings.map((p, i) =>
-    i === lastIdx ? { ...p, amount: parsed, amountInput: autoAmount } : p,
+    i === lastIdx ? { ...p, amount: parsed, amountInput: shown } : p,
   );
 }
 
 export function makePosting(partial?: Partial<Posting>): Posting {
-  const amountInput = partial?.amountInput ?? "0.00";
+  // An amount the user types starts empty, so the "0.00" placeholder shows
+  // and the first digit starts the value. Seeded as text, "0.00" was typed
+  // onto: an iOS tap leaves the caret after it with nothing selected, and
+  // "12.50" became "0.0012.50" (w21/159). The auto leg is empty while it is
+  // zero for the same reason (w21/321): it carries a computed zero amount but
+  // no text to type onto.
+  const amountInput = partial?.amountInput ?? "";
   const amount =
     partial && "amount" in partial
       ? (partial.amount ?? null)
-      : parseExactAmount(amountInput);
+      : partial?.isAuto
+        ? "0.00"
+        : parseExactAmount(amountInput);
   return {
     id: nextId(),
     account: partial?.account ?? "",
@@ -152,11 +216,15 @@ export function makePosting(partial?: Partial<Posting>): Posting {
 export function createInitialPostings(
   firstAsset: string,
   firstExpense: string,
+  minorUnits = 2,
 ): Posting[] {
-  return applyAutoFill([
-    makePosting({ account: firstAsset, isAuto: false }),
-    makePosting({ account: firstExpense, isAuto: true }),
-  ]);
+  return applyAutoFill(
+    [
+      makePosting({ account: firstAsset, isAuto: false }),
+      makePosting({ account: firstExpense, isAuto: true }),
+    ],
+    minorUnits,
+  );
 }
 
 /**
@@ -173,22 +241,31 @@ export function createPrefilledPostings(
   sourceAccount: string,
   targetAccount: string,
   amountInput: string,
+  minorUnits = 2,
 ): Posting[] {
   const parsed = parseExactAmount(amountInput);
-  const paidAmount =
-    parsed === null || isZeroExact(parsed)
-      ? parseExactAmount("0.00")
-      : parseExactAmount(formatExactAmount(negateExact(parsed)));
-  const paidInput = formatExactAmount(paidAmount ?? "0");
-  return applyAutoFill([
-    makePosting({
-      account: sourceAccount,
-      amount: paidAmount,
-      amountInput: paidInput,
-      isAuto: false,
-    }),
-    makePosting({ account: targetAccount, isAuto: true }),
-  ]);
+  // A total that is zero or unreadable seeds nothing: an empty field shows the
+  // placeholder and the first digit starts the value, where a seeded "0.00"
+  // was typed onto (w21/321).
+  const hasTotal = parsed !== null && !isZeroExact(parsed);
+  const paidAmount = hasTotal
+    ? parseExactAmount(formatExactAmount(negateExact(parsed), minorUnits))
+    : null;
+  const paidInput = hasTotal
+    ? formatExactAmount(paidAmount ?? "0", minorUnits)
+    : "";
+  return applyAutoFill(
+    [
+      makePosting({
+        account: sourceAccount,
+        amount: paidAmount,
+        amountInput: paidInput,
+        isAuto: false,
+      }),
+      makePosting({ account: targetAccount, isAuto: true }),
+    ],
+    minorUnits,
+  );
 }
 
 /**
@@ -269,47 +346,79 @@ export function updatePostingAmount(
   postings: Posting[],
   index: number,
   input: string,
+  minorUnits = 2,
 ): Posting[] {
-  const amount = parseExactAmount(input);
+  // Stored without the spaces a pasted amount carries: the row reads the sign
+  // off the text itself (w21/232).
+  const text = input.trim();
+  const amount = parseExactAmount(text);
   const isLast = index === postings.length - 1;
   const updated = postings.map((p, i) =>
     i === index
       ? {
           ...p,
-          amountInput: input,
+          amountInput: text,
           amount,
           isAuto: isLast ? false : p.isAuto,
         }
       : p,
   );
-  return applyAutoFill(updated);
+  return applyAutoFill(updated, minorUnits);
 }
 
-export function toggleLastPostingAuto(postings: Posting[]): Posting[] {
+/**
+ * An auto leg the user now types into. A computed amount is kept as the
+ * starting value; a zero one starts empty, like a new leg, rather than as a
+ * "0.00" the next digits would be typed onto (w21/159).
+ */
+function asTyped(posting: Posting): Posting {
+  return isZeroExact(posting.amount)
+    ? { ...posting, isAuto: false, amountInput: "", amount: null }
+    : { ...posting, isAuto: false };
+}
+
+export function toggleLastPostingAuto(
+  postings: Posting[],
+  minorUnits = 2,
+): Posting[] {
   const lastIdx = postings.length - 1;
   const updated = postings.map((p, i) =>
-    i === lastIdx ? { ...p, isAuto: !p.isAuto } : p,
+    i !== lastIdx ? p : p.isAuto ? asTyped(p) : { ...p, isAuto: true },
   );
-  return applyAutoFill(updated);
+  return applyAutoFill(updated, minorUnits);
 }
 
-export function addPosting(postings: Posting[]): Posting[] {
+export function addPosting(postings: Posting[], minorUnits = 2): Posting[] {
   const withNoAuto = postings.map((p, i) =>
-    i === postings.length - 1 ? { ...p, isAuto: false } : p,
+    i === postings.length - 1 ? asTyped(p) : p,
   );
-  return applyAutoFill([...withNoAuto, makePosting({ isAuto: true })]);
+  return applyAutoFill(
+    [...withNoAuto, makePosting({ isAuto: true })],
+    minorUnits,
+  );
 }
 
-export function removePosting(postings: Posting[], index: number): Posting[] {
+export function removePosting(
+  postings: Posting[],
+  index: number,
+  minorUnits = 2,
+): Posting[] {
   if (postings.length <= 2) return postings;
   const newPostings = postings.filter((_, i) => i !== index);
   if (index >= newPostings.length) {
-    const withAuto = newPostings.map((p, i) =>
-      i === newPostings.length - 1 ? { ...p, isAuto: true } : p,
-    );
-    return applyAutoFill(withAuto);
+    // The row that is now last balances the others only if it holds nothing of
+    // the user's: a typed amount stays, and the form shows the remainder as
+    // unbalanced, instead of being overwritten without a word (w21/462).
+    const last = newPostings[newPostings.length - 1]!;
+    const typed = last.amountInput.trim() !== "" && !isZeroExact(last.amount);
+    const withAuto = typed
+      ? newPostings
+      : newPostings.map((p, i) =>
+          i === newPostings.length - 1 ? { ...p, isAuto: true } : p,
+        );
+    return applyAutoFill(withAuto, minorUnits);
   }
-  return applyAutoFill(newPostings);
+  return applyAutoFill(newPostings, minorUnits);
 }
 
 export function validatePostings(postings: Posting[]): ValidationError | null {
@@ -341,9 +450,21 @@ export function buildEntryInput(
     meta: {},
     postings: postings.map((posting) => ({
       account: posting.account,
-      amount: `${formatExactAmount(posting.amount ?? "0")} ${opts.currency}`,
+      amount: `${formatExactAmount(
+        posting.amount ?? "0",
+        currencyMinorUnits(opts.currency),
+      )} ${opts.currency}`,
     })),
   };
+}
+
+/**
+ * Typed text the parser could not read as an amount. Such a posting adds
+ * nothing to the remainder, which then read as a green, balanced zero
+ * (w21/031); the form shows it as an error instead.
+ */
+export function hasUnparsedAmount(posting: Posting): boolean {
+  return posting.amountInput.trim() !== "" && posting.amount === null;
 }
 
 export function hasNonZeroAmount(posting: Posting): boolean {
@@ -352,4 +473,94 @@ export function hasNonZeroAmount(posting: Posting): boolean {
 
 export function isRemainderBalanced(rem: string): boolean {
   return isZeroExact(rem);
+}
+
+/**
+ * The Remainder row's label, at the remainder's own scale: 10.004 against -10
+ * leaves "+$0.004". Rounded to cents it read "+$0.00" in red while Done
+ * refused the entry as unbalanced (w21/075).
+ */
+export function formatRemainderAmount(rem: string, currency: string): string {
+  const exact = formatExactAmount(rem, currencyMinorUnits(currency));
+  return formatSignedMoneyWithCurrency(
+    Number(exact),
+    currency,
+    true,
+    amountScale(exact),
+  );
+}
+
+/**
+ * The accounts a new entry opens with: the first open asset as the source,
+ * and the first open expense (else another open asset) as the target, by the
+ * ledger's recent-use ranking. That ranking still lists a heavily used account
+ * just closed first, and the form opened on it only for Done to be refused
+ * (w21/103). With nothing open the ranking's own first entries stand.
+ */
+export function defaultPostingAccounts(
+  assets: readonly string[],
+  expenses: readonly string[],
+  isOpen: (account: string) => boolean,
+): { source: string; target: string } {
+  const source = assets.find(isOpen) ?? assets[0] ?? "";
+  const target =
+    expenses.find(isOpen) ??
+    assets.find((account) => account !== source && isOpen(account)) ??
+    expenses[0] ??
+    (assets.length > 1 ? assets[1] : source);
+  return { source, target };
+}
+
+/** What a posting says, as the draft keeps it. */
+type PostingShape = Pick<Posting, "account" | "amountInput">;
+
+/**
+ * Whether two posting lists say the same thing: their accounts and typed
+ * amounts, ignoring ids.
+ */
+function samePostings(
+  a: readonly PostingShape[],
+  b: readonly PostingShape[],
+): boolean {
+  return (
+    a.length === b.length &&
+    a.every(
+      (posting, i) =>
+        posting.account === b[i].account &&
+        posting.amountInput === b[i].amountInput,
+    )
+  );
+}
+
+/**
+ * Whether a fresh seed should replace the form's postings. The first seed
+ * came from last session's persisted ranking, which can name an account since
+ * removed; the network's arrives later (w21/110). Replace only postings the
+ * user has not touched, and only when the seed changed.
+ */
+export function shouldReseed(
+  current: readonly PostingShape[],
+  lastSeed: readonly PostingShape[],
+  nextSeed: readonly PostingShape[],
+): boolean {
+  return samePostings(current, lastSeed) && !samePostings(nextSeed, lastSeed);
+}
+
+/**
+ * The root a new account created from posting `index`'s picker should start
+ * under. Every row of New Transaction is a `posting` picker, which suggested
+ * `Assets:` even on the expense row, so one tap on Done booked "groceries" to
+ * `Assets:Groceries` (w21/259). A debit (positive amount) is where money went:
+ * Expenses. A credit is where it came from: Assets. A row with no amount yet
+ * follows its place: the first row is the source, the others the destination.
+ */
+export function createRootForPosting(
+  postings: readonly Posting[],
+  index: number,
+): "Assets" | "Expenses" {
+  const amount = postings[index]?.amount;
+  if (amount != null && !isZeroExact(amount)) {
+    return amount.startsWith("-") ? "Assets" : "Expenses";
+  }
+  return index === 0 ? "Assets" : "Expenses";
 }

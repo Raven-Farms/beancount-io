@@ -337,6 +337,11 @@ export interface BeancountErrorPublic {
    * The engine's own remediation hint for this error, when it has one.
    */
   hint?: string | null;
+  /**
+   * Severity
+   * `error` for what bean-check fails on; `warning` for what the engine only remarks on. Count only errors. Absent means error.
+   */
+  severity?: "error" | "warning" | null;
 }
 
 /**
@@ -668,6 +673,11 @@ export interface ContextPublic {
    * The feed URL when the entry comes from a managed price include (ADR 015), else null. The entry is read-only.
    */
   managed_source?: string | null;
+  /**
+   * Generated From
+   * The entry hash of the source entry when this entry is a copy a plugin or a pad generated from it (amortize_over, forecast, padding), else null. A copy shares its source's text and checksum, so editing or deleting it changes the source and every other copy.
+   */
+  generated_from?: string | null;
 }
 
 /**
@@ -900,6 +910,8 @@ export interface DeleteMultiSourceSlicesRequest {
    * List of entries to delete
    */
   entries: DeleteMultiSourceSliceItem[];
+  /** Delete the entries even when that would add bean-check errors (NEW_LEDGER_ERRORS), instead of refusing it. */
+  allowInvalid?: boolean;
 }
 
 /**
@@ -917,6 +929,11 @@ export interface DeleteMultiSourceSlicesResponse {
    * Hashes of the deleted entries
    */
   deleted_hashes: string[];
+  /**
+   * Files
+   * Each ledger file the write rewrote, once.
+   */
+  files?: string[];
 }
 
 /**
@@ -934,6 +951,8 @@ export interface DeleteSourceSliceRequest {
    * SHA256 hash of the current entry source for validation
    */
   sha256sum: string;
+  /** Delete the entry even when that would add bean-check errors (NEW_LEDGER_ERRORS), instead of refusing it. */
+  allowInvalid?: boolean;
 }
 
 /**
@@ -951,6 +970,11 @@ export interface DeleteSourceSliceResponse {
    * Hash of the deleted entry
    */
   entry_hash: string;
+  /**
+   * Files
+   * Each ledger file the write rewrote, once.
+   */
+  files?: string[];
 }
 
 /**
@@ -1123,6 +1147,11 @@ export interface EntryAddBulkEntriesRequest {
   filename?: string | null;
   /** Record entries deliberately even when they are unbalanced (UNBALANCED) or would add bean-check errors (NEW_LEDGER_ERRORS), instead of refusing them. */
   allowInvalid?: boolean;
+  /**
+   * Dryrun
+   * Run every check — balance, tokens, bean-check, the directive limit — and commit nothing.
+   */
+  dryRun?: boolean | null;
 }
 
 /**
@@ -2133,6 +2162,16 @@ export interface PlaintextJournalResponse {
    * Plaintext journal content
    */
   content: string;
+  /**
+   * Total
+   * Entries the filters select, before offset and limit
+   */
+  total: number;
+  /**
+   * Truncated
+   * Whether entries remain after this page
+   */
+  truncated: boolean;
 }
 
 /**
@@ -3155,6 +3194,8 @@ export interface UpdateSourceSliceRequest {
    * New content for the entry
    */
   new_content: string;
+  /** Commit the edit even when it would add bean-check errors (NEW_LEDGER_ERRORS), instead of refusing it. */
+  allowInvalid?: boolean;
 }
 
 /**
@@ -3182,6 +3223,11 @@ export interface UpdateSourceSliceResponse {
    * The entry's public ID after the commit, re-read from the fresh post-commit parse.
    */
   new_entry_hash: string;
+  /**
+   * Files
+   * Each ledger file the write rewrote, once.
+   */
+  files?: string[];
 }
 
 /**
@@ -3495,6 +3541,98 @@ export interface SuccessResponseListManagedPriceSourcePublic {
   success?: boolean;
   /** Data */
   data: ManagedPriceSourcePublic[];
+}
+
+/**
+ * LedgerCheckFilesOptions
+ * A complete set of files that is not a repository yet, such as the ledger a guided setup would create.
+ */
+export interface LedgerCheckFilesOptions {
+  /**
+   * Files
+   * Every file of the ledger; the entry point is main.bean
+   */
+  files: LedgerCheckFile[];
+}
+
+/** LedgerCheckFile */
+export interface LedgerCheckFile {
+  /** Path */
+  path: string;
+  /**
+   * Content
+   * Base64 text
+   */
+  content: string;
+}
+
+/** EntryAddBulkEntriesResult */
+export interface EntryAddBulkEntriesResult {
+  /**
+   * Entry Hashes
+   * The entry hash each committed entry now carries, in request order; empty for a dry run, or when they could not be resolved after the commit.
+   */
+  entry_hashes: string[];
+  /**
+   * Included Files
+   * Files the write reached outside the include closure, now included from the entry point in the same commit.
+   */
+  included_files: string[];
+}
+
+/** SuccessResponse[EntryAddBulkEntriesResult] */
+export interface SuccessResponseEntryAddBulkEntriesResult {
+  /**
+   * Success
+   * @default true
+   */
+  success?: boolean;
+  data: EntryAddBulkEntriesResult;
+}
+
+/** SourceLineLocation */
+export interface SourceLineLocation {
+  /** Path */
+  path: string;
+  /**
+   * Line
+   * 1-based line the directive starts on.
+   * @min 1
+   */
+  line: number;
+}
+
+/** LedgerProjectedEntryIdsOptions */
+export interface LedgerProjectedEntryIdsOptions {
+  /**
+   * Files
+   * Projected file contents: base64 UTF-8 text, or null to project a deletion.
+   */
+  files: ProjectedFileOverlay[];
+  /**
+   * Locations
+   * @maxItems 200
+   */
+  locations: SourceLineLocation[];
+}
+
+/** ProjectedEntryIds */
+export interface ProjectedEntryIds {
+  /**
+   * Entry Hashes
+   * One per location, in order; null where no directive starts on that line.
+   */
+  entry_hashes: (string | null)[];
+}
+
+/** SuccessResponse[ProjectedEntryIds] */
+export interface SuccessResponseProjectedEntryIds {
+  /**
+   * Success
+   * @default true
+   */
+  success?: boolean;
+  data: ProjectedEntryIds;
 }
 
 export type QueryParamsType = Record<string | number, any>;
@@ -4411,28 +4549,6 @@ export class Api<
         format: "json",
         ...params,
       }),
-
-    /**
-     * @description Download a repository archive (e.g., main.zip, main.tar.gz).
-     *
-     * @tags ledger-files
-     * @name GetLedgerArchive
-     * @summary Get Ledger Archive
-     * @request GET:/ledgers/{owner}/{repo_name}/archive/{archive}
-     * @secure
-     */
-    getLedgerArchive: (
-      owner: string,
-      repoName: string,
-      archive: string,
-      params: RequestParams = {},
-    ) =>
-      this.request<void, ErrorResponse>({
-        path: `/ledgers/${encodeURIComponent(owner)}/${encodeURIComponent(repoName)}/archive/${archive}`,
-        method: "GET",
-        secure: true,
-        ...params,
-      }),
   };
   reports = {
     /**
@@ -4563,6 +4679,29 @@ export class Api<
         path: `/reports/${encodeURIComponent(owner)}/${encodeURIComponent(repoName)}/source-files`,
         method: "GET",
         secure: true,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description The files the projected ledger loads (base64 text; null deletes): its include closure, globs included. How a write tells whether a file it routes to would be read.
+     *
+     * @tags reports
+     * @name GetProjectedSourceFiles
+     * @summary Projected source files
+     * @request POST:/reports/{owner}/{repo_name}/source-files
+     */
+    getProjectedSourceFiles: (
+      owner: string,
+      repoName: string,
+      data: LedgerCheckProjectedFilesOptions,
+      params: RequestParams = {},
+    ) =>
+      this.request<SuccessResponseListStr, ErrorResponse>({
+        path: `/reports/${encodeURIComponent(owner)}/${encodeURIComponent(repoName)}/source-files`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
         format: "json",
         ...params,
       }),
@@ -4942,6 +5081,29 @@ export class Api<
     ) =>
       this.request<SuccessResponseListBeancountErrorPublic, ErrorResponse>({
         path: `/reports/${encodeURIComponent(owner)}/${encodeURIComponent(repoName)}/check`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description The entry ID of the directive starting on each 1-based line of the projected ledger (base64 text; null deletes), or null where none does. How a write that commits these files reports the hashes it created.
+     *
+     * @tags reports
+     * @name GetProjectedEntryIds
+     * @summary Resolve projected entry IDs
+     * @request POST:/reports/{owner}/{repo_name}/entry-ids
+     */
+    getProjectedEntryIds: (
+      owner: string,
+      repoName: string,
+      data: LedgerProjectedEntryIdsOptions,
+      params: RequestParams = {},
+    ) =>
+      this.request<SuccessResponseProjectedEntryIds, ErrorResponse>({
+        path: `/reports/${encodeURIComponent(owner)}/${encodeURIComponent(repoName)}/entry-ids`,
         method: "POST",
         body: data,
         type: ContentType.Json,
@@ -5411,6 +5573,27 @@ export class Api<
         format: "json",
         ...params,
       }),
+
+    /**
+     * @description bean-check over a complete set of files that is not a repository yet (base64 text, entry point main.bean), parsed without creating anything. Powers guided-setup previews.
+     *
+     * @tags reports
+     * @name CheckLedgerFiles
+     * @summary Check ledger files
+     * @request POST:/reports/check-files
+     */
+    checkLedgerFiles: (
+      data: LedgerCheckFilesOptions,
+      params: RequestParams = {},
+    ) =>
+      this.request<SuccessResponseListBeancountErrorPublic, ErrorResponse>({
+        path: `/reports/check-files`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
   };
   keys = {
     /**
@@ -5626,7 +5809,7 @@ export class Api<
       data: EntryAddBulkEntriesRequest,
       params: RequestParams = {},
     ) =>
-      this.request<SuccessResponseNoneType, ErrorResponse>({
+      this.request<SuccessResponseEntryAddBulkEntriesResult, ErrorResponse>({
         path: `/entries/${encodeURIComponent(owner)}/${encodeURIComponent(repoName)}/bulk`,
         method: "POST",
         body: data,
@@ -5849,6 +6032,16 @@ export class Api<
          * Time filter
          */
         time?: string | null;
+        /**
+         * Limit
+         * Entries per page; omitted, every entry
+         */
+        limit?: number | null;
+        /**
+         * Offset
+         * Entries to skip
+         */
+        offset?: number | null;
       },
       params: RequestParams = {},
     ) =>

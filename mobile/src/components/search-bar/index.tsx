@@ -3,6 +3,7 @@ import {
   Platform,
   StyleSheet,
   TextInput,
+  TouchableOpacity,
   View,
   useWindowDimensions,
   type StyleProp,
@@ -11,6 +12,7 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { fontSizes, space, useTheme } from "@/common/theme";
 import { useThemeStyle } from "@/common/hooks/use-theme-style";
+import { useTranslations } from "@/common/hooks/use-translations";
 import { ColorTheme } from "@/types/theme-props";
 import {
   SEARCH_BAR_RADIUS,
@@ -59,6 +61,10 @@ const getStyles = (theme: ColorTheme) =>
     inputAndroid: {
       padding: 0,
     },
+    clear: {
+      justifyContent: "center",
+      alignItems: "center",
+    },
   });
 
 interface SearchBarProps {
@@ -104,6 +110,7 @@ export function SearchBar({
   const styles = useThemeStyle(getStyles);
   const theme = useTheme().colorTheme;
   const { fontScale } = useWindowDimensions();
+  const { t } = useTranslations();
 
   return (
     <View
@@ -122,11 +129,30 @@ export function SearchBar({
         value={value}
         onChangeText={onChangeText}
         returnKeyType="search"
-        clearButtonMode="while-editing"
         autoCorrect={false}
         autoCapitalize="none"
         accessibilityLabel={accessibilityLabel ?? placeholder}
       />
+      {
+        // Drawn here on both platforms: the native clear-button prop is iOS-only, so on
+        // Android a search could only be left by deleting it character by
+        // character (w21/467).
+        value.length > 0 ? (
+          <TouchableOpacity
+            style={styles.clear}
+            onPress={() => onChangeText("")}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel={t("clearSearch")}
+          >
+            <Ionicons
+              name="close-circle"
+              size={18}
+              color={theme.controlPlaceholder}
+            />
+          </TouchableOpacity>
+        ) : null
+      }
       {right}
     </View>
   );

@@ -3,7 +3,11 @@ import { HOSTED_APP_ORIGIN, normalizeOrigin } from "./resolve-app-link";
 export type BuildLedgerUrlInput =
   | { kind: "home"; ledgerFullName: string }
   | { kind: "account"; ledgerFullName: string; account: string }
+  | { kind: "accounts"; ledgerFullName: string }
+  | { kind: "open-account"; ledgerFullName: string }
   | { kind: "journal"; ledgerFullName: string }
+  | { kind: "new-entry"; ledgerFullName: string }
+  | { kind: "files"; ledgerFullName: string }
   | { kind: "commit"; ledgerFullName: string; sha: string }
   | { kind: "file"; ledgerFullName: string; branch: string; path: string }
   | { kind: "income-statement"; ledgerFullName: string }
@@ -40,8 +44,16 @@ export function buildLedgerUrl(
       return base;
     case "account":
       return `${base}/account/${encodePathSegment(input.account)}`;
+    case "accounts":
+      return `${base}/accounts`;
+    case "open-account":
+      return `${base}/accounts?action=open-account`;
     case "journal":
       return `${base}/journal`;
+    case "new-entry":
+      return `${base}/journal?action=new-entry&directive=transaction`;
+    case "files":
+      return `${base}/files/tree/main`;
     case "commit":
       return `${base}/commit/${encodePathSegment(input.sha)}`;
     case "file":

@@ -24,9 +24,12 @@ type EntryType =
  *   {date}    — full ISO 8601 date (e.g. 2025-03-15)
  */
 function interpolateFilePath(template: string, date: Date): string {
-  const year = date.getFullYear().toString();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const quarter = String(Math.ceil((date.getMonth() + 1) / 3));
+  // A directive date is a UTC midnight, so read it in UTC: local fields put
+  // 2026-01-01 in 2025/12 on a server west of UTC. Pad the year so 0099 routes
+  // to `0099`, the year its source line names (w4/m38).
+  const year = String(date.getUTCFullYear()).padStart(4, "0");
+  const month = String(date.getUTCMonth() + 1).padStart(2, "0");
+  const quarter = String(Math.ceil((date.getUTCMonth() + 1) / 3));
   const isoDate = date.toISOString().slice(0, 10);
   return template
     .replace(/\{year\}/g, year)

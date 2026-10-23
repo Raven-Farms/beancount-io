@@ -137,9 +137,15 @@ const bgImporter: Record<string, TranslationEntry> = {
     message: "Текущият тип файл изисква AI анализ",
     description: "Description of why premium is required",
   },
-  "importer.error.upgradeToPremium": {
-    message: "Надградете до премиум",
-    description: "Label for premium upgrade option",
+  "importer.error.upgradeToPlan": {
+    message: "Надградете до {plan}",
+    description:
+      "Heading over the paywall's upgrade button; {plan} is the plan the button recommends (the next tier up).",
+  },
+  "importer.error.upgradePlan": {
+    message: "Надградете плана си",
+    description:
+      "Heading over the paywall's upgrade button when no higher self-serve plan exists.",
   },
   "importer.error.upgradeDescription": {
     message: "Анализирайте PDF, OFX и изображения автоматично с AI",
@@ -169,6 +175,15 @@ const bgImporter: Record<string, TranslationEntry> = {
   "importer.error.failedToParse": {
     message: "Неуспешен анализ на файла",
     description: "Title for parse failure error",
+  },
+  "importer.error.notUtf8": {
+    message: "Файлът не е текст в UTF-8",
+    description: "Title when an uploaded CSV is not UTF-8 text",
+  },
+  "importer.error.notUtf8Description": {
+    message:
+      "Този CSV съдържа знаци, които не са валиден UTF-8, затова импортирането му би променило текста на получателите и описанията. Запазете го отново като CSV UTF-8 от банката или програмата за таблици и качете този файл.",
+    description: "How to re-save a CSV that is not UTF-8 text",
   },
   "importer.error.serverError": {
     message:
@@ -311,6 +326,24 @@ const bgImporter: Record<string, TranslationEntry> = {
     message: "Валута за всички транзакции",
     description: "Hint text for currency field",
   },
+  "importer.configure.currencyConflict_one": {
+    message:
+      "{count} ред ({rows}) е в {symbol} ({currencies}), но този импорт би го осчетоводил като {currency}.",
+    description:
+      "Import refusal: a selected row's amount carries a currency symbol that is not the chosen import currency. {count} is 1, {rows} the row number, {symbol} the symbol from the bank file (€, £…), {currencies} the currencies it can mean, {currency} the selected currency code",
+  },
+  "importer.configure.currencyConflict_other": {
+    message:
+      "{count} реда ({rows}) са в {symbol} ({currencies}), но този импорт би ги осчетоводил като {currency}.",
+    description:
+      "Import refusal for several selected rows whose amounts carry a currency symbol other than the chosen import currency. {rows} lists their row numbers, possibly ending in …",
+  },
+  "importer.configure.currencyConflictRemedy": {
+    message:
+      "Един импорт осчетоводява само една валута. Изберете валутата на тези редове или премахнете избора им и ги импортирайте отделно. Нищо не е импортирано.",
+    description:
+      "How to resolve a currency conflict before importing: no conversion happens, so the user picks the matching currency or splits the file",
+  },
   "importer.configure.assignTargetAccounts": {
     message: "Назначаване на целеви сметки",
     description: "Heading for account mapping section",
@@ -448,6 +481,12 @@ const bgImporter: Record<string, TranslationEntry> = {
   "importer.accountMapping.aiSuccessDescription_other": {
     message: "Успешно категоризирани {count} транзакции",
     description: "Toast description for multiple transactions categorization",
+  },
+  "importer.accountMapping.aiNoneApplied": {
+    message:
+      "Нито едно предложение не беше достатъчно сигурно, за да попълни целева сметка.",
+    description:
+      "Toast description when AI Fill completed but no suggestion was confident enough to fill a target",
   },
   "importer.accountMapping.aiFailed": {
     message: "AI категоризацията се провали",

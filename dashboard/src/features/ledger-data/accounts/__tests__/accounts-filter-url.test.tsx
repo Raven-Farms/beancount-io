@@ -57,7 +57,13 @@ const accounts = [
   },
 ];
 
+// The failed-renewal banner reads billing state the shell under test does
+// not provide; it has its own tests.
+vi.mock("@/common/components/billing/failed-renewal-banner", () => ({
+  FailedRenewalBanner: () => null,
+}));
 vi.mock("@apollo/client/react", () => ({
+  useApolloClient: () => ({ refetchQueries: async () => [] }),
   useQuery: (query: unknown) => ({
     data:
       query === GetLedgerDocument
@@ -382,6 +388,21 @@ describe("accounts list filters in the URL", () => {
     },
   );
 
+  it("gates the forced-colors highlight on the chosen type chip (w4/m43)", async () => {
+    // Forced colors draws every chip's border, so only the selected chip's
+    // system highlight tells the chosen type apart.
+    await mountAt("/ledger/alice/books/accounts?type=Assets");
+
+    for (const name of ["Assets", "page.accounts.allTypes"]) {
+      expect(typeChip(name)).toHaveClass("aria-pressed:forced-selected");
+    }
+    expect(typeChip("Assets")).toHaveAttribute("aria-pressed", "true");
+    expect(typeChip("page.accounts.allTypes")).toHaveAttribute(
+      "aria-pressed",
+      "false",
+    );
+  });
+
   it("restores search and type after opening an account and pressing Back, then Forward", async () => {
     const user = userEvent.setup();
     const router = await mountAt(
@@ -471,6 +492,52 @@ describe("accounts list filters in the URL", () => {
       "true",
     );
   });
+
+  it.each([
+    { isMobile: false, via: "keyboard" },
+    { isMobile: true, via: "keyboard" },
+    { isMobile: false, via: "pointer" },
+  ])(
+    "returns the empty state's Clear to search for the next query (mobile=$isMobile, $via, w4/340)",
+    async ({ isMobile, via }) => {
+      viewport.isMobile = isMobile;
+      const user = userEvent.setup();
+      const router = await mountAt("/ledger/alice/books/accounts");
+      await user.click(typeChip("Assets"));
+      const input = searchBox();
+      await user.type(input, "no-matching-account");
+      await waitFor(() => expect(accountNames()).toEqual([]));
+
+      const reset = screen
+        .getAllByRole("button", { name: "common.clearInput" })
+        .find((button) => button !== searchClear())!;
+      if (via === "keyboard") {
+        reset.focus();
+        await user.keyboard("{Enter}");
+      } else {
+        await user.click(reset);
+      }
+
+      // The reset drops search and type; focus lands back in the search.
+      await waitFor(() => expect(router.state.location.search).toEqual({}));
+      expect(reset).not.toBeInTheDocument();
+      expect(searchBox()).toBe(input);
+      expect(input).toHaveValue("");
+      expect(input).toHaveFocus();
+      expect(typeChip("page.accounts.allTypes")).toHaveAttribute(
+        "aria-pressed",
+        "true",
+      );
+      // Keys typed straight away, without a refocus, search again.
+      await user.keyboard("Cash");
+      expect(input).toHaveValue("Cash");
+      await waitFor(() =>
+        expect(router.state.location.search).toEqual({ search: "Cash" }),
+      );
+      expect(accountNames().length).toBeGreaterThan(0);
+      expect(accountNames().every((name) => /cash/i.test(name))).toBe(true);
+    },
+  );
 
   it("keeps pasted input consistent with the bounded search URL", async () => {
     const user = userEvent.setup();

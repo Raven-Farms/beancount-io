@@ -427,10 +427,6 @@ const koJournal: Record<string, TranslationEntry> = {
     message: "보류 중",
     description: "Pending transaction status",
   },
-  "journal.blankStatus": {
-    message: "(공백)",
-    description: "Blank transaction status option",
-  },
   "journal.addPosting": {
     message: "분개 추가",
     description: "Accessible name for adding a transaction posting row",

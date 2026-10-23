@@ -477,6 +477,8 @@ describe("oidc-route: unified MCP + identity provider", () => {
     loginBody?: Record<string, string>;
     prompt?: string;
     resource?: string;
+    /** What the consent page is told to show, when it differs from `scope`. */
+    displayedScope?: string;
   }): Promise<{ code: string; verifier: string }> {
     const jar = new CookieJar();
     const { codeVerifier, codeChallenge } = pkce();
@@ -503,12 +505,14 @@ describe("oidc-route: unified MCP + identity provider", () => {
     expect(uid).toBeTruthy();
     if (opts.clientId !== DISCOURSE_CLIENT_ID) {
       expect(consentUrl.searchParams.get("scope")).toBe(
-        opts.prompt === "consent" || opts.clientId !== MOBILE_CLIENT_ID
-          ? opts.scope
-          : opts.scope
-              .split(" ")
-              .filter((scope) => scope !== "offline_access")
-              .join(" "),
+        opts.displayedScope !== undefined
+          ? opts.displayedScope
+          : opts.prompt === "consent" || opts.clientId !== MOBILE_CLIENT_ID
+            ? opts.scope
+            : opts.scope
+                .split(" ")
+                .filter((scope) => scope !== "offline_access")
+                .join(" "),
       );
     }
 
@@ -903,6 +907,14 @@ describe("oidc-route: unified MCP + identity provider", () => {
     expect(signUp.searchParams.get("screen_hint")).toBe("signup");
     expect(signUp.searchParams.get("scope")).toBe("openid ledger.read");
 
+    // w21/153: after a sign-out the app asks for an explicit account choice.
+    const afterSignOut = await interactionUrlFor(
+      mobileAuthUrl({ screen_hint: "select_account" }),
+    );
+    expect(afterSignOut.searchParams.get("screen_hint")).toBe(
+      "select_account",
+    );
+
     // A hint this server does not know is a newer app talking to an older
     // server: the user still gets the login form, never an error.
     const unknown = await interactionUrlFor(
@@ -1069,6 +1081,95 @@ describe("oidc-route: unified MCP + identity provider", () => {
     expect((await afterRevoke.json()) as object).toMatchObject({
       error: "invalid_grant",
     });
+  });
+
+  // A password reset deletes the provider rows whose top-level accountId's
+  // user segment is the user, plus every row under their grants
+  // (oauth-grant-model, w0/m4). That SQL can only be as right as its reading of
+  // what the provider writes, so check the rows a real sign-in leaves — for the
+  // mobile app (bare user id) and an MCP host pinned to a ledger
+  // ("userId:ledgerId") — and that removing them refuses the next refresh with
+  // the invalid_grant the mobile app treats as "signed out".
+  it("password reset: the rows it revokes are the user's, and their refresh tokens stop working", async () => {
+    const grants = new MemoryAdapter("Grant");
+    const refreshTokens = new MemoryAdapter("RefreshToken");
+    const ownedBy = (payload: { accountId?: unknown } | undefined) =>
+      String(payload?.accountId ?? "").split(":")[0];
+
+    const mobileResource = `${ISSUER}/v1`;
+    const mobileRedirect = MOBILE_REDIRECT_URIS[0];
+    const mobile = await driveAuthorizationCode({
+      clientId: MOBILE_CLIENT_ID,
+      clientAuth: "",
+      scope: "openid offline_access ledger.read",
+      redirectUri: mobileRedirect,
+      prompt: "consent",
+      resource: mobileResource,
+    });
+    const mobileTokens = await exchangeToken({
+      ...mobile,
+      clientId: MOBILE_CLIENT_ID,
+      redirectUri: mobileRedirect,
+      resource: mobileResource,
+    });
+
+    const host = await registerMcpClient();
+    const pinned = await driveAuthorizationCode({
+      clientId: host.clientId,
+      clientAuth: "",
+      scope: "openid offline_access ledger.read",
+      redirectUri: host.redirectUri,
+      loginBody: { ledgerId: "ada/personal" },
+      prompt: "consent",
+    });
+    const pinnedTokens = await exchangeToken({
+      ...pinned,
+      clientId: host.clientId,
+      redirectUri: host.redirectUri,
+    });
+
+    const connections = [
+      {
+        clientId: MOBILE_CLIENT_ID,
+        resource: mobileResource,
+        refreshToken: mobileTokens.refresh_token as string,
+        accountId: TEST_USER.id,
+      },
+      {
+        clientId: host.clientId,
+        resource: `${ISSUER}/api-gateway/mcp`,
+        refreshToken: pinnedTokens.refresh_token as string,
+        accountId: `${TEST_USER.id}:ada/personal`,
+      },
+    ];
+
+    for (const connection of connections) {
+      const refreshToken = await refreshTokens.find(connection.refreshToken);
+      const grantId = refreshToken?.grantId as string;
+      const grant = await grants.find(grantId);
+      expect(refreshToken?.accountId).toBe(connection.accountId);
+      expect(grant?.accountId).toBe(connection.accountId);
+      expect(ownedBy(refreshToken)).toBe(TEST_USER.id);
+      expect(ownedBy(grant)).toBe(TEST_USER.id);
+
+      await grants.destroy(grantId);
+      await refreshTokens.destroy(connection.refreshToken);
+
+      const refresh = await fetch(`${ISSUER}/api-gateway/oauth/token`, {
+        method: "POST",
+        headers: { "content-type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({
+          grant_type: "refresh_token",
+          refresh_token: connection.refreshToken,
+          client_id: connection.clientId,
+          resource: connection.resource,
+        }),
+      });
+      expect(refresh.status).toBe(400);
+      expect((await refresh.json()) as object).toMatchObject({
+        error: "invalid_grant",
+      });
+    }
   });
 
   it("mobile flow: refreshing slides the grant, so use — not age — keeps a session alive", async () => {
@@ -1660,6 +1761,26 @@ describe("oidc-route: unified MCP + identity provider", () => {
     expect(reg.status).toBe(400);
   });
 
+  // w23/040: oidc-provider's web rules accepted a plain http redirect to any
+  // host, which could carry the authorization code over cleartext.
+  it.each([
+    ["plain http to a remote host", "http://qa-evil.example/cb", 400],
+    ["https", "https://client.example/cb", 201],
+    ["http to localhost", "http://localhost:8080/cb", 201],
+    ["http to 127.0.0.1", "http://127.0.0.1:8080/cb", 201],
+    ["http to [::1]", "http://[::1]:8080/cb", 201],
+  ])("for a web client, answers %s with %p", async (_case, uri, status) => {
+    const reg = await registerHost([uri], {
+      application_type: "web",
+      grant_types: ["authorization_code"],
+    });
+    expect(reg.status).toBe(status);
+    if (status === 400)
+      expect(reg.error).toBe(
+        "redirect_uris must use https unless they are loopback",
+      );
+  });
+
   it("keeps web rules for a dynamic client that states application_type web", async () => {
     const reg = await registerHost(CURSOR_REDIRECTS, {
       application_type: "web",
@@ -1917,6 +2038,42 @@ describe("oidc-route: unified MCP + identity provider", () => {
     expect(claims.email).toBeUndefined();
     expect(claims.preferred_username).toBeUndefined();
   });
+
+  // w23/021: a scope the server does not support was granted verbatim and
+  // signed into the token, and shown to the person approving.
+  it.each<[string, Record<string, string>]>([
+    ["a ledger-pinned", { ledgerId: "ada/personal" }],
+    ["an account-wide", { accountWide: "true", scope: "openid ledger.read" }],
+  ])(
+    "drops an unsupported scope from %s grant and its token",
+    async (_kind, loginBody) => {
+      const { clientId, redirectUri } = await registerMcpClient();
+      const { code, verifier } = await driveAuthorizationCode({
+        clientId,
+        clientAuth: "",
+        scope: "openid ledger.read ledger.superuser",
+        displayedScope: "openid ledger.read",
+        redirectUri,
+        loginBody,
+      });
+      // The resource makes the access token the signed JWT an MCP client uses.
+      const tokenBody = await exchangeToken({
+        code,
+        verifier,
+        clientId,
+        redirectUri,
+        resource: `${ISSUER}/api-gateway/mcp`,
+      });
+      expect(tokenBody.access_token).toBeTruthy();
+      expect(String(tokenBody.scope).split(" ").sort()).toEqual([
+        "ledger.read",
+        "openid",
+      ]);
+      expect(
+        String(decodeJwt(tokenBody.access_token as string).scope).split(" "),
+      ).not.toContain("ledger.superuser");
+    },
+  );
 
   it("mints an unpinned grant only with explicit account-wide consent", async () => {
     const { clientId, redirectUri } = await registerMcpClient();

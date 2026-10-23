@@ -417,11 +417,13 @@ describe("selectTrialBalanceDisplays", () => {
       kind: "units",
       units: { currency: "RGAGX", number: 597.748, scale: 3 },
       value: { amount: 48471.38532, basis: "market" },
+      notInTotal: [],
     });
     expect(displays.get("Assets:Hoogle:Vacation")).toEqual({
       kind: "units",
       units: { currency: "VACHR", number: -13, scale: 0 },
       value: null,
+      notInTotal: [],
     });
   });
 
@@ -443,6 +445,38 @@ describe("selectTrialBalanceDisplays", () => {
     expect(valuation?.cost).toBe(null);
   });
 
+  it("gives a single-commodity root the valuation Home shows (w21/279)", () => {
+    const hool = createTrialBalance({
+      assets: {
+        account: "Assets",
+        total: { USD: "1500" },
+        children: [
+          { account: "Assets:Broker", balanceChildren: { USD: "1500" } },
+        ],
+      },
+    });
+    const holdings = createTrialBalance({
+      assets: {
+        account: "Assets",
+        total: { HOOL: "10" },
+        children: [
+          { account: "Assets:Broker", balanceChildren: { HOOL: "10" } },
+        ],
+      },
+    });
+    const assets = selectTrialBalanceDisplays(
+      "USD",
+      hool,
+      holdings,
+      [{ base: "HOOL", quote: "USD", prices: [{ date: "2026-08-01" }] }],
+      "2026-10-21",
+    ).get("assets");
+    expect(assets?.kind).toBe("units");
+    const valuation = assets?.kind === "units" ? assets.valuation : undefined;
+    expect(valuation?.priced[0]?.stale).toBe(true);
+    expect(valuation?.priced[0]?.priceDate).toBe("2026-08-01");
+  });
+
   it("reads a commodity the ledger has no price for at cost", () => {
     const displays = selectTrialBalanceDisplays(
       "USD",
@@ -455,6 +489,7 @@ describe("selectTrialBalanceDisplays", () => {
       kind: "units",
       units: { currency: "RGAGX", number: 597.748, scale: 3 },
       value: { amount: 49049.66613, basis: "cost" },
+      notInTotal: [],
     });
     const assets = displays.get("assets");
     expect(assets?.kind === "money" && assets.valuation?.atCostNoPrice).toEqual(
@@ -597,5 +632,108 @@ describe("selectTrialBalanceCategories with unconverted holdings", () => {
     expect(
       selectAccountTreeFromRoot("USD", root).map((node) => node.name),
     ).toEqual(["Hoogle:Checking", "Cash"]);
+  });
+});
+
+// w21/099: a closed, emptied account stayed in the tree as a live "$0.00" row,
+// because every opened account was kept at zero.
+describe("closed accounts in the Accounts tree", () => {
+  const { listedAccountsAsOf } = require("../../../common/account-close-dates");
+  type Node = { account: string; children: Node[] };
+  const flatten = (nodes: Node[]): string[] =>
+    nodes.flatMap((node) => [node.account, ...flatten(node.children)]);
+
+  const data = createTrialBalance({
+    assets: {
+      account: "Assets",
+      total: { USD: 15 },
+      children: [
+        {
+          account: "Assets:Bank",
+          balanceChildren: { USD: 15 },
+          children: [
+            { account: "Assets:Bank:Checking", balanceChildren: { USD: 10 } },
+            { account: "Assets:Bank:Old", balanceChildren: { USD: 0 } },
+            { account: "Assets:Bank:Leftover", balanceChildren: { USD: 5 } },
+          ],
+        },
+      ],
+    },
+  });
+  const opened = [
+    "Assets:Bank:Checking",
+    "Assets:Bank:Old",
+    "Assets:Bank:Leftover",
+    "Assets:Bank:New",
+  ];
+  const closeDates = new Map([
+    ["Assets:Bank:Old", "2026-08-04"],
+    ["Assets:Bank:Leftover", "2026-08-04"],
+  ]);
+  const tree = flatten(
+    selectTrialBalanceCategories(
+      "USD",
+      data,
+      listedAccountsAsOf(opened, "2026-10-21", closeDates),
+    )[0].children as Node[],
+  );
+
+  it("leaves out a closed account the ledger emptied", () => {
+    expect(tree.includes("Assets:Bank:Old")).toBe(false);
+  });
+
+  it("keeps a closed account with a balance left, and a new empty one", () => {
+    expect(tree.includes("Assets:Bank:Leftover")).toBe(true);
+    expect(tree.includes("Assets:Bank:New")).toBe(true);
+    expect(tree.includes("Assets:Bank:Checking")).toBe(true);
+  });
+
+  it("lists an account closing in the future", () => {
+    expect(
+      listedAccountsAsOf(
+        ["Assets:Bank:Old"],
+        "2026-08-03",
+        new Map([["Assets:Bank:Old", "2026-08-04"]]),
+      ),
+    ).toEqual(["Assets:Bank:Old"]);
+  });
+
+  // w21/614: an account opening in December was a live "$0.00" row in October.
+  it("leaves out an account that opens after today", () => {
+    const { closeDatesOf } = require("../../../common/account-close-dates");
+    const dates = closeDatesOf([
+      { account: "Liabilities:NewCard", openedAt: "2026-12-01" },
+      { account: "Liabilities:Card", openedAt: "2025-01-01" },
+    ]);
+    expect(
+      listedAccountsAsOf(
+        ["Liabilities:NewCard", "Liabilities:Card"],
+        "2026-10-22",
+        dates,
+      ),
+    ).toEqual(["Liabilities:Card"]);
+    expect(
+      listedAccountsAsOf(["Liabilities:NewCard"], "2026-12-01", dates),
+    ).toEqual(["Liabilities:NewCard"]);
+  });
+
+  it("is what the Accounts tab grafts", () => {
+    const source = require("fs").readFileSync(
+      require("path").join(
+        __dirname,
+        "..",
+        "..",
+        "..",
+        "screens",
+        "accounts-screen",
+        "accounts-screen.tsx",
+      ),
+      "utf8",
+    ) as string;
+    expect(
+      source.includes(
+        "selectTrialBalanceCategories(currency, accountData, listed)",
+      ),
+    ).toBe(true);
   });
 });

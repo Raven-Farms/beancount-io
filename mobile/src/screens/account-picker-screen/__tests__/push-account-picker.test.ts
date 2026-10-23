@@ -9,7 +9,11 @@
  * `type: "expenses"` and the pick would silently go nowhere.
  */
 import { SelectedAccount } from "../../../common/globalFnFactory";
-import { accountOrderFor, pushAccountPicker } from "../push-account-picker";
+import {
+  accountOrderFor,
+  parseCreateRoot,
+  pushAccountPicker,
+} from "../push-account-picker";
 
 /** Captures what the helper pushed, standing in for expo-router. */
 const makeRouter = () => {
@@ -38,6 +42,23 @@ describe("pushAccountPicker", () => {
     });
 
     expect(SelectedAccount.getFn()).toBe(onSelect);
+  });
+
+  it("forwards a dated form's entry date for an account created there", () => {
+    const router = makeRouter();
+
+    pushAccountPicker(router, {
+      type: "posting",
+      current: "Assets:Cash",
+      entryDate: "2026-08-25",
+      onSelect: () => undefined,
+    });
+
+    expect(router.pushes[0].params).toEqual({
+      type: "posting",
+      selectedItem: "Assets:Cash",
+      entryDate: "2026-08-25",
+    });
   });
 
   it("pushes the picker route with the caller's type and current account", () => {
@@ -115,5 +136,55 @@ describe("accountOrderFor", () => {
   it("falls back to the destination ordering for an unknown type", () => {
     expect(accountOrderFor(undefined)).toBe("to");
     expect(accountOrderFor("not-a-picker")).toBe("to");
+  });
+});
+
+// w21/259: every New Transaction row is a `posting` picker, which suggested
+// Assets for Create even on the expense row.
+describe("the root a created account starts under", () => {
+  it("is forwarded when the caller knows it", () => {
+    const router = makeRouter();
+    pushAccountPicker(router, {
+      type: "posting",
+      createRoot: "Expenses",
+      onSelect: () => undefined,
+    });
+    expect(router.pushes[0].params.createRoot).toBe("Expenses");
+    SelectedAccount.deleteFn();
+  });
+
+  it("is left out otherwise, so the picker's type decides", () => {
+    const router = makeRouter();
+    pushAccountPicker(router, { type: "posting", onSelect: () => undefined });
+    expect("createRoot" in router.pushes[0].params).toBe(false);
+    SelectedAccount.deleteFn();
+  });
+
+  it("reads only the two roots a picker can suggest", () => {
+    expect(parseCreateRoot("Expenses")).toBe("Expenses");
+    expect(parseCreateRoot("Assets")).toBe("Assets");
+    expect(parseCreateRoot("Income")).toBe(null);
+    expect(parseCreateRoot(undefined)).toBe(null);
+  });
+
+  it("is what the multi-posting form and the picker pass along", () => {
+    const read = (...parts: string[]) =>
+      require("fs")
+        .readFileSync(
+          require("path").join(__dirname, "..", "..", ...parts),
+          "utf8",
+        )
+        .replace(/\s+/g, "");
+    expect(
+      read(
+        "multi-postings-transaction",
+        "multi-postings-transaction-screen.tsx",
+      ).includes("createRoot:createRootForPosting(postings,index)"),
+    ).toBe(true);
+    expect(
+      read("account-picker-screen", "account-picker-screen.tsx").includes(
+        "parseCreateRoot(createRoot)??",
+      ),
+    ).toBe(true);
   });
 });

@@ -137,9 +137,15 @@ const ruImporter: Record<string, TranslationEntry> = {
     message: "Текущий тип файла требует анализа с помощью ИИ",
     description: "Description of why premium is required",
   },
-  "importer.error.upgradeToPremium": {
-    message: "Перейти на премиум",
-    description: "Label for premium upgrade option",
+  "importer.error.upgradeToPlan": {
+    message: "Перейти на {plan}",
+    description:
+      "Heading over the paywall's upgrade button; {plan} is the plan the button recommends (the next tier up).",
+  },
+  "importer.error.upgradePlan": {
+    message: "Повысить тариф",
+    description:
+      "Heading over the paywall's upgrade button when no higher self-serve plan exists.",
   },
   "importer.error.upgradeDescription": {
     message: "Автоматически анализируйте PDF, OFX и изображения с помощью ИИ",
@@ -168,6 +174,15 @@ const ruImporter: Record<string, TranslationEntry> = {
   "importer.error.failedToParse": {
     message: "Не удалось проанализировать файл",
     description: "Title for parse failure error",
+  },
+  "importer.error.notUtf8": {
+    message: "Файл не в кодировке UTF-8",
+    description: "Title when an uploaded CSV is not UTF-8 text",
+  },
+  "importer.error.notUtf8Description": {
+    message:
+      "В этом CSV есть символы, недопустимые в UTF-8, поэтому импорт изменил бы текст получателей и описаний. Сохраните файл заново как CSV UTF-8 в банке или табличном редакторе и загрузите его.",
+    description: "How to re-save a CSV that is not UTF-8 text",
   },
   "importer.error.serverError": {
     message:
@@ -308,6 +323,36 @@ const ruImporter: Record<string, TranslationEntry> = {
   "importer.configure.currencyHint": {
     message: "Валюта для всех транзакций",
     description: "Hint text for currency field",
+  },
+  "importer.configure.currencyConflict_one": {
+    message:
+      "{count} строка ({rows}) указана в {symbol} ({currencies}), но этот импорт провёл бы её как {currency}.",
+    description:
+      "Import refusal: a selected row's amount carries a currency symbol that is not the chosen import currency. {count} is 1, {rows} the row number, {symbol} the symbol from the bank file (€, £…), {currencies} the currencies it can mean, {currency} the selected currency code",
+  },
+  "importer.configure.currencyConflict_few": {
+    message:
+      "{count} строки ({rows}) указаны в {symbol} ({currencies}), но этот импорт провёл бы их как {currency}.",
+    description:
+      "Import refusal for several selected rows whose amounts carry a currency symbol other than the chosen import currency. {rows} lists their row numbers, possibly ending in …",
+  },
+  "importer.configure.currencyConflict_many": {
+    message:
+      "{count} строк ({rows}) указаны в {symbol} ({currencies}), но этот импорт провёл бы их как {currency}.",
+    description:
+      "Import refusal for several selected rows whose amounts carry a currency symbol other than the chosen import currency. {rows} lists their row numbers, possibly ending in …",
+  },
+  "importer.configure.currencyConflict_other": {
+    message:
+      "{count} строки ({rows}) указаны в {symbol} ({currencies}), но этот импорт провёл бы их как {currency}.",
+    description:
+      "Import refusal for several selected rows whose amounts carry a currency symbol other than the chosen import currency. {rows} lists their row numbers, possibly ending in …",
+  },
+  "importer.configure.currencyConflictRemedy": {
+    message:
+      "Один импорт проводит только одну валюту. Выберите валюту этих строк или снимите с них выбор и импортируйте их отдельно. Ничего не импортировано.",
+    description:
+      "How to resolve a currency conflict before importing: no conversion happens, so the user picks the matching currency or splits the file",
   },
   "importer.configure.assignTargetAccounts": {
     message: "Назначить целевые счета",
@@ -474,6 +519,12 @@ const ruImporter: Record<string, TranslationEntry> = {
   "importer.accountMapping.aiSuccessDescription_other": {
     message: "{count} транзакции успешно категоризированы",
     description: "Toast description for fractional transactions categorization",
+  },
+  "importer.accountMapping.aiNoneApplied": {
+    message:
+      "Ни одно предложение не было достаточно уверенным, чтобы заполнить целевой счёт.",
+    description:
+      "Toast description when AI Fill completed but no suggestion was confident enough to fill a target",
   },
   "importer.accountMapping.aiFailed": {
     message: "Категоризация ИИ не удалась",

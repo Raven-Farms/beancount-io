@@ -6,14 +6,13 @@ import {
   type ComboboxOption,
 } from "@/common/components/ui/combobox";
 import { Skeleton } from "@/common/components/ui/skeleton";
-import { Alert, AlertDescription } from "@/common/components/ui/alert";
 import {
   GetLedgerNarrationsDocument,
   type GetLedgerNarrationsQuery,
   type GetLedgerNarrationsQueryVariables,
 } from "@/graphql/definitions";
 import { useTranslations } from "@/common/hooks/use-translations";
-import { getErrorMessageKey } from "@/common/lib/errors/error-message";
+import { useSuggestionsFallback } from "./use-suggestions-fallback";
 
 interface NarrationsComboboxProps extends ComboboxFieldProps {
   ledgerId: string;
@@ -40,13 +39,15 @@ export function NarrationsCombobox({
   const { t } = useTranslations();
   const defaultPlaceholder = placeholder || t("journal.selectNarration");
 
-  const { data, loading, error } = useQuery<
+  const query = useQuery<
     GetLedgerNarrationsQuery,
     GetLedgerNarrationsQueryVariables
   >(GetLedgerNarrationsDocument, {
     variables: { ledgerId },
     skip: !ledgerId,
+    notifyOnNetworkStatusChange: true,
   });
+  const { data } = query;
 
   // Convert narrations to ComboboxOption format
   const options: ComboboxOption[] = useMemo(() => {
@@ -58,21 +59,19 @@ export function NarrationsCombobox({
     }));
   }, [data]);
 
-  if (loading) {
-    return <Skeleton className="h-10 w-full" />;
-  }
+  const fallback = useSuggestionsFallback(
+    query,
+    Boolean(data?.getLedgerNarrations),
+    fieldProps["aria-describedby"],
+  );
 
-  if (error) {
-    return (
-      <Alert variant="destructive">
-        <AlertDescription>{t(getErrorMessageKey(error))}</AlertDescription>
-      </Alert>
-    );
+  if (fallback.initialLoading) {
+    return <Skeleton className="h-10 w-full" />;
   }
 
   return (
     <Combobox
-      options={options}
+      options={fallback.failed ? [] : options}
       value={value}
       onValueChange={onValueChange}
       placeholder={defaultPlaceholder}
@@ -81,6 +80,8 @@ export function NarrationsCombobox({
       disabled={disabled}
       className={className}
       {...fieldProps}
+      aria-describedby={fallback.describedBy}
+      notice={fallback.notice}
     />
   );
 }

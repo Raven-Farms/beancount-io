@@ -1,9 +1,10 @@
 import * as WebBrowser from "expo-web-browser";
 import { getServerUrl } from "../vars/server-url";
 import { completeOAuthAuthorization } from "./authorization-completion";
+import { isAccountChoiceNeeded } from "./account-choice";
 import { createAuthorizationLauncher } from "./authorization-launcher";
 import type { PendingOAuthAuthorization } from "./authorization-result";
-import { discoverOAuthServer } from "./discovery";
+import { discoverWithTimeout } from "./bounded-discovery";
 import { currentOAuthRedirectUri } from "./native-redirect";
 import { createAuthorizationState, createPkceChallenge } from "./pkce";
 import {
@@ -14,7 +15,7 @@ import {
 import type { OAuthSession } from "./session-record";
 
 const launch = createAuthorizationLauncher({
-  discover: (serverUrl) => discoverOAuthServer(serverUrl),
+  discover: (serverUrl, signal) => discoverWithTimeout(serverUrl, { signal }),
   createPkce: createPkceChallenge,
   createState: createAuthorizationState,
   redirectUri: currentOAuthRedirectUri,
@@ -29,6 +30,7 @@ const launch = createAuthorizationLauncher({
       preferEphemeralSession: false,
     }),
   complete: completeOAuthAuthorization,
+  chooseAccount: isAccountChoiceNeeded,
 });
 
 /**
@@ -40,4 +42,9 @@ export function startNativeAuthorization(
   flow: PendingOAuthAuthorization["flow"],
 ): Promise<OAuthSession | null> {
   return launch(getServerUrl(), flow);
+}
+
+/** Drop a sign-in still waiting on the old server's discovery. */
+export function abortNativeAuthorizationDiscovery(): void {
+  launch.abortDiscovery();
 }

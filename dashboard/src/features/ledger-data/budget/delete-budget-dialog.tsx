@@ -6,6 +6,8 @@ import {
   DeleteLedgerEntrySourceSliceDocument,
 } from "@/graphql/definitions";
 import { useApolloCacheClear } from "@/common/hooks/use-apollo-cache";
+import { useErrorMessage } from "@/common/lib/errors/error-message";
+import { Alert, AlertDescription } from "@/common/components/ui/alert";
 import { Button } from "@/common/components/ui/button";
 import {
   AlertDialog,
@@ -33,14 +35,22 @@ export function DeleteBudgetDialog({
   onSuccess,
 }: DeleteBudgetDialogProps) {
   const [isDeleting, setIsDeleting] = useState(false);
+  // Keyed to the directive it is about, so it never shows for another row.
+  const [failure, setFailure] = useState<{
+    entryHash: string;
+    message: string;
+  } | null>(null);
   const { t } = useTranslations();
+  const formatError = useErrorMessage();
   const client = useApolloClient();
   const clearCache = useApolloCacheClear();
   const [deleteMutation] = useMutation(DeleteLedgerEntrySourceSliceDocument);
 
   const handleDelete = async () => {
     if (!target) return;
+    const { entry_hash: entryHash } = target;
     setIsDeleting(true);
+    setFailure(null);
     try {
       const { data } = await client.query({
         query: GetLedgerEntryContextDocument,
@@ -48,7 +58,10 @@ export function DeleteBudgetDialog({
         fetchPolicy: "network-only",
       });
       const sha256sum = data?.getLedgerEntryContext?.sha256sum;
-      if (!sha256sum) return;
+      if (!sha256sum) {
+        setFailure({ entryHash, message: t("common.errors.generic") });
+        return;
+      }
 
       await deleteMutation({
         variables: {
@@ -59,6 +72,9 @@ export function DeleteBudgetDialog({
       onOpenChange(false);
       clearCache();
       onSuccess();
+    } catch (err) {
+      // The dialog stays open on its target, with Cancel and Delete to retry.
+      setFailure({ entryHash, message: formatError(err) });
     } finally {
       setIsDeleting(false);
     }
@@ -86,13 +102,18 @@ export function DeleteBudgetDialog({
               })}
           </AlertDialogDescription>
         </AlertDialogHeader>
+        {failure && failure.entryHash === target?.entry_hash && (
+          <Alert variant="destructive">
+            <AlertDescription>{failure.message}</AlertDescription>
+          </Alert>
+        )}
         <AlertDialogFooter>
           <AlertDialogCancel disabled={isDeleting}>
             {t("common.cancel")}
           </AlertDialogCancel>
           <Button
             variant="destructive"
-            onClick={handleDelete}
+            onClick={() => void handleDelete()}
             disabled={isDeleting}
           >
             {isDeleting ? (

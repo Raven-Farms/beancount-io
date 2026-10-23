@@ -6,7 +6,13 @@ import { View, StyleSheet } from "react-native";
 import { loadLocale } from "@/common/vars/locale";
 import { loadLedger, ledgerVar } from "@/common/vars/ledger";
 import { loadTheme } from "@/common/vars/theme";
-import { loadSession, sessionVar } from "@/common/vars/session";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import {
+  forgetSessionFromPreviousInstall,
+  loadSession,
+  sessionVar,
+} from "@/common/vars/session";
+import { claimInstallMarker } from "@/common/install-marker";
 import {
   getServerUrl,
   loadServerUrlOverride,
@@ -22,7 +28,8 @@ import { apolloClient } from "@/common/apollo/client";
 import { restoreApolloCache } from "@/common/apollo/cache-persist";
 import { clearServerScopedState } from "@/common/server-url-actions";
 import { GetLedgerDocument } from "@/generated-graphql/graphql";
-import { isApolloError } from "@apollo/client";
+import { shouldClearLedgerSelection } from "@/common/graphql-error-codes";
+import { settleWithin } from "@/common/settle-within";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -40,6 +47,9 @@ const styles = StyleSheet.create({
   },
 });
 
+/** How long the splash waits to confirm the selected ledger. */
+const LEDGER_CHECK_DEADLINE_MS = 5000;
+
 const SplashProviderComponent = ({
   children,
 }: {
@@ -53,6 +63,11 @@ const SplashProviderComponent = ({
         // The server determines both endpoint routing and session/cache scope,
         // so it is the one required dependency before all other startup work.
         // Nothing below can mount a query until this provider is ready.
+        // A reinstall finds the previous account's session still in the
+        // Keychain; drop it before anything restores it (w21/154).
+        if ((await claimInstallMarker(AsyncStorage)) === "fresh-install") {
+          await forgetSessionFromPreviousInstall().catch(() => undefined);
+        }
         await loadServerUrlOverride();
         const [, locale, loadedSession, loadedLedger] = await Promise.all([
           Font.loadAsync(Ionicons.font),
@@ -108,29 +123,46 @@ const SplashProviderComponent = ({
         // network-only: splash must learn about deleted ledgers when online.
         if (session && ledger) {
           try {
-            await apolloClient.query({
+            const check = apolloClient.query({
               query: GetLedgerDocument,
               variables: { ledgerId: ledger },
               // network-only: confirm the selection still exists when reachable.
               fetchPolicy: "network-only",
             });
+            // Bounded: on a lossy or captive network the check (and a token
+            // refresh before it) took the OS's ~60 s request timeout, with
+            // the cache ready all along. Past the deadline the app opens on
+            // the persisted selection and the check carries on behind it
+            // (w21/183).
+            const outcome = await settleWithin(check, LEDGER_CHECK_DEADLINE_MS);
+            if (outcome.status === "timeout") {
+              console.warn("Ledger check is slow; opening on the cache");
+              check.catch((late: unknown) => {
+                // Only the ledger it validated: the user may have picked
+                // another from the drawer or a link while it was pending
+                // (w21/362).
+                if (
+                  ledgerVar() === ledger &&
+                  shouldClearLedgerSelection(late)
+                ) {
+                  ledgerVar(null);
+                }
+              });
+            }
           } catch (e) {
-            // Offline / transport failure: keep the persisted selection so a
-            // cold start can still render cached Home/Accounts/Reports data.
-            // Clear only when the server rejects the ledger.
+            // Keep the persisted selection through offline, a ledger service
+            // outage or a rate limit, so a cold start can still render cached
+            // Home/Accounts/Reports data. Clear only when the server says the
+            // ledger is gone or no longer accessible (w21/182).
             const err = e instanceof Error ? e : new Error(String(e));
-            const networkOnly =
-              isApolloError(err) &&
-              err.networkError != null &&
-              (err.graphQLErrors?.length ?? 0) === 0;
-            if (networkOnly) {
-              console.warn("Offline at launch; keeping ledger selection:", err);
-            } else {
+            if (shouldClearLedgerSelection(err)) {
               console.warn(
-                "Failed to validate ledger, clearing ledgerVar:",
+                "Ledger gone or inaccessible, clearing ledgerVar:",
                 err,
               );
               ledgerVar(null);
+            } else {
+              console.warn("Could not confirm the ledger; keeping it:", err);
             }
           }
         }

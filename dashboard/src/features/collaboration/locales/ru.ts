@@ -36,6 +36,12 @@ const ruCollaboration: Record<string, TranslationEntry> = {
     message: "Ошибка загрузки соавторов",
     description: "Error title when collaborators fail to load",
   },
+  "collaboration.ownerPlanLimitReached": {
+    message:
+      "Тариф владельца этой книги не допускает больше соавторов. Только владелец может перейти на более высокий тариф.",
+    description:
+      "Shown when adding a collaborator to someone else's ledger hits the owner's plan limit; only the owner can upgrade.",
+  },
   "collaboration.failedToAddCollaborator": {
     message: "Не удалось добавить соавтора",
     description: "Error message when adding collaborator fails",

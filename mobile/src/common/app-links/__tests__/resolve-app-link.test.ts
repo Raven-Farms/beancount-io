@@ -35,6 +35,7 @@ describe("resolveAppLink", () => {
     ).toEqual({
       ledgerFullName: LEDGER,
       href: "/transactions",
+      filters: { statuses: [], range: "all" },
     });
     expect(
       resolveAppLink(`${ORIGIN}/ledger/${LEDGER}/commit/abc123`, {
@@ -56,7 +57,8 @@ describe("resolveAppLink", () => {
       ledgerFullName: LEDGER,
       href: {
         pathname: "/ledger-file-editor",
-        params: { path: "main.beancount" },
+        // Bound to the link's ledger (w21/199).
+        params: { path: "main.beancount", ledger: LEDGER },
       },
     });
     expect(
@@ -95,7 +97,7 @@ describe("resolveAppLink", () => {
 
   it("falls unknown sub-paths back to ledger home", () => {
     expect(
-      resolveAppLink(`${ORIGIN}/ledger/${LEDGER}/cash-flow`, {
+      resolveAppLink(`${ORIGIN}/ledger/${LEDGER}/holdings`, {
         serverUrl: ORIGIN,
       }),
     ).toEqual({ ledgerFullName: LEDGER, href: "/" });
@@ -131,7 +133,7 @@ describe("resolveAppLink", () => {
     expect(resolveAppLink("not-a-url")).toBe(null);
   });
 
-  it("accepts the selected server host in addition to the hosted domain", () => {
+  it("accepts the selected server's host, and the hosted domain only when it is the server", () => {
     const selfHost = "https://books.example.test";
     expect(
       resolveAppLink(`${selfHost}/ledger/${LEDGER}/journal`, {
@@ -140,13 +142,17 @@ describe("resolveAppLink", () => {
     ).toEqual({
       ledgerFullName: LEDGER,
       href: "/transactions",
+      filters: { statuses: [], range: "all" },
     });
-    // Hosted domain still works even when a self-host is selected.
+    // A beancount.io link is the hosted service's ledger, not the same-named
+    // one on the selected self-hosted server (w21/348).
     expect(
-      resolveAppLink(`${ORIGIN}/ledger/${LEDGER}`, {
-        serverUrl: selfHost,
-      }),
-    ).toEqual({ ledgerFullName: LEDGER, href: "/" });
+      resolveAppLink(`${ORIGIN}/ledger/${LEDGER}`, { serverUrl: selfHost }),
+    ).toBe(null);
+    expect(resolveAppLink(`${ORIGIN}/ledger/${LEDGER}`)).toEqual({
+      ledgerFullName: LEDGER,
+      href: "/",
+    });
   });
 });
 
@@ -155,6 +161,10 @@ describe("buildLedgerUrl round trip", () => {
     { kind: "home", ledgerFullName: LEDGER },
     { kind: "account", ledgerFullName: LEDGER, account: "Assets:Cash" },
     { kind: "journal", ledgerFullName: LEDGER },
+    { kind: "accounts", ledgerFullName: LEDGER },
+    { kind: "open-account", ledgerFullName: LEDGER },
+    { kind: "new-entry", ledgerFullName: LEDGER },
+    { kind: "files", ledgerFullName: LEDGER },
     { kind: "commit", ledgerFullName: LEDGER, sha: "abc123" },
     {
       kind: "file",
@@ -187,6 +197,22 @@ describe("buildLedgerUrl round trip", () => {
         expect(resolved!.href).toBe("/transactions");
         return;
       }
+      if (input.kind === "accounts") {
+        expect(resolved!.href).toBe("/accounts");
+        return;
+      }
+      if (input.kind === "open-account") {
+        expect(resolved!.href).toBe("/open-account");
+        return;
+      }
+      if (input.kind === "new-entry") {
+        expect(resolved!.href).toBe("/add-transaction");
+        return;
+      }
+      if (input.kind === "files") {
+        expect(resolved!.href).toBe("/ledger");
+        return;
+      }
       if (input.kind === "budget") {
         expect(resolved!.href).toBe("/budget");
         return;
@@ -208,7 +234,7 @@ describe("buildLedgerUrl round trip", () => {
       if (input.kind === "file") {
         expect(resolved!.href).toEqual({
           pathname: "/ledger-file-editor",
-          params: { path: input.path },
+          params: { path: input.path, ledger: LEDGER },
         });
         return;
       }
@@ -220,4 +246,77 @@ describe("buildLedgerUrl round trip", () => {
       }
     });
   }
+
+  // w21/223: the dashboard's ledger-errors table links to the error's line.
+  describe("a file link with a line number", () => {
+    const file = `${ORIGIN}/ledger/${LEDGER}/files/blob/main/main.bean`;
+    const params = (url: string) =>
+      (
+        resolveAppLink(url, { serverUrl: ORIGIN })?.href as {
+          params: Record<string, string>;
+        }
+      ).params;
+
+    it("opens the editor at that line", () => {
+      expect(params(`${file}?lineNumber=42`)).toEqual({
+        path: "main.bean",
+        ledger: LEDGER,
+        initialLine: "42",
+      });
+    });
+
+    it("ignores a line that is not a positive whole number", () => {
+      for (const bad of [
+        "0",
+        "-3",
+        "4.5",
+        "abc",
+        "",
+        "1e3",
+        "07x",
+        "9999999999",
+      ]) {
+        expect(params(`${file}?lineNumber=${bad}`)).toEqual({
+          path: "main.bean",
+          ledger: LEDGER,
+        });
+      }
+      expect(params(file)).toEqual({ path: "main.bean", ledger: LEDGER });
+    });
+  });
+});
+
+// w21/545: the dashboard's errors, commits, cash-flow and trial-balance pages
+// all opened Home.
+describe("dashboard pages with a matching screen", () => {
+  const open = (page: string) =>
+    resolveAppLink(`${ORIGIN}/ledger/${LEDGER}/${page}`, {
+      serverUrl: ORIGIN,
+    });
+
+  it("opens Notifications for errors and commits", () => {
+    expect(open("errors")).toEqual({
+      ledgerFullName: LEDGER,
+      href: "/notifications",
+    });
+    expect(open("commits")).toEqual({
+      ledgerFullName: LEDGER,
+      href: "/notifications",
+    });
+  });
+
+  it("opens Reports for cash-flow and trial-balance", () => {
+    expect(open("cash-flow")).toEqual({
+      ledgerFullName: LEDGER,
+      href: "/reports",
+    });
+    expect(open("trial-balance")).toEqual({
+      ledgerFullName: LEDGER,
+      href: "/reports",
+    });
+  });
+
+  it("still opens Home for a page the app has no screen for", () => {
+    expect(open("holdings")).toEqual({ ledgerFullName: LEDGER, href: "/" });
+  });
 });

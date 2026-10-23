@@ -7,10 +7,6 @@ export interface TranslationEntry {
 
 const skUserSettings: Record<string, TranslationEntry> = {
   ...apiKeyTranslations.sk,
-  "userSettings.accessUntil": {
-    message: "Prístup do",
-    description: "Label for access remaining until date",
-  },
   "userSettings.accountDeleted": {
     message: "Účet bol úspešne vymazaný",
     description: "Success message when account is deleted",
@@ -47,15 +43,6 @@ const skUserSettings: Record<string, TranslationEntry> = {
     message: "Zrušiť predplatné",
     description: "Button text to cancel subscription",
   },
-  "userSettings.cancelSubscriptionDescription": {
-    message:
-      "Ste si istí, že chcete zrušiť predplatné? Prístup budete mať až do konca aktuálneho fakturačného obdobia.",
-    description: "Confirmation dialog description for canceling subscription",
-  },
-  "userSettings.cancelSubscriptionTitle": {
-    message: "Zrušiť predplatné?",
-    description: "Confirmation dialog title for canceling subscription",
-  },
   "userSettings.canceling": {
     message: "Zrušovanie...",
     description: "Button text while canceling subscription",
@@ -71,10 +58,6 @@ const skUserSettings: Record<string, TranslationEntry> = {
   "userSettings.changeUsername": {
     message: "Zmeniť používateľské meno",
     description: "Dialog title for changing username",
-  },
-  "userSettings.confirmCancel": {
-    message: "Áno, zrušiť predplatné",
-    description: "Button text to confirm subscription cancellation",
   },
   "userSettings.createKey": {
     message: "Vytvoriť klúč",
@@ -394,13 +377,49 @@ const skUserSettings: Record<string, TranslationEntry> = {
     message: "SSH Klúče",
     description: "Page title for SSH keys",
   },
+  "userSettings.subscriptionStatus.active": {
+    message: "Aktívne",
+    description:
+      "Billing badge for a subscription whose Stripe status is active: paid and current.",
+  },
+  "userSettings.subscriptionStatus.trialing": {
+    message: "Skúšobné obdobie",
+    description:
+      "Billing badge for a subscription whose Stripe status is trialing: in a free trial.",
+  },
+  "userSettings.subscriptionStatus.past_due": {
+    message: "Po splatnosti",
+    description:
+      "Billing badge for a subscription whose Stripe status is past_due: the last renewal failed and Stripe is retrying.",
+  },
+  "userSettings.subscriptionStatus.unpaid": {
+    message: "Nezaplatené",
+    description:
+      "Billing badge for a subscription whose Stripe status is unpaid: Stripe stopped retrying a failed renewal.",
+  },
+  "userSettings.subscriptionStatus.incomplete": {
+    message: "Neúplné",
+    description:
+      "Billing badge for a subscription whose Stripe status is incomplete: the first payment has not completed.",
+  },
+  "userSettings.subscriptionStatus.incomplete_expired": {
+    message: "Vypršané",
+    description:
+      "Billing badge for a subscription whose Stripe status is incomplete_expired: the first payment never completed.",
+  },
+  "userSettings.subscriptionStatus.canceled": {
+    message: "Zrušené",
+    description:
+      "Billing badge for a subscription whose Stripe status is canceled: ended.",
+  },
+  "userSettings.subscriptionStatus.paused": {
+    message: "Pozastavené",
+    description:
+      "Billing badge for a subscription whose Stripe status is paused: paused.",
+  },
   "userSettings.subscription": {
     message: "Predplatné",
     description: "Subscription section title",
-  },
-  "userSettings.subscriptionCanceled": {
-    message: "Predplatné bolo zrušené",
-    description: "Message when subscription is already canceled",
   },
   "userSettings.subscriptionCanceledSuccess": {
     message: "Predplatné úspešne zrušené",
@@ -409,12 +428,6 @@ const skUserSettings: Record<string, TranslationEntry> = {
   "userSettings.subscriptionUpgraded": {
     message: "Predplatné bolo úspešne aktualizované",
     description: "Success message after upgrading subscription",
-  },
-  "userSettings.paymentRequiresAuth": {
-    message:
-      "Vaša platba vyžaduje dodatočné overenie. Skontrolujte svoj e-mail alebo kontaktujte vydavateľa karty.",
-    description:
-      "Message when 3DS authentication is needed for subscription upgrade",
   },
   "userSettings.system": {
     message: "Systémová",
@@ -484,6 +497,10 @@ const skUserSettings: Record<string, TranslationEntry> = {
     message: "{used} tokenov využitých tento mesiac (neobmedzené)",
     description: "AI CFO usage display for unlimited tier",
   },
+  "userSettings.aiCfoUsageUnavailable": {
+    message: "Využitie momentálne nie je dostupné.",
+    description: "Shown in place of AI token usage when its read fails",
+  },
   "userSettings.currentPlan": {
     message: "Aktuálny plán",
     description: "Badge label for the user's current subscription tier",
@@ -508,10 +525,6 @@ const skUserSettings: Record<string, TranslationEntry> = {
     message: "{used} / {max} kníh",
     description: "Ledger usage count display",
   },
-  "userSettings.upgradeYourPlan": {
-    message: "Vylepšite svoj plán",
-    description: "Section header for upgrade tier cards",
-  },
   "userSettings.billing": {
     message: "Fakturácia",
     description: "Section header for billing management",
@@ -527,6 +540,10 @@ const skUserSettings: Record<string, TranslationEntry> = {
   "userSettings.aiTokensPerMonth": {
     message: "{count} AI tokenov / mesiac",
     description: "AI token allowance for a subscription tier",
+  },
+  "userSettings.unlimitedAiTokens": {
+    message: "Neobmedzené AI tokeny",
+    description: "Unlimited AI token allowance",
   },
   "userSettings.unlimitedLedgers": {
     message: "Neobmedzené účtovné knihy",
@@ -602,6 +619,394 @@ const skUserSettings: Record<string, TranslationEntry> = {
   "userSettings.fingerprint": {
     message: "odtlačok prsta",
     description: "Label for an SSH key fingerprint",
+  },
+  "userSettings.yearly": {
+    message: "Ročne",
+    description: "Yearly billing option in the billing-cycle toggle",
+  },
+  "userSettings.billingCycle": {
+    message: "Fakturačné obdobie",
+    description: "Accessible label for the monthly/yearly billing-cycle toggle",
+  },
+  "userSettings.plans": {
+    message: "Plány",
+    description: "Section header above every plan on the Billing page",
+  },
+  "userSettings.switchToYearly": {
+    message: "Prejsť na ročné platby",
+    description: "Button that moves a monthly subscription to yearly billing",
+  },
+  "userSettings.switchToMonthly": {
+    message: "Prejsť na mesačné platby",
+    description: "Button that moves a yearly subscription to monthly billing",
+  },
+  "userSettings.downgrade": {
+    message: "Znížiť plán",
+    description: "Button for moving to a lower plan",
+  },
+  "userSettings.contactUs": {
+    message: "Kontaktujte nás",
+    description: "Enterprise plan call to action and price label",
+  },
+  "userSettings.billedYearly": {
+    message: "{amount} pri ročnej platbe",
+    description: "Total charged once a year; {amount} is a formatted price",
+  },
+  "userSettings.saveYearlyPercent": {
+    message: "Ušetrite {percent} %",
+    description: "Badge with the yearly saving; {percent} is a whole number",
+  },
+  "userSettings.payYearlyOffer": {
+    message:
+      "Plaťte ročne: {yearly} za rok namiesto {monthlyTotal} – ušetríte {saving} ročne.",
+    description:
+      "Offer on a monthly plan; {yearly}, {monthlyTotal} and {saving} are formatted prices",
+  },
+  "userSettings.perYear": {
+    message: "/rok",
+    description: "Price interval suffix for yearly prices",
+  },
+  "userSettings.legacyPrice": {
+    message: "Pôvodná cena",
+    description: "Label for an older price an existing subscriber keeps",
+  },
+  "userSettings.checkoutConfirming": {
+    message: "Potvrdzujeme vašu platbu…",
+    description:
+      "Shown while waiting for Stripe to confirm a just-completed checkout",
+  },
+  "userSettings.checkoutDone": {
+    message: "Teraz máte {plan}",
+    description:
+      "Confirmation after checkout; {plan} is a plan name and billing cycle such as 'Premium \u00b7 Yearly'",
+  },
+  "userSettings.checkoutRenews": {
+    message: "Obnoví sa {date} za {amount}. Potvrdenie dostanete e-mailom.",
+    description:
+      "Renewal line after checkout; {date} is a formatted date and {amount} a formatted price",
+  },
+  "userSettings.checkoutUnlocked": {
+    message: "Teraz zahŕňa: {limits}",
+    description: "What the new plan includes; {limits} is a list of quotas",
+  },
+  "userSettings.checkoutPending": {
+    message:
+      "Platba bola prijatá. Váš plán sa zobrazí do minúty; obnovte stránku a skontrolujte to.",
+    description:
+      "Shown when the payment is done but the subscription is not recorded yet",
+  },
+  "userSettings.refresh": {
+    message: "Obnoviť",
+    description: "Button that reloads the subscription status",
+  },
+  "userSettings.backToWork": {
+    message: "Späť na predchádzajúcu stránku",
+    description: "Button that returns to the page where the purchase began",
+  },
+  "userSettings.startUsingPlan": {
+    message: "Začnite používať {plan}",
+    description:
+      "Primary button on the checkout confirmation when the purchase did not start at an in-product prompt; opens the ledgers. {plan} is the plan name, e.g. Premium",
+  },
+  "userSettings.checkoutCanceled": {
+    message: "Platba bola zrušená. Nič vám nebolo účtované.",
+    description:
+      "Notice on Billing after the customer leaves Stripe Checkout without paying",
+  },
+  "userSettings.viewBilling": {
+    message: "Zobraziť fakturáciu",
+    description:
+      "Button that closes the checkout confirmation and shows billing settings",
+  },
+  "userSettings.planChangeTitle": {
+    message: "Zmeniť na {plan}",
+    description:
+      "Title of the plan-change sheet; {plan} is a plan and cycle such as 'Premium \u00b7 Yearly'",
+  },
+  "userSettings.planChangePreviewing": {
+    message: "Počítame, koľko stojí táto zmena…",
+    description: "Shown while the server prices a plan change",
+  },
+  "userSettings.planChangePreviewFailed": {
+    message: "Cenu tejto zmeny sa nepodarilo vypočítať. Skúste to znova.",
+    description: "Shown when the plan-change price could not be loaded",
+  },
+  "userSettings.planChangeStartsToday": {
+    message: "Platí od dnes.",
+    description: "The plan change takes effect immediately",
+  },
+  "userSettings.planChangeDueToday": {
+    message: "Na úhradu dnes",
+    description: "Label for the amount charged today",
+  },
+  "userSettings.planChangeCredit": {
+    message: "Zahŕňa kredit {credit} za nevyužitý čas súčasného plánu.",
+    description: "Credit for unused time; {credit} is a formatted price",
+  },
+  "userSettings.planChangeNext": {
+    message: "Potom {amount}, ďalšia platba {date}.",
+    description:
+      "Next charge; {amount} is a price with its interval and {date} a formatted date",
+  },
+  "userSettings.planChangeChargedTo": {
+    message: "Strhne sa z {card}",
+    description:
+      "Card the change is charged to; {card} is a card brand and its last four digits",
+  },
+  "userSettings.planChangeWhatYouGet": {
+    message: "Čo získate",
+    description: "Heading above what the new plan adds",
+  },
+  "userSettings.planChangePayAndSwitch": {
+    message: "Zaplatiť {amount} a zmeniť",
+    description:
+      "Confirm button; {amount} is the formatted amount charged today",
+  },
+  "userSettings.planChangeContinueToCheckout": {
+    message: "Pokračovať na platbu",
+    description: "Confirm button that opens Stripe Checkout",
+  },
+  "userSettings.planChangeNotNow": {
+    message: "Teraz nie",
+    description:
+      "Button that closes the plan-change sheet without changing anything",
+  },
+  "userSettings.planChangeCreditNote": {
+    message: "Nevyužitý čas sa vždy započíta — nikdy neplatíte dvakrát.",
+    description: "Reassurance under the confirm button",
+  },
+  "userSettings.planChangeRefusalCurrent": {
+    message: "Tento plán už máte.",
+    description: "The chosen plan is the one the customer already has",
+  },
+  "userSettings.planChangeRefusalSameTier": {
+    message:
+      "Tento plán si ponechávate za staršiu, nižšiu cenu; zmena by ju len zvýšila.",
+    description:
+      "The customer keeps an older, cheaper price for the same plan and cycle",
+  },
+  "userSettings.planChangeRefusalMultiple": {
+    message:
+      "Váš účet má viac ako jedno aktívne predplatné. Ak chcete zmeniť plán, kontaktujte podporu.",
+    description: "The account has duplicate subscriptions and needs support",
+  },
+  "userSettings.planChangeRefusalNoSubscription": {
+    message:
+      "Nemáte aktívne predplatné, ktoré by sa dalo zmeniť. Obnovte stránku a vyberte si plán.",
+    description: "The subscription ended before the change was confirmed",
+  },
+  "userSettings.planChangeRefusalPastDue": {
+    message:
+      "Posledná platba za obnovenie neprešla. Aktualizujte spôsob platby v časti Spravovať fakturáciu a potom zmeňte plán.",
+    description:
+      "A plan change is refused until a failed renewal payment is fixed",
+  },
+  "userSettings.planChangeStartsOn": {
+    message: "Začína {date}. Dovtedy si ponecháte {plan}.",
+    description:
+      "When a scheduled change takes effect and the plan kept until then",
+  },
+  "userSettings.planChangeNothingToday": {
+    message: "Dnes nič neplatíte.",
+    description: "A scheduled change charges nothing today",
+  },
+  "userSettings.planChangeWhatChanges": {
+    message: "Čo sa zmení {date}",
+    description:
+      "Heading for the limits and features that change on the effective date",
+  },
+  "userSettings.planChangeLimitCollaborators": {
+    message: "Spolupracovníci na účtovnú knihu",
+    description: "Row label: collaborators allowed per ledger",
+  },
+  "userSettings.planChangeLimitAiTokens": {
+    message: "AI tokeny za mesiac",
+    description: "Row label: AI tokens allowed per month",
+  },
+  "userSettings.planChangeYouHave": {
+    message: "máte {count}",
+    description: "The reader's current usage beside a limit row",
+  },
+  "userSettings.planChangeOverLimit": {
+    message:
+      "Všetky vaše knihy zostávajú vaše a naďalej fungujú. Novú vytvoríte, až keď budete pod novým limitom {max}.",
+    description:
+      "Explains what happens when usage is above the lower plan's ledger limit",
+  },
+  "userSettings.planChangeScheduleDowngrade": {
+    message: "Naplánovať zníženie",
+    description:
+      "Button that schedules a downgrade for the end of the paid period",
+  },
+  "userSettings.planChangeScheduleSwitch": {
+    message: "Naplánovať zmenu",
+    description:
+      "Button that schedules a billing-cycle switch for the end of the paid period",
+  },
+  "userSettings.planChangeKeep": {
+    message: "Ponechať {plan}",
+    description: "Button that keeps the current plan and closes the sheet",
+  },
+  "userSettings.planChangeScheduled": {
+    message: "Naplánované na {date}. Dovtedy sa nič nemení.",
+    description: "Toast after a change was scheduled",
+  },
+  "userSettings.planChangeReplacesScheduled": {
+    message: "Toto nahradí vašu naplánovanú zmenu na {plan} {date}.",
+    description: "Note that this choice replaces an already scheduled change",
+  },
+  "userSettings.planChangeWithdrawsCancellation": {
+    message: "Tým sa zruší aj vaša výpoveď, predplatné teda pokračuje.",
+    description: "Note that this choice withdraws a pending cancellation",
+  },
+  "userSettings.planChangeLegacyEnds": {
+    message: "Vaša aktuálna cena sa už neponúka, preto touto zmenou končí.",
+    description: "Note for a subscriber on a price that is no longer offered",
+  },
+  "userSettings.planChangeSplitIntro": {
+    message:
+      "{plan} s mesačnou platbou môže začať pri obnovení {date}. Chcete {plan} už dnes?",
+    description:
+      "Introduces the two options when choosing a higher tier on monthly while on yearly",
+  },
+  "userSettings.planChangeSplitNow": {
+    message: "Získať {plan} dnes s ročnou platbou — teraz {amount}",
+    description:
+      "Option: the higher tier today on yearly billing, with the amount due now",
+  },
+  "userSettings.planChangeSplitLater": {
+    message: "Prejsť na {plan} mesačne {date} — dnes nič",
+    description: "Option: the higher tier on monthly from the renewal date",
+  },
+  "userSettings.planChangeAtRenewal": {
+    message: "Platí od obnovenia",
+    description:
+      "Under a plan card whose change waits for the end of the paid period",
+  },
+  "userSettings.planChangeFeaturesEnd": {
+    message: "Už nie je zahrnuté",
+    description:
+      "Heading above the plan features the lower plan does not include",
+  },
+  "userSettings.planChangeLimitDirectives": {
+    message: "Direktívy",
+    description: "Row label: entries (Beancount directives) allowed in total",
+  },
+  "userSettings.scheduledHeading": {
+    message: "Naplánované",
+    description:
+      "Heading of the panel listing what happens at the end of the paid period",
+  },
+  "userSettings.scheduledChangesTo": {
+    message: "{date} sa zmení na {plan}.",
+    description: "A scheduled plan change and its date",
+  },
+  "userSettings.scheduledEnds": {
+    message: "{plan} končí {date}.",
+    description: "A pending cancellation and the date the plan ends",
+  },
+  "userSettings.scheduledKeepCurrent": {
+    message: "Ponechať súčasný",
+    description: "Button that undoes a scheduled plan change",
+  },
+  "userSettings.scheduledKept": {
+    message: "Váš plán zostáva taký, aký je.",
+    description: "Toast after undoing a scheduled plan change",
+  },
+  "userSettings.scheduledKeepFailed": {
+    message: "Naplánovanú zmenu sa nepodarilo vrátiť. Skúste to znova.",
+    description: "Toast when undoing a scheduled plan change fails",
+  },
+  "userSettings.cancelSheetTitle": {
+    message: "Zrušiť {plan}?",
+    description: "Title of the sheet shown before cancelling",
+  },
+  "userSettings.cancelSheetKeepUntil": {
+    message:
+      "{plan} si ponecháte do {date}. Potom budete na bezplatnom pláne: {limits}.",
+    description:
+      "What the reader keeps until the period ends, and the Free limits afterwards",
+  },
+  "userSettings.cancelSheetPlainText": {
+    message:
+      "Vaše knihy sú obyčajný text — exportujte ich kedykoľvek. Nič sa nevymaže.",
+    description: "Reassurance that cancelling deletes nothing",
+  },
+  "userSettings.cancelSheetOtherOptions": {
+    message: "Ďalšie možnosti",
+    description: "Heading above the cheaper alternative to cancelling",
+  },
+  "userSettings.cancelSheetSwitchToYearly": {
+    message: "Prejsť na ročné — {price}/mesiac",
+    description:
+      "Alternative to cancelling: switch to yearly at the per-month price",
+  },
+  "userSettings.cancelSheetDowngradeTo": {
+    message: "Znížiť na {plan}",
+    description: "Alternative to cancelling: the next lower plan",
+  },
+  "userSettings.cancelSheetReason": {
+    message: "Aký je hlavný dôvod? (nepovinné)",
+    description: "Optional question about why the reader cancels",
+  },
+  "userSettings.cancelReasonTooExpensive": {
+    message: "Príliš drahé",
+    description: "Cancellation reason",
+  },
+  "userSettings.cancelReasonMissingFeatures": {
+    message: "Chýba funkcia",
+    description: "Cancellation reason",
+  },
+  "userSettings.cancelReasonUnused": {
+    message: "Nepoužívam to",
+    description: "Cancellation reason",
+  },
+  "userSettings.cancelReasonSwitchedService": {
+    message: "Prechádzam na iný nástroj",
+    description: "Cancellation reason: moving to another tool",
+  },
+  "userSettings.cancelReasonOther": {
+    message: "Iné",
+    description: "Cancellation reason",
+  },
+  "userSettings.planChangeRequiresAction": {
+    message:
+      "Vaša banka musí túto platbu schváliť. Dovtedy sa nič nezmení; po schválení obnovte túto stránku.",
+    description: "The bank must approve the payment before the change applies",
+  },
+  "userSettings.planChangeApproving": {
+    message: "Čaká sa, kým vaša banka platbu schváli…",
+    description:
+      "Shown while Stripe asks the bank to approve a plan change's payment",
+  },
+  "userSettings.planChangeApprovePayment": {
+    message: "Schváliť platbu",
+    description: "Button that opens Stripe's page to approve the payment",
+  },
+  "userSettings.planChangeFailed": {
+    message: "Vaša banka platbu neschválila. Nič sa nezmenilo.",
+    description: "The payment was declined and the plan did not change",
+  },
+  "userSettings.planChangeUseAnotherCard": {
+    message: "Použiť inú kartu",
+    description: "Button that opens billing settings to change the card",
+  },
+  "userSettings.featureAutomaticBackups": {
+    message: "Automatické zálohy",
+    description: "Plan feature from the pricing table",
+  },
+  "userSettings.featureAutomationIntegrations": {
+    message: "Pokročilá automatizácia a integrácie",
+    description: "Plan feature from the pricing table",
+  },
+  "userSettings.featureOidcSso": {
+    message: "Jednotné prihlásenie (SSO) cez OIDC",
+    description:
+      "Plan feature from the pricing table; OIDC and SSO stay as written",
+  },
+  "userSettings.featureMultiEntity": {
+    message: "Konsolidácia viacerých subjektov",
+    description: "Plan feature from the pricing table",
   },
 };
 

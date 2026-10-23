@@ -16,6 +16,15 @@ import { SUBSCRIPTION_PERIOD_VERIFICATION_VERSION } from "@/features/stripe/serv
 // Test constants
 const THIRTY_DAYS_IN_MS = 30 * 24 * 60 * 60 * 1000; // 30 days in milliseconds
 
+let currentResolver: SubscriptionResolver;
+// One schema for the whole file: building the resolver's schema a second time
+// in one process re-binds TypeGraphQL's parameter metadata, after which @Arg and
+// @Ctx arrive in the wrong positions for every schema built so far.
+const graphqlSchema = buildSchema({
+  resolvers: [SubscriptionResolver],
+  container: { get: () => currentResolver },
+});
+
 describe("SubscriptionResolver", () => {
   let resolver: SubscriptionResolver;
   let mockContext: IContext;
@@ -26,6 +35,9 @@ describe("SubscriptionResolver", () => {
     resumeSubscription: jest.Mock;
     createCustomerPortalSession: jest.Mock;
     upgradeSubscription: jest.Mock;
+    previewPlanChange: jest.Mock;
+    changePlan: jest.Mock;
+    defaultCard: jest.Mock;
   };
   let mockModels: {
     user: {
@@ -50,6 +62,9 @@ describe("SubscriptionResolver", () => {
       resumeSubscription: jest.fn(),
       createCustomerPortalSession: jest.fn(),
       upgradeSubscription: jest.fn(),
+      previewPlanChange: jest.fn(),
+      changePlan: jest.fn(),
+      defaultCard: jest.fn().mockResolvedValue(null),
     };
 
     mockModels = {
@@ -85,6 +100,7 @@ describe("SubscriptionResolver", () => {
       }),
     );
     resolver = new SubscriptionResolver(subscriptions);
+    currentResolver = resolver;
   });
 
   describe("subscriptionStatus", () => {
@@ -104,12 +120,8 @@ describe("SubscriptionResolver", () => {
       mockStripeService.listSubscriptions.mockRejectedValue(
         new Error("Stripe unavailable"),
       );
-      const schema = await buildSchema({
-        resolvers: [SubscriptionResolver],
-        container: { get: () => resolver },
-      });
       const result = await graphql({
-        schema,
+        schema: await graphqlSchema,
         source: "query { subscriptionStatus { hasActiveSubscription } }",
         contextValue: {
           ...mockContext,
@@ -173,8 +185,279 @@ describe("SubscriptionResolver", () => {
       expect(mockStripeService.listSubscriptions).toHaveBeenCalledTimes(1);
       expect(mockStripeService.listSubscriptions).toHaveBeenCalledWith(
         "user-123",
-        expect.objectContaining({ status: "active" }),
+        expect.objectContaining({ status: "current", expandForStatus: false }),
       );
+    });
+
+    const liveSubscription = (status: string, overrides = {}) => {
+      const end = Math.floor(Date.now() / 1000) + 86_400;
+      return {
+        id: "sub_123",
+        status,
+        livemode: true,
+        customer: "cus_live",
+        clientId: "beancount-web-prod",
+        start_date: end - 86_400 * 30,
+        cancel_at: null,
+        canceled_at: null,
+        cancel_at_period_end: false,
+        items: {
+          data: [
+            {
+              id: "item_123",
+              quantity: 1,
+              current_period_start: end - 86_400 * 30,
+              current_period_end: end,
+              price: {
+                id: "price_1SyPdaEqsEqs2tLViLPUDoVi",
+                unit_amount: 9999,
+                currency: "usd",
+                recurring: { interval: "month", interval_count: 1 },
+                product: { id: "prod_1", name: "Growth", deleted: false },
+              },
+            },
+          ],
+        },
+        ...overrides,
+      };
+    };
+    const selecting = (...fields: string[]) =>
+      ({
+        fieldNodes: [
+          {
+            selectionSet: {
+              selections: fields.map((value) => ({
+                kind: Kind.FIELD,
+                name: { value },
+              })),
+            },
+          },
+        ],
+      }) as unknown as GraphQLResolveInfo;
+
+    // A past-due subscription keeps its plan only while Stripe still retries
+    // the renewal (holdsPaidTier); an open invoice with no next attempt is
+    // the end of the retries.
+    it.each([
+      ["past_due", true, true],
+      ["past_due", false, false],
+      ["unpaid", true, false],
+      ["canceled", true, false],
+    ])(
+      "counts a %s subscription (Stripe retrying: %s) as paid: %s",
+      async (status, retrying, expected) => {
+        mockModels.paidCustomer.findByUserIdWithActivePeriod.mockResolvedValue(
+          null,
+        );
+        mockStripeService.listSubscriptions.mockResolvedValue([
+          liveSubscription(status, {
+            latest_invoice: {
+              id: "in_1",
+              status: "open",
+              next_payment_attempt: retrying
+                ? Math.floor(Date.now() / 1000) + 86_400
+                : null,
+            },
+          }),
+        ]);
+
+        const result = await resolver.subscriptionStatus(
+          mockContext,
+          selecting("hasActiveSubscription"),
+        );
+
+        expect(result.hasActiveSubscription).toBe(expected);
+      },
+    );
+
+    // An outage or a binding mismatch is not evidence of no subscription:
+    // without a valid cache the read fails instead of answering "not paid".
+    it.each([
+      ["the active-only check", "{ hasActiveSubscription }"],
+      [
+        "the full Billing view",
+        "{ hasActiveSubscription subscriptions { id } }",
+      ],
+    ])(
+      "surfaces a Stripe failure in %s with no valid cache rather than reporting no subscription",
+      async (_label, selection) => {
+        mockModels.paidCustomer.findByUserIdWithActivePeriod.mockResolvedValue(
+          null,
+        );
+        const failure = new Error(
+          "Stripe subscription does not match its live customer binding",
+        );
+        mockStripeService.listSubscriptions.mockRejectedValue(failure);
+
+        const result = await graphql({
+          schema: await graphqlSchema,
+          source: `query { subscriptionStatus ${selection} }`,
+          contextValue: {
+            ...mockContext,
+            identity: mockContext.getCurrentIdentity(),
+          },
+        });
+
+        expect(result.data).toBeNull();
+        expect(result.errors).toHaveLength(1);
+        expect(result.errors?.[0].originalError).toBe(failure);
+        expect(mockStripeService.listSubscriptions).toHaveBeenCalledTimes(1);
+        expect(
+          mockModels.paidCustomer.updatePeriodIfUnchanged,
+        ).not.toHaveBeenCalled();
+      },
+    );
+
+    it("gives a past-due subscription's next payment attempt for the banner", async () => {
+      const retry = Math.floor(Date.now() / 1000) + 3 * 86_400;
+      mockStripeService.listSubscriptions.mockResolvedValue([
+        liveSubscription("past_due", {
+          latest_invoice: {
+            id: "in_1",
+            status: "open",
+            next_payment_attempt: retry,
+          },
+        }),
+      ]);
+
+      const result = await resolver.subscriptionStatus(
+        mockContext,
+        selecting("subscriptions"),
+      );
+
+      expect(result.subscriptions[0]).toMatchObject({
+        status: "past_due",
+        nextPaymentAttempt: new Date(retry * 1000),
+      });
+    });
+
+    it("gives no next attempt to a subscription that is paid up", async () => {
+      mockStripeService.listSubscriptions.mockResolvedValue([
+        liveSubscription("active", {
+          latest_invoice: {
+            id: "in_1",
+            status: "paid",
+            next_payment_attempt: null,
+          },
+        }),
+      ]);
+
+      const result = await resolver.subscriptionStatus(
+        mockContext,
+        selecting("subscriptions"),
+      );
+
+      expect(result.subscriptions[0]?.nextPaymentAttempt).toBeNull();
+    });
+
+    it("reports what the latest invoice collected, discounts applied", async () => {
+      mockStripeService.listSubscriptions.mockResolvedValue([
+        liveSubscription("active", {
+          latest_invoice: {
+            id: "in_first",
+            status: "paid",
+            amount_paid: 0,
+            currency: "usd",
+            billing_reason: "subscription_create",
+            next_payment_attempt: null,
+            created: 1_800_000_000,
+          },
+        }),
+      ]);
+
+      const result = await resolver.subscriptionStatus(
+        mockContext,
+        selecting("subscriptions"),
+      );
+
+      expect(result.subscriptions[0]?.latestInvoice).toEqual({
+        id: "in_first",
+        amountPaid: 0,
+        currency: "usd",
+        billingReason: "subscription_create",
+        // So the client can tell a fresh Checkout from an old bookmark.
+        created: new Date(1_800_000_000 * 1000),
+      });
+    });
+
+    it("gives no latest invoice when the listing did not expand it", async () => {
+      mockStripeService.listSubscriptions.mockResolvedValue([
+        liveSubscription("active", { latest_invoice: "in_unexpanded" }),
+      ]);
+
+      const result = await resolver.subscriptionStatus(
+        mockContext,
+        selecting("subscriptions"),
+      );
+
+      expect(result.subscriptions[0]?.latestInvoice).toBeNull();
+    });
+
+    it("reports a subscription's scheduled plan change", async () => {
+      const end = Math.floor(Date.now() / 1000) + 86_400;
+      mockStripeService.listSubscriptions.mockResolvedValue([
+        {
+          id: "sub_123",
+          status: "active",
+          livemode: true,
+          customer: "cus_live",
+          clientId: "beancount-web-prod",
+          start_date: end - 86_400 * 30,
+          cancel_at: null,
+          canceled_at: null,
+          cancel_at_period_end: false,
+          schedule: {
+            id: "sub_sched_1",
+            status: "active",
+            current_phase: { start_date: end - 86_400 * 30, end_date: end },
+            phases: [
+              {
+                start_date: end - 86_400 * 30,
+                items: [{ price: "price_1SyPdaEqsEqs2tLViLPUDoVi" }],
+              },
+              {
+                start_date: end,
+                items: [{ price: "price_1RrSOGEqsEqs2tLVFnyB34qG" }],
+              },
+            ],
+          },
+          items: {
+            data: [
+              {
+                id: "item_123",
+                quantity: 1,
+                current_period_start: end - 86_400 * 30,
+                current_period_end: end,
+                price: {
+                  id: "price_1SyPdaEqsEqs2tLViLPUDoVi",
+                  unit_amount: 9999,
+                  currency: "usd",
+                  recurring: { interval: "month", interval_count: 1 },
+                  product: { id: "prod_1", name: "Growth", deleted: false },
+                },
+              },
+            ],
+          },
+        },
+      ]);
+      const info = {
+        fieldNodes: [
+          {
+            selectionSet: {
+              selections: [
+                { kind: Kind.FIELD, name: { value: "subscriptions" } },
+              ],
+            },
+          },
+        ],
+      } as unknown as GraphQLResolveInfo;
+
+      const result = await resolver.subscriptionStatus(mockContext, info);
+
+      expect(result.subscriptions[0]?.scheduledChange).toEqual({
+        priceId: "price_1RrSOGEqsEqs2tLVFnyB34qG",
+        effectiveAt: new Date(end * 1000),
+      });
     });
 
     it("queries Stripe for full billing details even with a valid live cache", async () => {
@@ -209,7 +492,7 @@ describe("SubscriptionResolver", () => {
       ).not.toHaveBeenCalled();
       expect(mockStripeService.listSubscriptions).toHaveBeenCalledWith(
         "user-123",
-        expect.objectContaining({ status: "all" }),
+        expect.objectContaining({ status: "all", expandForStatus: true }),
       );
     });
 
@@ -283,7 +566,7 @@ describe("SubscriptionResolver", () => {
 
       expect(mockStripeService.listSubscriptions).toHaveBeenCalledWith(
         "user-123",
-        expect.objectContaining({ status: "active" }),
+        expect.objectContaining({ status: "current", expandForStatus: false }),
       );
       expect(result.hasActiveSubscription).toBe(true);
     });
@@ -494,6 +777,7 @@ describe("SubscriptionResolver", () => {
         }),
         new Date(newPeriodEnd * 1000),
         SUBSCRIPTION_PERIOD_VERIFICATION_VERSION,
+        expect.any(String),
       );
     });
 
@@ -562,6 +846,7 @@ describe("SubscriptionResolver", () => {
           clientId: "beancount-web-prod",
           currentPeriodEnd: exactDate,
           periodVerificationVersion: SUBSCRIPTION_PERIOD_VERIFICATION_VERSION,
+          periodTier: "PREMIUM",
           createdAt: new Date(),
           updatedAt: new Date(),
         },
@@ -1436,7 +1721,7 @@ describe("SubscriptionResolver", () => {
 
       const result = await resolver.createSubscriptionSession(
         "beancount-web-prod",
-        "price_1L9ccEEqsEqs2tLVKPRV17wb", // Valid price ID
+        "price_1RrSOGEqsEqs2tLVFnyB34qG", // Valid price ID
         mockContext,
       );
 
@@ -1449,7 +1734,7 @@ describe("SubscriptionResolver", () => {
         expect.objectContaining({
           line_items: [
             {
-              price: "price_1L9ccEEqsEqs2tLVKPRV17wb",
+              price: "price_1RrSOGEqsEqs2tLVFnyB34qG",
               quantity: 1,
             },
           ],
@@ -1483,7 +1768,7 @@ describe("SubscriptionResolver", () => {
 
       const result = await resolver.createSubscriptionSession(
         "beancount-web-prod",
-        "price_1L9ccEEqsEqs2tLVKPRV17wb",
+        "price_1RrSOGEqsEqs2tLVFnyB34qG",
         mockContext,
       );
 
@@ -1498,6 +1783,210 @@ describe("SubscriptionResolver", () => {
       expect(mockModels.user.getById).not.toHaveBeenCalled();
     });
 
+    it("returns a cancelled Checkout to the pricing page with the plan and cycle still chosen", async () => {
+      const mockStripeCheckoutSessions = {
+        create: jest.fn().mockResolvedValue({
+          id: "cs_1",
+          url: "https://checkout.stripe.com/session/1",
+        }),
+      };
+      mockStripeService.getStripeInstance.mockReturnValue({
+        checkout: { sessions: mockStripeCheckoutSessions },
+      });
+      mockModels.paidCustomer.findByUserIdAndClientId.mockResolvedValue(null);
+
+      await resolver.createSubscriptionSession(
+        "beancount-web-prod",
+        "price_1US5htEqsEqs2tLVENCzLaZB",
+        mockContext,
+      );
+      await resolver.createSubscriptionSession(
+        "beancount-web-prod",
+        "price_1SyPdaEqsEqs2tLViLPUDoVi",
+        mockContext,
+      );
+
+      const [yearly, monthly] = mockStripeCheckoutSessions.create.mock.calls;
+      expect(yearly[0].cancel_url).toBe(
+        "https://beancount.io/pricing?plan=premium&billing=yearly&checkout=canceled",
+      );
+      expect(monthly[0].cancel_url).toBe(
+        "https://beancount.io/pricing?plan=growth&billing=monthly&checkout=canceled",
+      );
+      // Stripe fills in the literal placeholder; percent-encoded braces would
+      // reach the confirmation unfilled.
+      expect(yearly[0].success_url).toBe(
+        "https://beancount.io/settings/billing?checkout=success&session_id={CHECKOUT_SESSION_ID}",
+      );
+    });
+
+    it("returns a Checkout cancelled from Billing to Billing, which says nothing was charged", async () => {
+      const create = jest.fn().mockResolvedValue({
+        id: "cs_2",
+        url: "https://checkout.stripe.com/session/2",
+      });
+      mockStripeService.getStripeInstance.mockReturnValue({
+        checkout: { sessions: { create } },
+      });
+      mockModels.paidCustomer.findByUserIdAndClientId.mockResolvedValue(null);
+
+      await resolver.createSubscriptionSession(
+        "beancount-web-prod",
+        "price_1US5htEqsEqs2tLVENCzLaZB",
+        mockContext,
+        "BILLING",
+      );
+      await resolver.createSubscriptionSession(
+        "beancount-web-prod",
+        "price_1US5htEqsEqs2tLVENCzLaZB",
+        mockContext,
+        null,
+      );
+
+      const [fromBilling, unspecified] = create.mock.calls;
+      expect(fromBilling[0].cancel_url).toBe(
+        "https://beancount.io/settings/billing?checkout=canceled",
+      );
+      expect(fromBilling[0].success_url).toBe(
+        "https://beancount.io/settings/billing?checkout=success&session_id={CHECKOUT_SESSION_ID}",
+      );
+      // An omitted or null argument is the pricing page's call.
+      expect(unspecified[0].cancel_url).toBe(
+        "https://beancount.io/pricing?plan=premium&billing=yearly&checkout=canceled",
+      );
+    });
+
+    // The pricing page's contract (w1/m39 README): every price it sells, under
+    // the client it sends, must open Checkout. Written out rather than read
+    // from SUBSCRIPTION_CONFIG, so dropping a sold price from the server's
+    // catalog fails here instead of passing by construction.
+    it.each([
+      ["Premium monthly", "price_1RrSOGEqsEqs2tLVFnyB34qG"],
+      ["Premium yearly", "price_1US5htEqsEqs2tLVENCzLaZB"],
+      ["Growth monthly", "price_1SyPdaEqsEqs2tLViLPUDoVi"],
+      ["Growth yearly", "price_1SyPdbEqsEqs2tLV7PJyWZed"],
+      ["Organization monthly", "price_1SyPdcEqsEqs2tLVCWEgU1PZ"],
+      ["Organization yearly", "price_1SyPdfEqsEqs2tLVmK6zCrP6"],
+    ])(
+      "opens Checkout through GraphQL for the pricing page's %s price",
+      async (_label, priceId) => {
+        const create = jest.fn().mockResolvedValue({
+          id: "cs_pricing",
+          url: "https://checkout.stripe.com/c/pay/cs_pricing",
+        });
+        mockStripeService.getStripeInstance.mockReturnValue({
+          checkout: { sessions: { create } },
+        });
+        mockModels.paidCustomer.findByUserIdAndClientId.mockResolvedValue(null);
+        const identity = mockContext.getCurrentIdentity();
+
+        const result = await graphql({
+          schema: await graphqlSchema,
+          source: `mutation Checkout($clientId: String!, $priceId: String!) {
+            createSubscriptionSession(clientId: $clientId, priceId: $priceId) {
+              success message sessionUrl
+            }
+          }`,
+          variableValues: { clientId: "beancount-web-prod", priceId },
+          contextValue: { ...mockContext, identity },
+        });
+
+        expect(result.errors).toBeUndefined();
+        expect(result.data?.createSubscriptionSession).toEqual({
+          success: true,
+          message: null,
+          sessionUrl: "https://checkout.stripe.com/c/pay/cs_pricing",
+        });
+        expect(create).toHaveBeenCalledTimes(1);
+        const [session] = create.mock.calls[0];
+        expect(session.line_items[0].price).toBe(priceId);
+        expect(session.allow_promotion_codes).toBe(true);
+      },
+    );
+
+    it.each([
+      ["$9.99 monthly", "price_1L9ccEEqsEqs2tLVKPRV17wb"],
+      ["$99.99 yearly", "price_1L9ccEEqsEqs2tLVbeBgHm9p"],
+    ])(
+      "never sells the retired %s Premium price, though its subscribers keep it",
+      async (_label, priceId) => {
+        const create = jest.fn();
+        mockStripeService.getStripeInstance.mockReturnValue({
+          checkout: { sessions: { create } },
+        });
+        mockModels.paidCustomer.findByUserIdAndClientId.mockResolvedValue(null);
+
+        const result = await resolver.createSubscriptionSession(
+          "beancount-web-prod",
+          priceId,
+          mockContext,
+        );
+
+        expect(result.success).toBe(false);
+        expect(result.message).toContain("no longer offered");
+        expect(create).not.toHaveBeenCalled();
+      },
+    );
+
+    it.each([
+      ["an active subscription", { status: "active" }],
+      [
+        "a past-due subscription Stripe is still retrying",
+        {
+          status: "past_due",
+          latest_invoice: {
+            id: "in_1",
+            status: "open",
+            next_payment_attempt: Math.floor(Date.now() / 1000) + 86_400,
+          },
+        },
+      ],
+    ])(
+      "refuses a second Checkout to a customer who already pays with %s, so nobody is billed twice",
+      async (_label, state) => {
+        const mockStripeCheckoutSessions = { create: jest.fn() };
+        mockStripeService.getStripeInstance.mockReturnValue({
+          checkout: { sessions: mockStripeCheckoutSessions },
+        });
+        const binding = {
+          id: "customer-123",
+          userId: "user-123",
+          stripeCustomerId: "cus_existing_123",
+          clientId: "beancount-web-prod",
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        };
+        mockModels.paidCustomer.findByUserIdAndClientId.mockResolvedValue(
+          binding,
+        );
+        mockStripeService.listSubscriptions.mockResolvedValue([
+          {
+            id: "sub_live",
+            livemode: true,
+            clientId: "beancount-web-prod",
+            items: {
+              data: [{ price: { id: "price_1RrSOGEqsEqs2tLVFnyB34qG" } }],
+            },
+            ...state,
+          },
+        ]);
+
+        const result = await resolver.createSubscriptionSession(
+          "beancount-web-prod",
+          "price_1US5htEqsEqs2tLVENCzLaZB",
+          mockContext,
+        );
+
+        expect(result.success).toBe(false);
+        expect(result.message).toContain("already have an active subscription");
+        expect(mockStripeCheckoutSessions.create).not.toHaveBeenCalled();
+        expect(mockStripeService.listSubscriptions).toHaveBeenCalledWith(
+          "user-123",
+          { status: "current", bindings: [binding] },
+        );
+      },
+    );
+
     it("should handle Stripe API errors gracefully", async () => {
       const mockStripeCheckoutSessions = {
         create: jest.fn().mockRejectedValue(new Error("Stripe API error")),
@@ -1511,7 +2000,7 @@ describe("SubscriptionResolver", () => {
 
       const result = await resolver.createSubscriptionSession(
         "beancount-web-prod",
-        "price_1L9ccEEqsEqs2tLVKPRV17wb",
+        "price_1RrSOGEqsEqs2tLVFnyB34qG",
         mockContext,
       );
 
@@ -1535,7 +2024,7 @@ describe("SubscriptionResolver", () => {
 
       const result = await resolver.createSubscriptionSession(
         "beancount-web-prod",
-        "price_1L9ccEEqsEqs2tLVKPRV17wb",
+        "price_1RrSOGEqsEqs2tLVFnyB34qG",
         mockContext,
       );
 
@@ -1564,6 +2053,7 @@ describe("SubscriptionResolver", () => {
         resolver.cancelSubscription(
           "sub_123",
           "beancount-web-prod",
+          undefined,
           scopedContext,
         ),
       ).rejects.toMatchObject({ category: ErrorCategory.FORBIDDEN });
@@ -1586,6 +2076,7 @@ describe("SubscriptionResolver", () => {
         resolver.cancelSubscription(
           "sub_123",
           "beancount-web-prod",
+          undefined,
           contextWithoutUserId,
         ),
       ).rejects.toThrow("User ID not found in context");
@@ -1600,6 +2091,7 @@ describe("SubscriptionResolver", () => {
       const result = await resolver.cancelSubscription(
         "sub_123",
         "beancount-web-prod",
+        undefined,
         mockContext,
       );
 
@@ -1607,8 +2099,27 @@ describe("SubscriptionResolver", () => {
         "sub_123",
         "user-123",
         "beancount-web-prod",
+        undefined,
       );
       expect(result.success).toBe(true);
+    });
+
+    it("passes the subscriber's reason through", async () => {
+      mockStripeService.cancelSubscription.mockResolvedValue({ success: true });
+
+      await resolver.cancelSubscription(
+        "sub_123",
+        "beancount-web-prod",
+        "TOO_EXPENSIVE",
+        mockContext,
+      );
+
+      expect(mockStripeService.cancelSubscription).toHaveBeenCalledWith(
+        "sub_123",
+        "user-123",
+        "beancount-web-prod",
+        "TOO_EXPENSIVE",
+      );
     });
 
     it("should return error when cancellation fails", async () => {
@@ -1620,6 +2131,7 @@ describe("SubscriptionResolver", () => {
       const result = await resolver.cancelSubscription(
         "sub_nonexistent",
         "beancount-web-prod",
+        undefined,
         mockContext,
       );
 
@@ -1776,12 +2288,8 @@ describe("SubscriptionResolver", () => {
 
   describe("allTierQuotas", () => {
     it("is reachable anonymously through the real GraphQL schema", async () => {
-      const schema = await buildSchema({
-        resolvers: [SubscriptionResolver],
-        container: { get: () => resolver },
-      });
       const result = await graphql({
-        schema,
+        schema: await graphqlSchema,
         source: "query { allTierQuotas { tier } }",
         contextValue: { identity: undefined },
       });
@@ -1837,6 +2345,168 @@ describe("SubscriptionResolver", () => {
         maxCollaboratorsPerLedger: 1,
         maxDirectives: 1000,
       });
+    });
+  });
+  describe("previewPlanChange", () => {
+    const PREVIEW_QUERY = `query Preview($clientId: String!, $priceId: String!) {
+      previewPlanChange(clientId: $clientId, priceId: $priceId) {
+        kind
+        effect
+        refusal
+        currentPriceId
+        targetPriceId
+        currency
+        amountDueToday
+        creditApplied
+        nextAmount
+        nextChargeAt
+        effectiveAt
+        prorationDate
+        alternativePriceId
+        limitChanges { limit from to }
+        paymentMethod { brand last4 }
+      }
+    }`;
+
+    async function execute(identity: unknown) {
+      return graphql({
+        schema: await graphqlSchema,
+        source: PREVIEW_QUERY,
+        variableValues: {
+          clientId: "beancount-web-prod",
+          priceId: "price_1L9ccEEqsEqs2tLVbeBgHm9p",
+        },
+        contextValue: {
+          ...mockContext,
+          identity,
+          getCurrentIdentity: () => identity,
+        },
+      });
+    }
+
+    it("returns the server's classification and Stripe's amounts through GraphQL", async () => {
+      mockStripeService.previewPlanChange.mockResolvedValue({
+        kind: "TO_YEARLY",
+        effect: "IMMEDIATE",
+        refusal: null,
+        currentPriceId: "price_1RrSOGEqsEqs2tLVFnyB34qG",
+        targetPriceId: "price_1L9ccEEqsEqs2tLVbeBgHm9p",
+        currency: "usd",
+        amountDueToday: 9000,
+        creditApplied: 999,
+        nextAmount: 9999,
+        nextChargeAt: new Date("2027-10-17T12:00:00Z"),
+        effectiveAt: new Date("2026-10-17T12:00:00Z"),
+        prorationDate: 1792238400,
+        alternativePriceId: null,
+        limitChanges: [{ limit: "maxLedgers", from: 5, to: 5 }],
+        paymentMethod: { brand: "visa", last4: "4242" },
+      });
+
+      const result = await execute(mockContext.getCurrentIdentity());
+      expect(result.errors).toBeUndefined();
+      expect(result.data?.previewPlanChange).toMatchObject({
+        kind: "TO_YEARLY",
+        effect: "IMMEDIATE",
+        refusal: null,
+        amountDueToday: 9000,
+        creditApplied: 999,
+        nextChargeAt: "2027-10-17T12:00:00.000Z",
+        prorationDate: 1792238400,
+        paymentMethod: { brand: "visa", last4: "4242" },
+      });
+      expect(mockStripeService.previewPlanChange).toHaveBeenCalledWith(
+        "user-123",
+        "beancount-web-prod",
+        "price_1L9ccEEqsEqs2tLVbeBgHm9p",
+      );
+    });
+
+    it("refuses an OAuth credential before any Stripe work", async () => {
+      const result = await execute({
+        userId: "user-123",
+        method: "oauth",
+        scopes: new Set(["ledger.read", "ledger.write", "ledger.admin"]),
+      });
+
+      expect(result.errors?.[0]?.originalError).toMatchObject({
+        category: ErrorCategory.FORBIDDEN,
+      });
+      expect(result.data).toBeNull();
+      expect(mockStripeService.previewPlanChange).not.toHaveBeenCalled();
+    });
+  });
+  describe("changePlan", () => {
+    const CHANGE_MUTATION = `mutation Change($clientId: String!, $priceId: String!, $prorationDate: Int) {
+      changePlan(clientId: $clientId, priceId: $priceId, prorationDate: $prorationDate) {
+        status kind refusal message clientSecret hostedInvoiceUrl subscriptionId newTier currentPeriodEnd
+      }
+    }`;
+
+    async function execute(identity: unknown, prorationDate: number | null) {
+      return graphql({
+        schema: await graphqlSchema,
+        source: CHANGE_MUTATION,
+        variableValues: {
+          clientId: "beancount-web-prod",
+          priceId: "price_1L9ccEEqsEqs2tLVbeBgHm9p",
+          prorationDate,
+        },
+        contextValue: {
+          ...mockContext,
+          identity,
+          getCurrentIdentity: () => identity,
+        },
+      });
+    }
+
+    it("passes the previewed proration time through and returns the authentication handoff", async () => {
+      mockStripeService.changePlan.mockResolvedValue({
+        status: "REQUIRES_ACTION",
+        kind: "TO_YEARLY",
+        refusal: null,
+        message: "Your bank needs to approve this payment.",
+        clientSecret: "pi_1_secret",
+        hostedInvoiceUrl: "https://invoice.stripe.com/i/in_1",
+        subscriptionId: "sub_1",
+        newTier: "PREMIUM",
+        currentPeriodEnd: null,
+      });
+
+      const result = await execute(
+        mockContext.getCurrentIdentity(),
+        1792238400,
+      );
+
+      expect(result.errors).toBeUndefined();
+      expect(result.data?.changePlan).toMatchObject({
+        status: "REQUIRES_ACTION",
+        kind: "TO_YEARLY",
+        clientSecret: "pi_1_secret",
+        hostedInvoiceUrl: "https://invoice.stripe.com/i/in_1",
+      });
+      expect(mockStripeService.changePlan).toHaveBeenCalledWith(
+        "user-123",
+        "beancount-web-prod",
+        "price_1L9ccEEqsEqs2tLVbeBgHm9p",
+        1792238400,
+      );
+    });
+
+    it("refuses an OAuth credential before any Stripe work", async () => {
+      const result = await execute(
+        {
+          userId: "user-123",
+          method: "oauth",
+          scopes: new Set(["ledger.read", "ledger.write", "ledger.admin"]),
+        },
+        null,
+      );
+
+      expect(result.errors?.[0]?.originalError).toMatchObject({
+        category: ErrorCategory.FORBIDDEN,
+      });
+      expect(mockStripeService.changePlan).not.toHaveBeenCalled();
     });
   });
 });

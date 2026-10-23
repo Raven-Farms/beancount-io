@@ -16,6 +16,10 @@ const caEvents: Record<string, TranslationEntry> = {
     message: "Esdeveniments: {filtered} / {total}",
     description: "Count of filtered events out of total",
   },
+  "page.events.emptyType": {
+    message: "(sense tipus)",
+    description: "Label for an event whose type is empty, in the type filter",
+  },
   "page.events.noEventsFound": {
     message: "No s'han trobat esdeveniments",
     description: "Empty state title when no events exist",

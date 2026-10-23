@@ -7,6 +7,7 @@ import {
 } from "@/common/lib/search-params/tolerant";
 import { createLedgerHead } from "@/common/lib/seo/ledger-head";
 import { fileLoader } from "@/features/ledger-editor/file-editor/loader";
+import { requireSupportedBranch } from "@/features/ledger-editor/shared/lib/supported-branch";
 import { FileNotFound } from "@/features/ledger-editor/file-editor/not-found";
 
 const blobSearchSchema = z.object({
@@ -21,6 +22,7 @@ export const Route = createFileRoute(
   loader: fileLoader,
   notFoundComponent: FileNotFound,
   validateSearch: (search) => blobSearchSchema.parse(search),
+  beforeLoad: ({ params }) => requireSupportedBranch(params.branch),
   // A not-found boundary can keep the route's head snapshot; only a file
   // that loaded may describe itself.
   head: (args) =>

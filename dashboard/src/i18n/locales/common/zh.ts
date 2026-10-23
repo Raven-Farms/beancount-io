@@ -387,6 +387,11 @@ const zhCommon: Record<string, TranslationEntry> = {
     message: "下载",
     description: "Auto-generated from code usage",
   },
+  "common.downloadFailed": {
+    message: "无法下载文件，请重试。",
+    description:
+      "Error shown when the browser could not generate a file download",
+  },
   "common.moreActions": {
     message: "更多操作",
     description: "Label for dropdown menu with additional actions",
@@ -718,6 +723,11 @@ const zhCommon: Record<string, TranslationEntry> = {
     message: "未找到账户",
     description: "Message when no accounts match search",
   },
+  "component.suggestions.unavailable": {
+    message: "无法加载建议。你仍然可以直接输入。",
+    description:
+      "Notice under a form field when its suggestions failed to load; the field still accepts typed text",
+  },
   "component.sourceFileCombobox.placeholder": {
     message: "搜索文件...",
     description: "Placeholder for ledger file search",
@@ -1031,6 +1041,25 @@ const zhCommon: Record<string, TranslationEntry> = {
     message: "你已看过全部更新",
     description:
       "Description under the What's new heading when every release has been read",
+  },
+  "common.failedRenewal": {
+    message:
+      "我们无法从 {card} 扣取 {plan} 的费用。请在 {date} 前更新，以保留 {plan}。",
+    description:
+      "Banner while a renewal payment is past due: the card, the plan and the next retry date",
+  },
+  "common.failedRenewalUpdate": {
+    message: "更新付款方式",
+    description: "Button that opens the billing portal to fix a failed renewal",
+  },
+  "common.failedRenewalYourCard": {
+    message: "你的卡",
+    description: "Stands in for the card name when it is unknown",
+  },
+  "common.failedRenewalDismiss": {
+    message: "暂时关闭",
+    description:
+      "Accessible name of the button that hides the failed-renewal banner for this session",
   },
 };
 

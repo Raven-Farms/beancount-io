@@ -1,4 +1,6 @@
+import { merchantDateRangeText } from "./selectors/merchant-date-range";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useLedgerRootNames } from "@/common/hooks/use-ledger-root-names";
 import {
   ActivityIndicator,
   SectionList,
@@ -8,7 +10,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { useLocalSearchParams, Stack, useRouter } from "expo-router";
+import { Stack, useRouter } from "expo-router";
 import { NetworkStatus, useReactiveVar } from "@apollo/client";
 import {
   fontSizes,
@@ -19,7 +21,7 @@ import {
 } from "@/common/theme";
 import { useThemeStyle } from "@/common/hooks";
 import { useTranslations } from "@/common/hooks/use-translations";
-import { formatLedgerDateShort } from "@/common/date-format";
+import { useToday } from "@/common/hooks/use-today";
 import { LEADING_TEXT_ALIGN } from "@/common/rtl";
 import { ColorTheme } from "@/types/theme-props";
 import {
@@ -32,6 +34,8 @@ import { bindRouteLedger } from "@/common/route-ledger";
 import { ThemedRefreshControl } from "@/components/dashboard-scroll-view";
 import { AccountTypeIcon } from "@/components/account-type-icon";
 import { AmountText } from "@/components/amount-text";
+import { StaleDataBanner } from "@/components/stale-data-banner";
+import { isShowingStaleDataFromQueries } from "@/common/apollo/stale-data";
 import { HERO_AMOUNT_FIT } from "@/components/amount-text/hero-amount-fit";
 import {
   merchantRecurringOverridesVar,
@@ -39,9 +43,17 @@ import {
   toggleRecurringOverride,
 } from "@/common/vars/merchant-recurring-overrides";
 import { cadenceLabelKey } from "@/screens/merchants-screen/selectors/merchant-sections";
-import { resolveRecurringVerdict } from "@/screens/merchants-screen/selectors/resolve-recurring";
+import {
+  endedBeforeSeriesWindow,
+  resolveRecurringVerdict,
+} from "@/screens/merchants-screen/selectors/resolve-recurring";
 import { usePayeeRecurrence } from "@/screens/merchants-screen/use-payee-recurrence";
 import { EntryRow } from "@/screens/transactions-screen/entry-row";
+import {
+  journalListKey,
+  journalRowKeys,
+  mergeJournalPage,
+} from "@/screens/transactions-screen/utils/merge-journal-page";
 import { DateSectionHeader } from "@/screens/transactions-screen/date-section-header";
 import {
   DirectiveType,
@@ -53,8 +65,11 @@ import {
   groupToSections,
 } from "@/screens/transactions-screen/utils/transaction-display-utils";
 import { openTransactionDetail } from "@/screens/transaction-detail-screen/open-transaction-detail";
-import { toPlainSearchFilter } from "@/screens/transactions-screen/utils/plain-search-filter";
-import { filterExactPayee } from "./selectors/filter-exact-payee";
+import {
+  filterExactPayee,
+  parseSpellings,
+  exactPayeeFilter,
+} from "./selectors/filter-exact-payee";
 import {
   buildMerchantCurrencyTotalsBql,
   buildMerchantMetaBql,
@@ -62,8 +77,11 @@ import {
   mapMerchantCurrencyTotals,
   mapMerchantMeta,
 } from "./selectors/merchant-stats";
-import { formatMerchantTotal } from "./selectors/format-merchant-total";
+import { useLedgerReadContext } from "@/common/hooks/use-ledger-read-context";
+import { formatMerchantTotals } from "./selectors/format-merchant-total";
 import { MerchantDetailSkeleton } from "./merchant-detail-skeleton";
+import { merchantKey } from "@/common/merchant-key";
+import { useRouteParams } from "@/common/hooks/use-route-params";
 
 const PAGE_SIZE = 20;
 /** Free-text filter inflates pages; stop after this many raw fetches. */
@@ -234,21 +252,30 @@ const getStyles = (theme: ColorTheme) =>
     },
   });
 
-function MerchantDetailBody({ payee }: { payee: string }) {
+function MerchantDetailBody({
+  payee,
+  spellings,
+}: {
+  payee: string;
+  /** Every spelling the Merchants row merged, the displayed one first. */
+  spellings: readonly string[];
+}) {
   const ledgerId = useLedgerGuard();
   const router = useRouter();
   const styles = useThemeStyle(getStyles);
   const theme = useTheme().colorTheme;
   const { t, locale } = useTranslations();
+  const today = useToday();
   const overrides = useReactiveVar(merchantRecurringOverridesVar);
   const { detections, enoughHistory } = usePayeeRecurrence(ledgerId);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const pagesFetchedRef = useRef(1);
 
-  const metaBql = useMemo(() => buildMerchantMetaBql(payee), [payee]);
+  const metaBql = useMemo(() => buildMerchantMetaBql(spellings), [spellings]);
+  const { expenses, income } = useLedgerRootNames();
   const totalsBql = useMemo(
-    () => buildMerchantCurrencyTotalsBql(payee),
-    [payee],
+    () => buildMerchantCurrencyTotalsBql(spellings, { expenses, income }),
+    [spellings, expenses, income],
   );
 
   const {
@@ -274,7 +301,10 @@ function MerchantDetailBody({ payee }: { payee: string }) {
   // Quoted-and-escaped STRING literal: a bare needle makes the advanced-filter
   // lexer reject an apostrophe ("Lowe's") or a period ("Ethereum 2.0"), which
   // failed the journal while the BQL-driven header still loaded.
-  const journalFilter = useMemo(() => toPlainSearchFilter(payee), [payee]);
+  // Only this merchant's rows are paged: a free-text match on the payee also
+  // took longer names and narrations, and the 500-entry cap then cut the
+  // merchant's own rows off (w21/181).
+  const journalFilter = useMemo(() => exactPayeeFilter(spellings), [spellings]);
 
   const {
     data: journalData,
@@ -306,6 +336,14 @@ function MerchantDetailBody({ payee }: { payee: string }) {
     [metaData?.queryShell?.table, totalsData?.queryShell?.table],
   );
 
+  // Totals in currencies that share a symbol read by code, the ledger's own
+  // keeping it (w21/535).
+  const { primaryCurrency } = useLedgerReadContext(ledgerId!);
+  const totalLines = formatMerchantTotals(
+    stats?.totalsByCurrency ?? [],
+    primaryCurrency,
+  );
+
   const rawEntries = useMemo(
     () =>
       (journalData?.getLedgerJournal.data ||
@@ -313,9 +351,11 @@ function MerchantDetailBody({ payee }: { payee: string }) {
     [journalData?.getLedgerJournal.data],
   );
 
+  const rowKeys = useMemo(() => journalRowKeys(rawEntries), [rawEntries]);
+
   const transactions = useMemo(
-    () => filterExactPayee(rawEntries.filter(isJournalTransaction), payee),
-    [rawEntries, payee],
+    () => filterExactPayee(rawEntries.filter(isJournalTransaction), spellings),
+    [rawEntries, spellings],
   );
 
   const rawTotal = journalData?.getLedgerJournal.total;
@@ -329,21 +369,32 @@ function MerchantDetailBody({ payee }: { payee: string }) {
     [transactions, locale],
   );
 
-  const detection = detections.get(payee) ?? null;
+  const detection = detections.get(merchantKey(payee)) ?? null;
   const resolved = useMemo(
     () =>
       resolveRecurringVerdict(
         detection,
         overrideFor(overrides, ledgerId!, payee),
-        enoughHistory.has(payee),
+        enoughHistory.has(merchantKey(payee)),
+        endedBeforeSeriesWindow(stats?.lastDate, today),
       ),
-    [detection, overrides, ledgerId, payee, enoughHistory],
+    [detection, overrides, ledgerId, payee, enoughHistory, stats, today],
   );
+
+  // The list the query shows now, read when a page lands (w21/116).
+  const listKeyRef = useRef("");
+  listKeyRef.current = journalListKey(ledgerId ?? "", {
+    filter: journalFilter || undefined,
+  });
 
   const loadMore = useCallback(async () => {
     if (isLoadingMore || !hasMore || journalLoading || !ledgerId) {
       return;
     }
+    const requestedFor = listKeyRef.current;
+    // An entry added elsewhere shifted the pages; reload from the top, where
+    // it now sits (w21/035).
+    let listMoved = false;
     try {
       await fetchMore({
         variables: {
@@ -356,23 +407,32 @@ function MerchantDetailBody({ payee }: { payee: string }) {
           },
         },
         updateQuery: (prev, { fetchMoreResult }) => {
+          // Requested for a list no longer shown (w21/116).
+          if (listKeyRef.current !== requestedFor) return prev;
           if (!fetchMoreResult?.getLedgerJournal?.data) {
             return prev;
           }
+          const { data, overlapped } = mergeJournalPage(
+            prev.getLedgerJournal.data || [],
+            fetchMoreResult.getLedgerJournal.data,
+            {
+              loaded: prev.getLedgerJournal.total,
+              page: fetchMoreResult.getLedgerJournal.total,
+            },
+          );
+          listMoved = overlapped;
           return {
             ...prev,
             getLedgerJournal: {
               ...prev.getLedgerJournal,
-              data: [
-                ...(prev.getLedgerJournal.data || []),
-                ...fetchMoreResult.getLedgerJournal.data,
-              ],
+              data,
               total: fetchMoreResult.getLedgerJournal.total,
             },
           };
         },
       });
       pagesFetchedRef.current += 1;
+      if (listMoved) void refetchJournal().catch(() => undefined);
     } catch (err) {
       console.error("Error loading more merchant transactions:", err);
     }
@@ -383,6 +443,7 @@ function MerchantDetailBody({ payee }: { payee: string }) {
     ledgerId,
     rawEntries.length,
     fetchMore,
+    refetchJournal,
     journalFilter,
   ]);
 
@@ -437,7 +498,9 @@ function MerchantDetailBody({ payee }: { payee: string }) {
   const isInitialLoading = statsLoading || journalInitialLoading;
   // Stats and journal are independent; a journal failure must not hide stats.
   const fatalError = !stats && (metaError || totalsError);
-  const listError = journalError;
+  // A refresh that failed over rows already loaded keeps them, under the stale
+  // banner; only a failed first load has nothing to list (w21/081, w21/575).
+  const listError = journalData ? undefined : journalError;
 
   const cadenceKey = cadenceLabelKey(resolved.cadence);
   // Label the setting, not the flip action — Switch already announces on/off.
@@ -469,7 +532,7 @@ function MerchantDetailBody({ payee }: { payee: string }) {
         </View>
       ) : null}
 
-      {stats?.totalsByCurrency.map((row) => (
+      {stats?.totalsByCurrency.map((row, index) => (
         // A total must never ellipsize — "51,230.00…" loses its currency at
         // accessibility text sizes. AmountText caps the scale like every other
         // amount, and the hero fit shrinks a still-too-wide figure instead.
@@ -478,16 +541,19 @@ function MerchantDetailBody({ payee }: { payee: string }) {
           style={styles.totalLine}
           {...HERO_AMOUNT_FIT}
         >
-          {formatMerchantTotal(row)}
+          {totalLines[index]}
         </AmountText>
       ))}
 
       {stats?.firstDate && stats?.lastDate ? (
         <Text style={styles.dateRange}>
-          {t("merchantDetailDateRange", {
-            first: formatLedgerDateShort(stats.firstDate, locale),
-            last: formatLedgerDateShort(stats.lastDate, locale),
-          })}
+          {merchantDateRangeText(
+            stats.firstDate,
+            stats.lastDate,
+            today,
+            locale,
+            t,
+          )}
         </Text>
       ) : null}
 
@@ -515,37 +581,33 @@ function MerchantDetailBody({ payee }: { payee: string }) {
     </View>
   );
 
+  // A failed header query used to drop the header silently whenever the rows
+  // loaded, hiding the count, the totals and the Recurring toggle (w21/032).
+  // A whole translated sentence, never transport text (w21/118).
+  const statsError = (
+    <View style={styles.errorContainer}>
+      <Text style={styles.errorText}>{t("merchantDetailLoadError")}</Text>
+      <TouchableOpacity
+        style={styles.retryButton}
+        onPress={onRetry}
+        accessibilityRole="button"
+        accessibilityLabel={t("merchantDetailRetry")}
+      >
+        <Text style={styles.retryText}>{t("merchantDetailRetry")}</Text>
+      </TouchableOpacity>
+    </View>
+  );
+
   const listEmpty = () => {
     if (isInitialLoading) {
       return <MerchantDetailSkeleton />;
     }
-    if (fatalError) {
-      const message =
-        (metaError ?? totalsError)?.message ?? t("merchantDetailLoadError");
-      return (
-        <View style={styles.errorContainer}>
-          <Text style={styles.errorText}>
-            {t("merchantDetailLoadError")}
-            {message}
-          </Text>
-          <TouchableOpacity
-            style={styles.retryButton}
-            onPress={onRetry}
-            accessibilityRole="button"
-            accessibilityLabel={t("merchantDetailRetry")}
-          >
-            <Text style={styles.retryText}>{t("merchantDetailRetry")}</Text>
-          </TouchableOpacity>
-        </View>
-      );
-    }
+    // The header already says why the stats failed (`statsError`).
+    if (fatalError) return null;
     if (listError) {
       return (
         <View style={styles.errorContainer}>
-          <Text style={styles.errorText}>
-            {t("merchantDetailLoadError")}
-            {listError.message}
-          </Text>
+          <Text style={styles.errorText}>{t("merchantDetailLoadError")}</Text>
           <TouchableOpacity
             style={styles.retryButton}
             onPress={onRetry}
@@ -573,12 +635,20 @@ function MerchantDetailBody({ payee }: { payee: string }) {
 
   return (
     <View style={styles.container} testID="merchant-detail">
+      {isShowingStaleDataFromQueries([
+        { data: journalData, error: journalError },
+      ]) ? (
+        <StaleDataBanner />
+      ) : null}
       <SectionList
         style={styles.list}
         contentContainerStyle={styles.listContent}
         sections={listError ? [] : sections}
         keyExtractor={(item, index) =>
-          `${isJournalTransaction(item) ? item.entry_hash : "row"}:${index}`
+          // Unique per row: identical twins share a hash (w21/419).
+          isJournalTransaction(item)
+            ? (rowKeys.get(item) ?? item.entry_hash)
+            : `row:${index}`
         }
         renderItem={({ item }) => (
           <EntryRow entry={item} onPress={() => handleEntryPress(item)} />
@@ -587,7 +657,7 @@ function MerchantDetailBody({ payee }: { payee: string }) {
           <DateSectionHeader displayDate={section.displayDate} />
         )}
         stickySectionHeadersEnabled={false}
-        ListHeaderComponent={fatalError ? null : listHeader}
+        ListHeaderComponent={fatalError ? statsError : listHeader}
         ListEmptyComponent={listEmpty}
         ListFooterComponent={
           isLoadingMore ? (
@@ -616,13 +686,19 @@ function MerchantDetailBody({ payee }: { payee: string }) {
 
 function MerchantDetailRoute({
   payee,
+  otherSpellings,
   ledger,
 }: {
   payee: string;
-  ledger?: string | string[];
+  otherSpellings: readonly string[];
+  ledger?: string;
 }) {
   const { t } = useTranslations();
   const binding = bindRouteLedger(ledger, useLedgerGuard());
+  const spellings = useMemo(
+    () => [payee, ...otherSpellings],
+    [payee, otherSpellings],
+  );
 
   if (binding.status === "mismatch") {
     // A revived merchant from another ledger: its stats and journal would be
@@ -635,18 +711,23 @@ function MerchantDetailRoute({
       />
     );
   }
-  return <MerchantDetailBody payee={payee} />;
+  return <MerchantDetailBody payee={payee} spellings={spellings} />;
 }
 
 export function MerchantDetailScreen() {
   // `ledger` binds the entry to the ledger it was opened for; see
   // `common/route-ledger` for why the ambient selection is not enough.
-  const params = useLocalSearchParams<{
-    payee?: string | string[];
-    ledger?: string | string[];
+  const params = useRouteParams<{
+    payee?: string;
+    otherSpellings?: string;
+    ledger?: string;
   }>();
   const raw = params.payee;
   const payee = Array.isArray(raw) ? raw[0] : raw;
+  const otherSpellings = useMemo(
+    () => parseSpellings(params.otherSpellings),
+    [params.otherSpellings],
+  );
   const theme = useTheme().colorTheme;
 
   if (!payee) {
@@ -666,7 +747,11 @@ export function MerchantDetailScreen() {
           contentStyle: { backgroundColor: theme.white },
         }}
       />
-      <MerchantDetailRoute payee={payee} ledger={params.ledger} />
+      <MerchantDetailRoute
+        payee={payee}
+        otherSpellings={otherSpellings}
+        ledger={params.ledger}
+      />
     </LedgerGuard>
   );
 }

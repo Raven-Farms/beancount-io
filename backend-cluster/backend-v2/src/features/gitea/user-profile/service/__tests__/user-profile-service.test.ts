@@ -140,6 +140,27 @@ describe("UserProfileService", () => {
     },
   );
 
+  // w23/038: the host answers more than 50 with 50, which read as the last
+  // page; the refusal must not be swallowed into the empty upstream-failure
+  // page these reads return.
+  it.each([
+    ["getUserFollowers", "userListFollowers"],
+    ["getUserFollowing", "userListFollowing"],
+    ["getUserStarredRepos", "userListStarred"],
+  ] as const)(
+    "%s refuses a limit above 50 before the host",
+    async (method, upstream) => {
+      await expect(service[method]("testuser", 1, 51)).rejects.toMatchObject({
+        category: "BAD_USER_INPUT",
+        message: "limit must be at most 50",
+      });
+      await expect(service[method]("testuser", 0, 10)).rejects.toMatchObject({
+        category: "BAD_USER_INPUT",
+      });
+      expect(mockGiteaClient.users[upstream]).not.toHaveBeenCalled();
+    },
+  );
+
   describe("getUserProfile", () => {
     it("should fetch and transform user profile successfully", async () => {
       const mockUser = createMockGiteaUser();
@@ -945,6 +966,64 @@ describe("UserProfileService", () => {
         { page: 2, limit: 30 },
         { format: "json" },
       );
+    });
+
+    // w21/130: the admin list is public-only, so a viewer's own private
+    // ledger never showed under Starred.
+    describe("the viewer's own list", () => {
+      const ownClient = (login: string) => ({
+        user: {
+          userGetCurrent: jest.fn().mockResolvedValue({ data: { login } }),
+          userCurrentListStarred: jest.fn().mockResolvedValue({
+            data: [
+              createMockGiteaRepository({
+                name: "books",
+                full_name: "testuser/books",
+                private: true,
+              }),
+            ],
+          }),
+        },
+      });
+
+      it("reads it through the viewer's own client, private stars included", async () => {
+        const client = ownClient("TestUser");
+        mockGetUserApiClient.mockResolvedValue(client);
+
+        const result = await service.getUserStarredRepos(
+          "testuser",
+          2,
+          30,
+          "viewer-1",
+        );
+
+        expect(mockGetUserApiClient).toHaveBeenCalledWith("viewer-1");
+        expect(client.user.userCurrentListStarred).toHaveBeenCalledWith(
+          { page: 2, limit: 30 },
+          { format: "json" },
+        );
+        expect(mockGiteaClient.users.userListStarred).not.toHaveBeenCalled();
+        expect(result.repositories.map((r) => r.fullName)).toEqual([
+          "testuser/books",
+        ]);
+      });
+
+      it("keeps the admin public list for someone else's profile", async () => {
+        const client = ownClient("someone-else");
+        mockGetUserApiClient.mockResolvedValue(client);
+        mockGiteaClient.users.userListStarred.mockResolvedValue({
+          data: [],
+        } as any);
+
+        await service.getUserStarredRepos("testuser", 1, 20, "viewer-1");
+
+        expect(client.user.userCurrentListStarred).not.toHaveBeenCalled();
+        expect(mockGiteaClient.users.userListStarred).toHaveBeenCalledWith(
+          "testuser",
+          { page: 1, limit: 20 },
+          { format: "json" },
+        );
+      });
     });
 
     it("should transform repositories correctly", async () => {

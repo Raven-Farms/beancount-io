@@ -19,6 +19,7 @@ describe("selectBalanceDisplay", () => {
       kind: "units",
       units: { currency: "RGAGX", number: 597.748, scale: 3 },
       value: { amount: 48471.38532, basis: "market" },
+      notInTotal: [],
     });
   });
 
@@ -38,6 +39,7 @@ describe("selectBalanceDisplay", () => {
       kind: "units",
       units: { currency: "STARTUP", number: 1000, scale: 0 },
       value: { amount: 1000, basis: "cost" },
+      notInTotal: [],
     });
   });
 
@@ -48,6 +50,7 @@ describe("selectBalanceDisplay", () => {
       kind: "units",
       units: { currency: "RGAGX", number: 597.748, scale: 3 },
       value: { amount: 48471.38532, basis: null },
+      notInTotal: [],
     });
   });
 
@@ -57,6 +60,7 @@ describe("selectBalanceDisplay", () => {
       kind: "units",
       units: { currency: "VACHR", number: -13, scale: 0 },
       value: null,
+      notInTotal: [],
     };
     expect(selectBalanceDisplay(vacation, vacation, "USD")).toEqual(expected);
     // The valued read alone is enough: the units read may not have landed.
@@ -130,12 +134,23 @@ describe("selectBalanceDisplay", () => {
 });
 
 describe("notInTotalOf", () => {
-  it("excludes the key the total is read from, including the USD fallback", () => {
-    // resolveCurrencyBalance falls back to USD when the currency is absent, so
-    // USD is part of that total and must not also be reported as left out.
+  it("discloses USD under a EUR total, which no longer reads it (w21/058)", () => {
     expect(notInTotalOf({ USD: "5", GLD: "2" }, "EUR")).toEqual([
+      { currency: "USD", number: 5, scale: 0 },
       { currency: "GLD", number: 2, scale: 0 },
     ]);
+    expect(notInTotalOf({ EUR: "200.00", USD: "5" }, "EUR")).toEqual([
+      { currency: "USD", number: 5, scale: 0 },
+    ]);
+  });
+
+  it("reads a lone USD balance under EUR in its own units", () => {
+    expect(selectBalanceDisplay({ USD: "50.00" }, {}, "EUR")).toEqual({
+      kind: "units",
+      units: { currency: "USD", number: 50, scale: 2 },
+      value: null,
+      notInTotal: [],
+    });
   });
 
   it("ignores zero entries", () => {
@@ -164,5 +179,69 @@ describe("amountIn", () => {
   it("reads a missing currency as zero, without the USD fallback", () => {
     expect(amountIn({ USD: "5" }, "RGAGX")).toEqual({ number: 0, scale: 0 });
     expect(amountIn(undefined, "USD")).toEqual({ number: 0, scale: 0 });
+  });
+});
+
+// w21/278: a commodity held with and without a cost basis lost its value.
+describe("a commodity held with and without a cost", () => {
+  const rewards = { USD: "5000", ETH: "0.05" };
+  const held = { ETH: "2.05" };
+
+  it("keeps the converted value and names the cost-less remainder", () => {
+    expect(selectBalanceDisplay(rewards, held, "USD", () => "market")).toEqual({
+      kind: "units",
+      units: { currency: "ETH", number: 2.05, scale: 2 },
+      value: { amount: 5000, basis: "market" },
+      notInTotal: [{ currency: "ETH", number: 0.05, scale: 2 }],
+    });
+  });
+
+  it("says nothing extra when nothing was converted", () => {
+    const display = selectBalanceDisplay({ ETH: "2.05" }, held, "USD");
+    expect(display).toEqual({
+      kind: "units",
+      units: { currency: "ETH", number: 2.05, scale: 2 },
+      value: null,
+      notInTotal: [],
+    });
+  });
+});
+
+// w21/555: 0.5 BTC {30000 USD} and 0.5 BTC {28000 EUR} read "1.0 BTC" with no
+// value and no note, though the Assets total includes the USD part.
+describe("selectBalanceDisplay for a commodity bought in two currencies", () => {
+  const display = () =>
+    selectBalanceDisplay(
+      { USD: "30000.00", EUR: "14000.00" },
+      { BTC: "1.0" },
+      "USD",
+      () => "market",
+    );
+
+  it("keeps the operating-currency value of the part it converted", () => {
+    const shown = display();
+    expect(shown.kind).toBe("units");
+    if (shown.kind !== "units") return;
+    expect(shown.units).toEqual({ currency: "BTC", number: 1, scale: 1 });
+    expect(shown.value).toEqual({ amount: 30000, basis: "market" });
+  });
+
+  it("names the other currency's part as not in the total", () => {
+    const shown = display();
+    expect(shown.kind === "units" ? shown.notInTotal : []).toEqual([
+      { currency: "EUR", number: 14000, scale: 2 },
+    ]);
+  });
+
+  it("stays plain units when nothing converted", () => {
+    const shown = selectBalanceDisplay(
+      { EUR: "14000.00" },
+      { BTC: "0.5" },
+      "USD",
+    );
+    expect(shown.kind).toBe("units");
+    if (shown.kind !== "units") return;
+    expect(shown.value).toBe(null);
+    expect(shown.notInTotal).toEqual([]);
   });
 });

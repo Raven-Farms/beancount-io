@@ -17,6 +17,11 @@ import { getBasicAuthHeader } from "@/features/auth/utils/auth";
 import { delayRun } from "@/shared/execute";
 import { generateLedgerPassword } from "@/features/auth/utils/ledger-password";
 import {
+  PasswordPolicyError,
+  passwordPolicyViolation,
+} from "@/features/auth/utils/password-policy";
+import type { IsPwnedPassword } from "@/features/auth/operations/is-pwned-password";
+import {
   assertValidUsername,
   usernameFromEmail,
 } from "@/features/auth/utils/username-rule";
@@ -24,17 +29,37 @@ import { createLedger } from "@/features/ledger/operations/create-ledger";
 import { defaultLedgerTemplate } from "@/features/ledger/utils/ledger-template";
 import { logger } from "@/shared/logger";
 import { lock, LOCK_KEYS } from "@/shared/lock";
-import { checkRateLimit } from "@/shared/rate-limiter";
-import { incrementInWindow } from "@/foundation/redis/redis-counter";
-import { CACHE_KEYS } from "@/shared/cache";
+import {
+  enforceSignupRequestLimits,
+  consumeMailDelivery,
+  enforceSignupOtpIpLimits,
+  enforceSignupOtpAccountLimits,
+} from "@/features/auth/operations/auth-mail-limits";
+import {
+  clearPasswordFailures,
+  verifyPasswordWithinBudget,
+} from "@/features/auth/operations/password-failure-budget";
+import {
+  enforcePasswordIpLimits,
+  enforcePasswordRequestLimits,
+} from "@/features/auth/operations/password-request-limits";
+import {
+  enforceMailRequestLimits,
+  enforceRecoveryProofLimits,
+  enforceVerifiedRecoveryAccountLimit,
+} from "@/features/auth/operations/auth-mail-limits";
+import { consumeSignInRecoveryProof } from "@/features/auth/operations/sign-in-recovery-proof";
+import type { IAuthMailService } from "./auth-mail-service";
+import { verifyPasswordWithCapacity } from "@/features/auth/utils/password-verifier";
+import type { User } from "@/features/auth/data/user-model/types";
+import { UNKNOWN_CLIENT_ADDRESS } from "@/server/client-address";
 import { secureStringEqual } from "@/features/auth/utils/secure-string-equal";
 import { isSignupAllowed } from "@/features/auth/utils/signup-policy";
+import { validateAuthReturnPath } from "@/features/auth/utils/auth-return-path";
 import bcrypt from "bcryptjs";
 import {
   renderWelcomeHtml,
   renderWelcomeText,
-  renderPasswordResetHtml,
-  renderPasswordResetText,
   renderSignupOtpHtml,
   renderSignupOtpText,
 } from "@/shared/email-templates";
@@ -65,11 +90,21 @@ type CreateSignUpSessionParams = {
 export type FinishSignupSessionParams = {
   sessionId: string;
   otp: string;
+  ip?: string;
 };
 
 export type LoginUserParams = {
   email: string;
   password: string;
+  ip?: string;
+};
+
+export type SignInRecoveryParams = {
+  email: string;
+  challengeId: string;
+  code: string;
+  password: string;
+  ip?: string;
 };
 
 export type SignInWithOneTimeTokenParams = {
@@ -81,9 +116,8 @@ export type AuthResponse = {
   expireAt: Date;
 };
 
-const MAX_PASSWORD_LENGTH = 128;
-const SIGNUP_OTP_ATTEMPT_WINDOW_MS = 10 * 60 * 1000;
-const SIGNUP_OTP_MAX_ATTEMPTS = 5;
+/** Sign-in's input cap; new passwords are held to `password-policy.ts`. */
+const MAX_LOGIN_PASSWORD_LENGTH = 128;
 
 const DISPOSABLE_EMAIL_DOMAINS = new Set([
   "mailinator.com",
@@ -127,6 +161,24 @@ const DISPOSABLE_EMAIL_DOMAINS = new Set([
 export interface IAuthService {
   registerUser(params: RegisterUserParams): Promise<AuthResponse>;
   loginUser(params: LoginUserParams): Promise<AuthResponse>;
+  requestSignInRecovery(
+    email: string,
+    ip?: string,
+    returnTo?: string,
+  ): Promise<string>;
+  signInWithEmailCode(params: SignInRecoveryParams): Promise<AuthResponse>;
+  /**
+   * The account an email + password names, held to the account's
+   * request limits and wrong-password budget. Every password sign-in goes
+   * through it (dashboard, Git basic auth), sharing both budgets. Throws
+   * `BadUserInputError` for wrong credentials and `RateLimitedError` for a
+   * spent budget.
+   */
+  verifyPasswordCredentials(
+    email: string,
+    password: string,
+    ip?: string,
+  ): Promise<User>;
   signInWithMagicLinkToken(
     params: SignInWithOneTimeTokenParams,
   ): Promise<AuthResponse>;
@@ -153,6 +205,7 @@ export class AuthService implements IAuthService {
       IModels,
       | "user"
       | "jwt"
+      | "oauthGrant"
       | "magicLinkToken"
       | "emailToken"
       | "signupOtpSession"
@@ -165,7 +218,10 @@ export class AuthService implements IAuthService {
     private readonly config: Pick<
       AppConfig,
       "favaApi" | "dashboard" | "gitea" | "signup" | "passwordAuthEnabled"
-    >,
+    > &
+      Partial<Pick<AppConfig, "jwt">>,
+    private readonly isPwnedPassword: IsPwnedPassword,
+    private readonly enqueueAuthMail?: IAuthMailService["enqueue"],
   ) {}
 
   /**
@@ -223,6 +279,19 @@ export class AuthService implements IAuthService {
       );
     }
   }
+
+
+  /** The breach lookup goes last, so a locally refused password never leaves. */
+  private assertAcceptableNewPassword = async (
+    password: string,
+    identifiers: readonly (string | null | undefined)[],
+  ): Promise<void> => {
+    const violation = passwordPolicyViolation(password, identifiers);
+    if (violation) throw new PasswordPolicyError(violation);
+    if (await this.isPwnedPassword(password)) {
+      throw new PasswordPolicyError("BREACHED");
+    }
+  };
 
   public registerUser = async (
     params: RegisterUserParams,
@@ -306,34 +375,69 @@ export class AuthService implements IAuthService {
     return result;
   };
 
-  public loginUser = async (params: LoginUserParams): Promise<AuthResponse> => {
+  public verifyPasswordCredentials = async (
+    email: string,
+    password: string,
+    ip = UNKNOWN_CLIENT_ADDRESS,
+  ): Promise<User> => {
     this.assertPasswordAuthEnabled();
-    const { email, password } = params;
+    email = email.trim().toLowerCase();
+    // Count every attempt, including successful and malformed credentials,
+    // before any account lookup or expensive comparison work.
+    await enforcePasswordRequestLimits(email, ip);
     // Reject overlong passwords before touching the database or bcrypt.
     // Use the same generic error as wrong password to avoid leaking signal.
-    if (password.length > MAX_PASSWORD_LENGTH) {
+    if (password.length > MAX_LOGIN_PASSWORD_LENGTH) {
       throw new BadUserInputError("Invalid email or password");
     }
-    const user = await this.models.user.getByMail(this.db, email);
-    if (!user) {
-      // Use same generic error as wrong password to prevent email enumeration
-      throw new BadUserInputError("Invalid email or password");
-    }
-    const isPasswordVerified = await this.models.user.verifyPassword(
-      this.db,
-      user.id,
-      password,
-    );
-    if (!isPasswordVerified) {
-      throw new BadUserInputError("Invalid email or password");
-    }
-    if (user.isBlocked) {
-      throw new ForbiddenError(
-        "User is banned. If you need help, please contact https://beancount.io/tg.",
+    let user: User | null = null;
+    // Per account, across addresses (w0/m7). An unknown account is counted and
+    // answered like a wrong password, so neither says whether it exists.
+    const verified = await verifyPasswordWithinBudget(email, async () => {
+      user = await this.models.user.getByMail(this.db, email);
+      const account = user;
+      return verifyPasswordWithCapacity(
+        password,
+        account?.password
+          ? () => this.models.user.verifyPassword(this.db, account.id, password)
+          : undefined,
       );
+    });
+    if (!verified || !user) {
+      throw new BadUserInputError("Invalid email or password");
     }
-    const { token, expireAt } = await this.models.jwt.create(this.db, user.id);
-    return { token, expireAt };
+    return user;
+  };
+
+  public loginUser = async (params: LoginUserParams): Promise<AuthResponse> => {
+    const user = await this.verifyPasswordCredentials(
+      params.email,
+      params.password,
+      params.ip,
+    );
+    return this.issuePasswordSession(user);
+  };
+
+  private issuePasswordSession = async (user: User): Promise<AuthResponse> => {
+    // Resetting the password locks this same row before revoking sessions.
+    // Keep revalidation and issuance together so a delayed old-password proof
+    // cannot create a session after that reset has completed.
+    return this.db.transaction(async (tx) => {
+      const current = await this.models.user.getByIdForUpdate(tx, user.id);
+      if (
+        !current?.password ||
+        !user.password ||
+        !secureStringEqual(current.password, user.password)
+      ) {
+        throw new BadUserInputError("Invalid email or password");
+      }
+      if (current.isBlocked) {
+        throw new ForbiddenError(
+          "User is banned. If you need help, please contact https://beancount.io/tg.",
+        );
+      }
+      return this.models.jwt.create(tx, current.id);
+    });
   };
 
   public signInWithMagicLinkToken = async (
@@ -400,39 +504,76 @@ export class AuthService implements IAuthService {
     ip?: string,
   ): Promise<void> => {
     this.assertPasswordAuthEnabled();
-    // Rate limit: 2 requests per minute per email
-    checkRateLimit(`forgot-password:${email}`, {
-      windowMs: 60000,
-      max: 2,
-      message:
-        "Too many password reset requests for this email. Please try again later.",
-    });
+    await this.queueRecoveryMail(email, ip, "reset");
+  };
 
-    // Also rate limit by IP if provided (2 requests per minute per IP)
-    if (ip && ip !== "unknown") {
-      checkRateLimit(`forgot-password-ip:${ip}`, {
-        windowMs: 60000,
-        max: 2,
-        message: "Too many password reset requests. Please try again later.",
-      });
-    }
+  public requestSignInRecovery = async (
+    email: string,
+    ip?: string,
+    returnTo?: string,
+  ): Promise<string> => {
+    this.assertPasswordAuthEnabled();
+    return this.queueRecoveryMail(email, ip, "sign-in-recovery", returnTo);
+  };
 
+  private queueRecoveryMail = async (
+    email: string,
+    ip: string | undefined,
+    kind: "reset" | "sign-in-recovery",
+    returnTo?: string,
+  ): Promise<string> => {
+    email = email.trim().toLowerCase();
+    await enforceMailRequestLimits(email, ip ?? UNKNOWN_CLIENT_ADDRESS);
+    if (!z.email().max(254).safeParse(email).success)
+      throw new BadUserInputError("Email is invalid");
+    const next = validateAuthReturnPath(returnTo);
+    if (!this.enqueueAuthMail)
+      throw new ServiceUnavailableError("Email delivery", 5);
+    // Durable enqueue is identical for registered and unknown addresses. The
+    // worker owns account lookup, delivery suppression and provider retries.
+    return next === undefined
+      ? this.enqueueAuthMail(email, kind)
+      : this.enqueueAuthMail(email, kind, next);
+  };
+
+  public signInWithEmailCode = async (
+    params: SignInRecoveryParams,
+  ): Promise<AuthResponse> => {
+    this.assertPasswordAuthEnabled();
+    const email = params.email.trim().toLowerCase();
+    const ip = params.ip ?? UNKNOWN_CLIENT_ADDRESS;
+    await enforcePasswordIpLimits(ip);
+    await enforceRecoveryProofLimits(params.challengeId, ip);
+    const invalid = () =>
+      new BadUserInputError("Invalid email, verification code or password");
+    if (
+      params.password.length > MAX_LOGIN_PASSWORD_LENGTH ||
+      params.challengeId.length > 128 ||
+      !/^\d{6}$/.test(params.code)
+    )
+      throw invalid();
+    // Spend before bcrypt: each ownership proof authorizes exactly one password
+    // attempt, including a wrong password. It never resets request-volume keys.
+    const userId = await consumeSignInRecoveryProof(
+      email,
+      params.challengeId,
+      params.code,
+      this.config.jwt?.secret ?? "",
+    );
+    if (!userId) throw invalid();
+    await enforceVerifiedRecoveryAccountLimit(email);
     const user = await this.models.user.getByMail(this.db, email);
-    if (!user) {
-      // Silent success — do not reveal whether the email is registered (prevents email enumeration)
-      return;
-    }
-    const { token } = await this.models.emailToken.regenerateToken(user.id);
-    const link = `${this.config.dashboard.url}/auth/reset-password/?token=${token}`;
-    logger.debug(`sending out password reset email ${link}`);
-
-    const resetParams = { resetLink: link };
-    await this.sendgrid.sendMail({
-      to: email,
-      subject: "Reset your Password",
-      html: renderPasswordResetHtml(resetParams),
-      text: renderPasswordResetText(resetParams),
-    });
+    const verified = await verifyPasswordWithCapacity(
+      params.password,
+      user?.id === userId && user.password
+        ? () =>
+            this.models.user.verifyPassword(this.db, user.id, params.password)
+        : undefined,
+    );
+    if (!verified || !user || user.id !== userId) throw invalid();
+    const session = await this.issuePasswordSession(user);
+    await clearPasswordFailures(email);
+    return session;
   };
 
   public validateEmailToken = async (token: string): Promise<boolean> => {
@@ -457,30 +598,35 @@ export class AuthService implements IAuthService {
       throw new BadUserInputError("Invalid or expired token");
     }
 
-    if (newPassword.length < 8) {
-      throw new BadUserInputError(
-        "Please use at least 8 characters as the password",
-      );
-    }
-    if (newPassword.length > MAX_PASSWORD_LENGTH) {
-      throw new BadUserInputError(
-        `Password must be at most ${MAX_PASSWORD_LENGTH} characters long`,
-      );
-    }
-
     const user = await this.models.user.getById(this.db, emailToken.userId);
     if (!user) {
       throw new NotFoundError("User", emailToken.userId);
     }
+    // Before the token is spent, so a refused password can be retried.
+    await this.assertAcceptableNewPassword(newPassword, [
+      user.email,
+      user.ledger_username,
+    ]);
 
     // Consume the token FIRST to prevent reuse (security: if password update fails, token is already consumed)
-    await this.models.emailToken.findOneAndDelete(token);
+    const consumed = await this.models.emailToken.findOneAndDelete(token);
+    if (!consumed || consumed.userId !== emailToken.userId) {
+      throw new BadUserInputError("Invalid or expired token");
+    }
 
-    await this.models.user.updatePassword(
-      this.db,
-      emailToken.userId,
-      newPassword,
-    );
+    // A reset ends every session and OAuth grant the old password issued, this
+    // browser's included: the user may be resetting because someone else holds
+    // one. All or nothing, so a reset never reports success with a grant left.
+    await this.db.transaction(async (tx) => {
+      await this.models.user.updatePassword(tx, emailToken.userId, newPassword);
+      await this.models.jwt.deleteByUserId(tx, emailToken.userId);
+      await this.models.oauthGrant.revokeAllForUser(tx, emailToken.userId);
+      // Other delivered links must not survive a completed password change.
+      // Failure aborts the password/session transaction; a fresh link can retry.
+      await this.models.emailToken.deleteByUserId(emailToken.userId);
+    });
+    // Whoever reset the password holds the account's email; let them sign in.
+    await clearPasswordFailures(user.email);
   };
 
   public createSignUpSession = async (
@@ -525,23 +671,7 @@ export class AuthService implements IAuthService {
       throw new BadUserInputError("Email is invalid");
     }
 
-    // Rate limit: 5 signup requests per hour per email
-    checkRateLimit(`signup:${normalizedEmail}`, {
-      windowMs: 60 * 60 * 1000,
-      max: 5,
-      message:
-        "Too many signup attempts for this email. Please try again later.",
-    });
-
-    // Rate limit: 10 signup requests per hour per IP
-    if (ip && ip !== "unknown") {
-      checkRateLimit(`signup-ip:${ip}`, {
-        windowMs: 60 * 60 * 1000,
-        max: 10,
-        message:
-          "Too many signup attempts from your network. Please try again later.",
-      });
-    }
+    await enforceSignupRequestLimits(normalizedEmail, ip);
 
     // After the rate limits, so refused addresses count against them too.
     this.assertSignupAllowed(normalizedEmail);
@@ -550,17 +680,6 @@ export class AuthService implements IAuthService {
     if (domainPart && DISPOSABLE_EMAIL_DOMAINS.has(domainPart)) {
       throw new BadUserInputError(
         "Disposable email addresses are not allowed. Please use a permanent email address.",
-      );
-    }
-
-    if (password.length < 8) {
-      throw new BadUserInputError(
-        "Password must be at least 8 characters long",
-      );
-    }
-    if (password.length > MAX_PASSWORD_LENGTH) {
-      throw new BadUserInputError(
-        `Password must be at most ${MAX_PASSWORD_LENGTH} characters long`,
       );
     }
 
@@ -590,6 +709,22 @@ export class AuthService implements IAuthService {
       if (existingUser) {
         throw new ConflictError("Username", usernameToUse);
       }
+    }
+
+    // After the cheap checks, so a sign-up refused for them never looks it up.
+    await this.assertAcceptableNewPassword(password, [
+      normalizedEmail,
+      usernameToUse,
+    ]);
+
+    // A suppressed resend must leave the existing code and its chosen signup
+    // credentials intact. Returning that session for a new submission could
+    // bind its verification to a different person's password or profile.
+    if (!(await consumeMailDelivery(normalizedEmail))) {
+      throw new RateLimitedError(
+        60,
+        "Please wait before requesting another verification email.",
+      );
     }
 
     // Hash before storing in Redis so plaintext password never leaves the service layer
@@ -624,6 +759,7 @@ export class AuthService implements IAuthService {
   ): Promise<AuthResponse> => {
     this.assertPasswordAuthEnabled();
     const { sessionId, otp } = params;
+    await enforceSignupOtpIpLimits(params.ip || UNKNOWN_CLIENT_ADDRESS);
 
     const session =
       await this.models.signupOtpSession.getSessionById(sessionId);
@@ -631,7 +767,7 @@ export class AuthService implements IAuthService {
       throw new BadUserInputError("Invalid or expired session");
     }
 
-    await this.consumeSignupOtpAttempt(session.email);
+    await enforceSignupOtpAccountLimits(session.email, sessionId);
 
     if (!secureStringEqual(session.otp, otp)) {
       throw new BadUserInputError("Invalid OTP code");
@@ -673,6 +809,7 @@ export class AuthService implements IAuthService {
   ): Promise<AuthResponse> => {
     this.assertPasswordAuthEnabled();
     const { sessionId, otp } = params;
+    await enforceSignupOtpIpLimits(params.ip || UNKNOWN_CLIENT_ADDRESS);
 
     const session =
       await this.models.signupOtpSession.getSessionById(sessionId);
@@ -680,7 +817,7 @@ export class AuthService implements IAuthService {
       throw new BadUserInputError("Invalid or expired session");
     }
 
-    await this.consumeSignupOtpAttempt(session.email);
+    await enforceSignupOtpAccountLimits(session.email, sessionId);
 
     if (!secureStringEqual(session.otp, otp)) {
       throw new BadUserInputError("Invalid OTP code");
@@ -704,24 +841,6 @@ export class AuthService implements IAuthService {
     await this.deleteSignupOtpSession(sessionId);
 
     return result;
-  };
-
-  private consumeSignupOtpAttempt = async (email: string): Promise<void> => {
-    const attempt = await incrementInWindow(
-      CACHE_KEYS.auth.signupOtpAttemptsByEmail(email),
-      SIGNUP_OTP_ATTEMPT_WINDOW_MS,
-    );
-
-    if (!attempt) {
-      throw new ServiceUnavailableError("OTP verification");
-    }
-
-    if (attempt.count > SIGNUP_OTP_MAX_ATTEMPTS) {
-      throw new RateLimitedError(
-        Math.max(1, Math.ceil(attempt.resetInMs / 1000)),
-        "Too many OTP attempts. Please request a new verification code.",
-      );
-    }
   };
 
   /**

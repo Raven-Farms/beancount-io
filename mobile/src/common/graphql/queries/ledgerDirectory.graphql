@@ -3,6 +3,7 @@ query LedgerDirectory($page: Float!, $limit: Float!) {
     id
     name
     fullName
+    description
     private
   }
 }

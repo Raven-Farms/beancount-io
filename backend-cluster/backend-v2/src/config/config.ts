@@ -4,7 +4,13 @@ import { z } from "zod";
 
 // Type definitions for configuration
 interface ServerConfig {
-  proxy: boolean;
+  /**
+   * How many reverse proxies in front of this server append to
+   * `X-Forwarded-For`. The client address is the entry the nearest trusted one
+   * appended; every entry left of it is whatever the client sent. `0` means
+   * nothing is in front: the socket address is the client.
+   */
+  trustedProxyHops: number;
   port: number;
   url: string;
   /**
@@ -182,6 +188,18 @@ export function parseCorsAllowedOrigins(
   return origins;
 }
 
+/**
+ * `TRUSTED_PROXY_HOPS`, defaulting to the one proxy (Caddy, Traefik) every
+ * shipped deployment puts in front of the backend. Anything that is not a
+ * non-negative integer falls back to that default rather than to trusting
+ * every forwarded entry.
+ */
+export function parseTrustedProxyHops(value: string | undefined): number {
+  if (value === undefined || value.trim() === "") return 1;
+  const hops = Number(value);
+  return Number.isInteger(hops) && hops >= 0 ? hops : 1;
+}
+
 interface LoggerConfig {
   enabled: boolean;
   level: string;
@@ -193,10 +211,6 @@ interface PostgresConfig {
 
 interface SendGridConfig {
   apiKey: string;
-}
-
-interface AnalyticsConfig {
-  gaMeasurementId: string;
 }
 
 interface JwtConfig {
@@ -408,7 +422,6 @@ export interface AppConfig {
   env: Environment;
   project: string;
   server: ServerConfig;
-  analytics: AnalyticsConfig;
   logger: LoggerConfig;
   sendGrid: SendGridConfig;
   postgres: PostgresConfig;
@@ -650,7 +663,7 @@ export const config: AppConfig = {
     sandboxApiUrl: process.env.CLAUDE_CODE_AGENT_URL || "",
   },
   server: {
-    proxy: true,
+    trustedProxyHops: parseTrustedProxyHops(process.env.TRUSTED_PROXY_HOPS),
     port: parseInt(process.env.PORT || "4104", 10),
     url: process.env.SERVER_URL || "https://api.v3.beancount.io",
     corsAllowedOrigins: parseCorsAllowedOrigins(
@@ -669,9 +682,6 @@ export const config: AppConfig = {
   },
   sendGrid: {
     apiKey: process.env.SEND_GRID_API_KEY || "",
-  },
-  analytics: {
-    gaMeasurementId: "G-94TFG6X2Q5",
   },
   stripe: {
     webhookSecret: process.env.STRIPE_WEBHOOK_SECRET || "",

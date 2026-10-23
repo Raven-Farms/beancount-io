@@ -1,13 +1,14 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, waitFor, act } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { CombinedGraphQLErrors } from "@apollo/client/errors";
 import ResetPasswordPage from "../index";
 
 // Mock dependencies - use vi.hoisted() to ensure mocks are available in hoisted vi.mock() calls
-const { mockNavigate, mockUseSearch, mockMutation, mockUseQuery } = vi.hoisted(
-  () => {
+const { mockRedirectToLogin, mockUseSearch, mockMutation, mockUseQuery } =
+  vi.hoisted(() => {
     return {
-      mockNavigate: vi.fn(),
+      mockRedirectToLogin: vi.fn(),
       mockUseSearch: vi.fn(() => ({ token: "valid-token" })),
       mockMutation: vi.fn(),
       mockUseQuery: vi.fn(() => ({
@@ -16,15 +17,17 @@ const { mockNavigate, mockUseSearch, mockMutation, mockUseQuery } = vi.hoisted(
         error: null,
       })),
     };
-  },
-);
+  });
 
 vi.mock("@tanstack/react-router", () => ({
-  useNavigate: () => mockNavigate,
   useSearch: () => mockUseSearch(),
   Link: ({ to, children }: { to: string; children: React.ReactNode }) => (
     <a href={to}>{children}</a>
   ),
+}));
+
+vi.mock("@/features/auth/lib/redirect-to-login", () => ({
+  redirectToLogin: () => mockRedirectToLogin(),
 }));
 
 vi.mock("@apollo/client/react", () => ({
@@ -80,12 +83,63 @@ describe("ResetPasswordPage", () => {
       render(<ResetPasswordPage />);
 
       const passwordInput = screen.getByLabelText("New Password");
-      await user.type(passwordInput, "12345");
+      await user.type(passwordInput, "1234567");
       await user.tab();
 
       await waitFor(() => {
         expect(
-          screen.getByText("Password must be at least 6 characters"),
+          screen.getByText("Password must be at least 8 characters"),
+        ).toBeInTheDocument();
+      });
+    });
+
+    it("should refuse a password over bcrypt's 72 bytes", async () => {
+      const user = userEvent.setup();
+      render(<ResetPasswordPage />);
+
+      const passwordInput = screen.getByLabelText("New Password");
+      // 37 characters, but 74 bytes.
+      await user.type(passwordInput, "é".repeat(37));
+      await user.tab();
+
+      await waitFor(() => {
+        expect(
+          screen.getByText(/^Password is too long\. Use at most 72 characters/),
+        ).toBeInTheDocument();
+      });
+    });
+
+    it("should say why the server refused a breached password", async () => {
+      const user = userEvent.setup();
+
+      mockMutation.mockRejectedValue(
+        new CombinedGraphQLErrors({
+          errors: [
+            {
+              message:
+                "Validation failed for password: has appeared in a known data breach",
+              extensions: {
+                code: "VALIDATION_FAILED",
+                field: "password",
+                passwordPolicy: "BREACHED",
+              },
+            },
+          ],
+        }),
+      );
+
+      render(<ResetPasswordPage />);
+
+      await user.type(screen.getByLabelText("New Password"), "password123");
+      await user.type(
+        screen.getByLabelText("Confirm New Password"),
+        "password123",
+      );
+      await user.click(screen.getByRole("button", { name: "Reset password" }));
+
+      await waitFor(() => {
+        expect(
+          screen.getByText(/^This password has appeared in a data breach\./),
         ).toBeInTheDocument();
       });
     });
@@ -177,7 +231,7 @@ describe("ResetPasswordPage", () => {
       });
     });
 
-    it("should navigate to login after successful password reset", async () => {
+    it("should load the login page fresh after successful password reset", async () => {
       const user = userEvent.setup();
       vi.useFakeTimers({ shouldAdvanceTime: true });
 
@@ -213,7 +267,9 @@ describe("ResetPasswordPage", () => {
         vi.advanceTimersByTime(2000);
       });
 
-      expect(mockNavigate).toHaveBeenCalledWith({ to: "/auth/login" });
+      // A document load drops the profile the router loaded under the session
+      // the reset just ended; a router navigation would keep it.
+      expect(mockRedirectToLogin).toHaveBeenCalledTimes(1);
     });
 
     it("should show error when API returns failure", async () => {

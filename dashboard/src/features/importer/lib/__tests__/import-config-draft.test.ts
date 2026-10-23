@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   buildImportConfigFormValues,
   getValidImportRows,
+  retainedRowChoices,
   toImportConfigDraft,
   type ImportConfigDraft,
 } from "../import-config-draft";
@@ -176,6 +177,46 @@ describe("import-config-draft", () => {
         a: { targetAccount: "Expenses:Software", selected: true },
         b: { targetAccount: "", selected: false },
       },
+    });
+  });
+
+  it("retains choices only for preview rows the form does not hold (w4/309)", () => {
+    const draft: ImportConfigDraft = {
+      sourceAccount: "Assets:Cash",
+      defaultCurrency: "USD",
+      rows: {
+        ok: { targetAccount: "Expenses:Food", selected: true },
+        held: { targetAccount: "Expenses:Fees", selected: false },
+        gone: { targetAccount: "Expenses:Old", selected: false },
+      },
+    };
+    const rows = [
+      row({ id: "ok" }),
+      row({ id: "held", amountInput: "invalid", errors: ["invalid amount"] }),
+    ];
+    const retained = retainedRowChoices(rows, draft);
+    expect(retained).toEqual({
+      held: { targetAccount: "Expenses:Fees", selected: false },
+    });
+
+    const saved = toImportConfigDraft(
+      buildImportConfigFormValues(rows, draft, "USD"),
+      retained,
+    );
+    expect(saved.rows).toEqual({
+      ok: { targetAccount: "Expenses:Food", selected: true },
+      held: { targetAccount: "Expenses:Fees", selected: false },
+    });
+    // Repaired, the row returns with its saved target and exclusion.
+    const repaired = buildImportConfigFormValues(
+      [row({ id: "ok" }), row({ id: "held" })],
+      saved,
+      "USD",
+    );
+    expect(repaired.transactions[1]).toMatchObject({
+      id: "held",
+      targetAccount: "Expenses:Fees",
+      selected: false,
     });
   });
 });

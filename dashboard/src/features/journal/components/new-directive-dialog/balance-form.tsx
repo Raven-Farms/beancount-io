@@ -15,7 +15,7 @@ import {
   FormMessage,
 } from "@/common/components/ui/form";
 import { DatePicker } from "@/common/components/ui/date-picker";
-import { format } from "date-fns";
+import { todayIsoDate } from "@/common/components/ui/date-picker-utils";
 import {
   BulkEntriesDocument,
   LedgerEntryType,
@@ -34,18 +34,22 @@ import {
 import { useLedger } from "@/common/hooks/use-ledger";
 import { track } from "@/common/analytics";
 import { AccountAvailabilityNotice } from "./account-availability-notice";
-import { entryDay, useAccountAvailability } from "./use-account-availability";
+import { useAccountAvailability } from "./use-account-availability";
+import { usePendingSubmit } from "@/common/hooks/use-pending-submit";
 
 interface BalanceFormProps {
   ledgerId: string;
   onSuccess?: () => void;
+  /** Reports a write in flight, so the dialog can hold its tabs and close. */
+  onPendingChange?: (pending: boolean) => void;
 }
 
-// Zod validation schema factory
+// Zod validation schema factory. Required text is trimmed before its
+// required check, so whitespace alone is refused rather than sent as "" (w4/334).
 const createBalanceSchema = (t: (key: string) => string) =>
   z.object({
-    date: z.date(),
-    account: z.string().min(1, t("journal.accountRequired")).trim(),
+    date: z.iso.date(),
+    account: z.string().trim().min(1, t("journal.accountRequired")),
     amount: z
       .string()
       .min(1, t("journal.amountRequired"))
@@ -53,7 +57,7 @@ const createBalanceSchema = (t: (key: string) => string) =>
         (val) => parseDecimalNumber(val) !== null,
         t("journal.amountMustBeNumber"),
       ),
-    currency: z.string().min(1, t("journal.currencyRequired")).trim(),
+    currency: z.string().trim().min(1, t("journal.currencyRequired")),
   });
 
 /**
@@ -61,7 +65,11 @@ const createBalanceSchema = (t: (key: string) => string) =>
  * Fields: date, account, amount, currency
  * Used to assert account balances at specific dates
  */
-export function BalanceForm({ ledgerId, onSuccess }: BalanceFormProps) {
+export function BalanceForm({
+  ledgerId,
+  onSuccess,
+  onPendingChange,
+}: BalanceFormProps) {
   const { t } = useTranslations();
   const formatError = useErrorMessage();
   const [addBalance] = useMutation(BulkEntriesDocument);
@@ -74,7 +82,7 @@ export function BalanceForm({ ledgerId, onSuccess }: BalanceFormProps) {
   const form = useForm<BalanceFormData>({
     resolver: zodResolver(balanceSchema),
     defaultValues: {
-      date: new Date(),
+      date: todayIsoDate(),
       account: "",
       amount: "",
       currency: primaryCurrency,
@@ -83,15 +91,14 @@ export function BalanceForm({ ledgerId, onSuccess }: BalanceFormProps) {
   });
 
   const accounts = useAccountAvailability(ledgerId);
-  const day = entryDay(form.watch("date"));
+  const day = form.watch("date") || null;
   const account = form.watch("account");
 
   const onSubmit = async (data: BalanceFormData) => {
     setError(null);
 
     try {
-      const entryDate = entryDay(data.date);
-      if (accounts.blocks([data.account], entryDate)) return;
+      if (accounts.blocks([data.account], data.date)) return;
 
       // The digits as typed: Beancount infers the assertion's tolerance from
       // them, so `49.70` must not become `49.7` through a double.
@@ -102,7 +109,7 @@ export function BalanceForm({ ledgerId, onSuccess }: BalanceFormProps) {
 
       // Create balance input
       const balanceInput: LedgerBalanceInput = {
-        date: format(data.date, "yyyy-MM-dd"),
+        date: data.date,
         account: data.account,
         amount: amountInput,
       };
@@ -110,7 +117,7 @@ export function BalanceForm({ ledgerId, onSuccess }: BalanceFormProps) {
       const variables: BulkEntriesMutationVariables = {
         ledgerId,
         entries: [
-          ...accounts.openEntries([data.account], entryDate),
+          ...accounts.openEntries([data.account], data.date),
           { type: LedgerEntryType.Balance, balance: balanceInput },
         ],
       };
@@ -120,7 +127,7 @@ export function BalanceForm({ ledgerId, onSuccess }: BalanceFormProps) {
       if (result.data?.bulkEntries.success) {
         // Reset form
         form.reset({
-          date: new Date(),
+          date: todayIsoDate(),
           account: "",
           amount: "",
           currency: primaryCurrency,
@@ -128,6 +135,7 @@ export function BalanceForm({ ledgerId, onSuccess }: BalanceFormProps) {
         accounts.reset();
         track("directive_added", { directive_type: "balance" });
         onSuccess?.();
+        return true;
       } else {
         // Payload message is intentional server feedback (e.g. beancount
         // validation details) — safe to show as-is.
@@ -141,117 +149,118 @@ export function BalanceForm({ ledgerId, onSuccess }: BalanceFormProps) {
     }
   };
 
+  const { submit, pending } = usePendingSubmit(form, onSubmit, onPendingChange);
+
   return (
     <Form {...form}>
-      <form
-        onSubmit={form.handleSubmit(onSubmit)}
-        className="space-y-6 pt-1 px-1"
-      >
-        {error && (
-          <Alert variant="destructive">
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
-        )}
+      <form onSubmit={submit}>
+        <fieldset disabled={pending} className="min-w-0 space-y-6 pt-1 px-1">
+          {error && (
+            <Alert variant="destructive">
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
 
-        <div className="grid grid-cols-1 gap-2 md:flex md:items-start md:gap-2">
-          <FormField
-            control={form.control}
-            name="date"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel className="sr-only">{t("journal.date")}</FormLabel>
-                <FormControl>
-                  <DatePicker
-                    value={field.value}
-                    onChange={(newDate) => field.onChange(newDate)}
-                    required
+          <div className="grid grid-cols-1 gap-2 md:flex md:items-start md:gap-2">
+            <FormField
+              control={form.control}
+              name="date"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="sr-only">{t("journal.date")}</FormLabel>
+                  <FormControl>
+                    <DatePicker
+                      value={field.value}
+                      onChange={(newDate) => field.onChange(newDate)}
+                      required
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="account"
+              render={({ field }) => (
+                <FormItem className="flex-1">
+                  <FormLabel className="sr-only">
+                    {t("journal.accountLabel")}
+                  </FormLabel>
+                  <FormControl>
+                    <AccountCombobox
+                      ledgerId={ledgerId}
+                      value={field.value}
+                      onValueChange={field.onChange}
+                      placeholder={t("journal.accountPlaceholder")}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                  <AccountAvailabilityNotice
+                    check={accounts}
+                    account={account}
+                    day={day}
                   />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+                </FormItem>
+              )}
+            />
 
-          <FormField
-            control={form.control}
-            name="account"
-            render={({ field }) => (
-              <FormItem className="flex-1">
-                <FormLabel className="sr-only">
-                  {t("journal.accountLabel")}
-                </FormLabel>
-                <FormControl>
-                  <AccountCombobox
-                    ledgerId={ledgerId}
-                    value={field.value}
-                    onValueChange={field.onChange}
-                    placeholder={t("journal.accountPlaceholder")}
-                  />
-                </FormControl>
-                <FormMessage />
-                <AccountAvailabilityNotice
-                  check={accounts}
-                  account={account}
-                  day={day}
-                />
-              </FormItem>
-            )}
-          />
+            <FormField
+              control={form.control}
+              name="amount"
+              render={({ field }) => (
+                <FormItem className="w-32">
+                  <FormLabel className="sr-only">
+                    {t("journal.amountLabel")}
+                  </FormLabel>
+                  <FormControl>
+                    <Input
+                      type="number"
+                      step="any"
+                      placeholder={t("journal.amountPlaceholder")}
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
-          <FormField
-            control={form.control}
-            name="amount"
-            render={({ field }) => (
-              <FormItem className="w-32">
-                <FormLabel className="sr-only">
-                  {t("journal.amountLabel")}
-                </FormLabel>
-                <FormControl>
-                  <Input
-                    type="number"
-                    step="any"
-                    placeholder={t("journal.amountPlaceholder")}
-                    {...field}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+            <FormField
+              control={form.control}
+              name="currency"
+              render={({ field }) => (
+                <FormItem className="w-48">
+                  <FormLabel className="sr-only">
+                    {t("journal.currencyLabel")}
+                  </FormLabel>
+                  <FormControl>
+                    <CurrencyCombobox
+                      ledgerId={ledgerId}
+                      value={field.value}
+                      onValueChange={field.onChange}
+                      placeholder={t("journal.currencyPlaceholder")}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
 
-          <FormField
-            control={form.control}
-            name="currency"
-            render={({ field }) => (
-              <FormItem className="w-48">
-                <FormLabel className="sr-only">
-                  {t("journal.currencyLabel")}
-                </FormLabel>
-                <FormControl>
-                  <CurrencyCombobox
-                    ledgerId={ledgerId}
-                    value={field.value}
-                    onValueChange={field.onChange}
-                    placeholder={t("journal.currencyPlaceholder")}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        </div>
-
-        <div className="flex justify-end">
-          <Button
-            type="submit"
-            disabled={
-              !form.formState.isValid || accounts.blocks([account], day)
-            }
-            loading={form.formState.isSubmitting}
-          >
-            {t("journal.createBalanceEntry")}
-          </Button>
-        </div>
+          <div className="flex justify-end">
+            <Button
+              type="submit"
+              disabled={
+                !form.formState.isValid || accounts.blocks([account], day)
+              }
+              loading={pending}
+            >
+              {t("journal.createBalanceEntry")}
+            </Button>
+          </div>
+        </fieldset>
       </form>
     </Form>
   );

@@ -181,3 +181,43 @@ def test_a_recursion_failure_without_a_named_refusal_keeps_its_traceback() -> No
     error = json.loads(stdout.getvalue())["error"]
     assert error["message"].startswith("RecursionError")
     assert "recurse" in error["traceback"]
+
+
+def _ledger_with_depth(tmp_path: Path, levels: int) -> Path:
+    account = "Expenses:" + ":".join(f"L{level}" for level in range(levels - 1))
+    ledger = tmp_path / "main.bean"
+    ledger.write_text(
+        'option "operating_currency" "USD"\n'
+        "2000-01-01 open Assets:Bank USD\n"
+        f"2000-01-01 open {account} USD\n"
+        '2001-02-03 * "t"\n'
+        f"  {account}  1.00 USD\n"
+        "  Assets:Bank\n",
+        encoding="utf-8",
+    )
+    return ledger
+
+
+def test_shallow_nesting_is_not_blamed_for_a_recursion_failure(tmp_path: Path) -> None:
+    """w5/806: a regex RecursionError beside 2-level accounts was reported as deep nesting."""
+    from bea_engine import report as reports
+
+    assert reports.too_deep(_ledger_with_depth(tmp_path, 2)) is None
+    assert reports.too_deep(_ledger_with_depth(tmp_path, 99)) is None
+    deep = reports.too_deep(_ledger_with_depth(tmp_path, 100))
+    assert deep is not None and "100 levels deep" in str(deep)
+
+
+def test_a_recursion_failure_beside_shallow_accounts_keeps_its_traceback() -> None:
+    def recurse() -> None:
+        recurse()
+
+    stdout = io.StringIO()
+    with redirect_stdout(stdout), pytest.raises(SystemExit), protocol.answering("probe") as answer:
+        answer.too_deep = lambda: None
+        recurse()
+
+    error = json.loads(stdout.getvalue())["error"]
+    assert error["message"].startswith("RecursionError")
+    assert "too deep" not in error["message"]
+    assert "recurse" in error["traceback"]

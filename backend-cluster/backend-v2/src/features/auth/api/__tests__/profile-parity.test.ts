@@ -55,15 +55,13 @@ async function fixture(
       findByUserIdWithActivePeriod: async () => null,
     },
   };
+  // The owner's own list: shared ledgers are not in it.
   const ledgers = jest.fn(async () => ({
-    data: {
-      success: true,
-      data: [{ full_name: "ada/personal" }, { full_name: "someone/shared" }],
-    },
+    data: { success: true, data: [{ full_name: "ada/personal" }] },
   }));
   const factory = {
     getApiContext: async () => ({
-      favaApiClient: { ledgers: { listLedgers: ledgers } },
+      favaApiClient: { ledgers: { listUserLedgers: ledgers } },
     }),
   };
   const service = new AccountService(
@@ -179,7 +177,7 @@ describe("profile reads through actual adapters and exact-self authorization", (
       const profile = await (await f.rest()).json();
       expect(profile).toMatchObject({
         tier: "ORGANIZATION",
-        limits: { ledgersMax: 100, collaboratorsPerLedgerMax: 50 },
+        limits: { ledgersMax: 500, collaboratorsPerLedgerMax: 50 },
       });
       expect((await f.gql()).data?.userProfile).toEqual(profile);
       expect(await f.read()).toEqual(profile);

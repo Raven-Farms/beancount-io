@@ -32,19 +32,21 @@ import {
   formatFileSize,
   getFileExtension,
   downloadFile,
+  downloadableContent,
   getFilename,
 } from "../../shared/lib/utils";
 import LedgerFileBreadcrumb from "../../shared/components/ledger-file-breadcrumb";
 import { useTranslations } from "@/common/hooks/use-translations";
 import { LedgerWritePermission } from "@/common/components/ledger-permission/write";
 import { useIsMac } from "../hooks/use-platform";
+import { imageMimeType } from "@/common/lib/image-mime-type";
 import { restoreFocusOnDialogClose } from "@/common/lib/focus/restore-focus-on-dialog-close";
 
 export interface NonTextFileViewProps {
   filePath: string;
   fileContent: NonNullable<GetLedgerFileQuery["getLedgerFile"]>;
   /** Absent when the file cannot be deleted (the ledger's root main.bean). */
-  onDelete?: () => void;
+  onDelete?: () => void | Promise<void>;
 }
 
 interface FileMetadataBarProps {
@@ -56,7 +58,7 @@ interface FileActionButtonsProps {
   fileContent: NonNullable<GetLedgerFileQuery["getLedgerFile"]>;
   onDownload: () => void;
   /** Absent when the file cannot be deleted (the ledger's root main.bean). */
-  onDelete?: () => void;
+  onDelete?: () => void | Promise<void>;
   canEdit?: boolean;
   onEdit?: () => void;
 }
@@ -113,10 +115,20 @@ export const FileActionButtons = ({
     setIsDeleteDialogOpen(true);
   };
 
-  const handleConfirmDelete = () => {
+  const handleConfirmDelete = async () => {
     deleteConfirmedRef.current = true;
-    onDelete?.();
     setIsDeleteDialogOpen(false);
+    try {
+      await onDelete?.();
+    } catch {
+      // The delete reported its own failure and this file is still here:
+      // give a reader whose focus was lost the actions back, not the top of
+      // the page (w4/306). A deliberate move while waiting is kept.
+      const active = document.activeElement;
+      if (!active || active === document.body) {
+        moreActionsTriggerRef.current?.focus();
+      }
+    }
   };
 
   const handleCancelDelete = () => {
@@ -134,8 +146,12 @@ export const FileActionButtons = ({
                 size="sm"
                 onClick={onEdit}
                 className="flex items-center gap-2"
+                // The visible label and shortcut hide at narrow widths; the
+                // name must not depend on CSS breakpoints (w4/240).
+                aria-label={t("common.edit")}
+                aria-keyshortcuts={isMac ? "Meta+E" : "Control+E"}
               >
-                <Edit className="h-4 w-4" />
+                <Edit aria-hidden="true" className="h-4 w-4" />
                 <span className="hidden md:inline">{t("common.edit")}</span>
                 <span className="ml-auto text-xs tracking-widest text-primary-foreground/70 hidden sm:inline">
                   {isMac ? "⌘E" : "Ctrl+E"}
@@ -158,7 +174,7 @@ export const FileActionButtons = ({
             <DropdownMenuContent align="end">
               <DropdownMenuItem
                 onClick={onDownload}
-                disabled={!fileContent.content}
+                disabled={downloadableContent(fileContent) === null}
               >
                 <Download className="h-4 w-4" />
                 {t("common.download")}
@@ -200,8 +216,11 @@ export const FileActionButtons = ({
           onCloseAutoFocus={(event) => {
             if (deleteConfirmedRef.current) {
               deleteConfirmedRef.current = false;
-              // A confirmed delete owns navigation; keep its route focus.
+              // A confirmed delete owns navigation: once it has left this
+              // page, the new route keeps its focus. While it is still
+              // pending the actions stay usable (w4/306).
               event.preventDefault();
+              moreActionsTriggerRef.current?.focus();
               return;
             }
             restoreFocusOnDialogClose(event, moreActionsTriggerRef.current);
@@ -249,9 +268,12 @@ export const ImageFileView = ({
   const filename = getFilename(filePath);
 
   const handleDownloadClick = () => {
-    if (!fileContent.content) return;
-    downloadFile(filename, fileContent.content);
+    const content = downloadableContent(fileContent);
+    if (content === null) return;
+    downloadFile(filename, content);
   };
+
+  const [failedImage, setFailedImage] = useState<string | null>(null);
 
   const renderImageContent = () => {
     if (!fileContent.content) {
@@ -267,18 +289,11 @@ export const ImageFileView = ({
       );
     }
 
-    try {
-      const imageData = `data:image/${getFileExtension(filename)};base64,${fileContent.content}`;
-      return (
-        <div className="flex justify-center p-2">
-          <img
-            src={imageData}
-            alt={filename}
-            className="max-w-full max-h-64 sm:max-h-96 object-contain rounded-lg border"
-          />
-        </div>
-      );
-    } catch {
+    // The MIME type, not the bare extension: `image/svg` is not a type, so
+    // an SVG never decoded (w4/258). A failed decode shows the fallback
+    // rather than a broken image; a different file gets a fresh attempt.
+    const imageData = `data:${imageMimeType(filename) ?? "application/octet-stream"};base64,${fileContent.content}`;
+    if (failedImage === imageData) {
       return (
         <div className="flex items-center justify-center py-8">
           <div className="text-center">
@@ -290,6 +305,16 @@ export const ImageFileView = ({
         </div>
       );
     }
+    return (
+      <div className="flex justify-center p-2">
+        <img
+          src={imageData}
+          alt={filename}
+          onError={() => setFailedImage(imageData)}
+          className="max-w-full max-h-64 sm:max-h-96 object-contain rounded-lg border"
+        />
+      </div>
+    );
   };
 
   return (
@@ -326,8 +351,9 @@ export const PDFFileView = ({
   const filename = getFilename(filePath);
 
   const handleDownloadClick = () => {
-    if (!fileContent.content) return;
-    downloadFile(filename, fileContent.content);
+    const content = downloadableContent(fileContent);
+    if (content === null) return;
+    downloadFile(filename, content);
   };
 
   const renderPDFContent = () => {
@@ -377,13 +403,18 @@ export const UnknownFileView = ({
   filePath,
   fileContent,
   onDelete,
-}: NonTextFileViewProps) => {
+  reason,
+}: NonTextFileViewProps & {
+  /** A known text type whose bytes are not UTF-8 (w4/276). */
+  reason?: "notUtf8";
+}) => {
   const filename = getFilename(filePath);
   const { t } = useTranslations();
 
   const handleDownloadClick = () => {
-    if (!fileContent.content) return;
-    downloadFile(filename, fileContent.content);
+    const content = downloadableContent(fileContent);
+    if (content === null) return;
+    downloadFile(filename, content);
   };
 
   const renderUnknownContent = () => {
@@ -396,9 +427,11 @@ export const UnknownFileView = ({
             {t("ledgerEditor.unsupportedFileFormat")}
           </p>
           <p className="text-sm text-muted-foreground">
-            {ext
-              ? t("ledgerEditor.unsupportedPreviewWithType", { type: ext })
-              : t("ledgerEditor.unsupportedPreview")}
+            {reason === "notUtf8"
+              ? t("ledgerEditor.notUtf8Text")
+              : ext
+                ? t("ledgerEditor.unsupportedPreviewWithType", { type: ext })
+                : t("ledgerEditor.unsupportedPreview")}
           </p>
         </div>
       </div>

@@ -318,6 +318,39 @@ describe("LedgerDirectoryView", () => {
     expect(dirLink).toHaveAttribute("data-splat", "accounts");
   });
 
+  // w21/658: names compared as text listed "qa-10.bean" before "qa-2.bean".
+  it("lists folders first, then names with numbers in numeric order", () => {
+    const entry = (name: string, type: "file" | "dir") => ({
+      name,
+      path: name,
+      type,
+      size: 1,
+      sha: name,
+      lastCommitterDate: "2024-01-01",
+    });
+    mockUseQuery.mockReturnValue({
+      data: {
+        getLedgerDirContent: [
+          entry("qa-10.bean", "file"),
+          entry("qa-2.bean", "file"),
+          entry("2025", "dir"),
+          entry("qa-1.bean", "file"),
+          entry("12.bean", "file"),
+        ],
+      },
+      loading: false,
+      error: undefined,
+    });
+
+    render(<LedgerDirectoryView ledgerId="test-ledger" currentPath="" />);
+
+    expect(
+      screen
+        .getAllByRole("link")
+        .map((link) => link.getAttribute("data-splat")),
+    ).toEqual(["2025", "12.bean", "qa-1.bean", "qa-2.bean", "qa-10.bean"]);
+  });
+
   it("shows error state", () => {
     mockUseQuery.mockReturnValue({
       data: undefined,

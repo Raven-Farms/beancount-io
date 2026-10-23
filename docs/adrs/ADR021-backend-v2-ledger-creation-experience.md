@@ -139,7 +139,7 @@ Correct the Starter description in every locale and label the create action **Cr
 - **`bea init`** gains `--preset`, `--title`, and a documented input file that expresses the full setup specification; the existing `--currency`, `--date`, and `--opening-balance` remain. Interactive use asks the same starter, title, currency, history, and first-account questions and skips those already answered by options. Calls without `--preset` keep today's `Personal ledger` chart, account names, exit categories, and signed opening-balance semantics. It stays local: no account, network request, or model call.
 - **`bea cloud ledger create`** gains `--preset`, `--title`, `--currency`, and `--date`, sent as `setup`, and sends a `requestId` on every create so `--clone` retries cannot duplicate a ledger. Without them the request is unchanged. `--from` is the local-to-hosted transfer in phase 3.
 - Output reports the created path or address, preset and version, validation result, unresolved setup items, and the command for the next task, in human or JSON form.
-- Update the agent-facing [beancount-init skill](../../skills/.claude/skills/beancount-init/SKILL.md) and tutorials with the release.
+- Update the agent-facing [beancount-init skill](../../skills/beancount-init/SKILL.md) and tutorials with the release.
 
 ## Demo and the Sample template
 

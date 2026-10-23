@@ -1,18 +1,20 @@
 /**
- * Escape a value for interpolation into a fixed app-authored BQL string
- * literal. Returns the full quoted literal (including surrounding `"`).
+ * A BQL predicate matching `payee` exactly, safe for any payee text.
  *
- * Dialect (validated 2026-08-20 against live `queryShell`): double-quoted
- * strings with `\\` and `\"` escapes. SQL-style `''` doubling is rejected by
- * the backend for some inputs, so it is not used.
+ * The ledger's rustledger engine reads a double-quoted string literal with no
+ * escape processing, so `\"` is a syntax error and SQL-style `''` is not an
+ * escape either: a payee containing `"` dropped the merchant header with a
+ * parse error (w21/032). An ordinary payee is compared with `=` as before.
+ * One containing `"` or `\` becomes an anchored regex instead, metacharacters
+ * escaped and `"` written as the regex escape `\x22`, the same encoding
+ * Transactions search uses (`plain-search-filter.ts`).
  *
  * Free of `@/` imports so the jest-lite runner can require it.
  */
-export function escapeBqlString(value: string): string {
-  const escaped = value
-    .replace(/\\/g, "\\\\")
-    .replace(/"/g, '\\"')
-    .replace(/\n/g, "\\n")
-    .replace(/\r/g, "\\r");
-  return `"${escaped}"`;
+export function bqlPayeeEquals(payee: string): string {
+  if (!/["\\]/.test(payee)) return `payee = "${payee}"`;
+  const pattern = payee
+    .replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+    .replace(/"/g, "\\x22");
+  return `payee ~ "^${pattern}$"`;
 }

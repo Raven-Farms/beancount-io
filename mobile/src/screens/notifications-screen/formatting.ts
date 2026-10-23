@@ -1,8 +1,10 @@
-import { formatFeedDate } from "../../common/date-format";
+import { formatMoment } from "../../common/date-format";
+import { errorHint, errorMessageWithHint } from "../../common/new-ledger-error";
 export type LedgerError = {
   filename?: string | null;
   lineno?: number | null;
   message: string;
+  hint?: string | null;
 };
 
 export function formatErrorLocation(error: LedgerError): string {
@@ -11,22 +13,65 @@ export function formatErrorLocation(error: LedgerError): string {
   return `${error.filename}${line}`;
 }
 
+/**
+ * What copying an error row puts on the clipboard: the message, the engine's
+ * hint when it has one, then where it is ("main.bean:12") on its own line, to
+ * search for or send to someone (w21/432, w21/424).
+ */
+export function errorCopyText(error: LedgerError): string {
+  const hint = errorHint(error);
+  const text = hint ? `${error.message}\n${hint}` : error.message;
+  return error.filename ? `${text}\n${formatErrorLocation(error)}` : text;
+}
+
+/** What a screen reader says for an error row: message, hint, then place. */
+export function errorSpokenText(error: LedgerError): string {
+  const head = errorMessageWithHint(error);
+  return error.filename ? `${head}. ${formatErrorLocation(error)}` : head;
+}
+
 export function formatShortSha(sha: string, shortSha?: string | null): string {
   return shortSha ?? sha.slice(0, 7);
 }
 
 /**
+ * What a commit row reads as one sentence, in the order it shows: the subject
+ * (or `noMessage` for a commit with an empty message, which rendered a blank
+ * row), then "author · date", then the short SHA. A label on a pressable
+ * replaces its children, so with the subject alone VoiceOver spoke five
+ * identical "qa: mobile remove" rows (w21/224).
+ */
+export function commitRowAccessibilityLabel(
+  commit: {
+    subject: string;
+    sha: string;
+    shortSha?: string | null;
+    author: { name: string; date?: unknown };
+  },
+  noMessage: string,
+  locale: string,
+): string {
+  return [
+    commit.subject || noMessage,
+    formatCommitAuthorLine(commit.author.name, commit.author.date, locale),
+    formatShortSha(commit.sha, commit.shortSha),
+  ].join(", ");
+}
+
+/**
  * The muted line under a commit: its author and, when the commit carries a
- * usable timestamp, the day it was made in the reader's locale. A missing or
+ * usable timestamp, the day and time it was made in the reader's locale and
+ * zone, so same-day commits differ by more than their SHA (w21/487). A missing or
  * unparseable date shows the author alone, never "Invalid Date" or 1970.
  */
 export function formatCommitAuthorLine(
   name: string,
   date: unknown,
   locale: string,
+  timeZone?: string,
 ): string {
-  const day = formatFeedDate(date, locale);
-  return day ? `${name} · ${day}` : name;
+  const moment = formatMoment(date, locale, timeZone);
+  return moment ? `${name} · ${moment}` : name;
 }
 
 const LIST_ITEM = /^\s*([-*+•] |\d+[.)] )/;

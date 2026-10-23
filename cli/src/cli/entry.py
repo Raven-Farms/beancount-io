@@ -23,8 +23,10 @@ def main() -> None:
         # lines without a tab, which fish offered as candidates (w5/421).
         os.environ["TERMINAL_WIDTH"] = "100000"
     try:
+        from cli.engine.launch import own_process
         from cli.main import app
 
+        own_process()
         app()
     except KeyboardInterrupt:
         sys.exit(130)

@@ -1,6 +1,28 @@
 import Stripe from "stripe";
-import { customerId, subscriptionPeriodEnd } from "./subscription-plan";
-import { SUBSCRIPTION_CONFIG } from "@/features/stripe/service/stripe";
+import {
+  customerId,
+  highestTier,
+  holdsVerifiedPeriod,
+} from "./subscription-plan";
+import {
+  SUBSCRIPTION_CONFIG,
+  SubscriptionTier,
+} from "@/features/stripe/service/stripe";
+import {
+  applyPlanChange,
+  type PlanChangeResultView,
+} from "../operations/plan-change-apply";
+import {
+  defaultCard,
+  previewPlanChange,
+  type PaymentMethodSummaryView,
+  type PlanChangePreviewView,
+} from "../operations/plan-change-preview";
+import {
+  cancelScheduledChange,
+  releaseSchedule,
+} from "../operations/plan-change-schedule";
+import { ValidationError } from "@/shared/errors";
 import type { PaidCustomer } from "../data/paid-customer-model/types";
 import { IModels } from "@/foundation/models";
 import { logger } from "@/shared/logger";
@@ -15,13 +37,57 @@ function isNoSuchSubscriptionError(error: unknown): boolean {
   );
 }
 
+/** Why a subscriber cancels, as the cancel sheet offers it, in Stripe's terms. */
+const CANCELLATION_FEEDBACK = {
+  TOO_EXPENSIVE: "too_expensive",
+  MISSING_FEATURES: "missing_features",
+  UNUSED: "unused",
+  SWITCHED_SERVICE: "switched_service",
+  OTHER: "other",
+} as const satisfies Record<
+  string,
+  Stripe.SubscriptionUpdateParams.CancellationDetails.Feedback
+>;
+export type CancellationReason = keyof typeof CANCELLATION_FEEDBACK;
+
 export interface SubscriptionListOptions {
-  status?: "active" | "all";
+  /**
+   * `current` is every subscription not canceled (Stripe's default listing),
+   * which includes a past-due one that still holds its paid tier.
+   */
+  status?: "active" | "all" | "current";
   bindings?: PaidCustomer[];
+  /**
+   * Expand each subscription's schedule (a pending plan change) and latest
+   * invoice (a failed renewal's next attempt). Only Billing status reads
+   * them, so tier checks and webhooks skip the cost.
+   */
+  expandForStatus?: boolean;
 }
 
 export interface IStripeService {
   getStripeInstance(clientId: string): Stripe;
+  previewPlanChange(
+    userId: string,
+    clientId: string,
+    priceId: string,
+  ): Promise<PlanChangePreviewView>;
+  defaultCard(
+    clientId: string,
+    subscription: Stripe.Subscription,
+  ): Promise<PaymentMethodSummaryView | null>;
+  changePlan(
+    userId: string,
+    clientId: string,
+    priceId: string,
+    prorationDate?: number | null,
+  ): Promise<PlanChangeResultView>;
+  cancelScheduledPlanChange(
+    userId: string,
+    clientId: string,
+  ): Promise<{ success: boolean; message?: string }>;
+  /** The tier a still-current verified period paid for, from our cache. */
+  lastVerifiedTier(userId: string): Promise<SubscriptionTier | null>;
   handleCheckoutSessionCompleted(
     session: Stripe.Checkout.Session,
     clientId: string,
@@ -42,6 +108,7 @@ export interface IStripeService {
     subscriptionId: string,
     userId: string,
     clientId: string,
+    reason?: CancellationReason | null,
   ): Promise<{ success: boolean; message?: string }>;
   deleteSubscription(
     subscriptionId: string,
@@ -202,6 +269,97 @@ export class StripeService implements IStripeService {
     }
   }
 
+  async previewPlanChange(
+    userId: string,
+    clientId: string,
+    priceId: string,
+  ): Promise<PlanChangePreviewView> {
+    return previewPlanChange(
+      this.planChangeDeps(clientId),
+      userId,
+      clientId,
+      priceId,
+    );
+  }
+
+  /** What preview and apply need to price and change a plan for a client. */
+  private planChangeDeps(clientId: string) {
+    if (!SUBSCRIPTION_CONFIG[clientId]) {
+      throw new ValidationError("clientId", "Unknown client");
+    }
+    return {
+      stripe: this.getStripeInstance(clientId),
+      models: this.models,
+      db: this.postgresDb,
+    };
+  }
+
+  defaultCard(
+    clientId: string,
+    subscription: Stripe.Subscription,
+  ): Promise<PaymentMethodSummaryView | null> {
+    return defaultCard(this.getStripeInstance(clientId), subscription);
+  }
+
+  changePlan(
+    userId: string,
+    clientId: string,
+    priceId: string,
+    prorationDate?: number | null,
+  ): Promise<PlanChangeResultView> {
+    return applyPlanChange(
+      this.planChangeDeps(clientId),
+      userId,
+      clientId,
+      priceId,
+      { prorationDate },
+    );
+  }
+
+  async lastVerifiedTier(userId: string): Promise<SubscriptionTier | null> {
+    const bindings = await this.models.paidCustomer.findByUserId(
+      this.postgresDb,
+      userId,
+    );
+    const tiers = bindings.flatMap((binding) =>
+      holdsVerifiedPeriod(binding) &&
+      binding.periodTier &&
+      Object.values(SubscriptionTier).includes(
+        binding.periodTier as SubscriptionTier,
+      )
+        ? [binding.periodTier as SubscriptionTier]
+        : [],
+    );
+    return tiers.length ? highestTier(tiers) : null;
+  }
+
+  async cancelScheduledPlanChange(
+    userId: string,
+    clientId: string,
+  ): Promise<{ success: boolean; message?: string }> {
+    const deps = this.planChangeDeps(clientId);
+    try {
+      return await cancelScheduledChange(deps, userId, clientId);
+    } catch (error) {
+      logger.error("Error cancelling a scheduled plan change", {
+        userId,
+        clientId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return {
+        success: false,
+        message:
+          "An error occurred while cancelling your scheduled plan change. Please try again or contact support.",
+      };
+    }
+  }
+
+  /**
+   * The original immediate-change mutation, kept for existing callers. It
+   * applies changes through the same path as `changePlan`, but immediate-only:
+   * a downgrade or a switch to monthly is refused here, neither applied at
+   * once nor scheduled.
+   */
   async upgradeSubscription(
     userId: string,
     clientId: string,
@@ -213,166 +371,50 @@ export class StripeService implements IStripeService {
     subscriptionId?: string;
     newTier?: string;
   }> {
+    const clientConfig = SUBSCRIPTION_CONFIG[clientId];
+    if (!clientConfig) {
+      return { success: false, message: `Invalid client ID: ${clientId}` };
+    }
+    if (!clientConfig.planIds.includes(newPriceId)) {
+      return {
+        success: false,
+        message: `Invalid price ID for client ${clientId}: ${newPriceId}`,
+      };
+    }
     try {
-      // Validate clientId
-      const clientConfig =
-        SUBSCRIPTION_CONFIG[clientId as keyof typeof SUBSCRIPTION_CONFIG];
-      if (!clientConfig) {
-        return {
-          success: false,
-          message: `Invalid client ID: ${clientId}`,
-        };
-      }
-
-      // Validate newPriceId exists in client's plans
-      if (!clientConfig.planIds.includes(newPriceId)) {
-        return {
-          success: false,
-          message: `Invalid price ID for client ${clientId}: ${newPriceId}`,
-        };
-      }
-
-      // Look up target tier from plan config
-      const targetPlan = clientConfig.plans.find(
-        (plan) => plan.priceId === newPriceId,
-      );
-      const newTier = targetPlan?.tier;
-
-      // Look up PaidCustomer
-      const customer = await this.models.paidCustomer.findByUserIdAndClientId(
-        this.postgresDb,
+      const outcome = await applyPlanChange(
+        this.planChangeDeps(clientId),
         userId,
         clientId,
+        newPriceId,
+        { immediateOnly: true },
       );
-
-      if (!customer?.stripeCustomerId) {
-        return {
-          success: false,
-          message:
-            "No active Stripe customer found. Please create a new subscription instead.",
-        };
-      }
-
-      const stripe = this.getStripeInstance(clientId);
-
-      // List active subscriptions
-      const subscriptions = await stripe.subscriptions.list({
-        customer: customer.stripeCustomerId,
-        status: "active",
-      });
-
-      if (subscriptions.data.length === 0) {
-        return {
-          success: false,
-          message:
-            "No active subscription found. Please create a new subscription instead.",
-        };
-      }
-
-      const subscription = subscriptions.data[0];
-      if (
-        !subscription.livemode ||
-        customerId(subscription.customer) !== customer.stripeCustomerId
-      ) {
-        return {
-          success: false,
-          message: "Subscription does not match your live billing customer",
-        };
-      }
-      const currentItem = subscription.items.data.find((item) =>
-        clientConfig.planIds.includes(item.price.id),
-      );
-      if (!currentItem)
-        return {
-          success: false,
-          message: "Subscription plan is not recognized",
-        };
-
-      // Same-plan guard
-      if (currentItem.price.id === newPriceId) {
-        return {
-          success: false,
-          message: "You are already on this plan.",
-        };
-      }
-
-      // Update subscription in place
-      const updatedSubscription = await stripe.subscriptions.update(
-        subscription.id,
-        {
-          items: [{ id: currentItem.id, price: newPriceId }],
-          payment_behavior: "pending_if_incomplete",
-          proration_behavior: "always_invoice",
-        },
-      );
-
-      // Handle response based on status
-      if (
-        !updatedSubscription.livemode ||
-        customerId(updatedSubscription.customer) !== customer.stripeCustomerId
-      ) {
-        throw new Error(
-          "Updated subscription does not match its live customer binding",
-        );
-      }
-      if (updatedSubscription.status === "active") {
-        // Success — update currentPeriodEnd in DB
-        const periodEnd = subscriptionPeriodEnd([
-          { ...updatedSubscription, clientId },
-        ]);
-        if (periodEnd) {
-          await this.models.paidCustomer.updateCustomerById(
-            this.postgresDb,
-            customer.id,
-            { currentPeriodEnd: periodEnd },
-          );
-        }
-
+      if (outcome.status === "ACTIVE") {
         logger.debug("Subscription upgraded successfully", {
           userId,
           clientId,
-          subscriptionId: updatedSubscription.id,
-          newTier,
+          subscriptionId: outcome.subscriptionId,
+          newTier: outcome.newTier,
         });
-
         return {
           success: true,
           message: "Subscription upgraded successfully.",
-          subscriptionId: updatedSubscription.id,
-          newTier,
+          subscriptionId: outcome.subscriptionId ?? undefined,
+          newTier: outcome.newTier ?? undefined,
         };
       }
-
-      // Check for 3DS / requires_action
-      const latestInvoice = updatedSubscription.latest_invoice;
-      if (latestInvoice && typeof latestInvoice === "object") {
-        const paymentIntent = (latestInvoice as { payment_intent?: unknown })
-          .payment_intent;
-        if (paymentIntent && typeof paymentIntent === "object") {
-          const pi = paymentIntent as {
-            status?: string;
-            client_secret?: string;
-          };
-          if (pi.status === "requires_action" && pi.client_secret) {
-            return {
-              success: false,
-              message:
-                "Your payment requires additional authentication. Please check your email or card issuer.",
-              clientSecret: pi.client_secret,
-              subscriptionId: updatedSubscription.id,
-              newTier,
-            };
-          }
-        }
-      }
-
-      // Payment failed or subscription incomplete
       return {
         success: false,
-        message:
-          "Payment failed. Your subscription was not changed. Please update your payment method and try again.",
+        message: outcome.message ?? undefined,
+        clientSecret: outcome.clientSecret ?? undefined,
+        subscriptionId: outcome.subscriptionId ?? undefined,
+        newTier: outcome.newTier ?? undefined,
       };
     } catch (error) {
+      if (error instanceof ValidationError) {
+        // A retired or unknown price: the caller's input, not a fault.
+        return { success: false, message: error.message };
+      }
       if (isNoSuchSubscriptionError(error)) {
         return {
           success: false,
@@ -405,9 +447,15 @@ export class StripeService implements IStripeService {
     subscriptionId: string,
     userId: string,
     clientId: string,
-  ): Promise<{ authorized: true } | { authorized: false; message: string }> {
+  ): Promise<
+    | { authorized: true; subscription: Stripe.Subscription }
+    | { authorized: false; message: string }
+  > {
     // Retrieve the subscription to verify it exists
-    const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+    // The schedule comes inline, so releasing a pending change needs no read.
+    const subscription = await stripe.subscriptions.retrieve(subscriptionId, {
+      expand: ["schedule"],
+    });
 
     // Verify that this subscription belongs to a customer in our database
     // with the correct user ID and client ID (tenant isolation)
@@ -433,7 +481,7 @@ export class StripeService implements IStripeService {
       };
     }
 
-    return { authorized: true };
+    return { authorized: true, subscription };
   }
 
   /**
@@ -445,6 +493,7 @@ export class StripeService implements IStripeService {
     subscriptionId: string,
     userId: string,
     clientId: string,
+    reason?: CancellationReason | null,
   ): Promise<{ success: boolean; message?: string }> {
     try {
       const stripe = this.getStripeInstance(clientId);
@@ -459,8 +508,16 @@ export class StripeService implements IStripeService {
         return { success: false, message: ownership.message };
       }
 
+      // Stripe refuses a cancellation while a schedule holds a pending plan
+      // change; cancelling releases that change (PRFAQ005 question 14).
+      await releaseSchedule(stripe, ownership.subscription);
       await stripe.subscriptions.update(subscriptionId, {
         cancel_at_period_end: true,
+        // The reader's optional reason, kept where Stripe reports churn. No
+        // reason clears one left by an earlier cancellation.
+        cancellation_details: {
+          feedback: reason ? CANCELLATION_FEEDBACK[reason] : "",
+        },
       });
 
       logger.debug("Subscription scheduled for cancellation at period end", {
@@ -519,6 +576,7 @@ export class StripeService implements IStripeService {
         return { success: false, message: ownership.message };
       }
 
+      await releaseSchedule(stripe, ownership.subscription);
       await stripe.subscriptions.cancel(subscriptionId);
 
       logger.debug("Subscription deleted immediately", {
@@ -579,6 +637,8 @@ export class StripeService implements IStripeService {
 
       await stripe.subscriptions.update(subscriptionId, {
         cancel_at_period_end: false,
+        // A resumed subscription carries no cancellation reason.
+        cancellation_details: { feedback: "" },
       });
 
       logger.debug("Subscription resumed", {
@@ -636,9 +696,18 @@ export class StripeService implements IStripeService {
         // Provider failures propagate; an outage is not evidence of no subscription.
         const page = await stripe.subscriptions.list({
           customer: binding.stripeCustomerId,
-          status: options.status ?? "all",
+          ...(options.status === "current"
+            ? {}
+            : { status: options.status ?? "all" }),
           limit: 100,
           starting_after: startingAfter,
+          // A past-due subscription's grace is read from its latest invoice,
+          // so every tier lookup needs it.
+          ...(options.expandForStatus
+            ? { expand: ["data.schedule", "data.latest_invoice"] }
+            : options.status === "current"
+              ? { expand: ["data.latest_invoice"] }
+              : {}),
         });
         for (const subscription of page.data) {
           if (
@@ -695,13 +764,13 @@ export class StripeService implements IStripeService {
         };
       }
 
-      // Validate that we have a valid return URL
-      const returnUrl = clientConfig.portalReturnUrl || clientConfig.successUrl;
+      // The Checkout success URL is no fallback: it is a confirmation page
+      // that expects a session id.
+      const returnUrl = clientConfig.portalReturnUrl;
       if (!returnUrl) {
-        logger.error(
-          "No valid return URL configured for client. Both portalReturnUrl and successUrl are empty.",
-          { clientId },
-        );
+        logger.error("No portal return URL configured for client", {
+          clientId,
+        });
         return {
           success: false,
           message:
@@ -714,6 +783,7 @@ export class StripeService implements IStripeService {
       const session = await stripe.billingPortal.sessions.create({
         customer: customer.stripeCustomerId,
         return_url: returnUrl,
+        configuration: clientConfig.portalConfigurationId,
       });
 
       logger.debug("Created Stripe customer portal session", {

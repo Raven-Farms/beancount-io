@@ -42,4 +42,20 @@ describe("buildAuthorizationUrl", () => {
     expect(signIn.searchParams.get("prompt")).toBe("consent");
     expect(signIn.searchParams.get("code_challenge_method")).toBe("S256");
   });
+
+  // w21/153: after a sign-out the browser is still signed in, and Sign In
+  // approved the previous account with one tap.
+  it("asks for an account choice on the first Sign In after a sign-out", () => {
+    const url = new URL(
+      buildAuthorizationUrl(pending("sign_in"), "c", { chooseAccount: true }),
+    );
+    expect(url.searchParams.getAll("screen_hint")).toEqual(["select_account"]);
+  });
+
+  it("keeps Sign Up's own hint after a sign-out", () => {
+    const url = new URL(
+      buildAuthorizationUrl(pending("sign_up"), "c", { chooseAccount: true }),
+    );
+    expect(url.searchParams.getAll("screen_hint")).toEqual(["signup"]);
+  });
 });

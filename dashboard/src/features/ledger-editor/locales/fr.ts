@@ -9,6 +9,17 @@ const frLedgerEditor: Record<string, { message: string; description: string }> =
       message: "Créer un fichier",
       description: "Button label to create file",
     },
+    "ledgerEditor.branchNotFound": {
+      message:
+        "La branche « {branch} » n'est pas disponible ici. Les fichiers sont affichés depuis {main}.",
+      description:
+        "404 for a Files URL naming a branch other than the supported one (contains {branch} and {main})",
+    },
+    "ledgerEditor.browseMainFiles": {
+      message: "Parcourir les fichiers de {main}",
+      description:
+        "Link to the Files root on the supported branch (contains {main})",
+    },
     "ledgerEditor.files": {
       message: "Fichiers",
       description: "Ledger files management",
@@ -49,6 +60,12 @@ export default {
   "ledgerEditor.unsupportedPreview": {
     message: "Ce type de fichier n'est pas pris en charge pour l'aperçu",
     description: "Unsupported preview message without a file type",
+  },
+  "ledgerEditor.notUtf8Text": {
+    message:
+      "Ce fichier n'est pas du texte UTF-8 : il ne peut pas être affiché ni modifié ici sans changer ses octets. Téléchargez-le pour l'ouvrir ailleurs.",
+    description:
+      "Shown instead of the editor for a text file whose bytes are not valid UTF-8",
   },
   "ledgerEditor.createFileCommit": {
     message: "Créer le fichier {path}",

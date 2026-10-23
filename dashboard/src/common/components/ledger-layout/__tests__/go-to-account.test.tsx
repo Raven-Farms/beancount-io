@@ -360,4 +360,52 @@ describe("AccountCombobox", () => {
       });
     });
   });
+
+  it("keeps keyboard focus in the picker through a retry (w4/274)", async () => {
+    const refetch = vi.fn().mockResolvedValue({});
+    mockUseQuery.mockReturnValue({
+      data: undefined,
+      loading: false,
+      error: new Error("network"),
+      refetch,
+    });
+    const { rerender } = render(
+      <SidebarProvider>
+        <AccountCombobox>
+          <button>Go to Account</button>
+        </AccountCombobox>
+      </SidebarProvider>,
+    );
+    await user.click(screen.getByRole("button", { name: /go to account/i }));
+    const search = await screen.findByRole("combobox");
+    const retry = await screen.findByRole("button", { name: /try again/i });
+    retry.focus();
+    await user.keyboard("{Enter}");
+    expect(refetch).toHaveBeenCalledTimes(1);
+    expect(search).toHaveFocus();
+
+    // The read succeeds: arrows move the selection with no refocusing.
+    mockUseQuery.mockReturnValue({
+      data: { getLedgerAccounts: ["Assets:Cash", "Equity:Opening"] },
+      loading: false,
+      error: undefined,
+      refetch,
+    });
+    rerender(
+      <SidebarProvider>
+        <AccountCombobox>
+          <button>Go to Account</button>
+        </AccountCombobox>
+      </SidebarProvider>,
+    );
+    const selected = () =>
+      screen
+        .getAllByRole("option")
+        .find((option) => option.getAttribute("aria-selected") === "true")
+        ?.textContent;
+    await waitFor(() => expect(selected()).toBe("Assets"));
+    await user.keyboard("{ArrowDown}");
+    await waitFor(() => expect(selected()).not.toBe("Assets"));
+    expect(search).toHaveFocus();
+  });
 });

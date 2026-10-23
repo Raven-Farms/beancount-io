@@ -1,0 +1,48 @@
+# Offer a retry after a statement or Account Journal read fails
+
+Original inbox328, retained as source evidence. Current scope/status: [M50](./README.md).
+
+**Severity:** minor. **Estimate:** 45–60 minutes. **Owner:** dashboard. **A2:** a newcomer changing a report's valuation should be able to retry the failed read where the error appears, without discovering a reload or filter workaround.
+
+## Reproduction and working controls
+
+Production `https://beancount.io`, 2026-10-21, anonymous public synthetic `open_ledger/example`, English/light, owned isolated headless Chromium155.0.8059.85. Fresh1440×1000 and390×844 contexts independently reproduce this. **The failures are explicitly injected browser-local request aborts, not observed production outages.**
+
+1. Open `/ledger/open_ledger/example/trial-balance?time=2016&view=income&lang=en`. Wait for the populated Trial Balance table and Income chart.
+2. Intercept only `GetLedgerTrialBalance`, then use the named conversion selector and native keyboard to choose **Units**. Abort that read before transport; allow unrelated reads normally.
+3. After settlement, the report becomes **Error loading data / Connection problem. Please check your internet connection and try again.** Both widths have zero retry buttons, zero conversion selectors and zero tables. The error branch has removed the control that initiated the read. The global scope controls remain available.
+4. Remove the fault. At desktop, reload: Units and Income return, with88 table rows including the header and no alert. At narrow width, open Filters and reapply the existing Time2016: the same URL/scope recovers Units/Income and the88-row table without reloading.
+
+The workaround is real; this is not a permanent navigation trap. The defect is the absent in-page retry for the requested statement after its own controls disappear. There are no uncaught page errors or ledger mutations. Before this failure probe, hierarchy collapse/reopen with Space/Enter correctly hid/restored five descendants and retained disclosure focus; the Checking link retained August2017, its settled account journal returned ten entries, and browser Back restored Trial Balance. The Liabilities chart also remained selected through a successful conversion change.
+
+## Cause and bounded repair
+
+`dashboard/src/features/reports/trial-balance/index.tsx:61–71` obtains the Apollo read result without its `refetch` callback, then at94 renders `<ReportErrorState error={error} />`. The shared `common/components/state-components.tsx:119–171` already accepts `onRetry` and renders the localized **Try Again** button only when that callback exists. The owning caller never supplies it.
+
+Wire the failed statement's current query observer to that existing retry action, preserving the requested conversion, chart view and shared scope. A pending retry must not offer repeated competing attempts; a rejected retry must remain safely handled and retryable, while a successful retry restores only data for the current request. Retain classified error guidance and the existing settled-data/loading boundaries. Do not use a full-document reload, reset report preferences, expose raw server messages or add a dependency/API.
+
+Holdings uses a separate DatasetTable/Alert error branch; its independently reproduced missing retry is [337](../337.md). That component does not use these callbacks and remains outside this note's wiring repair. Include the fifth equivalent caller, Account Journal, as independently reproduced below.
+
+Source audit finds the identical missing callback on Balance Sheet (`index.tsx:95`), Income Statement (`index.tsx:104`) and Cash Flow's query-error branch (`index.tsx:154`). Include these equivalent read-error callers in the small wiring repair, using each one's own observer. Those three failures are source-traced, not separately live-reproduced. Cash Flow's separate accounting-reconciliation error at181 is not a failed network read and must keep its existing recovery semantics.
+
+Acceptance: exercise the real owning report lifecycle with a rejected read, keyboard Try Again, pending state, repeated rejection and eventual success. Assert the retried variables preserve conversion/time/account/filter and chart selection, useful feedback remains, and stale or earlier requests cannot replace the new scope. Verify the equivalent statement callers, plus desktop/narrow browser behavior, and run dashboard's normal gates when implementing. Reuse the existing retry component and translations.
+
+## Dedupe, deployment and cleanup
+
+Searched all board states for ReportErrorState/onRetry, report/statement retry actions and missing-retry descriptions, plus the owning caller history. Completed [w3/133](../../../w3/done/133.md) propagates classified errors for these statement callers; [w3/134](../../../w3/done/134.md) repairs Cash Flow's scope-correction lifecycle. Neither wires retry. Completed [m16](../m16/README.md) preserves chart selection; that behavior passes here. [134](../134.md) concerns Account/Events invalid-input guidance. [264](../264.md) repairs an existing Try Again action at the child route-loader boundary, whereas these mounted Apollo observers render their own report error card with no action. [257](../257.md) implements the analogous retry in General Settings' separate error component/observer; reuse that pending/rejection handling precedent. No matching pending or landed statement retry repair found.
+
+Local main `b6993a788`. Public source maps `/lgassets/state-components-FFMRoGPC.js.map` and `/lgassets/ledger._ledgerOwner._ledgerName.trial-balance-BJG_fA-W.js.map` contain sources exactly matching local SHA-256: shared state component `224e0313a0ea60d76e4db8a4443daefaec5f777273e7b00ea035ac591cc35609`; Trial Balance page `d6d94d13b4bdfc085402a1fb640468f0deca72cfb0e9067115d3a41ee5fc0fd6`. The served caller has zero onRetry/refetch mentions. Full deployment revision remains unverified.
+
+Ignored evidence: `dashboard/tmp/qa-20261020/dashboard-loop/trial-report-read-recovery-complete-controls.json`, `trial-report-read-failure-{1440,390}.png`; the narrow screenshot was visually inspected. Early unsettled account samples and an initial view-click timeout are excluded and superseded by settled successful controls. All owned child contexts and interceptors are closed, leaving the original isolated QA context. Hosted writes, fixtures, mutation attempts, route errors and uncaught page errors are zero. No product fix or tests were authored by QA. Other engines, actual screen-reader speech and repaired behavior remain unverified.
+
+## Account Journal extension — 2026-10-22
+
+Fresh anonymous Chromium155 contexts at390×844 and1440×1000 reproduce the same missing callback on `/ledger/open_ledger/example/account/Assets%3AUS%3ABofA%3AChecking?time=2016-08`. Abort only the initial **GetLedgerAccountJournal** before transport, leaving GetLedgerAccountReport and unrelated reads available. At both widths the journal settles to **Error loading data / Error loading journal data**, with no Try Again/Retry action. Its Transaction selection and scope remain intact. The independent account chart stays healthy: native Enter on its **Period data** disclosure at1440 opens the actual August31 value **3014.75 USD** while the journal error remains.
+
+Remove the fault. At390, native Enter toggles Transaction off and back on: actual successful reads return12 entries for all directives and10 for the restored Transaction filter, respectively; the restored journal has11 rows including its header, no alert and the original URL. At1440, reloading the original URL also returns10 entries/11 rows with no alert. These are working recovery workarounds, not a permanent trap or a production outage.
+
+`features/reports/account/index.tsx:180` already obtains `refetch: refetchJournal`, but its journal error branch around303–307 passes only a fixed message to ReportErrorState. Wire that existing observer to the existing local retry UI, retaining the journal's independent loading/error boundary, ledger/account/conversion, pagination, directive/subtype filters, Metadata/Postings preferences and healthy chart. Preserve rejection handling, pending activation protection and the original four callers' acceptance above. This fifth local callback repair remains within the note's45–60m estimate; no global retry policy, dependency, API or account-chart error redesign is included.
+
+The actual served `ledger._ledgerOwner._ledgerName.account._accountName-CrGQVmd0.js.map` contains the complete Account source with SHA-256 **682a3c490a8edceccaa4fb89ca40adf179c65398c8fb13083f3658b13204b11c**, exactly matching current main. Completed [134](../134.md) explicitly excludes this independent journal branch; [099](../099.md) owns chart read readiness, and [w3/491](../../../w3/done/491.md) owns pager focus. Searches across all board states found no separate Account Journal retry repair. This is an extension of the same ReportErrorState/onRetry issue, not a new finding group.
+
+Ignored evidence: `dashboard/tmp/qa-20261020/dashboard-loop/account-journal-read-recovery-complete-controls.json` and `account-journal-read-failure-{1440,390}.png`; the narrow screenshot was visually inspected. Initial wrong error-text and incomplete table-name locators were corrected; a button-only Period data probe and canvas-only chart probe were inapplicable and do not establish missing chart UI. Both owned contexts close with zero hosted writes, mutation attempts, route errors and page exceptions. The Account page's separate primary-read error branch and repaired behavior remain unverified. No product changes or tests authored.

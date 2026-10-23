@@ -1,4 +1,5 @@
 import { useLedgerAccess } from "@/common/hooks/use-ledger-access";
+import { carryBalanceToToday } from "@/common/series-util";
 import { StyleSheet, View } from "react-native";
 import { useMemo, useState } from "react";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
@@ -20,7 +21,7 @@ import {
   type Valuation,
 } from "@/common/valuation";
 import { ValuationSheet } from "@/components/valuation-sheet";
-import { getFormatDate } from "@/common/format-util";
+import { useToday } from "@/common/hooks/use-today";
 import {
   AccountChartsCard,
   type ChartKey,
@@ -31,7 +32,6 @@ import { BudgetCard } from "@/screens/home-screen/components/budget-card";
 import { FeedCard } from "@/screens/home-screen/components/feed-card";
 import { AskAiCard } from "@/screens/home-screen/components/ask-ai-card";
 import { config } from "@/config";
-import { getPrimaryCurrency } from "@/common/currency-util";
 import { ColorTheme } from "@/types/theme-props";
 import { useRouter } from "expo-router";
 import { AddTransactionCallback } from "@/common/globalFnFactory";
@@ -44,7 +44,9 @@ import {
   StaleDataBanner,
 } from "@/components";
 import { LedgerGuard, useLedgerGuard } from "@/components/ledger-guard";
+import { useLedgerErrors } from "@/common/hooks/use-ledger-errors";
 import { isShowingStaleDataFromQueries } from "@/common/apollo/stale-data";
+import { selectReadContextState } from "@/common/apollo/card-load-state";
 
 const getStyles = (theme: ColorTheme) =>
   StyleSheet.create({
@@ -61,15 +63,15 @@ const HomeScreenImpl = (): JSX.Element => {
   const styles = useThemeStyle(getStyles);
   const router = useRouter();
   const ledgerId = useLedgerGuard();
+  const { refetch: ledgerErrorsRefetch } = useLedgerErrors(ledgerId);
   const { canWrite } = useLedgerAccess();
   const {
-    currencies,
+    primaryCurrency: currency,
     refetch: ledgerMetaRefetch,
     data: ledgerMeta,
     error: ledgerMetaError,
   } = useLedgerReadContext(ledgerId);
 
-  const currency = getPrimaryCurrency(currencies);
   // One balance-sheet query feeds all three curves on the card. Home is the
   // only place net worth is charted; the Accounts tab is account lists only.
   const {
@@ -78,17 +80,28 @@ const HomeScreenImpl = (): JSX.Element => {
     refetch: balanceSheetRefetch,
     error: balanceSheetError,
   } = useBalanceSheet(ledgerId);
+  // Each curve is carried to today: a balance series ends at the month of the
+  // ledger's last entry or price, and 1M/3M/6M count back from its last point,
+  // so a month with nothing yet showed the last month's change as this one's
+  // (w21/414; account detail does the same since w21/240).
+  const today = useToday();
   const netWorthSeries = useMemo(
-    () => selectNetWorthSeries(currency, balanceSheet),
-    [currency, balanceSheet],
+    () =>
+      carryBalanceToToday(selectNetWorthSeries(currency, balanceSheet), today),
+    [currency, balanceSheet, today],
   );
   const assetsSeries = useMemo(
-    () => selectAssetsSeries(currency, balanceSheet),
-    [currency, balanceSheet],
+    () =>
+      carryBalanceToToday(selectAssetsSeries(currency, balanceSheet), today),
+    [currency, balanceSheet, today],
   );
   const liabilitiesSeries = useMemo(
-    () => selectLiabilitiesSeries(currency, balanceSheet),
-    [currency, balanceSheet],
+    () =>
+      carryBalanceToToday(
+        selectLiabilitiesSeries(currency, balanceSheet),
+        today,
+      ),
+    [currency, balanceSheet, today],
   );
   // Every figure on the card is at market. The same curves at cost and in
   // units, and the ledger's price dates, are what let each caption say so:
@@ -107,7 +120,6 @@ const HomeScreenImpl = (): JSX.Element => {
     refetch: pricesRefetch,
     error: pricesError,
   } = useLedgerPrices(ledgerId);
-  const today = useMemo(() => getFormatDate(new Date()), []);
   const { valuations, chartCaptions, chartFootnotes } = useMemo(() => {
     const valuationOf = (series: SheetSeries) =>
       selectSeriesValuation(
@@ -161,13 +173,21 @@ const HomeScreenImpl = (): JSX.Element => {
   // The basis and price reads hold the skeleton too, so a caption never lands
   // after its figure and pushes it down. A failed one releases it: the figure
   // then says only what it can still tell.
+  const contextState = selectReadContextState(ledgerMeta, ledgerMetaError);
   const isLoading =
+    contextState === "loading" ||
     (balanceSheetLoading && !balanceSheet) ||
     (basisLoading && !balanceSheetBasis && !basisError) ||
     (pricesLoading && !pricesData && !pricesError);
   // First-load failure (error, no cache) keeps the chart skeleton; cached
   // data with a failed refetch shows the numbers + stale banner instead.
-  const chartError = Boolean(balanceSheetError) && !balanceSheet;
+  const chartError =
+    (Boolean(balanceSheetError) && !balanceSheet) || contextState === "failed";
+  const retryChart = () => {
+    void Promise.all([ledgerMetaRefetch(), balanceSheetRefetch()]).catch(
+      () => undefined,
+    );
+  };
   const showStale = isShowingStaleDataFromQueries([
     { data: balanceSheet, error: balanceSheetError },
     { data: balanceSheetBasis, error: basisError },
@@ -183,6 +203,9 @@ const HomeScreenImpl = (): JSX.Element => {
         balanceSheetRefetch(),
         basisRefetch(),
         pricesRefetch(),
+        // The bell counts these: a ledger broken or fixed elsewhere showed
+        // the old badge after a pull (w21/138).
+        ledgerErrorsRefetch(),
       ]);
     } catch {
       // Query errors render in the cards or the guest access boundary.
@@ -248,6 +271,7 @@ const HomeScreenImpl = (): JSX.Element => {
           onCaptionPress={setDetailPage}
           loading={isLoading}
           error={chartError}
+          onRetry={retryChart}
           ledgerId={ledgerId}
         />
         <ValuationSheet

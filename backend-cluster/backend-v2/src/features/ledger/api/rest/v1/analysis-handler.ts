@@ -294,7 +294,7 @@ export const ANALYSIS_READS: readonly AnalysisRead[] = [
     segment: "entry-context",
     summary: "Get the source context around one entry",
     description:
-      "The ledger text surrounding a directive, addressed by its hash — what to read before editing it.",
+      "The ledger text surrounding a directive, addressed by its hash — what to read before editing it. A result with `generated_from` is a copy a plugin or a pad generated from that source entry: it shares the source's slice and sha256sum, so editing or deleting it would change the source and every other copy.",
     query: z.object({
       entryHash: z.string().openapi({ description: "The entry's hash" }),
     }),

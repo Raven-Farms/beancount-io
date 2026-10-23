@@ -40,6 +40,12 @@ function FilterControls() {
       </button>
       <button
         type="button"
+        onClick={() => setSearchParams({ time: "2017-09" })}
+      >
+        set-time-patch
+      </button>
+      <button
+        type="button"
         onClick={() =>
           setSearchParams({
             account: "",
@@ -285,5 +291,107 @@ describe("ledger filter navigation and history", () => {
       expect(screen.getByTestId("time")).toHaveTextContent("");
       expect(screen.getByTestId("href").textContent).not.toMatch(/[?&]time=/);
     });
+  });
+});
+
+/**
+ * A field edit made while a Clear all is still loading composes with it: it
+ * changes only that field instead of restoring the settled scope (w4/249).
+ */
+describe("filter edits during a pending navigation", () => {
+  it("keeps a pending Clear all when Time changes before it settles", async () => {
+    cleanup();
+    let release!: () => void;
+    const held = new Promise<void>((resolve) => (release = resolve));
+
+    function RaceControls() {
+      const { searchParams, setSearchParams } = useLedgerSearchParams();
+      const href = useRouterState({ select: (s) => s.location.href });
+      return (
+        <div>
+          <div data-testid="href">{href}</div>
+          <div data-testid="account">{searchParams.account}</div>
+          <button
+            type="button"
+            onClick={() =>
+              setSearchParams({ account: "", filter: "", time: "" })
+            }
+          >
+            clear-all
+          </button>
+          {/* What LedgerSearchControls sends for one field. */}
+          <button
+            type="button"
+            onClick={() => setSearchParams({ time: "2016-09" })}
+          >
+            set-time
+          </button>
+          <Outlet />
+        </div>
+      );
+    }
+    const rootRoute = createRootRoute({ component: () => <Outlet /> });
+    const ledgerRoute = createRoute({
+      getParentRoute: () => rootRoute,
+      path: "/ledger/$ledgerOwner/$ledgerName",
+      validateSearch: (search) => ledgerFilterSearchSchema.parse(search),
+      search: {
+        middlewares: [retainSearchParams(["account", "filter", "time"])],
+      },
+      component: () => (
+        <LedgerSearchParamsProvider>
+          <RaceControls />
+        </LedgerSearchParamsProvider>
+      ),
+    });
+    const incomeRoute = createRoute({
+      getParentRoute: () => ledgerRoute,
+      path: "/income-statement",
+      loaderDeps: ({ search }) => search,
+      // The cleared scope's report read is slow.
+      loader: async ({ deps }) => {
+        const { account, time } = deps as { account?: string; time?: unknown };
+        if (!account && !time) await held;
+      },
+      component: () => <div data-testid="page">income</div>,
+    });
+    const router = createRouter({
+      routeTree: rootRoute.addChildren([
+        ledgerRoute.addChildren([incomeRoute]),
+      ]),
+      history: createMemoryHistory({
+        initialEntries: [
+          "/ledger/open_ledger/example/income-statement?time=2016-08&account=Expenses%3AFood",
+        ],
+      }),
+    });
+    await router.load();
+    render(<RouterProvider router={router} />);
+    const user = userEvent.setup();
+    await screen.findByTestId("page");
+
+    await user.click(screen.getByRole("button", { name: "clear-all" }));
+    // The clear is still loading; the settled controls still say Food.
+    expect(screen.getByTestId("account")).toHaveTextContent("Expenses:Food");
+    await user.click(screen.getByRole("button", { name: "set-time" }));
+    await act(async () => release());
+
+    await waitFor(() =>
+      expect(router.state.location.search).toEqual({ time: "2016-09" }),
+    );
+    expect(screen.getByTestId("account")).toHaveTextContent("");
+  });
+
+  it("changes only the edited field once settled", async () => {
+    const user = userEvent.setup();
+    await mountAt(
+      "/ledger/open_ledger/example/journal?time=2016&account=Expenses%3AFood&filter=%23trip",
+    );
+    await user.click(screen.getByRole("button", { name: "set-time-patch" }));
+    await waitFor(() =>
+      expect(screen.getByTestId("time")).toHaveTextContent("2017-09"),
+    );
+    expect(screen.getByTestId("account")).toHaveTextContent("Expenses:Food");
+    expect(screen.getByTestId("filter")).toHaveTextContent("#trip");
   });
 });

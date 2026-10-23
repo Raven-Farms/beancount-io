@@ -35,7 +35,7 @@ const getStyles = (theme: ColorTheme) =>
     message: {
       fontSize: fontSizes.lg,
       fontWeight: fontWeights.regular,
-      color: theme.black60,
+      color: theme.black80,
       textAlign: "center",
       marginBottom: 32,
       lineHeight: 24,
@@ -77,7 +77,7 @@ const getStyles = (theme: ColorTheme) =>
     finalMessage: {
       fontSize: fontSizes.md,
       fontWeight: fontWeights.regular,
-      color: theme.black60,
+      color: theme.black80,
       textAlign: "center",
       marginTop: 24,
       lineHeight: 20,

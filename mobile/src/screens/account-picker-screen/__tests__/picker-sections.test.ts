@@ -4,8 +4,10 @@ import {
   findAccountLocation,
   RECENT_LIMIT,
   showCreateAccountRow,
+  showCreateBelowResults,
   visibleAccountSections,
 } from "../picker-sections";
+import { filterAccounts } from "../../../common/account-search";
 import type { AccountUsage } from "../../../common/account-frecency";
 
 /** The screen groups once and passes the result in; mirror that here. */
@@ -230,6 +232,37 @@ describe("visibleAccountSections", () => {
       expect(result.some(({ source }) => source === "recents")).toBe(false);
     });
 
+    // A root chip narrows the pinned block too: Expenses must not lead with
+    // Assets:Cash (w21/021).
+    test("should pin only recents under the selected root", () => {
+      const result = withUsage(
+        "",
+        "Expenses",
+        used("Assets:Cash", "Expenses:Food"),
+      );
+
+      expect(result.map(({ title }) => title)).toEqual(["Recent", "Expenses"]);
+      expect(result[0].data).toEqual(["Expenses:Food"]);
+    });
+
+    test("should drop the block when no recent is under the root", () => {
+      const result = withUsage("", "Expenses", used("Assets:Cash"));
+
+      expect(result.some(({ source }) => source === "recents")).toBe(false);
+      // The lone section loses its header again.
+      expect(result.map(({ title }) => title)).toEqual([""]);
+    });
+
+    test("should keep mixed recents under All", () => {
+      const result = withUsage(
+        "",
+        ALL_ROOTS,
+        used("Assets:Cash", "Expenses:Food"),
+      );
+
+      expect(result[0].data.length).toBe(2);
+    });
+
     test("should leave the pinned accounts in the browse list too", () => {
       const result = withUsage("", ALL_ROOTS, used("Expenses:Food"));
       const expenses = result.filter(({ title }) => title === "Expenses");
@@ -302,6 +335,15 @@ describe("showCreateAccountRow", () => {
     ).toBe(false);
   });
 
+  // w21/643: a new ledger's picker had nothing to browse and no way to open
+  // an account, since Create waited for a query.
+  test("should offer creation to a writer whose ledger has no accounts", () => {
+    expect(showCreateAccountRow("", 0, writer, "posting", false)).toBe(true);
+    expect(showCreateAccountRow("", 0, writer, "posting", true)).toBe(false);
+    expect(showCreateAccountRow("", 0, reader, "posting", false)).toBe(false);
+    expect(showCreateAccountRow("", 0, writer, "filter", false)).toBe(false);
+  });
+
   test("should treat a failed permission query as read-only", () => {
     expect(
       showCreateAccountRow("Coffee", 0, {
@@ -310,5 +352,107 @@ describe("showCreateAccountRow", () => {
         error: new Error("offline"),
       }),
     ).toBe(false);
+  });
+});
+
+// w21/258: the scattered-letter matcher finds something for almost any word, so
+// a genuinely new category had no Create row.
+describe("showCreateBelowResults", () => {
+  const writer: {
+    canWrite: boolean;
+    loading: boolean;
+    error?: unknown;
+  } = { canWrite: true, loading: false };
+  const chart = [
+    "Assets:Bank:Checking",
+    "Assets:Cash",
+    "Expenses:Food:Groceries",
+    "Expenses:Housing:Rent",
+    "Expenses:Transport:Tram",
+    "Expenses:Travel:Hotels",
+    "Income:US:Babble:Salary",
+    "Liabilities:CreditCard:Visa",
+  ];
+  const below = (query: string, access = writer) =>
+    showCreateBelowResults(query, filterAccounts(query, chart), access);
+
+  it("offers Create under loose matches for a name the ledger lacks", () => {
+    // "pets" scatters across Expenses:Transport:Tram and Expenses:Travel:Hotels.
+    expect(filterAccounts("pets", chart).length > 0).toBe(true);
+    expect(below("pets")).toBe(true);
+    expect(below("uber")).toBe(true);
+    expect(below("phone")).toBe(true);
+  });
+
+  it("does not, when an account really contains the query", () => {
+    expect(below("food")).toBe(false);
+    expect(below("rent")).toBe(false);
+    expect(below("credit card")).toBe(false);
+    expect(below("FOOD:groc")).toBe(false);
+  });
+
+  // w21/452: a full new name is a piece of a longer account's name.
+  it("offers Create for a whole new name inside a longer account", () => {
+    expect(below("Expenses:Food")).toBe(true);
+    expect(below("Assets:Bank:Check")).toBe(true);
+    expect(below("expenses: housing")).toBe(true);
+    // A name the ledger has exactly is a real hit, in any case or spelling.
+    expect(below("Expenses:Food:Groceries")).toBe(false);
+    expect(below("expenses:food:GROCERIES")).toBe(false);
+    expect(below("Assets:Cash")).toBe(false);
+    // Starting below a root, it is still a search for a piece of a name.
+    expect(below("FOOD:groc")).toBe(false);
+    expect(below("food:groceries")).toBe(false);
+  });
+
+  it("is left to the empty state when there are no results", () => {
+    expect(showCreateBelowResults("zzzz", [], writer)).toBe(false);
+  });
+
+  it("is not offered to someone who may not create accounts", () => {
+    expect(below("pets", { ...writer, canWrite: false })).toBe(false);
+    expect(below("pets", { ...writer, error: new Error("denied") })).toBe(
+      false,
+    );
+  });
+
+  it("reads composed and decomposed spellings alike", () => {
+    expect(
+      showCreateBelowResults("caf\u00e9", ["Expenses:Cafe\u0301"], writer),
+    ).toBe(false);
+  });
+
+  it("is what the picker renders under the results", () => {
+    const source = require("fs")
+      .readFileSync(
+        require("path").join(__dirname, "..", "account-picker-screen.tsx"),
+        "utf8",
+      )
+      .replace(/\s+/g, "");
+    expect(
+      source.includes("ListFooterComponent={showCreateFooter?createRow:null}"),
+    ).toBe(true);
+  });
+});
+
+// w21/528: the Transactions filter's picker offered Create, and Done on the
+// Open Account screen it led to wrote an `open` from a read-only control.
+describe("the filter picker never offers Create", () => {
+  const access = { canWrite: true };
+
+  it("not in the empty state", () => {
+    expect(showCreateAccountRow("QaTravel", 0, access, "filter")).toBe(false);
+    expect(showCreateAccountRow("QaTravel", 0, access, "posting")).toBe(true);
+    expect(showCreateAccountRow("QaTravel", 0, access)).toBe(true);
+  });
+
+  it("not under search results", () => {
+    const results = ["Expenses:Transport:Tram"];
+    expect(showCreateBelowResults("pets", results, access, "filter")).toBe(
+      false,
+    );
+    expect(showCreateBelowResults("pets", results, access, "budget")).toBe(
+      true,
+    );
   });
 });

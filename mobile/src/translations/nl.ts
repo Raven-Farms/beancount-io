@@ -6,6 +6,9 @@ export const nl: Translations = {
   guestTryExample: "Probeer een voorbeeld",
   guestChooseExample: "Kies een voorbeeld",
   guestReadOnly: "Alleen-lezen voorbeeld",
+  guestSignInHint: "Opent het inloggen",
+  guestReadOnlyEditor:
+    "Voorbeeld alleen-lezen. Meld je aan om je eigen grootboek te bewerken.",
   guestExit: "Voorbeelden verlaten",
   guestIntroduction:
     "Bekijk echte rapporten zonder account. Deze boeken zijn alleen-lezen.",
@@ -27,6 +30,7 @@ export const nl: Translations = {
   discoveryTab_explore: "Ontdekken",
   discoverySearch: "Boeken zoeken",
   discoveryClear: "Zoekopdracht wissen",
+  clearSearch: "Zoekopdracht wissen",
   discoveryOpen: "{{name}} openen",
   discoveryStar: "{{name}} als favoriet opslaan",
   discoveryUnstar: "{{name}} uit favorieten verwijderen",
@@ -47,6 +51,15 @@ export const nl: Translations = {
     "De actie kon niet worden voltooid. Controleer je verbinding en toegang tot het boek en probeer het opnieuw.",
   ledgerReadOnly:
     "Dit boek is alleen-lezen. Kies een boek dat je kunt bewerken om wijzigingen aan te brengen.",
+  ledgerGoneTitle: "Dit boek is niet meer beschikbaar",
+  ledgerGoneMessage:
+    "Het is verwijderd, hernoemd of niet meer gedeeld. Kies een ander boek om verder te gaan.",
+  ledgerEditorNotUtf8:
+    "Dit bestand is geen UTF-8-tekst. Als je het hier bewerkt, veranderen sommige tekens, dus het opent alleen-lezen. Bewerk het op een computer.",
+  ledgerEditorTooLarge:
+    "Dit bestand is te groot om op je telefoon te openen en is daarom alleen-lezen. Bewerk het op een computer.",
+  ledgerEditorTooLargeToEdit:
+    "Dit bestand is groter dan 1 MiB, meer dan je vanaf je telefoon kunt opslaan, en is daarom alleen-lezen. Bewerk het op het web of met de CLI.",
 
   // bottom tab bar
   home: "Home",
@@ -76,25 +89,32 @@ export const nl: Translations = {
   merchantsEmptyMessage:
     "Begunstigden uit je transacties verschijnen hier als een doorzoekbare directory.",
   merchantsNoSearchResults: "Geen winkels komen overeen met je zoekopdracht.",
-  merchantsLoadError: "Winkels laden mislukt: ",
+  merchantsLoadError: "Winkels laden mislukt",
   merchantsSortByCount: "Sorteren op aantal transacties",
   merchantsSortAlphabetical: "Alfabetisch sorteren",
   merchantsRecurringSection: "Terugkerend",
+  merchantsAllSection: "Alle winkels",
   merchantsRecurringBadge: "Terugkerend",
   merchantsCadenceWeekly: "Wekelijks",
   merchantsCadenceBiweekly: "Om de 2 weken",
+  merchantsCadenceSemimonthly: "Twee keer per maand",
   merchantsCadenceMonthly: "Maandelijks",
+  merchantsCadenceBimonthly: "Elke 2 maanden",
   merchantsCadenceQuarterly: "Per kwartaal",
+  merchantsCadenceSemiannual: "Elke 6 maanden",
   merchantsCadenceYearly: "Jaarlijks",
   merchantsCadenceIrregular: "Onregelmatig",
   merchantsCadenceUnknown: "Te weinig geschiedenis",
+  merchantsCadenceInactive: "Geen recente betalingen",
   merchantsNextExpected: "Volgende {{date}}",
   merchantsOverdue: "Achterstallig",
+  merchantsLastPaid: "Laatst betaald {{date}}",
+  merchantsScheduled: "Gepland op {{date}}",
   merchantsRecurringToggle: "Terugkerend",
   merchantsRecurringToggleHelper:
     "Zet deze handelaar vast onder Terugkerend. Handmatige keuze wint van detectie en blijft op dit apparaat.",
   merchantDetailDateRange: "{{first}} – {{last}}",
-  merchantDetailLoadError: "Handelaar laden mislukt: ",
+  merchantDetailLoadError: "Handelaar laden mislukt",
   merchantDetailRetry: "Opnieuw proberen",
   merchantDetailEmptyTitle: "Geen transacties",
   merchantDetailEmptyMessage:
@@ -112,7 +132,7 @@ export const nl: Translations = {
   // layout direction — only a switch that crosses it costs a restart
   restartForLayoutTitle: "Opnieuw starten om de indeling te wijzigen",
   restartForLayoutMessage:
-    "{{language}} leest de andere kant op, dus Beancount moet opnieuw starten om zichzelf correct in te delen. Slaat u dit over, dan wijzigt de taal nu en volgt de indeling de volgende keer dat u de app opent.",
+    "{{language}} leest de andere kant op, dus Beancount moet opnieuw starten om zichzelf correct in te delen. Sla je dit over, dan wijzigt de taal nu en volgt de indeling de volgende keer dat je de app opent.",
   restartNow: "Nu opnieuw starten",
   // logout alert
   logoutAlertMsg: "Weet je zeker dat je wilt uitloggen?",
@@ -133,6 +153,7 @@ export const nl: Translations = {
   deleteAccountConfirmMessage:
     'Om te bevestigen, typ "sudo delete my account" hieronder:',
   deleteAccountConfirmPhrase: "sudo delete my account",
+  deleteAccountConfirmMismatch: "Typ de zin precies zoals getoond.",
   deleteAccountConfirmPlaceholder: "Typ de zin hier",
   deleteAccountSuccess: "Account verwijderd",
   deleteAccountFailed:
@@ -143,6 +164,8 @@ export const nl: Translations = {
   accountSettings: "Account",
   supportSettings: "Ondersteuning",
   signIn: "Inloggen",
+  sessionEndedNotice:
+    "Je sessie is beëindigd. Meld je opnieuw aan om verder te gaan.",
   signUp: "Registreren",
   serverSettings: "Serverinstellingen",
   serverSettingsDescription:
@@ -163,6 +186,14 @@ export const nl: Translations = {
   serverConnectionUnreachable: "Deze server kan niet worden bereikt.",
   serverConnectionIncompatible:
     "Deze server biedt niet de vereiste Beancount.io-API.",
+  serverConnectionOlder:
+    "Deze server is ouder dan de app. Je kunt verbinden, maar sommige functies werken mogelijk niet.",
+  serverConnectionNotConfigured:
+    "Deze server is nog niet ingesteld voor inloggen.",
+  serverConnectionMismatch:
+    "Dit adres komt niet overeen met het adres dat de server opgeeft. Open de serverinstellingen en test de verbinding.",
+  serverConnectionCanonical: "Deze server meldt zich aan als {{url}}.",
+  serverUseCanonical: "Dat adres gebruiken",
   serverConnectionAdvisory:
     "Je kunt deze URL toch opslaan en inloggen wanneer de server beschikbaar is.",
   restoreDefaultServer: "Standaardinstelling van Beancount.io herstellen",
@@ -183,26 +214,37 @@ export const nl: Translations = {
   multiPostingsInvalidBalance: "De boekingen moeten samen nul zijn",
   multiPostingsMissingAccount: "Elke boeking heeft een account nodig",
   multiPostingsZeroAmount: "Elke boeking heeft een bedrag anders dan nul nodig",
+  multiPostingsAmountFormat:
+    "Gebruik cijfers en één decimaalpunt, zoals 1234.56",
   accountPicker: "Account kiezen",
   accountPickerSearchPlaceholder: "Rekeningen zoeken",
   accountPickerRecent: "Recent",
   accountPickerAllTab: "Alle",
   accountPickerNoResults: "Geen overeenkomende rekeningen",
   accountPickerCreate: '"%{name}" aanmaken',
-  next: "Volgende",
+  accountPickerClosedOn: "{{name}} is gesloten op {{date}}",
+  accountPickerOpensOn:
+    "{{name}} wordt geopend op {{date}}. Wijzig de datum om het te gebruiken.",
+  accountPickerOpenLater:
+    "Je rekeningen worden geopend op {{date}}. Wijzig de datum om ze te gebruiken.",
+  accountPickerNoAccounts: "Dit grootboek heeft nog geen rekeningen.",
   cancel: "Annuleren",
   confirm: "Bevestigen",
   saving: "Opslaan...",
+  deleting: "Verwijderen...",
   saveSuccess: "Transactie opgeslagen!",
   saveFailed: "Opslaan mislukt",
-  amountEmptyError: "Voer het bedrag in",
-  accountEmptyError: "Kies het account waarvan en waarnaar",
+  profilePartialSave:
+    "De gebruikersnaam is opgeslagen, maar je naam kon niet worden opgeslagen. Probeer het opnieuw.",
   accounts: "Accounts",
   // Column header for the Accounts tab's account column. The balance column
   // reuses `balance`; each root row states its own valuation basis.
   account: "Account",
   atCost: "{{amount}} tegen kostprijs",
+  postingCost: "kostprijs {{amount}}",
+  postingPrice: "prijs {{amount}}",
   notInTotal: "Niet in totaal: {{amounts}}",
+  spendingLastMonthNotInTotal: "Vorige maand, niet in het totaal: {{amounts}}",
   atMarket: "{{amount}} tegen marktwaarde",
   atMarketValue: "Tegen marktwaarde",
   pricesNotUpdatedSince: {
@@ -231,11 +273,15 @@ export const nl: Translations = {
   equity: "Eigen vermogen",
   noDataCharts: "Snel toevoegen om grafieken te tonen",
   notEnoughChartData: "Nog niet genoeg gegevens voor een grafiek",
+  chartSummary:
+    "Van {{start}}, {{startValue}}, tot {{end}}, {{endValue}}. Laagste {{low}}, hoogste {{high}}.",
+  chartPointValue: "{{period}}, {{value}}, {{change}} sinds het begin",
+  chartAdjustHint: "Veeg omhoog of omlaag om door de maanden te gaan",
+  chartAdjustHintAndroid: "Open het actiemenu om door de maanden te gaan",
   done: "Klaar",
   payee: "Begunstigde",
   narration: "Beschrijving",
   suggestions: "Suggesties",
-  aiSuggestions: "AI-suggesties",
   from: "Van",
   to: "Naar",
   date: "Datum",
@@ -278,9 +324,11 @@ export const nl: Translations = {
     "Zodra je transacties toevoegt, verschijnen ze hier.",
   transactionsNoSearchResults:
     "Geen transacties komen overeen met je zoekopdracht of filters.",
-  transactionsLoadError: "Laden van transacties mislukt: ",
+  transactionsLoadError: "Laden van transacties mislukt",
   // transactions filter modal
   filters: "Filters",
+  filtersActive: "Actief: {{count}}",
+  clearAccount: "Rekening wissen",
   filterStatus: "Status",
   filterDateRange: "Periode",
   filterDateRangeInvalid: "De einddatum moet op of na de startdatum liggen.",
@@ -295,6 +343,7 @@ export const nl: Translations = {
   transactions: "Transacties",
   search: "Zoeken",
   unknown: "Onbekend",
+  datePlaceholder: "JJJJ-MM-DD",
   openAccount: "Account openen",
   accountType: "Accounttype",
   currency: "Valuta",
@@ -303,34 +352,75 @@ export const nl: Translations = {
   chooseCurrency: "Kies een valuta",
   openAccountNamePlaceholder: "Bank:Checking",
   openAccountNoCurrency: "Geen valuta",
+  openAccountOtherCurrency: "Overig…",
+  openAccountOtherCurrencyTitle: "Andere valuta",
+  openAccountOtherCurrencyMessage:
+    "Voer een valuta- of effectcode in, zoals EUR of VTI.",
+  openAccountCurrencyInvalid:
+    "Gebruik hoofdletters, cijfers en ' . _ -, beginnend met een letter, zoals EUR of VTI.",
   openAccountSaving: "Openen...",
   openAccountFailed: "Account openen is mislukt. Probeer het opnieuw.",
   ledgerWouldBreak: "Dit zou een fout aan je grootboek toevoegen: {{detail}}",
+  ledgerRefusalLine: "regel {{line}}",
+  ledgerRefusalNearEntry: "in de buurt van deze boeking",
+  ledgerRefusalQuoteHint: 'Een aanhalingsteken in tekst schrijf je als \\".',
+  ledgerWriteOffline: "Je bent offline. Er is niets opgeslagen.",
+  ledgerWriteUnconfirmed:
+    "De server heeft het opslaan niet bevestigd. Controleer het voordat je het opnieuw probeert.",
+  ledgerWriteRateLimited:
+    "Te veel wijzigingen tegelijk. Wacht even en probeer het opnieuw.",
+  ledgerInvalidAccount: "{{value}} is geen geldige accountnaam.",
+  ledgerInvalidCurrency: "{{value}} is geen geldige valuta.",
+  ledgerInvalidTag:
+    "#{{value}} kan niet als tag worden gebruikt. Gebruik alleen de letters A–Z, cijfers en - _ . /",
+  ledgerInvalidLink:
+    "^{{value}} kan niet als link worden gebruikt. Gebruik alleen de letters A–Z, cijfers en - _ . /",
+  ledgerInvalidFlag: "{{value}} kan niet als vlag worden gebruikt.",
+  ledgerEntryOneAtATime: "Bewerk één boeking tegelijk.",
+  ledgerEntryIndent: "Laat de boekingsregels inspringen onder de datumregel.",
+  ledgerEntryNotAnEntry:
+    "Opties, plugins en includes zijn geen boekingen. Wijzig ze in de bestandseditor van het grootboek.",
   openAccountInvalidRoot: "Kies een geldig accounttype.",
   openAccountNameRequired: "Voer minstens één naamdeel in.",
   openAccountEmptyComponent: "Naamdelen mogen niet leeg zijn.",
   openAccountNamePreview: "Wordt aangemaakt als {{account}}",
   openAccountAlreadyOpen: "{{account}} is al geopend in dit grootboek.",
+  openAccountClosed:
+    "{{account}} is gesloten op {{date}} en kan niet opnieuw worden geopend.",
   openAccountUppercaseComponent:
     "Elk naamdeel moet met een hoofdletter of cijfer beginnen.",
   openAccountInvalidCharacters:
     "Gebruik in accountnamen alleen letters, cijfers en koppeltekens.",
   transaction: "Transactie",
+  transactionActions: "Transactieacties",
   loadingMore: "Meer laden...",
   noMoreEntries: "Geen verdere vermeldingen",
+  loadMoreFailed: "Meer boekingen laden is mislukt.",
+  a11yTapToExpand: "Tik twee keer om uit te vouwen",
+  a11yTapToCollapse: "Tik twee keer om in te klappen",
   noEntries: "Geen boekingen",
   accountDetailUnavailable:
     "Dit account is niet beschikbaar in het geselecteerde grootboek.",
   transactionDetailUnavailable:
     "Deze transactie is niet beschikbaar in het geselecteerde grootboek.",
+  transactionDetailRemoved:
+    "Deze transactie is gewijzigd of verwijderd. Ga terug om de actuele lijst te zien.",
+  transactionErrorOpenFile: "Openen in de bestandseditor",
+  pluginCopyNotice:
+    "Een plug-in heeft deze boeking uit een andere gemaakt, dus je kunt hem hier niet bewerken of verwijderen.",
+  pluginCopyOpenSource: "Bronboeking openen",
   merchantDetailUnavailable:
     "Deze handelaar is niet beschikbaar in het geselecteerde grootboek.",
   commitDetailUnavailable:
     "Deze wijziging is niet beschikbaar in het geselecteerde grootboek.",
-  journalLoadError: "Laden van journaal mislukt: ",
+  commitDetailGone: "Deze commit is niet meer beschikbaar.",
+  fileEditorUnavailable:
+    "Dit bestand is niet beschikbaar in het geselecteerde grootboek.",
+  journalLoadError: "Laden van journaal mislukt",
   // entry context (transactions screen)
   journalError: "Fout",
   journalNoData: "Geen contextgegevens van vermelding beschikbaar",
+  dateSectionHeaderTotal: "{{date}}, totaal {{total}}",
   journalEntryContext: "Context van vermelding",
   journalBalancesBefore: "Saldi voor vermelding",
   journalBalancesAfter: "Saldi na vermelding",
@@ -339,6 +429,7 @@ export const nl: Translations = {
   open: "Openen",
   close: "Sluiten",
   balance: "Saldo",
+  balanceOffBy: "Afwijking {{amount}}",
   note: "Notitie",
   document: "Document",
   pad: "Aanvulling",
@@ -346,9 +437,11 @@ export const nl: Translations = {
   custom: "Eigen",
   cleared: "Bevestigd",
   pending: "In afwachting",
+  entryUpcoming: "Aankomend",
   other: "Overige",
   budget: "Budget",
   metadata: "Metadata",
+  accountOwnPostings: "{{name}} (eigen)",
   postings: "Boekingen",
   details: "Details",
   tags: "Tags",
@@ -357,6 +450,8 @@ export const nl: Translations = {
   reports: "Rapporten",
   netProfit: "Nettowinst",
   cashFlow: "Kasstroom",
+  cashFlowRefunds: "Terugbetalingen",
+  cashFlowClawbacks: "Terugvorderingen",
   moneyFlow: "Geldstroom",
   cashFlowEmpty: "Geen kasstroom in deze periode",
   savings: "Spaargeld",
@@ -368,12 +463,22 @@ export const nl: Translations = {
   notFoundGoHome: "Ga naar start",
   // home dashboard
   seeAll: "Alles bekijken",
+  seeAllCard: "Alles bekijken: {{title}}",
+  seeAllAccounts: "Alle rekeningen bekijken",
   netWorth: "Nettovermogen",
   noAccounts: "Geen accounts",
+  reportsNoExpenses: "Geen uitgaven in deze periode",
+  reportsNoIncome: "Geen inkomsten in deze periode",
   recentTransactions: "Recente transacties",
   recentTransactionsEmpty: "Nog geen transacties",
+  recentTransactionsUpcoming:
+    "Tot vandaag niets. Geplande boekingen staan onder Transacties.",
+  recentTransactionsEmptyRange: "Geen transacties in deze periode",
   spending: "Uitgaven",
   spendingSubtitle: "Deze maand vergeleken met vorige maand",
+  spendingChartSummary:
+    "Uitgaven: vorige maand {{lastMonth}}, deze maand {{thisMonth}}.",
+  spendingEmpty: "Nog geen uitgaven",
   thisMonth: "Deze maand",
   lastMonth: "Vorige maand",
   range1M: "1M",
@@ -383,6 +488,13 @@ export const nl: Translations = {
   range1Y: "1J",
   rangeLastYear: "VJ",
   rangeAll: "ALLES",
+  rangeSpoken1M: "1 maand",
+  rangeSpoken3M: "3 maanden",
+  rangeSpoken6M: "6 maanden",
+  rangeSpokenYTD: "Dit jaar tot nu",
+  rangeSpoken1Y: "1 jaar",
+  rangeSpokenLastYear: "Vorig jaar",
+  rangeSpokenAll: "Alle tijd",
   // edit / delete transaction
   editTransaction: "Transactie bewerken",
   deleteTransaction: "Verwijderen",
@@ -391,8 +503,12 @@ export const nl: Translations = {
     "Weet je zeker dat je deze transactie wilt verwijderen? Dit kan niet ongedaan worden gemaakt.",
   deleteSuccess: "Transactie verwijderd",
   deleteFailed: "Verwijderen van transactie mislukt",
+  deleteTransactionChanged:
+    "Deze transactie is elders gewijzigd. Ze is opnieuw geladen; probeer haar opnieuw te verwijderen.",
   editSuccess: "Transactie opgeslagen",
   editFailed: "Opslaan van transactie mislukt",
+  editTransactionEmpty:
+    "Een lege boeking kan niet worden opgeslagen. Gebruik Verwijderen in de details om de transactie te verwijderen.",
   editTransactionLoadFailed: "Transactie laden mislukt",
   editTransactionSource:
     "Bewerk hieronder de beancount-brontekst. Een verouderde controlesom of ongeldige beancount wordt met een foutmelding geweigerd.",
@@ -406,12 +522,16 @@ export const nl: Translations = {
   receiptFlashOff: "Uit",
   receiptFlashOn: "Aan",
   receiptRetake: "Opnieuw",
+  receiptTryAgain: "Opnieuw proberen",
   receiptUpload: "Uploaden",
   receiptOpenSettings: "Instellingen openen",
+  receiptAllowCamera: "Camera toestaan",
   receiptCancel: "Annuleren",
   receiptUploading: "Foto uploaden…",
+  receiptUploadingProgress: "Foto uploaden… {{percent}}%",
   receiptParsing: "AI leest je bon…",
   receiptRevealTitle: "Dit hebben we gelezen",
+  receiptRevealSpoken: "Bon gelezen: {{summary}}",
   // Deliberately a proposal: nothing is written to the ledger until the user
   // saves on the next screen.
   receiptRevealHint:
@@ -431,14 +551,29 @@ export const nl: Translations = {
   notificationsChangesSection: "Recente wijzigingen",
   notificationsLedgerHealthy: "Het grootboek is in orde — geen fouten.",
   notificationsNoChanges: "Geen recente wijzigingen.",
+  notificationsShowOlder: "Oudere wijzigingen tonen",
+  commitNoMessage: "(geen bericht)",
   // commit detail
   commitDetailAuthor: "Auteur",
   commitDetailStats: "Statistieken",
   commitDetailFiles: "Bestanden",
+  commitFileAdded: "Toegevoegd",
+  commitFileDeleted: "Verwijderd",
+  commitFileRenamedFrom: "Hernoemd van {{name}}",
   commitDetailDiff: "Verschillen",
+  commitDetailShowMore: {
+    one: "{{count}} regel meer tonen",
+    other: "{{count}} regels meer tonen",
+  },
   commitDetailNoDiff: "Geen verschillen beschikbaar.",
-  commitDetailAdditions: "+{{count}} regels",
-  commitDetailDeletions: "-{{count}} regels",
+  commitDetailAdditions: {
+    one: "+{{count}} regel",
+    other: "+{{count}} regels",
+  },
+  commitDetailDeletions: {
+    one: "-{{count}} regel",
+    other: "-{{count}} regels",
+  },
   // ledger file browser
   ledgerLoadError: "Laden mislukt",
   ledgerEmpty: "Geen bestanden",
@@ -451,20 +586,35 @@ export const nl: Translations = {
     "Voer een unieke .bean- of .beancount-bestandsnaam in. Zonder extensie wordt .bean toegevoegd.",
   ledgerCreateFilePlaceholder: "investments.bean",
   ledgerCreateFileSuccess: "{{name}} aangemaakt",
+  ledgerCreateFileSuccessIn: "{{name}} aangemaakt in {{ledger}}",
   ledgerCreateFileFailed: "Aanmaken van bestand mislukt",
+  ledgerFileNameExists: "Er bestaat al een bestand met de naam {{name}}",
+  ledgerFileNameExtension: "Gebruik een naam op .bean of .beancount",
+  ledgerFileNamePath: "Gebruik een naam zonder \\, .. of lege mapnamen",
+  ledgerFileNamePortable:
+    'Vermijd < > : " | ? *, delen die op een punt of spatie eindigen en namen als con of nul',
   ledgerDeleteFile: "{{name}} verwijderen",
+  ledgerFilesFolderLabel: "{{name}}, map",
+  ledgerFilesFileLabel: "{{name}}, bestand",
   ledgerDeleteFileTitle: "Grootboekbestand verwijderen",
   ledgerDeleteFileMessage:
     '"{{name}}" verwijderen? Dit kan niet ongedaan worden gemaakt.',
   ledgerDeleteFileConfirm: "Verwijderen",
   ledgerDeleteFileSuccess: "{{name}} verwijderd",
   ledgerDeleteFileFailed: "Verwijderen van bestand mislukt",
+  ledgerDeleteFileChanged:
+    "Dit bestand is elders gewijzigd. De lijst is vernieuwd; probeer het opnieuw.",
   ledgerMainFileProtected: "main.bean kan niet worden verwijderd",
   // ledger file editor
   ledgerEditorSave: "Opslaan",
   ledgerEditorSaving: "Opslaan...",
   ledgerEditorSaveSuccess: "Bestand opgeslagen",
   ledgerEditorSaveFailed: "Opslaan mislukt",
+  ledgerEditorSaveLeftErrorsTitle:
+    "Opgeslagen, met een nieuwe fout in het grootboek",
+  ledgerEditorSaveLeftErrors:
+    "Het bestand is opgeslagen, maar je grootboek heeft nu een fout die het eerst niet had: {{error}}",
+  ledgerEditorViewErrors: "Fouten bekijken",
   ledgerEditorLoadFailed: "Laden van bestand mislukt",
   ledgerEditorFileUnavailable: "Dit bestand staat niet meer in het grootboek.",
   ledgerEditorBackToFiles: "Terug naar bestanden",
@@ -473,11 +623,37 @@ export const nl: Translations = {
   ledgerEditorDiscardChanges: "Verwerpen",
   ledgerEditorConflictTitle: "Bestand gewijzigd",
   ledgerEditorConflictMessage:
-    "Dit bestand is op afstand gewijzigd. Lokale wijzigingen verwerpen en herladen?",
+    "Dit bestand is extern gewijzigd. Je tekst eroverheen opslaan, of je tekst kopiëren en de nieuwe versie laden?",
+  ledgerEditorOverwrite: "Overschrijven",
+  ledgerEditorCopyReload: "Kopiëren en herladen",
+  ledgerEditorOverwriteTitle: "Externe wijzigingen overschrijven?",
+  ledgerEditorOverwriteMessage:
+    "Je tekst vervangt de elders opgeslagen versie. Die wijzigingen gaan verloren.",
+  ledgerEditorFileGoneTitle: "Bestand verwijderd",
+  ledgerEditorFileGoneMessage:
+    "Dit bestand is elders verwijderd of verplaatst en kan niet worden opgeslagen. Je tekst staat er nog: kopieer hem of sla hem op als nieuw bestand op hetzelfde pad.",
+  ledgerEditorRecreate: "Opslaan als nieuw bestand",
+  ledgerEditorSaveFailedHint:
+    "Je tekst staat er nog. Probeer het zo meteen opnieuw.",
+  ledgerEditorAccessRemoved:
+    "Je kunt dit grootboek niet meer bewerken. Je tekst staat er nog: kopieer hem om hem te bewaren.",
+  ledgerEditorCopyFailed:
+    "Je tekst kon niet worden gekopieerd, dus het bestand is niet herladen.",
   ledgerEditorReload: "Herladen",
   ledgerEditorKeepEditing: "Doorgaan met bewerken",
   keyboardAccessoryInsert: "{{symbol}} invoegen",
+  keyboardInsertDate: "Datum van vandaag invoegen",
+  keyboardInsertCleared: "Vlag voor afgeletterd invoegen",
+  keyboardInsertPending: "Vlag voor in behandeling invoegen",
+  keyboardInsertQuotes: "Aanhalingstekens invoegen",
+  keyboardInsertColon: "Dubbele punt invoegen",
+  keyboardInsertTab: "Tab invoegen",
+  keyboardInsertMinus: "Min invoegen",
+  keyboardInsertTag: "Tag invoegen",
+  keyboardInsertLink: "Link invoegen",
   keyboardAccessoryDismiss: "Toetsenbord verbergen",
+  ledgerEditorErrorLine: "regel {{line}}",
+  ledgerEditorJumpToLine: "Ga naar regel {{line}}",
   ledgerEditorErrorCount: {
     one: "{{count}} fout",
     other: "{{count}} fouten",
@@ -499,14 +675,22 @@ export const nl: Translations = {
     "Stel voor een willekeurige rekening een doel in om te gaan volgen.",
   budgetEmptyStateCta: "Je eerste budget toevoegen",
   budgetPanelEmpty: "Stel een doel in voor een rekening",
+  budgetPanelEmptyGuest: "Meld je aan om uitgavendoelen in te stellen",
   budgetPanelRowValue:
     "{{actual}} van {{budget}}, {{percent}}% gebruikt, {{status}}",
+  budgetPanelRowValueNoBudget: "{{actual}} van {{budget}}, {{status}}",
+  budgetStartsOn: "Begint op {{date}}",
   budgetLoadFailed: "Budgetten konden niet worden geladen",
   budgetIntervalDaily: "Dagelijks",
   budgetIntervalWeekly: "Wekelijks",
   budgetIntervalMonthly: "Maandelijks",
   budgetIntervalQuarterly: "Per kwartaal",
   budgetIntervalYearly: "Jaarlijks",
+  budgetIntervalAdjDaily: "dagelijkse",
+  budgetIntervalAdjWeekly: "wekelijkse",
+  budgetIntervalAdjMonthly: "maandelijkse",
+  budgetIntervalAdjQuarterly: "driemaandelijkse",
+  budgetIntervalAdjYearly: "jaarlijkse",
   // add / update budget
   budgetAdd: "Budget toevoegen",
   budgetUpdate: "Budget bijwerken",
@@ -520,10 +704,14 @@ export const nl: Translations = {
   budgetSaveFailed: "Budget kon niet worden opgeslagen",
   // delete
   budgetDelete: "Verwijderen",
+  budgetUpdateNamed: "Budget voor {{account}} bijwerken, {{currency}}",
+  budgetDeleteNamed: "Budgetregel van {{date}} verwijderen, {{amount}}",
   budgetDeleteTitle: "Budget verwijderen",
   budgetDeleteMessage:
     "Het {{interval}} budget van {{amount}} voor {{account}} met ingang van {{date}} verwijderen? Dit verwijdert één regel en kan niet ongedaan worden gemaakt.",
   budgetDeleteFailed: "Budget kon niet worden verwijderd",
+  budgetDeleteChanged:
+    "Deze budgetregel is elders gewijzigd. De geschiedenis is vernieuwd; probeer het opnieuw.",
 
   // Ask Beancount.io — the agent chat
   agentTitle: "Vraag het Beancount.io",
@@ -562,10 +750,16 @@ export const nl: Translations = {
   createLedgerNameInvalid:
     "De naam moet minstens één letter of cijfer bevatten.",
   createLedgerNameConflict: "Er bestaat al een grootboek met deze naam.",
+  createLedgerNameReserved:
+    "Die naam hoorde bij een hernoemd grootboek en verwijst er nog naar door. Kies een andere naam.",
+  createLedgerSetupUnsupported:
+    "Deze server ondersteunt de begeleide installatie niet. Ga terug en kies Start of Voorbeeld om een grootboek met de standaardwaarden van de server te maken.",
+  createLedgerCreated: "{{name}} aangemaakt",
   createLedgerSlugPreview: "Wordt aangemaakt als {{slug}}",
   createLedgerDescription: "Beschrijving",
   createLedgerDescriptionPlaceholder: "Optioneel",
   createLedgerPrivate: "Privé",
+  createLedgerPublic: "Openbaar",
   createLedgerTemplate: "Sjabloon",
   createLedgerTemplateStarter: "Start",
   createLedgerTemplateStarterHint:
@@ -577,6 +771,8 @@ export const nl: Translations = {
     "De grootboeklimiet is bereikt. Er kan geen nieuw grootboek worden aangemaakt.",
   createLedgerGenericError:
     "Kon het grootboek niet maken. Probeer het opnieuw.",
+  createLedgerStillCreating:
+    "Dit grootboek wordt nog gemaakt. Wacht een paar seconden en tik dan opnieuw op Maken.",
   createLedgerDrawerRow: "Nieuw grootboek",
   createLedgerEmptyTitle: "Nog geen grootboeken",
   createLedgerEmptyBody: "Maak een grootboek of ontdek openbare voorbeelden.",
@@ -586,8 +782,14 @@ export const nl: Translations = {
   ledgerGuardMessage: "Maak een grootboek of ontdek er een om door te gaan.",
   removePosting: "Boeking verwijderen",
   toggleAmountSign: "Teken van bedrag wisselen",
-  incomeExpenseChartSummary:
-    "Inkomsten en uitgaven over {{count}} maanden. Inkomsten {{income}}, uitgaven {{expense}}, netto {{net}}.",
+  postingSignToggle: "Teken voor {{account}}",
+  signPlus: "Plus",
+  signMinus: "Min",
+  incomeExpenseChartSummary: {
+    one: "Inkomsten en uitgaven over {{count}} maand. Inkomsten {{income}}, uitgaven {{expense}}, netto {{net}}.",
+    other:
+      "Inkomsten en uitgaven over {{count}} maanden. Inkomsten {{income}}, uitgaven {{expense}}, netto {{net}}.",
+  },
   cashFlowChartSummary:
     "Kasstroom van inkomsten naar uitgaven. Inkomsten {{income}}, uitgaven {{expenses}}.",
   cashFlowChartSummaryWithSavings:
@@ -597,6 +799,7 @@ export const nl: Translations = {
   sankeyIncomeNodeLabel: "{{name}} (inkomsten)",
   sankeyExpensesNodeLabel: "{{name}} (uitgaven)",
   ledgerNavigateUp: "Eén map omhoog",
+  ledgerNavigateUpTo: "Omhoog naar {{folder}}",
   openLedgerDrawer: "Menu openen",
   back: "Terug",
   postingAmountLabel: "Bedrag voor {{account}}",
@@ -606,8 +809,13 @@ export const nl: Translations = {
   expandAccount: "{{account}} uitklappen",
   collapseAccount: "{{account}} inklappen",
   breakdownRowShare: "{{amount}}, {{percent}}% van het totaal",
-  budgetChartSummary:
-    "Budget versus werkelijk voor {{span}}. Werkelijk {{actual}} van {{budget}} begroot over {{count}} periodes, {{over}} boven het doel.",
+  budgetChartSummary: {
+    one: "Budget versus werkelijk voor {{span}}. Werkelijk {{actual}} van {{budget}} begroot over {{count}} periode, {{missed}}.",
+    other:
+      "Budget versus werkelijk voor {{span}}. Werkelijk {{actual}} van {{budget}} begroot over {{count}} periodes, {{missed}}.",
+  },
+  budgetSummaryOverTarget: "{{count}} boven het doel",
+  budgetSummaryBelowTarget: "{{count}} onder het doel",
   feedSourceLedger: "Grootboek",
   feedSourceBlog: "Blog",
   feedSourceRelease: "Uitgave",
@@ -620,6 +828,7 @@ export const nl: Translations = {
   profileUsernameHint:
     "De webadressen van je grootboeken beginnen met je gebruikersnaam, dus als je die wijzigt, veranderen ze mee.",
   profileUsernameRequired: "Voer een gebruikersnaam in",
+  profileNameTooLong: "Maximaal 100 tekens.",
   profileUsernameRule:
     "Gebruik 1–20 tekens: kleine letters a–z, cijfers 0–9 of underscores.",
   profileUsernameTaken: "Die gebruikersnaam is al in gebruik",
@@ -627,6 +836,54 @@ export const nl: Translations = {
   profileEmailReadOnly: "Je e-mailadres kan hier niet worden gewijzigd",
   profileNotSet: "Niet ingesteld",
   profilePhotoFromGravatar: "Foto van Gravatar",
+  profileAddGravatar: "Voeg een foto toe op Gravatar",
   profileUpdated: "Profiel bijgewerkt",
   multiplePostings: "Meerdere boekingen",
+  createLedgerNext: "Volgende",
+  createLedgerBack: "Terug",
+  createLedgerStep: "Stap {{step}} van {{total}}",
+  createLedgerStartPreset: "Voorinstelling",
+  createLedgerStartPresetHint:
+    "Kies een kant-en-klaar rekeningschema voor wat je bijhoudt: een huishouden, een bedrijf, beleggingen.",
+  createLedgerCurrency: "Operationele valuta",
+  createLedgerHistoryStart: "Boeken beginnen op",
+  createLedgerOpeningAccount: "Openingsrekening",
+  createLedgerOpeningAmount: "Openingssaldo (optioneel)",
+  createLedgerReviewOpening: "Openingssaldo: {{account}} {{amount}}",
+  createLedgerAmountOwed: "Verschuldigd bedrag (optioneel)",
+  createLedgerOpeningNone: "Later beslissen",
+  createLedgerReview: "Controleren",
+  createLedgerReviewDescription:
+    "Dit is precies wat er wordt gemaakt. Ga terug om iets te wijzigen.",
+  createLedgerAccounts: "Rekeningen",
+  createLedgerAmountInvalid: "Voer een bedrag in zoals 100 of -30.50",
+  createLedgerAmountReenter:
+    "Voer het openingssaldo opnieuw in of kies Later beslissen. Het wordt niet bewaard in het opgeslagen concept.",
+  createLedgerCurrencyInvalid: "Kies een valutacode zoals USD of EUR.",
+  createLedgerHistoryStartInvalid:
+    "Voer een geldige datum in, zoals 2026-01-01.",
+  createLedgerPresetPersonal: "Persoonlijk grootboek",
+  createLedgerPresetPersonalOutcome:
+    "Leg een aankoop vast en begrijp het effect op je resterende geld.",
+  createLedgerPresetFreelance: "Freelance grootboek",
+  createLedgerPresetFreelanceOutcome:
+    "Leg klantinkomsten vast of zie wat een onbetaalde klant nog schuldig is.",
+  createLedgerPresetBusiness: "Zakelijk grootboek",
+  createLedgerPresetBusinessOutcome:
+    "Bepaal een openingspositie en onderscheid financiering van omzet.",
+  createLedgerPresetPortfolio: "Portefeuille grootboek",
+  createLedgerPresetPortfolioOutcome:
+    "Leg een aankoop vast en controleer eenheden, aanschafgegevens en geldstroom.",
+  createLedgerPresetRental: "Verhuur grootboek",
+  createLedgerPresetRentalOutcome:
+    "Leg ontvangsten vast en onderscheid huur van een terugbetaalbare borg.",
+  createLedgerPresetShared: "Grootboek voor gedeelde uitgaven",
+  createLedgerPresetSharedOutcome:
+    "Leg een voorschot vast en zie wie aan wie schuldig is.",
+  createLedgerPresetCommunity: "Gemeenschaps grootboek",
+  createLedgerPresetCommunityOutcome:
+    "Verklaar bijdragen, projectuitgaven en resterende fondsen.",
+  createLedgerPresetBlank: "Leeg grootboek",
+  createLedgerPresetBlankOutcome:
+    "Voeg een gekozen structuur toe zonder ongewenste categorieën te verwijderen.",
 };

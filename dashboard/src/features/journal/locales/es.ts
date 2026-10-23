@@ -461,10 +461,6 @@ const esJournal: Record<string, TranslationEntry> = {
     message: "Pendiente",
     description: "Pending transaction status",
   },
-  "journal.blankStatus": {
-    message: "(en blanco)",
-    description: "Blank transaction status option",
-  },
   "journal.addPosting": {
     message: "Añadir asiento",
     description: "Accessible name for adding a transaction posting row",

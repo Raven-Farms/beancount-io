@@ -8,11 +8,12 @@ import {
   type V1Deps,
 } from "@/server/rest/v1-route";
 import { json } from "@/server/rest/v1-schemas";
+import { HOST_PAGE_MAX } from "@/shared/host-page";
 
 export const socialListQuery = z.object({
   username: z.string(),
-  page: z.coerce.number().optional(),
-  limit: z.coerce.number().optional(),
+  page: z.coerce.number().int().min(1).optional(),
+  limit: z.coerce.number().int().min(1).max(HOST_PAGE_MAX).optional(),
 });
 const userList = z.object({
   users: z.array(
@@ -71,11 +72,13 @@ export const SOCIAL_V1_ROUTES = [
         "Public social discovery. page defaults to 1 and limit to 20. total is the returned page size. Existing upstream failures return an empty page.",
       query: socialListQuery,
       responses: { 200: json("Social discovery page", read.response) },
-      handler: async ({ layers }, { query }) =>
+      handler: async ({ layers }, { query, identity }) =>
         layers.services.userProfile[read.method](
           query.username,
           query.page,
           query.limit,
+          // Only the starred list reads differently for its own user (w21/130).
+          identity?.userId,
         ),
     }),
   ),

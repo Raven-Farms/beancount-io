@@ -36,6 +36,12 @@ const frCollaboration: Record<string, TranslationEntry> = {
     message: "Erreur lors du chargement des collaborateurs",
     description: "Error title when collaborators fail to load",
   },
+  "collaboration.ownerPlanLimitReached": {
+    message:
+      "L'abonnement du propriétaire de ce registre n'autorise pas d'autres collaborateurs. Seul le propriétaire peut passer à une offre supérieure pour en ajouter.",
+    description:
+      "Shown when adding a collaborator to someone else's ledger hits the owner's plan limit; only the owner can upgrade.",
+  },
   "collaboration.failedToAddCollaborator": {
     message: "Échec de l'ajout du collaborateur",
     description: "Error message when adding collaborator fails",

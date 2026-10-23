@@ -1,8 +1,4 @@
-query BalanceSheet(
-  $ledgerId: String!
-  $time: String
-  $conversion: String!
-) {
+query BalanceSheet($ledgerId: String!, $time: String, $conversion: String!) {
   getLedgerBalanceSheet(
     ledgerId: $ledgerId
     time: $time

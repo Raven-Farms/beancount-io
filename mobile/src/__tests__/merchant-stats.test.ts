@@ -15,9 +15,10 @@ function table(
 }
 
 describe("buildMerchantMetaBql / buildMerchantCurrencyTotalsBql", () => {
-  it("interpolates an escaped payee literal into fixed statements", () => {
+  it("interpolates a safe payee predicate into fixed statements", () => {
+    // A double quote can't be escaped in the engine's literal (w21/032).
     const meta = buildMerchantMetaBql('He said "hi"');
-    expect(meta.includes('payee = "He said \\"hi\\""')).toBe(true);
+    expect(meta.includes('payee ~ "^He said \\x22hi\\x22$"')).toBe(true);
     expect(meta.includes("FROM #entries")).toBe(true);
     expect(meta.includes("transaction_count")).toBe(true);
 
@@ -111,5 +112,27 @@ describe("composeMerchantStats", () => {
       lastDate: "2024-02-01",
       totalsByCurrency: [{ currency: "USD", total: -10 }],
     });
+  });
+});
+
+describe("merchant detail header failure", () => {
+  it("shows the retryable failure in place of the header, rows or not", () => {
+    const fs = require("fs");
+    const path = require("path");
+    const screen = fs.readFileSync(
+      path.join(
+        __dirname,
+        "..",
+        "screens",
+        "merchant-detail-screen",
+        "merchant-detail-screen.tsx",
+      ),
+      "utf8",
+    );
+    expect(
+      screen.includes(
+        "ListHeaderComponent={fatalError ? statsError : listHeader}",
+      ),
+    ).toBe(true);
   });
 });

@@ -26,8 +26,9 @@ const putBodySchema = z
         "The file's full new content, as UTF-8 text; at most 1 MiB (1,048,576 UTF-8 bytes).",
       example: "2026-01-01 open Assets:Bank:Checking USD\n",
     }),
-    message: z.string().min(1).optional().openapi({
-      description: "Commit message; defaults to a generated one",
+    message: z.string().optional().openapi({
+      description:
+        'Commit message; "Create <path>" or "Update <path>" when omitted or empty',
       example: "Add January transactions",
     }),
     sha: z.string().optional().openapi({
@@ -42,7 +43,7 @@ const putBodySchema = z
 
 const deleteBodySchema = z
   .object({
-    message: z.string().min(1).optional(),
+    message: z.string().optional(),
     sha: z.string().optional().openapi({
       description: "Blob SHA of the file being deleted, from a prior GET",
     }),
@@ -54,6 +55,14 @@ const dirEntrySchema = z
     path: z.string(),
     name: z.string(),
     type: z.enum(["file", "dir"]),
+    size: z.number().int().openapi({ description: "Size in bytes" }),
+    sha: z.string().openapi({
+      description:
+        "Blob SHA: send it back as the optimistic lock of a delete or update",
+    }),
+    lastCommitSha: z.string().nullable().openapi({
+      description: "The commit that last touched the entry, when known",
+    }),
   })
   .openapi("LedgerDirEntry", {
     description: "One file or directory at a level of the repository",
@@ -70,6 +79,10 @@ const fileSchema = z
     path: z.string(),
     content: z.string(),
     sha: z.string(),
+    lossy: z.literal(true).optional().openapi({
+      description:
+        "Present when the file is not valid UTF-8: `content` shows U+FFFD for its undecodable bytes, so writing it back would replace them.",
+    }),
   })
   .openapi("LedgerFile", { description: "One ledger file and its blob SHA" });
 
@@ -152,7 +165,10 @@ export const FILE_ROUTES = [
             ...(body.sha ? { sha: body.sha } : {}),
           },
         ],
-        message: body.message ?? `Update ${params.path}`,
+        // An empty message is an omitted one, as the ledger service reads it
+        // (w21/553); a write with no sha creates the file.
+        message:
+          body.message || `${body.sha ? "Update" : "Create"} ${params.path}`,
       });
       return { ok: true as const, path: params.path };
     },
@@ -179,7 +195,7 @@ export const FILE_ROUTES = [
             ...(body.sha ? { sha: body.sha } : {}),
           },
         ],
-        message: body.message ?? `Delete ${params.path}`,
+        message: body.message || `Delete ${params.path}`,
       });
       return { ok: true as const, path: params.path };
     },

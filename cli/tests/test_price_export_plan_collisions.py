@@ -70,3 +70,37 @@ def test_force_export_refuses_destinations_aliasing_each_other(tmp_path: Path, l
     assert result.exit_code == 2, result.output
     assert "same destination" in result.output
     assert {path: path.read_bytes() for path in before} == before
+
+
+@pytest.mark.parametrize("shared", ["_shared", "_SHARED", "_Shared"])
+def test_a_file_in_the_way_of_the_relocation_directory_is_refused_in_any_case(tmp_path: Path, shared: str) -> None:
+    """`_SHARED` is the file `_shared/` must be on a case-insensitive volume (w5/867).
+
+    The ancestor check compared raw spellings, so only `_shared` was refused at
+    planning; `_SHARED` wrote two files, then failed with exit 1.
+    """
+    books = tmp_path / "books"
+    books.mkdir()
+    outside = tmp_path / "outside"
+    outside.mkdir()
+    local = books / shared
+    local.write_text("2026-01-01 open Assets:Internal USD\n")
+    external = outside / "accounts.bean"
+    external.write_text("2026-01-01 open Assets:External USD\n")
+    root = books / "main.bean"
+    root.write_text(
+        f'option "operating_currency" "USD"\ninclude "{shared}"\ninclude "../outside/accounts.bean"\n'
+        '2026-01-02 * "Transfer"\n  Assets:Internal  1 USD\n  Assets:External\n'
+    )
+    before = {path: path.read_bytes() for path in (root, local, external)}
+    out = tmp_path / "snapshot"
+
+    result = runner.invoke(app, ["--file", str(root), "price", "export", "-o", str(out)])
+
+    assert result.exit_code == 2, result.output
+    assert f"would write {out / shared} as a file and {out / '_shared' / '01-accounts.bean'} inside it" in " ".join(
+        result.output.split()
+    )
+    assert "Nothing was written" in result.output
+    assert not out.exists()
+    assert {path: path.read_bytes() for path in before} == before

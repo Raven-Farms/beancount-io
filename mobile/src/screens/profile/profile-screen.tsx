@@ -1,4 +1,7 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
+import { useApolloClient } from "@apollo/client";
+import { invalidateLedgerData } from "@/common/apollo/invalidate-ledger";
+import { renameLedgerOwner } from "@/common/vars/rename-ledger-owner";
 import {
   KeyboardAvoidingView,
   Platform,
@@ -43,9 +46,15 @@ import { UserAvatar } from "@/components/user-avatar";
 import {
   usernameAllowed,
   usernameErrorKey,
+  nameFailureKey,
   profileChanges,
   type ProfileValues,
 } from "./profile-changes";
+import { useIsHere } from "@/common/hooks/use-is-here";
+import { InlineError } from "@/components/inline-error";
+
+/** The longest first or last name the form accepts. */
+const NAME_MAX = 100;
 
 const AVATAR_SIZE = 96;
 const skeletonWidths = [120, 96, 140, 180];
@@ -186,9 +195,7 @@ function ProfileFooter({
   return (
     <View style={styles.footer}>
       {rootError ? (
-        <Text style={styles.formError} accessibilityRole="alert">
-          {rootError}
-        </Text>
+        <InlineError style={styles.formError} message={rootError} />
       ) : null}
       <View style={!canSave && !isSubmitting ? styles.saveDisabled : null}>
         <Button
@@ -213,7 +220,9 @@ export function ProfileScreen(): JSX.Element {
   const [updateProfile] = useUpdateProfileMutation();
   const [updateUsername] = useUpdateUsernameMutation();
   const { refresh: refreshLedgers } = useLedgerDirectory();
+  const client = useApolloClient();
   const [saved, setSaved] = useState(false);
+  const [avatarFallback, setAvatarFallback] = useState(false);
   const keyboardVerticalOffset = useStackKeyboardOffset();
   const screenOptions = useMemo(() => ({ title: t("profile") }), [t]);
 
@@ -229,8 +238,10 @@ export function ProfileScreen(): JSX.Element {
   const schema = useMemo(
     () =>
       z.object({
-        firstName: z.string().max(100),
-        lastName: z.string().max(100),
+        // Rendered under its field: a hidden error blocked Save with no word
+        // (w21/123).
+        firstName: z.string().max(NAME_MAX, t("profileNameTooLong")),
+        lastName: z.string().max(NAME_MAX, t("profileNameTooLong")),
         username: z
           .string()
           .trim()
@@ -243,6 +254,7 @@ export function ProfileScreen(): JSX.Element {
     [t, savedValues.username],
   );
 
+  const isHere = useIsHere();
   const {
     control,
     handleSubmit,
@@ -255,15 +267,27 @@ export function ProfileScreen(): JSX.Element {
     resetOptions: { keepDirtyValues: true },
   });
 
+  // The username this form has already saved. A retry after the name failed
+  // must not send it, or rename the ledgers a second time (w21/288).
+  const savedUsernameRef = useRef<string | null>(null);
+
   const onSubmit = handleSubmit(async (values) => {
     const pending = profileChanges(savedValues, values);
     // Username first: it is the write most likely to be refused, and a
     // refusal should leave the names untouched too.
-    if (pending.username !== undefined) {
+    if (
+      pending.username !== undefined &&
+      pending.username !== savedUsernameRef.current
+    ) {
       try {
         await updateUsername({ variables: { username: pending.username } });
-        // Renaming the account renames every ledger it owns; the directory
-        // would otherwise keep listing them under the old owner.
+        // Renaming the account renames every ledger it owns: follow them with
+        // everything remembered per ledger, drop what was read under the old
+        // ids, and re-list the directory, which would otherwise keep listing
+        // them under the old owner (w21/226).
+        savedUsernameRef.current = pending.username;
+        renameLedgerOwner(savedValues.username, pending.username);
+        void invalidateLedgerData(client, "file");
         void refreshLedgers().catch(() => {});
       } catch (error) {
         const fieldKey = usernameErrorKey(error);
@@ -277,12 +301,17 @@ export function ProfileScreen(): JSX.Element {
       try {
         await updateProfile({ variables: pending.name });
       } catch {
-        setError("root", { message: t("saveFailed") });
+        setError("root", {
+          message: t(nameFailureKey(savedUsernameRef.current !== null)),
+        });
         return;
       }
     }
     setSaved(true);
     toast.showToast({ message: t("profileUpdated"), type: "success" });
+    // Left during the save: the toast is enough, and `back()` would close
+    // whatever the user opened meanwhile (w21/194).
+    if (!isHere()) return;
     if (router.canGoBack()) {
       router.back();
     } else {
@@ -293,7 +322,11 @@ export function ProfileScreen(): JSX.Element {
   const textField = (
     name: keyof ProfileValues,
     label: string,
-    options: { autoCapitalize: "words" | "none"; testID: string },
+    options: {
+      autoCapitalize: "words" | "none";
+      testID: string;
+      maxLength?: number;
+    },
   ) => (
     <View style={styles.card}>
       <Text style={styles.label}>{label}</Text>
@@ -314,11 +347,24 @@ export function ProfileScreen(): JSX.Element {
             style={styles.input}
             accessibilityLabel={label}
             returnKeyType="done"
+            maxLength={options.maxLength}
           />
         )}
       />
     </View>
   );
+
+  const nameError = (message: string | undefined) =>
+    message ? (
+      <InlineError style={[styles.hint, styles.hintError]} message={message} />
+    ) : null;
+
+  // A Gravatar URL comes back for everyone without an upload; when it fails to
+  // load there is no Gravatar, and the initials must not be captioned as one
+  // (w21/289).
+  const gravatarCaption = avatarFallback
+    ? t("profileAddGravatar")
+    : t("profilePhotoFromGravatar");
 
   let body: JSX.Element;
   if (user) {
@@ -334,6 +380,7 @@ export function ProfileScreen(): JSX.Element {
             uri={user.avatarUrl}
             name={displayName}
             size={AVATAR_SIZE}
+            onFallbackChange={setAvatarFallback}
           />
           {isGravatarUrl(user.avatarUrl) ? (
             <Pressable
@@ -341,12 +388,10 @@ export function ProfileScreen(): JSX.Element {
                 void WebBrowser.openBrowserAsync("https://gravatar.com/")
               }
               accessibilityRole="link"
-              accessibilityLabel={t("profilePhotoFromGravatar")}
+              accessibilityLabel={gravatarCaption}
               hitSlop={8}
             >
-              <Text style={styles.avatarCaption}>
-                {t("profilePhotoFromGravatar")}
-              </Text>
+              <Text style={styles.avatarCaption}>{gravatarCaption}</Text>
             </Pressable>
           ) : null}
         </View>
@@ -354,22 +399,24 @@ export function ProfileScreen(): JSX.Element {
         {textField("firstName", t("profileFirstName"), {
           autoCapitalize: "words",
           testID: "profile-first-name",
+          maxLength: NAME_MAX,
         })}
+        {nameError(errors.firstName?.message)}
         {textField("lastName", t("profileLastName"), {
           autoCapitalize: "words",
           testID: "profile-last-name",
+          maxLength: NAME_MAX,
         })}
+        {nameError(errors.lastName?.message)}
         {textField("username", t("profileUsername"), {
           autoCapitalize: "none",
           testID: "profile-username",
         })}
         {errors.username?.message ? (
-          <Text
+          <InlineError
             style={[styles.hint, styles.hintError]}
-            accessibilityRole="alert"
-          >
-            {errors.username.message}
-          </Text>
+            message={errors.username.message}
+          />
         ) : (
           <Text style={styles.hint}>
             {`${t("profileUsernameRule")} ${t("profileUsernameHint")}`}

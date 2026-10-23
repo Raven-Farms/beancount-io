@@ -7,6 +7,7 @@ import {
   InternalServerError,
   BadUserInputError,
   DomainError,
+  NotFoundError,
   ServiceUnavailableError,
 } from "@/shared/errors";
 import { lock, LOCK_KEYS } from "@/shared/lock";
@@ -22,6 +23,7 @@ import {
 } from "@/server/api/authorization";
 import { operationNotAllowedFromCause } from "@/features/ledger/utils/operation-not-allowed-from-cause";
 import { createLedgerId, parseLedgerId } from "@/shared/str";
+import type { DirectiveLimitPreview } from "@/features/ledger/operations/directive-limit-preview";
 import type { IPlaidClient } from "./plaid-client";
 import { decryptToken } from "../utils/encryption";
 import type { TransactionToCategorize } from "@/features/llm/types";
@@ -120,6 +122,8 @@ export class PlaidSyncService implements IPlaidSyncService {
     >,
     private readonly db: DbExecutor,
     private readonly authorization: IAuthorizationService,
+    /** Lets a preview refuse what the commit would (w5/904); absent, a preview does not look. */
+    private readonly limitPreview?: DirectiveLimitPreview,
   ) {}
 
   private async authorizeBankAction(
@@ -181,12 +185,26 @@ export class PlaidSyncService implements IPlaidSyncService {
     transactions: PlaidTransaction[];
     accounts: ReadonlyMap<string, PlaidAccount>;
   }> {
+    // Authority first, against the route's ledger: a read-only credential is
+    // FORBIDDEN before any lookup, instead of being told the transactions do
+    // not exist (w23/024).
+    const { ledgerRepoId } = await this.authorizeBankAction(
+      identity,
+      action,
+      ledgerId,
+    );
     const transactions = await this.models.plaidTransaction.getByTransactionIds(
       this.db,
       transactionIds,
     );
     if (transactions.length !== transactionIds.length) {
-      throw new BadUserInputError("Some transactions not found in database");
+      // An agent handed the staged row's `id` for its `transactionId` and got
+      // this with nothing to go on (w5/m5/t004, 2026-10-21).
+      throw new BadUserInputError(
+        "Some transactions not found in database",
+        "transactionIds",
+        "Pass each staged transaction's `transactionId`, as the staged-transaction list returns it, not its row `id`.",
+      );
     }
 
     const accounts = new Map<string, PlaidAccount>();
@@ -206,12 +224,6 @@ export class PlaidSyncService implements IPlaidSyncService {
     const itemIds = [
       ...new Set([...accounts.values()].map((a) => a.plaidItemId)),
     ];
-    const { ledgerRepoId } = await this.authorizeBankAction(
-      identity,
-      action,
-      ledgerId,
-      itemIds,
-    );
     for (const itemId of itemIds) {
       const item = await this.models.plaidItem.getById(this.db, itemId);
       if (
@@ -219,9 +231,13 @@ export class PlaidSyncService implements IPlaidSyncService {
         item.userId !== identity.userId ||
         item.ledgerRepoId !== ledgerRepoId
       ) {
-        throw new BadUserInputError("Unauthorized access to transaction");
+        // Concealed like every other foreign bank resource.
+        throw new NotFoundError("Bank connection");
       }
     }
+    // The item-bound decision as well, so the PDP verifies the chain and the
+    // audit record names the connections acted on.
+    await this.authorizeBankAction(identity, action, ledgerId, itemIds);
 
     return { transactions, accounts };
   }
@@ -740,6 +756,14 @@ export class PlaidSyncService implements IPlaidSyncService {
     // access, already-synced checks, account mapping, and the target file — so
     // a preview here is the exact set the write would append, not an estimate.
     if (dryRun) {
+      // The write is refused at the ledger service's commit when the owner's
+      // directive limit is crossed; the preview refuses it the same way.
+      await this.limitPreview?.assertRoom({
+        client: favaApiClient,
+        owner: ledgerOwner,
+        repo: ledgerName,
+        adding: beancountTransactions.length,
+      });
       return {
         success: true,
         addedCount: 0,

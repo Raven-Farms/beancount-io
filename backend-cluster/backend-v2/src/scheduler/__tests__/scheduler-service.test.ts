@@ -24,6 +24,13 @@ jest.mock("@/shared/logger", () => {
 });
 
 // Mock job creators
+jest.mock("../jobs/auth-mail-job", () => ({
+  createAuthMailJob: jest.fn((_layers, _config) => ({
+    schedule: "*/5 * * * * *",
+    task: jest.fn().mockResolvedValue(undefined),
+  })),
+}));
+
 jest.mock("../jobs/jwt-cleanup-job", () => ({
   createJwtCleanupJob: jest.fn((_service, _config) => ({
     schedule: "0 0 * * *",
@@ -74,6 +81,7 @@ import { createPlaidSyncJob } from "../jobs/plaid-sync-job";
 import { createPlaidWebhookProcessorJob } from "../jobs/plaid-webhook-processor-job";
 import { createPlaidWebhookCleanupJob } from "../jobs/plaid-webhook-cleanup-job";
 import { createOauthAdapterCleanupJob } from "../jobs/oauth-adapter-cleanup-job";
+import { createAuthMailJob } from "../jobs/auth-mail-job";
 
 describe("JobScheduler", () => {
   let mockLayers: AppLayers;
@@ -114,10 +122,10 @@ describe("JobScheduler", () => {
       scheduler = new JobScheduler(mockLayers, mockConfig);
       scheduler.start();
 
-      // Should schedule enabled jobs: llm-probe + dev-test + audit-retention +
+      // Should schedule enabled jobs: auth-mail + llm-probe + dev-test + audit-retention +
       // jwt-cleanup + oauth-adapter-cleanup + plaid-webhook-processor +
       // plaid-webhook-cleanup (plaid-sync is disabled)
-      expect(cron.schedule).toHaveBeenCalledTimes(7);
+      expect(cron.schedule).toHaveBeenCalledTimes(8);
       expect(logger.info).toHaveBeenCalledWith(
         expect.stringContaining("Started job:"),
       );
@@ -131,10 +139,10 @@ describe("JobScheduler", () => {
       scheduler = new JobScheduler(mockLayers, mockConfig);
       scheduler.start();
 
-      // Should schedule llm-probe + audit-retention + jwt-cleanup +
+      // Should schedule auth-mail + llm-probe + audit-retention + jwt-cleanup +
       // oauth-adapter-cleanup + plaid-webhook-processor + plaid-webhook-cleanup
       // (dev-test disabled in production, plaid-sync always disabled)
-      expect(cron.schedule).toHaveBeenCalledTimes(6);
+      expect(cron.schedule).toHaveBeenCalledTimes(7);
       expect(logger.info).toHaveBeenCalledWith(
         expect.stringContaining("Skipping disabled job: dev-test"),
       );
@@ -163,11 +171,31 @@ describe("JobScheduler", () => {
         mockLayers,
         mockConfig,
       );
-      // 7 jobs scheduled in dev (llm-probe + dev-test + audit-retention +
+      expect(createAuthMailJob).toHaveBeenCalledWith(mockLayers, mockConfig);
+      // 8 jobs scheduled in dev (auth-mail + llm-probe + dev-test + audit-retention +
       // jwt-cleanup + oauth-adapter-cleanup + plaid-webhook-processor +
       // plaid-webhook-cleanup), plaid-sync is disabled
-      expect(cron.schedule).toHaveBeenCalledTimes(7);
+      expect(cron.schedule).toHaveBeenCalledTimes(8);
     });
+
+    it.each(["development", "production"] as const)(
+      "registers and runs auth mail delivery in %s",
+      async (environment) => {
+        mockConfig.env = environment;
+        scheduler = new JobScheduler(mockLayers, mockConfig);
+        scheduler.start();
+
+        expect(createAuthMailJob).toHaveBeenCalledWith(mockLayers, mockConfig);
+        const registration = jest
+          .mocked(cron.schedule)
+          .mock.calls.find(([schedule]) => schedule === "*/5 * * * * *");
+        expect(registration).toBeDefined();
+        await (registration![1] as () => Promise<void>)();
+        expect(
+          jest.mocked(createAuthMailJob).mock.results[0].value.task,
+        ).toHaveBeenCalledTimes(1);
+      },
+    );
   });
 
   describe("stop", () => {
@@ -206,7 +234,9 @@ describe("JobScheduler", () => {
       scheduler.start();
 
       // Get the task wrapper function that was passed to cron.schedule
-      const scheduleCall = (cron.schedule as jest.Mock).mock.calls[0];
+      const scheduleCall = (cron.schedule as jest.Mock).mock.calls.find(
+        (call: unknown[]) => call[0] === "*/5 * * * *",
+      );
       const taskWrapper = scheduleCall[1];
 
       // Execute the wrapped task - it should call our failing job task

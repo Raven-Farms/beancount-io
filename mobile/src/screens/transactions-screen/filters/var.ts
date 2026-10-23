@@ -1,5 +1,10 @@
 import { makeVar } from "@apollo/client";
-import { NO_SCOPED_FILTERS, ScopedTransactionFilters } from "./types";
+import { renamedLedgerScope } from "@/common/ledger-owner-rename";
+import {
+  NO_SCOPED_FILTERS,
+  ScopedTransactionFilters,
+  TransactionFilters,
+} from "./types";
 
 /**
  * The transactions tab's active filters, together with the ledger they were
@@ -20,3 +25,37 @@ import { NO_SCOPED_FILTERS, ScopedTransactionFilters } from "./types";
  */
 export const transactionFiltersVar =
   makeVar<ScopedTransactionFilters>(NO_SCOPED_FILTERS);
+
+/**
+ * Back to no filters, for sign-out: the var lives in memory, keyed by ledger
+ * but not by account, so the next sign-in opened Transactions narrowed by the
+ * last session's filters (w21/115).
+ */
+export function resetTransactionFilters(): void {
+  transactionFiltersVar(NO_SCOPED_FILTERS);
+}
+
+/**
+ * Replace the filters with ones chosen outside the filter modal, such as a
+ * journal app link's (w21/344), owned by the ledger they were meant for.
+ */
+export function setTransactionFiltersForLedger(
+  ledgerId: string,
+  filters: TransactionFilters,
+): void {
+  transactionFiltersVar({ ledgerId, filters });
+}
+
+/**
+ * Keep the filters on their ledger when the account's username changes: left
+ * on the old id, readers dropped them and the full journal showed with no
+ * message (w21/644).
+ */
+export function renameTransactionFiltersOwner(
+  oldOwner: string,
+  newOwner: string,
+): void {
+  transactionFiltersVar(
+    renamedLedgerScope(transactionFiltersVar(), oldOwner, newOwner),
+  );
+}

@@ -135,10 +135,16 @@ function serialiseInventory(
   priceMap: PriceMap,
   date: string | undefined,
 ): Record<string, string> {
-  const converted = balance.reduce(parseConversion(target), priceMap, date);
+  const converted = balance.reduceScaled(
+    parseConversion(target),
+    priceMap,
+    date,
+  );
   const out: Record<string, string> = {};
-  converted.forEach((value, currency) => {
-    if (!value.isZero()) out[currency] = value.toString();
+  // Plain decimals at the written scale: `toString()` sent `5e-7` and
+  // dropped trailing zeros (w21/125).
+  converted.forEach(({ value, scale }, currency) => {
+    if (!value.isZero()) out[currency] = value.toFixed(scale);
   });
   return out;
 }

@@ -17,6 +17,7 @@ import { isLlmConfigured } from "../utils/fallback-language-model";
 import { extractTransactionsFromFile } from "../utils/extract-transactions-from-file";
 import { extractReceiptFromFile } from "../utils/extract-receipt-from-file";
 import { recommendAccounts } from "../utils/recommend-accounts";
+import { normalizeReceiptDate } from "../utils/normalize-receipt-date";
 import { categorizeTransactions } from "../utils/categorize-transactions";
 import { modelProxyError } from "../utils/model-proxy-error";
 import { parseLedgerId } from "@/shared/str";
@@ -28,6 +29,20 @@ import {
 } from "@/shared/errors";
 import type { RecentTransactionExample } from "../types";
 import { logger } from "@/shared/logger";
+
+/** Image formats the parsing models read. */
+const MODEL_IMAGE_TYPES = new Set([
+  "image/jpeg",
+  "image/png",
+  "image/gif",
+  "image/webp",
+]);
+
+/** Receipt formats the parsing models accept. */
+const RECEIPT_CONTENT_TYPES = new Set([
+  ...MODEL_IMAGE_TYPES,
+  "application/pdf",
+]);
 
 const llmServiceLogger = logger.child({ module: "llm-service" });
 
@@ -169,6 +184,19 @@ export class LLMService implements ILLMService {
 
     const { contentType } =
       await this.assetStorage.getObjectMetadata(s3ObjectKey);
+
+    // A statement may be a photo or a scan, but only in a format the models
+    // read: an image of any other kind (an iPhone's HEIC, a TIFF) reached the
+    // model, failed there and read as a generic parse error (w21/325, as
+    // w21/108 did for receipts). Text, PDF and spreadsheet exports are not
+    // images and are passed on as before.
+    const mediaType = contentType?.split(";")[0]?.trim().toLowerCase() ?? "";
+    if (mediaType.startsWith("image/") && !MODEL_IMAGE_TYPES.has(mediaType)) {
+      throw new BadUserInputError(
+        "s3ObjectKey must be a CSV, OFX, QIF, spreadsheet or PDF export, or an image (JPEG, PNG, GIF, WEBP)",
+      );
+    }
+
     const { downloadUrl } =
       await this.assetStorage.generateDownloadUrl(s3ObjectKey);
 
@@ -221,10 +249,10 @@ export class LLMService implements ILLMService {
     const { contentType } =
       await this.assetStorage.getObjectMetadata(s3ObjectKey);
 
-    if (
-      !contentType?.startsWith("image/") &&
-      contentType !== "application/pdf"
-    ) {
+    // Exactly the formats the models read. Any `image/*` used to pass, so an
+    // iPhone's HEIC reached the model, failed there, and read only as "Could
+    // not read receipt" (w21/108).
+    if (!RECEIPT_CONTENT_TYPES.has(contentType ?? "")) {
       throw new BadUserInputError(
         "s3ObjectKey must be an image (JPEG, PNG, GIF, WEBP) or PDF file",
       );
@@ -264,7 +292,7 @@ export class LLMService implements ILLMService {
     await this.aiCfoUsageService.addTokenUsage(userId, totalTokens);
 
     return {
-      date: txn.date || null,
+      date: normalizeReceiptDate(txn.date),
       payee: txn.payee,
       description: txn.description,
       amount: txn.amount,

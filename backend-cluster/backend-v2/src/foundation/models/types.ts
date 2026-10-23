@@ -1,8 +1,10 @@
 import { IPaidCustomerModel } from "@/features/stripe/data/paid-customer-model";
+import type { ISentBillingEmailModel } from "@/features/stripe/data/sent-billing-email-model";
 import type { IApiKeyModel } from "@/features/apikeys/data/api-key-model";
 import type { IAuditEventModel } from "@/features/audit/data/audit-event-model";
 import { IJwtModel } from "@/features/auth/data/jwt-model";
 import { IEmailTokenModel } from "@/features/auth/data/email-token-model";
+import type { IAuthMailModel } from "@/features/auth/data/auth-mail-model";
 import { IMagicLinkTokenModel } from "@/features/auth/data/magic-link-token-model";
 import { ISignupOtpSessionModel } from "@/features/auth/data/signup-otp-session-model";
 import { IUserModel } from "@/features/auth/data/user-model";
@@ -12,6 +14,7 @@ import { IPlaidTransactionModel } from "@/features/plaid/data/plaid-transaction-
 import { IPlaidSyncLogModel } from "@/features/plaid/data/plaid-sync-log-model";
 import { IFeatureUsageModel } from "@/features/feature-usage/data/feature-usage-model";
 import { ICliAuthSessionModel } from "@/features/auth/data/cli-auth-session-model";
+import type { IOauthGrantModel } from "@/features/oauth/data/oauth-grant-model";
 
 /**
  * Database-agnostic models container interface.
@@ -22,11 +25,14 @@ import { ICliAuthSessionModel } from "@/features/auth/data/cli-auth-session-mode
  */
 export interface IModels {
   paidCustomer: IPaidCustomerModel;
+  sentBillingEmail: ISentBillingEmailModel;
   apiKey: IApiKeyModel;
   auditEvent: IAuditEventModel;
   cliAuthSession: ICliAuthSessionModel;
   jwt: IJwtModel;
+  oauthGrant: IOauthGrantModel;
   emailToken: IEmailTokenModel;
+  authMail: IAuthMailModel;
   magicLinkToken: IMagicLinkTokenModel;
   signupOtpSession: ISignupOtpSessionModel;
   user: IUserModel;

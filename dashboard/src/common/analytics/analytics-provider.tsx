@@ -4,9 +4,12 @@ import { useQuery } from "@apollo/client/react";
 import { GetCurrentUserDocument } from "@/graphql/definitions";
 import { Authenticated } from "@/common/components/authenticated";
 import { AnalyticsEnabled } from "./analytics-enabled";
-import { trackRouteView, setUserId } from "./track";
+import { trackPageView, trackRouteView, setUserId } from "./track";
 
-/** Fires a custom route_view event on mount and on every SPA navigation. */
+/**
+ * Fires the page_view (sanitized to the route pattern) and the custom
+ * route_view event on mount and on every SPA navigation.
+ */
 const PageViewTracker = () => {
   // Select from s.matches (not s.location.href) — matches update only when
   // navigation fully resolves, so the pattern is always in sync with the page.
@@ -25,6 +28,7 @@ const PageViewTracker = () => {
   useEffect(() => {
     if (lastPatternRef.current === routePattern) return;
     lastPatternRef.current = routePattern;
+    trackPageView({ route_pattern: routePattern, page_title: document.title });
     trackRouteView({ route_pattern: routePattern });
   }, [routePattern]);
 

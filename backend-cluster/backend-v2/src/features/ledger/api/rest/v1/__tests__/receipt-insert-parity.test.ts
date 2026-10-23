@@ -76,7 +76,8 @@ async function fixture(caller = identity) {
   const download = jest.fn(async () => ({
     downloadUrl: `data:application/pdf;base64,${receiptBytes.toString("base64")}`,
   }));
-  const createFile = jest.fn(async () => envelope({}));
+  const createFile = jest.fn(async () => envelope({ sha: "sha-receipt" }));
+  const deleteFile = jest.fn(async () => envelope({}));
   const fava = {
     getAdminClient: () => ({
       ledgers: { getLedger: async () => envelope({ id: 42, private: true }) },
@@ -91,7 +92,7 @@ async function fixture(caller = identity) {
     }),
     getPublicApiClient: async () => ({
       reports: { getLedgerBcioOptions: async () => envelope(state.bcio) },
-      ledgers: { createLedgerFile: createFile },
+      ledgers: { createLedgerFile: createFile, deleteLedgerFile: deleteFile },
     }),
   };
   const models = {
@@ -141,6 +142,7 @@ async function fixture(caller = identity) {
     copy,
     deleteTemp,
     createFile,
+    deleteFile,
     rest: (body: unknown = { receiptObjectKey, input }) =>
       fetch(
         `${rest.url}/api-gateway/v1/ledgers/alice/main/import/insert-receipt`,
@@ -200,7 +202,13 @@ it.each([identity, { ...identity, ledgerScope: undefined }])(
         objectKey: receiptObjectKey,
         scope: "repo_42",
       });
-      expect(f.write).toHaveBeenCalledTimes(3);
+      // Each surface checks the entry (a dry run) before promoting, then
+      // writes it (w23/058).
+      expect(f.write).toHaveBeenCalledTimes(6);
+      const checks = f.write.mock.calls.filter(
+        (call) => (call as unknown[])[6] === true,
+      );
+      expect(checks).toHaveLength(3);
       expect(f.write).toHaveBeenCalledWith(
         "usr_alice",
         "alice",
@@ -240,7 +248,11 @@ it("stores the receipt in git with a linked document when configured", async () 
     expect((await f.gql()).errors).toBeUndefined();
     expect((await f.mcp()).isError).not.toBe(true);
     expect(f.createFile).toHaveBeenCalledTimes(3);
-    expect(f.write).toHaveBeenCalledTimes(3);
+    // A dry run of the transaction precedes each stored receipt (w23/058).
+    expect(f.write).toHaveBeenCalledTimes(6);
+    const writes = f.write.mock.calls.filter(
+      (call) => (call as unknown[])[6] !== true,
+    );
     for (let call = 0; call < 3; call += 1) {
       const [owner, name, file] = f.createFile.mock.calls[call] as unknown as [
         string,
@@ -254,7 +266,7 @@ it("stores the receipt in git with a linked document when configured", async () 
       );
       expect(file.content).toBe(receiptBytes.toString("base64"));
       expect(file.message).toBe(`docs: add receipt ${file.path}`);
-      const [userId, wOwner, wName, entries, platform] = f.write.mock.calls[
+      const [userId, wOwner, wName, entries, platform] = writes[
         call
       ] as unknown as [
         string,
@@ -385,17 +397,53 @@ it("refuses a different credential pin before any effect", async () => {
   }
 });
 
-it("surfaces a failed entry write and keeps the temporary asset", async () => {
+// w23/058: a refused entry used to be found only after the receipt had been
+// promoted or committed, leaving it behind on every retry.
+it("refuses an entry before promoting the receipt, keeping the temporary asset", async () => {
   const f = await fixture();
   f.write.mockRejectedValue(new Error("fixture ledger write failed"));
   try {
     expect((await f.rest()).status).toBe(500);
     expect((await f.gql()).errors).toHaveLength(1);
     expect((await f.mcp()).isError).toBe(true);
-    // The promotion has already happened — the existing partial-failure
-    // boundary — but the temporary key must survive for a retry.
-    expect(f.copy).toHaveBeenCalledTimes(3);
+    expect(f.copy).not.toHaveBeenCalled();
     expect(f.deleteTemp).not.toHaveBeenCalled();
+  } finally {
+    await f.close();
+  }
+});
+
+it("stores nothing in git when the entry is refused", async () => {
+  const f = await fixture();
+  f.state.bcio = { receipt_storage: "git" };
+  f.write.mockRejectedValue(new Error("fixture ledger write failed"));
+  try {
+    expect((await f.rest()).status).toBe(500);
+    expect(f.createFile).not.toHaveBeenCalled();
+  } finally {
+    await f.close();
+  }
+});
+
+it("takes a stored receipt back out when the final write is refused", async () => {
+  const f = await fixture();
+  f.state.bcio = { receipt_storage: "git" };
+  f.write.mockImplementation(async (...args: unknown[]) => {
+    if (args[6] === true) return { success: true };
+    throw new Error("fixture ledger write failed");
+  });
+  try {
+    expect((await f.rest()).status).toBe(500);
+    const [, , stored] = f.createFile.mock.calls[0] as unknown as [
+      string,
+      string,
+      { path: string },
+    ];
+    expect(f.deleteFile).toHaveBeenCalledWith("alice", "main", {
+      path: stored.path,
+      sha: "sha-receipt",
+      message: `docs: remove receipt ${stored.path}; its entry was refused`,
+    });
   } finally {
     await f.close();
   }

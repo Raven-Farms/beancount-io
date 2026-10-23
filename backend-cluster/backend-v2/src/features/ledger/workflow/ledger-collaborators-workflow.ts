@@ -1,14 +1,24 @@
 import { type IStripeService } from "@/features/stripe/service/stripe-service";
+import { assertHostPage } from "@/shared/host-page";
 import { type IFavaClientFactory } from "@/foundation/clients/fava-client-factory";
 import {
-  SubscriptionTier,
-  TIER_LIMITS,
   getTierLimits,
+  TIER_DISPLAY_NAMES,
 } from "@/features/stripe/service/stripe";
 import { getUserTier } from "@/features/stripe/operations/get-user-tier";
 import { parseLedgerId } from "@/shared/str";
-import { BadUserInputError, InternalServerError } from "@/shared/errors";
-import { UserPublic } from "@/foundation/fava";
+import {
+  BadUserInputError,
+  DomainError,
+  ErrorCategory,
+  InternalServerError,
+  OperationNotAllowedError,
+  ResourceLimitReachedError,
+} from "@/shared/errors";
+import type { DbExecutor } from "@/drizzle/drizzle";
+import type { IModels } from "@/foundation/models";
+import { readGiteaPages } from "@/shared/gitea-pages";
+import { UserPublic, unwrapFavaResponse } from "@/foundation/fava";
 import { logger } from "@/shared/logger";
 import type { Identity } from "@/server/api/identity";
 import {
@@ -42,6 +52,27 @@ function assertCollaboratorName(collaborator: string): void {
     throw new BadUserInputError(
       "collaborator must be a non-empty username",
       "collaborator",
+    );
+  }
+}
+
+/**
+ * The owner is not a collaborator (w23/025). The repository host no-ops a
+ * grant or removal naming the owner and still reports success, so "give the
+ * owner read access" or "remove me" read as done while nothing changed — and
+ * nothing could: an owner's access is not a collaborator grant. Logins are
+ * case-insensitive, as the limit check compares them.
+ */
+function assertNotOwner(
+  operation: string,
+  collaborator: string,
+  ledgerOwner: string,
+): void {
+  if (collaborator.toLowerCase() === ledgerOwner.toLowerCase()) {
+    throw new OperationNotAllowedError(
+      operation,
+      `${collaborator} owns this ledger; an owner's access can't be granted or removed as a collaborator`,
+      "Name another user: the owner already has full access, which comes with owning the ledger.",
     );
   }
 }
@@ -111,7 +142,30 @@ export class LedgerCollaboratorsWorkflow implements ILedgerCollaboratorsWorkflow
     private readonly favaClientFactory: IFavaClientFactory,
     private readonly stripe: IStripeService,
     private readonly authorization: IAuthorizationService,
+    private readonly models: Pick<IModels, "user">,
+    private readonly db: DbExecutor,
   ) {}
+
+  /**
+   * The collaborator limit is the ledger owner's plan, whoever adds the
+   * collaborator (PRFAQ005). A ledger owned by an organization with no
+   * account behind it falls back to the acting user's plan.
+   */
+  private async ownerTier(ledgerOwner: string, actingUserId: string) {
+    const owner = await this.models.user.getUserByUsername(
+      this.db,
+      ledgerOwner,
+    );
+    if (!owner) {
+      moduleLogger.info("No account owns the ledger; using the actor's plan", {
+        ledgerOwner,
+      });
+    }
+    return getUserTier({
+      stripe: this.stripe,
+      userId: owner?.id ?? actingUserId,
+    });
+  }
 
   async addOrUpdateCollaborator(params: {
     identity: Identity;
@@ -127,43 +181,40 @@ export class LedgerCollaboratorsWorkflow implements ILedgerCollaboratorsWorkflow
       resource: ledgerResource(ledgerId),
     });
     const userId = identity.userId;
-    const favaApiClient = await this.favaClientFactory.getPublicApiClient(
-      ledgerId,
-      userId,
-    );
     const { ledgerOwner, ledgerName } = parseLedgerId(ledgerId);
+    assertNotOwner("setLedgerCollaborator", collaborator, ledgerOwner);
+    const [favaApiClient, ownerTier] = await Promise.all([
+      this.favaClientFactory.getPublicApiClient(ledgerId, userId),
+      this.ownerTier(ledgerOwner, userId),
+    ]);
+    const { maxCollaboratorsPerLedger: max } = getTierLimits(ownerTier);
 
-    const userTier = await getUserTier({
-      stripe: this.stripe,
-      userId,
-    });
-    const tierLimits = getTierLimits(userTier);
-
-    const existingResponse =
-      await favaApiClient.collaborators.listLedgerCollaborators(
-        ledgerOwner,
-        ledgerName,
-        { page: 1, limit: 100 },
+    if (max !== -1) {
+      // A list that cannot be read refuses the change rather than skipping
+      // the limit.
+      const existing = await readGiteaPages((query) =>
+        unwrapFavaResponse(
+          favaApiClient.collaborators.listLedgerCollaborators(
+            ledgerOwner,
+            ledgerName,
+            query,
+          ),
+          "list collaborators",
+        ),
       );
+      // Gitea logins are case-insensitive.
+      const is = (login: string | null | undefined, name: string) =>
+        login?.toLowerCase() === name.toLowerCase();
+      const isNew = !existing.some((c) => is(c.login, collaborator));
+      const count = existing.filter((c) => !is(c.login, ledgerOwner)).length;
 
-    if (existingResponse.data?.success && existingResponse.data.data) {
-      const existing = existingResponse.data.data;
-      const isNew = !existing.some((c: UserPublic) => c.login === collaborator);
-      const count = existing.filter(
-        (c: UserPublic) => c.login !== ledgerOwner,
-      ).length;
-
-      // -1 = unlimited
-      if (
-        isNew &&
-        tierLimits.maxCollaboratorsPerLedger !== -1 &&
-        count >= tierLimits.maxCollaboratorsPerLedger
-      ) {
-        const premiumLimit =
-          TIER_LIMITS[SubscriptionTier.PREMIUM].maxCollaboratorsPerLedger;
-        throw new InternalServerError(
-          `Maximum number of collaborators (${tierLimits.maxCollaboratorsPerLedger}) reached for ${userTier} tier. ` +
-            `Upgrade to PREMIUM for ${premiumLimit} collaborators per ledger.`,
+      // Changing an existing collaborator's permission never counts.
+      if (isNew && count >= max) {
+        throw new ResourceLimitReachedError(
+          "Collaborator",
+          max,
+          count,
+          `This ledger's owner is on the ${TIER_DISPLAY_NAMES[ownerTier]} plan, which allows ${max} ${max === 1 ? "collaborator" : "collaborators"} per ledger, and it already has ${count}. The ledger owner can upgrade for more.`,
         );
       }
     }
@@ -204,11 +255,12 @@ export class LedgerCollaboratorsWorkflow implements ILedgerCollaboratorsWorkflow
       resource: ledgerResource(ledgerId),
     });
     const userId = identity.userId;
+    const { ledgerOwner, ledgerName } = parseLedgerId(ledgerId);
+    assertNotOwner("removeLedgerCollaborator", collaborator, ledgerOwner);
     const favaApiClient = await this.favaClientFactory.getPublicApiClient(
       ledgerId,
       userId,
     );
-    const { ledgerOwner, ledgerName } = parseLedgerId(ledgerId);
 
     let response;
     try {
@@ -235,6 +287,7 @@ export class LedgerCollaboratorsWorkflow implements ILedgerCollaboratorsWorkflow
     limit?: number;
   }): Promise<CollaboratorData[]> {
     const { identity, ledgerId, page = 1, limit = 10 } = params;
+    assertHostPage(page, limit);
     await this.authorization.authorizeOrThrow({
       principal: identity,
       action: AUTHORIZATION_ACTIONS.LEDGER_COLLABORATORS_LIST,
@@ -364,11 +417,21 @@ export class LedgerCollaboratorsWorkflow implements ILedgerCollaboratorsWorkflow
     ledgerId: string;
   }): Promise<{ success: boolean; message?: string }> {
     const { identity, ledgerId } = params;
-    await this.authorization.authorizeOrThrow({
-      principal: identity,
-      action: AUTHORIZATION_ACTIONS.LEDGER_COLLABORATORS_LEAVE,
-      resource: ledgerResource(ledgerId),
-    });
+    try {
+      await this.authorization.authorizeOrThrow({
+        principal: identity,
+        action: AUTHORIZATION_ACTIONS.LEDGER_COLLABORATORS_LEAVE,
+        resource: ledgerResource(ledgerId),
+      });
+    } catch (error) {
+      if (
+        error instanceof DomainError &&
+        error.category === ErrorCategory.NOT_FOUND
+      ) {
+        await this.refuseUnleavable(identity, ledgerId);
+      }
+      throw error;
+    }
     const userId = identity.userId;
     const { favaUser } = await this.favaClientFactory.getApiContext(userId);
     const favaAdminApiClient = this.favaClientFactory.getAdminClient();
@@ -389,5 +452,40 @@ export class LedgerCollaboratorsWorkflow implements ILedgerCollaboratorsWorkflow
     }
 
     throw new InternalServerError("Failed to remove self from repository");
+  }
+
+  /**
+   * Only an explicit collaborator can leave; anyone else is denied, and the
+   * denial is concealed as "Ledger not found" so a ledger stays invisible
+   * to who cannot see it. A caller who can read it — its owner, or a reader
+   * of a public ledger — was told it did not exist, and an agent concluded
+   * it was gone (w23/063). Those callers get the real reason.
+   */
+  private async refuseUnleavable(
+    identity: Identity,
+    ledgerId: string,
+  ): Promise<void> {
+    const readable = await this.authorization.authorize({
+      principal: identity,
+      action: AUTHORIZATION_ACTIONS.LEDGER_METADATA_READ,
+      resource: ledgerResource(ledgerId),
+    });
+    if (!readable.allowed) return;
+    const { favaUser } = await this.favaClientFactory.getApiContext(
+      identity.userId,
+    );
+    const { ledgerOwner } = parseLedgerId(ledgerId);
+    if (favaUser.username.toLowerCase() === ledgerOwner.toLowerCase()) {
+      throw new OperationNotAllowedError(
+        "leave ledger",
+        `${favaUser.username} owns this ledger; an owner can't leave it`,
+        "An owner's access comes with owning the ledger. To give it up, delete the ledger with `deleteLedger`.",
+      );
+    }
+    throw new OperationNotAllowedError(
+      "leave ledger",
+      `${favaUser.username} is not a collaborator on this ledger, so there is nothing to leave`,
+      "Leaving removes your own collaborator grant; you can read this ledger without one.",
+    );
   }
 }

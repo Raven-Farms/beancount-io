@@ -32,7 +32,7 @@ const liveKey: ApiKey = {
   updatedAt: new Date("2026-01-01"),
 };
 
-function databaseWith(key: ApiKey | null) {
+function databaseWith(key: ApiKey | null, ownerExists = true) {
   const touchLastUsedAt = jest.fn(async () => undefined);
   return {
     touchLastUsedAt,
@@ -40,6 +40,11 @@ function databaseWith(key: ApiKey | null) {
       db: {} as DatabaseLayer["db"],
       models: {
         jwt: { verify: jest.fn(async () => null) },
+        user: {
+          getById: jest.fn(async (_db: unknown, id: string) =>
+            ownerExists && key?.userId === id ? { id } : null,
+          ),
+        },
         apiKey: {
           findByDigest: jest.fn(async (_db: unknown, digestValue: string) =>
             key && key.keyDigest === digestValue ? key : null,
@@ -76,6 +81,14 @@ describe("resolving an API key", () => {
       "ledger.read",
       "ledger.write",
     ]);
+  });
+
+  // w21/156: account deletion left keys behind, and they still resolved.
+  it("refuses a key whose account was deleted", async () => {
+    const { database } = databaseWith(liveKey, false);
+    await expect(
+      resolveIdentity(bearer(PLAINTEXT), database, config),
+    ).resolves.toBeUndefined();
   });
 
   it("accepts the x-api-key form published by the OpenAPI contract", async () => {

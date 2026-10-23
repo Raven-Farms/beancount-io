@@ -92,6 +92,8 @@ function monacoSurface() {
     },
     onDidDispose: (listener: () => void) => disposed.push(listener),
     onDidChangeModelContent: () => subscription,
+    onDidCompositionStart: () => subscription,
+    onDidCompositionEnd: () => subscription,
     dispose: vi.fn(() => disposed.forEach((listener) => listener())),
     focus: vi.fn(() => surface.focus()),
   };

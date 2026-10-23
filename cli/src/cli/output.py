@@ -28,7 +28,8 @@ import typer
 from cli import context
 from cli.config import package_version
 from cli.errors import AuthError, BeaError, LedgerError, UsageError, to_bea_error
-from cli.paths import expand_path
+from cli.include_glob import check_glob
+from cli.paths import expand_path, refuse_too_long_name
 from cli.utils import atomic_write, inert_text, single_line
 
 
@@ -59,11 +60,23 @@ def flush_warnings() -> None:
 def success(message: str | None = None) -> None:
     """Print a human-readable confirmation. Silent in JSON mode — the envelope says it."""
     if message and not _json_mode():
-        print(message)
+        # Messages carry the user's own paths, which may hold terminal controls (w5/887).
+        print(inert_text(message))
 
 
 #: `--output` spellings that name this process's own stdout.
 STDOUT_PATHS = frozenset({"-", "/dev/stdout", "/dev/fd/1", "/proc/self/fd/1"})
+
+
+def write_descriptor(path: str, text: str) -> None:
+    """Write a result to a descriptor this process holds, naming `--output` when that fails."""
+    from cli.errors import UsageError
+
+    try:
+        with open(path, "w", encoding="utf-8") as stream:
+            stream.write(text)
+    except OSError as exc:
+        raise UsageError(f"Cannot write --output {path}: {exc.strerror or exc}.") from exc
 
 
 def write_data(text: str) -> None:
@@ -128,8 +141,35 @@ def engine_output(text: str) -> None:
         note(text)
 
 
+def _use_utf8_for_errors() -> None:
+    """Report errors in UTF-8 when the inherited `PYTHONIOENCODING` is not UTF-8.
+
+    Under `utf-16` the frontend's own `Error: …` printed spaced-out and a
+    `--json` envelope came out undecodable (w5/724). Locale-derived
+    encodings are left alone; only an explicitly inherited non-UTF-8 codec
+    is ignored, since bea's error contract is UTF-8.
+    """
+    stream = sys.stderr
+    if stream is None:
+        return
+    try:
+        inherited = codecs.lookup(os.environ.get("PYTHONIOENCODING", "").split(":")[0]).name
+        current = codecs.lookup(stream.encoding).name
+    except (AttributeError, LookupError, TypeError):
+        return
+    if inherited == "utf-8" or current == "utf-8":
+        return
+    reconfigure = getattr(stream, "reconfigure", None)
+    if reconfigure is not None:
+        try:
+            reconfigure(encoding="utf-8")
+        except (OSError, ValueError):
+            pass
+
+
 def error(exc: BaseException | str) -> NoReturn:
     """Fail with a documented category and exit code, rendered for the active mode."""
+    _use_utf8_for_errors()
     err = to_bea_error(exc)
     exit_code = err.exit_code
     trace = None
@@ -198,6 +238,7 @@ def failure(exc: BaseException | str) -> None:
     take the conversation with it. Text only, because the surfaces that recover
     this way have no JSON mode.
     """
+    _use_utf8_for_errors()
     err = to_bea_error(exc)
     trace = None
     if context.current().debug and isinstance(exc, BaseException):
@@ -425,6 +466,7 @@ def _include_matches(source: Path, raw: str) -> tuple[list[Path], list[Path]]:
     not a regular file resolves nothing, and the loader cannot read it.
     """
     pattern = raw if Path(raw).is_absolute() else str(source.parent / raw)
+    check_glob(pattern)
     # Named as the loader names them: it `normpath`s each match, so
     # `link/../other.bean` through a symlinked `link` is the `other.bean`
     # beside the includer, not the one beside the link's target (w5/451).
@@ -497,8 +539,10 @@ def _walk_closure(*roots: Path) -> tuple[list[Path], list[MissingInclude], list[
     seen: dict[Path, str] = {}
     inodes: set[tuple[int, int]] = set()
     stack = list(reversed(roots))
-    # The include, as written, and the file holding it, that first reached each member.
-    named_by: dict[Path, tuple[str, Path]] = {}
+    # Every include edge matters for diagnostics, even when its member was
+    # already read through another root or path (w5/709).
+    named_by: dict[Path, list[tuple[str, Path]]] = {}
+    read_failures: dict[Path, str] = {}
     while stack:
         current = stack.pop()
         try:
@@ -529,14 +573,11 @@ def _walk_closure(*roots: Path) -> tuple[list[Path], list[MissingInclude], list[
         try:
             text = current.read_text(encoding="utf-8", errors="replace").removeprefix("\ufeff")
         except OSError as exc:
+            read_failures[key] = exc.strerror or type(exc).__name__
             if current not in roots:
-                unreadable.append(current)
                 # A file the include matched but nobody may read (mode 000) is
                 # an unreadable include, as a directory there is (w5/523).
-                if current in named_by:
-                    include, source = named_by[current]
-                    why = f"{current} cannot be read: {exc.strerror or type(exc).__name__}"
-                    missing.append(MissingInclude(include=include, source=source, reason=why))
+                unreadable.append(current)
             continue
         for match in _INCLUDE_DIRECTIVE.finditer(text):
             raw = match.group(1)
@@ -544,15 +585,41 @@ def _walk_closure(*roots: Path) -> tuple[list[Path], list[MissingInclude], list[
                 # A managed price feed: the loader fetches it, so there is no
                 # file here to read, format, alias, or report as missing.
                 continue
-            matches, others = _include_matches(current, _unescape(raw))
+            try:
+                matches, others = _include_matches(current, _unescape(raw))
+            except OSError as exc:
+                failed = Path(os.fsdecode(exc.filename)) if exc.filename else current
+                unreadable.append(failed)
+                missing.append(
+                    MissingInclude(
+                        include=raw,
+                        source=current,
+                        reason=f"{failed} cannot be read: {exc.strerror or type(exc).__name__}",
+                    )
+                )
+                continue
             if matches:
                 for found in matches:
-                    named_by.setdefault(found, (raw, current))
+                    named_by.setdefault(found, []).append((raw, current))
                 stack.extend(matches)
             else:
                 reason = not_a_file(others[0]) if others else None
                 missing.append(MissingInclude(include=raw, source=current, reason=reason))
             unreadable.extend(others)
+    # Later roots can name a member after its failed read. Wait until every
+    # edge is known, then attach that failure to each includer without reading
+    # the member again. Resolve aliases only on this failure path.
+    if read_failures:
+        for found, includers in named_by.items():
+            try:
+                reason = read_failures.get(found.resolve())
+            except OSError:
+                continue
+            if reason is not None:
+                missing.extend(
+                    MissingInclude(include=include, source=source, reason=f"{found} cannot be read: {reason}")
+                    for include, source in includers
+                )
     return members, missing, unreadable, again
 
 
@@ -582,7 +649,7 @@ def _output_ledger_members(ledger: Path) -> list[Path]:
             if directory in searched:
                 continue
             searched.add(directory)
-            for candidate in sorted(directory.glob("*.bean")) + sorted(directory.glob("*.beancount")):
+            for candidate in _ledger_candidates(directory):
                 if opened >= 64:
                     return members
                 try:
@@ -609,6 +676,20 @@ def _output_ledger_members(ledger: Path) -> list[Path]:
                 except OSError:
                     continue
     return members
+
+
+def _ledger_candidates(directory: Path) -> list[Path]:
+    """The ledger files in a directory, `.bean` first, whatever case their suffix is spelled in.
+
+    `glob("*.bean")` matches case-sensitively on POSIX, even on a
+    case-insensitive volume, so a `main.BEAN` root was never examined and
+    format wrote over it, or into its include glob, with exit 0 (w5/865).
+    """
+    try:
+        entries = sorted(directory.iterdir())
+    except OSError:
+        return []
+    return [path for suffix in _LEDGER_SUFFIXES for path in entries if path.suffix.lower() == suffix]
 
 
 def _nearby_ledger_directories(source: Path) -> list[Path]:
@@ -938,6 +1019,7 @@ def guard_output_destination(
     force: bool = False,
 ) -> None:
     """`guard_forwarded_output` for a destination the caller already parsed."""
+    refuse_too_long_name(destination, "--output")
     for ledger in ledgers:
         refuse_ledger_alias(destination, ledger)
     if not refuse_existing_ledger_file or force:
@@ -964,6 +1046,7 @@ def check_output_destination(destination: Path, flag: str = "--output") -> None:
     path the caller supplied — never a downstream errno or temp-file rename.
     Call this before any temp file is created or any stream is opened.
     """
+    refuse_too_long_name(destination, flag)
     if destination.exists() and destination.is_dir():
         raise UsageError(f"{flag} must be a file path, not a directory ({destination}).")
     if not destination.parent.exists():
@@ -980,7 +1063,10 @@ def require_writable_destination(destination: Path, flag: str = "--output") -> N
     staging file the user never named. It is the filesystem refusing (exit 3),
     reported before anything runs. A device or FIFO is left to the open call.
     """
-    if str(destination) == "-":
+    if str(destination) in STDOUT_PATHS:
+        # The stdout spellings all mean the stream, whatever it currently
+        # is: under a file redirect they stat as regular files, and with
+        # stdout closed the stat fails and `/dev` takes the blame (w5/795).
         return
     try:
         existing = destination.stat()

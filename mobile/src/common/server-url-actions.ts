@@ -1,10 +1,14 @@
 import { apolloClient } from "@/common/apollo/client";
+import { sweepReceiptCaches } from "@/common/receipt-files";
 import { purgeApolloCache } from "@/common/apollo/cache-persist";
 import { teardownSessionCaches } from "@/common/apollo/session-teardown";
 import { defaultRuntimeServerUrl } from "@/common/server-url";
 import { oauthTokenManager } from "@/common/oauth/oauth-token-manager";
 import { clearPendingAuthorization } from "@/common/oauth/pending-authorization-storage";
 import { clearGuestVisit } from "@/common/guest/guest-state";
+import { clearPendingAppLink } from "@/common/app-links/pending-app-link";
+import { clearCreateLedgerDraft } from "@/common/create-ledger-draft";
+import { resetTransactionFilters } from "@/screens/transactions-screen/filters/var";
 import { invalidateAuthorization } from "@/common/oauth/authorization-context";
 import {
   accountUsageVar,
@@ -30,6 +34,8 @@ export async function clearServerScopedState(
 ): Promise<void> {
   clearGuestVisit();
   invalidateAuthorization();
+  // A link stashed for this account must not open for the next one (w21/083).
+  clearPendingAppLink();
   if (options.refreshAlreadyTerminal) {
     oauthTokenManager.invalidatePendingRefreshes();
   } else {
@@ -39,6 +45,7 @@ export async function clearServerScopedState(
   ledgerVar(null);
   accountUsageVar({});
   merchantRecurringOverridesVar({});
+  resetTransactionFilters();
   await teardownSessionCaches({
     clearSession: () => sessionVar(null),
     flushSession,
@@ -49,6 +56,11 @@ export async function clearServerScopedState(
     flushLedger(),
     flushAccountUsage(),
     flushMerchantRecurringOverrides(),
+    // The next account on this device must not resume this one's setup
+    // (w21/053).
+    clearCreateLedgerDraft(),
+    // Receipt photos the camera and the picker left in the cache (w21/585).
+    sweepReceiptCaches(),
   ]);
 }
 

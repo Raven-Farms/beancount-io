@@ -100,6 +100,16 @@ const skCommodities: Record<string, TranslationEntry> = {
     message: "Ceny sa nepodarilo obnoviť",
     description: "Toast shown when refreshing managed prices fails",
   },
+  "page.commodities.chartsReloadFailed": {
+    message: "Ceny boli obnovené, ale grafy sa nepodarilo znova načítať.",
+    description:
+      "Shown on the managed price sources card when a refresh was acknowledged but reading the price charts again failed",
+  },
+  "page.commodities.reloadCharts": {
+    message: "Znova načítať grafy",
+    description:
+      "Button that reads the price charts again after a failed reload, without refreshing the managed feeds",
+  },
 };
 
 export default skCommodities;

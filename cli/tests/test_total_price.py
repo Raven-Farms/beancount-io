@@ -227,6 +227,10 @@ def test_json_answer_total_price_round_trips_through_bulk(ledger: Path, posting:
         ("3 HOOL @@ (100) USD", ("100", "USD")),
         ("3 HOOL @@ 200/2 USD", ("100", "USD")),
         ("3 HOOL @@ 40 + 60 USD", ("100", "USD")),
+        # w5/802: the lexer reads a glued currency as two tokens.
+        ("3 HOOL @@ 100USD", ("100", "USD")),
+        ("3 HOOL @@ (40+60)USD", ("100", "USD")),
+        ("3 HOOL @@ 1,000USD", ("1000", "USD")),
         ("3 HOOL {10 USD} @@ 2.50*4 USD ; fee", ("10.00", "USD")),
         ('3 HOOL {10 USD, "lot @@ 1"} @@ -(40+60) USD', ("-100", "USD")),
     ],
@@ -309,6 +313,53 @@ def test_bulk_shorthand_arithmetic_total_price_keeps_its_annotation(ledger: Path
         "narration": "buy",
         "postings": [
             {"account": "Assets:Brokerage", "amount": f"3 HOOL @@ {total} USD"},
+            {"account": "Equity:Opening-Balances", "amount": "-100.00 USD"},
+        ],
+    }
+    rows.write_text(json.dumps([row]))
+
+    result = _bea(ledger.parent, "--json", "--file", str(ledger), "add", "transactions", "--from", str(rows))
+
+    assert result.returncode == 0, result.stderr
+    text = ledger.read_text()
+    assert "3 HOOL @@ 100 USD" in text
+    assert "33.3" not in text
+
+
+@pytest.mark.parametrize("total", ["100USD", "(40+60)USD"])
+def test_glued_total_price_writes_the_exact_total_and_replays(ledger: Path, total: str) -> None:
+    """w5/802: `@@ 100USD` was written as `@ 33.33333333333333333333333333 USD` with `price_total: null`."""
+    added = _bea(
+        ledger.parent,
+        *("--json", "--file", str(ledger), "add", "transaction", "--date", "2024-03-23", "--narration", "buy"),
+        *("--posting", f"Assets:Brokerage 3 HOOL @@ {total}", "--posting", "Equity:Opening-Balances -100.00 USD"),
+    )
+    assert added.returncode == 0, added.stderr
+    first = ledger.read_text()[len(LEDGER) :]
+    assert "3 HOOL @@ 100 USD" in first
+    assert "33.3" not in first
+    directive = json.loads(added.stdout)["data"]["directive"]
+    assert directive["postings"][0]["price"] is None
+    assert directive["postings"][0]["price_total"] == {"number": "100", "currency": "USD"}
+
+    ledger.write_text(LEDGER)
+    rows = ledger.parent / "rows.json"
+    rows.write_text(json.dumps([{key: directive[key] for key in ("date", "narration", "postings")}]))
+    replayed = _bea(ledger.parent, "--file", str(ledger), "add", "transactions", "--from", str(rows))
+    assert replayed.returncode == 0, replayed.stderr
+    assert ledger.read_text()[len(LEDGER) :] == first
+    check = _bea(ledger.parent, "--json", "--file", str(ledger), "check")
+    assert check.returncode == 0, check.stderr
+
+
+@pytest.mark.parametrize("total", ["100USD", "(40+60)USD"])
+def test_bulk_shorthand_glued_total_price_writes_the_exact_total(ledger: Path, total: str) -> None:
+    rows = ledger.parent / "rows.json"
+    row = {
+        "date": "2024-03-23",
+        "narration": "buy",
+        "postings": [
+            {"account": "Assets:Brokerage", "amount": f"3 HOOL @@ {total}"},
             {"account": "Equity:Opening-Balances", "amount": "-100.00 USD"},
         ],
     }

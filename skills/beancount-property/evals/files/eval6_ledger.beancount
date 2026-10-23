@@ -1,0 +1,20 @@
+;; fixture — beancount-property eval6 (escrow disbursement)
+option "operating_currency" "USD"
+
+2026-01-01 open Assets:Checking USD
+2026-01-01 open Assets:Property:OakSt OAKST
+2026-01-01 open Assets:Escrow:OakSt USD
+2026-01-01 open Liabilities:Mortgage:OakSt USD
+2026-01-01 open Expenses:Interest USD
+2026-01-01 open Expenses:PropertyTax USD
+2026-01-01 open Equity:Opening-Balances
+
+2026-01-02 * "Cash in"
+  Assets:Checking  50000.00 USD
+  Equity:Opening-Balances
+
+2026-02-01 * "Buy Oak St (closing statement)"
+  Assets:Property:OakSt  1 OAKST {510000.00 USD}
+  Assets:Escrow:OakSt  3000.00 USD
+  Equity:Opening-Balances -113000.00 USD
+  Liabilities:Mortgage:OakSt -400000.00 USD

@@ -7,6 +7,7 @@ import re
 import unicodedata
 import warnings
 from collections.abc import Collection, Iterator, Mapping
+from contextvars import ContextVar
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -88,7 +89,13 @@ def bea_command(file: Path | str) -> str:
     import shlex
 
     target = Path(file)
-    cwd = Path.cwd()
+    try:
+        cwd = Path.cwd()
+    except OSError:
+        # A removed working directory: `Path.cwd()` raised, and the refusal
+        # this remedy belongs to was lost behind a bare FileNotFoundError
+        # (w5/837). The ledger's own path reaches it from anywhere.
+        return f"bea --file {shlex.quote(str(target))}"
     if not os.environ.get("BEA_FILE"):
         for name in ("main.bean", "main.beancount"):
             if os.path.lexists(cwd / name):
@@ -196,14 +203,24 @@ def _option_location(options: Mapping[str, Any], name: str, value: str) -> str:
     return ""
 
 
-def require_tag_or_link(value: str) -> str:
-    """One tag or link body, or a ValueError naming the allowed characters."""
-    if not _TAG_OR_LINK.fullmatch(value):
+def require_tag(value: str) -> str:
+    """One tag with or without `#`, stored bare, or a ValueError quoting the typed value."""
+    return _require_tag_or_link(value, "#", "tag")
+
+
+def require_link(value: str) -> str:
+    """One link with or without `^`, stored bare, or a ValueError quoting the typed value."""
+    return _require_tag_or_link(value, "^", "link")
+
+
+def _require_tag_or_link(value: str, sigil: str, noun: str) -> str:
+    body = value[1:] if value.startswith(sigil) else value
+    if not _TAG_OR_LINK.fullmatch(body):
         raise ValueError(
-            f"{value!r} is not one tag or link; use only ASCII letters, digits and - _ / . "
-            "after an optional leading # or ^ (no spaces, sigils or line breaks inside)."
+            f"{value!r} is not one {noun}; use only ASCII letters, digits and - _ / . "
+            f"after an optional leading {sigil} (no spaces, sigils or line breaks inside)."
         )
-    return value
+    return body
 
 
 def require_commodity(value: str) -> str:
@@ -271,7 +288,10 @@ def regex_reads_otherwise(pattern: str, flags: int = 0) -> str | None:
         re.purge()
         try:
             re.compile(pattern, flags)
-        except re.error:
+        except (re.error, OverflowError, RecursionError, MemoryError):
+            # An invalid pattern is its caller's to report; a repetition too
+            # large or nesting too deep to compile is invalid the same way
+            # (w5/806).
             return None
     changed = next(
         (str(item.message) for item in caught if issubclass(item.category, (FutureWarning, DeprecationWarning))),
@@ -291,15 +311,24 @@ def regex_reads_otherwise(pattern: str, flags: int = 0) -> str | None:
     )
 
 
-def decode_error_message(path: object, exc: UnicodeDecodeError) -> str:
+def decode_error_message(path: object, exc: UnicodeDecodeError, data: bytes | None = None) -> str:
     """A decode failure as path, byte offset, attempted encoding, and remedy.
 
     The frontend keeps its own copy (`cli.utils.decode_error_message`):
     neither side may import the other, and both have to report the same
     failure. Callers choose the category: a caller's input file is a usage
     error, an undecodable ledger is a validation error.
+
+    Pass the raw bytes when the failing decode used `utf-8-sig`: the codec
+    strips a leading BOM, so the offset is quoted against the raw bytes
+    (w5/738). Callers decoding plain `utf-8` pass nothing — a BOM decodes
+    there as an ordinary character, so their offsets are already raw.
     """
-    return f"Cannot decode '{path}' as UTF-8: {exc.reason} at byte {exc.start}. Re-save the file as UTF-8 and retry."
+    from bea_engine.compat import UTF8_BOM
+
+    base = len(UTF8_BOM) if data is not None and data.startswith(UTF8_BOM) else 0
+    offset = exc.start + base
+    return f"Cannot decode '{path}' as UTF-8: {exc.reason} at byte {offset}. Re-save the file as UTF-8 and retry."
 
 
 def syntax_errors(path: Path) -> list[str]:
@@ -327,9 +356,40 @@ _ROOT_OPTIONS = ("name_assets", "name_liabilities", "name_equity", "name_income"
 _DEFAULT_ROOTS = ("Assets", "Liabilities", "Equity", "Income", "Expenses")
 
 
-_ROOT_NAME_LINE = re.compile(
-    r'^option[ \t]+"(name_(?:assets|liabilities|equity|income|expenses))"[ \t]+"([^"\\\n]*)"', re.MULTILINE
-)
+def root_name_options(text: str) -> dict[str, str]:
+    """The root-name options accepted from source text, without parsing a ledger.
+
+    Match the loader's BOM and Unicode handling, then use its lexer and option
+    converter. Comments, quoted directive text and malformed option lines must
+    not rename an account root; an invalid value keeps the last valid value.
+    The insertion order follows each option's first valid appearance.
+    """
+    from beancount.parser.lexer import lex_iter_string
+    from beancount.parser.options import options_validate_root_account
+
+    named: dict[str, str] = {}
+
+    def accept(tokens: list[tuple[str, Any]]) -> None:
+        if [kind for kind, _ in tokens] != ["OPTION", "STRING", "STRING"]:
+            return
+        key, value = tokens[1][1], tokens[2][1]
+        if key not in _ROOT_OPTIONS:
+            return
+        try:
+            named[key] = options_validate_root_account(value)  # type: ignore[no-untyped-call]
+        except ValueError:
+            pass
+
+    tokens: list[tuple[str, Any]] = []
+    text = unicodedata.normalize("NFC", text.removeprefix("\ufeff"))
+    for kind, _, _, value in lex_iter_string(text):  # type: ignore[no-untyped-call]
+        if kind == "EOL":
+            accept(tokens)
+            tokens.clear()
+        elif len(tokens) < 4:
+            tokens.append((kind, value))
+    accept(tokens)
+    return named
 
 
 def root_names_of(file: Path) -> tuple[str, ...]:
@@ -338,13 +398,13 @@ def root_names_of(file: Path) -> tuple[str, ...]:
     For refusing an account under a root the ledger does not use before
     anything loads: `add open Expenses:X` on a ledger whose expenses root is
     `Aufwand` ended at Beancount's bare "Invalid account name" (w5/402).
-    Beancount takes these options from the root file, the last one winning.
+    Beancount takes these options from the root file, the last valid one winning.
     """
     try:
         text = file.read_text(encoding="utf-8", errors="replace")
     except OSError:
         return _DEFAULT_ROOTS
-    named = dict(_ROOT_NAME_LINE.findall(text))
+    named = root_name_options(text)
     return tuple(named.get(key) or default for key, default in zip(_ROOT_OPTIONS, _DEFAULT_ROOTS, strict=True))
 
 
@@ -458,6 +518,10 @@ def new_account_format_problem(name: str) -> str | None:
     return None
 
 
+#: Accounts the ledger being written already opens, set around an import (w5/928).
+OPENED_ACCOUNTS: ContextVar[frozenset[str]] = ContextVar("opened_accounts", default=frozenset())
+
+
 def parse_account(name: str, roots: Collection[str] | None = None, *, creating: bool = False) -> str:
     """Validate an account name the way the loader will, or explain the rules.
 
@@ -474,6 +538,12 @@ def parse_account(name: str, roots: Collection[str] | None = None, *, creating: 
     `open` for it fails to load. With the ledger's ``roots`` the root is
     checked too, so a caller can refuse the name instead of suggesting an
     `add open` that can never succeed.
+
+    The roots are the root file's: Beancount applies `name_*` per file as it
+    parses, so an included file may keep roots the main file renamed. An
+    account the ledger already opens is still usable under its own spelling
+    (`OPENED_ACCOUNTS`), though its root is not among the main file's; a name
+    it never opens keeps the root check (w5/928).
     """
     from beancount.core.account import is_valid
 
@@ -493,7 +563,7 @@ def parse_account(name: str, roots: Collection[str] | None = None, *, creating: 
             "Assets, Liabilities, Equity, Income and Expenses; configured root names are also supported."
             + _refused_character(name)
         )
-    if roots is not None and name.split(":", 1)[0] not in roots:
+    if roots is not None and name.split(":", 1)[0] not in roots and name not in OPENED_ACCOUNTS.get():
         raise protocol.UsageError(unknown_root_message(name, roots))
     return name
 

@@ -28,8 +28,8 @@ export function useUserLimits() {
   const tier = (userProfile?.tier as UserTier) || "FREE";
   const limits: UserLimits | null = userProfile?.limits || null;
 
-  // Helper booleans
-  // -1 = unlimited
+  // Helper booleans. -1 is an unlimited allowance, which no count reaches
+  // (w4/313); a finite cap, zero included, is reached at its value.
   const isAtLedgerLimit = limits
     ? limits.ledgersMax !== -1 && limits.ledgersUsed >= limits.ledgersMax
     : false;

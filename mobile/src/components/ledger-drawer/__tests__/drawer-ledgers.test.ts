@@ -1,6 +1,7 @@
 import {
   filterLedgers,
   getDrawerLedgers,
+  getDrawerSections,
   getLedgerOwner,
   groupLedgersByOwner,
 } from "../drawer-ledgers";
@@ -157,5 +158,40 @@ describe("drawer ledger filter", () => {
 
   it("matches nothing rather than everything when the query is unknown", () => {
     expect(filterLedgers(collection, "walmart")).toEqual([]);
+  });
+});
+
+// w21/074: after the selected ledger was deleted elsewhere, the drawer still
+// pinned a row invented from its id at the top as the current ledger.
+describe("a selected ledger the server no longer has", () => {
+  it("gets no current-ledger row", () => {
+    expect(getDrawerLedgers([], "qa/my-book2", undefined, true)).toEqual([]);
+    expect(
+      getDrawerSections([personal], undefined, "").some(
+        (section) => section.key === "current-ledger",
+      ),
+    ).toBe(false);
+  });
+
+  it("still shows a canonical link whose metadata is loading", () => {
+    const selected = getDrawerLedgers([], "qa/my-book2")[0];
+    expect(selected).toEqual({
+      id: "qa/my-book2",
+      name: "my-book2",
+      fullName: "qa/my-book2",
+    });
+    expect(getDrawerSections([personal], selected, "")[0].key).toBe(
+      "current-ledger",
+    );
+  });
+
+  it("is what the drawer passes once GetLedger says NOT_FOUND", () => {
+    const source = require("fs").readFileSync(
+      require("path").join(__dirname, "..", "account-ledger-drawer.tsx"),
+      "utf8",
+    ) as string;
+    expect(
+      source.includes("const selectedGone = isLedgerGone(selectedError);"),
+    ).toBe(true);
   });
 });

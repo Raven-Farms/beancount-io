@@ -38,6 +38,7 @@ export const getEntryPostings = (
         .map((p) => ({
           account: p.account,
           amount: p.units?.number != null ? Number(p.units.number) : undefined,
+          ...(p.units?.currency ? { currency: p.units.currency } : {}),
         })) ?? []
     );
   }

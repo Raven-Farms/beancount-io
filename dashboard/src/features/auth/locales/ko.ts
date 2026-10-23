@@ -33,6 +33,11 @@ const koAuth: Record<string, TranslationEntry> = {
     message: "비밀번호를 확인해 주세요",
     description: "Placeholder for password confirmation",
   },
+  "auth.chooseYourPassword": {
+    message: "비밀번호를 정하세요 (최소 8자)",
+    description:
+      "Placeholder for the password a new account chooses, with the minimum length",
+  },
   "auth.createAccount": {
     message: "계정 만들기",
     description: "Button to submit registration",
@@ -158,6 +163,12 @@ const koAuth: Record<string, TranslationEntry> = {
     message: "로그인에 실패했습니다",
     description: "Error title when login fails",
   },
+  "auth.loginRateLimited": {
+    message:
+      "로그인 시도가 너무 많습니다. 몇 분 후에 다시 시도하거나 비밀번호를 재설정하세요.",
+    description:
+      "Shown on any password sign-in form when sign-in is rate limited, by address or by too many wrong passwords for the account",
+  },
   "auth.logout": {
     message: "로그아웃",
     description: "Button label to log out",
@@ -167,11 +178,12 @@ const koAuth: Record<string, TranslationEntry> = {
     description: "Label for new password field",
   },
   "auth.newPasswordMinLength": {
-    message: "비밀번호는 최소 6자 이상이어야 합니다",
+    message: "비밀번호는 최소 8자 이상이어야 합니다",
     description: "Validation error for password length",
   },
   "auth.newPasswordMaxLength": {
-    message: "비밀번호는 최대 128자 이하여야 합니다",
+    message:
+      "비밀번호가 너무 깁니다. 최대 72자까지 사용할 수 있으며, 악센트 문자, 한글 등 라틴 문자가 아닌 글자, 이모지는 각각 2~4자로 계산됩니다.",
     description:
       "Validation error when new password exceeds the maximum length",
   },
@@ -195,8 +207,20 @@ const koAuth: Record<string, TranslationEntry> = {
     message: "비밀번호는 필수입니다",
     description: "Validation error when password is not provided",
   },
+  "auth.passwordBreached": {
+    message:
+      "이 비밀번호는 데이터 유출에서 발견되었습니다. 다른 곳에서 사용하지 않는 비밀번호를 선택하세요.",
+    description:
+      "Error when the server finds the new password in a known data breach (Have I Been Pwned)",
+  },
+  "auth.passwordTooSimilar": {
+    message: "비밀번호가 이메일 또는 사용자 이름과 너무 비슷합니다.",
+    description:
+      "Error when the new password is too close to the account's email or username",
+  },
   "auth.passwordResetSuccessMessage": {
-    message: "비밀번호가 재설정되었습니다. 로그인 페이지로 이동 중...",
+    message:
+      "비밀번호가 재설정되었으며 모든 기기와 연결된 앱에서 로그아웃되었습니다. 로그인 페이지로 이동 중...",
     description: "Success message description",
   },
   "auth.passwordResetSuccessful": {
@@ -741,6 +765,76 @@ const koAuth: Record<string, TranslationEntry> = {
       "이 서버에서는 비밀번호 로그인이 꺼져 있습니다. 대신 Google로 계속하세요.",
     description:
       "Shown instead of a password form when password sign-in is turned off on the server",
+  },
+  "auth.recoveryTitle": {
+    message: "이메일을 확인하고 로그인하세요",
+    description:
+      "Title of the email ownership verification step for sign-in recovery",
+  },
+  "auth.recoveryDescription": {
+    message:
+      "로그인 복구 이메일의 링크를 연 다음, 이메일에 있는 코드와 현재 비밀번호를 입력하세요.",
+    description: "Instructions for continuing from the sign-in recovery email",
+  },
+  "auth.recoverySendEmail": {
+    message: "로그인 복구 이메일 보내기",
+    description: "Button requesting a sign-in recovery email",
+  },
+  "auth.recoverySending": {
+    message: "로그인 복구 이메일을 보내는 중...",
+    description: "Pending state while requesting a sign-in recovery email",
+  },
+  "auth.recoverySent": {
+    message:
+      "이 주소로 등록된 계정이 있으면 곧 로그인 복구 이메일이 도착합니다. 이메일의 링크를 열어 계속하세요. 최근에 받은 복구 이메일도 계속 사용할 수 있습니다.",
+    description:
+      "Uniform confirmation after requesting recovery; previous valid recovery emails remain usable",
+  },
+  "auth.recoveryResend": {
+    message: "로그인 복구 이메일 다시 보내기",
+    description: "Button requesting another sign-in recovery email",
+  },
+  "auth.recoveryRetryAt": {
+    message: "{time}에 다시 시도하세요.",
+    description:
+      "Absolute local retry time after throttling; {time} is formatted using the active locale",
+  },
+  "auth.recoveryCode": {
+    message: "6자리 인증 코드",
+    description: "Accessible label for the sign-in recovery email code",
+  },
+  "auth.recoveryCodeInvalid": {
+    message: "로그인 복구 이메일에 있는 6자리 코드를 입력하세요.",
+    description:
+      "Validation error when the recovery code is not exactly six digits",
+  },
+  "auth.recoveryFailed": {
+    message:
+      "이메일, 코드 또는 비밀번호가 올바르지 않거나 코드가 만료되었습니다. 새 로그인 복구 이메일을 요청할 수 있습니다.",
+    description:
+      "Uniform invalid-credentials or expired-code error during sign-in recovery",
+  },
+  "auth.recoveryRequestFailed": {
+    message: "로그인 복구 이메일을 요청하지 못했습니다. 다시 시도하세요.",
+    description: "Error when requesting a sign-in recovery email fails",
+  },
+  "auth.recoveryUnavailable": {
+    message: "일시적으로 로그인할 수 없습니다. 다시 시도하세요.",
+    description: "Temporary service outage during sign-in recovery",
+  },
+  "auth.recoveryExpiry": {
+    message:
+      "코드는 10분 후 만료되며 비밀번호 확인에 한 번만 사용할 수 있습니다.",
+    description:
+      "Explains the expiry and single password-attempt limit of a recovery code",
+  },
+  "auth.recoverySubmit": {
+    message: "확인하고 로그인",
+    description: "Button submitting the recovery code and current password",
+  },
+  "auth.recoveryVerifying": {
+    message: "확인 중...",
+    description: "Pending state while verifying the recovery code and password",
   },
 };
 

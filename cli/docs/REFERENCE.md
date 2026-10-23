@@ -86,6 +86,8 @@ Usage: bea init [OPTIONS] [directory]
 | `--currency, -c` | str |  | Operating currency, e.g. USD or EUR |
 | `--date` | str |  | Earliest history/opening date YYYY-MM-DD; prompts interactively, otherwise today |
 | `--opening-balance` | str (repeatable) |  | 'ACCOUNT NUMBER' in the operating currency; repeat for each account |
+| `--preset` | str |  | Setup-catalog preset id, e.g. personal@1 (ADR021); replaces the fixed chart |
+| `--title` | str |  | Ledger title; only with --preset |
 
 ### `bea import`
 
@@ -101,7 +103,7 @@ Usage: bea import [OPTIONS] {source}
 
 | Option | Type | Default | Help |
 | --- | --- | --- | --- |
-| `--csv` | str |  | Column mapping (date=Date,amount=Amount,narration=Description,...; delimiter=';' overrides detection, encoding=cp1252 overrides UTF-8), or 'auto' to read the header row; no Python importer needed |
+| `--csv` | str |  | Column mapping (date=Date, amount=Amount, narration=Description, ...; delimiter=';' overrides detection, encoding=cp1252 overrides UTF-8, decimal=comma\|point forces the convention, skip=2 skips leading rows), or 'auto' to read the header row; no Python importer needed |
 | `--account` | str |  | Source account for --csv rows |
 | `--date-format` | str |  | strptime date format for --csv; inferred from the file if unset |
 | `--delimiter` | str |  | CSV field delimiter for --csv: ',', ';', '\|', or 'tab' (detected from the header when omitted) |
@@ -154,7 +156,7 @@ Usage: bea query [OPTIONS] [query_string]
 | `--source` | str |  | Native Beanquery source URI (beancount:<path>, csv:..., or a bare path); native bean-query rendering |
 | `--allow-errors` | flag |  | Answer with errors on stderr; opts strict reads into partial answers |
 | `--format, -f` | str |  | Rendering for a printed result: text, csv, beancount |
-| `--output, -o` | str |  | Write the result to this file instead of stdout |
+| `--output, -o` | path |  | Write the result to this file instead of stdout |
 | `--numberify, -m` | flag |  | Split amounts into one column per currency |
 | `--no-errors, -q` | flag |  | Hide ledger load errors |
 | `--spreadsheet-safe` | flag |  | With --format csv, prefix text cells starting with = + - @ tab or CR with ' so spreadsheets do not run them as formulas |
@@ -342,7 +344,7 @@ options:
 
 ### `bea ingest identify`
 
-Identify which importer matches each document (Beangulp identify).
+Identify which importer matches each document.
 
 ```text
 Usage: bea ingest identify [OPTIONS]
@@ -371,7 +373,7 @@ Options:
 
 ### `bea ingest extract`
 
-Extract raw entries from documents (Beangulp extract; not bea import --apply).
+Extract raw entries from documents.
 
 ```text
 Usage: bea ingest extract [OPTIONS]
@@ -498,10 +500,11 @@ Usage: bea add close [OPTIONS]
 | `--account, -a` | str | required | Account name |
 | `--allow-errors` | flag |  | Allow semantic ledger errors; syntax and pad account references must be valid |
 | `--into` | path |  | Write to an included file, relative to the root ledger |
+| `--force` | flag |  | Close the account even though it still holds a balance on the close date |
 
 ### `bea add balance`
 
-Append a strict balance assertion, or explicitly pad from another account.
+Append a balance assertion, or pad from another account.
 
 ```text
 Usage: bea add balance [OPTIONS]
@@ -514,7 +517,7 @@ Usage: bea add balance [OPTIONS]
 | `--amount` | str | required | 'NUMBER [~ TOLERANCE] CURRENCY' (pass once) |
 | `--allow-errors` | flag |  | Allow semantic ledger errors; syntax and pad account references must be valid |
 | `--into` | path |  | Write to an included file, relative to the root ledger |
-| `--force` | flag |  | Record another assertion when the date/account already has one |
+| `--force` | flag |  | Record another assertion when the date/account already has one, or pad to an amount whose sign is refused |
 | `--pad-from` | str |  | Explicitly add a pad and this balance assertion together; source account |
 | `--pad-date` | str |  | Pad date; defaults to the day before the balance assertion |
 
@@ -568,7 +571,7 @@ Usage: bea add event [OPTIONS]
 
 ### `bea add price`
 
-Append a price, or report an exact ledger-authored date/commodity/amount match.
+Append a price directive.
 
 ```text
 Usage: bea add price [OPTIONS]
@@ -830,7 +833,7 @@ Usage: bea list custom [OPTIONS]
 
 ### `bea list transaction`
 
-List recent transactions and their amounts; --details adds metadata and source.
+List recent transactions and their amounts.
 
 ```text
 Usage: bea list transaction [OPTIONS]
@@ -844,8 +847,8 @@ Usage: bea list transaction [OPTIONS]
 | `--account, -a` | str |  | Filter by account (case-insensitive substring) |
 | `--flag` | str |  | Transaction flag, e.g. '!' for entries to review |
 | `--search` | str (repeatable) |  | Case-insensitive text in payee or narration; repeatable (AND — every term must match) |
-| `--tag` | str (repeatable) |  | Tag with or without '#'; repeatable |
-| `--link` | str (repeatable) |  | Link with or without '^'; repeatable |
+| `--tag` | str (repeatable) |  | Tag with or without '#', case-sensitive; repeat to require every tag |
+| `--link` | str (repeatable) |  | Link with or without '^', case-sensitive; repeat to require every link |
 | `--allow-errors` | flag |  | Report partial data with errors on stderr; opts strict reads into partial answers |
 | `--on-disk` | flag |  | Only directives written in a ledger file (hide plugin-synthesized rows) |
 | `--details` | flag |  | Render Beancount syntax with every posting, metadata, and source location |
@@ -869,7 +872,7 @@ Usage: bea report overview [OPTIONS]
 
 ### `bea report income-statement`
 
-Income, expenses, and profit, with an interval breakdown.
+Income, expenses, and profit by interval.
 
 ```text
 Usage: bea report income-statement [OPTIONS]
@@ -885,7 +888,7 @@ Usage: bea report income-statement [OPTIONS]
 
 ### `bea report balance-sheet`
 
-Assets, liabilities, and equity including current earnings and valuation adjustments.
+Assets, liabilities, and equity.
 
 ```text
 Usage: bea report balance-sheet [OPTIONS]
@@ -901,7 +904,7 @@ Usage: bea report balance-sheet [OPTIONS]
 
 ### `bea report trial-balance`
 
-All five account types, retaining signed ledger balances.
+All five account types, with signed balances.
 
 ```text
 Usage: bea report trial-balance [OPTIONS]
@@ -1195,7 +1198,7 @@ Usage: bea upgrade [OPTIONS]
 
 ### `bea engine status`
 
-Show which engine serves local commands, whether it is provisioned, and optional features.
+Show which engine serves local commands.
 
 ```text
 Usage: bea engine status [OPTIONS]
@@ -1203,7 +1206,7 @@ Usage: bea engine status [OPTIONS]
 
 ### `bea engine enable`
 
-Install a reviewed optional package into the managed engine (not the frontend).
+Install a reviewed optional package.
 
 ```text
 Usage: bea engine enable [OPTIONS] {feature}
@@ -1217,7 +1220,7 @@ Usage: bea engine enable [OPTIONS] {feature}
 
 ### `bea cloud login`
 
-Log in by device flow; credentials.json goes in $BEA_CONFIG_DIR, $XDG_CONFIG_HOME/bea or ~/.config/bea.
+Log in by device flow.
 
 ```text
 Usage: bea cloud login [OPTIONS]
@@ -1233,7 +1236,7 @@ Usage: bea cloud logout [OPTIONS]
 
 ### `bea cloud status`
 
-Show who is logged in, where the credential came from, and when it expires.
+Show the current login.
 
 ```text
 Usage: bea cloud status [OPTIONS]
@@ -1241,7 +1244,7 @@ Usage: bea cloud status [OPTIONS]
 
 ### `bea cloud ledger list`
 
-List the caller's accessible ledgers, restricted to the credential's ledger pin when present
+List accessible ledgers.
 
 ```text
 Usage: bea cloud ledger list [OPTIONS]
@@ -1294,6 +1297,10 @@ Usage: bea cloud ledger create [OPTIONS] {name}
 | `--private, --public` | flag | private | Ledger visibility |
 | `--clone` | flag |  | Clone the new ledger to disk after creating it |
 | `--dir` | path |  | Local directory for the git clone |
+| `--preset` | str |  | Setup-catalog preset id, e.g. personal@1 (ADR021) |
+| `--title` | str |  | Ledger title; only with --preset |
+| `--currency` | str |  | Operating currency for the preset, e.g. EUR |
+| `--date` | str |  | History start YYYY-MM-DD for the preset |
 
 ### `bea cloud ledger clone`
 

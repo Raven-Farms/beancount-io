@@ -14,3 +14,43 @@ export function changePercent(baseline: number, value: number): number | null {
   }
   return ((value - baseline) / Math.abs(baseline)) * 100;
 }
+
+/**
+ * The change row's percentage as it is shown: rounded to two places first, a
+ * rounded -0 normalised to 0, and the sign and the verdict taken from the
+ * rounded value, as the amount's sign is (w21/055). Prefixed from the raw
+ * change, a move of -$12 on 2,500,000 read "-$12.00 (-0.00%)" in the
+ * unfavourable colour, and a sub-cent gain "+$0.00 (-0.00%)" (w21/237).
+ * `flat` is true when it rounds to nothing, which reads in the neutral colour.
+ */
+export function formatChangePercent(pct: number): {
+  text: string;
+  flat: boolean;
+} {
+  const rounded = Math.round(pct * 100) / 100 + 0;
+  return {
+    text: `${rounded > 0 ? "+" : ""}${rounded.toFixed(2)}%`,
+    flat: rounded === 0,
+  };
+}
+
+/**
+ * The change row's amount and whether it reads in the neutral colour. A change
+ * that rounds to nothing is flat whatever the percentage: from a zero baseline
+ * there is no percentage, and "+$0.00" was drawn in the gain colour on an empty
+ * ledger (w21/416). Flat when the formatted amount holds no non-zero digit; a
+ * flat amount is shown unsigned. `pct` is the formatted percentage, if any,
+ * and decides flatness when there is one.
+ */
+export function describeChange(
+  change: number,
+  pct: { flat: boolean } | null,
+  format: (value: number, includePlus?: boolean) => string,
+): { amount: string; flat: boolean } {
+  const amount = format(change, true);
+  const roundsToNothing = !/[1-9]/.test(amount);
+  if (pct !== null) return { amount, flat: pct.flat };
+  return roundsToNothing
+    ? { amount: format(0), flat: true }
+    : { amount, flat: false };
+}

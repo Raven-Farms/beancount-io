@@ -88,8 +88,8 @@ describe("entry-utils", () => {
       } as unknown as JournalDirectiveType;
 
       expect(getEntryPostings(entry)).toEqual([
-        { account: "Expenses:Food:Restaurant", amount: 23.09 },
-        { account: "Assets:Bank:Checking", amount: -23.09 },
+        { account: "Expenses:Food:Restaurant", amount: 23.09, currency: "USD" },
+        { account: "Assets:Bank:Checking", amount: -23.09, currency: "USD" },
       ]);
     });
 

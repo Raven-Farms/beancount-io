@@ -1,0 +1,13 @@
+; Synthetic variance fixture; every supplier and amount is invented.
+option "operating_currency" "USD"
+
+2026-01-01 open Assets:Checking USD
+2026-01-01 open Expenses:Supplies USD
+
+2026-05-15 * "Synthetic supplier" "Refund on returned supplies"
+  Expenses:Supplies  -100.00 USD
+  Assets:Checking     100.00 USD
+
+2026-06-15 * "Synthetic supplier" "New supplies purchase"
+  Expenses:Supplies   200.00 USD
+  Assets:Checking    -200.00 USD

@@ -44,6 +44,11 @@ const bgAuth: Record<string, TranslationEntry> = {
     message: "Потвърдете паролата си",
     description: "Placeholder for password confirmation",
   },
+  "auth.chooseYourPassword": {
+    message: "Изберете парола (мин. 8 символа)",
+    description:
+      "Placeholder for the password a new account chooses, with the minimum length",
+  },
   "auth.createAccount": {
     message: "Създаване на профил",
     description: "Button to submit registration",
@@ -179,6 +184,12 @@ const bgAuth: Record<string, TranslationEntry> = {
     message: "Неуспешен вход",
     description: "Error title when login fails",
   },
+  "auth.loginRateLimited": {
+    message:
+      "Твърде много опити за вход. Изчакайте няколко минути и опитайте отново или нулирайте паролата си.",
+    description:
+      "Shown on any password sign-in form when sign-in is rate limited, by address or by too many wrong passwords for the account",
+  },
   "auth.logout": {
     message: "Изход",
     description: "Button label to log out",
@@ -197,11 +208,12 @@ const bgAuth: Record<string, TranslationEntry> = {
     description: "Label for new password field",
   },
   "auth.newPasswordMinLength": {
-    message: "Паролата трябва да бъде поне 6 символа",
+    message: "Паролата трябва да бъде поне 8 символа",
     description: "Validation error for password length",
   },
   "auth.newPasswordMaxLength": {
-    message: "Паролата трябва да бъде най-много 128 символа",
+    message:
+      "Паролата е твърде дълга. Използвайте най-много 72 символа; буквите с диакритика, нелатинските букви и емоджитата се броят за 2 до 4 всяко.",
     description:
       "Validation error when new password exceeds the maximum length",
   },
@@ -245,9 +257,20 @@ const bgAuth: Record<string, TranslationEntry> = {
     message: "Паролата е задължителна",
     description: "Validation error when password is not provided",
   },
+  "auth.passwordBreached": {
+    message:
+      "Тази парола е открита при изтичане на данни. Изберете парола, която не използвате никъде другаде.",
+    description:
+      "Error when the server finds the new password in a known data breach (Have I Been Pwned)",
+  },
+  "auth.passwordTooSimilar": {
+    message: "Паролата е твърде сходна с вашия имейл или потребителско име.",
+    description:
+      "Error when the new password is too close to the account's email or username",
+  },
   "auth.passwordResetSuccessMessage": {
     message:
-      "Вашата парола беше нулирана. Пренасочване към страницата за вход...",
+      "Вашата парола беше нулирана и излязохте от профила си на всички устройства и в свързаните приложения. Пренасочване към страницата за вход...",
     description: "Success message description",
   },
   "auth.passwordResetSuccessful": {
@@ -750,6 +773,76 @@ const bgAuth: Record<string, TranslationEntry> = {
       "Влизането с парола е изключено на този сървър. Вместо това продължете с Google.",
     description:
       "Shown instead of a password form when password sign-in is turned off on the server",
+  },
+  "auth.recoveryTitle": {
+    message: "Потвърдете имейла си, за да влезете",
+    description:
+      "Title of the email ownership verification step for sign-in recovery",
+  },
+  "auth.recoveryDescription": {
+    message:
+      "Отворете връзката в имейла за възстановяване на достъпа, след което въведете кода от него и текущата си парола.",
+    description: "Instructions for continuing from the sign-in recovery email",
+  },
+  "auth.recoverySendEmail": {
+    message: "Изпращане на имейл за възстановяване",
+    description: "Button requesting a sign-in recovery email",
+  },
+  "auth.recoverySending": {
+    message: "Изпращане на имейл за възстановяване...",
+    description: "Pending state while requesting a sign-in recovery email",
+  },
+  "auth.recoverySent": {
+    message:
+      "Ако има акаунт с този адрес, скоро ще получите имейл за възстановяване на достъпа. Отворете връзката в него, за да продължите. Скорошен имейл за възстановяване все още е валиден.",
+    description:
+      "Uniform confirmation after requesting recovery; previous valid recovery emails remain usable",
+  },
+  "auth.recoveryResend": {
+    message: "Изпращане на нов имейл за възстановяване",
+    description: "Button requesting another sign-in recovery email",
+  },
+  "auth.recoveryRetryAt": {
+    message: "Опитайте отново в {time}.",
+    description:
+      "Absolute local retry time after throttling; {time} is formatted using the active locale",
+  },
+  "auth.recoveryCode": {
+    message: "Шестцифрен код за потвърждение",
+    description: "Accessible label for the sign-in recovery email code",
+  },
+  "auth.recoveryCodeInvalid": {
+    message: "Въведете шестцифрения код от имейла за възстановяване.",
+    description:
+      "Validation error when the recovery code is not exactly six digits",
+  },
+  "auth.recoveryFailed": {
+    message:
+      "Имейлът, кодът или паролата са неправилни или кодът е изтекъл. Можете да поискате нов имейл за възстановяване.",
+    description:
+      "Uniform invalid-credentials or expired-code error during sign-in recovery",
+  },
+  "auth.recoveryRequestFailed": {
+    message: "Неуспешна заявка за имейл за възстановяване. Опитайте отново.",
+    description: "Error when requesting a sign-in recovery email fails",
+  },
+  "auth.recoveryUnavailable": {
+    message: "Влизането временно не е достъпно. Опитайте отново.",
+    description: "Temporary service outage during sign-in recovery",
+  },
+  "auth.recoveryExpiry": {
+    message:
+      "Кодът изтича след 10 минути и важи за един опит за въвеждане на парола.",
+    description:
+      "Explains the expiry and single password-attempt limit of a recovery code",
+  },
+  "auth.recoverySubmit": {
+    message: "Потвърждаване и вход",
+    description: "Button submitting the recovery code and current password",
+  },
+  "auth.recoveryVerifying": {
+    message: "Потвърждаване...",
+    description: "Pending state while verifying the recovery code and password",
   },
 };
 

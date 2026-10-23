@@ -7,6 +7,7 @@ so a clean ledger could be left failing `bea check` by a write that exited 0.
 from __future__ import annotations
 
 import json
+import textwrap
 from pathlib import Path
 from typing import Any
 
@@ -125,6 +126,45 @@ def test_add_pad_still_stages_its_own_pad_for_the_two_step_flow(book: Path) -> N
     balance = _bea(book, "add", "balance", "--date", "2026-01-10", "-a", "Assets:Cash", "--amount", "50.00 USD")
 
     assert balance.exit_code == 0, balance.output
+    assert _check(book) == 0
+
+
+PAD_IMPORTER = textwrap.dedent("""\
+    import datetime
+    from beancount.core import data
+
+    class PadImp:
+        name = "padimp"
+
+        def identify(self, filepath):
+            return True
+
+        def account(self, filepath):
+            return "Assets:Checking"
+
+        def extract(self, filepath, existing):
+            meta = data.new_metadata("p.stmt", 0)
+            return [data.Pad(meta, datetime.date(2026, 3, 14), "Assets:Checking", "Equity:Opening")]
+
+    CONFIG = [PadImp()]
+    """)
+
+
+def test_a_pad_only_import_is_refused_even_with_allow_errors(book: Path) -> None:
+    # w5/798: the staged-pad carve-out is `add pad`'s alone. A pad-only
+    # import used to inherit it, exiting 0 and leaving a clean ledger
+    # failing `check` — with every later write then refused.
+    before = book.read_text()
+    source = book.parent / "p.stmt"
+    source.write_text("x\n")
+    config = book.parent / "padimp.py"
+    config.write_text(PAD_IMPORTER)
+
+    result = _bea(book, "--no-input", "import", str(source), "--config", str(config), "--apply", "--allow-errors")
+
+    assert result.exit_code == 1, result.output
+    assert "Unused Pad" in result.output
+    assert book.read_text() == before
     assert _check(book) == 0
 
 

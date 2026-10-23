@@ -25,6 +25,7 @@ function createService(existing: unknown, allowedEmails: string[] = []) {
         allowedDomains: new Set<string>(),
       },
     } as any,
+    async () => false,
   );
   return { service, user, jwt, createUser };
 }

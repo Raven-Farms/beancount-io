@@ -398,6 +398,11 @@ const nlCommon: Record<string, TranslationEntry> = {
     message: "Downloaden",
     description: "Auto-generated from code usage",
   },
+  "common.downloadFailed": {
+    message: "Het bestand kon niet worden gedownload. Probeer het opnieuw.",
+    description:
+      "Error shown when the browser could not generate a file download",
+  },
   "common.moreActions": {
     message: "Meer acties",
     description: "Label for dropdown menu with additional actions",
@@ -737,6 +742,12 @@ const nlCommon: Record<string, TranslationEntry> = {
     message: "Geen rekeningen gevonden",
     description: "Message when no accounts match search",
   },
+  "component.suggestions.unavailable": {
+    message:
+      "Suggesties konden niet worden geladen. Je kunt nog steeds een waarde typen.",
+    description:
+      "Notice under a form field when its suggestions failed to load; the field still accepts typed text",
+  },
   "component.sourceFileCombobox.placeholder": {
     message: "Bestanden zoeken...",
     description: "Placeholder for ledger file search",
@@ -1062,6 +1073,25 @@ const nlCommon: Record<string, TranslationEntry> = {
     message: "Je bent helemaal bij",
     description:
       "Description under the What's new heading when every release has been read",
+  },
+  "common.failedRenewal": {
+    message:
+      "We konden {card} niet belasten voor {plan}. Werk de kaart bij vóór {date} om {plan} te houden.",
+    description:
+      "Banner while a renewal payment is past due: the card, the plan and the next retry date",
+  },
+  "common.failedRenewalUpdate": {
+    message: "Betaalmethode bijwerken",
+    description: "Button that opens the billing portal to fix a failed renewal",
+  },
+  "common.failedRenewalYourCard": {
+    message: "je kaart",
+    description: "Stands in for the card name when it is unknown",
+  },
+  "common.failedRenewalDismiss": {
+    message: "Nu verbergen",
+    description:
+      "Accessible name of the button that hides the failed-renewal banner for this session",
   },
 };
 

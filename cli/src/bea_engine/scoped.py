@@ -43,12 +43,53 @@ def run(op: str, argv: list[str]) -> int:
             return original(entries, scoped, conversion, price_map)
 
         upstream.render_mini_balances = in_scope
+        named = _named_search(upstream, argv)
         try:
             return _invoke(upstream, op, argv)
         finally:
             upstream.render_mini_balances = original
+            for attribute, original_fn in named:
+                setattr(upstream, attribute, original_fn)
     finally:
         upstream.loader = plain_loader
+
+
+def _named_search(upstream: Any, argv: list[str]) -> list[tuple[str, Any]]:
+    """Search locations under the ledger path as the command line named it.
+
+    The loader reads the named path (a symlink stays a symlink), so entries
+    carry it — but `context` and `region` build a bare line's location from
+    click's resolved FILENAME, the real path, and the text compare fails
+    (w5/767). `linked` never broke: it searches `options_map["filename"]`,
+    which is the named path already. Each search is remapped the way the
+    load was; an explicit `file:line` passes through remapped too, which can
+    only help it agree with the entries.
+    """
+    import functools
+
+    patched: list[tuple[str, Any]] = []
+    render = getattr(upstream, "render_file_context", None)
+    if render is not None:
+
+        @functools.wraps(render)
+        def render_named(entries: Any, options_map: Any, search_filename: Any, lineno: Any) -> Any:
+            return render(entries, options_map, _as_named(search_filename, argv), lineno)
+
+        upstream.render_file_context = render_named
+        patched.append(("render_file_context", render))
+    resolve = getattr(upstream, "resolve_region_to_entries", None)
+    if resolve is not None:
+
+        @functools.wraps(resolve)
+        def resolve_named(entries: Any, filename: Any, region: Any) -> Any:
+            search_filename, first_lineno, last_lineno = region
+            if search_filename is None:
+                region = (_as_named(filename, argv), first_lineno, last_lineno)
+            return resolve(entries, filename, region)
+
+        upstream.resolve_region_to_entries = resolve_named
+        patched.append(("resolve_region_to_entries", resolve))
+    return patched
 
 
 class _ManagedLoader:
@@ -107,7 +148,8 @@ def _invoke(upstream: Any, op: str, argv: list[str]) -> int:
     from bea_engine import protocol
 
     try:
-        upstream.doctor.main(args=[op, *argv], prog_name="bean-doctor")
+        # Its usage errors name the command the user typed (w5/846).
+        upstream.doctor.main(args=[op, *argv], prog_name="bea doctor")
     except SystemExit as exit_status:
         return _status(exit_status.code)
     except protocol.EngineError as exc:
@@ -204,6 +246,7 @@ def _context_of(entries: Any, options_map: Any, conversion: Any = None, price_ma
                 continue
             context.update(posting.units.number, posting.units.currency)
             seen = True
+    ledger_context = options_map.get("dcontext")
     if conversion in ("cost", "value"):
         root = realization.realize(entries)  # type: ignore[no-untyped-call]
         for real_account in realization.iter_children(root):  # type: ignore[no-untyped-call]
@@ -212,12 +255,20 @@ def _context_of(entries: Any, options_map: Any, conversion: Any = None, price_ma
                 converted.append(real_account.balance.reduce(convert.get_value, price_map))
             for balance in converted:
                 for position in balance:
-                    if position.units.number is not None:
-                        context.update(position.units.number, position.units.currency)
-                        seen = True
+                    number = position.units.number
+                    if number is None:
+                        continue
+                    if _is_division_artifact(number):
+                        # A total-cost split or an interpolation divided here:
+                        # learn the rounded value at the ledger's usual
+                        # precision, not the 26 artifact digits (w5/768).
+                        rounded = _at_ledger_precision(number, position.units.currency, ledger_context)
+                        if rounded is not None:
+                            number = rounded
+                    context.update(number, position.units.currency)
+                    seen = True
     if not seen:
         return options_map["dcontext"]
-    ledger_context = options_map.get("dcontext")
     if ledger_context is not None:
         context.set_commas(ledger_context.commas)
         for currency, known in ledger_context.ccontexts.items():
@@ -225,6 +276,31 @@ def _context_of(entries: Any, options_map: Any, conversion: Any = None, price_ma
             if isinstance(fixed, int):
                 context.set_fixed_precision(currency, fixed)
             elif currency in inferred and currency not in context.ccontexts:
-                # Only an inferred leg carries it here: format it as the ledger does.
-                context.ccontexts[currency] = known
+                # Only an inferred leg carries it here: the ledger's usual
+                # precision, not its maximum (a price's 4 places became the
+                # column's in w5/768's fixture).
+                context.set_fixed_precision(currency, known.get_fractional_digits_common())
     return context
+
+
+#: Significant digits at which a converted balance stops being a typed number.
+#: Beancount computes with the default 28-digit decimal context, so a number
+#: using all of it came out of a division — a total-cost split or an
+#: interpolation — not out of the ledger text.
+_DIVISION_DIGITS = 28
+
+
+def _is_division_artifact(number: Any) -> bool:
+    """Whether this converted balance is division output rather than a typed number."""
+    digits = getattr(number.as_tuple(), "digits", None)
+    return isinstance(digits, tuple) and len(digits) >= _DIVISION_DIGITS
+
+
+def _at_ledger_precision(number: Any, currency: str, ledger_context: Any) -> Any | None:
+    """This number rounded to the ledger's usual precision for its currency, if known."""
+    from decimal import Decimal
+
+    known = (getattr(ledger_context, "ccontexts", None) or {}).get(currency)
+    if known is None:
+        return None
+    return number.quantize(Decimal(1).scaleb(-known.get_fractional_digits_common()))

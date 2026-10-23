@@ -91,6 +91,36 @@ def test_a_file_previewed_again_bank_signed_drops_only_its_own_sign(book: Path) 
     assert [row["amount"] for row in september["rows"]] == ["12.00 USD"]
 
 
+def test_an_edited_file_is_refused_until_its_sign_is_said_again(book: Path) -> None:
+    """w5/754: deleting a pending row re-hashes the file; the old sign must not replay or drop."""
+    assert _preview(book, "aug.csv", f"{MAPPING},sign=ledger") == "-25.00 USD"
+    (book.parent / "aug.csv").write_text("Date,Description,Amount\n2026-08-02,GROCERY,25.00\n2026-08-03,FUEL,10.00\n")
+    before = book.read_bytes()
+
+    refused = runner.invoke(app, ["--json", "--file", str(book), "import", str(book.parent / "aug.csv"), "--apply"])
+    assert refused.exit_code == 2, refused.output
+    assert "aug.csv changed since sign=ledger was chosen for it" in refused.output
+    assert "another file" not in refused.output
+    assert book.read_bytes() == before
+
+    # Saying the sign again confirms the new bytes, and the run after replays them.
+    confirmed = _import(book, "aug.csv", "--account", "Liabilities:Card", "--csv", "sign=ledger", "--apply")
+    assert [row["amount"] for row in confirmed["rows"]] == ["-25.00 USD", "-10.00 USD"]
+    assert _card_line(book, "-25.00") and _card_line(book, "-10.00")
+    replayed = _import(book, "aug.csv")
+    assert any("Re-applied sign=ledger: aug.csv is the file it was chosen for" in note for note in replayed["notes"])
+
+
+def test_a_different_name_keeps_the_bank_signed_note(book: Path) -> None:
+    """w5/754: the 'another file' note now only ever names a genuinely different file."""
+    assert _preview(book, "aug.csv", f"{MAPPING},sign=ledger") == "-25.00 USD"
+
+    september = _import(book, "sep.csv")
+
+    assert [row["amount"] for row in september["rows"]] == ["-12.00 USD"]
+    assert any("never carried to another file: sep.csv is read bank-signed" in note for note in september["notes"])
+
+
 def test_a_record_from_before_keeps_its_one_ledger_signed_file(book: Path, bea_config_dir: Path) -> None:
     _preview(book, "aug.csv", f"{MAPPING},sign=ledger")
     (record,) = (bea_config_dir / "importers").glob("csv-*.json")

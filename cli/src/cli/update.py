@@ -288,7 +288,18 @@ def _fetch_latest(channel: str) -> str:
         raise ValueError("the index sent an unreadable answer") from exc
 
 
-_VERSION = re.compile(r"\d+(?:\.\d+)+[A-Za-z0-9.+-]*")
+#: PEP 440's own grammar, which PyPI enforces on every upload. A digit prefix
+#: with any suffix cached `0.9banana`, `0.9.0..` and `0.9.0+` as answers (w5/864).
+_VERSION = re.compile(
+    r"""
+    v?(?:[0-9]+!)?[0-9]+(?:\.[0-9]+)*                                       # epoch, release
+    (?:[-_.]?(?:a|b|c|rc|alpha|beta|pre|preview)[-_.]?[0-9]*)?              # pre-release
+    (?:-[0-9]+|[-_.]?(?:post|rev|r)[-_.]?[0-9]*)?                           # post-release
+    (?:[-_.]?dev[-_.]?[0-9]*)?                                              # development release
+    (?:\+[a-z0-9]+(?:[-_.][a-z0-9]+)*)?                                     # local version
+    """,
+    re.VERBOSE | re.IGNORECASE,
+)
 
 
 def latest_version(

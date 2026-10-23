@@ -133,6 +133,7 @@ it("requires verification before a future live period can serve cached paid stat
       unverified,
       unverified.currentPeriodEnd!,
       SUBSCRIPTION_PERIOD_VERIFICATION_VERSION,
+      "PREMIUM",
     ),
   ).toBe(true);
   expect(await model.findByUserIdWithActivePeriod(db, "u")).toMatchObject({
@@ -168,6 +169,7 @@ it("normal request compare-and-set cannot overwrite a newer webhook or another c
       live,
       new Date(1900000000000),
       SUBSCRIPTION_PERIOD_VERIFICATION_VERSION,
+      "PREMIUM",
     ),
   ).toBe(false);
   const fresh = (await model.findByUserIdAndClientId(
@@ -182,6 +184,7 @@ it("normal request compare-and-set cannot overwrite a newer webhook or another c
       { ...fresh, stripeCustomerId: "cus_foreign" },
       new Date(2100000000000),
       SUBSCRIPTION_PERIOD_VERIFICATION_VERSION,
+      "PREMIUM",
     ),
   ).toBe(false);
   expect(
@@ -190,6 +193,7 @@ it("normal request compare-and-set cannot overwrite a newer webhook or another c
       fresh,
       new Date(2100000000000),
       SUBSCRIPTION_PERIOD_VERIFICATION_VERSION,
+      "PREMIUM",
     ),
   ).toBe(true);
   expect(
@@ -217,6 +221,7 @@ it("preserves microsecond versions written by reconciliation and rejects interve
       repaired,
       new Date(2000000000000),
       SUBSCRIPTION_PERIOD_VERIFICATION_VERSION,
+      "PREMIUM",
     ),
   ).toBe(true);
   expect(
@@ -225,6 +230,7 @@ it("preserves microsecond versions written by reconciliation and rejects interve
       repaired,
       new Date(2100000000000),
       SUBSCRIPTION_PERIOD_VERIFICATION_VERSION,
+      "PREMIUM",
     ),
   ).toBe(false);
 });

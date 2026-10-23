@@ -226,10 +226,13 @@
     font-weight: 600 !important;
   }
 
+  /* An amount has no spaces, so it stays on one line until it is wider than
+     its column; then it wraps (the cells' overflow-wrap: anywhere) instead of
+     being clipped at the page edge. A 16-digit figure overflowed portrait A4
+     under nowrap (w4/289). */
   .statement-print-amount {
     font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
     text-align: end !important;
-    white-space: nowrap;
   }
 
   .statement-print-footer {

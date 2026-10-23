@@ -19,6 +19,14 @@ import { headerTitleLineHeight, headerHeight } from "./header-layout";
 import { useLedgerDrawer } from "./ledger-drawer-context";
 import { useGuest } from "@/common/guest/guest-context";
 
+/**
+ * How far the badge's count scales with the text size. The bell it sits on is a
+ * fixed 24pt, so a count at AX2 (30pt line box) outgrew the 16pt pill and its
+ * lower half fell onto the header; iOS caps its own badges the same way
+ * (w21/625).
+ */
+const BADGE_MAX_FONT_SIZE_MULTIPLIER = 1.3;
+
 const getStyles = (theme: ColorTheme) =>
   StyleSheet.create({
     navBar: {
@@ -59,8 +67,9 @@ const getStyles = (theme: ColorTheme) =>
       top: -4,
       end: -6,
       minWidth: 16,
-      height: 16,
-      borderRadius: 8,
+      // Grows with its text rather than clipping it (w21/625).
+      minHeight: 16,
+      borderRadius: 9,
       backgroundColor: theme.error,
       justifyContent: "center",
       alignItems: "center",
@@ -113,6 +122,11 @@ function NotificationsBellButton(): JSX.Element {
     <TouchableOpacity
       accessibilityRole="button"
       accessibilityLabel={t("notificationsBell")}
+      // The label replaces the badge for VoiceOver, so its count is spoken
+      // as the value: "Notifications, 1 error" (w21/109).
+      accessibilityValue={
+        count > 0 ? { text: t("ledgerEditorErrorCount", { count }) } : undefined
+      }
       onPress={handlePress}
       style={styles.action}
       activeOpacity={0.7}
@@ -121,7 +135,12 @@ function NotificationsBellButton(): JSX.Element {
         <Ionicons name="notifications-outline" size={24} color={theme.black} />
         {count > 0 && (
           <View style={styles.badge}>
-            <Text style={styles.badgeText}>{count > 99 ? "99+" : count}</Text>
+            <Text
+              style={styles.badgeText}
+              maxFontSizeMultiplier={BADGE_MAX_FONT_SIZE_MULTIPLIER}
+            >
+              {count > 99 ? "99+" : count}
+            </Text>
           </View>
         )}
       </View>
@@ -137,6 +156,13 @@ type HeaderAction = {
   | { onPress: () => void; disabled?: boolean; items?: never }
   | { items: MenuButtonItem[]; onPress?: never; disabled?: never }
 );
+
+/**
+ * How far the header title may shrink to stay on one line. At AX2 the longest
+ * title ("Transaktionen") needs about 0.69 of its scaled size to fit between
+ * the action groups, so the floor leaves room under that.
+ */
+const HEADER_TITLE_MIN_SCALE = 0.6;
 
 /**
  * Every tab uses the same row and 44pt actions, including read-only/empty states.
@@ -162,7 +188,15 @@ export function LedgerDrawerHeader({
         <LedgerDrawerButton />
         {!guest && <NotificationsBellButton />}
       </View>
-      <Text style={styles.navTitle} numberOfLines={1}>
+      {/* Between two fixed action groups there are about 190 pt, and a title
+          that scales with Dynamic Type read "Transacti…" at AX2: it shrinks
+          to fit, down to 60%, before it would truncate (w21/246). */}
+      <Text
+        style={styles.navTitle}
+        numberOfLines={1}
+        adjustsFontSizeToFit
+        minimumFontScale={HEADER_TITLE_MIN_SCALE}
+      >
         {title}
       </Text>
       <View style={styles.navRight}>

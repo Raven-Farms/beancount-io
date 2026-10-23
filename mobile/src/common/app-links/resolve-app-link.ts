@@ -1,4 +1,7 @@
+import { routeText } from "../route-text";
 import { Href } from "expo-router";
+import type { TransactionFilters } from "../../screens/transactions-screen/filters/types";
+import { journalLinkFilters } from "./journal-link-filters";
 
 /** Hosted production origin — always accepted by the resolver. */
 export const HOSTED_APP_ORIGIN = "https://beancount.io";
@@ -6,12 +9,14 @@ export const HOSTED_APP_ORIGIN = "https://beancount.io";
 export type AppLinkTarget = {
   ledgerFullName: string;
   href: Href;
+  /** Transactions filters the link sets; absent for every other target. */
+  filters?: TransactionFilters;
 };
 
 export type ResolveAppLinkOptions = {
   /** Selected server origin (with or without trailing slash). */
   serverUrl?: string;
-  /** Always-accepted hosted origin. Defaults to beancount.io. */
+  /** The hosted origin, accepted when no server is selected. Defaults to beancount.io. */
   hostedOrigin?: string;
 };
 
@@ -27,14 +32,24 @@ function hostFromOrigin(origin: string): string | null {
   }
 }
 
+/**
+ * The hosts whose links are this server's. With a self-hosted server selected,
+ * a beancount.io link names the hosted service's ledger, not the same-named
+ * one on this server, so only the server's own host counts (w21/348); the
+ * hosted origin is accepted when it is the server, or none is given.
+ */
 function allowedHosts(options: ResolveAppLinkOptions): Set<string> {
   const hosts = new Set<string>();
-  const hosted = normalizeOrigin(options.hostedOrigin ?? HOSTED_APP_ORIGIN);
-  const hostedHost = hostFromOrigin(hosted);
-  if (hostedHost) hosts.add(hostedHost);
-  if (options.serverUrl) {
-    const serverHost = hostFromOrigin(normalizeOrigin(options.serverUrl));
-    if (serverHost) hosts.add(serverHost);
+  const serverHost = options.serverUrl
+    ? hostFromOrigin(normalizeOrigin(options.serverUrl))
+    : null;
+  if (serverHost) {
+    hosts.add(serverHost);
+  } else {
+    const hostedHost = hostFromOrigin(
+      normalizeOrigin(options.hostedOrigin ?? HOSTED_APP_ORIGIN),
+    );
+    if (hostedHost) hosts.add(hostedHost);
   }
   return hosts;
 }
@@ -113,8 +128,31 @@ export function resolveAppLink(
         },
       };
     }
-    case "journal":
-      return { ledgerFullName, href: "/transactions" };
+    case "accounts":
+      return {
+        ledgerFullName,
+        href:
+          parsed.searchParams.get("action") === "open-account"
+            ? "/open-account"
+            : "/accounts",
+      };
+    case "journal": {
+      // The dashboard's "new entry" link opens its form; here, the native one.
+      if (parsed.searchParams.get("action") === "new-entry") {
+        const directive = parsed.searchParams.get("directive");
+        if (directive === null || directive === "transaction") {
+          return { ledgerFullName, href: "/add-transaction" };
+        }
+        if (directive === "account") {
+          return { ledgerFullName, href: "/open-account" };
+        }
+      }
+      return {
+        ledgerFullName,
+        href: "/transactions",
+        filters: journalLinkFilters(parsed.searchParams),
+      };
+    }
     case "commit": {
       if (tail.length !== 1 || !tail[0]) {
         return { ledgerFullName, href: "/" };
@@ -129,6 +167,13 @@ export function resolveAppLink(
       };
     }
     case "files": {
+      // /files/tree/main[/dir...] — the Files tab; it has no folder deep link,
+      // so a folder opens at the root. Other branches are no app link, as for
+      // a file (below).
+      if (tail.length === 0 || tail[0] === "tree") {
+        if (tail.length > 1 && tail[1] !== "main") return null;
+        return { ledgerFullName, href: "/ledger" };
+      }
       // /files/blob/$branch/$path... — mobile editor takes the path only.
       if (tail[0] !== "blob" || tail.length < 3) {
         return { ledgerFullName, href: "/" };
@@ -137,17 +182,42 @@ export function resolveAppLink(
       if (!path) {
         return { ledgerFullName, href: "/" };
       }
+      // The editor reads and writes main only. The dashboard 404s any other
+      // branch rather than show main's file under a URL naming another, so the
+      // link is no app link and opens in the browser (w21/347).
+      if (tail[1] !== "main") return null;
+      // A positive whole number only; anything else opens at the top.
+      const lineNumber = parsed.searchParams.get("lineNumber") ?? "";
+      const initialLine = /^[1-9]\d{0,8}$/.test(lineNumber)
+        ? lineNumber
+        : undefined;
       return {
         ledgerFullName,
         href: {
           pathname: "/ledger-file-editor",
-          params: { path },
+          // `ledger` binds the file to the link's ledger: without it the
+          // editor opened the *selected* ledger's same-named file, editable,
+          // for a link to a ledger the user cannot read (w21/199).
+          params: {
+            path: routeText(path),
+            ledger: ledgerFullName,
+            // The dashboard's ledger-errors table links to the error's line.
+            ...(initialLine ? { initialLine } : {}),
+          },
         },
       };
     }
     case "income-statement":
     case "balance-sheet":
+    // The dashboard's cash-flow and trial-balance pages are Reports' cards and
+    // statements here (w21/545).
+    case "cash-flow":
+    case "trial-balance":
       return { ledgerFullName, href: "/reports" };
+    // Ledger errors and recent changes are Notifications' two sections.
+    case "errors":
+    case "commits":
+      return { ledgerFullName, href: "/notifications" };
     case "budget":
       return { ledgerFullName, href: "/budget" };
     case "entry": {

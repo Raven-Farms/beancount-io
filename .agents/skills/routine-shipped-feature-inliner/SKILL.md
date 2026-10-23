@@ -10,6 +10,7 @@ description: Autonomous maintenance routine that finds gates for fully shipped
   and for changing what any flag is set to — this routine never flips a value.
   The core trigger is "this feature fully shipped; remove its flag and inline
   the winning path".
+metadata: {"internal": true}
 ---
 
 # Task: Remove gates for fully shipped features

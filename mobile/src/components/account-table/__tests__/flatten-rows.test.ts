@@ -1,4 +1,10 @@
-import { flattenRows, rowDisclosure } from "../flatten-rows";
+import fs from "fs";
+import path from "path";
+import {
+  flattenRows,
+  revealAccountOverrides,
+  rowDisclosure,
+} from "../flatten-rows";
 import { en } from "../../../translations/en";
 import type {
   AccountCategory,
@@ -226,5 +232,108 @@ describe("rowDisclosure", () => {
       );
       expect(disclosure?.chevronLabel.includes("undefined")).toBe(false);
     }
+  });
+});
+
+// w21/174: a parent's own-postings row shares its account, not its row key.
+describe("a parent's own-postings row", () => {
+  it("has a key of its own and is marked for its label", () => {
+    const rows = flattenRows(
+      [
+        {
+          key: "assets",
+          account: "Assets",
+          value: 300,
+          children: [
+            node("Assets:Bank", 300, [
+              node("Assets:Bank:Checking", 100),
+              { ...node("Assets:Bank", 200), name: "Bank", own: true },
+            ]),
+          ],
+        },
+      ],
+      { "Assets:Bank": true },
+    );
+    const own = rows.find((row) => row.own)!;
+    expect(own.account).toBe("Assets:Bank");
+    expect(own.key === "Assets:Bank").toBe(false);
+    expect(new Set(rows.map((row) => row.key)).size).toBe(rows.length);
+  });
+});
+
+// w21/175: an account opened under a collapsed parent was invisible after Done.
+describe("revealing a just-opened account", () => {
+  const tree: AccountCategory[] = [
+    {
+      key: "assets",
+      account: "Assets",
+      value: 0,
+      children: [
+        node("Assets:Bank", 0, [
+          node("Assets:Bank:Checking", 0),
+          node("Assets:Bank:QaBrokerage", 0),
+        ]),
+      ],
+    },
+    {
+      key: "expenses",
+      account: "Expenses",
+      value: 0,
+      children: [node("Expenses:QaGym", 0)],
+    },
+  ];
+
+  it("opens its category and every ancestor row", () => {
+    const overrides = revealAccountOverrides(tree, "Assets:Bank:QaBrokerage")!;
+    expect(overrides).toEqual({ assets: true, "Assets:Bank": true });
+    expect(
+      flattenRows(tree, overrides).some(
+        (row) => row.account === "Assets:Bank:QaBrokerage",
+      ),
+    ).toBe(true);
+  });
+
+  it("opens a collapsed-by-default category for a top-level account", () => {
+    const overrides = revealAccountOverrides(tree, "Expenses:QaGym")!;
+    expect(overrides).toEqual({ expenses: true });
+    expect(
+      flattenRows(tree, overrides).some(
+        (row) => row.account === "Expenses:QaGym",
+      ),
+    ).toBe(true);
+  });
+
+  it("is nothing for an account no category holds", () => {
+    expect(revealAccountOverrides(tree, "Other:Thing")).toBe(null);
+  });
+});
+
+describe("the reveal wiring", () => {
+  it("is set by Open Account and consumed by the Accounts table", () => {
+    const src = path.join(__dirname, "..", "..", "..");
+    const open = fs.readFileSync(
+      path.join(
+        src,
+        "screens",
+        "open-account-screen",
+        "open-account-screen.tsx",
+      ),
+      "utf8",
+    );
+    expect(open.includes("revealAccountVar({ ledgerId, account });")).toBe(
+      true,
+    );
+    const table = fs.readFileSync(
+      path.join(__dirname, "..", "account-table.tsx"),
+      "utf8",
+    );
+    expect(table.includes("revealAccountOverrides(categories, account)")).toBe(
+      true,
+    );
+    expect(
+      table.includes(
+        "listRef.current?.scrollToIndex({ index, viewPosition: 0.5 });",
+      ),
+    ).toBe(true);
   });
 });

@@ -8,7 +8,7 @@ import {
   Query,
 } from "type-graphql";
 import { AllowAnonymous, Authenticated } from "@/server/graphql/authenticated";
-import { Matches, MaxLength } from "class-validator";
+import { IsOptional, Matches, MaxLength } from "class-validator";
 import { IContext } from "@/server/graphql/context";
 import type { IAuthService } from "@/features/auth/service/auth-service";
 import type { IAuthSessionWorkflow } from "@/features/auth/workflow/auth-session-workflow";
@@ -29,6 +29,43 @@ class TokenAuthResponse {
 class SignInInput {
   @Field(() => String)
   public email: string;
+
+  @Field(() => String)
+  @MaxLength(128, {
+    message: "Password must be at most 128 characters long",
+  })
+  public password: string;
+}
+
+@ArgsType()
+class RequestSignInRecoveryInput {
+  @Field(() => String)
+  public email: string;
+
+  @Field(() => String, { nullable: true })
+  @IsOptional()
+  @MaxLength(2048)
+  public returnTo?: string | null;
+}
+
+@ObjectType()
+class RequestSignInRecoveryResponse {
+  @Field(() => Boolean)
+  public success: boolean;
+}
+
+@ArgsType()
+class SignInWithEmailCodeInput {
+  @Field(() => String)
+  public email: string;
+
+  @Field(() => String)
+  @MaxLength(128)
+  public challengeId: string;
+
+  @Field(() => String)
+  @Matches(/^\d{6}$/, { message: "Verification code must be a 6-digit code" })
+  public code: string;
 
   @Field(() => String)
   @MaxLength(128, {
@@ -180,6 +217,49 @@ export class AuthResolver {
     const result = await this.authSessionWorkflow.loginUser({
       email: args.email.toLowerCase().trim(),
       password: args.password,
+      ip: ctx.clientIp,
+    });
+    setAuthCookie(
+      ctx.koaCtx as unknown as Context,
+      result.token,
+      result.expireAt,
+      ctx.config.env === "production",
+      ctx.config.jwt?.cookieDomain,
+    );
+    return { token: result.token, expireAt: result.expireAt };
+  }
+
+  @AllowAnonymous()
+  @Mutation(() => RequestSignInRecoveryResponse, {
+    description: "Request an email ownership code to continue password sign-in",
+  })
+  public async requestSignInRecovery(
+    @Ctx() ctx: IContext,
+    @Args() args: RequestSignInRecoveryInput,
+  ): Promise<RequestSignInRecoveryResponse> {
+    await this.authService.requestSignInRecovery(
+      args.email.toLowerCase().trim(),
+      ctx.clientIp,
+      args.returnTo ?? undefined,
+    );
+    return { success: true };
+  }
+
+  @AllowAnonymous()
+  @Mutation(() => TokenAuthResponse, {
+    description:
+      "Sign in with a one-use email ownership code and the correct password",
+  })
+  public async signInWithEmailCode(
+    @Ctx() ctx: IContext,
+    @Args() args: SignInWithEmailCodeInput,
+  ): Promise<TokenAuthResponse> {
+    const result = await this.authSessionWorkflow.signInWithEmailCode({
+      email: args.email.toLowerCase().trim(),
+      challengeId: args.challengeId,
+      code: args.code,
+      password: args.password,
+      ip: ctx.clientIp,
     });
     setAuthCookie(
       ctx.koaCtx as unknown as Context,
@@ -252,14 +332,9 @@ export class AuthResolver {
     @Ctx() ctx: IContext,
     @Args() args: SendForgotPasswordLinkInput,
   ): Promise<SendForgotPasswordLinkResponse> {
-    const forwardedFor = ctx.reqHeaders["x-forwarded-for"];
-    const ip =
-      (forwardedFor && forwardedFor.split(",")[0].trim()) ||
-      ctx.reqHeaders["x-real-ip"] ||
-      "unknown";
     await this.authService.sendForgotPasswordLink(
       args.email.toLowerCase().trim(),
-      ip,
+      ctx.clientIp,
     );
     return { success: true };
   }
@@ -298,11 +373,6 @@ export class AuthResolver {
     @Ctx() ctx: IContext,
     @Args() args: SignUpInput,
   ): Promise<SignUpResponse> {
-    const forwardedFor = ctx.reqHeaders["x-forwarded-for"];
-    const ip =
-      (forwardedFor && forwardedFor.split(",")[0].trim()) ||
-      ctx.reqHeaders["x-real-ip"] ||
-      "unknown";
     // inviteSrc and inviteBy are accepted for backward compatibility but no longer used
     const sessionId = await this.authService.createSignUpSession({
       email: args.email.toLowerCase().trim(),
@@ -310,7 +380,7 @@ export class AuthResolver {
       firstName: args.firstName,
       lastName: args.lastName,
       username: args.username ?? null,
-      ip,
+      ip: ctx.clientIp,
       withDefaultLedger: args.withDefaultLedger ?? false,
     });
     const session = await this.authService.getSignupOtpSession(sessionId);
@@ -331,6 +401,7 @@ export class AuthResolver {
     const result = await this.authSessionWorkflow.verifySignUpOtp({
       sessionId: args.sessionId,
       otp: args.otp,
+      ip: ctx.clientIp,
     });
     setAuthCookie(
       ctx.koaCtx as unknown as Context,

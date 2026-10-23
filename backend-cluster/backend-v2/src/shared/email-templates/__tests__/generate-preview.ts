@@ -4,13 +4,21 @@ import fs from "fs";
 import path from "path";
 import { EMAIL_THEME } from "../components/email-theme";
 import { renderPasswordResetHtml } from "../templates/password-reset.template";
+import {
+  renderPlanChangeHtml,
+  type PlanChangeEmailParams,
+} from "../templates/plan-change.template";
+import {
+  renderRenewalHtml,
+  type RenewalEmailParams,
+} from "../templates/renewal.template";
 import { renderSignupOtpHtml } from "../templates/signup-otp.template";
 import { renderWelcomeHtml } from "../templates/welcome.template";
 import { escapeHtml } from "../utils/url-validator";
 
 export interface TemplatePreview {
   title: string;
-  params: Record<string, unknown>;
+  params: object;
   html: string;
 }
 
@@ -24,7 +32,45 @@ export function buildTemplatePreviews(): TemplatePreview[] {
   const signupOtpParams = { otp: "123456" };
   const passwordResetParams = {
     resetLink:
-      "https://dashboard.beancount.io/reset-password?token=public-preview-token",
+      "https://dashboard.beancount.io/auth/reset-password/?token=public-preview-token",
+    signInRecovery: {
+      link: "https://dashboard.beancount.io/auth/login/?recovery=public-preview-challenge",
+      code: "123456",
+    },
+  };
+  const planChangeParams: PlanChangeEmailParams = {
+    kind: "scheduled",
+    currentPlan: "Growth · Yearly",
+    newPlan: "Premium · Yearly",
+    effectiveDate: "October 17, 2027",
+    limitChanges: [
+      { label: "Ledgers", from: "20", to: "5" },
+      { label: "Collaborators per ledger", from: "10", to: "5" },
+      {
+        label: "AI Assistant tokens per month",
+        from: "2,000,000",
+        to: "500,000",
+      },
+    ],
+    billingUrl: "https://beancount.io/settings/billing",
+  };
+  const renewal = {
+    plan: "Premium · Yearly",
+    billingUrl: "https://beancount.io/settings/billing",
+  };
+  const renewalFailedParams: RenewalEmailParams = {
+    ...renewal,
+    kind: "failed",
+    amount: "$143.88",
+    // What subscribers get: Stripe automations leave the retry time out.
+    nextAttemptDate: null,
+  };
+  const renewalFinalParams: RenewalEmailParams = { ...renewal, kind: "final" };
+  const renewalUpcomingParams: RenewalEmailParams = {
+    ...renewal,
+    kind: "upcoming",
+    amount: "$143.88",
+    renewalDate: "October 17, 2027",
   };
 
   return [
@@ -42,6 +88,31 @@ export function buildTemplatePreviews(): TemplatePreview[] {
       title: "Password Reset Email",
       params: passwordResetParams,
       html: renderPasswordResetHtml(passwordResetParams),
+    },
+    {
+      title: "Plan Change Scheduled Email",
+      params: planChangeParams,
+      html: renderPlanChangeHtml(planChangeParams),
+    },
+    {
+      title: "Plan Change Reminder Email",
+      params: { ...planChangeParams, kind: "reminder" },
+      html: renderPlanChangeHtml({ ...planChangeParams, kind: "reminder" }),
+    },
+    {
+      title: "Renewal Failed Email",
+      params: renewalFailedParams,
+      html: renderRenewalHtml(renewalFailedParams),
+    },
+    {
+      title: "Renewal Final Notice Email",
+      params: renewalFinalParams,
+      html: renderRenewalHtml(renewalFinalParams),
+    },
+    {
+      title: "Yearly Renewal Reminder Email",
+      params: renewalUpcomingParams,
+      html: renderRenewalHtml(renewalUpcomingParams),
     },
   ];
 }

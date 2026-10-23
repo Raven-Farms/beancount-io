@@ -2,10 +2,15 @@ import { Circle, G, Path, Text as SvgText } from "react-native-svg";
 import { scaleBand, scaleLinear } from "d3-scale";
 import { curveMonotoneX, line as d3Line } from "d3-shape";
 import { contentPadding, ScreenWidth } from "@/common/screen-util";
-import { formatShortMoneyWithCurrency } from "@/common/number-utils";
+import {
+  formatShortMoneyWithCurrency,
+  roundMoney,
+} from "@/common/number-utils";
 import { useTheme } from "@/common/theme";
 import { useTranslations } from "@/common/hooks/use-translations";
 import { AnimatedBar } from "./animated-bar";
+import { barChartValueDomain, hasNoFlow } from "./bar-chart-domain";
+import { withYearMarks } from "./axis-year-marks";
 import { useEntranceProgress } from "./use-entrance-progress";
 import { restingBarRect } from "./bar-geometry";
 import { ScrollableAxisChart } from "./scrollable-axis-chart";
@@ -27,6 +32,11 @@ export const DEFAULT_CHART_HEIGHT = 220;
 export { LEGEND_HEIGHT } from "./chart-chrome";
 
 type IncomeExpenseBarChartProps = {
+  /**
+   * What the empty state says in place of "No cash flow in this range": a range
+   * whose only flow is outside the operating currency is not empty (w21/515).
+   */
+  emptyLabel?: string;
   /**
    * Unique, ascending "YYYY-MM" month keys — the x identity. Full keys (not "MM")
    * so a span crossing a year keeps a distinct column per month. The display
@@ -58,6 +68,7 @@ const MIN_GROUP_WIDTH = 44;
  * horizontally while the y-axis stays pinned on the left.
  */
 function IncomeExpenseBarChart({
+  emptyLabel,
   months,
   income,
   expense,
@@ -66,7 +77,7 @@ function IncomeExpenseBarChart({
   height = DEFAULT_CHART_HEIGHT,
 }: IncomeExpenseBarChartProps): JSX.Element {
   const theme = useTheme().colorTheme;
-  const { t } = useTranslations();
+  const { t, locale } = useTranslations();
 
   const chartHeight = height;
 
@@ -81,18 +92,33 @@ function IncomeExpenseBarChart({
   if (months.length === 0) {
     return <ChartPlaceholder height={chartHeight} />;
   }
+  // A range whose every month is nothing but transfers or prices: no income, no
+  // expense, no net. Two bars over a "$0 to $1" axis read as cents of activity,
+  // beside a Cash flow card that says there is none (w21/496).
+  if (hasNoFlow(income, expense, net)) {
+    return (
+      <ChartPlaceholder
+        height={chartHeight}
+        label={emptyLabel ?? t("cashFlowEmpty")}
+      />
+    );
+  }
 
-  const maxBar = Math.max(0, ...income, ...expense);
-  const yMax = Math.max(maxBar, ...net, 1);
-  const yMin = Math.min(0, ...net); // net can dip below zero (a loss month)
+  // Every series sets the bounds, bars included: a refund month's negative
+  // expense bar ran off the plot floor through the month label when only the
+  // net line could lower it (w21/022).
+  const columnLabels = withYearMarks(
+    months.map((month) => t(month.slice(5, 7))),
+    months,
+  );
   const yScale = scaleLinear()
-    .domain([yMin, yMax])
+    .domain(barChartValueDomain([...income, ...expense, ...net]))
     .range([chartHeight - BOTTOM_PADDING, TOP_PADDING])
     .nice();
   const zeroY = yScale(0);
   const yTicks = yScale.ticks(5);
   const axisWidth = axisLabelWidth(
-    yTicks.map((tick) => formatShortMoneyWithCurrency(tick, currency)),
+    yTicks.map((tick) => formatShortMoneyWithCurrency(tick, currency, locale)),
     AXIS_FONT_SIZE,
     LEFT_PADDING,
   );
@@ -159,16 +185,28 @@ function IncomeExpenseBarChart({
       accessibilityLabel={t("incomeExpenseChartSummary", {
         count: months.length,
         income: formatShortMoneyWithCurrency(
-          income.reduce((sum, v) => sum + v, 0),
+          roundMoney(
+            income.reduce((sum, v) => sum + v, 0),
+            currency,
+          ),
           currency,
+          locale,
         ),
         expense: formatShortMoneyWithCurrency(
-          expense.reduce((sum, v) => sum + v, 0),
+          roundMoney(
+            expense.reduce((sum, v) => sum + v, 0),
+            currency,
+          ),
           currency,
+          locale,
         ),
         net: formatShortMoneyWithCurrency(
-          net.reduce((sum, v) => sum + v, 0),
+          roundMoney(
+            net.reduce((sum, v) => sum + v, 0),
+            currency,
+          ),
           currency,
+          locale,
         ),
       })}
       legend={
@@ -216,7 +254,8 @@ function IncomeExpenseBarChart({
         />
       ))}
 
-      {/* X axis labels — month abbreviation per column */}
+      {/* X axis labels — month abbreviation per column, with the year where
+          it changes (w21/497) */}
       {months.map((month, i) => (
         <SvgText
           key={`x-${month}`}
@@ -226,7 +265,7 @@ function IncomeExpenseBarChart({
           fill={theme.text01}
           textAnchor="middle"
         >
-          {t(month.slice(5, 7))}
+          {columnLabels[i]}
         </SvgText>
       ))}
     </ScrollableAxisChart>

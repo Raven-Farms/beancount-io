@@ -1,6 +1,9 @@
 import fs from "fs";
 import path from "path";
-import { selectCardLoadState } from "../card-load-state";
+import {
+  selectCardLoadState,
+  selectReadContextState,
+} from "../card-load-state";
 
 describe("selectCardLoadState", () => {
   it("fails a first load that errored, instead of reading as empty", () => {
@@ -56,4 +59,73 @@ describe("empty states behind a failed query", () => {
       expect(/<CardLoadFailure\s+onRetry=/.test(source)).toBe(true);
     });
   }
+});
+
+// w21/262: until the ledger's read context lands, the currency falls back to
+// "USD", so a EUR ledger's Home and Accounts flashed a USD headline of 0.
+describe("selectReadContextState", () => {
+  it("holds while the context has neither arrived nor failed", () => {
+    expect(selectReadContextState(undefined, undefined)).toBe("loading");
+  });
+
+  it("is ready once it arrives, even if a refresh failed", () => {
+    expect(selectReadContextState({ getLedger: {} }, undefined)).toBe("ready");
+    expect(selectReadContextState({ getLedger: {} }, new Error("net"))).toBe(
+      "ready",
+    );
+  });
+
+  it("is failed when the first load failed and nothing is cached", () => {
+    expect(selectReadContextState(undefined, new Error("net"))).toBe("failed");
+  });
+});
+
+describe("the screens that name a currency from the read context", () => {
+  const read = (...parts: string[]) =>
+    require("fs")
+      .readFileSync(
+        require("path").join(__dirname, "..", "..", "..", ...parts),
+        "utf8",
+      )
+      .replace(/\s+/g, "");
+
+  it("hold their skeletons and fail instead of rendering in the USD fallback", () => {
+    const home = read("screens", "home-screen", "home-screen.tsx");
+    expect(
+      home.includes(
+        "constcontextState=selectReadContextState(ledgerMeta,ledgerMetaError);",
+      ),
+    ).toBe(true);
+    expect(home.includes('contextState==="loading"||')).toBe(true);
+    expect(home.includes('contextState==="failed"')).toBe(true);
+    expect(home.includes("onRetry={retryChart}")).toBe(true);
+
+    const spending = read(
+      "screens",
+      "home-screen",
+      "components",
+      "spending-card.tsx",
+    );
+    expect(
+      spending.includes("selectReadContextState(context.data,context.error)"),
+    ).toBe(true);
+    expect(spending.includes('contextState==="failed"||')).toBe(true);
+
+    const accounts = read("screens", "accounts-screen", "accounts-screen.tsx");
+    expect(
+      accounts.includes("selectReadContextState(ledgerMeta,ledgerMetaError)"),
+    ).toBe(true);
+    expect(
+      accounts.includes('contextState==="loading"||!closeDatesSettled||'),
+    ).toBe(true);
+    expect(accounts.includes('contextState==="failed"||')).toBe(true);
+
+    const charts = read(
+      "screens",
+      "home-screen",
+      "components",
+      "account-charts-card.tsx",
+    );
+    expect(charts.includes("<CardLoadFailureonRetry={onRetry}/>")).toBe(true);
+  });
 });

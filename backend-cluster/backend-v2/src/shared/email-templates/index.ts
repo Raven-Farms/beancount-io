@@ -20,3 +20,17 @@ export {
   renderSignupOtpHtml,
   renderSignupOtpText,
 } from "./templates/signup-otp.template";
+
+export {
+  planChangeEmailSubject,
+  renderPlanChangeHtml,
+  renderPlanChangeText,
+  type PlanChangeEmailParams,
+} from "./templates/plan-change.template";
+
+export {
+  renewalEmailSubject,
+  renderRenewalHtml,
+  renderRenewalText,
+  type RenewalEmailParams,
+} from "./templates/renewal.template";

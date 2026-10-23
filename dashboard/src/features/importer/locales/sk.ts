@@ -136,9 +136,15 @@ const skImporter: Record<string, TranslationEntry> = {
     message: "Aktuálny typ súboru vyžaduje AI analýzu",
     description: "Description of why premium is required",
   },
-  "importer.error.upgradeToPremium": {
-    message: "Prejsť na prémium",
-    description: "Label for premium upgrade option",
+  "importer.error.upgradeToPlan": {
+    message: "Prejsť na {plan}",
+    description:
+      "Heading over the paywall's upgrade button; {plan} is the plan the button recommends (the next tier up).",
+  },
+  "importer.error.upgradePlan": {
+    message: "Prejsť na vyšší plán",
+    description:
+      "Heading over the paywall's upgrade button when no higher self-serve plan exists.",
   },
   "importer.error.upgradeDescription": {
     message: "Analyzujte PDF, OFX a obrázky automaticky pomocou AI",
@@ -167,6 +173,15 @@ const skImporter: Record<string, TranslationEntry> = {
   "importer.error.failedToParse": {
     message: "Nepodarilo sa analyzovať súbor",
     description: "Title for parse failure error",
+  },
+  "importer.error.notUtf8": {
+    message: "Súbor nie je text v UTF-8",
+    description: "Title when an uploaded CSV is not UTF-8 text",
+  },
+  "importer.error.notUtf8Description": {
+    message:
+      "Tento CSV obsahuje znaky, ktoré nie sú platné UTF-8, takže import by zmenil text príjemcov a popisov. Uložte ho znova ako CSV UTF-8 z banky alebo tabuľkového programu a nahrajte tento súbor.",
+    description: "How to re-save a CSV that is not UTF-8 text",
   },
   "importer.error.serverError": {
     message:
@@ -307,6 +322,36 @@ const skImporter: Record<string, TranslationEntry> = {
   "importer.configure.currencyHint": {
     message: "Mena pre všetky transakcie",
     description: "Hint text for currency field",
+  },
+  "importer.configure.currencyConflict_one": {
+    message:
+      "{count} riadok ({rows}) je v {symbol} ({currencies}), ale tento import by ho zaúčtoval ako {currency}.",
+    description:
+      "Import refusal: a selected row's amount carries a currency symbol that is not the chosen import currency. {count} is 1, {rows} the row number, {symbol} the symbol from the bank file (€, £…), {currencies} the currencies it can mean, {currency} the selected currency code",
+  },
+  "importer.configure.currencyConflict_few": {
+    message:
+      "{count} riadky ({rows}) sú v {symbol} ({currencies}), ale tento import by ich zaúčtoval ako {currency}.",
+    description:
+      "Import refusal for several selected rows whose amounts carry a currency symbol other than the chosen import currency. {rows} lists their row numbers, possibly ending in …",
+  },
+  "importer.configure.currencyConflict_many": {
+    message:
+      "{count} riadka ({rows}) je v {symbol} ({currencies}), ale tento import by ich zaúčtoval ako {currency}.",
+    description:
+      "Import refusal for several selected rows whose amounts carry a currency symbol other than the chosen import currency. {rows} lists their row numbers, possibly ending in …",
+  },
+  "importer.configure.currencyConflict_other": {
+    message:
+      "{count} riadkov ({rows}) je v {symbol} ({currencies}), ale tento import by ich zaúčtoval ako {currency}.",
+    description:
+      "Import refusal for several selected rows whose amounts carry a currency symbol other than the chosen import currency. {rows} lists their row numbers, possibly ending in …",
+  },
+  "importer.configure.currencyConflictRemedy": {
+    message:
+      "Jeden import účtuje iba jednu menu. Vyberte menu týchto riadkov alebo zrušte ich výber a importujte ich samostatne. Nič sa neimportovalo.",
+    description:
+      "How to resolve a currency conflict before importing: no conversion happens, so the user picks the matching currency or splits the file",
   },
   "importer.configure.assignTargetAccounts": {
     message: "Priradiť cieľové účty",
@@ -473,6 +518,11 @@ const skImporter: Record<string, TranslationEntry> = {
   "importer.accountMapping.aiSuccessDescription_other": {
     message: "Úspešne kategorizovaných {count} transakcií",
     description: "Toast description for multiple transactions categorization",
+  },
+  "importer.accountMapping.aiNoneApplied": {
+    message: "Žiadny návrh nebol dosť spoľahlivý na vyplnenie cieľového účtu.",
+    description:
+      "Toast description when AI Fill completed but no suggestion was confident enough to fill a target",
   },
   "importer.accountMapping.aiFailed": {
     message: "AI kategorizácia zlyhala",

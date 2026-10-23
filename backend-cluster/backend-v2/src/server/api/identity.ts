@@ -165,8 +165,8 @@ export interface Identity {
    */
   ledgerScope?: string;
   /**
-   * Stable identifier of the credential itself (OAuth `jti`, API key id) for
-   * audit and revocation. Never the credential's secret material.
+   * Stable identifier of the credential itself (session/OAuth `jti`, API key
+   * id) for budgets, audit and revocation. Never its secret material.
    */
   tokenId?: string;
   /**
@@ -406,6 +406,12 @@ async function resolveApiKeyIdentity(
   ) {
     return undefined;
   }
+  // A key whose account is gone is no identity at all. Deletion now removes
+  // a user's keys, but one left by an earlier deletion still resolved, and
+  // endpoints that never read the user row accepted it (w21/156).
+  if (!(await database.models.user.getById(database.db, key.userId))) {
+    return undefined;
+  }
 
   if (recordUsage) void stampLastUsed(key.id, database);
 
@@ -476,6 +482,7 @@ export async function resolveSessionIdentity(
     scopes: EMPTY_SCOPES,
     capabilities: ALL_OPERATION_CAPABILITIES,
     assurance: { type: "interactive" },
+    tokenId: session.tokenId,
     issuedAt: session.issuedAt,
     expiresAt: session.expiresAt,
   };

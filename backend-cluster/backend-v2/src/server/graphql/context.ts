@@ -7,6 +7,7 @@ import { getTokenFromCtx } from "@/features/auth/utils/auth";
 import { type Identity, resolveIdentity } from "@/server/api/identity";
 import { GraphQLLoaders, createLoaders } from "./loaders";
 import { logger } from "@/shared/logger";
+import { clientAddress } from "@/server/client-address";
 
 const lastSeenThrottle = new Map<string, number>();
 const LAST_SEEN_THROTTLE_MS = 5 * 60 * 1000;
@@ -21,6 +22,13 @@ export interface IContext {
   userId?: string;
   token?: string;
   reqHeaders: Record<string, string>;
+  /**
+   * The caller's address as the trusted proxy saw it (Koa's `ctx.ip` under
+   * `TRUSTED_PROXY_HOPS`). A rate-limit bucket key, never an authorization
+   * input. Do not read `x-forwarded-for` from `reqHeaders` instead: its
+   * left-most entry is whatever the client sent.
+   */
+  clientIp: string;
   platform: "web" | "mobile";
   config: AppConfig;
   koaCtx: ContextLike;
@@ -37,6 +45,7 @@ export interface IContext {
  */
 interface ContextLike {
   headers: Record<string, string | string[] | undefined>;
+  ip?: string;
 }
 
 /**
@@ -105,6 +114,7 @@ export async function createContext(
     // cookie fallback even though authentication no longer goes through it.
     token: getTokenFromCtx(ctx as Parameters<typeof getTokenFromCtx>[0]),
     reqHeaders,
+    clientIp: clientAddress(ctx),
     platform,
     config,
     koaCtx: ctx,

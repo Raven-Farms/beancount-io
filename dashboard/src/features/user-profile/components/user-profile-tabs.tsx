@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   Tabs,
   TabsList,
@@ -100,6 +100,7 @@ export function UserProfileTabs({
   const { t } = useTranslations();
   const navigate = useNavigate({ from: "/ledger/$username" });
   const [activeTab, setActiveTab] = useState(initialTab);
+  const strip = useRef<HTMLDivElement>(null);
 
   // Update URL when tab changes
   const handleTabChange = (newTab: string) => {
@@ -126,6 +127,24 @@ export function UserProfileTabs({
   useEffect(() => {
     setActiveTab(initialTab);
   }, [initialTab]);
+
+  // On a narrow screen the tabs scroll sideways. A tab selected by link, the
+  // header's counts or the keyboard is brought inside that strip, never the
+  // page, and only when it changes, so the reader's own scrolling stands
+  // (w4/335). Relative offsets also hold for a right-to-left strip, whose
+  // scrollLeft runs negative.
+  useEffect(() => {
+    const container = strip.current;
+    const tab = container?.querySelector('[role="tab"][aria-selected="true"]');
+    if (!container || !tab) return;
+    const box = container.getBoundingClientRect();
+    const style = getComputedStyle(container);
+    const start = box.left + (parseFloat(style.paddingLeft) || 0);
+    const end = box.right - (parseFloat(style.paddingRight) || 0);
+    const { left, right } = tab.getBoundingClientRect();
+    if (left < start) container.scrollLeft += left - start;
+    else if (right > end) container.scrollLeft += right - end;
+  }, [activeTab]);
 
   // Lazy load tab data only when tab becomes active
   const {
@@ -168,7 +187,7 @@ export function UserProfileTabs({
       onValueChange={handleTabChange}
       className="w-full gap-0"
     >
-      <div className="overflow-x-auto -mx-4 sm:mx-0 px-4 sm:px-0">
+      <div ref={strip} className="overflow-x-auto -mx-4 sm:mx-0 px-4 sm:px-0">
         <TabsList
           variant="underline"
           className="w-full justify-start min-w-max sm:min-w-0"

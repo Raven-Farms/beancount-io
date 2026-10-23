@@ -20,3 +20,21 @@ export function selectCardLoadState({
   if (error) return "failed";
   return loading ? "loading" : "ready";
 }
+
+/**
+ * Where the ledger's read context (its operating currency and renamed roots)
+ * stands. Until it lands, `getPrimaryCurrency` falls back to "USD", so a EUR
+ * ledger flashed a USD headline of 0 and "1 not in total", and on a failed
+ * first load kept it with no error (w21/262): a screen holds its skeleton while
+ * this is `loading` and shows the failure card when it is `failed`.
+ */
+export function selectReadContextState(
+  data: unknown,
+  error: unknown,
+): CardLoadState {
+  return selectCardLoadState({
+    loading: data === undefined,
+    hasData: data !== undefined,
+    error,
+  });
+}

@@ -1,0 +1,10 @@
+{
+  "@puncsky/beancount-io": {
+    "0.4.0": {
+      "attempt_id": "zx76nyp6dz5nf2zc8yj77maemx8gr01a",
+      "source_commit": "d493eb1c7b4e427a209b8378219f46fc4b71a4f0",
+      "artifact_sha256": "550e23c92e1380d45a3f92cd5cd4d7068b15b6637c8ca7dba3bdd34a488b6a04",
+      "workflow_run": 39859124712
+    }
+  }
+}

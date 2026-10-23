@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { useQueryRetry } from "@/common/hooks/use-query-retry";
 import {
   ReportErrorState,
   ReportLoadingState,
@@ -20,6 +21,12 @@ interface QueryViewProps<T> {
    * mapped to a localized, user-safe message (never the raw error.message).
    */
   errorMessage?: string;
+  /**
+   * Offered on the error state as Try Again, usually the query's `refetch`.
+   * While the promise it returns is pending, the error state stays, busy
+   * (w4/m50).
+   */
+  onRetry?: () => Promise<unknown> | void;
   /** Returns true when data is present but logically empty (e.g. empty array). */
   isEmpty?: (data: NonNullable<T>) => boolean;
   /** Rendered when isEmpty returns true. */
@@ -34,11 +41,17 @@ export function QueryView<T>({
   data,
   loadingSlot,
   errorMessage,
+  onRetry,
   isEmpty,
   emptySlot,
   children,
 }: QueryViewProps<T>) {
-  if (loading) {
+  const { failure, retrying, retry } = useQueryRetry(error ?? undefined, () =>
+    Promise.resolve(onRetry?.()),
+  );
+
+  // A retry keeps its error state in place; its loading is the busy button.
+  if (loading && !retrying) {
     return loadingSlot ? (
       <SkeletonLoadingState>{loadingSlot}</SkeletonLoadingState>
     ) : (
@@ -46,8 +59,15 @@ export function QueryView<T>({
     );
   }
 
-  if (error) {
-    return <ReportErrorState message={errorMessage} error={error} />;
+  if (failure) {
+    return (
+      <ReportErrorState
+        message={errorMessage}
+        error={failure}
+        onRetry={onRetry && retry}
+        retrying={retrying}
+      />
+    );
   }
 
   if (data == null) {

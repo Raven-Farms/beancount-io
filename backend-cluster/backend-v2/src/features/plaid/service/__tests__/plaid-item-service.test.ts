@@ -25,7 +25,11 @@ jest.mock("@/features/llm/utils/suggest-account-mapping", () => ({
 
 import { PlaidItemService } from "../plaid-item-service";
 import { assertLedgerAccess } from "@/features/ledger/utils/ledger-access-check";
-import { BadUserInputError, ForbiddenError } from "@/shared/errors";
+import {
+  BadUserInputError,
+  ForbiddenError,
+  NotFoundError,
+} from "@/shared/errors";
 import { suggestAccountMapping as mockSuggestAccountMappingLLM } from "@/features/llm/utils/suggest-account-mapping";
 import {
   AUTHORIZATION_ACTIONS,
@@ -365,7 +369,7 @@ describe("PlaidItemService", () => {
           "pacc_1",
           "other/ledger",
         ),
-      ).rejects.toThrow(BadUserInputError);
+      ).rejects.toThrow(NotFoundError);
       expect(
         mockPlaidTransactionModel.getUnsyncedByAccountId,
       ).not.toHaveBeenCalled();
@@ -802,7 +806,7 @@ describe("PlaidItemService", () => {
           "Assets:Checking",
           "owner/ledger",
         ),
-      ).rejects.toThrow(BadUserInputError);
+      ).rejects.toThrow(NotFoundError);
       expect(mockPlaidAccountModel.update).not.toHaveBeenCalled();
     });
   });
@@ -869,7 +873,7 @@ describe("PlaidItemService", () => {
           "EUR",
           "owner/ledger",
         ),
-      ).rejects.toThrow(BadUserInputError);
+      ).rejects.toThrow(NotFoundError);
       expect(mockPlaidAccountModel.update).not.toHaveBeenCalled();
     });
   });
@@ -913,10 +917,8 @@ describe("PlaidItemService", () => {
           "pacc_1",
         ),
       ).rejects.toThrow("source unavailable");
-      expect(mockPlaidAccountModel.getById).toHaveBeenCalledWith(
-        mockDb,
-        "pacc_1",
-      );
+      // Authority is decided before the account is even looked up (w23/024).
+      expect(mockPlaidAccountModel.getById).not.toHaveBeenCalled();
       expect(
         mockPlaidTransactionModel.getUnsyncedByAccountId,
       ).not.toHaveBeenCalled();
@@ -936,7 +938,7 @@ describe("PlaidItemService", () => {
           "other/ledger",
           "pacc_1",
         ),
-      ).rejects.toThrow(BadUserInputError);
+      ).rejects.toThrow(NotFoundError);
     });
   });
 

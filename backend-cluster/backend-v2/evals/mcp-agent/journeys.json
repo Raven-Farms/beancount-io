@@ -176,6 +176,99 @@
       ]
     },
     {
+      "id": "prompt-close-month-statements-confirmed",
+      "title": "close-month prompt with every statement: book the missing entry, pin each account after confirmation, then report the close complete",
+      "invoke": {
+        "name": "close-month",
+        "args": {
+          "month": "2026-08"
+        }
+      },
+      "followUps": [
+        "Here are my August 2026 statements for every active account, as CSV.\n\nAssets:Bank:Checking statement: Opening balance 4564.11 USD, ending balance 6702.01 USD.\ndate,description,amount\n2026-08-01,ACME CORP,4000.00\n2026-08-03,LANDLORD LLC,-1800.00\n2026-08-20,WHOLE FOODS,-62.10\n\nAssets:Bank:Savings statement: Opening balance 10500.00 USD, ending balance 10500.00 USD. No transactions.\n\nAssets:Cash statement: Opening balance 140.00 USD, ending balance 44.50 USD.\ndate,description,amount\n2026-08-12,BLUE BOTTLE,-6.75\n2026-08-22,CITY BUS,-60.00\n2026-08-28,FARMERS MARKET,-23.50\n2026-08-30,CORNER STORE,-5.25\n\nLiabilities:CreditCard:Visa statement (the card issuer shows charges as positive and the balance as the amount owed): Opening balance 0.00 USD, ending balance 143.25 USD.\ndate,description,amount\n2026-08-06,TRADER JOES,95.25\n2026-08-15,SUSHI PLACE,48.00\n\nIf anything is missing from the ledger, book CORNER STORE to Expenses:Food:Groceries.",
+        "Yes. Append exactly the transaction and the balance assertions you proposed, then verify the ledger and finish the close."
+      ],
+      "confirmationTurn": 1,
+      "facts": [
+        {
+          "id": "close-missing-entry",
+          "description": "The missing CORNER STORE entry and Cash's ending balance are reported",
+          "terms": ["CORNER STORE"],
+          "numbers": ["5.25", "44.50"]
+        },
+        {
+          "id": "close-complete",
+          "description": "With every account tied and pinned and the check green, the close is reported complete",
+          "terms": ["close status: complete"]
+        }
+      ],
+      "expectedWrite": {
+        "date": "2026-08-30",
+        "postings": [
+          {
+            "account": "Assets:Cash",
+            "amount": "-5.25",
+            "currency": "USD"
+          },
+          {
+            "account": "Expenses:Food:Groceries",
+            "amount": "5.25",
+            "currency": "USD"
+          }
+        ],
+        "directives": [
+          "^2026-(08-31|09-01) balance Assets:Bank:Checking 6702\\.01 USD$",
+          "^2026-(08-31|09-01) balance Assets:Bank:Savings 10500\\.00 USD$",
+          "^2026-(08-31|09-01) balance Assets:Cash 44\\.50 USD$",
+          "^2026-(08-31|09-01) balance Liabilities:CreditCard:Visa -143\\.25 USD$"
+        ]
+      }
+    },
+    {
+      "id": "prompt-close-month-statements-unpinned",
+      "title": "close-month prompt with every statement but no writes: an account missing an entry and assertions dated before period end leave the close incomplete",
+      "invoke": {
+        "name": "close-month",
+        "args": {
+          "month": "2026-08"
+        }
+      },
+      "followUps": [
+        "Here are my August 2026 statements for every active account, as CSV.\n\nAssets:Bank:Checking statement: Opening balance 4564.11 USD, ending balance 6702.01 USD.\ndate,description,amount\n2026-08-01,ACME CORP,4000.00\n2026-08-03,LANDLORD LLC,-1800.00\n2026-08-20,WHOLE FOODS,-62.10\n\nAssets:Bank:Savings statement: Opening balance 10500.00 USD, ending balance 10500.00 USD. No transactions.\n\nAssets:Cash statement: Opening balance 140.00 USD, ending balance 44.50 USD.\ndate,description,amount\n2026-08-12,BLUE BOTTLE,-6.75\n2026-08-22,CITY BUS,-60.00\n2026-08-28,FARMERS MARKET,-23.50\n2026-08-30,CORNER STORE,-5.25\n\nLiabilities:CreditCard:Visa statement (the card issuer shows charges as positive and the balance as the amount owed): Opening balance 0.00 USD, ending balance 143.25 USD.\ndate,description,amount\n2026-08-06,TRADER JOES,95.25\n2026-08-15,SUSHI PLACE,48.00\n\nDo not write anything to the ledger in this session; report the close as it stands."
+      ],
+      "facts": [
+        {
+          "id": "close-unpinned",
+          "description": "Accounts without a balance assertion dated on or after period end are reported as unpinned",
+          "anyTerms": [
+            "unpinned",
+            "not pinned",
+            "no balance assertion",
+            "without a balance assertion",
+            "missing assertion",
+            "missing balance assertion"
+          ]
+        },
+        {
+          "id": "close-incomplete",
+          "description": "The close is reported incomplete",
+          "terms": ["close status: incomplete"]
+        },
+        {
+          "id": "close-unpinned-not-claimed",
+          "description": "The close is not claimed as finished",
+          "absentTerms": [
+            "closed successfully",
+            "close completed successfully",
+            "month is now closed",
+            "books are now closed",
+            "the close is complete",
+            "close status: complete"
+          ]
+        }
+      ]
+    },
+    {
       "id": "prompt-reconcile-mismatch-unconfirmed",
       "title": "reconcile-account prompt: classify date drift and an amount mismatch, write nothing unconfirmed",
       "invoke": {

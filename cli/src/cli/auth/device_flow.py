@@ -4,6 +4,7 @@ import platform
 import socket
 import time
 import webbrowser
+from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 
 from cli.api.client import call, unwrap
@@ -14,9 +15,9 @@ from cli.api.rest_client.api.ledger_v_1 import (
 )
 from cli.api.rest_client.models.create_cli_auth_session_body import CreateCliAuthSessionBody
 from cli.api.rest_client.models.create_cli_auth_session_body_client import CreateCliAuthSessionBodyClient
-from cli.auth.credentials import save_credentials
+from cli.auth.credentials import grant_expiry, save_credentials
 from cli.config import package_version
-from cli.errors import AuthError
+from cli.errors import AuthError, UnreadableSuccess, request_id_from
 
 if TYPE_CHECKING:
     from cli.api.rest_client.client import AuthenticatedClient
@@ -69,7 +70,24 @@ def run_device_flow(client: AuthenticatedClient, dashboard_url: str) -> tuple[st
         status = status_result.status.value
 
         if status == "AUTHORIZED":
-            grant = unwrap(call(consume_cli_auth_session.sync_detailed, session.device_code, client=client))
+            consumed = call(consume_cli_auth_session.sync_detailed, session.device_code, client=client)
+            grant = unwrap(consumed)
+            # Before the saved credential is replaced: a grant the next command
+            # would refuse as unreadable or expired is not a login (w5/894).
+            try:
+                expiry = grant_expiry(grant.expire_at)
+            except ValueError:
+                raise UnreadableSuccess(
+                    f"Unexpected server response (HTTP {consumed.status_code}).",
+                    status=consumed.status_code,
+                    request_id=request_id_from(consumed.headers),
+                ) from None
+            if expiry <= datetime.now(tz=UTC):
+                raise AuthError(
+                    "The server granted a session that has already expired, so you were not logged in "
+                    "and your saved login is unchanged. Check this computer's clock, then run "
+                    "'bea cloud login' again."
+                )
             save_credentials(grant.token, grant.expire_at)
             return grant.token, grant.expire_at
         elif status == "DENIED":

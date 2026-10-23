@@ -81,6 +81,30 @@ describe("queryResultToRecords", () => {
   });
 });
 
+describe("formatCellValue renders a lot as Beancount writes it (w23/015)", () => {
+  const units = { number: "5", currency: "GLD" };
+  it.each([
+    [
+      { number: "197.06", currency: "USD", date: "2015-09-15" },
+      "5 GLD {197.06 USD, 2015-09-15}",
+    ],
+    [
+      { number: "197.06", currency: "USD", date: "2015-09-15", label: "lot-a" },
+      '5 GLD {197.06 USD, 2015-09-15, "lot-a"}',
+    ],
+    [
+      { number: "197.06", currency: "USD", label: 'say "hi"' },
+      '5 GLD {197.06 USD, "say \\"hi\\""}',
+    ],
+    [
+      { number: "197.06", currency: "USD", date: null, label: null },
+      "5 GLD {197.06 USD}",
+    ],
+  ])("renders cost %j", (cost, expected) => {
+    expect(formatCellValue({ units, cost } as never)).toBe(expected);
+  });
+});
+
 describe("formatCellValue", () => {
   const cases: [string, CellValue, string][] = [
     ["null", null, ""],

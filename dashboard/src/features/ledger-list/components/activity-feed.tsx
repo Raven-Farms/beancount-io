@@ -79,10 +79,18 @@ function ActivityFeedWorkspace() {
           { fetchMoreResult }: { fetchMoreResult?: GetFeedQuery },
         ) => {
           if (!active.current || !fetchMoreResult) return prev;
+          // Newer activity shifts the server's offset pages, so a page can
+          // repeat cards already shown, or an id within itself. Append only
+          // unseen ids; the offset still advances by the page requested
+          // (w4/302).
+          const seen = new Set(prev.getFeed.items.map((item) => item.id));
+          const unseen = fetchMoreResult.getFeed.items.filter(
+            (item) => !seen.has(item.id) && Boolean(seen.add(item.id)),
+          );
           return {
             getFeed: {
               ...fetchMoreResult.getFeed,
-              items: [...prev.getFeed.items, ...fetchMoreResult.getFeed.items],
+              items: [...prev.getFeed.items, ...unseen],
             },
           };
         },

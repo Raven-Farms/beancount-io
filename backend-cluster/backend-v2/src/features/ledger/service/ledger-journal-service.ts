@@ -1,11 +1,5 @@
 import { parseLedgerId } from "@/shared/str";
-import {
-  unwrapFavaResponse,
-  type DirectiveType,
-  type TransactionSubtype,
-  type DocumentSubtype,
-  type CustomSubtype,
-} from "@/foundation/fava";
+import { unwrapFavaResponse } from "@/foundation/fava";
 import type { Identity } from "@/server/api/identity";
 import {
   authorizeLedger,
@@ -16,6 +10,8 @@ import {
   type AuthorizationAction,
 } from "@/server/api/authorization/authorization-contract";
 import { BadUserInputError } from "@/shared/errors";
+import { directiveLimitExemptParams } from "@/features/ledger/operations/directive-limit-bypass";
+import { normalizeJournalKinds } from "@/features/ledger/utils/journal-kinds";
 
 /**
  * The page a journal read asks for: limit 1–1000 (default 20), offset 0 or
@@ -66,9 +62,34 @@ export type EntryContextResult = {
    * else null: the entry is read-only, with no source file to open.
    */
   managed_source: string | null;
+  /**
+   * The entry hash of the source entry when this entry is a copy a plugin or a
+   * pad generated from it (amortize_over, forecast, padding), else null. A copy
+   * shares its source's text and checksum, so editing or deleting it changes the
+   * source and every other copy: clients offer neither (w21/443).
+   */
+  generated_from: string | null;
 };
 
-export type PlaintextJournalResult = { content: string };
+export type PlaintextJournalResult = {
+  content: string;
+  /** Entries the filters select, before `offset`/`limit` (w23/044). */
+  total: number;
+  /** Whether entries remain after this page. */
+  truncated: boolean;
+};
+
+/** The most entries one page of the plaintext export may hold. */
+export const PLAINTEXT_PAGE_MAX = 1000;
+
+type PlaintextJournalQuery = {
+  account?: string;
+  filter?: string;
+  time?: string;
+  /** Omitted, every entry: the dashboard's export reads the whole ledger. */
+  limit?: number | null;
+  offset?: number | null;
+};
 
 export type AccountJournalResult = {
   items: {
@@ -81,15 +102,24 @@ export type AccountJournalResult = {
   with_children: boolean;
 };
 
-export type DeleteSliceResult = { message: string; entryHash: string };
+/**
+ * The files a slice write rewrote, each once, as the ledger reports them; an
+ * older ledger service sends none. MCP reports them as `wrote` (w23/042).
+ */
+type TouchedFiles = { files: string[] };
+
+export type DeleteSliceResult = {
+  message: string;
+  entryHash: string;
+} & TouchedFiles;
 
 export type DeleteMultiSlicesResult = {
   message: string;
   /** How many entries were deleted — hashes are stale the moment they are. */
   deletedCount: number;
-};
+} & TouchedFiles;
 
-export type UpdateSliceResult = {
+export type UpdateSliceResult = TouchedFiles & {
   message: string;
   entryHash: string;
   newSha256sum: string;
@@ -101,10 +131,11 @@ export type JournalQueryParams = {
   account?: string;
   filter?: string;
   time?: string;
-  directiveTypes?: DirectiveType[];
-  transactionSubtypes?: TransactionSubtype[];
-  documentSubtypes?: DocumentSubtype[];
-  customSubtypes?: CustomSubtype[];
+  /** Matched case-insensitively against `DirectiveType` (w23/006). */
+  directiveTypes?: readonly string[] | null;
+  transactionSubtypes?: readonly string[] | null;
+  documentSubtypes?: readonly string[] | null;
+  customSubtypes?: readonly string[] | null;
   limit?: number;
   offset?: number;
 };
@@ -115,10 +146,11 @@ export type AccountJournalQueryParams = {
   filterAccount?: string;
   filter?: string;
   time?: string;
-  directiveTypes?: DirectiveType[];
-  transactionSubtypes?: TransactionSubtype[];
-  documentSubtypes?: DocumentSubtype[];
-  customSubtypes?: CustomSubtype[];
+  /** Matched case-insensitively against `DirectiveType` (w23/006). */
+  directiveTypes?: readonly string[] | null;
+  transactionSubtypes?: readonly string[] | null;
+  documentSubtypes?: readonly string[] | null;
+  customSubtypes?: readonly string[] | null;
   limit?: number;
   offset?: number;
   with_children?: boolean;
@@ -141,7 +173,7 @@ export interface ILedgerJournalService {
   plaintextJournal(params: {
     ledgerId: string;
     identity: Identity | undefined;
-    query?: { account?: string; filter?: string; time?: string };
+    query?: PlaintextJournalQuery;
   }): Promise<PlaintextJournalResult>;
 
   getAccountJournal(params: {
@@ -155,12 +187,16 @@ export interface ILedgerJournalService {
     identity: Identity;
     entryHash: string;
     sha256sum: string;
+    /** Commit even when the delete adds bean-check errors (w21/m1). */
+    allowInvalid?: boolean;
   }): Promise<DeleteSliceResult>;
 
   deleteMultiSourceSlices(params: {
     ledgerId: string;
     identity: Identity;
     entries: { entryHash: string; sha256sum: string }[];
+    /** Commit even when the deletes add bean-check errors (w21/m1). */
+    allowInvalid?: boolean;
   }): Promise<DeleteMultiSlicesResult>;
 
   updateSourceSlice(params: {
@@ -169,6 +205,10 @@ export interface ILedgerJournalService {
     entryHash: string;
     sha256sum: string;
     newContent: string;
+    /** Mobile writes are exempt from the directive limit; the default is web. */
+    platform?: "web" | "mobile";
+    /** Commit even when the edit adds bean-check errors (w21/m1). */
+    allowInvalid?: boolean;
   }): Promise<UpdateSliceResult>;
 }
 
@@ -198,6 +238,7 @@ export class LedgerJournalService
   }): Promise<JournalResult> {
     const { ledgerId, identity, query } = params;
     const page = journalPage(query);
+    const kinds = normalizeJournalKinds(query);
     const { favaApiClient, ledgerOwner, ledgerName } = await this.getClient(
       ledgerId,
       identity,
@@ -209,11 +250,8 @@ export class LedgerJournalService
         account: query?.account || undefined,
         filter: query?.filter || undefined,
         time: query?.time || undefined,
-        directive_types: query?.directiveTypes || undefined,
         ...page,
-        transaction_subtypes: query?.transactionSubtypes || undefined,
-        document_subtypes: query?.documentSubtypes || undefined,
-        custom_subtypes: query?.customSubtypes || undefined,
+        ...kinds,
       }),
       "get ledger journal entries",
     );
@@ -250,15 +288,34 @@ export class LedgerJournalService
       sha256sum: ctx.sha256sum,
       slice: ctx.slice,
       managed_source: ctx.managed_source ?? null,
+      generated_from: ctx.generated_from ?? null,
     };
   }
 
   async plaintextJournal(params: {
     ledgerId: string;
     identity: Identity | undefined;
-    query?: { account?: string; filter?: string; time?: string };
+    query?: PlaintextJournalQuery;
   }): Promise<PlaintextJournalResult> {
     const { ledgerId, identity, query } = params;
+    // GraphQL's Int arguments arrive unchecked; REST and MCP parse the same
+    // bounds in their query schema.
+    const { limit, offset } = query ?? {};
+    if (
+      limit != null &&
+      (!Number.isInteger(limit) || limit < 1 || limit > PLAINTEXT_PAGE_MAX)
+    ) {
+      throw new BadUserInputError(
+        `limit must be an integer from 1 to ${PLAINTEXT_PAGE_MAX}`,
+        "limit",
+      );
+    }
+    if (offset != null && (!Number.isInteger(offset) || offset < 0)) {
+      throw new BadUserInputError(
+        "offset must be a non-negative integer",
+        "offset",
+      );
+    }
     const { favaApiClient, ledgerOwner, ledgerName } = await this.getClient(
       ledgerId,
       identity,
@@ -270,10 +327,16 @@ export class LedgerJournalService
         account: query?.account || undefined,
         filter: query?.filter || undefined,
         time: query?.time || undefined,
+        limit: limit ?? undefined,
+        offset: offset ?? undefined,
       }),
       "get plaintext journal",
     );
-    return { content: data.content };
+    return {
+      content: data.content,
+      total: data.total,
+      truncated: data.truncated,
+    };
   }
 
   async getAccountJournal(params: {
@@ -283,6 +346,7 @@ export class LedgerJournalService
   }): Promise<AccountJournalResult> {
     const { ledgerId, identity, query } = params;
     const page = journalPage(query);
+    const kinds = normalizeJournalKinds(query);
     const { favaApiClient, ledgerOwner, ledgerName } = await this.getClient(
       ledgerId,
       identity,
@@ -299,10 +363,7 @@ export class LedgerJournalService
         with_children:
           query.with_children !== undefined ? query.with_children : true,
         conversion: query.conversion || "at_cost",
-        directive_types: query.directiveTypes || undefined,
-        transaction_subtypes: query.transactionSubtypes || undefined,
-        document_subtypes: query.documentSubtypes || undefined,
-        custom_subtypes: query.customSubtypes || undefined,
+        ...kinds,
       }),
       "get account journal entries",
     );
@@ -323,8 +384,9 @@ export class LedgerJournalService
     identity: Identity;
     entryHash: string;
     sha256sum: string;
+    allowInvalid?: boolean;
   }): Promise<DeleteSliceResult> {
-    const { ledgerId, identity, entryHash, sha256sum } = params;
+    const { ledgerId, identity, entryHash, sha256sum, allowInvalid } = params;
     const { favaApiClient, ledgerOwner, ledgerName } = await this.getClient(
       ledgerId,
       identity,
@@ -335,18 +397,24 @@ export class LedgerJournalService
       favaApiClient.journal.deleteSourceSlice(ledgerOwner, ledgerName, {
         entry_hash: entryHash,
         sha256sum,
+        ...(allowInvalid && { allowInvalid: true }),
       }),
       "delete source slice",
     );
-    return { message: data.message, entryHash: data.entry_hash };
+    return {
+      message: data.message,
+      entryHash: data.entry_hash,
+      files: data.files ?? [],
+    };
   }
 
   async deleteMultiSourceSlices(params: {
     ledgerId: string;
     identity: Identity;
     entries: { entryHash: string; sha256sum: string }[];
+    allowInvalid?: boolean;
   }): Promise<DeleteMultiSlicesResult> {
-    const { ledgerId, identity, entries } = params;
+    const { ledgerId, identity, entries, allowInvalid } = params;
     const { favaApiClient, ledgerOwner, ledgerName } = await this.getClient(
       ledgerId,
       identity,
@@ -359,10 +427,15 @@ export class LedgerJournalService
           entry_hash: e.entryHash,
           sha256sum: e.sha256sum,
         })),
+        ...(allowInvalid && { allowInvalid: true }),
       }),
       "delete source slices",
     );
-    return { message: data.message, deletedCount: data.deleted_hashes.length };
+    return {
+      message: data.message,
+      deletedCount: data.deleted_hashes.length,
+      files: data.files ?? [],
+    };
   }
 
   async updateSourceSlice(params: {
@@ -371,20 +444,44 @@ export class LedgerJournalService
     entryHash: string;
     sha256sum: string;
     newContent: string;
+    platform?: "web" | "mobile";
+    allowInvalid?: boolean;
   }): Promise<UpdateSliceResult> {
-    const { ledgerId, identity, entryHash, sha256sum, newContent } = params;
+    const {
+      ledgerId,
+      identity,
+      entryHash,
+      sha256sum,
+      newContent,
+      platform = "web",
+      allowInvalid,
+    } = params;
     const { favaApiClient, ledgerOwner, ledgerName } = await this.getClient(
       ledgerId,
       identity,
       AUTHORIZATION_ACTIONS.LEDGER_ENTRIES_WRITE,
     );
+    // An empty edit would replace the entry with a blank line: a delete that
+    // skipped the delete confirmation and reported "saved" (w21/120). REST,
+    // GraphQL and MCP all edit through here.
+    if (!newContent.trim()) {
+      throw new BadUserInputError(
+        "newContent is empty; delete the entry instead of saving it blank",
+      );
+    }
 
     const data = await unwrapFavaResponse(
-      favaApiClient.journal.updateSourceSlice(ledgerOwner, ledgerName, {
-        entry_hash: entryHash,
-        sha256sum,
-        new_content: newContent,
-      }),
+      favaApiClient.journal.updateSourceSlice(
+        ledgerOwner,
+        ledgerName,
+        {
+          entry_hash: entryHash,
+          sha256sum,
+          new_content: newContent,
+          ...(allowInvalid && { allowInvalid: true }),
+        },
+        directiveLimitExemptParams(platform),
+      ),
       "update source slice",
     );
     return {
@@ -394,6 +491,7 @@ export class LedgerJournalService
       entryHash: data.entry_hash,
       newSha256sum: data.new_sha256sum,
       newEntryHash: data.new_entry_hash,
+      files: data.files ?? [],
     };
   }
 }

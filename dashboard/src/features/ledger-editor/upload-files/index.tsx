@@ -1,10 +1,11 @@
 import { PageHeader } from "@/common/components/page-header";
 import { RelatedLinks } from "@/common/components/related-links";
 import { getLedgerFilesRootPath } from "@/common/hooks/use-file-navigate";
-import { useState, useRef, useId, useMemo } from "react";
+import { useState, useRef, useId, useMemo, useEffect } from "react";
 import type { DragEvent } from "react";
 import { useParams, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery } from "@apollo/client/react";
+import { useRefreshDirectory } from "@/features/ledger-editor/shared/hooks/use-refresh-directory";
 import { Card, CardContent } from "@/common/components/ui/card";
 import { Button } from "@/common/components/ui/button";
 import { Input } from "@/common/components/ui/input";
@@ -66,7 +67,25 @@ const UploadFilesPage = () => {
 
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [commitMessage, setCommitMessage] = useState("");
-  const [isUploading, setIsUploading] = useState(false);
+  const [isUploading, setIsUploadingState] = useState(false);
+  // Synchronous twin of isUploading: a drop can land before React renders
+  // the busy state. While a batch is in flight no new file is staged — the
+  // success path leaves with exactly that batch (w4/259).
+  const uploadingRef = useRef(false);
+  // Leaving this page or its folder ends the upload journey, so an older
+  // batch's late completion cannot take the reader away from where they went
+  // (w4/305). Its writes still land.
+  const journeyRef = useRef(0);
+  useEffect(
+    () => () => {
+      journeyRef.current += 1;
+    },
+    [ledgerId, dirPath],
+  );
+  const setIsUploading = (busy: boolean) => {
+    uploadingRef.current = busy;
+    setIsUploadingState(busy);
+  };
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const uploadSizeLimitId = useId();
@@ -88,6 +107,7 @@ const UploadFilesPage = () => {
     [dirData],
   );
 
+  const refreshDirectory = useRefreshDirectory(ledgerId, dirPath);
   const [createFileMutation] = useMutation<
     CreateLedgerFileMutation,
     CreateLedgerFileMutationVariables
@@ -150,6 +170,7 @@ const UploadFilesPage = () => {
 
     setIsUploading(true);
     setUploadFailure(null);
+    const journey = journeyRef.current;
     const batch = selectedFiles;
     const message = commitMessage.trim() || `Upload ${batch.length} file(s)`;
     const uploaded: string[] = [];
@@ -167,16 +188,6 @@ const UploadFilesPage = () => {
             content: content,
             message: `${message} - ${file.name}`,
           },
-          refetchQueries: [
-            {
-              query: GetLedgerDirContentDocument,
-              variables: {
-                ledgerId,
-                dirPath: dirPath || null,
-              },
-            },
-          ],
-          awaitRefetchQueries: true,
         });
       } catch (error) {
         const failure = {
@@ -185,6 +196,8 @@ const UploadFilesPage = () => {
           uploaded,
         };
         setUploadFailure(failure);
+        // Files already written must count for the existing-name check.
+        if (uploaded.length > 0) void refreshDirectory();
         toast.error(
           t("ledgerEditor.uploadStoppedAt", {
             fileName: failure.fileName,
@@ -198,7 +211,10 @@ const UploadFilesPage = () => {
       setSelectedFiles((prev) => prev.filter((staged) => staged !== file));
     }
 
+    // Only after every write: a failed folder read is not a failed upload.
+    await refreshDirectory();
     setIsUploading(false);
+    if (journey !== journeyRef.current) return;
     void navigate({
       to: "/ledger/$ledgerOwner/$ledgerName/files/tree/$branch/$",
       params: {
@@ -221,7 +237,7 @@ const UploadFilesPage = () => {
     const chosen = event.target.files ? Array.from(event.target.files) : [];
     // Allow selecting the same path again after remove/cancel.
     event.target.value = "";
-    if (chosen.length > 0) {
+    if (chosen.length > 0 && !uploadingRef.current) {
       setSelectedFiles((prev) => stageFiles(prev, chosen));
     }
   };
@@ -231,6 +247,10 @@ const UploadFilesPage = () => {
    */
   const handleDragOver = (e: DragEvent<HTMLDivElement>) => {
     e.preventDefault();
+    if (uploadingRef.current) {
+      if (e.dataTransfer) e.dataTransfer.dropEffect = "none";
+      return;
+    }
     setIsDragging(true);
   };
 
@@ -248,6 +268,7 @@ const UploadFilesPage = () => {
   const handleDrop = (e: DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     setIsDragging(false);
+    if (uploadingRef.current) return;
 
     const files = e.dataTransfer.files;
     if (files && files.length > 0) {

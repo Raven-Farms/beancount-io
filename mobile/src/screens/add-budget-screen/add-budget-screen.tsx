@@ -1,5 +1,13 @@
-import { useState } from "react";
 import {
+  budgetCurrencyOptions,
+  defaultBudgetCurrency,
+} from "./currency-options";
+import { TextInputModal } from "@/components/text-input-modal";
+import { typedCurrencyCode } from "@/screens/open-account-screen/account-name";
+import { useRef, useState } from "react";
+import { InlineError } from "@/components/inline-error";
+import {
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -9,7 +17,8 @@ import {
   View,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { Stack, useLocalSearchParams, useRouter } from "expo-router";
+import { Stack, useRouter } from "expo-router";
+import { budgetAmountPlaceholder } from "./amount-placeholder";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { haptics } from "@/common/haptics";
 import { useLedgerMeta } from "@/common/hooks/use-ledger-meta";
@@ -26,6 +35,8 @@ import {
   useTheme,
 } from "@/common/theme";
 import { pushAccountPicker } from "@/screens/account-picker-screen/push-account-picker";
+import { useUnsavedChangesGuard } from "@/common/hooks/use-unsaved-changes-guard";
+import { updateBudgetDates } from "./update-date";
 import { DatePickerModal } from "@/components/date-picker-modal";
 import { LedgerGuard, useLedgerGuard } from "@/components/ledger-guard";
 import { Picker } from "@/components/picker";
@@ -42,6 +53,8 @@ import {
   directionalIcon,
   trailingInputTextAlign,
 } from "@/common/rtl";
+import { useIsHere } from "@/common/hooks/use-is-here";
+import { useRouteParams } from "@/common/hooks/use-route-params";
 
 const getStyles = (theme: ColorTheme) =>
   StyleSheet.create({
@@ -109,16 +122,21 @@ const getStyles = (theme: ColorTheme) =>
       color: theme.black80,
       fontSize: fontSizes.sm,
       lineHeight: 20,
+      textAlign: LEADING_TEXT_ALIGN,
     },
     error: {
       paddingHorizontal: space.xs,
       color: theme.error,
       fontSize: fontSizes.sm,
       lineHeight: 20,
+      textAlign: LEADING_TEXT_ALIGN,
     },
   });
 
 type PickerKind = "interval" | "currency" | null;
+
+const OTHER_CURRENCY = "__other_currency__";
+const EXAMPLE_CURRENCY = "EUR";
 
 type FormRowProps = {
   label: string;
@@ -179,13 +197,17 @@ function AddBudgetScreenImpl(): JSX.Element {
     data: ledgerMeta,
     currencies,
     loading: metaLoading,
+    error: metaError,
   } = useLedgerMeta(userId, ledgerId);
   const { saveBudget, loading } = useSaveBudget(ledgerId);
+  const isHere = useIsHere();
 
-  const params = useLocalSearchParams<{
+  const params = useRouteParams<{
     account?: string;
     interval?: string;
     currency?: string;
+    currentAmount?: string;
+    currentDate?: string;
   }>();
   // Reached from a card, the account is fixed: a budget's history belongs to
   // one account+currency pair, so changing it here would silently start a
@@ -199,26 +221,44 @@ function AddBudgetScreenImpl(): JSX.Element {
   );
   const [amount, setAmount] = useState("");
   const [pickedCurrency, setPickedCurrency] = useState(params.currency ?? "");
-  const [date, setDate] = useState(() => new Date());
+  // An Update starts no earlier than the entry it replaces (w21/623).
+  const dates = updateBudgetDates(params.currentDate, new Date());
+  const [date, setDate] = useState(() => dates.initial);
   const [picker, setPicker] = useState<PickerKind>(null);
+  const [typedCurrencies, setTypedCurrencies] = useState<string[]>([]);
+  const [otherCurrencyVisible, setOtherCurrencyVisible] = useState(false);
   const [datePickerVisible, setDatePickerVisible] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   // A committed save disables submit: a cold-link form that fails to leave
   // must never invite a duplicate resubmit (w1/032).
   const [saved, setSaved] = useState(false);
+  // Set as the save lands, before it navigates away: leaving after a save is not
+  // a discard. A typed amount asks before Back drops it, as the other write forms
+  // do (w21/631).
+  const savedOutRef = useRef(false);
+  useUnsavedChangesGuard(!saved && amount.trim().length > 0, savedOutRef);
 
   // Empty means "not chosen yet" — the picker only ever sets a non-empty value,
   // so the ledger's default fills in until then without an effect to sync it.
   const currency =
-    pickedCurrency || (metaLoading ? "" : (currencies[0] ?? "USD"));
+    pickedCurrency ||
+    (metaLoading
+      ? ""
+      : defaultBudgetCurrency(currencies, ledgerMeta?.currencies ?? []));
 
   // Written verbatim into the directive, so only a number may pass (w0/038).
   const amountOk = isBudgetAmount(amount);
   const amountInvalid = amount.trim().length > 0 && !amountOk;
+  // The income sign comes from the ledger's options, which an update from a
+  // card does not otherwise wait for: saved before they landed, an income
+  // target went out positive and read as a spending cap (w21/303). A failed
+  // read stops the wait; the amount then goes as typed.
+  const metaSettled = ledgerMeta !== undefined || Boolean(metaError);
   const canSubmit =
     account.trim().length > 0 &&
     amountOk &&
     currency.trim().length > 0 &&
+    metaSettled &&
     !loading &&
     !saved;
 
@@ -248,9 +288,19 @@ function AddBudgetScreenImpl(): JSX.Element {
       incomeRoot: ledgerMeta?.options.name_income,
     });
 
+    // A save was already running: this press did nothing (w21/193).
+    if (!result) {
+      return;
+    }
+
     if (result.ok) {
       haptics.success();
+      savedOutRef.current = true;
       setSaved(true);
+      // Left during the save: leave the screen they are on alone (w21/194).
+      if (!isHere()) {
+        return;
+      }
       if (router.canGoBack()) {
         router.back();
       } else {
@@ -270,10 +320,18 @@ function AddBudgetScreenImpl(): JSX.Element {
     label: t(intervalLabelKey(value)),
   }));
 
-  const currencyItems =
-    currencies.length > 0
-      ? currencies.map((value) => ({ value, label: value }))
-      : [{ value: "USD", label: "USD" }];
+  // The current value is always an option, so the wheel never falls back to
+  // the first one and switches a non-operating currency silently (w21/121).
+  const currencyItems = [
+    ...budgetCurrencyOptions(
+      currencies,
+      currency,
+      ledgerMeta?.currencies ?? [],
+      typedCurrencies,
+    ).map((value) => ({ value, label: value })),
+    // A commodity the ledger has not posted yet is typed, not picked (w21/234).
+    { value: OTHER_CURRENCY, label: t("openAccountOtherCurrency") },
+  ];
 
   return (
     <SafeAreaView edges={["bottom"]} style={styles.container}>
@@ -332,15 +390,21 @@ function AddBudgetScreenImpl(): JSX.Element {
             <Text style={styles.label}>{t("budgetAmount")}</Text>
             <TextInput
               testID="add-budget-amount-input"
+              accessibilityLabel={t("budgetAmount")}
               value={amount}
               onChangeText={(value) => {
                 setAmount(value);
                 setSubmitError(null);
               }}
               style={styles.amountInput}
-              placeholder="500"
+              placeholder={budgetAmountPlaceholder(
+                isUpdate,
+                params.currentAmount,
+              )}
               placeholderTextColor={theme.controlPlaceholder}
-              keyboardType="numbers-and-punctuation"
+              keyboardType={
+                Platform.OS === "ios" ? "numbers-and-punctuation" : "numeric"
+              }
               returnKeyType="done"
               accessibilityHint={
                 amountInvalid ? t("budgetAmountInvalid") : undefined
@@ -351,27 +415,30 @@ function AddBudgetScreenImpl(): JSX.Element {
           <FormRow
             label={t("currency")}
             value={currency}
-            onPress={() => setPicker("currency")}
+            // Locked with the account: the currency is the other half of the
+            // budget's identity, so changing it started a second budget and
+            // left this one as it was (w21/121).
+            onPress={isUpdate ? undefined : () => setPicker("currency")}
           />
         </View>
 
         {amountInvalid ? (
-          <Text
+          <InlineError
             style={styles.error}
-            accessibilityRole="alert"
-            accessibilityLiveRegion="polite"
-          >
-            {t("budgetAmountInvalid")}
-          </Text>
+            message={t("budgetAmountInvalid")}
+          />
         ) : null}
         <Text style={styles.help}>{t("budgetAccountHelp")}</Text>
-        {submitError && <Text style={styles.error}>{submitError}</Text>}
+        {submitError && (
+          <InlineError style={styles.error} message={submitError} />
+        )}
       </ScrollView>
 
       <DatePickerModal
         isVisible={datePickerVisible}
         mode="date"
         date={date}
+        minimumDate={dates.minimum}
         onConfirm={(picked: Date) => {
           setDatePickerVisible(false);
           setDate(picked);
@@ -393,6 +460,9 @@ function AddBudgetScreenImpl(): JSX.Element {
         onSelect={(item) => {
           if (picker === "interval") {
             setInterval(item.value);
+          } else if (item.value === OTHER_CURRENCY) {
+            setPicker(null);
+            setOtherCurrencyVisible(true);
           } else {
             setPickedCurrency(item.value);
           }
@@ -401,6 +471,31 @@ function AddBudgetScreenImpl(): JSX.Element {
         onCancel={() => setPicker(null)}
         confirmButtonText={t("done")}
         cancelButtonText={t("cancel")}
+      />
+      <TextInputModal
+        visible={otherCurrencyVisible}
+        title={t("openAccountOtherCurrencyTitle")}
+        message={t("openAccountOtherCurrencyMessage")}
+        placeholder={EXAMPLE_CURRENCY}
+        confirmButtonText={t("done")}
+        cancelButtonText={t("cancel")}
+        validateInput={(input) =>
+          input.trim() === ""
+            ? false
+            : typedCurrencyCode(input) !== null ||
+              t("openAccountCurrencyInvalid")
+        }
+        onConfirm={(input) => {
+          const code = typedCurrencyCode(input);
+          if (code === null) return;
+          setTypedCurrencies((known) =>
+            known.includes(code) ? known : [...known, code],
+          );
+          setPickedCurrency(code);
+          setSubmitError(null);
+          setOtherCurrencyVisible(false);
+        }}
+        onCancel={() => setOtherCurrencyVisible(false)}
       />
     </SafeAreaView>
   );

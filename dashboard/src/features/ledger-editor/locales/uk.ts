@@ -9,6 +9,16 @@ const ukLedgerEditor: Record<string, { message: string; description: string }> =
       message: "Створити файл",
       description: "Button label to create file",
     },
+    "ledgerEditor.branchNotFound": {
+      message: "Гілка «{branch}» тут недоступна. Файли показано з {main}.",
+      description:
+        "404 for a Files URL naming a branch other than the supported one (contains {branch} and {main})",
+    },
+    "ledgerEditor.browseMainFiles": {
+      message: "Переглянути файли в {main}",
+      description:
+        "Link to the Files root on the supported branch (contains {main})",
+    },
     "ledgerEditor.files": {
       message: "Файли",
       description: "Ledger files management",
@@ -49,6 +59,12 @@ export default {
   "ledgerEditor.unsupportedPreview": {
     message: "Цей тип файлу не підтримується для попереднього перегляду",
     description: "Unsupported preview message without a file type",
+  },
+  "ledgerEditor.notUtf8Text": {
+    message:
+      "Цей файл не є текстом у UTF-8, тому його не можна показати чи змінити тут, не змінивши його байти. Завантажте його, щоб відкрити в іншій програмі.",
+    description:
+      "Shown instead of the editor for a text file whose bytes are not valid UTF-8",
   },
   "ledgerEditor.createFileCommit": {
     message: "Створити файл {path}",

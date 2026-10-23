@@ -17,8 +17,23 @@ type Op =
   | { kind: "delete"; aIndex: number }
   | { kind: "insert"; bIndex: number };
 
+/**
+ * Lines with their terminators kept, so a trailing newline ends the last line
+ * instead of starting an empty one (w23/005), and a last line that gains or
+ * loses its newline compares as changed.
+ */
 function splitLines(text: string): string[] {
-  return text === "" ? [] : text.split("\n");
+  return text.match(/[^\n]*\n|[^\n]+$/g) ?? [];
+}
+
+const NO_NEWLINE_MARKER = "\\ No newline at end of file";
+
+/** One rendered diff line, plus git's marker when it has no terminator. */
+function renderLine(prefix: string, line: string | undefined): string {
+  const text = line ?? "";
+  return text.endsWith("\n")
+    ? `${prefix}${text.slice(0, -1)}`
+    : `${prefix}${text}\n${NO_NEWLINE_MARKER}`;
 }
 
 function lcsOps(a: string[], b: string[]): Op[] {
@@ -185,13 +200,13 @@ export function unifiedDiff(
       if (op.kind === "equal") {
         aCount++;
         bCount++;
-        lines.push(` ${a[op.aIndex]}`);
+        lines.push(renderLine(" ", a[op.aIndex]));
       } else if (op.kind === "delete") {
         aCount++;
-        lines.push(`-${a[op.aIndex]}`);
+        lines.push(renderLine("-", a[op.aIndex]));
       } else {
         bCount++;
-        lines.push(`+${b[op.bIndex]}`);
+        lines.push(renderLine("+", b[op.bIndex]));
       }
     }
     const from = aCount === 0 ? aStart : aStart + 1;

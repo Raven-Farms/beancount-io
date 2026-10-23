@@ -37,6 +37,7 @@ import { CASH_FLOW_VIEWS, DEFAULT_VIEW } from "./search";
 import { PageHeader } from "@/common/components/page-header";
 import { ConversionSelect } from "@/common/components/conversion-select";
 import { IntervalSelect } from "@/common/components/interval-select";
+import { useQueryRetry } from "@/common/hooks/use-query-retry";
 
 /**
  * Cash Flow page component
@@ -78,6 +79,7 @@ export default function LedgerCashFlowPage() {
     data,
     loading: isLoading,
     error,
+    refetch,
   } = useQuery(GetLedgerCashFlowDocument, {
     variables: {
       ledgerId: ledgerId,
@@ -89,6 +91,7 @@ export default function LedgerCashFlowPage() {
     },
     fetchPolicy: "cache-first",
   });
+  const { failure, retrying, retry } = useQueryRetry(error, refetch);
 
   const settled = selectSettledReportData(isLoading, data);
 
@@ -146,12 +149,14 @@ export default function LedgerCashFlowPage() {
     [closingCashAccounts, cashFlowData, statement],
   );
 
-  if (settled.pending) {
-    return <ReportLoadingState />;
+  if (failure) {
+    return (
+      <ReportErrorState error={failure} onRetry={retry} retrying={retrying} />
+    );
   }
 
-  if (error) {
-    return <ReportErrorState error={error} />;
+  if (settled.pending) {
+    return <ReportLoadingState />;
   }
 
   if (reconciliationError) {

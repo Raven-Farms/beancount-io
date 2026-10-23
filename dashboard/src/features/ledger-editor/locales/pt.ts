@@ -9,6 +9,17 @@ const ptLedgerEditor: Record<string, { message: string; description: string }> =
       message: "Criar Arquivo",
       description: "Button label to create file",
     },
+    "ledgerEditor.branchNotFound": {
+      message:
+        "O branch “{branch}” não está disponível aqui. Os arquivos são exibidos a partir de {main}.",
+      description:
+        "404 for a Files URL naming a branch other than the supported one (contains {branch} and {main})",
+    },
+    "ledgerEditor.browseMainFiles": {
+      message: "Ver arquivos em {main}",
+      description:
+        "Link to the Files root on the supported branch (contains {main})",
+    },
     "ledgerEditor.files": {
       message: "Arquivos",
       description: "Ledger files management",
@@ -48,6 +59,12 @@ export default {
   "ledgerEditor.unsupportedPreview": {
     message: "Este tipo de arquivo não é compatível com visualização",
     description: "Unsupported preview message without a file type",
+  },
+  "ledgerEditor.notUtf8Text": {
+    message:
+      "Este arquivo não é texto UTF-8, então não pode ser exibido nem editado aqui sem alterar seus bytes. Baixe-o para abri-lo em outro programa.",
+    description:
+      "Shown instead of the editor for a text file whose bytes are not valid UTF-8",
   },
   "ledgerEditor.createFileCommit": {
     message: "Criar arquivo {path}",

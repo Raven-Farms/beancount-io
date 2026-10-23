@@ -1,0 +1,13 @@
+;; fixture — beancount-trade eval4 (4-for-1 split)
+option "operating_currency" "USD"
+
+2026-01-01 open Assets:Brokerage USD,ACME
+2026-01-01 open Equity:Opening-Balances
+
+2026-01-02 * "Cash in"
+  Assets:Brokerage  5000.00 USD
+  Equity:Opening-Balances
+
+2026-01-15 * "Buy ACME"
+  Assets:Brokerage  10 ACME {200.00 USD}
+  Assets:Brokerage -2000.00 USD

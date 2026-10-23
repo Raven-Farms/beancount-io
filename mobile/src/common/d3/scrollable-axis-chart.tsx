@@ -5,6 +5,7 @@ import Svg, { Line, Text as SvgText } from "react-native-svg";
 import { useTheme } from "@/common/theme";
 import { useThemeStyle } from "@/common/hooks/use-theme-style";
 import { formatShortMoneyWithCurrency } from "@/common/number-utils";
+import { useTranslations } from "@/common/hooks/use-translations";
 import { useHorizontalSwipeOwnerGesture } from "@/common/horizontal-swipe-owner";
 import {
   AXIS_FONT_SIZE,
@@ -56,6 +57,8 @@ export function ScrollableAxisChart({
   children,
 }: ScrollableAxisChartProps): JSX.Element {
   const theme = useTheme().colorTheme;
+  // Axis amounts abbreviate in the app's language (w21/177).
+  const { locale } = useTranslations();
   const styles = useThemeStyle(getChromeStyles);
   const swipeOwner = useHorizontalSwipeOwnerGesture();
   const scrollRef = useRef<ScrollView>(null);
@@ -78,7 +81,7 @@ export function ScrollableAxisChart({
                 fill={theme.text01}
                 textAnchor="end"
               >
-                {formatShortMoneyWithCurrency(tick, currency)}
+                {formatShortMoneyWithCurrency(tick, currency, locale)}
               </SvgText>
             ))}
           </Svg>

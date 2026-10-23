@@ -1,28 +1,31 @@
-import { escapeBqlString } from "../screens/merchant-detail-screen/selectors/escape-bql-string";
+import { bqlPayeeEquals } from "../screens/merchant-detail-screen/selectors/escape-bql-string";
 
-describe("escapeBqlString", () => {
-  it("wraps a plain payee in double quotes", () => {
-    expect(escapeBqlString("MiniMax Group Inc.")).toBe('"MiniMax Group Inc."');
+// The ledger's BQL engine reads string literals with no escapes, so `\"` in a
+// payee was a syntax error and the merchant header disappeared (w21/032).
+describe("bqlPayeeEquals", () => {
+  it("compares an ordinary payee exactly, as before", () => {
+    expect(bqlPayeeEquals("MiniMax Group Inc.")).toBe(
+      'payee = "MiniMax Group Inc."',
+    );
+    expect(bqlPayeeEquals("Lowe's")).toBe('payee = "Lowe\'s"');
+    expect(bqlPayeeEquals("Ethereum 2.0")).toBe('payee = "Ethereum 2.0"');
   });
 
-  it("leaves single quotes inside a double-quoted literal", () => {
-    expect(escapeBqlString("O'Brien")).toBe('"O\'Brien"');
+  it("matches a payee with a double quote by an anchored regex", () => {
+    expect(bqlPayeeEquals('qa O\'Reilly "Q" Café')).toBe(
+      'payee ~ "^qa O\'Reilly \\x22Q\\x22 Café$"',
+    );
   });
 
-  it("backslash-escapes embedded double quotes", () => {
-    expect(escapeBqlString('He said "hi"')).toBe('"He said \\"hi\\""');
+  it("escapes regex metacharacters and backslashes in that form", () => {
+    expect(bqlPayeeEquals('12" Sub (Co.)\\')).toBe(
+      'payee ~ "^12\\x22 Sub \\(Co\\.\\)\\\\$"',
+    );
   });
 
-  it("backslash-escapes backslashes", () => {
-    expect(escapeBqlString("path\\to")).toBe('"path\\\\to"');
-  });
-
-  it("escapes newlines and carriage returns", () => {
-    expect(escapeBqlString("a\nb\rc")).toBe('"a\\nb\\rc"');
-  });
-
-  it("preserves unicode and empty strings", () => {
-    expect(escapeBqlString("emoji 🎉")).toBe('"emoji 🎉"');
-    expect(escapeBqlString("")).toBe('""');
+  it("never emits the backslash-quote escape the engine rejects", () => {
+    for (const payee of ['a"b', 'x\\"y', '"']) {
+      expect(bqlPayeeEquals(payee).includes('\\"')).toBe(false);
+    }
   });
 });

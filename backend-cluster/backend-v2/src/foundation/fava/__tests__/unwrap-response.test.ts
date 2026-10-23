@@ -103,6 +103,40 @@ describe("unwrapFavaResponse", () => {
     },
   );
 
+  // w23/047: every 404 read "Ledger resource not found", so a stale entry
+  // hash told an agent its ledger was gone.
+  it.each([
+    [
+      "Entry with ID 'abc:1' not found",
+      "Entry with ID 'abc:1' not found",
+      {
+        resource: "Entry",
+        id: "abc:1",
+        hint: expect.stringContaining("listLedgerEntries"),
+      },
+    ],
+    [
+      "Ledger entry point with ID 'alice/main:main.bean' not found",
+      "Ledger entry point with ID 'alice/main:main.bean' not found",
+      { resource: "Ledger entry point" },
+    ],
+    ["File 2026.bean not found", "File 2026.bean not found", {}],
+    ["The target couldn't be found.", "Ledger resource not found", {}],
+    ["", "Ledger resource not found", {}],
+  ])("keeps what a 404 %p names", async (upstream, message, metadata) => {
+    const caught = await unwrapFavaResponse(
+      Promise.reject(
+        new FavaApiError(upstream || "Not Found", 404, {
+          success: false,
+          error: upstream,
+        }),
+      ),
+      "read entry",
+    ).catch((error: unknown) => error);
+    expect(caught).toBeInstanceOf(NotFoundError);
+    expect(caught).toMatchObject({ category: "NOT_FOUND", message, metadata });
+  });
+
   it("maps the legacy resource-limit message to ResourceLimitReachedError", async () => {
     const response = Promise.reject(
       new FavaApiError(
@@ -144,6 +178,31 @@ describe("unwrapFavaResponse", () => {
       metadata: {
         reasonCode: "LEDGER_NAME_ALREADY_EXISTS",
         field: "name",
+      },
+    });
+  });
+
+  it("maps a renamed ledger's former name to its own conflict (w23/061)", async () => {
+    const error =
+      "'books' is the former name of alice/books-2025: links to it redirect there, so the name stays reserved. Choose a different name.";
+    const response = Promise.reject(
+      new FavaApiError("reserved", 400, {
+        success: false,
+        error,
+        code: "LEDGER_NAME_RESERVED",
+        details: { name: "books", redirects_to: "alice/books-2025" },
+      }),
+    );
+
+    await expect(
+      unwrapFavaResponse(response, "create ledger"),
+    ).rejects.toMatchObject({
+      category: "CONFLICT",
+      message: `Ledger conflict: ${error}`,
+      metadata: {
+        reasonCode: "LEDGER_NAME_RESERVED",
+        field: "name",
+        hint: expect.not.stringContaining("existing ledgers"),
       },
     });
   });

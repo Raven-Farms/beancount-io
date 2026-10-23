@@ -25,7 +25,7 @@ from pathlib import Path
 from typing import Any
 
 from bea_engine import protocol
-from bea_engine.amounts import parse_decimal_number, parse_exact
+from bea_engine.amounts import JsonFloat, parse_decimal_number, parse_exact
 from bea_engine.ledger import write, writer
 from bea_engine.ledger.text import (
     checked_operating_currencies,
@@ -68,6 +68,7 @@ def answer(
         "transaction": _transaction,
         "transactions": _transactions,
         "balance": _balance,
+        "close": _close,
         "price": _price,
     }
     from pydantic import ValidationError
@@ -81,9 +82,15 @@ def answer(
             # lock made the append refuse whatever the writer it had just
             # waited for committed, so unrelated `bea` writes started together
             # mostly failed with "the ledger changed" (w5/183). Queue first; an
-            # edit that takes no lock is still caught by the snapshot.
-            with write.lock_files([file, write.destination(file, into)], deciding=True):
-                return build(file, request, into=into, allow_errors=allow_errors, strict_read=strict_read)
+            # edit that takes no lock is still caught by the snapshot. The lock
+            # covers the whole graph, not just root and target, so a write to
+            # an include in another directory queues too (w5/718).
+            with write.locked_graph(file, write.destination(file, into), deciding=True):
+                if directive_type not in ("transaction", "transactions"):
+                    return build(file, request, into=into, allow_errors=allow_errors, strict_read=strict_read)
+                # A positive cover keeps the label of the short lot it covers.
+                with writer.short_lot_labels(lambda: _batch_holdings(file)):
+                    return build(file, request, into=into, allow_errors=allow_errors, strict_read=strict_read)
         if directive_type not in TYPES:
             raise protocol.UsageError(f"Unknown directive type {directive_type!r}. Use one of: {', '.join(TYPES)}.")
         # The root file's roots, for a write to the root itself: Beancount
@@ -200,11 +207,10 @@ def _simple(directive_type: str, request: dict[str, Any], roots: tuple[str, ...]
     if directive_type == "close":
         return CloseDirective(date=date, account=parse_account(_text(request, "account"), roots))
     if directive_type == "pad":
-        return PadDirective(
-            date=date,
-            account=parse_account(_text(request, "account"), roots),
-            source_account=parse_account(_text(request, "source_account"), roots),
-        )
+        account = parse_account(_text(request, "account"), roots)
+        source = parse_account(_text(request, "source_account"), roots)
+        _refuse_self_pad(account, source)
+        return PadDirective(date=date, account=account, source_account=source)
     if directive_type == "note":
         return NoteDirective(
             date=date,
@@ -296,8 +302,189 @@ def _appended(
 
 
 # --------------------------------------------------------------------------- #
+# close: refuse an account that still holds a balance
+# --------------------------------------------------------------------------- #
+
+
+def _held_through(entries: list[Any], account: str, date: datetime.date) -> dict[str, Decimal]:
+    """Units per currency in exactly `account` at the end of `date`.
+
+    A posting dated on the close date is still allowed, so it counts; child
+    accounts are separate accounts with their own close.
+    """
+    from beancount.core.data import Transaction
+
+    held: dict[str, Decimal] = {}
+    for entry in entries:
+        if not isinstance(entry, Transaction) or entry.date > date:
+            continue
+        for posting in entry.postings:
+            if posting.account == account and posting.units is not None and posting.units.number is not None:
+                currency = posting.units.currency
+                held[currency] = held.get(currency, Decimal(0)) + posting.units.number
+    return {currency: number for currency, number in held.items() if number != 0}
+
+
+def _drained_checks(entries: list[Any], options: Any, account: str, date: datetime.date) -> set[str]:
+    """The currencies `check_drained` will assert zero for on closing `account` at `date`.
+
+    The plugin covers balance-sheet accounts only, and skips a currency the
+    ledger already asserts on the close date, whatever that assertion says; an
+    Income or Expenses balance, or one a statement assertion hides, is not
+    its to refuse.
+    """
+    from beancount.core import account_types
+    from beancount.core.data import Balance
+    from beancount.parser import options as beancount_options
+
+    if not account_types.is_balance_sheet_account(
+        account,
+        beancount_options.get_account_types(options),  # type: ignore[no-untyped-call]
+    ):
+        return set()
+    asserted = {
+        entry.amount.currency
+        for entry in entries
+        if isinstance(entry, Balance) and entry.account == account and entry.date == date
+    }
+    return _plugin_currencies(entries, account) - asserted
+
+
+def _plugin_currencies(entries: list[Any], account: str) -> set[str]:
+    """Every currency the account has posted or declared, as the plugin accumulates them."""
+    from beancount.core.data import Open, Transaction
+
+    seen: set[str] = set()
+    for entry in entries:
+        if isinstance(entry, Transaction):
+            seen |= {p.units.currency for p in entry.postings if p.account == account and p.units is not None}
+        elif isinstance(entry, Open) and entry.account == account and entry.currencies:
+            seen |= set(entry.currencies)
+    return seen
+
+
+def _stranded_lots(entries: list[Any], account: str, date: datetime.date) -> list[str]:
+    """Each lot the account still holds at the end of `date` although every commodity's units net to zero.
+
+    Units alone cannot tell: `+1 HOOL {100 USD}` and `-1 HOOL {200 USD}` are
+    two lots the inventory keeps apart, worth −100 USD at cost, however
+    `_held_through` reads the shares (w5/909). The booked postings are netted
+    per lot (cost number, currency, date and label), and a commodity whose
+    units already show a balance is left to that report.
+    """
+    from beancount.core.data import Transaction
+
+    lots: dict[tuple[str, Any], Decimal] = {}
+    for entry in entries:
+        if not isinstance(entry, Transaction) or entry.date > date:
+            continue
+        for posting in entry.postings:
+            if posting.account != account or posting.units is None or posting.units.number is None:
+                continue
+            cost: Any = posting.cost
+            key = None if cost is None else (cost.number, cost.currency, cost.date, getattr(cost, "label", None))
+            slot = (posting.units.currency, key)
+            lots[slot] = lots.get(slot, Decimal(0)) + posting.units.number
+    by_currency: dict[str, Decimal] = {}
+    for (currency, _), number in lots.items():
+        by_currency[currency] = by_currency.get(currency, Decimal(0)) + number
+    stranded = []
+    for (currency, key), number in sorted(lots.items(), key=lambda item: (item[0][0], str(item[0][1]))):
+        if number == 0 or by_currency[currency] != 0:
+            continue
+        spelled = ""
+        if key is not None:
+            parts = [f"{_plain(key[0])} {key[1]}", key[2].isoformat()]
+            if key[3]:
+                parts.append(f'"{key[3]}"')
+            spelled = f" {{{', '.join(parts)}}}"
+        stranded.append(f"{_plain(number)} {currency}{spelled}")
+    return stranded
+
+
+def _remaining_balance(
+    entries: list[Any], options: Any, account: str, date: datetime.date
+) -> tuple[dict[str, Decimal], list[str]]:
+    """What `account` still holds at the end of `date`, as units and as stranded lots.
+
+    Units a loaded `check_drained` will assert zero are left to it, with its own
+    hint (w5/888); lots that cancel in units but not at cost, which no units
+    check can see, are named separately (w5/909).
+    """
+    held = _held_through(entries, account, date)
+    if held and any(str(name).endswith("check_drained") for name, _ in options.get("plugin") or ()):
+        covered = _drained_checks(entries, options, account, date)
+        held = {currency: number for currency, number in held.items() if currency not in covered}
+    return held, [] if held else _stranded_lots(entries, account, date)
+
+
+def _closed_with(entries: list[Any], options: Any, account: str) -> list[str]:
+    """The descendants a loaded `close_tree` plugin closes along with `account`: opened and not yet closed."""
+    from beancount.core.data import Close, Open
+
+    if not any(str(name).endswith("close_tree") for name, _ in options.get("plugin") or ()):
+        return []
+    prefix = f"{account}:"
+    opened = {entry.account for entry in entries if isinstance(entry, Open) and entry.account.startswith(prefix)}
+    closed = {entry.account for entry in entries if isinstance(entry, Close)}
+    return sorted(opened - closed)
+
+
+def _close(
+    file: Path, request: dict[str, Any], *, into: Path | None, allow_errors: bool, strict_read: bool
+) -> dict[str, Any]:
+    from bea_engine import managed_load
+    from bea_engine.ledger.models import CloseDirective
+
+    roots = root_names_of(file) if into is None else None
+    directive = CloseDirective(date=_date(request), account=parse_account(_text(request, "account"), roots))
+    snapshot = write.LedgerSnapshot.capture(file)
+    snapshot.require_target(write.destination(file, into), into=into)
+    entries, _errors, options = managed_load.load_file(file, snapshot=snapshot, check_types=True)
+    # A close over a balance strands it: later postings to the account are
+    # refused and reports keep counting it (w2/092). A ledger that loads
+    # check_drained refuses it in validation already, with its own hint, but
+    # only for what the plugin really checks (w5/888). The accounts the
+    # close_tree plugin closes with this one are closed by the same write, so
+    # they are judged the same way (w5/910).
+    if not request.get("force"):
+        day = directive.date.isoformat()
+        for account in [directive.account, *_closed_with(entries, options, directive.account)]:
+            held, stranded = _remaining_balance(entries, options, account, directive.date)
+            own = account == directive.account
+            if stranded:
+                subject = f"{account} still holds {', '.join(stranded)} on {day}: the units cancel but the lots do not."
+                remedy = (
+                    f"Close those lots with a transaction posting each one's cost, dated on or before {day}, then "
+                    f"close {directive.account}, or pass --force to close {'it' if own else 'them'} with them."
+                )
+            elif held:
+                amounts = ", ".join(f"{_plain(number)} {currency}" for currency, number in sorted(held.items()))
+                subject = f"{account} still holds {amounts} on {day}"
+                subject += "." if own else f", and the close_tree plugin closes it with {directive.account}."
+                remedy = (
+                    f"Move that balance out of {account} with a transaction dated on or before {day}, then close "
+                    f"{'it' if own else directive.account}, or pass --force to close {'it' if own else 'them'} with "
+                    "the balance."
+                )
+            else:
+                continue
+            raise protocol.LedgerError(f"{subject} {remedy} Nothing was written.")
+    # Write against the ledger this decision read (w5/115).
+    return _appended(file, directive, allow_errors=allow_errors, into=into, snapshot=snapshot)
+
+
+# --------------------------------------------------------------------------- #
 # balance, with or without an explicit pad
 # --------------------------------------------------------------------------- #
+
+
+def _refuse_self_pad(account: str, source: str) -> None:
+    """Refuse a pad whose source is the padded account: no balance can complete it (w5/799)."""
+    if source == account:
+        raise protocol.UsageError(
+            f"The pad source must be another account: {account} cannot pad itself. Nothing was written."
+        )
 
 
 def _conflict_refusal(
@@ -328,6 +515,8 @@ def _balance(
         date=date, account=account, amount=Amount(number=number, currency=currency), tolerance=tolerance
     )
     pad_from = request.get("pad_from")
+    if pad_from is not None:
+        _refuse_self_pad(account, parse_account(str(pad_from)))
     snapshot = write.LedgerSnapshot.capture(file)
     target = write.destination(file, into)
     snapshot.require_target(target, into=into)
@@ -375,6 +564,8 @@ def _balance(
     conflict = _balance_conflict(before, date, account, number, currency, tolerance)
     if conflict is not None and not request.get("force"):
         raise _conflict_refusal(conflict, account, date, number, currency, tolerance)
+    if pad_from is None and not request.get("force"):
+        _refuse_used_pad_fill(before, date, account, number, currency, tolerance, before_options)
     if pad_from is None:
         # The snapshot the checks above read: a writer that landed since then
         # is a conflict, not a second assertion appended beside it (w5/115).
@@ -470,19 +661,37 @@ def _balance(
             return result
         # The book does not match, so the new pad went unused because an
         # existing pad fills this assertion instead (Beancount pads every
-        # currency of the next assertion after the latest pad).
-        cover = _covering_pad(loaded, account, date)
+        # currency of the next assertion after the latest pad) — or the new
+        # pad is needed and an existing pad would go unused instead.
+        cover = _covering_pad(loaded, account, date, currency)
         if cover is None:
-            raise
+            stranded = _unused_existing_pads(exc, loaded)
+            if not stranded:
+                raise
+            raise _stranded_pad_refusal(stranded, loaded, account) from exc
         pad_at = f"{cover.meta.get('filename')}:{cover.meta.get('lineno')}"
         if cover.source_account != source_account:
+            used = any(
+                isinstance(entry, Balance) and entry.account == account and cover.date < entry.date < date
+                for entry in loaded
+            )
+            if used:
+                # The plain path refuses a used pad's silent fill too, so
+                # dropping --pad-from is no remedy here (w5/796).
+                advice = (
+                    f"That pad already has an assertion after it; fix the amount, record the missing "
+                    f"transaction, pass --pad-from {cover.source_account} to pad explicitly, or edit that "
+                    f"pad first."
+                )
+            else:
+                advice = (
+                    f"Add the balance without --pad-from to let that pad insert {_plain(difference)} {currency} "
+                    f"from {cover.source_account}, or edit that pad first."
+                )
             raise protocol.LedgerError(
                 f"The existing pad at {pad_at} ({cover.date} from {cover.source_account}) already fills this "
                 f"assertion, so a pad from {source_account} would go unused; nothing was written.",
-                details=[
-                    f"Add the balance without --pad-from to let that pad insert {_plain(difference)} {currency} "
-                    f"from {cover.source_account}, or edit that pad first."
-                ],
+                details=[advice],
             ) from exc
         result = _appended(file, directive, allow_errors=allow_errors, into=into, snapshot=snapshot) | {"pad": None}
         warnings = list(result.get("warnings") or [])
@@ -500,6 +709,25 @@ def _balance(
     # What the pad inserts was never said: a sign error padded twice the
     # balance with exit 0, found only by listing the padding entry (w5/611).
     inserted = {"number": _plain(number - held), "currency": currency}
+    if before_options.get("plugin_processing_mode") == "raw":
+        # Raw mode skips pad processing with the balance checks, so the pad
+        # is recorded but inserts nothing and the balance never moves (w5/766).
+        warnings = [
+            *warnings,
+            'option "plugin_processing_mode" "raw" skips Beancount\u2019s pad processing, so the pad '
+            "is recorded but inserts nothing; drop the raw mode to pad balances.",
+        ]
+    owed = write.credit_root(account, before_options)
+    if owed is not None and held == 0 and number > 0:
+        # No balance to compare with, so the negated-balance refusal cannot
+        # fire, and a loan padded to +5000 added to net worth in silence,
+        # where the same assertion without --pad-from flags the sign (w5/827).
+        warnings = [
+            *warnings,
+            f"{owed} balances are negative in Beancount, so an amount owed of {_plain(number)} {currency} is "
+            f"asserted as -{_plain(number)} {currency}; {account} was padded to +{_plain(number)} {currency} "
+            "as asserted, which counts toward net worth.",
+        ]
     return {
         "written": 2,
         "directive": directive.model_dump(mode="json"),
@@ -604,17 +832,125 @@ def _balance_tolerance(balance: Any, options: dict[str, Any]) -> Decimal:
     return tolerance
 
 
-def _covering_pad(entries: list[Any], account: str, date: datetime.date) -> Any | None:
-    """The pad Beancount would apply to an assertion on `account` at `date`: the latest before it."""
+def _refuse_used_pad_fill(
+    entries: list[Any],
+    date: Any,
+    account: str,
+    number: Decimal,
+    currency: str,
+    tolerance: Decimal | None,
+    options: dict[str, Any],
+) -> None:
+    """Refuse an assertion a non-staged pad would silently pad (w5/796).
+
+    Upstream keeps a pad active for every currency it has not yet padded,
+    so a pad consumed by an earlier assertion still pads a new currency's
+    gap without a word. A staged pad — none of the account's balances
+    between it and this assertion yet — completes silently, as the two-step
+    intends.
+    """
+    from beancount.core.amount import Amount as BcAmount
+    from beancount.core.data import Balance
+
+    cover = _covering_pad(entries, account, date, currency)
+    if cover is None:
+        return
+    held = write.book_units(entries, account, currency, date)
+    candidate = Balance({}, date, account, BcAmount(number, currency), tolerance, None)
+    if abs(number - held) <= _balance_tolerance(candidate, options):
+        return
+    between = [
+        entry
+        for entry in entries
+        if isinstance(entry, Balance) and entry.account == account and cover.date < entry.date < date
+    ]
+    if not between:
+        return
+    pad_at = f"{cover.meta.get('filename')}:{cover.meta.get('lineno')}"
+    difference = number - held
+    raise protocol.LedgerError(
+        f"{account} holds {_plain(held)} {currency} but asserts {_plain(number)}; the pad at {pad_at} "
+        f"({cover.date} from {cover.source_account}) would silently insert the {_plain(difference)} "
+        f"{currency} difference. Nothing was written.",
+        details=[
+            "Record the missing transaction or fix the amount; pass "
+            f"--pad-from {cover.source_account} to pad explicitly, or --force to record the padded assertion."
+        ],
+    )
+
+
+def _covering_pad(entries: list[Any], account: str, date: datetime.date, currency: str) -> Any | None:
+    """The latest pad before `date` still unconsumed for `currency`, if any.
+
+    A pad is consumed for a currency by the first assertion in it after the
+    pad — even an exact one — so a consumed pad never offers to cover (w5/797).
+    """
+    from beancount.core.data import Balance, Pad
+
+    for entry in reversed(entries):
+        if not (isinstance(entry, Pad) and entry.account == account and entry.date < date):
+            continue
+        consumed = any(
+            isinstance(other, Balance)
+            and other.account == account
+            and other.amount.currency == currency
+            and entry.date < other.date < date
+            for other in entries
+        )
+        if not consumed:
+            return entry
+    return None
+
+
+def _unused_existing_pads(exc: protocol.LedgerError, entries: list[Any]) -> list[Any]:
+    """Loaded pads an `Unused Pad` failure names (w5/797).
+
+    The failure carries display strings, not entries, but a pad the failed
+    write would have added is on no loaded line: anything matching a loaded
+    pad's file and line is an existing pad the write would strand.
+    """
     from beancount.core.data import Pad
 
-    return next(
+    found: dict[tuple[str, int], Any] = {}
+    for detail in exc.details or []:
+        if "Unused Pad" not in detail:
+            continue
+        filename, _, lineno = detail.partition(": Unused Pad")[0].rpartition(":")
+        try:
+            line = int(lineno)
+        except ValueError:
+            continue
+        for entry in entries:
+            if isinstance(entry, Pad) and entry.meta.get("filename") == filename and entry.meta.get("lineno") == line:
+                found[(filename, line)] = entry
+    return list(found.values())
+
+
+def _stranded_pad_refusal(stranded: list[Any], entries: list[Any], account: str) -> protocol.LedgerError:
+    """The refusal when the new pad would strand an existing one (w5/797)."""
+    from beancount.core.data import Balance
+
+    first = min(stranded, key=lambda entry: entry.date)
+    pad_at = f"{first.meta.get('filename')}:{first.meta.get('lineno')}"
+    following = next(
         (
             entry
-            for entry in reversed(entries)
-            if isinstance(entry, Pad) and entry.account == account and entry.date < date
+            for entry in entries
+            if isinstance(entry, Balance) and entry.account == account and entry.date > first.date
         ),
         None,
+    )
+    why = (
+        f"the book balance already matches the {following.date} assertion"
+        if following is not None
+        else ("nothing after it needs padding")
+    )
+    others = f" (and {len(stranded) - 1} more)" if len(stranded) > 1 else ""
+    remove = "those pads" if len(stranded) > 1 else "that pad"
+    return protocol.LedgerError(
+        f"Adding this assertion would strand the existing pad at {pad_at} ({first.date} from "
+        f"{first.source_account}){others}: {why}. Nothing was written.",
+        details=[f"Remove {remove} first, then retry — or fix the amount if the statement is wrong."],
     )
 
 
@@ -643,7 +979,7 @@ def _parse_balance_amount(text: str) -> tuple[Decimal, str, Decimal | None]:
     if errors or len(entries) != 1 or not isinstance(entries[0], Balance):
         raise protocol.UsageError(
             "Balance amount must be 'NUMBER [~ TOLERANCE] CURRENCY', for example '1538 ~ 1 EUR'.",
-            details=[f"--amount: {readable_parser_message(error.message)}" for error in errors],
+            details=[f"--amount: {readable_parser_message(error.message, text=text)}" for error in errors],
         )
     entry = entries[0]
     if entry.amount.number is None:
@@ -656,6 +992,21 @@ def _parse_balance_amount(text: str) -> tuple[Decimal, str, Decimal | None]:
 # --------------------------------------------------------------------------- #
 # price — the one add that reads the ledger before deciding to write
 # --------------------------------------------------------------------------- #
+
+
+def one_price_per_day_plugin(options: Any) -> str | None:
+    """The plugin this ledger loads that allows one price per pair and day, as a phrase, or None.
+
+    `unique_prices` rejects a second same-day quote, so `--force` could only
+    end in its bare "Disagreeing price entries" (w5/397); `pedantic` bundles
+    it (w5/766). Import's advice asks the same question (w5/902).
+    """
+    loaded = [str(name) for name, _ in options.get("plugin") or ()]
+    if any(name == "pedantic" or name.endswith(".pedantic") for name in loaded):
+        return "the pedantic plugin (which bundles unique_prices)"
+    if any(name.endswith("unique_prices") for name in loaded):
+        return "the unique_prices plugin"
+    return None
 
 
 def _price(
@@ -724,16 +1075,18 @@ def _price(
         }
     conflict = next((entry for entry in local_prices if entry.amount.number != number), None)
     # unique_prices rejects a second quote for the day, so --force could only
-    # end in its bare "Disagreeing price entries" (w5/397).
-    unique = any(str(name).endswith("unique_prices") for name, _ in options.get("plugin") or ())
-    if conflict is not None and (unique or not request.get("force")):
+    # end in its bare "Disagreeing price entries" (w5/397). pedantic bundles
+    # unique_prices, so it counts too (w5/766).
+    loader = one_price_per_day_plugin(options)
+    if conflict is not None and (loader is not None or not request.get("force")):
         where = f"{conflict.meta.get('filename')}:{conflict.meta.get('lineno')}"
-        remedy = (
-            f"This ledger loads the unique_prices plugin, which allows one {currency} price in {amount_currency} "
-            f"per day; edit the existing price at {where} instead."
-            if unique
-            else "Pass --force to record another quote."
-        )
+        if loader is not None:
+            remedy = (
+                f"This ledger loads {loader}, which allows one {currency} price in {amount_currency} "
+                f"per day; edit the existing price at {where} instead."
+            )
+        else:
+            remedy = "Pass --force to record another quote."
         raise protocol.ConflictError(
             f"{currency} already has a {directive.date.isoformat()} price of "
             f"{_plain(conflict.amount.number)} {amount_currency} (at {where}); "
@@ -743,8 +1096,11 @@ def _price(
     # A same-day quote in the other direction is the same rate for the day, and
     # one that disagrees made `balance` and `query` value the pair differently
     # by line order; with both, Beancount values by the inverse of the
-    # direction quoted less often (w5/556).
-    crossing = next((entry for entry in reciprocal_prices if (entry.amount.number or 0) * number != 1), None)
+    # direction quoted less often (w5/556). Agreement is judged at the typed
+    # precision, as import judges it (w5/741).
+    from bea_engine.ledger.prices import reciprocal_agrees
+
+    crossing = next((entry for entry in reciprocal_prices if not reciprocal_agrees(number, entry.amount.number)), None)
     if crossing is not None and not request.get("force"):
         where = f"{crossing.meta.get('filename')}:{crossing.meta.get('lineno')}"
         raise protocol.ConflictError(
@@ -754,8 +1110,28 @@ def _price(
             "values the pair by the inverse of the direction quoted less often."
         )
 
+    # The new quote can still lose its day: to a generated reciprocal
+    # (implicit_prices), to a same-direction quote that sorts later (an
+    # included file's line number beats the root's), or to a quote already
+    # written. A write no read will use says so, naming the winner's location
+    # (w5/741, w5/903), judged on the ledger as it would load.
+    from bea_engine.ledger.prices import unused_quote_advisories
+
     entry = Price({}, directive.date, currency, BcAmount(number, amount_currency))
-    warnings = write.append(file, [writer.format_entry(entry)], allow_errors=allow_errors, into=into, snapshot=snapshot)
+    text = writer.format_entry(entry)
+    advisories: list[str] = []
+    write.validate_append(
+        file,
+        [text],
+        allow_errors=allow_errors,
+        into=into,
+        snapshot=snapshot,
+        inspect=lambda candidate: advisories.extend(
+            unused_quote_advisories(candidate, entries, [(directive.date, currency, amount_currency, number)])
+        ),
+    )
+    warnings = write.append(file, [text], allow_errors=allow_errors, into=into, snapshot=snapshot)
+    warnings.extend(advisories)
     warnings.extend(f"Ledger price shadows the managed quote from {source}." for source in sorted(managed_sources))
     return {
         "written": 1,
@@ -853,8 +1229,10 @@ def _transaction(
             if "unexpected EOL" in error.message:
                 line -= 1
             posting_number = line - header_lines
-            location = f"--posting {posting_number}" if 0 < posting_number <= len(postings) else "Transaction options"
-            details.append(f"{location}: {readable_parser_message(error.message)}")
+            blamed = 0 < posting_number <= len(postings)
+            location = f"--posting {posting_number}" if blamed else "Transaction options"
+            scope = postings[posting_number - 1] if blamed else ""
+            details.append(f"{location}: {readable_parser_message(error.message, text=scope)}")
         if details and all(detail.startswith("Transaction options:") for detail in details):
             message = _HEADER_ERROR
         else:
@@ -867,6 +1245,11 @@ def _transaction(
         if managed_load.zero_units_at_total_cost(posting):
             # Booking divides the total by the units, and raised (w5/538).
             raise protocol.UsageError(f"--posting {number} {managed_load.ZERO_UNITS_TOTAL_COST} Nothing was written.")
+        tail = managed_load.elided_units_zero_rate_tail(posting)
+        if tail is not None:
+            # Booking cannot infer the elided units from a zero rate, and
+            # died naming no posting (w5/732).
+            raise protocol.UsageError(f"--posting {number} {tail} Nothing was written.")
     # The ledger loads NFC-normalized; the parsed postings must match it before
     # currency inference compares them against the opened accounts below.
     entry = entry._replace(postings=[posting._replace(account=_nfc(posting.account)) for posting in entry.postings])
@@ -881,6 +1264,11 @@ def _transaction(
         allowed = {e.account: e.currencies for e in existing if isinstance(e, Open)}
     normalized = []
     elided = 0
+    # Postings whose currency fell back to the operating currency, with what
+    # the account allows: validation hints name them when a guessed currency
+    # causes the failure, instead of advising an exchange never made (w5/804).
+    # A forced single-currency default is not a guess and stays out.
+    operating_defaults: dict[int, list[str] | None] = {}
     for number, posting in enumerate(entry.postings, start=1):
         _refuse_missing_price(postings, number, posting)
         # Beancount annotates booked postings; the parser also returns MISSING.
@@ -889,8 +1277,10 @@ def _transaction(
             elided += 1
         if units is not MISSING and units.currency is MISSING:
             choices = allowed.get(posting.account) or []
+            from_operating = False
             if len(choices) != 1 and len(currencies) == 1 and (not choices or currencies[0] in choices):
                 choices = currencies
+                from_operating = True
             if len(choices) != 1:
                 raise protocol.UsageError(
                     f"Currency is ambiguous for {posting.account}; specify NUMBER CURRENCY explicitly.",
@@ -901,14 +1291,35 @@ def _transaction(
             # defaulting it wrote three dollars held at eighty dollars each,
             # exit 0 and a passing check (w5/098). A default that differs from
             # the rate's currency — an account opened for HOOL alone — stands.
-            rate = posting.cost if posting.cost is not None else posting.price
-            if rate is not None and getattr(rate, "currency", None) == choices[0]:
+            # A rate that names no currency cannot prove it differs: `3 {80}` and
+            # `3 {}` defaulted the same silent way, and a price beside a cost
+            # was never consulted at all (w5/800).
+            rate_currencies = [
+                getattr(rate, "currency", None) for rate in (posting.cost, posting.price) if rate is not None
+            ]
+            if rate_currencies and any(
+                currency is MISSING or currency is None or currency == choices[0] for currency in rate_currencies
+            ):
+                if any(currency == choices[0] for currency in rate_currencies):
+                    given = (
+                        f"gives a cost or price in {choices[0]} but no commodity, and "
+                        f"{posting.account} would default to {choices[0]} itself."
+                    )
+                else:
+                    given = (
+                        "gives a cost or price with no currency but no commodity, and "
+                        f"{posting.account} would default to {choices[0]}."
+                    )
                 raise protocol.UsageError(
-                    f"--posting {number} gives a cost or price in {choices[0]} but no commodity, and "
-                    f"{posting.account} would default to {choices[0]} itself. Name the commodity: "
+                    f"--posting {number} {given} Name the commodity: "
                     f"'{posting.account} NUMBER COMMODITY {{…}}' or '… NUMBER COMMODITY @ …'. Nothing was written."
                 )
             units = units._replace(currency=choices[0])
+            if from_operating:
+                operating_defaults[number] = allowed.get(posting.account) or None
+        # After the units are settled, so a missing commodity is named before a
+        # missing total currency on a doubly bare posting (w5/800 keeps `3 {{240}}`).
+        _refuse_currency_less_total(number, posting)
         # Parsed postings keep the input order, so the raw line with the `@@`
         # spelling sits at the same index; incomplete prices raised above.
         meta: dict[str, Any] = {}
@@ -918,10 +1329,14 @@ def _transaction(
                 meta[writer.TOTAL_PRICE_META] = total
         normalized.append(posting._replace(units=units, meta=meta))
     if elided > 1:
-        raise protocol.UsageError("Only one posting may omit its amount; supply amounts for the other postings.")
+        raise protocol.UsageError(_ONE_ELIDED)
     if elided == 1 and _inferred_leg_is_zero(normalized):
         raise protocol.UsageError(f"{_ZERO_NET_INFERRED} Nothing was written.")
     entry = entry._replace(postings=normalized, meta=write.metadata_for_write(entry.meta))
+    # The answer below is built from this entry, so it is normalized first:
+    # reporting the raw label while the file holds the escaped one cannot be
+    # fed back (w5/733). Rendering normalizes again, harmlessly.
+    entry = writer.normalize_entry_strings(entry)
     rendered = writer.format_entry(entry)
     totals = [(posting.meta or {}).get(writer.TOTAL_PRICE_META) for posting in entry.postings]
     # The `@@` stash served the render; the JSON answer must not carry it.
@@ -937,7 +1352,9 @@ def _transaction(
         posting["price_total"] = None if total is None else protocol.jsonable(total)
         if total is not None:
             posting["price"] = None
-    warnings = write.append(file, [rendered], allow_errors=allow_errors, into=into, snapshot=snapshot)
+    warnings = write.append(
+        file, [rendered], allow_errors=allow_errors, into=into, snapshot=snapshot, operating_defaults=operating_defaults
+    )
     return {
         "written": 1,
         "directive": directive,
@@ -952,6 +1369,12 @@ _ZERO_NET_INFERRED = (
     "Beancount drops that leg from list/query. Supply an explicit amount "
     "(for example 'Assets:Cash 0 USD') or use nonzero postings."
 )
+_ONE_ELIDED = "Only one posting may omit its amount; supply amounts for the other postings."
+
+
+def _amountless_postings(directive: Any) -> int:
+    """Postings whose number booking must infer: no units, or units with a null number (w5/801)."""
+    return sum(1 for posting in directive.postings if posting.units is None or posting.units.number is None)
 
 
 def _directive_infers_zero(directive: Any) -> bool:
@@ -964,7 +1387,7 @@ def _directive_infers_zero(directive: Any) -> bool:
     from beancount.core.data import Transaction
     from beancount.parser import parser
 
-    if sum(1 for posting in directive.postings if posting.units is None) != 1:
+    if _amountless_postings(directive) != 1:
         return False
     entries, errors, _ = parser.parse_string(writer.format_transaction(directive))
     # Renamed roots read as invalid here, which used to skip this guard entirely.
@@ -1006,11 +1429,16 @@ def _inferred_leg_is_zero(postings: list[Any]) -> bool:
         cost, price = posting.cost, posting.price
         if cost is not None:
             per = None if cost.number_per is MISSING else cost.number_per
-            if cost.currency is MISSING or (per is None and cost.number_total is None):
+            # A total left for booking to interpolate (`{100 # USD}`) is known
+            # only after it: calling copy_sign on the MISSING sentinel crashed
+            # (w5/803). An empty `{# USD}` then reads as per-None-plus-total-None,
+            # which the guard below already stands aside for.
+            total = None if cost.number_total is MISSING else cost.number_total
+            if cost.currency is MISSING or (per is None and total is None):
                 return False
             weight = units.number * (per or 0)
-            if cost.number_total is not None:
-                weight += cost.number_total.copy_sign(units.number)
+            if total is not None:
+                weight += total.copy_sign(units.number)
             weights[cost.currency] += weight
         elif price is not None:
             total = posting.meta.get(writer.TOTAL_PRICE_META) if posting.meta else None
@@ -1074,6 +1502,33 @@ def _refuse_missing_price(postings: list[str], number: int, posting: Any) -> Non
         need = f"the {total}price after {marker} needs a currency"
     example = f"'{posting.account} 10 HOOL {marker} 5.00 USD'"
     raise protocol.UsageError(f"--posting {number}: {need}: write {example}. Nothing was written.")
+
+
+def _refuse_currency_less_total(number: int, posting: Any) -> None:
+    """A total cost without a currency names the missing part (w5/805).
+
+    `{{240}}` parses, but the writer renders it as `{0 # 240}`, which needs a
+    currency and failed as "a value that is not one token". Bulk already
+    refuses the same shape ("a total cost needs currency", w5/384); the flag
+    path refuses it here, before anything is rendered or written. A per-unit
+    cost without a currency (`{80}`) and an interpolated total (`{100 # USD}`)
+    are not total costs and pass through.
+    """
+    from beancount.core.number import MISSING
+
+    from bea_engine import protocol
+
+    cost = posting.cost
+    if cost is None or cost.number_total is None or cost.number_total is MISSING:
+        return
+    if cost.currency is not MISSING:
+        return
+    total = format(cost.number_total, "f")
+    example = "'{{" + total + " USD}}'"
+    raise protocol.UsageError(
+        f"--posting {number}: the total cost {total} has no currency; a total cost needs one "
+        f"(for example {example}). Nothing was written."
+    )
 
 
 def _nfc(text: str) -> str:
@@ -1165,6 +1620,21 @@ def _parse_metadata(items: list[str]) -> dict[str, Any]:
             parsed_raw = '"x"'
         entries, errors, _ = parse_exact(f'2000-01-01 * ""\n  {key}: {parsed_raw}\n')
         errors = without_root_name_errors(errors)
+        if raw.startswith('"') and not re.fullmatch(r'"((?:[^"\\]|\\.)*)"', raw):
+            # A quoted literal followed by more text: the parser reads `; …`
+            # as a comment and C-escapes the quotes' content, so keeping its
+            # value stores text nobody typed (w5/727).
+            match = re.match(r'"(?:[^"\\]|\\.)*"', raw)
+            if match is None:
+                raise protocol.UsageError(
+                    f"Invalid --meta {key!r}; close the quoted string or supply a bare value such as '{key}:hello'.",
+                    details=[str(error.message) for error in errors],
+                )
+            extra = raw[match.end() :].strip()
+            raise protocol.UsageError(
+                f"Invalid --meta {key!r}; the quoted string is closed but {extra!r} follows it. "
+                "Remove the extra text, or store the value unquoted.",
+            )
         if not errors and len(entries) == 1 and isinstance(entries[0], Transaction) and key in entries[0].meta:
             value = entries[0].meta[key]
             # Only the documented kinds keep the parser's reading. Unquoted
@@ -1180,12 +1650,7 @@ def _parse_metadata(items: list[str]) -> dict[str, Any]:
                 # other backslash (w5/232); only `\"` and `\\` are escapes.
                 metadata[key] = re.sub(r'\\(["\\])', r"\1", literal.group(1))
             else:
-                metadata[key] = value if raw.startswith('"') or _is_typed_literal(raw, value) else raw
-        elif raw.startswith('"'):
-            raise protocol.UsageError(
-                f"Invalid --meta {key!r}; close the quoted string or supply a bare value such as '{key}:hello'.",
-                details=[str(error.message) for error in errors],
-            )
+                metadata[key] = value if _is_typed_literal(raw, value) else raw
         elif errors and (key_errors := parser.parse_string(f'2000-01-01 * ""\n  {key}: "x"\n')[1]):
             # Judged on the key alone, with a value that cannot fail: testing
             # for `key:` inside the message blamed the key `name` for any
@@ -1193,6 +1658,13 @@ def _parse_metadata(items: list[str]) -> dict[str, Any]:
             raise protocol.UsageError(
                 f"Invalid --meta key {key!r}; Beancount rejected it ({key_errors[0].message}).",
                 details=[str(error.message) for error in key_errors],
+            )
+        elif raw.startswith('"'):
+            # A whole literal the parser still rejects, such as an escape it
+            # cannot read; every other quoted shape refused above (w5/727).
+            raise protocol.UsageError(
+                f"Invalid --meta {key!r}; close the quoted string or supply a bare value such as '{key}:hello'.",
+                details=[str(error.message) for error in errors],
             )
         elif re.fullmatch(_META_DATE, raw):
             # Beancount's date grammar: a slash or unpadded spelling of an
@@ -1223,8 +1695,13 @@ _META_VALUE_HELP = (
 )
 
 
-def _untagged_float_problem(value: float) -> str:
+def _untagged_float_problem(value: float | JsonFloat) -> str:
     """Why an untagged JSON float is no metadata value, and the tagged number to send."""
+    if isinstance(value, JsonFloat):
+        return (
+            f"JSON float {value.literal} cannot represent a decimal exactly. Send a tagged number instead, "
+            f'such as {{"kind":"number","value":"{value.literal}"}}.'
+        )
     if not math.isfinite(value):
         return f"{value!r} is not a finite number, so it has no decimal form; send it as text or leave it out."
     exact = format(Decimal(repr(value)), "f")
@@ -1291,7 +1768,7 @@ def _bulk_meta_problems(location: str, meta: dict[str, Any]) -> list[str]:
                         f"ASCII digits and no exponent or underscores, such as '1.25'; got {number!r}."
                     )
                     continue
-        elif isinstance(value, float):
+        elif isinstance(value, (float, JsonFloat)):
             # Written through `Decimal(str(value))` (w3/230), a float recorded
             # its binary value: 12345678901234567890.123 became
             # 12345678901234567000, and 0.3-style values kept their noise
@@ -1423,10 +1900,15 @@ def _transactions(
         )
 
     # The single add's lost-leg refusal holds for every row too: a zero
-    # inferred posting would be written, then dropped by every read.
+    # inferred posting would be written, then dropped by every read. So does
+    # its one-elided-posting rule: two number-less legs each infer zero, a
+    # ghost transaction the checks pass (w5/801).
     kept: list[tuple[int, Any]] = []
     for index, directive in valid:
-        if _directive_infers_zero(directive):
+        if _amountless_postings(directive) > 1:
+            rejected.append(f"Row {index + 1}: {_ONE_ELIDED}")
+            rejected_rows.append(index)
+        elif _directive_infers_zero(directive):
             rejected.append(f"Row {index + 1}: {_ZERO_NET_INFERRED}")
             rejected_rows.append(index)
         else:
@@ -1451,7 +1933,9 @@ def _transactions(
     # Validate the entire batch first: an earlier sale may depend on a buy that
     # appears later in the input. Partial recovery drops the rows that load's
     # errors name; only errors it cannot place need a bisection of the batch.
-    valid = _same_day_purchases_first(valid)
+    # Rows that book in input order keep it; only a sale with no position to
+    # book against moves after its same-day purchase (w5/730).
+    valid = _booking_order(valid, file=file, allow_errors=allow_errors, into=into)
     batch_texts = [writer.format_transaction(d) for _, d in valid]
     try:
         write.validate_append(file, batch_texts, allow_errors=allow_errors, into=into)
@@ -1479,12 +1963,30 @@ def _transactions(
                 if recoverable:
                     noun = "row" if recoverable == 1 else "rows"
                     message = f"{message} Pass --partial to append the {recoverable} valid {noun}."
-            elif len(valid) > 1:
+            elif len(valid) > 1 and not _only_preexisting(batch_error):
                 message = f"{message} Pass --partial to append the rows that validate."
             raise protocol.LedgerError(
                 message, details=details, ledger_errors=list(batch_error.ledger_errors), result=result
             ) from batch_error
+        if _only_preexisting(batch_error):
+            # The ledger refuses every write by itself; no row is the cause,
+            # so the failure is reported once, as the ledger's (w5/725).
+            rejected_rows.extend(index for index, _ in valid)
+            raise protocol.LedgerError(
+                str(batch_error),
+                details=[*rejected, *batch_error.details],
+                ledger_errors=list(batch_error.ledger_errors),
+                result={
+                    "written": 0,
+                    "written_rows": [],
+                    "rejected_rows": rejected_rows,
+                },
+            ) from batch_error
         named = _named_rows(file, batch_texts, batch_error, allow_errors=allow_errors, into=into)
+        if named is None:
+            # Errors the batch error names are still dropped first when sibling
+            # errors cannot be placed; only their remainder is bisected (w5/720).
+            named = _refused_with_placed(file, batch_texts, batch_error, allow_errors=allow_errors, into=into)
         accepted: list[tuple[int, Any]] = []
         # Human labels count from 1, like the schema rejections above;
         # `rejected_rows` stays a zero-based index for scripts.
@@ -1525,7 +2027,61 @@ def _transactions(
     return {"written": len(valid), "rejected": [], "warnings": warnings, "target": target}
 
 
-def _same_day_purchases_first(valid: list[tuple[int, Any]]) -> list[tuple[int, Any]]:
+def _batch_holdings(file: Path | None) -> list[Any]:
+    """Ledger entries a bulk add's sales book against, or none when unreadable.
+
+    A missing ledger holds no lots to match, so the reorder then behaves as
+    it did before the gate (w5/543). A ledger that fails to load fails the
+    batch's own validation next; the gate must not fail first (w5/730).
+    """
+    if file is None:
+        return []
+    from bea_engine import managed_load
+
+    try:
+        entries, _, _ = managed_load.load_file(file)
+    except (OSError, ValueError):
+        return []
+    return entries
+
+
+def _booking_order(
+    valid: list[tuple[int, Any]], *, file: Path | None, allow_errors: bool, into: Path | None
+) -> list[tuple[int, Any]]:
+    """The order the batch books in: the same-day rule's, else the first alternative that validates.
+
+    The rule above reads signs and sets, which cannot tell whether a sale
+    books: a partial holding, the wrong cost lot, a purchase whose units
+    booking infers, and a short opened and covered the same day each defeat
+    it (w5/884). So when its order does not validate, the input order and the
+    order that puts every same-day sale after its purchases are tried against
+    the ledger, and the first that books wins. When none does, the rule's
+    order stands and its refusal is the one reported.
+    """
+    ordered = _same_day_purchases_first(valid, file=file)
+    if file is None:
+        return ordered
+    # Only a batch whose same-day rows could book another way is tried at all.
+    candidates = [ordered]
+    for alternative in (valid, _same_day_purchases_first(valid, file=file, eager=True)):
+        if all([i for i, _ in alternative] != [i for i, _ in seen] for seen in candidates):
+            candidates.append(alternative)
+    if len(candidates) == 1:
+        return ordered
+    for candidate in candidates:
+        try:
+            write.validate_append(
+                file, [writer.format_transaction(d) for _, d in candidate], allow_errors=allow_errors, into=into
+            )
+        except protocol.LedgerError:
+            continue
+        return candidate
+    return ordered
+
+
+def _same_day_purchases_first(
+    valid: list[tuple[int, Any]], *, file: Path | None = None, eager: bool = False
+) -> list[tuple[int, Any]]:
     """`valid` with each day's sales at cost after that day's purchases of the same lots (w5/543).
 
     Beancount books one date's entries in file order, and rows are appended
@@ -1535,22 +2091,60 @@ def _same_day_purchases_first(valid: list[tuple[int, Any]]) -> list[tuple[int, A
     commodity at cost that another row of the same date buys at cost into
     the same account moves after that date's other rows, keeping the slots
     each date held; nothing else changes order.
+
+    A sale that already books in input order stays where it is: the ledger
+    holds the lot through its date, or an earlier row bought it — the same
+    date listed before it, or any earlier date anywhere in the input, since
+    rows book chronologically. Only a sale with no position to book
+    against moves after its same-day purchase (w5/730).
+
+    `eager` drops that test: every sale with a same-day purchase of its lot
+    moves behind it, and a purchase whose units are left to booking counts.
     """
     from collections import Counter, defaultdict
 
     def lots(directive: Any, negative: bool) -> set[tuple[str, str]]:
+        # A null units number interpolates at booking, so its sign is unknown
+        # here; it books no reorder either way (w5/801).
         return {
             (posting.account, posting.units.currency)
             for posting in directive.postings
             if posting.cost is not None
             and posting.units is not None
-            and (posting.units.number < 0) == negative
-            and posting.units.number != 0
+            and (
+                (eager and not negative and posting.units.number is None)
+                or (
+                    posting.units.number is not None
+                    and (posting.units.number < 0) == negative
+                    and posting.units.number != 0
+                )
+            )
         }
 
     slots: dict[Any, list[int]] = defaultdict(list)
     for position, (_, directive) in enumerate(valid):
         slots[directive.date].append(position)
+    by_date: dict[Any, list[Any]] = defaultdict(list)
+    for _, directive in valid:
+        by_date[directive.date].append(directive)
+    earlier: dict[Any, set[tuple[str, str]]] = {}
+    accumulated: set[tuple[str, str]] = set()
+    for date in sorted(by_date):
+        earlier[date] = set(accumulated)
+        for directive in by_date[date]:
+            accumulated |= lots(directive, negative=False)
+    entries: list[Any] | None = None
+    held_cache: dict[tuple[str, Any], dict[str, Decimal]] = {}
+
+    def file_holds(account: str, currency: str, date: Any) -> bool:
+        nonlocal entries
+        key = (account, date)
+        if key not in held_cache:
+            if entries is None:
+                entries = _batch_holdings(file)
+            held_cache[key] = _held_through(entries, account, date)
+        return held_cache[key].get(currency, Decimal(0)) != 0
+
     ordered = list(valid)
     for positions in slots.values():
         rows = [valid[position] for position in positions]
@@ -1562,11 +2156,33 @@ def _same_day_purchases_first(valid: list[tuple[int, Any]]) -> list[tuple[int, A
         ]
         if not any(selling):
             continue
-        rearranged = [row for row, sells in zip(rows, selling, strict=True) if not sells]
-        rearranged += [row for row, sells in zip(rows, selling, strict=True) if sells]
+        date = rows[0][1].date
+        before = set(earlier[date])
+        gated = []
+        for (_, directive), own, moves in zip(rows, bought, selling, strict=True):
+            gated.append(
+                moves
+                and (
+                    eager
+                    or any(
+                        buyers[lot] > (lot in own) and lot not in before and not file_holds(*lot, date)
+                        for lot in lots(directive, negative=True)
+                    )
+                )
+            )
+            before |= own
+        if not any(gated):
+            continue
+        rearranged = [row for row, sells in zip(rows, gated, strict=True) if not sells]
+        rearranged += [row for row, sells in zip(rows, gated, strict=True) if sells]
         for position, row in zip(positions, rearranged, strict=True):
             ordered[position] = row
     return ordered
+
+
+def _only_preexisting(batch_error: protocol.LedgerError) -> bool:
+    """Whether the refused batch adds nothing wrong: the books were already broken (w5/725)."""
+    return isinstance(batch_error, write.CandidateRejected) and batch_error.preexisting_only
 
 
 def _named_rows(
@@ -1581,8 +2197,8 @@ def _named_rows(
     """
     if not isinstance(batch_error, write.CandidateRejected):
         return None
-    rows = _rows_with_errors(file, texts, batch_error, into=into)
-    if rows is None:
+    rows, unplaced = _partitioned_rows(file, texts, batch_error, into=into)
+    if unplaced:
         return None
     kept = [text for number, text in enumerate(texts) if number not in rows]
     if kept:
@@ -1596,19 +2212,28 @@ def _named_rows(
 def _refused_in_order(
     file: Path, texts: list[str], batch_error: protocol.LedgerError, *, allow_errors: bool, into: Path | None
 ) -> dict[int, protocol.LedgerError]:
-    """Positions in `texts` the rows kept before them refuse, each with the refusal it met.
+    """Positions in `texts` the forward scan refuses, each with the refusal it met.
 
-    A row is kept when it loads after the rows kept before it, as a trial per
-    row decided; but those trials cost a full load per row over a growing
-    batch, so an error no row can be named for (an existing balance assertion
-    the batch breaks) made `--partial` quadratic. Bisecting for the first
-    refused row instead costs a load per halving: k bad rows take O(k log n)
-    loads (w5/537). A ledger that refuses any write by itself (an error it
-    already has, without --allow-errors) would bisect down to every row, so it
-    keeps one trial per row.
+    Scanning in input order, every leading run that loads is kept and the row
+    that breaks it is refused — which keeps a row a later kept row offsets
+    even when it fails alone (row 1 of w5/720's four-row case). A trial per
+    row would instead judge each row alone after the rows kept before it, but
+    those trials cost a full load per row over a growing batch, so an error no
+    row can be named for (an existing balance assertion the batch breaks) made
+    `--partial` quadratic. Bisecting for the first refused row instead costs a
+    load per halving while bad rows are few (w5/537); the loads spent past
+    the rows decided accumulate, and once they pass one round's worth —
+    bisection then costs more per row than judging in order, k·log n past n
+    in aggregate — the rest are judged in order (w5/720). A batch that
+    adds nothing wrong to already-broken books never reaches the search
+    (w5/725); a batch that adds its own errors to them would bisect down
+    to every row, so it keeps one trial per row.
     """
+    spent = 0
 
     def refusal(candidate: list[str]) -> protocol.LedgerError | None:
+        nonlocal spent
+        spent += 1
         try:
             write.validate_append(file, candidate, allow_errors=allow_errors, into=into)
         except protocol.LedgerError as err:
@@ -1620,8 +2245,20 @@ def _refused_in_order(
     rest = list(range(len(texts)))
     error: protocol.LedgerError | None = batch_error
     ledger_loads: bool | None = None
+    halvings = math.ceil(math.log2(max(len(texts), 2)))
+    overspend = 0
+
+    def judge_rest() -> None:
+        for number in rest:
+            found = refusal([*kept, texts[number]])
+            if found is None:
+                kept.append(texts[number])
+            else:
+                refused[number] = found
+
     while rest and error is not None:
         # `kept` with rest[:low] loads; `kept` with rest[:high] meets `error`.
+        round_start = spent
         low, high = 0, len(rest)
         while high - low > 1:
             middle = (low + high) // 2
@@ -1634,36 +2271,43 @@ def _refused_in_order(
             if ledger_loads is None:
                 ledger_loads = refusal([]) is None
             if not ledger_loads:
-                for number in rest:
-                    found = refusal([*kept, texts[number]])
-                    if found is None:
-                        kept.append(texts[number])
-                    else:
-                        refused[number] = found
+                judge_rest()
                 return refused
+        decided = low + 1
+        round_loads = spent - round_start
         refused[rest[low]] = error
         kept.extend(texts[number] for number in rest[:low])
         rest = rest[low + 1 :]
         error = refusal([*kept, *(texts[number] for number in rest)]) if rest else None
+        # Loads spent past the rows decided, floored: a sparse head must not
+        # subsidize a dense tail's halving searches (w5/720).
+        overspend = max(0, overspend + round_loads + 1 - decided)
+        if rest and error is not None and overspend > halvings + 1:
+            judge_rest()
+            return refused
     return refused
 
 
-def _rows_with_errors(
+def _partitioned_rows(
     file: Path, texts: list[str], batch_error: write.CandidateRejected, *, into: Path | None
-) -> dict[int, list[int]] | None:
-    """Positions in `texts` whose appended lines carry an error, or None when one cannot be placed.
+) -> tuple[dict[int, list[int]], bool]:
+    """Positions in `texts` whose appended lines carry an error, and whether any error went unplaced.
 
-    Each maps to the positions of its errors in the batch error's `locations`.
+    Each position maps to the positions of its errors in the batch error's
+    `locations`. An error the spans cannot place (a balance assertion the
+    batch breaks, or a location outside the appended blocks) no longer sinks
+    the placed ones: the caller drops the named rows and searches only the
+    remainder (w5/720).
     """
     locations = batch_error.locations
     if not locations:
-        return None
+        return {}, True
     target = write.destination(file, into)
     try:
         original = target.read_bytes() if target.exists() else b""
         content = write.appended_content(original, texts)
     except (OSError, UnicodeDecodeError):
-        return None
+        return {}, True
     # Blocks are appended one after another, each after one separating line;
     # walking back from the end gives every block's line span.
     spans: list[tuple[int, int]] = []
@@ -1674,14 +2318,47 @@ def _rows_with_errors(
         end -= size + 1
     spans.reverse()
     rows: dict[int, list[int]] = {}
+    unplaced = False
     for position, (source, lineno) in enumerate(locations):
         if lineno is None or Path(source).resolve() != target:
-            return None
+            unplaced = True
+            continue
         hits = [number for number, (first, last) in enumerate(spans) if first <= lineno <= last]
         if not hits:
-            return None
+            unplaced = True
+            continue
         rows.setdefault(hits[0], []).append(position)
-    return rows
+    return rows, unplaced
+
+
+def _refused_with_placed(
+    file: Path, texts: list[str], batch_error: protocol.LedgerError, *, allow_errors: bool, into: Path | None
+) -> dict[int, list[str]] | None:
+    """Refused positions in `texts` with detail lines, or None when no error names a row.
+
+    The rows the batch error names are dropped and their remainder is
+    confirmed with one load; when the remainder still fails it is bisected
+    with the remainder's own refusal, and the dropped rows rejoin the refused
+    with the batch error's lines for them (w5/720).
+    """
+    if not isinstance(batch_error, write.CandidateRejected):
+        return None
+    placed, _ = _partitioned_rows(file, texts, batch_error, into=into)
+    if not placed:
+        return None
+    kept_numbers = [number for number in range(len(texts)) if number not in placed]
+    if not kept_numbers:
+        return None
+    kept_texts = [texts[number] for number in kept_numbers]
+    try:
+        write.validate_append(file, kept_texts, allow_errors=allow_errors, into=into)
+    except protocol.LedgerError as kept_error:
+        found = _refused_in_order(file, kept_texts, kept_error, allow_errors=allow_errors, into=into)
+        merged = {number: batch_error.details_at(placed[number]) for number in sorted(placed)}
+        for number, err in found.items():
+            merged[kept_numbers[number]] = ["; ".join(err.details) or str(err)]
+        return merged
+    return {number: batch_error.details_at(placed[number]) for number in sorted(placed)}
 
 
 # --------------------------------------------------------------------------- #

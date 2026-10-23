@@ -468,7 +468,57 @@ describe("LedgerJournalService", () => {
         "testowner",
         "testledger",
         { entry_hash: "hash-old", sha256sum: "oldsum", new_content: "2024-01-02 * \"new\"\n" },
+        {},
       );
+    });
+
+    // A slice edit can add directives, so the ledger service holds it to the
+    // limit — and the mobile app, exempt by product policy, must say so.
+    it("forwards the directive-limit exemption for a mobile edit", async () => {
+      mockUpdateSourceSlice.mockResolvedValue({
+        data: {
+          success: true,
+          data: {
+            message: "Updated",
+            entry_hash: "hash-new",
+            new_sha256sum: "newsum",
+            new_entry_hash: "hash-new",
+          },
+        },
+      });
+
+      await service.updateSourceSlice({
+        ledgerId: LEDGER_ID,
+        identity: IDENTITY,
+        entryHash: "hash-old",
+        sha256sum: "oldsum",
+        newContent: "x",
+        platform: "mobile",
+      });
+
+      expect(mockUpdateSourceSlice).toHaveBeenLastCalledWith(
+        "testowner",
+        "testledger",
+        expect.anything(),
+        { headers: { "x-directive-limit-exempt": "1" } },
+      );
+    });
+
+    // w21/120: an emptied edit replaced the entry with a blank line, deleting
+    // it without the delete confirmation and reporting it saved.
+    it("refuses an empty or whitespace-only edit before the ledger sees it", async () => {
+      for (const newContent of ["", "  ", "\n\t\n"]) {
+        await expect(
+          service.updateSourceSlice({
+            ledgerId: LEDGER_ID,
+            identity: IDENTITY,
+            entryHash: "h",
+            sha256sum: "s",
+            newContent,
+          }),
+        ).rejects.toMatchObject({ category: "BAD_USER_INPUT" });
+      }
+      expect(mockUpdateSourceSlice).not.toHaveBeenCalled();
     });
 
     it("throws InternalServerError on failure", async () => {

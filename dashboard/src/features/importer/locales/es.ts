@@ -136,9 +136,15 @@ const esImporter: Record<string, TranslationEntry> = {
     message: "El tipo de archivo actual requiere análisis con IA",
     description: "Description of why premium is required",
   },
-  "importer.error.upgradeToPremium": {
-    message: "Actualizar a premium",
-    description: "Label for premium upgrade option",
+  "importer.error.upgradeToPlan": {
+    message: "Actualizar a {plan}",
+    description:
+      "Heading over the paywall's upgrade button; {plan} is the plan the button recommends (the next tier up).",
+  },
+  "importer.error.upgradePlan": {
+    message: "Actualizar tu plan",
+    description:
+      "Heading over the paywall's upgrade button when no higher self-serve plan exists.",
   },
   "importer.error.upgradeDescription": {
     message: "Analiza archivos PDF, OFX e imágenes automáticamente con IA",
@@ -167,6 +173,15 @@ const esImporter: Record<string, TranslationEntry> = {
   "importer.error.failedToParse": {
     message: "Error al analizar el archivo",
     description: "Title for parse failure error",
+  },
+  "importer.error.notUtf8": {
+    message: "El archivo no es texto UTF-8",
+    description: "Title when an uploaded CSV is not UTF-8 text",
+  },
+  "importer.error.notUtf8Description": {
+    message:
+      "Este CSV contiene caracteres que no son UTF-8 válido, así que importarlo cambiaría el texto de beneficiarios y descripciones. Vuelve a guardarlo como CSV UTF-8 desde tu banco o tu hoja de cálculo y sube ese archivo.",
+    description: "How to re-save a CSV that is not UTF-8 text",
   },
   "importer.error.serverError": {
     message:
@@ -308,6 +323,30 @@ const esImporter: Record<string, TranslationEntry> = {
   "importer.configure.currencyHint": {
     message: "Moneda para todas las transacciones",
     description: "Hint text for currency field",
+  },
+  "importer.configure.currencyConflict_one": {
+    message:
+      "{count} fila ({rows}) está en {symbol} ({currencies}), pero esta importación la registraría en {currency}.",
+    description:
+      "Import refusal: a selected row's amount carries a currency symbol that is not the chosen import currency. {count} is 1, {rows} the row number, {symbol} the symbol from the bank file (€, £…), {currencies} the currencies it can mean, {currency} the selected currency code",
+  },
+  "importer.configure.currencyConflict_many": {
+    message:
+      "{count} filas ({rows}) están en {symbol} ({currencies}), pero esta importación las registraría en {currency}.",
+    description:
+      "Import refusal for several selected rows whose amounts carry a currency symbol other than the chosen import currency. {rows} lists their row numbers, possibly ending in …",
+  },
+  "importer.configure.currencyConflict_other": {
+    message:
+      "{count} filas ({rows}) están en {symbol} ({currencies}), pero esta importación las registraría en {currency}.",
+    description:
+      "Import refusal for several selected rows whose amounts carry a currency symbol other than the chosen import currency. {rows} lists their row numbers, possibly ending in …",
+  },
+  "importer.configure.currencyConflictRemedy": {
+    message:
+      "Una importación registra una sola moneda. Elige la moneda de esas filas, o desmárcalas e impórtalas por separado. No se ha importado nada.",
+    description:
+      "How to resolve a currency conflict before importing: no conversion happens, so the user picks the matching currency or splits the file",
   },
   "importer.configure.assignTargetAccounts": {
     message: "Asignar cuentas de destino",
@@ -461,6 +500,12 @@ const esImporter: Record<string, TranslationEntry> = {
   "importer.accountMapping.aiSuccessDescription_many": {
     message: "Se categorizaron exitosamente {count} transacciones",
     description: "Toast description for multiple transactions categorization",
+  },
+  "importer.accountMapping.aiNoneApplied": {
+    message:
+      "Ninguna sugerencia era lo bastante fiable para completar una cuenta de destino.",
+    description:
+      "Toast description when AI Fill completed but no suggestion was confident enough to fill a target",
   },
   "importer.accountMapping.aiFailed": {
     message: "La categorización con IA falló",

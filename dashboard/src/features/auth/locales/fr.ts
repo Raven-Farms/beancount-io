@@ -44,6 +44,11 @@ const frAuth: Record<string, TranslationEntry> = {
     message: "Confirmez votre mot de passe",
     description: "Placeholder for password confirmation",
   },
+  "auth.chooseYourPassword": {
+    message: "Choisissez un mot de passe (minimum 8 caractères)",
+    description:
+      "Placeholder for the password a new account chooses, with the minimum length",
+  },
   "auth.createAccount": {
     message: "Créer un compte",
     description: "Button to submit registration",
@@ -181,6 +186,12 @@ const frAuth: Record<string, TranslationEntry> = {
     message: "Échec de la connexion",
     description: "Error title when login fails",
   },
+  "auth.loginRateLimited": {
+    message:
+      "Trop de tentatives de connexion. Patientez quelques minutes et réessayez, ou réinitialisez votre mot de passe.",
+    description:
+      "Shown on any password sign-in form when sign-in is rate limited, by address or by too many wrong passwords for the account",
+  },
   "auth.logout": {
     message: "Déconnexion",
     description: "Button label to log out",
@@ -199,11 +210,12 @@ const frAuth: Record<string, TranslationEntry> = {
     description: "Label for new password field",
   },
   "auth.newPasswordMinLength": {
-    message: "Le mot de passe doit contenir au moins 6 caractères",
+    message: "Le mot de passe doit contenir au moins 8 caractères",
     description: "Validation error for password length",
   },
   "auth.newPasswordMaxLength": {
-    message: "Le mot de passe doit contenir au maximum 128 caractères",
+    message:
+      "Le mot de passe est trop long. Utilisez au maximum 72 caractères ; les lettres accentuées, les alphabets non latins et les emojis comptent chacun pour 2 à 4.",
     description:
       "Validation error when new password exceeds the maximum length",
   },
@@ -247,9 +259,21 @@ const frAuth: Record<string, TranslationEntry> = {
     message: "Le mot de passe est requis",
     description: "Validation error when password is not provided",
   },
+  "auth.passwordBreached": {
+    message:
+      "Ce mot de passe est apparu dans une fuite de données. Choisissez-en un que vous n'utilisez nulle part ailleurs.",
+    description:
+      "Error when the server finds the new password in a known data breach (Have I Been Pwned)",
+  },
+  "auth.passwordTooSimilar": {
+    message:
+      "Le mot de passe ressemble trop à votre adresse e-mail ou à votre nom d'utilisateur.",
+    description:
+      "Error when the new password is too close to the account's email or username",
+  },
   "auth.passwordResetSuccessMessage": {
     message:
-      "Votre mot de passe a été réinitialisé. Redirection vers la connexion...",
+      "Votre mot de passe a été réinitialisé, et vos sessions ont été fermées sur tous vos appareils et applications connectées. Redirection vers la connexion...",
     description: "Success message description",
   },
   "auth.passwordResetSuccessful": {
@@ -758,6 +782,79 @@ const frAuth: Record<string, TranslationEntry> = {
       "La connexion par mot de passe est désactivée sur ce serveur. Continuez plutôt avec Google.",
     description:
       "Shown instead of a password form when password sign-in is turned off on the server",
+  },
+  "auth.recoveryTitle": {
+    message: "Vérifiez votre adresse e-mail pour vous connecter",
+    description:
+      "Title of the email ownership verification step for sign-in recovery",
+  },
+  "auth.recoveryDescription": {
+    message:
+      "Ouvrez le lien de votre e-mail de récupération, puis saisissez le code qu’il contient et votre mot de passe actuel.",
+    description: "Instructions for continuing from the sign-in recovery email",
+  },
+  "auth.recoverySendEmail": {
+    message: "Envoyer un e-mail de récupération",
+    description: "Button requesting a sign-in recovery email",
+  },
+  "auth.recoverySending": {
+    message: "Envoi de l’e-mail de récupération...",
+    description: "Pending state while requesting a sign-in recovery email",
+  },
+  "auth.recoverySent": {
+    message:
+      "Si cette adresse est associée à un compte, vous recevrez bientôt un e-mail de récupération. Ouvrez son lien pour continuer. Un e-mail de récupération récent reste valable.",
+    description:
+      "Uniform confirmation after requesting recovery; previous valid recovery emails remain usable",
+  },
+  "auth.recoveryResend": {
+    message: "Envoyer un autre e-mail de récupération",
+    description: "Button requesting another sign-in recovery email",
+  },
+  "auth.recoveryRetryAt": {
+    message: "Réessayez à {time}.",
+    description:
+      "Absolute local retry time after throttling; {time} is formatted using the active locale",
+  },
+  "auth.recoveryCode": {
+    message: "Code de vérification à six chiffres",
+    description: "Accessible label for the sign-in recovery email code",
+  },
+  "auth.recoveryCodeInvalid": {
+    message:
+      "Saisissez le code à six chiffres de votre e-mail de récupération.",
+    description:
+      "Validation error when the recovery code is not exactly six digits",
+  },
+  "auth.recoveryFailed": {
+    message:
+      "L’adresse e-mail, le code ou le mot de passe est incorrect, ou le code a expiré. Vous pouvez demander un nouvel e-mail de récupération.",
+    description:
+      "Uniform invalid-credentials or expired-code error during sign-in recovery",
+  },
+  "auth.recoveryRequestFailed": {
+    message:
+      "Impossible de demander un e-mail de récupération. Veuillez réessayer.",
+    description: "Error when requesting a sign-in recovery email fails",
+  },
+  "auth.recoveryUnavailable": {
+    message:
+      "La connexion est temporairement indisponible. Veuillez réessayer.",
+    description: "Temporary service outage during sign-in recovery",
+  },
+  "auth.recoveryExpiry": {
+    message:
+      "Le code expire au bout de 10 minutes et permet une seule tentative de mot de passe.",
+    description:
+      "Explains the expiry and single password-attempt limit of a recovery code",
+  },
+  "auth.recoverySubmit": {
+    message: "Vérifier et se connecter",
+    description: "Button submitting the recovery code and current password",
+  },
+  "auth.recoveryVerifying": {
+    message: "Vérification...",
+    description: "Pending state while verifying the recovery code and password",
   },
 };
 

@@ -65,7 +65,7 @@ describe("AccountService", () => {
       getApiContext: jest.fn().mockResolvedValue({
         favaApiClient: {
           ledgers: {
-            listLedgers: jest.fn().mockResolvedValue({
+            listUserLedgers: jest.fn().mockResolvedValue({
               data: { success: true, data: [] },
             }),
           },
@@ -107,6 +107,12 @@ describe("AccountService", () => {
       },
       jwt: {
         deleteByUserId: jest.fn(),
+      },
+      oauthGrant: {
+        revokeAllForUser: jest.fn().mockResolvedValue(undefined),
+      },
+      apiKey: {
+        deleteByUserId: jest.fn().mockResolvedValue(undefined),
       },
       emailToken: {
         deleteByUserId: jest.fn(),
@@ -241,7 +247,7 @@ describe("AccountService", () => {
       (mockFavaClientFactory.getApiContext as jest.Mock).mockResolvedValue({
         favaApiClient: {
           ledgers: {
-            listLedgers: jest.fn().mockResolvedValue({
+            listUserLedgers: jest.fn().mockResolvedValue({
               data: { success: true, data: [] },
             }),
           },
@@ -290,7 +296,7 @@ describe("AccountService", () => {
       (mockFavaClientFactory.getApiContext as jest.Mock).mockResolvedValue({
         favaApiClient: {
           ledgers: {
-            listLedgers: jest.fn().mockResolvedValue({
+            listUserLedgers: jest.fn().mockResolvedValue({
               data: { success: true, data: [] },
             }),
           },
@@ -381,7 +387,7 @@ describe("AccountService", () => {
       (mockFavaClientFactory.getApiContext as jest.Mock).mockResolvedValue({
         favaApiClient: {
           ledgers: {
-            listLedgers: jest.fn().mockResolvedValue({
+            listUserLedgers: jest.fn().mockResolvedValue({
               data: { success: false, data: null },
             }),
           },
@@ -415,7 +421,7 @@ describe("AccountService", () => {
       (mockFavaClientFactory.getApiContext as jest.Mock).mockResolvedValue({
         favaApiClient: {
           ledgers: {
-            listLedgers: jest.fn().mockResolvedValue({
+            listUserLedgers: jest.fn().mockResolvedValue({
               data: {
                 success: true,
                 data: [
@@ -424,12 +430,6 @@ describe("AccountService", () => {
                     name: "my-ledger",
                     full_name: "johndoe/my-ledger",
                     permissions: { admin: true, pull: true, push: true },
-                  },
-                  {
-                    id: 2,
-                    name: "other-ledger",
-                    full_name: "otheruser/other-ledger",
-                    permissions: { admin: false, pull: true, push: false },
                   },
                 ],
               },
@@ -445,6 +445,46 @@ describe("AccountService", () => {
       );
 
       expect(result!.limits.ledgersUsed).toBe(1);
+    });
+
+    it("counts the owner's own ledgers on every page, not only the first", async () => {
+      const userId = "user-123";
+      mockModels.user.getById = jest.fn().mockResolvedValue({
+        _id: "507f1f77bcf86cd799439011",
+        id: userId,
+        email: "test@example.com",
+        ledger_username: "johndoe",
+        ledger_password: "password",
+      });
+      // 145 owned ledgers: pages of 50, 50 and 45.
+      const all = Array.from({ length: 145 }, (_, i) => ({
+        full_name: `johndoe/books-${i}`,
+      }));
+      const listUserLedgers = jest.fn(
+        (_owner: string, { page, limit }: { page: number; limit: number }) =>
+          Promise.resolve({
+            data: {
+              success: true,
+              data: all.slice((page - 1) * limit, page * limit),
+            },
+          }),
+      );
+      (mockFavaClientFactory.getApiContext as jest.Mock).mockResolvedValue({
+        favaApiClient: { ledgers: { listUserLedgers } },
+        favaUser: { username: "johndoe", password: "password" },
+      });
+
+      const result = await accountService.getUserProfile(
+        identity(userId),
+        userId,
+      );
+
+      expect(result!.limits.ledgersUsed).toBe(145);
+      expect(listUserLedgers).toHaveBeenCalledTimes(3);
+      expect(listUserLedgers).toHaveBeenCalledWith("johndoe", {
+        page: 3,
+        limit: 50,
+      });
     });
   });
 
@@ -475,6 +515,83 @@ describe("AccountService", () => {
         expect.any(Object),
         userId,
       );
+    });
+
+    // A deleted account's OAuth refresh tokens used to keep minting access
+    // tokens: the provider's findAccount answers for a user that is gone
+    // (w0/054). They are now revoked with the sessions.
+    it("revokes the user's OAuth grants in the deletion transaction", async () => {
+      const userId = "user-123";
+      mockModels.user.getById = jest
+        .fn()
+        .mockResolvedValue({ email: "test@example.com", ledger_username: "t" });
+
+      await accountService.deleteAccount(identity(userId));
+
+      const [tx] = mockModels.jwt.deleteByUserId.mock.calls[0];
+      expect(mockModels.oauthGrant.revokeAllForUser).toHaveBeenCalledWith(
+        tx,
+        userId,
+      );
+      expect(mockModels.user.deleteByUserId).toHaveBeenCalledWith(tx, userId);
+    });
+
+    // w21/157: Stripe and Plaid ran before the purge, so a failed purge left
+    // a live account with its subscription cancelled and its banks unlinked.
+    it("touches neither billing nor banks when the ledger purge fails", async () => {
+      const userId = "user-123";
+      mockModels.user.getById = jest
+        .fn()
+        .mockResolvedValue({ email: "test@example.com", ledger_username: "t" });
+      mockModels.paidCustomer.findByUserId = jest
+        .fn()
+        .mockResolvedValue([{ userId, clientId: "client_123" }]);
+      mockStripe.listSubscriptions.mockResolvedValue([
+        { id: "sub_123", clientId: "client_123", status: "active" } as any,
+      ]);
+      mockModels.plaidItem.getByUserId = jest
+        .fn()
+        .mockResolvedValue([{ id: "item_1", accessToken: "x" }]);
+      const admin = mockFavaClientFactory.getAdminClient().admin;
+      (admin.deleteUser as jest.Mock).mockRejectedValue(
+        new Error("Ledger service unavailable"),
+      );
+
+      await expect(
+        accountService.deleteAccount(identity(userId)),
+      ).rejects.toThrow("Ledger service unavailable");
+      expect(mockStripe.deleteSubscription).not.toHaveBeenCalled();
+      expect(mockPlaidClient.removeItem).not.toHaveBeenCalled();
+      expect(mockModels.user.deleteByUserId).not.toHaveBeenCalled();
+    });
+
+    it("completes a retry whose purge already happened (404)", async () => {
+      const userId = "user-123";
+      mockModels.user.getById = jest
+        .fn()
+        .mockResolvedValue({ email: "test@example.com", ledger_username: "t" });
+      const admin = mockFavaClientFactory.getAdminClient().admin;
+      (admin.deleteUser as jest.Mock).mockRejectedValue(
+        Object.assign(new Error("Not Found"), { status: 404 }),
+      );
+
+      await expect(
+        accountService.deleteAccount(identity(userId)),
+      ).resolves.toBe(true);
+      expect(mockModels.user.deleteByUserId).toHaveBeenCalled();
+    });
+
+    // w21/156: `api_keys` has no foreign key, so nothing cascaded.
+    it("deletes the user's API keys in the deletion transaction", async () => {
+      const userId = "user-123";
+      mockModels.user.getById = jest
+        .fn()
+        .mockResolvedValue({ email: "test@example.com", ledger_username: "t" });
+
+      await accountService.deleteAccount(identity(userId));
+
+      const [tx] = mockModels.jwt.deleteByUserId.mock.calls[0];
+      expect(mockModels.apiKey.deleteByUserId).toHaveBeenCalledWith(tx, userId);
     });
 
     it("should throw error if user not found", async () => {

@@ -5,6 +5,7 @@ import { executeEditLedgerFiles } from "../edit-ledger-files-tool";
 import { MCP_TOOLS } from "../../api/mcp-tools";
 import { VERB_TABLE } from "@/server/api/op-class";
 import type { Identity } from "@/server/api/identity";
+import { ConflictError } from "@/shared/errors";
 
 /**
  * Direct coverage of the four ADR-0006 tool executors' own logic (line
@@ -60,11 +61,25 @@ describe("executeBqlQuery", () => {
 });
 
 describe("executeListLedgerFiles", () => {
-  it("narrows service entries to {path, type} for the tool's output schema", async () => {
+  it("returns the listing's name, size, sha and last commit with each entry", async () => {
     const ledgerRepo = {
       listDirContent: jest.fn().mockResolvedValue([
-        { path: "main.bean", name: "main.bean", type: "file" },
-        { path: "sub", name: "sub", type: "dir" },
+        {
+          path: "main.bean",
+          name: "main.bean",
+          type: "file",
+          size: 12,
+          sha: "abc",
+          lastCommitSha: "c1",
+        },
+        {
+          path: "sub",
+          name: "sub",
+          type: "dir",
+          size: 0,
+          sha: "def",
+          lastCommitSha: null,
+        },
       ]),
     };
     const result = await executeListLedgerFiles(
@@ -78,8 +93,22 @@ describe("executeListLedgerFiles", () => {
     expect(result).toEqual({
       ok: true,
       result: [
-        { path: "main.bean", type: "file" },
-        { path: "sub", type: "dir" },
+        {
+          path: "main.bean",
+          name: "main.bean",
+          type: "file",
+          size: 12,
+          sha: "abc",
+          lastCommitSha: "c1",
+        },
+        {
+          path: "sub",
+          name: "sub",
+          type: "dir",
+          size: 0,
+          sha: "def",
+          lastCommitSha: null,
+        },
       ],
     });
   });
@@ -146,6 +175,7 @@ describe("executeReadLedgerFiles", () => {
           startLine: 1,
           endLine: 3,
           totalLines: 3,
+          sha: "sha1",
           content: "line1\nline2\nline3",
         },
       ],
@@ -205,6 +235,7 @@ describe("executeReadLedgerFiles", () => {
           startLine: 3,
           endLine: 3,
           totalLines: 3,
+          sha: "sha1",
           content: "line3",
         },
       ],
@@ -230,6 +261,73 @@ describe("executeReadLedgerFiles", () => {
         totalLines: 4,
       });
     }
+  });
+
+  // w23/005: a trailing newline ends the last line; it is not a line of its
+  // own. The count matches `wc -l`, and a full read is still byte-identical.
+  describe("a file that ends in a newline", () => {
+    const TERMINATED = "line1\nline2\nline3\n";
+    const read = (file: {
+      path: string;
+      start_line?: number;
+      end_line?: number;
+    }) =>
+      executeReadLedgerFiles(
+        {
+          services: { ledgerRepo: serviceReturning(TERMINATED) } as any,
+          identity: IDENTITY,
+          ledgerId: LEDGER_ID,
+        },
+        { files: [file] },
+      );
+
+    it("counts the lines wc -l counts and returns the bytes unchanged", async () => {
+      expect(await read({ path: "main.bean" })).toEqual({
+        ok: true,
+        result: [
+          {
+            path: "main.bean",
+            startLine: 1,
+            endLine: 3,
+            totalLines: 3,
+            sha: "sha1",
+            content: TERMINATED,
+          },
+        ],
+      });
+    });
+
+    it("refuses a start on the phantom line after the final newline", async () => {
+      expect(await read({ path: "main.bean", start_line: 4 })).toMatchObject({
+        ok: false,
+        errorCode: "BAD_USER_INPUT",
+        error: expect.stringContaining("past the end of the file (3 lines)"),
+      });
+    });
+
+    it("keeps the terminator only on a slice that reaches the end", async () => {
+      const middle = await read({
+        path: "main.bean",
+        start_line: 2,
+        end_line: 2,
+      });
+      const tail = await read({
+        path: "main.bean",
+        start_line: 2,
+        end_line: 99,
+      });
+      expect(middle.ok && middle.result[0]).toMatchObject({
+        startLine: 2,
+        endLine: 2,
+        content: "line2",
+      });
+      expect(tail.ok && tail.result[0]).toMatchObject({
+        startLine: 2,
+        endLine: 3,
+        totalLines: 3,
+        content: "line2\nline3\n",
+      });
+    });
   });
 
   it("fails the whole call when a requested path is missing from the response", async () => {
@@ -287,6 +385,7 @@ describe("executeReadLedgerFiles", () => {
           startLine: 1,
           endLine: 1,
           totalLines: 1,
+          sha: "sha1",
           content: "content",
         },
       ],
@@ -295,6 +394,205 @@ describe("executeReadLedgerFiles", () => {
 });
 
 describe("executeEditLedgerFiles", () => {
+  // w23/017: two agents editing one file at once. The loser used to report
+  // SERVICE_UNAVAILABLE; its exact-text edit now lands on the winner's text.
+  describe("after losing a concurrent commit", () => {
+    function racingRepo(winner: (text: string) => string) {
+      let remote = "; a\n; b\n";
+      let commits = 0;
+      const ledgerRepo = {
+        getFilesContent: jest.fn(async () => [
+          { path: "race.bean", content: remote, sha: `sha-${remote}` },
+        ]),
+        changeFiles: jest.fn(
+          async ({
+            operations,
+          }: {
+            operations: Array<{ content?: string }>;
+          }) => {
+            commits += 1;
+            if (commits === 1) {
+              remote = winner(remote);
+              throw new ConflictError(
+                "Ledger resource",
+                "the ledger changed under a concurrent write; re-read it and retry",
+              );
+            }
+            remote = operations[0]!.content!;
+          },
+        ),
+      };
+      const services = {
+        ledgerRepo,
+        ledgerData: { getErrors: jest.fn().mockResolvedValue([]) },
+      };
+      return { services, ledgerRepo, remote: () => remote };
+    }
+    const edit = (services: unknown, file: Record<string, unknown>) =>
+      executeEditLedgerFiles(
+        { services: services as any, identity: IDENTITY, ledgerId: LEDGER_ID },
+        { description: "edit", files: [file as any], dry_run: false },
+      );
+
+    it("re-reads and re-applies an exact-text edit", async () => {
+      const repo = racingRepo((text) => text.replace("; a\n", "; 0\n"));
+      const result = await edit(repo.services, {
+        operation: "update",
+        path: "race.bean",
+        old_string: "; b\n",
+        new_string: "; 1\n",
+      });
+      expect(result.ok).toBe(true);
+      expect(repo.ledgerRepo.changeFiles).toHaveBeenCalledTimes(2);
+      expect(repo.remote()).toBe("; 0\n; 1\n");
+    });
+
+    it("reports the edit's own text as gone when the winner removed it", async () => {
+      const repo = racingRepo((text) => text.replace("; b\n", "; B\n"));
+      const result = await edit(repo.services, {
+        operation: "update",
+        path: "race.bean",
+        old_string: "; b\n",
+        new_string: "; 1\n",
+      });
+      expect(result).toMatchObject({ ok: false, errorCode: "BAD_USER_INPUT" });
+      expect(repo.remote()).toBe("; a\n; B\n");
+    });
+
+    it("does not re-apply a whole-file replace over the winner's change", async () => {
+      const repo = racingRepo((text) => text.replace("; a\n", "; 0\n"));
+      const result = await edit(repo.services, {
+        operation: "replace",
+        path: "race.bean",
+        content: "; z\n",
+      });
+      expect(result).toMatchObject({ ok: false, errorCode: "CONFLICT" });
+      expect(repo.ledgerRepo.changeFiles).toHaveBeenCalledTimes(1);
+      expect(repo.remote()).toBe("; 0\n; b\n");
+    });
+
+    it("gives the conflict back after three lost commits", async () => {
+      const ledgerRepo = {
+        getFilesContent: jest.fn(async () => [
+          { path: "race.bean", content: "; a\n", sha: "sha" },
+        ]),
+        changeFiles: jest.fn(async () => {
+          throw new ConflictError("Ledger resource", "concurrent write");
+        }),
+      };
+      const result = await edit(
+        {
+          ledgerRepo,
+          ledgerData: { getErrors: jest.fn().mockResolvedValue([]) },
+        },
+        {
+          operation: "update",
+          path: "race.bean",
+          old_string: "; a\n",
+          new_string: "; 1\n",
+        },
+      );
+      expect(result).toMatchObject({ ok: false, errorCode: "CONFLICT" });
+      expect(ledgerRepo.changeFiles).toHaveBeenCalledTimes(3);
+    });
+  });
+
+  // w23/028: the in-product agent's combined tool can mix kinds of change to
+  // one path; each path still reaches the commit as a single operation.
+  describe("several changes to one path", () => {
+    const run = (existing: Record<string, string>, files: unknown[]) => {
+      const ledgerRepo = {
+        getFilesContent: jest.fn(async ({ paths }: { paths: string[] }) =>
+          paths
+            .filter((path) => path in existing)
+            .map((path) => ({
+              path,
+              content: existing[path]!,
+              sha: `sha-${path}`,
+            })),
+        ),
+        changeFiles: jest.fn().mockResolvedValue(undefined),
+      };
+      const result = executeEditLedgerFiles(
+        {
+          services: { ledgerRepo } as any,
+          identity: IDENTITY,
+          ledgerId: LEDGER_ID,
+        },
+        { description: "edit", files: files as any, dry_run: false },
+      );
+      return { ledgerRepo, result };
+    };
+    const committed = (ledgerRepo: { changeFiles: jest.Mock }) =>
+      ledgerRepo.changeFiles.mock.calls[0]![0].operations;
+
+    it("creates a new file with the edits that follow its creation", async () => {
+      const { ledgerRepo, result } = run({}, [
+        { operation: "create", path: "new.bean", content: "; a\n; b\n" },
+        {
+          operation: "update",
+          path: "new.bean",
+          old_string: "; b",
+          new_string: "; c",
+        },
+      ]);
+      expect(await result).toMatchObject({ ok: true, result: { count: 1 } });
+      expect(committed(ledgerRepo)).toEqual([
+        { operation: "create", path: "new.bean", content: "; a\n; c\n" },
+      ]);
+    });
+
+    it("overwrites an existing file that is deleted and created again", async () => {
+      const { ledgerRepo, result } = run({ "main.bean": "; old\n" }, [
+        { operation: "delete", path: "main.bean" },
+        { operation: "create", path: "main.bean", content: "; new\n" },
+      ]);
+      expect(await result).toMatchObject({ ok: true });
+      expect(committed(ledgerRepo)).toEqual([
+        {
+          operation: "update",
+          path: "main.bean",
+          content: "; new\n",
+          sha: "sha-main.bean",
+        },
+      ]);
+    });
+
+    it.each([
+      [
+        [
+          { operation: "delete", path: "main.bean" },
+          {
+            operation: "update",
+            path: "main.bean",
+            old_string: "a",
+            new_string: "b",
+          },
+        ],
+        "changed after it is deleted",
+      ],
+      [
+        [
+          { operation: "create", path: "n.bean", content: "x" },
+          { operation: "delete", path: "n.bean" },
+        ],
+        "created and deleted",
+      ],
+    ])(
+      "refuses a sequence that cannot fold, before any request",
+      async (files, problem) => {
+        const { ledgerRepo, result } = run({ "main.bean": "a" }, files);
+        expect(await result).toMatchObject({
+          ok: false,
+          errorCode: "BAD_USER_INPUT",
+          error: expect.stringContaining(problem),
+        });
+        expect(ledgerRepo.getFilesContent).not.toHaveBeenCalled();
+        expect(ledgerRepo.changeFiles).not.toHaveBeenCalled();
+      },
+    );
+  });
+
   it("create: base64-encodes content and never fetches existing content", async () => {
     const ledgerRepo = {
       getFilesContent: jest.fn(),
@@ -588,7 +886,7 @@ describe("executeEditLedgerFiles", () => {
         diff: [
           {
             path: "main.bean",
-            diff: "--- a/main.bean\n+++ b/main.bean\n@@ -1,1 +1,1 @@\n-abc\n+aBc\n",
+            diff: "--- a/main.bean\n+++ b/main.bean\n@@ -1,1 +1,1 @@\n-abc\n\\ No newline at end of file\n+aBc\n\\ No newline at end of file\n",
           },
         ],
         summary:
@@ -644,7 +942,7 @@ describe("executeEditLedgerFiles", () => {
         diff: [
           {
             path: "main.bean",
-            diff: "--- a/main.bean\n+++ b/main.bean\n@@ -1,1 +1,1 @@\n-abc\n+aBc\n",
+            diff: "--- a/main.bean\n+++ b/main.bean\n@@ -1,1 +1,1 @@\n-abc\n\\ No newline at end of file\n+aBc\n\\ No newline at end of file\n",
           },
         ],
         summary:
@@ -701,7 +999,7 @@ describe("executeEditLedgerFiles", () => {
         diff: [
           {
             path: "gone.bean",
-            diff: "--- a/gone.bean\n+++ b/gone.bean\n@@ -1,1 +0,0 @@\n-bye\n",
+            diff: "--- a/gone.bean\n+++ b/gone.bean\n@@ -1,1 +0,0 @@\n-bye\n\\ No newline at end of file\n",
           },
         ],
         summary:
@@ -884,7 +1182,7 @@ describe("MCP tool annotations", () => {
       "setLedgerCollaborator",
       "removeLedgerCollaborator",
       "leaveLedger",
-      "approvePullRequest",
+      "mergePullRequest",
       "rejectPullRequest",
       "discardStagedBankTransactions",
       "reconcileBankAccounts",
@@ -903,8 +1201,8 @@ describe("MCP tool annotations", () => {
 
   it("gives each per-operation tool the hints ADR 019 decided on 2026-10-18", () => {
     // The amendment's table: overwriting, deleting, merging, closing, and
-    // revoking access are destructive; a tool that reaches the bank is open
-    // world. Directory reviewers check these against the behavior, so a hint
+    // revoking access are destructive; a tool that reaches the bank, or can
+    // publish a ledger to anyone (w1/174), is open world. Directory reviewers check these against the behavior, so a hint
     // changes only with the decision.
     const decided: [string, { destructive: boolean; openWorld: boolean }][] = [
       ["createLedgerFiles", { destructive: false, openWorld: false }],
@@ -928,10 +1226,10 @@ describe("MCP tool annotations", () => {
       ["refreshBankConnection", { destructive: false, openWorld: true }],
       ["unlinkBankConnection", { destructive: true, openWorld: true }],
       ["createPullRequest", { destructive: false, openWorld: false }],
-      ["approvePullRequest", { destructive: true, openWorld: false }],
+      ["mergePullRequest", { destructive: true, openWorld: false }],
       ["rejectPullRequest", { destructive: true, openWorld: false }],
-      ["createLedger", { destructive: false, openWorld: false }],
-      ["updateLedger", { destructive: true, openWorld: false }],
+      ["createLedger", { destructive: false, openWorld: true }],
+      ["updateLedger", { destructive: true, openWorld: true }],
       ["deleteLedger", { destructive: true, openWorld: false }],
       ["setLedgerCollaborator", { destructive: true, openWorld: false }],
       ["removeLedgerCollaborator", { destructive: true, openWorld: false }],

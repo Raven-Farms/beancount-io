@@ -96,6 +96,11 @@ export const writeValidationSchema = z.object({
   errorsBefore: z.number().int(),
   errorsAfter: z.number().int(),
   newErrors: z.array(beanCheckErrorSchema),
+  checked: z
+    .literal(false)
+    .optional()
+    .describe("Present when bean-check could not run; see checkError"),
+  checkError: z.string().optional(),
 });
 
 export const wroteFileSchema = z.object({

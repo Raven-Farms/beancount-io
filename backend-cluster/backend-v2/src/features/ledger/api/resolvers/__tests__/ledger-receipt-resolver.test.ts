@@ -178,8 +178,10 @@ describe("s3 receipt storage strategy — temp cleanup ordering", () => {
   beforeEach(() => {
     order.length = 0;
     addBulkEntries.mockReset();
-    addBulkEntries.mockImplementation(async () => {
-      order.push("write");
+    // `writeBulkEntries(…, dryRun)`: the entry is checked with a dry run
+    // before the receipt is promoted (w23/058).
+    addBulkEntries.mockImplementation(async (...args: unknown[]) => {
+      order.push(args[6] === true ? "check" : "write");
       return { success: true };
     });
     copyTempToPermanent.mockReset();
@@ -208,11 +210,14 @@ describe("s3 receipt storage strategy — temp cleanup ordering", () => {
       identity: sessionIdentity,
     });
 
-    expect(order).toEqual(["copy", "write", "delete"]);
+    expect(order).toEqual(["check", "copy", "write", "delete"]);
   });
 
   it("does NOT delete the temp asset when the ledger write fails (retry stays safe)", async () => {
-    addBulkEntries.mockRejectedValue(new Error("ledger write failed"));
+    addBulkEntries.mockImplementation(async (...args: unknown[]) => {
+      if (args[6] === true) return { success: true };
+      throw new Error("ledger write failed");
+    });
     const workflow = makeWorkflow({
       bcioData: undefined,
       addBulkEntries,
@@ -230,6 +235,28 @@ describe("s3 receipt storage strategy — temp cleanup ordering", () => {
     ).rejects.toThrow("ledger write failed");
 
     expect(copyTempToPermanent).toHaveBeenCalledTimes(1);
+    expect(deleteTempAsset).not.toHaveBeenCalled();
+  });
+
+  it("promotes nothing when the entry check refuses (w23/058)", async () => {
+    addBulkEntries.mockRejectedValue(new Error("unbalanced"));
+    const workflow = makeWorkflow({
+      bcioData: undefined,
+      addBulkEntries,
+      copyTempToPermanent,
+      deleteTempAsset,
+    });
+
+    await expect(
+      workflow.insertReceiptTransaction({
+        ledgerId: "owner/ledger",
+        receiptObjectKey: "tmp/user_1/2026-06-18-r.pdf",
+        input: baseInput,
+        identity: sessionIdentity,
+      }),
+    ).rejects.toThrow();
+
+    expect(copyTempToPermanent).not.toHaveBeenCalled();
     expect(deleteTempAsset).not.toHaveBeenCalled();
   });
 });

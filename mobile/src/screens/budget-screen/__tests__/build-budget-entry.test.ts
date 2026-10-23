@@ -98,6 +98,22 @@ describe("buildBudgetEntry", () => {
       ).toBe("500");
     });
 
+    // w21/302: a negative amount reads as an income target, so an Expenses cap
+    // typed "-500" showed always red and "0% used".
+    it("stores a spending cap positive whatever sign was typed", () => {
+      const expense = { ...base, incomeRoot: "Income" };
+      for (const typed of ["-500", "+500", "500"]) {
+        const number = buildBudgetEntry({ ...expense, number: typed }).budget
+          ?.amount.number;
+        expect(number).toBe("500");
+        expect(budgetDirection(Number(number))).toBe(1);
+      }
+      expect(
+        buildBudgetEntry({ ...expense, number: "-1234.50" }).budget?.amount
+          .number,
+      ).toBe("1234.50");
+    });
+
     it("leaves expense budgets, and any budget without a known root, as typed", () => {
       expect(
         buildBudgetEntry({ ...base, incomeRoot: "Income" }).budget?.amount
@@ -125,17 +141,36 @@ describe("isBudgetAmount", () => {
     for (const text of [
       "12..3",
       "abc",
-      "1 000",
-      "1,000",
+      "1,23,4",
       "$500",
       "1e3",
-      ".5",
       "12.",
+      "1.2.3,4",
       "-",
       "",
       "   ",
     ]) {
       expect(isBudgetAmount(text)).toBe(false);
+    }
+  });
+
+  // w21/514: a German "49,99" was refused although New Transaction accepts it.
+  it("reads the decimal comma and the grouping New Transaction reads", () => {
+    const written = (number: string) =>
+      buildBudgetEntry({
+        account: "Expenses:Food",
+        interval: "MONTHLY",
+        number,
+        currency: "EUR",
+        date: new Date(2026, 9, 22),
+      }).budget?.amount.number;
+    expect(written("49,99")).toBe("49.99");
+    expect(written("1,234.56")).toBe("1234.56");
+    expect(written("1.234,56")).toBe("1234.56");
+    expect(written("1 234,56")).toBe("1234.56");
+    expect(written(".5")).toBe("0.5");
+    for (const text of ["49,99", "1,234.56", "1.234,56", ".5"]) {
+      expect(isBudgetAmount(text)).toBe(true);
     }
   });
 
@@ -157,5 +192,37 @@ describe("isBudgetAmount", () => {
     expect(guard?.[0].includes("amountOk")).toBe(true);
     expect(guard?.[0].includes("amount.trim().length > 0")).toBe(false);
     expect(source.includes('{t("budgetAmountInvalid")}')).toBe(true);
+  });
+});
+
+// w21/392: Add Budget's amount check was ASCII-only, so ۵۰۰ was refused although
+// New Transaction accepts it.
+describe("a budget amount typed with other keyboards' digits", () => {
+  it("is accepted as an amount", () => {
+    for (const text of ["۵۰۰", "٥٠٠", "５００", "۵۰۰٫۵۰", "-۵۰۰", " ۱۲۳ "]) {
+      expect(isBudgetAmount(text)).toBe(true);
+    }
+  });
+
+  it("still refuses what is not a number", () => {
+    for (const text of ["۵۰۰abc", "۵۰۰٫", "12..3"]) {
+      expect(isBudgetAmount(text)).toBe(false);
+    }
+  });
+
+  it("is written to the ledger as ASCII, with the sign rules unchanged", () => {
+    const entry = (number: string, account: string) =>
+      buildBudgetEntry({
+        account,
+        interval: "monthly",
+        number,
+        currency: "usd",
+        date: new Date(2026, 9, 21),
+        incomeRoot: "Income",
+      }).budget?.amount.number;
+    expect(entry("۵۰۰", "Expenses:Food")).toBe("500");
+    expect(entry("٥٠٠٫٥", "Expenses:Food")).toBe("500.5");
+    expect(entry("-۵۰۰", "Expenses:Food")).toBe("500");
+    expect(entry("۵۰۰", "Income:Salary")).toBe("-500");
   });
 });

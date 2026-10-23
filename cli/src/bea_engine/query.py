@@ -31,19 +31,21 @@ import difflib
 import json
 import os
 import re
+import shlex
 import stat
 import sys
 import unicodedata
 import warnings
 from collections.abc import Callable, Hashable, Iterator, Mapping
 from contextlib import contextmanager
+from contextvars import ContextVar
 from decimal import Decimal, DecimalException, InvalidOperation, localcontext
 from functools import cache, partial
 from pathlib import Path
 from typing import Any, TextIO, get_origin
 
 from bea_engine import protocol, stopping
-from bea_engine.paths import expand_path
+from bea_engine.paths import expand_path, is_descriptor_path
 
 LEDGER_DSN = "beancount:"
 """A pathless beanquery DSN: the source attaches the entries handed to it instead of loading a file."""
@@ -163,12 +165,60 @@ def load(file: Path) -> dict[str, Any]:
     return {"entries": entries, "errors": errors, "options": options}
 
 
+def _settle_price_map(connection: Any) -> None:
+    """Replace the connection's price map with the shared settlement rule.
+
+    `beanquery` builds it with Beancount's whole-ledger counts, so a later
+    quote valued an earlier conversion there even once the reports stopped
+    doing it (w5/740). The prices table keeps its raw entries; only the map
+    conversions read is replaced.
+    """
+    from bea_engine.ledger.prices import settled_bql_price_map
+
+    table = connection.tables["prices"]
+    table.price_map = settled_bql_price_map(table.entries)
+
+
 def connect(file: Path) -> Any:
     """A beanquery connection on the exact ledger file, includes and load errors intact."""
     import beanquery
 
     _null_safe_ordering()
-    return beanquery.connect(LEDGER_DSN, **load(file))
+    connection = beanquery.connect(LEDGER_DSN, **load(file))
+    _settle_price_map(connection)
+    return connection
+
+
+class _Orderable:
+    """A sort key that compares natively, and across types by `str()`.
+
+    Metadata mixes types (`ref: "A-12"` beside `ref: 5`), and `ORDER BY` on
+    it raised a bare TypeError once same-type rows stopped proving the
+    column uniform (w5/760). Same-type pairs keep their native order; only a
+    pair Python cannot compare falls back to its text, which is the
+    `ORDER BY str(...)` control's order.
+    """
+
+    __slots__ = ("value",)
+
+    def __init__(self, value: Any) -> None:
+        self.value = value
+
+    def __eq__(self, other: Any) -> bool:
+        if not isinstance(other, _Orderable):
+            return NotImplemented
+        try:
+            return bool(self.value == other.value)
+        except TypeError:
+            return str(self.value) == str(other.value)
+
+    def __lt__(self, other: Any) -> bool:
+        if not isinstance(other, _Orderable):
+            return NotImplemented
+        try:
+            return bool(self.value < other.value)
+        except TypeError:
+            return str(self.value) < str(other.value)
 
 
 def _null_safe_ordering() -> None:
@@ -187,7 +237,7 @@ def _null_safe_ordering() -> None:
         return
 
     def present(value: Any) -> tuple[bool, Any]:
-        return (False, 0) if value is None else (True, value)
+        return (False, 0) if value is None else (True, _Orderable(value))
 
     def nullitemgetter(item: int, *items: int) -> Callable[[Any], Any]:
         if items:
@@ -199,6 +249,19 @@ def _null_safe_ordering() -> None:
     query_execute.nullitemgetter = nullitemgetter
 
 
+#: The command a printed `.tables` or `.help` remedy runs: the ledger and mode
+#: the query was about. A bare `bea query .tables` failed "No ledger file"
+#: when pasted, or lost `--json` (w5/838).
+_REMEDY: ContextVar[Callable[[], str]] = ContextVar("bea_query_remedy", default=lambda: "bea query")
+
+
+def _remedy_for(file: Path, *, json_mode: bool) -> str:
+    from bea_engine.ledger.text import bea_command
+
+    prefix = bea_command(file)
+    return f"{prefix.replace('bea', 'bea --json', 1) if json_mode else prefix} query"
+
+
 def rows_answer(
     file: Path, query_string: str, *, allow_errors: bool = False, numberify: bool = False
 ) -> dict[str, Any]:
@@ -207,6 +270,8 @@ def rows_answer(
     The rows are JSON-ready: amounts as strings, a lot keeping the acquisition
     date and label that tell it from another lot at the same price.
     """
+    # Built only when a hint is printed: a query that succeeds asks nothing of the cwd.
+    _REMEDY.set(lambda: _remedy_for(file, json_mode=True))
     conn = connect(file)
     errors = _gate([format_error(error, ledger_file=file) for error in conn.errors], allow_errors, file)
     cursor = _executed(conn, query_string, conn.execute, errors, file=file)
@@ -242,6 +307,7 @@ def text_answer(
     that renders: `bea` decides whether a ledger with errors may answer at all,
     and it cannot unprint a table.
     """
+    _REMEDY.set(lambda: _remedy_for(file, json_mode=False))
     import io
 
     output_spelling = output
@@ -454,6 +520,25 @@ def _native_shell(source: str, *, interactive: bool, format: str, numberify: boo
             raise protocol.UsageError(
                 f"{kind[0].upper()}{kind[1:]} path '{file}' (from --source) is a directory; expected a {kind} file."
             )
+        if is_descriptor_path(parts.path):
+            # The frontend refuses first; this is the path the loader really
+            # gets, and a descriptor is not one it can open (w5/792).
+            label = "Ledger" if parts.scheme == "beancount" else "CSV"
+            raise protocol.UsageError(
+                f"{label} path '{file}' (from --source) is a file descriptor, not a file. "
+                "Save it to a file and pass that file."
+            )
+        if parts.scheme == "beancount":
+            # The loader runs `expandvars` on the root path, so a `$VAR` here
+            # silently read another ledger (w5/791). The frontend refuses
+            # first; this is the path the loader really gets.
+            expanded = os.path.expandvars(str(file))
+            if expanded != str(file):
+                raise protocol.UsageError(
+                    f"Ledger path '{file}' (from --source) contains an environment variable that Beancount "
+                    f"would expand, reading '{expanded}' instead. "
+                    "Rename the file or directory without '$', or unset that variable."
+                )
     if parts.scheme == "beancount":
         from beancount import loader
 
@@ -522,8 +607,7 @@ def _native_shell(source: str, *, interactive: bool, format: str, numberify: boo
 
         def do_describe(self, arg: str) -> None:
             """Describe table or structured type."""
-            _split_dot_arguments("describe", arg)
-            super().do_describe(arg)
+            _describe_table(self, arg)
 
         def do_set(self, arg: str) -> None:
             """Set shell settings variables."""
@@ -558,6 +642,8 @@ def _native_shell(source: str, *, interactive: bool, format: str, numberify: boo
 
         def execute(self, query: Any, **kwargs: Any) -> Any:
             self.ran_query = True
+            # Bea-only, so popped before upstream sees it (see PreciseShell).
+            kwargs.pop("stored_name", None)
             statement = query if isinstance(query, str) else ""
             if statement:
                 _refuse_statement_tail(statement)
@@ -747,6 +833,7 @@ def native_one_shot(
     2. An `--output` export is written only after the query succeeds, so a
     refused query leaves an existing export as it was.
     """
+    _REMEDY.set(lambda: f"bea query --source {shlex.quote(source)}")
     import io
 
     shell = _native_shell(source, interactive=False, format=format, numberify=numberify, show_errors=show_errors)
@@ -792,8 +879,27 @@ def _run_stored(shell: Any, arg: str) -> None:
                 # One placeholder must not stop every other stored query answering.
                 protocol.note(f'Skipped stored query "{name}": its body is empty.')
                 continue
+            if shell.source_file is not None:
+                # The same window check `execute` runs, before the "name:"
+                # header: a skipped query leaves no header behind. Anything
+                # else — a broken query, a bare CLOSE — still stops the run,
+                # like a bad statement anywhere else.
+                try:
+                    _refuse_empty_window(
+                        _quote_reserved_tables(unicodedata.normalize("NFC", query.query_string)),
+                        [],
+                        file=shell.source_file,
+                        stored_on=query.date,
+                        stored_name=name,
+                    )
+                except protocol.EmptyStoredWindow:
+                    protocol.note(
+                        f'Skipped stored query "{name}": its window covers no days '
+                        f"(query directive dated {query.date})."
+                    )
+                    continue
             print(f"{name}:", file=shell.outfile)
-            shell.execute(query.query_string, default_close_date=query.date)
+            shell.execute(query.query_string, default_close_date=query.date, stored_name=name)
             print(file=shell.outfile)
             print(file=shell.outfile)
         return
@@ -827,7 +933,7 @@ def _run_stored(shell: Any, arg: str) -> None:
             f'stored query "{name}" has an empty body.',
             details=["Write its BQL between the second pair of quotes of the query directive."],
         )
-    shell.execute(query.query_string, default_close_date=query.date)
+    shell.execute(query.query_string, default_close_date=query.date, stored_name=name)
 
 
 def _stored_body_is_empty(body: str) -> bool:
@@ -837,6 +943,54 @@ def _stored_body_is_empty(body: str) -> bool:
     whitespace, neither of which says which directive to fix (w5/276).
     """
     return not _code_mask(body, literals=False).strip("; \t\r\n")
+
+
+def _describe_table(shell: Any, arg: str) -> None:
+    """`.describe`: what upstream prints, matched as `FROM` matches it.
+
+    Upstream looks `tables.get(name)` up case-sensitively and skips a miss in
+    silence — exit 0, no output — which reads as "no columns" (w5/749). A
+    name is matched against tables and structured types case-insensitively,
+    and one matching neither is a usage error naming it, like `.run` with a
+    missing name. Every name is checked before anything prints.
+    """
+    from beanquery import types
+
+    names = _split_dot_arguments("describe", arg)
+    tables = shell.context.tables
+    # The context also keys placeholders no name can spell; only real names
+    # fold or list.
+    table_names = [key for key in tables if isinstance(key, str) and key]
+    type_names = [key for key in types.TYPES if isinstance(key, str) and key]
+    lowered_tables = {key.lower(): key for key in table_names}
+    lowered_types = {key.lower(): key for key in type_names}
+    resolved = []
+    for name in names:
+        table = name if name in tables else lowered_tables.get(name.lower())
+        datatype = name if name in types.TYPES else lowered_types.get(name.lower())
+        if table is None and datatype is None:
+            raise protocol.UsageError(
+                f'cannot describe "{name}": no table or structured type by that name.',
+                details=[
+                    f"Tables: {', '.join(sorted(table_names))}.",
+                    f"Structured types: {', '.join(sorted(type_names))}.",
+                ],
+            )
+        resolved.append((name, table, datatype))
+    for name, table, datatype in resolved:
+        if table is not None:
+            print(f"table {name}:", file=shell.outfile)
+            print(_describe_columns(tables[table]), file=shell.outfile)
+        if datatype is not None:
+            print(f"structured type {name}:", file=shell.outfile)
+            print(_describe_columns(types.TYPES[datatype]), file=shell.outfile)
+
+
+def _describe_columns(obj: Any) -> str:
+    """The `name (dtype)` lines upstream's `.describe` prints for one object."""
+    from beanquery import types
+
+    return "\n".join(f"  {name} ({types.name(column.dtype)})" for name, column in obj.columns.items())
 
 
 def _split_dot_arguments(command: str, arg: str) -> list[str]:
@@ -870,7 +1024,7 @@ def _shell_error(shell: Any, message: str, report: Callable[[str], None]) -> Non
         return
     raise protocol.UsageError(
         f"Cannot run this shell command: {message}.",
-        details=["Run bea query .help to list the shell commands."],
+        details=[f"Run {_REMEDY.get()()} .help to list the shell commands."],
     )
 
 
@@ -968,13 +1122,43 @@ def decimal_failure(exc: ArithmeticError, *, native: bool) -> str:
                 "amount to twelve integer digits; query the ledger with --file to print larger ones."
             )
         return f"Decimal arithmetic failed while printing this query ({name}): an amount outgrew its display precision."
-    if isinstance(exc, InvalidOperation):
+    if isinstance(exc, InvalidOperation) and _non_finite_operand(exc):
         return (
             f"Decimal arithmetic failed while running this query ({name}): a NaN or infinite value cannot be "
             "ordered, compared or used in arithmetic. Filter it out with WHERE, for example "
             "WHERE str(<value>) NOT IN ('NaN', 'Infinity', '-Infinity')."
         )
+    if isinstance(exc, InvalidOperation):
+        # No NaN in sight: `round(number, 30)` or `decimal('1e30') % 7` needs
+        # more digits than the 28 the arithmetic keeps (w5/846).
+        return (
+            f"Decimal arithmetic failed while running this query ({name}): a result needs more than the 28 "
+            "significant digits the arithmetic keeps. Round to fewer places, or keep the numbers smaller."
+        )
     return f"Decimal arithmetic failed while running or printing this query ({name})."
+
+
+def _non_finite_operand(exc: BaseException) -> bool:
+    """Whether a NaN or an infinity is among the values the failing Python frames held.
+
+    The C decimal module raises from inside the operation, so the frames
+    above it hold its operands.
+    """
+    traceback = exc.__traceback__
+    while traceback is not None:
+        if any(_holds_non_finite(value, 3) for value in traceback.tb_frame.f_locals.values()):
+            return True
+        traceback = traceback.tb_next
+    return False
+
+
+def _holds_non_finite(value: Any, depth: int) -> bool:
+    """A non-finite Decimal in `value`, or in the rows and cells it holds: a sort's operands are cells of rows."""
+    if isinstance(value, Decimal):
+        return not value.is_finite()
+    if depth and isinstance(value, tuple | list):
+        return any(_holds_non_finite(item, depth - 1) for item in value)
+    return False
 
 
 def _display_overflow(exc: BaseException) -> bool:
@@ -1152,6 +1336,7 @@ def build_shell(
 
     class PreciseShell(BQLShell):  # type: ignore[misc]  # beanquery does not ship type annotations
         outfile: TextIO
+        source_file = file
         # The read policy for queries after a `.reload`. One-shot callers gate
         # the load themselves before executing, so only `interactive()` turns
         # this off, once the startup load has passed its own gate.
@@ -1207,6 +1392,7 @@ def build_shell(
             self.context.errors.clear()
             self.context.options.clear()
             self.context.attach(LEDGER_DSN, **loaded)
+            _settle_price_map(self.context)
             self._extract_queries(self.context.tables["entries"].entries)
             if self.context.errors and self.show_load_errors:
                 _print_load_errors(self.context.errors, sys.stderr)
@@ -1241,8 +1427,7 @@ def build_shell(
 
         def do_describe(self, arg: str) -> None:
             """Describe table or structured type."""
-            _split_dot_arguments("describe", arg)
-            super().do_describe(arg)
+            _describe_table(self, arg)
 
         def do_set(self, arg: str) -> None:
             """Set shell settings variables."""
@@ -1282,7 +1467,12 @@ def build_shell(
             if isinstance(query, str):
                 _refuse_statement_tail(query)
                 query = statement = _quote_reserved_tables(unicodedata.normalize("NFC", query))
-                _refuse_empty_window(query, [], file=file, stored_on=kwargs.get("default_close_date"))
+                # Bea-only, so popped before upstream sees it: `default_close_date`
+                # is upstream's own spelling, `stored_name` is not.
+                stored_name = kwargs.pop("stored_name", None)
+                _refuse_empty_window(
+                    query, [], file=file, stored_on=kwargs.get("default_close_date"), stored_name=stored_name
+                )
             return _compiled(
                 partial(super().execute, query, **kwargs),
                 statement,
@@ -1353,10 +1543,12 @@ def build_shell(
                         Column(column.name, str) if column.datatype in (dict, Metadata) else column
                         for column in description
                     ]
-                renderer = FORMATS[self.settings.format]
                 if self.settings.format == "text":
                     with _fixed_point_text():
-                        return renderer(description, rows, out, dcontext=dcontext, **self.settings.todict())
+                        return _render_text_display_width(
+                            description, rows, out, dcontext=dcontext, **self.settings.todict()
+                        )
+                renderer = FORMATS[self.settings.format]
                 return renderer(description, rows, out, dcontext=dcontext, **self.settings.todict())
 
         def on_Print(self, statement: Any) -> Any:  # noqa: N802 - beanquery dispatch name
@@ -1483,6 +1675,7 @@ _EXPORTED_OPTIONS = (
     *_ROOT_OPTIONS,
     "account_rounding",
     "booking_method",
+    "plugin_processing_mode",
     "tolerance_multiplier",
     "infer_tolerance_from_cost",
 )
@@ -1588,7 +1781,9 @@ def _render_beancount(rows: Any, out: TextIO, file: Path, options: Mapping[str, 
         if not (isinstance(entry, Transaction) and entry.flag == "P" and _source_location(entry) in pads)
     ]
     switches, restore = _export_root_changes(rows, options)
-    preamble = "".join(_option_lines(options))
+    # Only ahead of rows: an empty result is an empty file, as an empty
+    # `SELECT -o` writes, not a lone `option` line (w5/854).
+    preamble = "".join(_option_lines(options)) if rows else ""
     # `write` only: the interactive pager has no `writelines`.
     out.write(preamble)
     previous_type = type(rows[0][0]) if rows else None
@@ -1638,13 +1833,30 @@ def _render_csv(description: Any, rows: Any, out: TextIO, *, spreadsheet_safe: b
     import csv
 
     writer = csv.writer(out)
-    writer.writerow([column.name for column in description or ()])
+    header = [column.name for column in description or ()]
+    # A column name is text too: `-number`, or an alias `AS "=HYPERLINK(1)"` (w5/854).
+    writer.writerow([_inert_formula(name) for name in header] if spreadsheet_safe else header)
     for row in rows:
         cells = [_csv_cell(value) for value in row]
         if spreadsheet_safe:
+            # Every cell but a number or an amount: a tag set's joined cell
+            # (`-neg`) was written as it was, a `str` alone being checked (w5/854).
             pairs = zip(row, cells, strict=True)
-            cells = [_inert_formula(cell) if isinstance(value, str) else cell for value, cell in pairs]
+            cells = [cell if _keeps_its_sign(value) else _inert_formula(cell) for value, cell in pairs]
         writer.writerow(cells)
+
+
+def _keeps_its_sign(value: Any) -> bool:
+    """A number or an amount, whose leading `-` is its sign, not a formula."""
+    from decimal import Decimal
+
+    from beancount.core.amount import Amount
+    from beancount.core.inventory import Inventory
+    from beancount.core.position import Position
+
+    if isinstance(value, bool):
+        return False
+    return isinstance(value, Decimal | int | float | Amount | Position | Inventory)
 
 
 #: What a spreadsheet reads as the start of a formula (OWASP's CSV-injection list).
@@ -1740,6 +1952,128 @@ def _fixed_point_text() -> Iterator[None]:
         yield
     finally:
         query_render.RENDERERS.update(saved)
+
+
+def _renderer_for(datatype: Any, ctx: Any) -> Any:
+    """Upstream's renderer lookup: the nearest registered class up the MRO."""
+    import typing
+
+    from beanquery import query_render
+
+    datatype = typing.get_origin(datatype) or datatype
+    for klass in datatype.__mro__:
+        renderer = query_render.RENDERERS.get(klass)
+        if renderer is not None:
+            return renderer(ctx)
+    raise AssertionError(f"no renderer for {datatype!r}")  # `object` always registers
+
+
+def _rjust_columns(text: str, width: int) -> str:
+    """`str.rjust` measured in columns rather than code points."""
+    from cli.output import display_width
+
+    return " " * max(0, width - display_width(text)) + text
+
+
+def _render_text_display_width(
+    columns: Any,
+    rows: Any,
+    file: Any,
+    *,
+    dcontext: Any,
+    expand: bool = False,
+    boxed: bool = False,
+    spaced: bool = False,
+    listsep: str = "  ",
+    nullvalue: str = "",
+    narrow: bool = True,
+    unicode: bool = False,
+    **kwargs: Any,
+) -> None:
+    """Upstream's text table, measured and padded by display width (w5/751).
+
+    Upstream counts characters: a CJK payee drew twice the columns it
+    measured, so its row's numbers sat under the next column and the row ran
+    past the table. Widths come from the columns cells draw, and padding
+    fills to those widths; headers keep upstream's exact spelling, the
+    decimal renderer keeps aligning on the point, and every option
+    (`boxed`, `unicode`, `spaced`, `expand`) behaves as upstream. Only the
+    `--file` text table renders here; the `--source` shell keeps upstream's.
+    """
+    from beanquery.query_render import Align, RenderContext, render_rows
+
+    from cli.output import display_width
+    from cli.output import pad as _pad_columns
+
+    if not rows:
+        return
+    ctx = RenderContext(dcontext, expand=expand, spaced=spaced, listsep=listsep, null=nullvalue)
+    renderers = [_renderer_for(column.datatype, ctx) for column in columns]
+    headers = [column.name for column in columns]
+    alignment = [renderer.align for renderer in renderers]
+
+    # Prime the renderers.
+    for row in rows:
+        for value, renderer in zip(row, renderers, strict=True):
+            if value is not None:
+                renderer.update(value)
+
+    # Compute columns widths.
+    widths = [
+        max(1, narrow or display_width(header), display_width(nullvalue), render.prepare())
+        for header, render in zip(headers, renderers, strict=True)
+    ]
+    # Widen for what the renderers counted as one column per character: a
+    # second format pass costs no rows held.
+    for row in rows:
+        for index, (value, renderer) in enumerate(zip(row, renderers, strict=True)):
+            if value is None:
+                continue
+            formatted = renderer.format(value)
+            lines = formatted if isinstance(formatted, list) else [formatted]
+            for line in lines:
+                widths[index] = max(widths[index], display_width(line))
+
+    # Initialize table style. For unicode box drawing characters,
+    # see https://www.unicode.org/charts/PDF/U2500.pdf
+    if boxed:
+        if unicode:
+            frmt = "\u2502 {} \u2502\n"
+            colsep = " \u2502 "
+            lines = ["".rjust(width, "\u2500") for width in widths]
+            top = "\u250c\u2500{}\u2500\u2510\n".format("\u2500\u252c\u2500".join(lines))
+            hline = "\u251c\u2500{}\u2500\u2524\n".format("\u2500\u253c\u2500".join(lines))
+            bottom = "\u2514\u2500{}\u2500\u2518\n".format("\u2500\u2534\u2500".join(lines))
+        else:
+            frmt = "| {} |\n"
+            colsep = " | "
+            top = hline = bottom = "+-{}-+\n".format("-+-".join("".rjust(width, "-") for width in widths))
+    else:
+        frmt = "{}\n"
+        colsep = "  "
+        top = bottom = ""
+        hline = "{}\n".format(colsep.join("".rjust(width, "\u2500" if unicode else "-") for width in widths))
+
+    # Header.
+    file.write(top)
+    file.write(
+        frmt.format(colsep.join(header[:width].center(width) for header, width in zip(headers, widths, strict=True)))
+    )
+    file.write(hline)
+
+    # Rows.
+    for row in render_rows(rows, renderers, ctx):
+        file.write(
+            frmt.format(
+                colsep.join(
+                    _pad_columns(x, w) if a == Align.LEFT else _rjust_columns(x, w)
+                    for x, w, a in zip(row, widths, alignment, strict=True)
+                )
+            )
+        )
+
+    # Footer.
+    file.write(bottom)
 
 
 def _whole(value: Decimal) -> Decimal:
@@ -1865,7 +2199,7 @@ def _csv_cost(cost: dict[str, Any]) -> str:
     parts = [f"{cost['number']} {cost['currency']}"]
     if cost.get("date"):
         parts.append(str(cost["date"]))
-    if cost.get("label"):
+    if cost.get("label") is not None:
         label = str(cost["label"]).replace("\\", "\\\\").replace('"', '\\"')
         parts.append(f'"{label}"')
     return ", ".join(parts)
@@ -2024,7 +2358,7 @@ def _compiled(
             named = ", ".join(grouped)
             raise protocol.UsageError(
                 f"BQL cannot use DISTINCT or GROUP BY on {named}: a set is not a value it can compare.",
-                details=_SET_COLUMN_ADVICE,
+                details=_set_column_advice(grouped),
                 ledger_errors=ledger_errors(),
             ) from None
         # A subquery joined by AND or OR is called as a row predicate, which
@@ -2037,8 +2371,20 @@ def _compiled(
         ungroupable = _ungroupable_columns(exc)
         if ungroupable is not None:
             raise _implicit_group_error(ungroupable, ledger_errors()) from None
+        # `SELECT DISTINCT meta` hashes result rows after `execute_select`
+        # builds them, so the same unhashable column fails one frame deeper.
+        distinct = _distinct_unhashable(exc)
+        if distinct is not None:
+            raise _distinct_error(distinct, ledger_errors()) from None
         raise
     except AttributeError as exc:
+        # The function lookup reads `__mro__` off the operand's dtype, which
+        # the parameterized set behind `accounts` does not have: no function
+        # applies to it (w5/760).
+        if "__mro__" in str(exc):
+            applied = _function_over_set(exc)
+            if applied is not None:
+                raise _function_over_set_error(applied, ledger_errors()) from None
         # A scalar subquery in the SELECT list reaches scalar evaluation as an
         # EvalQuery node, which has no childnodes to evaluate.
         if "childnodes" in str(exc):
@@ -2091,6 +2437,149 @@ def _ungroupable_columns(exc: TypeError) -> list[tuple[str, str]] | None:
     return found
 
 
+def _kind_of(value: Any) -> str:
+    """The word a refusal uses for an unhashable value: `dict`, `set`, `list`, or its type name."""
+    if isinstance(value, dict):
+        return "dict"
+    if isinstance(value, (set, frozenset)):
+        return "set"
+    if isinstance(value, list):
+        return "list"
+    return type(value).__name__
+
+
+def _distinct_unhashable(exc: TypeError) -> list[tuple[str, str]] | None:
+    """The `(column, kind)` pairs DISTINCT could not hash, or None unless that failure.
+
+    DISTINCT wraps the result rows after `execute_select` builds them, so the
+    TypeError rises while hashing the wrapper — deepest in generated code —
+    from Beanquery's `Unique.__call__`, which holds the row, while the
+    `execute_select` frame up the chain holds the query and the result
+    indexes that name each position.
+    """
+    if "unhashable type" not in str(exc):
+        return None
+    frames: list[Any] = []
+    tb = exc.__traceback__
+    while tb is not None:
+        frames.append(tb.tb_frame)
+        tb = tb.tb_next
+    inner = next(
+        (
+            frame
+            for frame in frames
+            if frame.f_code.co_name == "__call__"
+            and Path(frame.f_code.co_filename).name == "query_execute.py"
+            and isinstance(frame.f_locals.get("obj"), tuple)
+        ),
+        None,
+    )
+    if inner is None:
+        return None
+    row = inner.f_locals["obj"]
+    select = next(
+        (
+            frame
+            for frame in frames
+            if frame.f_code.co_name == "execute_select" and Path(frame.f_code.co_filename).parent.name == "beanquery"
+        ),
+        None,
+    )
+    if select is None:
+        return None
+    targets = getattr(select.f_locals.get("query"), "c_targets", None) or []
+    indexes = select.f_locals.get("result_indexes") or []
+    found: list[tuple[str, str]] = []
+    for position, value in enumerate(row):
+        index = indexes[position] if position < len(indexes) else None
+        name = getattr(targets[index], "name", None) if isinstance(index, int) and index < len(targets) else None
+        kind = _kind_of(value)
+        if isinstance(name, str) and not isinstance(value, Hashable) and (name, kind) not in found:
+            found.append((name, kind))
+    return found or None
+
+
+def _distinct_error(columns: list[tuple[str, str]], ledger_errors: list[str]) -> protocol.UsageError:
+    """The explained refusal for a DISTINCT over a column BQL cannot hash."""
+    named = ", ".join(f"{name} ({kind})" for name, kind in columns) or "a selected column"
+    details = []
+    for name, kind in columns:
+        # No function reads a set (w5/260), so there is no text form to offer.
+        if kind == "set":
+            continue
+        wrapped = f"joinstr({name})" if kind == "list" else f"str({name})"
+        details.append(f"Select its text instead: SELECT DISTINCT {wrapped}")
+    details.append("Or select it without DISTINCT.")
+    return protocol.UsageError(
+        f"Cannot run this BQL query: BQL cannot use DISTINCT on {named}, which it cannot hash.",
+        details=details,
+        ledger_errors=ledger_errors,
+    )
+
+
+def _function_over_set(exc: AttributeError) -> tuple[str, str] | None:
+    """The `(function, column)` whose operand dtype Beanquery's lookup choked on.
+
+    The lookup reads `__mro__` off each operand's dtype, which the
+    parameterized set behind `accounts` does not have. The `function_lookup`
+    frame names the function and holds the compiled operands; the `_function`
+    frame that called it still has the parsed node, whose operands name the
+    columns in the same positions.
+    """
+    frames: list[Any] = []
+    tb = exc.__traceback__
+    while tb is not None:
+        frames.append(tb.tb_frame)
+        tb = tb.tb_next
+    lookup = next(
+        (
+            frame
+            for frame in frames
+            if frame.f_code.co_name == "function_lookup" and Path(frame.f_code.co_filename).parent.name == "beanquery"
+        ),
+        None,
+    )
+    if lookup is None:
+        return None
+    name = lookup.f_locals.get("name")
+    operands = lookup.f_locals.get("operands") or []
+    broken = next(
+        (index for index, operand in enumerate(operands) if not hasattr(getattr(operand, "dtype", None), "__mro__")),
+        None,
+    )
+    if not isinstance(name, str) or broken is None:
+        return None
+    # The lookup's own caller: the nearest `_function` frame before it, since
+    # the query may call the same function twice.
+    caller = None
+    for frame in frames:
+        if frame is lookup:
+            break
+        node = frame.f_locals.get("node")
+        if (
+            frame.f_code.co_name == "_function"
+            and Path(frame.f_code.co_filename).parent.name == "beanquery"
+            and getattr(node, "fname", None) == name
+        ):
+            caller = node
+    if caller is None:
+        return None
+    parsed = getattr(caller, "operands", None) or []
+    column = getattr(parsed[broken], "name", None) if broken < len(parsed) else None
+    return (name, column) if isinstance(column, str) else None
+
+
+def _function_over_set_error(applied: tuple[str, str], ledger_errors: list[str]) -> protocol.UsageError:
+    """The explained refusal for a function applied to a set-dtype column."""
+    func, column = applied
+    return protocol.UsageError(
+        f"Cannot run this BQL query: BQL cannot apply {func} to {column}: it holds a set, "
+        "which no BQL function can read.",
+        details=[f"Select {column} without the function to see the sets."],
+        ledger_errors=ledger_errors,
+    )
+
+
 def _implicit_group_error(columns: list[tuple[str, str]], ledger_errors: list[str]) -> protocol.UsageError:
     named = ", ".join(f"{name} ({kind})" for name, kind in columns) or "a selected column"
     details = ["A column selected beside an aggregate is grouped by, as if it were listed in GROUP BY."]
@@ -2108,9 +2597,15 @@ def _implicit_group_error(columns: list[tuple[str, str]], ledger_errors: list[st
     )
 
 
-#: The string literal on the right of BQL's regex operators, quotes included.
+#: The constant regex operand in code, quotes included: the literal right of
+#: `~`/`!~`, or left of `?~`, whose pattern is its left operand.
 _PATTERN_LITERAL = re.compile(
-    r"""!?~\s*('[^']*'|"[^"]*")"""
+    # The right of `~` is the pattern, but the right of `?~` is the subject
+    # (`re.search` takes the pattern first), so `?~` is not this branch's.
+    # And a literal is the whole pattern only when `+` does not follow it: a
+    # concatenated pattern is first known when it runs (w5/747).
+    r"""(?<!\?)!?~\s*('[^']*'|"[^"]*")(?!\s*\+)"""
+    r"""|('[^']*'|"[^"]*")\s*\?~"""
     # The constant pattern of beanquery's regex functions, and a `JOURNAL`
     # account pattern, compile the same way and were unchecked (w5/509).
     # A literal is the whole argument only when `,` or `)` follows it: a
@@ -2135,6 +2630,9 @@ def _pattern_literals(statement: str) -> Iterator[str]:
         yield statement[found.start(group) : found.end(group)]
 
 
+_OPEN_ON_FIRST_DAY = re.compile(r"\bOPEN\s+ON\s+0*1-0?1-0?1\b", re.IGNORECASE)
+
+
 def _evaluation_error(exc: Exception, statement: str, ledger_errors: list[str]) -> protocol.UsageError | None:
     """A value the query's own text asked for that Python refused, as a usage error, or None.
 
@@ -2147,7 +2645,13 @@ def _evaluation_error(exc: Exception, statement: str, ledger_errors: list[str]) 
     """
     details = [f"  {statement}"]
     if isinstance(exc, OverflowError):
-        if "date" in str(exc):
+        if "date" in str(exc) and _OPEN_ON_FIRST_DAY.search(_code_mask(statement)):
+            # The date is in range; the summary OPEN ON writes the day before it is not (w5/842).
+            details.append(
+                "OPEN ON summarizes everything before its date into the day before it, and 0001-01-01 has none. "
+                "Nothing can be dated earlier, so drop OPEN ON."
+            )
+        elif "date" in str(exc):
             details.append("Date arithmetic must stay between 0001-01-01 and 9999-12-31.")
         reason = str(exc)
     elif type(exc).__name__ == "ParserError" and type(exc).__module__.startswith("dateutil"):
@@ -2169,7 +2673,7 @@ def _pattern_error(pattern: str, exc: re.error, statement: str, ledger_errors: l
     )
 
 
-_SET_COLUMNS = ("tags", "links", "other_accounts")
+_SET_COLUMNS = ("tags", "links", "other_accounts", "accounts")
 
 _SET_COLUMNS_PLUS_ACCOUNTS = ("tags", "links", "accounts")
 
@@ -2189,18 +2693,37 @@ _OTHER_ACCOUNTS_ADVICE = [
     "Counts per combination: SELECT joinstr(other_accounts), count(*) GROUP BY joinstr(other_accounts)",
 ]
 
+#: `accounts` is a set per entry no function reads: joining its text is not
+#: offered because `joinstr(accounts)` itself fails the function lookup (w5/760).
+_ACCOUNTS_ADVICE = [
+    "`accounts` holds a set per entry (every account it posts to), so BQL cannot hash it, "
+    "and no BQL function reads a set.",
+    "Select accounts without DISTINCT, GROUP BY, or an aggregate to see the sets.",
+]
+
 
 def _set_column_advice(columns: list[str]) -> list[str]:
-    """The recipes for the unhashable columns a query names: the set advice unless only `other_accounts`."""
-    advice = [] if columns == ["other_accounts"] else list(_SET_COLUMN_ADVICE)
-    return advice + (_OTHER_ACCOUNTS_ADVICE if "other_accounts" in columns else [])
+    """The recipes for the unhashable columns a query names, one section per column kind."""
+    if columns == ["other_accounts"]:
+        return list(_OTHER_ACCOUNTS_ADVICE)
+    if columns == ["accounts"]:
+        return list(_ACCOUNTS_ADVICE)
+    advice = list(_SET_COLUMN_ADVICE)
+    if "other_accounts" in columns:
+        advice += _OTHER_ACCOUNTS_ADVICE
+    if "accounts" in columns:
+        advice += _ACCOUNTS_ADVICE
+    return advice
 
 
 def _set_columns(query_string: str) -> list[str]:
     """The bare set-valued columns this query selects, which is what cannot be compared.
 
     Only a bare column is a problem — `joinstr(tags)` is a string and behaves
-    like any other, which is why it is the recipe we point at.
+    like any other, which is why it is the recipe we point at. An alias
+    through a subquery reports its underlying column: `SELECT DISTINCT o FROM
+    (SELECT other_accounts AS o)` fails on the list, so the list's advice
+    fits, not the tags' (w5/760).
     """
     try:
         from beanquery.parser import parse
@@ -2213,6 +2736,20 @@ def _set_columns(query_string: str) -> list[str]:
         name = getattr(getattr(target, "expression", None), "name", None)
         if name in _SET_COLUMNS and name not in found:
             found.append(name)
+    if not found:
+        # A subquery arrives as a Select in the FROM clause, its aliases on
+        # `.name` over the underlying column's expression.
+        subquery = getattr(parsed, "from_clause", None)
+        aliased: dict[str, str] = {}
+        for target in getattr(subquery, "targets", None) or []:
+            underlying = getattr(getattr(target, "expression", None), "name", None)
+            alias = getattr(target, "name", None)
+            if underlying in _SET_COLUMNS and isinstance(alias, str):
+                aliased[alias] = underlying
+        for target in getattr(parsed, "targets", None) or []:
+            name = getattr(getattr(target, "expression", None), "name", None)
+            if name in aliased and aliased[name] not in found:
+                found.append(aliased[name])
     return found
 
 
@@ -2239,7 +2776,14 @@ def _grouped_columns(query_string: str) -> list[str]:
     return [name for name in names if isinstance(name, str)]
 
 
-def _refuse_empty_window(query_string: str, ledger_errors: list[str], *, file: Path, stored_on: Any = None) -> None:
+def _refuse_empty_window(
+    query_string: str,
+    ledger_errors: list[str],
+    *,
+    file: Path,
+    stored_on: Any = None,
+    stored_name: str | None = None,
+) -> None:
     """Refuse a `FROM OPEN ON … CLOSE ON …` window that can hold no entries.
 
     `CLOSE ON D` is exclusive, so `OPEN ON D CLOSE ON D` spans zero days while
@@ -2250,7 +2794,9 @@ def _refuse_empty_window(query_string: str, ledger_errors: list[str], *, file: P
     `stored_on` is a stored query's directive date, which Beanquery applies as
     the outer window's `CLOSE ON` when the query names none: a stored query
     opening on that date answered `(no rows)`, and one opening later failed
-    over a CLOSE nobody wrote (w5/559).
+    over a CLOSE nobody wrote (w5/559). `stored_name` names it in the refusal,
+    so `.run NAME` says which query failed and `.run *` can skip it by name
+    (w5/746).
     """
     try:
         from beanquery.parser import ast, parse
@@ -2264,12 +2810,34 @@ def _refuse_empty_window(query_string: str, ledger_errors: list[str], *, file: P
     for clause in ast.walk(parsed):
         if isinstance(clause, ast.From):
             if stored_on is not None and clause is outer and not clause.close:
-                _refuse_window(clause.open, stored_on, ledger_errors, file=file, stored=True)
+                _refuse_window(clause.open, stored_on, ledger_errors, file=file, stored=True, stored_name=stored_name)
+            elif stored_on is not None and clause is outer and clause.close is True:
+                # A bare CLOSE beside the directive date: the "drop CLOSE"
+                # advice below would point at the end of the ledger, which a
+                # stored query's window never reaches (w5/746).
+                _refuse_window(
+                    clause.open,
+                    True,
+                    ledger_errors,
+                    file=file,
+                    stored=True,
+                    stored_on=stored_on,
+                    stored_name=stored_name,
+                )
             else:
                 _refuse_window(clause.open, clause.close, ledger_errors, file=file)
 
 
-def _refuse_window(begin: Any, end: Any, ledger_errors: list[str], *, file: Path, stored: bool = False) -> None:
+def _refuse_window(
+    begin: Any,
+    end: Any,
+    ledger_errors: list[str],
+    *,
+    file: Path,
+    stored: bool = False,
+    stored_on: Any = None,
+    stored_name: str | None = None,
+) -> None:
     """Refuse one `OPEN ON begin CLOSE ON end` window that spans no days, or has no end date.
 
     `stored` says `end` is a stored query's directive date rather than a
@@ -2279,10 +2847,22 @@ def _refuse_window(begin: Any, end: Any, ledger_errors: list[str], *, file: Path
 
     from bea_engine.ledger.text import bea_command
 
+    who = f'Stored query "{stored_name}"' if stored_name else "This stored query"
     # A bare `CLOSE` is `True`, not a date, and closes at the end of the ledger.
     # Beside a dated `OPEN` Beanquery orders the two as dates and escapes with
     # a raw TypeError, which read as a ledger failure (exit 1) (w5/177).
     if isinstance(begin, date) and end is True:
+        if stored:
+            raise protocol.UsageError(
+                f"{who} cannot run OPEN ON {begin} with a bare CLOSE: Beanquery needs the closing date here.",
+                details=[
+                    "Add the date: CLOSE ON YYYY-MM-DD is exclusive, so name the day after the last one you want.",
+                    f"Or drop CLOSE — but the window then closes at the query directive's date, {stored_on}. "
+                    "To keep later entries, use CLOSE ON <date> or re-date the "
+                    "directive after the last day it should cover.",
+                ],
+                ledger_errors=ledger_errors,
+            )
         raise protocol.UsageError(
             f"BQL cannot run OPEN ON {begin} with a bare CLOSE: Beanquery needs the closing date here.",
             details=[
@@ -2295,8 +2875,8 @@ def _refuse_window(begin: Any, end: Any, ledger_errors: list[str], *, file: Path
         return
     if stored:
         where = "on that same day" if begin == end else f"after it, on {begin}"
-        raise protocol.UsageError(
-            f"This stored query's window covers no days: its query directive's date, {end}, closes the window "
+        raise protocol.EmptyStoredWindow(
+            f"{who}'s window covers no days: its query directive's date, {end}, closes the window "
             f"(exclusive), and OPEN ON starts {where}.",
             details=[
                 f"Add CLOSE ON {begin + timedelta(days=1)} or later to the query, or re-date its query directive "
@@ -2345,8 +2925,29 @@ def _usage_error(exc: Exception, query_string: str, conn: Any, ledger_errors: li
         details.extend(_set_column_advice(columns))
     # Not the interactive shell: under `--json` or without a terminal `bea query`
     # with no argument is itself a usage error, and `.tables` runs one-shot (w5/198).
-    details.append("Run bea query .tables to list what you can query.")
+    details.append(f"Run {_REMEDY.get()()} .tables to list what you can query.")
     return protocol.UsageError(f"Cannot run this BQL query: {exc}.", details=details, ledger_errors=ledger_errors)
+
+
+def _display_width(text: str) -> int:
+    """How many terminal columns this text occupies, as the frontend's tables count them.
+
+    The frontend's `display_width` cannot be imported across the engine
+    boundary, so the rule is repeated here: East Asian Wide or Fullwidth
+    takes two columns, a combining mark, format character or emoji modifier
+    takes none, and the soft hyphen keeps its cell (w5/726).
+    """
+    return sum(_columns(character) for character in text)
+
+
+def _columns(character: str) -> int:
+    if character == "\u00ad":
+        return 1
+    if unicodedata.combining(character) or unicodedata.category(character) in {"Mn", "Me", "Cf"}:
+        return 0
+    if "\U0001f3fb" <= character <= "\U0001f3ff":
+        return 0
+    return 2 if unicodedata.east_asian_width(character) in "WF" else 1
 
 
 def _caret_lines(statement: str, position: int) -> list[str]:
@@ -2355,7 +2956,9 @@ def _caret_lines(statement: str, position: int) -> list[str]:
     The parser's offset is absolute, so for a query spanning lines it has to
     become a column of the line it falls on; indented by the whole offset the
     caret sat alone, far to the right of every line shown. A tab is shown as
-    one space so the caret's column is the token's.
+    one space so the caret's column is the token's. The indent counts display
+    columns, not characters, so a wide character before the token does not
+    pull the caret left (w5/726).
     """
     lines = statement.splitlines(keepends=True) or [""]
     details = []
@@ -2365,7 +2968,8 @@ def _caret_lines(statement: str, position: int) -> list[str]:
         details.append(f"  {text}")
         end = start + len(raw)
         if start <= position and (position < end or index == len(lines) - 1):
-            details.append(f"  {' ' * min(position - start, len(text))}^")
+            prefix = text[: max(0, min(position - start, len(text)))]
+            details.append(f"  {' ' * _display_width(prefix)}^")
         start = end
     return details
 
@@ -2453,7 +3057,7 @@ _PARSER_REPRS = (
 )
 
 
-def readable_parser_message(message: str) -> str:
+def readable_parser_message(message: str, *, text: str = "") -> str:
     """A parser diagnostic with the grammar value it quotes written as Beancount text.
 
     Upstream's grammar formats a `CompoundAmount`, `KeyValue`, `TagsLinks` or a
@@ -2469,6 +3073,14 @@ def readable_parser_message(message: str) -> str:
         from bea_engine.amounts import DECIMAL_COMMA_HELP
 
         return f"Invalid amount {comma[1]!r}. {DECIMAL_COMMA_HELP}"
+    if "unexpected COMMA" in message:
+        # `1.234,56` never lexes as one number, so the parser cannot quote
+        # it; the comma beside digits in the input is the amount (w5/722).
+        from bea_engine.amounts import DECIMAL_COMMA_HELP
+
+        found = re.search(r"[0-9][0-9.,]*,[0-9.,]*", text)
+        if found is not None:
+            return f"Invalid amount {found[0]!r}. {DECIMAL_COMMA_HELP}"
     for pattern, kind in _PARSER_REPRS:
         match = pattern.match(message)
         if match is None:
@@ -2560,7 +3172,20 @@ def _booking_message(error: Any, message: str) -> str:
     )
     cost = getattr(posting, "cost", None)
     requested = f"{units} {{{_cost_spec_text(cost, DisplayContext().build())}}}" if cost is not None else units
-    return f"No position matches {requested} in {account}; it holds {no_lot['held'].strip()}"
+    message = f"No position matches {requested} in {account}; it holds {no_lot['held'].strip()}"
+    label = getattr(cost, "label", None)
+    if isinstance(label, str):
+        from bea_engine.ledger.text import CONTROL_CHARACTERS, single_line
+
+        if CONTROL_CHARACTERS.search(label):
+            # The sought label prints the same escaped or raw — a tab reads as
+            # a tab either way — so the mismatch above cannot be seen. Name
+            # the characters and offer the way around them (w5/733).
+            message += (
+                f'; the label holds control characters (escaped: "{single_line(label)}"), '
+                "which look the same raw or escaped: select the lot by its cost or date instead."
+            )
+    return message
 
 
 def _plugin_message(message: str, ledger_file: Path | str | None, source: Any) -> str | None:

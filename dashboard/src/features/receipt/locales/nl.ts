@@ -235,6 +235,12 @@ const nlReceipt: Record<string, TranslationEntry> = {
     message: "Transactie van bon kon niet worden vastgelegd",
     description: "Error message when recording the transaction fails",
   },
+  "receipt.workflow.recordUnconfirmed": {
+    message:
+      "Mogelijk is deze toch vastgelegd. Controleer het Dagboek voordat u deze opnieuw vastlegt.",
+    description:
+      "Added after a connection failure while recording: the transaction may exist",
+  },
 };
 
 export default nlReceipt;

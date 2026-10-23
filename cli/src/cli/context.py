@@ -18,7 +18,7 @@ from typing import Any
 
 from cli.config import DEFAULT_ENTRY_FILE
 from cli.errors import UsageError
-from cli.paths import expand_path
+from cli.paths import expand_path, is_descriptor_path, refuse_too_long_name
 
 _TRUE = {"1", "true", "yes", "on"}
 
@@ -151,12 +151,29 @@ class RunContext:
             else:
                 candidate, source = DEFAULT_ENTRY_FILE, "the working directory"
 
-        if candidate.is_symlink() and not candidate.exists():
+        if is_descriptor_path(candidate):
+            # A ledger needs a stable path for its includes and cache; a
+            # descriptor is refused by name instead of failing mid-load (w5/792).
+            raise UsageError(
+                f"Ledger path '{candidate}' (from {source}) is a file descriptor, not a file. "
+                "Point --file at the ledger file."
+            )
+        refuse_too_long_name(candidate, f"Ledger path (from {source})")
+        try:
+            link = candidate.is_symlink()
+            present = candidate.exists()
+            directory = candidate.is_dir()
+            regular = candidate.is_file()
+        except PermissionError:
+            # An ancestor without search permission (w5/793): the same
+            # refusal an unreadable file gets.
+            raise UsageError(f"Ledger path '{candidate}' (from {source}) is not readable.") from None
+        if link and not present:
             raise UsageError(
                 f"Ledger path '{candidate}' (from {source}) is a broken symbolic link to "
                 f"'{os.readlink(candidate)}'. Restore its target, or point --file at the ledger."
             )
-        if not candidate.exists():
+        if not present:
             if source == "$BEA_FILE":
                 raise UsageError(
                     f"No ledger file at '{candidate}' (from $BEA_FILE). "
@@ -177,16 +194,19 @@ class RunContext:
                 f"Name one with --file PATH, set BEA_FILE, or run from a directory containing "
                 f"main.bean or main.beancount. {start}"
             )
-        if candidate.is_dir():
-            hint = next(
-                (candidate / name for name in DEFAULT_ENTRY_FILE_FALLBACKS if (candidate / name).is_file()),
-                candidate / DEFAULT_ENTRY_FILE_FALLBACKS[0],
-            )
+        if directory:
+            try:
+                hint = next(
+                    (candidate / name for name in DEFAULT_ENTRY_FILE_FALLBACKS if (candidate / name).is_file()),
+                    candidate / DEFAULT_ENTRY_FILE_FALLBACKS[0],
+                )
+            except PermissionError:
+                hint = candidate / DEFAULT_ENTRY_FILE_FALLBACKS[0]
             raise UsageError(
                 f"Ledger path '{candidate}' (from {source}) is a directory; expected a ledger file. "
                 f"Point --file to its root ledger, for example --file {shlex.quote(str(hint))}."
             )
-        if not candidate.is_file():
+        if not regular:
             raise UsageError(f"Ledger path '{candidate}' (from {source}) is not a regular file.")
         if not os.access(candidate, os.R_OK):
             raise UsageError(f"Ledger path '{candidate}' (from {source}) is not readable.")

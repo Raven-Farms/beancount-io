@@ -7,10 +7,6 @@ export interface TranslationEntry {
 
 const faUserSettings: Record<string, TranslationEntry> = {
   ...apiKeyTranslations.fa,
-  "userSettings.accessUntil": {
-    message: "دسترسی تا",
-    description: "Label for access remaining until date",
-  },
   "userSettings.accountDeleted": {
     message: "حساب با موفقیت حذف شد",
     description: "Success message when account is deleted",
@@ -47,15 +43,6 @@ const faUserSettings: Record<string, TranslationEntry> = {
     message: "لغو اشتراک",
     description: "Button text to cancel subscription",
   },
-  "userSettings.cancelSubscriptionDescription": {
-    message:
-      "آیا مطمئن هستید که می‌خواهید اشتراک خود را لغو کنید؟ شما تا پایان دوره فعلی صورت‌حساب به دسترسی ادامه خواهید داد.",
-    description: "Confirmation dialog description for canceling subscription",
-  },
-  "userSettings.cancelSubscriptionTitle": {
-    message: "لغو اشتراک؟",
-    description: "Confirmation dialog title for canceling subscription",
-  },
   "userSettings.canceling": {
     message: "در حال لغو...",
     description: "Button text while canceling subscription",
@@ -71,10 +58,6 @@ const faUserSettings: Record<string, TranslationEntry> = {
   "userSettings.changeUsername": {
     message: "تغییر نام کاربری",
     description: "Dialog title for changing username",
-  },
-  "userSettings.confirmCancel": {
-    message: "بله، اشتراک را لغو کنید",
-    description: "Button text to confirm subscription cancellation",
   },
   "userSettings.createKey": {
     message: "ایجاد کلید",
@@ -392,13 +375,49 @@ const faUserSettings: Record<string, TranslationEntry> = {
     message: "کلیدهای SSH",
     description: "Page title for SSH keys",
   },
+  "userSettings.subscriptionStatus.active": {
+    message: "فعال",
+    description:
+      "Billing badge for a subscription whose Stripe status is active: paid and current.",
+  },
+  "userSettings.subscriptionStatus.trialing": {
+    message: "دورهٔ آزمایشی",
+    description:
+      "Billing badge for a subscription whose Stripe status is trialing: in a free trial.",
+  },
+  "userSettings.subscriptionStatus.past_due": {
+    message: "سررسید گذشته",
+    description:
+      "Billing badge for a subscription whose Stripe status is past_due: the last renewal failed and Stripe is retrying.",
+  },
+  "userSettings.subscriptionStatus.unpaid": {
+    message: "پرداخت‌نشده",
+    description:
+      "Billing badge for a subscription whose Stripe status is unpaid: Stripe stopped retrying a failed renewal.",
+  },
+  "userSettings.subscriptionStatus.incomplete": {
+    message: "ناقص",
+    description:
+      "Billing badge for a subscription whose Stripe status is incomplete: the first payment has not completed.",
+  },
+  "userSettings.subscriptionStatus.incomplete_expired": {
+    message: "منقضی‌شده",
+    description:
+      "Billing badge for a subscription whose Stripe status is incomplete_expired: the first payment never completed.",
+  },
+  "userSettings.subscriptionStatus.canceled": {
+    message: "لغوشده",
+    description:
+      "Billing badge for a subscription whose Stripe status is canceled: ended.",
+  },
+  "userSettings.subscriptionStatus.paused": {
+    message: "متوقف‌شده",
+    description:
+      "Billing badge for a subscription whose Stripe status is paused: paused.",
+  },
   "userSettings.subscription": {
     message: "اشتراک",
     description: "Subscription section title",
-  },
-  "userSettings.subscriptionCanceled": {
-    message: "اشتراک لغو شده است",
-    description: "Message when subscription is already canceled",
   },
   "userSettings.subscriptionCanceledSuccess": {
     message: "اشتراک با موفقیت لغو شد",
@@ -407,12 +426,6 @@ const faUserSettings: Record<string, TranslationEntry> = {
   "userSettings.subscriptionUpgraded": {
     message: "اشتراک با موفقیت ارتقا یافت",
     description: "Success message after upgrading subscription",
-  },
-  "userSettings.paymentRequiresAuth": {
-    message:
-      "پرداخت شما نیاز به احراز هویت اضافی دارد. لطفاً ایمیل یا صادرکننده کارت خود را بررسی کنید.",
-    description:
-      "Message when 3DS authentication is needed for subscription upgrade",
   },
   "userSettings.system": {
     message: "سیستم",
@@ -483,6 +496,10 @@ const faUserSettings: Record<string, TranslationEntry> = {
     message: "{used} توکن در این ماه استفاده شده (نامحدود)",
     description: "AI CFO usage display for unlimited tier",
   },
+  "userSettings.aiCfoUsageUnavailable": {
+    message: "میزان استفاده در حال حاضر در دسترس نیست.",
+    description: "Shown in place of AI token usage when its read fails",
+  },
   "userSettings.currentPlan": {
     message: "طرح فعلی",
     description: "Badge label for the user's current subscription tier",
@@ -507,10 +524,6 @@ const faUserSettings: Record<string, TranslationEntry> = {
     message: "{used} / {max} دفتر",
     description: "Ledger usage count display",
   },
-  "userSettings.upgradeYourPlan": {
-    message: "طرح خود را ارتقا دهید",
-    description: "Section header for upgrade tier cards",
-  },
   "userSettings.billing": {
     message: "صورتحساب",
     description: "Section header for billing management",
@@ -524,8 +537,12 @@ const faUserSettings: Record<string, TranslationEntry> = {
     description: "Price interval suffix",
   },
   "userSettings.aiTokensPerMonth": {
-    message: "{count} نشانه های هوش مصنوعی / ماه",
+    message: "{count} توکن هوش مصنوعی / ماه",
     description: "AI token allowance for a subscription tier",
+  },
+  "userSettings.unlimitedAiTokens": {
+    message: "توکن‌های هوش مصنوعی نامحدود",
+    description: "Unlimited AI token allowance",
   },
   "userSettings.unlimitedLedgers": {
     message: "دفتر کل نامحدود",
@@ -547,11 +564,11 @@ const faUserSettings: Record<string, TranslationEntry> = {
       "Ledger allowance for a subscription tier - interpolation: {formattedCount} is the count formatted in the app language; {count} selects the plural form - plural form",
   },
   "userSettings.unlimitedDirectives": {
-    message: "دستورالعمل های نامحدود\nدستورالعمل های",
+    message: "دستورالعمل‌های نامحدود",
     description: "Unlimited directive allowance",
   },
   "userSettings.includedDirectives": {
-    message: "{count}",
+    message: "{count} دستورالعمل",
     description: "Directive allowance for a subscription tier",
   },
   "userSettings.unlimitedCollaborators": {
@@ -575,12 +592,403 @@ const faUserSettings: Record<string, TranslationEntry> = {
   },
   "userSettings.aiUsageUpgradeNudge": {
     message:
-      "شما از {percentage}٪ از نشانه های ماهانه هوش مصنوعی خود استفاده می کنید. برای جلوگیری از وقفه، ارتقا دهید.",
+      "شما از {percentage}٪ از توکن‌های ماهانه هوش مصنوعی خود استفاده می‌کنید. برای جلوگیری از وقفه، ارتقا دهید.",
     description: "Upgrade suggestion when AI token usage is high",
   },
   "userSettings.fingerprint": {
     message: "اثر انگشت",
     description: "Label for an SSH key fingerprint",
+  },
+  "userSettings.yearly": {
+    message: "سالانه",
+    description: "Yearly billing option in the billing-cycle toggle",
+  },
+  "userSettings.billingCycle": {
+    message: "دوره صورت‌حساب",
+    description: "Accessible label for the monthly/yearly billing-cycle toggle",
+  },
+  "userSettings.plans": {
+    message: "طرح‌ها",
+    description: "Section header above every plan on the Billing page",
+  },
+  "userSettings.switchToYearly": {
+    message: "تغییر به پرداخت سالانه",
+    description: "Button that moves a monthly subscription to yearly billing",
+  },
+  "userSettings.switchToMonthly": {
+    message: "تغییر به پرداخت ماهانه",
+    description: "Button that moves a yearly subscription to monthly billing",
+  },
+  "userSettings.downgrade": {
+    message: "کاهش طرح",
+    description: "Button for moving to a lower plan",
+  },
+  "userSettings.contactUs": {
+    message: "تماس با ما",
+    description: "Enterprise plan call to action and price label",
+  },
+  "userSettings.billedYearly": {
+    message: "{amount} با پرداخت سالانه",
+    description: "Total charged once a year; {amount} is a formatted price",
+  },
+  "userSettings.saveYearlyPercent": {
+    message: "{percent}٪ صرفه‌جویی",
+    description: "Badge with the yearly saving; {percent} is a whole number",
+  },
+  "userSettings.payYearlyOffer": {
+    message:
+      "پرداخت سالانه: {yearly} در سال به‌جای {monthlyTotal} — سالانه {saving} صرفه‌جویی کنید.",
+    description:
+      "Offer on a monthly plan; {yearly}, {monthlyTotal} and {saving} are formatted prices",
+  },
+  "userSettings.perYear": {
+    message: "/سال",
+    description: "Price interval suffix for yearly prices",
+  },
+  "userSettings.legacyPrice": {
+    message: "قیمت قدیمی",
+    description: "Label for an older price an existing subscriber keeps",
+  },
+  "userSettings.checkoutConfirming": {
+    message: "در حال تأیید پرداخت شما…",
+    description:
+      "Shown while waiting for Stripe to confirm a just-completed checkout",
+  },
+  "userSettings.checkoutDone": {
+    message: "اکنون طرح شما {plan} است",
+    description:
+      "Confirmation after checkout; {plan} is a plan name and billing cycle such as 'Premium \u00b7 Yearly'",
+  },
+  "userSettings.checkoutRenews": {
+    message:
+      "در تاریخ {date} با مبلغ {amount} تمدید می‌شود. رسید از طریق ایمیل برایتان ارسال می‌شود.",
+    description:
+      "Renewal line after checkout; {date} is a formatted date and {amount} a formatted price",
+  },
+  "userSettings.checkoutUnlocked": {
+    message: "اکنون شامل: {limits}",
+    description: "What the new plan includes; {limits} is a list of quotas",
+  },
+  "userSettings.checkoutPending": {
+    message:
+      "پرداخت دریافت شد. طرح شما تا یک دقیقه دیگر نمایش داده می‌شود؛ برای بررسی صفحه را تازه کنید.",
+    description:
+      "Shown when the payment is done but the subscription is not recorded yet",
+  },
+  "userSettings.refresh": {
+    message: "تازه‌سازی",
+    description: "Button that reloads the subscription status",
+  },
+  "userSettings.backToWork": {
+    message: "بازگشت به صفحه قبلی",
+    description: "Button that returns to the page where the purchase began",
+  },
+  "userSettings.startUsingPlan": {
+    message: "شروع استفاده از {plan}",
+    description:
+      "Primary button on the checkout confirmation when the purchase did not start at an in-product prompt; opens the ledgers. {plan} is the plan name, e.g. Premium",
+  },
+  "userSettings.checkoutCanceled": {
+    message: "پرداخت لغو شد. هیچ مبلغی کسر نشد.",
+    description:
+      "Notice on Billing after the customer leaves Stripe Checkout without paying",
+  },
+  "userSettings.viewBilling": {
+    message: "مشاهده صورت‌حساب",
+    description:
+      "Button that closes the checkout confirmation and shows billing settings",
+  },
+  "userSettings.planChangeTitle": {
+    message: "تغییر به {plan}",
+    description:
+      "Title of the plan-change sheet; {plan} is a plan and cycle such as 'Premium \u00b7 Yearly'",
+  },
+  "userSettings.planChangePreviewing": {
+    message: "در حال محاسبه هزینه این تغییر…",
+    description: "Shown while the server prices a plan change",
+  },
+  "userSettings.planChangePreviewFailed": {
+    message: "نتوانستیم هزینه این تغییر را محاسبه کنیم. دوباره تلاش کنید.",
+    description: "Shown when the plan-change price could not be loaded",
+  },
+  "userSettings.planChangeStartsToday": {
+    message: "از امروز شروع می‌شود.",
+    description: "The plan change takes effect immediately",
+  },
+  "userSettings.planChangeDueToday": {
+    message: "مبلغ قابل پرداخت امروز",
+    description: "Label for the amount charged today",
+  },
+  "userSettings.planChangeCredit": {
+    message: "شامل اعتبار {credit} برای زمان استفاده‌نشده طرح فعلی شماست.",
+    description: "Credit for unused time; {credit} is a formatted price",
+  },
+  "userSettings.planChangeNext": {
+    message: "سپس {amount}، پرداخت بعدی در {date}.",
+    description:
+      "Next charge; {amount} is a price with its interval and {date} a formatted date",
+  },
+  "userSettings.planChangeChargedTo": {
+    message: "از {card} پرداخت می‌شود",
+    description:
+      "Card the change is charged to; {card} is a card brand and its last four digits",
+  },
+  "userSettings.planChangeWhatYouGet": {
+    message: "آنچه دریافت می‌کنید",
+    description: "Heading above what the new plan adds",
+  },
+  "userSettings.planChangePayAndSwitch": {
+    message: "پرداخت {amount} و تغییر",
+    description:
+      "Confirm button; {amount} is the formatted amount charged today",
+  },
+  "userSettings.planChangeContinueToCheckout": {
+    message: "ادامه به پرداخت",
+    description: "Confirm button that opens Stripe Checkout",
+  },
+  "userSettings.planChangeNotNow": {
+    message: "اکنون نه",
+    description:
+      "Button that closes the plan-change sheet without changing anything",
+  },
+  "userSettings.planChangeCreditNote": {
+    message:
+      "زمان استفاده‌نشده همیشه محاسبه و کسر می‌شود؛ هرگز دو بار پرداخت نمی‌کنید.",
+    description: "Reassurance under the confirm button",
+  },
+  "userSettings.planChangeRefusalCurrent": {
+    message: "شما همین حالا این طرح را دارید.",
+    description: "The chosen plan is the one the customer already has",
+  },
+  "userSettings.planChangeRefusalSameTier": {
+    message:
+      "این طرح را با قیمت قدیمی‌تر و کمتر نگه می‌دارید؛ تغییر فقط آن را افزایش می‌دهد.",
+    description:
+      "The customer keeps an older, cheaper price for the same plan and cycle",
+  },
+  "userSettings.planChangeRefusalMultiple": {
+    message:
+      "حساب شما بیش از یک اشتراک فعال دارد. برای تغییر طرح با پشتیبانی تماس بگیرید.",
+    description: "The account has duplicate subscriptions and needs support",
+  },
+  "userSettings.planChangeRefusalNoSubscription": {
+    message:
+      "اشتراک فعالی برای تغییر وجود ندارد. صفحه را تازه\u200cسازی کنید تا طرحی انتخاب کنید.",
+    description: "The subscription ended before the change was confirmed",
+  },
+  "userSettings.planChangeRefusalPastDue": {
+    message:
+      "آخرین پرداخت تمدید شما انجام نشد. روش پرداخت را در «مدیریت صورت‌حساب» به‌روز کنید و سپس طرح را تغییر دهید.",
+    description:
+      "A plan change is refused until a failed renewal payment is fixed",
+  },
+  "userSettings.planChangeStartsOn": {
+    message: "از {date} شروع می‌شود. تا آن زمان {plan} را نگه می‌دارید.",
+    description:
+      "When a scheduled change takes effect and the plan kept until then",
+  },
+  "userSettings.planChangeNothingToday": {
+    message: "امروز چیزی برای پرداخت نیست.",
+    description: "A scheduled change charges nothing today",
+  },
+  "userSettings.planChangeWhatChanges": {
+    message: "آنچه در {date} تغییر می‌کند",
+    description:
+      "Heading for the limits and features that change on the effective date",
+  },
+  "userSettings.planChangeLimitCollaborators": {
+    message: "همکاران در هر دفتر",
+    description: "Row label: collaborators allowed per ledger",
+  },
+  "userSettings.planChangeLimitAiTokens": {
+    message: "توکن‌های هوش مصنوعی در ماه",
+    description: "Row label: AI tokens allowed per month",
+  },
+  "userSettings.planChangeYouHave": {
+    message: "{count} دارید",
+    description: "The reader's current usage beside a limit row",
+  },
+  "userSettings.planChangeOverLimit": {
+    message:
+      "همهٔ دفترهای شما متعلق به شما می‌مانند و کار می‌کنند. تا زمانی که زیر سقف جدید {max} نباشید، نمی‌توانید دفتر تازه‌ای بسازید.",
+    description:
+      "Explains what happens when usage is above the lower plan's ledger limit",
+  },
+  "userSettings.planChangeScheduleDowngrade": {
+    message: "زمان‌بندی کاهش طرح",
+    description:
+      "Button that schedules a downgrade for the end of the paid period",
+  },
+  "userSettings.planChangeScheduleSwitch": {
+    message: "زمان‌بندی تغییر",
+    description:
+      "Button that schedules a billing-cycle switch for the end of the paid period",
+  },
+  "userSettings.planChangeKeep": {
+    message: "نگه‌داشتن {plan}",
+    description: "Button that keeps the current plan and closes the sheet",
+  },
+  "userSettings.planChangeScheduled": {
+    message: "برای {date} زمان‌بندی شد. تا آن زمان چیزی تغییر نمی‌کند.",
+    description: "Toast after a change was scheduled",
+  },
+  "userSettings.planChangeReplacesScheduled": {
+    message: "این جایگزین تغییر زمان‌بندی‌شدهٔ شما به {plan} در {date} می‌شود.",
+    description: "Note that this choice replaces an already scheduled change",
+  },
+  "userSettings.planChangeWithdrawsCancellation": {
+    message:
+      "این کار لغو اشتراک شما را هم پس می‌گیرد، پس اشتراک ادامه می‌یابد.",
+    description: "Note that this choice withdraws a pending cancellation",
+  },
+  "userSettings.planChangeLegacyEnds": {
+    message: "قیمت فعلی شما دیگر ارائه نمی‌شود و با این تغییر به پایان می‌رسد.",
+    description: "Note for a subscriber on a price that is no longer offered",
+  },
+  "userSettings.planChangeSplitIntro": {
+    message:
+      "{plan} با پرداخت ماهانه می‌تواند از تمدید شما در {date} شروع شود. {plan} را از امروز می‌خواهید؟",
+    description:
+      "Introduces the two options when choosing a higher tier on monthly while on yearly",
+  },
+  "userSettings.planChangeSplitNow": {
+    message: "دریافت {plan} از امروز با پرداخت سالانه — اکنون {amount}",
+    description:
+      "Option: the higher tier today on yearly billing, with the amount due now",
+  },
+  "userSettings.planChangeSplitLater": {
+    message: "تغییر به {plan} ماهانه در {date} — امروز هیچ",
+    description: "Option: the higher tier on monthly from the renewal date",
+  },
+  "userSettings.planChangeAtRenewal": {
+    message: "از زمان تمدید اعمال می‌شود",
+    description:
+      "Under a plan card whose change waits for the end of the paid period",
+  },
+  "userSettings.planChangeFeaturesEnd": {
+    message: "دیگر شامل نمی‌شود",
+    description:
+      "Heading above the plan features the lower plan does not include",
+  },
+  "userSettings.planChangeLimitDirectives": {
+    message: "دستورالعمل‌ها",
+    description: "Row label: entries (Beancount directives) allowed in total",
+  },
+  "userSettings.scheduledHeading": {
+    message: "زمان‌بندی‌شده",
+    description:
+      "Heading of the panel listing what happens at the end of the paid period",
+  },
+  "userSettings.scheduledChangesTo": {
+    message: "در {date} به {plan} تغییر می‌کند.",
+    description: "A scheduled plan change and its date",
+  },
+  "userSettings.scheduledEnds": {
+    message: "{plan} در {date} به پایان می‌رسد.",
+    description: "A pending cancellation and the date the plan ends",
+  },
+  "userSettings.scheduledKeepCurrent": {
+    message: "نگه‌داشتن طرح فعلی",
+    description: "Button that undoes a scheduled plan change",
+  },
+  "userSettings.scheduledKept": {
+    message: "طرح شما همان‌طور که هست می‌ماند.",
+    description: "Toast after undoing a scheduled plan change",
+  },
+  "userSettings.scheduledKeepFailed": {
+    message: "تغییر زمان‌بندی‌شدهٔ شما لغو نشد. دوباره تلاش کنید.",
+    description: "Toast when undoing a scheduled plan change fails",
+  },
+  "userSettings.cancelSheetTitle": {
+    message: "{plan} لغو شود؟",
+    description: "Title of the sheet shown before cancelling",
+  },
+  "userSettings.cancelSheetKeepUntil": {
+    message:
+      "{plan} را تا {date} نگه می‌دارید. پس از آن روی طرح رایگان هستید: {limits}.",
+    description:
+      "What the reader keeps until the period ends, and the Free limits afterwards",
+  },
+  "userSettings.cancelSheetPlainText": {
+    message:
+      "دفترهای شما متن ساده‌اند — هر زمان خواستید خروجی بگیرید. چیزی حذف نمی‌شود.",
+    description: "Reassurance that cancelling deletes nothing",
+  },
+  "userSettings.cancelSheetOtherOptions": {
+    message: "گزینه‌های دیگر",
+    description: "Heading above the cheaper alternative to cancelling",
+  },
+  "userSettings.cancelSheetSwitchToYearly": {
+    message: "تغییر به سالانه — {price} در ماه",
+    description:
+      "Alternative to cancelling: switch to yearly at the per-month price",
+  },
+  "userSettings.cancelSheetDowngradeTo": {
+    message: "کاهش به {plan}",
+    description: "Alternative to cancelling: the next lower plan",
+  },
+  "userSettings.cancelSheetReason": {
+    message: "دلیل اصلی چیست؟ (اختیاری)",
+    description: "Optional question about why the reader cancels",
+  },
+  "userSettings.cancelReasonTooExpensive": {
+    message: "خیلی گران است",
+    description: "Cancellation reason",
+  },
+  "userSettings.cancelReasonMissingFeatures": {
+    message: "یک قابلیت کم است",
+    description: "Cancellation reason",
+  },
+  "userSettings.cancelReasonUnused": {
+    message: "از آن استفاده نمی‌کنم",
+    description: "Cancellation reason",
+  },
+  "userSettings.cancelReasonSwitchedService": {
+    message: "به ابزار دیگری می‌روم",
+    description: "Cancellation reason: moving to another tool",
+  },
+  "userSettings.cancelReasonOther": {
+    message: "دیگر",
+    description: "Cancellation reason",
+  },
+  "userSettings.planChangeRequiresAction": {
+    message:
+      "بانک شما باید این پرداخت را تأیید کند. تا آن زمان چیزی تغییر نمی‌کند؛ پس از تأیید، این صفحه را تازه کنید.",
+    description: "The bank must approve the payment before the change applies",
+  },
+  "userSettings.planChangeApproving": {
+    message: "در انتظار تأیید پرداخت توسط بانک شما…",
+    description:
+      "Shown while Stripe asks the bank to approve a plan change's payment",
+  },
+  "userSettings.planChangeApprovePayment": {
+    message: "تأیید پرداخت",
+    description: "Button that opens Stripe's page to approve the payment",
+  },
+  "userSettings.planChangeFailed": {
+    message: "بانک شما پرداخت را تأیید نکرد. چیزی تغییر نکرد.",
+    description: "The payment was declined and the plan did not change",
+  },
+  "userSettings.planChangeUseAnotherCard": {
+    message: "استفاده از کارت دیگر",
+    description: "Button that opens billing settings to change the card",
+  },
+  "userSettings.featureAutomaticBackups": {
+    message: "پشتیبان‌گیری خودکار",
+    description: "Plan feature from the pricing table",
+  },
+  "userSettings.featureAutomationIntegrations": {
+    message: "خودکارسازی و یکپارچه‌سازی پیشرفته",
+    description: "Plan feature from the pricing table",
+  },
+  "userSettings.featureOidcSso": {
+    message: "ورود یکپارچه (SSO) با OIDC",
+    description:
+      "Plan feature from the pricing table; OIDC and SSO stay as written",
+  },
+  "userSettings.featureMultiEntity": {
+    message: "تجمیع چند نهاد",
+    description: "Plan feature from the pricing table",
   },
 };
 

@@ -5,18 +5,25 @@ import BigNumber from "bignumber.js";
  * path (w2/m26): a transaction with a non-zero residual is refused unless the
  * caller opts in, and one posting per transaction may omit its amount.
  *
- * Tolerance mirrors Beancount's inference: each posting number implies half
- * the value of its least-significant digit (10.00 → 0.005), the per-currency
- * tolerance is the largest implied value, floored by the ledger's
- * `inferred_tolerance_default` (Beancount default 0.005). Arithmetic is exact
+ * Tolerance is Beancount's inference (`infer_tolerances`): a posting number
+ * with decimals implies half its last digit (10.00 → 0.005) and a whole number
+ * implies none. A currency's tolerance is the largest implied value, raised to
+ * the ledger's `inferred_tolerance_default` for that currency; a currency with
+ * none implied takes its own default, else the `*` default, else zero. There
+ * is no 0.005 floor, and `10 USD` gives no 0.5 (w21/648). Arithmetic is exact
  * (`BigNumber` over the decimal strings) — never binary floating point.
  */
 
-export const DEFAULT_INFERRED_TOLERANCE = "0.005";
+/** `option "inferred_tolerance_default"`: a currency, or `*`, to its tolerance. */
+export type ToleranceDefaults = ReadonlyMap<string, BigNumber>;
+
+const NO_TOLERANCE_DEFAULTS: ToleranceDefaults = new Map();
 
 export type BalancePosting = {
   account: string;
   units?: { number: string; currency: string } | null;
+  /** A per-unit price (`@`): the posting weighs units × price, in its currency. */
+  price?: { number: string; currency: string } | null;
 };
 
 export type BalanceFailure =
@@ -48,34 +55,66 @@ function halfUnit(decimals: number): BigNumber {
   return new BigNumber(0.5).times(new BigNumber(10).pow(-decimals));
 }
 
-/**
- * Format a residual with the precision of the postings that produced it, so
- * `10 USD`/`-5 USD` reads `5 USD` while `10.00 USD`/`-5.00 USD` reads
- * `5.00 USD`.
- */
-function formatResidual(value: BigNumber, decimals: number): string {
-  return value.abs().toFixed(decimals);
+/** A currency's tolerance, as Beancount resolves it from the two sources. */
+function toleranceFor(
+  currency: string,
+  implied: BigNumber | undefined,
+  defaults: ToleranceDefaults,
+): BigNumber {
+  const own = defaults.get(currency);
+  if (implied === undefined) {
+    return own ?? defaults.get("*") ?? new BigNumber(0);
+  }
+  return own === undefined ? implied : BigNumber.max(implied, own);
 }
 
 /**
- * Scan raw file contents for an `option "inferred_tolerance_default" "<n>"`
- * override, Beancount lexer semantics (quoted name and value). Only files the
- * bulk endpoint already fetched are scanned — an override living in an
- * unrelated file falls back to the default, noted at the call site.
+ * Format a residual with the precision of the postings that produced it, so
+ * `10 USD`/`-5 USD` reads `5 USD` while `10.00 USD`/`-5.00 USD` reads
+ * `5.00 USD`. Signed, as both engines print it.
  */
-export function scanInferredToleranceDefault(contents: string[]): string {
+function formatResidual(value: BigNumber, decimals: number): string {
+  return value.toFixed(decimals);
+}
+
+/** A decimal string as a number; NaN for anything else (never a throw). */
+function decimal(number: string): BigNumber {
+  // bignumber.js 11 throws on a malformed string where earlier versions
+  // returned NaN; either way it is the caller's input, never an outage.
+  try {
+    return new BigNumber(number);
+  } catch {
+    return new BigNumber(NaN);
+  }
+}
+
+/**
+ * Scan raw file contents for `option "inferred_tolerance_default"
+ * "<CURRENCY>:<tolerance>"` declarations, Beancount lexer semantics (quoted
+ * name and value). Each adds one currency (or `*`); a later one for the same
+ * currency wins. A bare number is not Beancount syntax, and both engines
+ * report and ignore it, so it is ignored here too. Only files the bulk
+ * endpoint already fetched are scanned — a declaration living in an unrelated
+ * file is missed, noted at the call site.
+ */
+export function scanInferredToleranceDefaults(
+  contents: string[],
+): ToleranceDefaults {
+  const defaults = new Map<string, BigNumber>();
   for (const content of contents) {
     for (const line of content.split("\n")) {
-      const match =
+      const value =
         /^\s*option\s+"inferred_tolerance_default"\s+"([^"]+)"\s*(;.*)?$/.exec(
           line,
-        );
-      if (match?.[1] && /^-?\d+(\.\d+)?$/.test(match[1].trim())) {
-        return match[1].trim();
-      }
+        )?.[1];
+      const entry =
+        value === undefined
+          ? null
+          : /^\s*([^:\s]+)\s*:\s*(\d+(?:\.\d+)?)\s*$/.exec(value);
+      if (entry) defaults.set(entry[1], new BigNumber(entry[2]));
     }
   }
-  return DEFAULT_INFERRED_TOLERANCE;
+  return defaults;
 }
 
 export type CheckedTransaction = {
@@ -89,7 +128,7 @@ export type CheckedTransaction = {
  */
 export function checkTransactionBalance(
   postings: BalancePosting[],
-  inferredToleranceDefault: string = DEFAULT_INFERRED_TOLERANCE,
+  toleranceDefaults: ToleranceDefaults = NO_TOLERANCE_DEFAULTS,
 ):
   | { ok: true; value: CheckedTransaction }
   | { ok: false; value: BalanceFailure } {
@@ -112,38 +151,43 @@ export function checkTransactionBalance(
   for (const posting of postings) {
     if (posting.units === undefined || posting.units === null) continue;
     const { number, currency } = posting.units;
-    // bignumber.js 11 throws on a malformed string where earlier versions
-    // returned NaN; either way it is the caller's input, never an outage.
-    let amount: BigNumber;
-    try {
-      amount = new BigNumber(number);
-    } catch {
-      amount = new BigNumber(NaN);
-    }
-    if (!amount.isFinite()) {
+    const amount = decimal(number);
+    const price = posting.price ? decimal(posting.price.number) : undefined;
+    if (!amount.isFinite() || (price !== undefined && !price.isFinite())) {
+      const bad = amount.isFinite() ? posting.price! : posting.units;
       return {
         ok: false,
         value: {
           kind: "unbalanced",
-          message: `posting amount "${number} ${currency}" is not a number`,
-          residuals: [`${number} ${currency}`],
+          message: `posting amount "${bad.number} ${bad.currency}" is not a number`,
+          residuals: [`${bad.number} ${bad.currency}`],
         },
       };
     }
-    sums.set(currency, (sums.get(currency) ?? new BigNumber(0)).plus(amount));
     const places = impliedDecimals(number);
-    decimals.set(currency, Math.max(decimals.get(currency) ?? 0, places));
+    // A priced posting weighs units × price, in the price's currency, as
+    // Beancount balances it (w21/647); it was summed in its own currency.
+    const weightCurrency = posting.price ? posting.price.currency : currency;
+    const weight = price === undefined ? amount : amount.times(price);
+    const weightPlaces = posting.price
+      ? places + impliedDecimals(posting.price.number)
+      : places;
+    sums.set(
+      weightCurrency,
+      (sums.get(weightCurrency) ?? new BigNumber(0)).plus(weight),
+    );
+    decimals.set(
+      weightCurrency,
+      Math.max(decimals.get(weightCurrency) ?? 0, weightPlaces),
+    );
+    // A whole number implies no tolerance at all.
+    if (places === 0) continue;
     const candidate = halfUnit(places);
     const best = inferred.get(currency);
     if (!best || candidate.isGreaterThan(best))
       inferred.set(currency, candidate);
   }
 
-  const floorParsed = new BigNumber(inferredToleranceDefault);
-  const floor =
-    floorParsed.isFinite() && floorParsed.isGreaterThanOrEqualTo(0)
-      ? floorParsed
-      : new BigNumber(DEFAULT_INFERRED_TOLERANCE);
   const residuals: CheckedTransaction["residuals"] = [];
   for (const [currency, sum] of sums) {
     if (!sum.isZero()) {
@@ -180,13 +224,17 @@ export function checkTransactionBalance(
     return { ok: true, value: { residuals: [] } };
   }
 
-  const offending = residuals.filter((residual) => {
-    const tolerance = BigNumber.max(
-      floor,
-      inferred.get(residual.currency) ?? new BigNumber(0),
-    );
-    return residual.amount.abs().isGreaterThan(tolerance);
-  });
+  const offending = residuals.filter((residual) =>
+    residual.amount
+      .abs()
+      .isGreaterThan(
+        toleranceFor(
+          residual.currency,
+          inferred.get(residual.currency),
+          toleranceDefaults,
+        ),
+      ),
+  );
   if (offending.length === 0) return { ok: true, value: { residuals: [] } };
   const rendered = offending.map(
     (residual) =>

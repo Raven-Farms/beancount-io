@@ -65,3 +65,24 @@ def test_a_write_to_the_root_names_the_link_too(linked: Path) -> None:
 
     assert result.returncode == 0, result.stderr
     assert json.loads(result.stdout)["target"] == {"file": str(linked / "main.bean"), "into": str(linked / "main.bean")}
+
+
+def test_format_target_files_name_the_link(linked: Path) -> None:
+    """`format --check` reports the root as named, not its resolved target (w5/795)."""
+    aligned = _bea(linked, "format", "-i", "main.bean")
+    assert aligned.returncode == 0, aligned.stderr
+
+    checked = _bea(linked, "--json", "format", "--check", "main.bean")
+
+    assert checked.returncode == 0, checked.stderr
+    files = json.loads(checked.stdout)["target"]["files"]
+    assert files == [str(linked / "inc.bean"), str(linked / "main.bean")]
+    assert _bea(linked, "--json", "format", "--check", files[1]).returncode == 0
+
+
+def test_text_add_names_the_link_like_json(linked: Path) -> None:
+    """The text confirmation uses the `write_target` path, not the engine's resolved one (w5/795)."""
+    result = _bea(linked, "add", "note", "--date", "2026-01-06", "-a", "Assets:Cash", "-m", "hi")
+
+    assert result.returncode == 0, result.stderr
+    assert result.stdout.strip() == f"Added 1 note to {linked / 'main.bean'}."

@@ -26,6 +26,30 @@ const SEGMENT_MATCH_BONUS = 2;
  */
 const EXACT_MATCH_LENGTH_FACTOR = 3;
 
+/**
+ * `text` lowercased one UTF-16 unit at a time, so it stays index-aligned with
+ * `text`. `"İ".toLowerCase()` is two units (`i` + U+0307), and lowercasing the
+ * whole string shifted every later character by one, so "bank" stopped
+ * finding `Assets:İşBank` (w21/060); its first unit, `i`, is what a typed
+ * pattern holds.
+ */
+function lowerAligned(text: string): string {
+  const whole = text.toLowerCase();
+  if (whole.length === text.length) {
+    return whole;
+  }
+  let lower = "";
+  for (let index = 0; index < text.length; index += 1) {
+    lower += text[index].toLowerCase()[0];
+  }
+  return lower;
+}
+
+function toNfc(text: string): string {
+  // eslint-disable-next-line no-control-regex
+  return /^[\x00-\x7f]*$/.test(text) ? text : text.normalize("NFC");
+}
+
 function isSegmentStart(text: string, index: number): boolean {
   return index === 0 || text[index - 1] === SEGMENT_SEPARATOR;
 }
@@ -66,6 +90,11 @@ function substringIndex(
  * An empty pattern matches everything with a neutral score of 1.
  */
 export function fuzzyMatch(pattern: string, text: string): number {
+  // Both sides as NFC: a ledger imported from a system that writes decomposed
+  // Unicode holds "Café" as "Cafe" + U+0301, which neither "café" nor "Café"
+  // would find (w21/256). Plain ASCII, nearly every account, skips the work.
+  pattern = toNfc(pattern);
+  text = toNfc(text);
   if (pattern.length === 0) {
     return 1;
   }
@@ -74,7 +103,7 @@ export function fuzzyMatch(pattern: string, text: string): number {
   }
 
   // Lowercased once per candidate instead of per character compared.
-  const lowerText = text.toLowerCase();
+  const lowerText = lowerAligned(text);
   let patternIndex = 0;
   let runLength = 0;
   let score = 0;
@@ -116,14 +145,31 @@ export function fuzzyMatch(pattern: string, text: string): number {
 }
 
 /**
+ * How exactly `pattern` names `account`: 2 for the whole name, 1 for its last
+ * segment, else 0, under the same smartcase rule as the match. A past pick of
+ * `Expenses:Rental-Car` ranked it above `Expenses:Rent` for "rent", since a
+ * whole-segment match scored like a prefix and usage broke the tie (w21/642).
+ */
+function exactness(pattern: string, account: string): number {
+  const wanted = toNfc(pattern);
+  const named = (text: string) =>
+    text.length === wanted.length &&
+    substringIndex(text, lowerAligned(text), wanted) === 0;
+  const text = toNfc(account);
+  if (named(text)) return 2;
+  return named(text.slice(text.lastIndexOf(SEGMENT_SEPARATOR) + 1)) ? 1 : 0;
+}
+
+/**
  * Accounts matching `pattern`, best first. An empty pattern returns the input
  * order untouched, so the caller can hand back its browse ordering unchanged.
  *
- * Match quality always dominates — a better match outranks a more-used weaker
- * one. Only once two accounts match equally well does `usage` decide, so the
- * ones the user actually books against come first; remaining ties break on the
- * shorter account, then alphabetically, so equally-good matches land in a
- * stable, predictable order rather than query-order chance.
+ * An account the query names exactly (its whole name, then its last segment)
+ * comes first. Then match quality dominates — a better match outranks a
+ * more-used weaker one. Only once two accounts match equally well does `usage`
+ * decide, so the ones the user actually books against come first; remaining
+ * ties break on the shorter account, then alphabetically, so equally-good
+ * matches land in a stable, predictable order rather than query-order chance.
  */
 export function filterAccounts(
   pattern: string,
@@ -134,14 +180,28 @@ export function filterAccounts(
   if (trimmed.length === 0) {
     return [...accounts];
   }
+  // Every word of the query must match, in any order: an account name has no
+  // spaces, so "credit card" as one pattern matched nothing and then offered
+  // to create an account the form refuses (w21/255). A single word scores
+  // exactly as before.
+  const words = trimmed.split(/\s+/);
 
   const matches: Array<{
     account: string;
+    exact: number;
     score: number;
     frecency: number;
   }> = [];
   for (const account of accounts) {
-    const score = fuzzyMatch(trimmed, account);
+    let score = 0;
+    for (const word of words) {
+      const wordScore = fuzzyMatch(word, account);
+      if (wordScore === 0) {
+        score = 0;
+        break;
+      }
+      score += wordScore;
+    }
     if (score === 0) {
       continue;
     }
@@ -150,6 +210,7 @@ export function filterAccounts(
     // survived the match, which on a real chart of accounts is few of them.
     matches.push({
       account,
+      exact: words.length === 1 ? exactness(trimmed, account) : 0,
       score,
       frecency: ranking
         ? frecencyScore(ranking.usage[account], ranking.now)
@@ -160,6 +221,7 @@ export function filterAccounts(
   return matches
     .sort(
       (a, b) =>
+        b.exact - a.exact ||
         b.score - a.score ||
         b.frecency - a.frecency ||
         a.account.length - b.account.length ||

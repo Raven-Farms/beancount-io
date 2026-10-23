@@ -260,7 +260,9 @@ describe("statement adapter contracts", () => {
       expect(result.data?.[entry.field]).toEqual(normalized);
       const expectedParams = entry.filtered
         ? params
-        : { conversion: "USD", interval: "monthly" };
+        : // No conversion on any surface: each values in the ledger's operating
+          // currency rather than GraphQL alone defaulting to USD (w21/202).
+          { interval: "monthly" };
       expect(f.reports[entry.field]).toHaveBeenCalledTimes(3);
       for (const call of f.reports[entry.field].mock.calls)
         expect(call).toEqual(["alice", "main", expectedParams]);
@@ -291,6 +293,8 @@ describe("statement adapter contracts", () => {
           equity: 2 * usd,
           // The accounts' own basis, not the series point's (w6/009).
           netWorth: 2 * usd + 2 * usd,
+          // The fixture's EUR side is stated, not summed as zero (w23/050).
+          otherCurrencies: { EUR: -182.4 },
           byAccount: [
             { account: "Assets", balance: usd },
             { account: "Assets", balance: usd },

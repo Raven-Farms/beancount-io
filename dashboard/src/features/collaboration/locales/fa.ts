@@ -36,6 +36,12 @@ const faCollaboration: Record<string, TranslationEntry> = {
     message: "خطا در بارگذاری همکاران",
     description: "Error title when collaborators fail to load",
   },
+  "collaboration.ownerPlanLimitReached": {
+    message:
+      "طرح مالک این دفتر اجازهٔ افزودن همکار بیشتری نمی‌دهد. فقط مالک می‌تواند برای همکاران بیشتر ارتقا دهد.",
+    description:
+      "Shown when adding a collaborator to someone else's ledger hits the owner's plan limit; only the owner can upgrade.",
+  },
   "collaboration.failedToAddCollaborator": {
     message: "افزودن همکار ناموفق بود",
     description: "Error message when adding collaborator fails",

@@ -396,6 +396,11 @@ const enCommon: Record<string, TranslationEntry> = {
     message: "Download",
     description: "Auto-generated from code usage",
   },
+  "common.downloadFailed": {
+    message: "The file could not be downloaded. Please try again.",
+    description:
+      "Error shown when the browser could not generate a file download",
+  },
   "common.moreActions": {
     message: "More actions",
     description: "Label for dropdown menu with additional actions",
@@ -779,6 +784,11 @@ const enCommon: Record<string, TranslationEntry> = {
     message: "No accounts found",
     description: "Message when no accounts match search",
   },
+  "component.suggestions.unavailable": {
+    message: "Suggestions couldn't load. You can still type a value.",
+    description:
+      "Notice under a form field when its suggestions failed to load; the field still accepts typed text",
+  },
   "component.sourceFileCombobox.placeholder": {
     message: "Search files...",
     description: "Placeholder for ledger file search",
@@ -1066,6 +1076,25 @@ const enCommon: Record<string, TranslationEntry> = {
     message: "You're up to date",
     description:
       "Description under the What's new heading when every release has been read",
+  },
+  "common.failedRenewal": {
+    message:
+      "We couldn't charge {card} for {plan}. Update it by {date} to keep {plan}.",
+    description:
+      "Banner while a renewal payment is past due: the card, the plan and the next retry date",
+  },
+  "common.failedRenewalUpdate": {
+    message: "Update payment method",
+    description: "Button that opens the billing portal to fix a failed renewal",
+  },
+  "common.failedRenewalYourCard": {
+    message: "your card",
+    description: "Stands in for the card name when it is unknown",
+  },
+  "common.failedRenewalDismiss": {
+    message: "Dismiss for now",
+    description:
+      "Accessible name of the button that hides the failed-renewal banner for this session",
   },
 };
 

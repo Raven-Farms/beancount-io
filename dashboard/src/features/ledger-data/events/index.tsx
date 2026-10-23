@@ -43,7 +43,11 @@ export default function LedgerEventsPage() {
   });
   const ledgerId = createLedgerId(ledgerOwner, ledgerName);
   const { ledgerName: ledgerDisplayName } = useLedger();
-  const [selectedEventType, setSelectedEventType] = useState<string>("all");
+  // null is "no type constraint", never an authored type: a real event
+  // type may be spelled "all" (w4/271).
+  const [selectedEventType, setSelectedEventType] = useState<string | null>(
+    null,
+  );
   const [searchTerm, setSearchTerm] = useState<string>("");
 
   // Get ledger searchParams from topbar
@@ -82,7 +86,7 @@ export default function LedgerEventsPage() {
       // Use queueMicrotask to schedule the state updates asynchronously
       queueMicrotask(() => {
         setSearchTerm("");
-        setSelectedEventType("all");
+        setSelectedEventType(null);
       });
     }
   }, [topbarFilterKey]);
@@ -94,15 +98,14 @@ export default function LedgerEventsPage() {
 
   // Get unique event types for filter dropdown
   const eventTypes = useMemo(() => {
-    const types = Array.from(new Set(events.map((event) => event.type)));
-    return ["all", ...types].sort();
+    return Array.from(new Set(events.map((event) => event.type))).sort();
   }, [events]);
 
   // Filter events based on selected type and search term
   const filteredEvents = useMemo(() => {
     return events.filter((event) => {
       const matchesType =
-        selectedEventType === "all" || event.type === selectedEventType;
+        selectedEventType === null || event.type === selectedEventType;
       const matchesSearch =
         searchTerm === "" ||
         event.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -110,6 +113,8 @@ export default function LedgerEventsPage() {
       return matchesType && matchesSearch;
     });
   }, [events, selectedEventType, searchTerm]);
+
+  const typeLabel = (type: string) => type || t("page.events.emptyType");
 
   const hasLedgerFilters = Boolean(
     ledgerFilters.searchParams.time ||
@@ -180,19 +185,25 @@ export default function LedgerEventsPage() {
                     <DropdownMenuTrigger asChild>
                       <Button variant="outline">
                         <Filter className="h-4 w-4 mr-2" />
-                        {selectedEventType === "all"
+                        {selectedEventType === null
                           ? t("page.accounts.allTypes")
-                          : selectedEventType}
+                          : typeLabel(selectedEventType)}
                         <ChevronDown className="h-4 w-4 ml-2" />
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent>
+                      <DropdownMenuItem
+                        key="all-types"
+                        onClick={() => setSelectedEventType(null)}
+                      >
+                        {t("page.accounts.allTypes")}
+                      </DropdownMenuItem>
                       {eventTypes.map((type) => (
                         <DropdownMenuItem
-                          key={type}
+                          key={`type:${type}`}
                           onClick={() => setSelectedEventType(type)}
                         >
-                          {type === "all" ? t("page.accounts.allTypes") : type}
+                          {typeLabel(type)}
                         </DropdownMenuItem>
                       ))}
                     </DropdownMenuContent>

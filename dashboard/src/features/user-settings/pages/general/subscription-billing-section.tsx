@@ -1,35 +1,40 @@
-import { AlertCircle, Crown } from "lucide-react";
+import { Crown } from "lucide-react";
 import { Button } from "@/common/components/ui/button";
 import { Badge } from "@/common/components/ui/badge";
 import type { GetSubscriptionStatusQuery } from "@/graphql/definitions";
+import type { CancelTarget } from "@/features/user-settings/hooks/use-subscription-cancel";
+import { isPendingCancellation } from "./subscription-state";
+import { useBillingDateFormat, useMoneyFormat } from "./use-money-format";
+
+/** Stripe's subscription statuses, as the billing badge names them. */
+const STATUS_LABEL_KEYS: Record<string, string> = {
+  active: "userSettings.subscriptionStatus.active",
+  trialing: "userSettings.subscriptionStatus.trialing",
+  past_due: "userSettings.subscriptionStatus.past_due",
+  unpaid: "userSettings.subscriptionStatus.unpaid",
+  incomplete: "userSettings.subscriptionStatus.incomplete",
+  incomplete_expired: "userSettings.subscriptionStatus.incomplete_expired",
+  canceled: "userSettings.subscriptionStatus.canceled",
+  paused: "userSettings.subscriptionStatus.paused",
+};
 
 export function BillingSection({
   subscriptions,
   t,
   portalLoading,
   cancelLoading,
-  resumeLoading,
   onManageBilling,
   onCancelClick,
-  onResumeClick,
 }: {
   subscriptions: GetSubscriptionStatusQuery["subscriptionStatus"]["subscriptions"];
   t: (key: string) => string;
   portalLoading: boolean;
   cancelLoading: boolean;
-  resumeLoading: boolean;
   onManageBilling: (clientId: string) => void;
-  onCancelClick: (
-    subscriptionId: string,
-    clientId: string,
-    endDate: string,
-  ) => void;
-  onResumeClick: (
-    subscriptionId: string,
-    clientId: string,
-    renewalDate: string,
-  ) => void;
+  onCancelClick: (target: CancelTarget) => void;
 }) {
+  const formatMoney = useMoneyFormat();
+  const formatDate = useBillingDateFormat();
   return (
     <div className="space-y-4">
       <h3 className="text-sm font-semibold text-foreground">
@@ -39,19 +44,16 @@ export function BillingSection({
         const product =
           subscription.items[0]?.product?.name || t("userSettings.unknownPlan");
         const price = subscription.items[0]?.price;
-        const amount = price?.amount ? (price.amount / 100).toFixed(2) : "0.00";
-        const currency =
-          price?.currency === "usd"
-            ? "$"
-            : (price?.currency?.toUpperCase() ?? "$");
-        const interval = price?.interval || "month";
+        const amount = `${formatMoney(price?.amount ?? 0, price?.currency)}${t(
+          price?.interval === "year"
+            ? "userSettings.perYear"
+            : "userSettings.perMonth",
+        )}`;
         const endDate = subscription.currentPeriodEnd
-          ? new Date(subscription.currentPeriodEnd).toLocaleDateString()
+          ? formatDate(subscription.currentPeriodEnd)
           : "";
-        const isCanceled = subscription.cancelAt || subscription.canceledAt;
-        const cancelAt = subscription.cancelAt
-          ? new Date(subscription.cancelAt).toLocaleDateString()
-          : null;
+        const isCanceled =
+          isPendingCancellation(subscription) || !!subscription.canceledAt;
 
         const statusVariant =
           subscription.status === "active"
@@ -76,15 +78,15 @@ export function BillingSection({
                   <Crown className="h-4 w-4 text-yellow-500" />
                   {product}
                 </p>
-                <p className="text-sm text-muted-foreground">
-                  {currency}
-                  {amount} / {interval}
-                </p>
+                <p className="text-sm text-muted-foreground">{amount}</p>
                 <Badge
                   variant={statusVariant}
-                  className={`text-xs capitalize ${statusClass}`}
+                  className={`text-xs ${statusClass}`}
                 >
-                  {subscription.status}
+                  {/* A status Stripe adds later still shows, untranslated. */}
+                  {STATUS_LABEL_KEYS[subscription.status]
+                    ? t(STATUS_LABEL_KEYS[subscription.status])
+                    : subscription.status}
                 </Badge>
               </div>
               <div className="flex flex-col gap-2 shrink-0">
@@ -98,34 +100,17 @@ export function BillingSection({
                     ? t("userSettings.opening")
                     : t("userSettings.manageBilling")}
                 </Button>
-                {isCanceled ? (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() =>
-                      onResumeClick(
-                        subscription.id,
-                        subscription.clientId,
-                        endDate,
-                      )
-                    }
-                    disabled={resumeLoading}
-                  >
-                    {resumeLoading
-                      ? t("userSettings.resuming")
-                      : t("userSettings.resumeSubscription")}
-                  </Button>
-                ) : (
+                {!isCanceled && (
                   <Button
                     variant="outline"
                     size="sm"
                     className="text-destructive hover:text-destructive"
                     onClick={() =>
-                      onCancelClick(
-                        subscription.id,
-                        subscription.clientId,
-                        endDate,
-                      )
+                      onCancelClick({
+                        id: subscription.id,
+                        clientId: subscription.clientId,
+                        endsAt: subscription.currentPeriodEnd,
+                      })
                     }
                     disabled={cancelLoading}
                   >
@@ -134,27 +119,12 @@ export function BillingSection({
                 )}
               </div>
             </div>
-            {isCanceled ? (
-              <div className="flex items-start gap-2 mt-2 p-2.5 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-md">
-                <AlertCircle className="h-4 w-4 text-yellow-600 dark:text-yellow-500 mt-0.5 shrink-0" />
-                <div className="text-xs text-yellow-800 dark:text-yellow-200 space-y-0.5">
-                  <p className="font-medium">
-                    {t("userSettings.subscriptionCanceled")}
-                  </p>
-                  {cancelAt && (
-                    <p>
-                      {t("userSettings.accessUntil")}{" "}
-                      <strong>{cancelAt}</strong>
-                    </p>
-                  )}
-                </div>
-              </div>
-            ) : (
-              subscription.currentPeriodEnd && (
-                <p className="text-xs text-muted-foreground">
-                  {t("userSettings.renewsOn")} <strong>{endDate}</strong>
-                </p>
-              )
+            {/* A pending cancellation is shown, with Resume, in the
+                Scheduled panel. */}
+            {!isCanceled && subscription.currentPeriodEnd && (
+              <p className="text-xs text-muted-foreground">
+                {t("userSettings.renewsOn")} <strong>{endDate}</strong>
+              </p>
             )}
           </div>
         );

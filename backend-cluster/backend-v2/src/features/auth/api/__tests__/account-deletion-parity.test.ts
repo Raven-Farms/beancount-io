@@ -30,8 +30,20 @@ let resolver: AccountResolver;
 let schemaPromise: ReturnType<typeof buildSchema>;
 registerEnumType(ReportStatus, { name: "ReportStatus" });
 
-async function fixture(identity = caller, failure?: "billing" | "ledger") {
-  const rows = new Set(["user", "paid", "jwt", "plaid", "email", "other-user"]);
+async function fixture(
+  identity = caller,
+  failure?: "billing" | "ledger" | "purged",
+) {
+  const rows = new Set([
+    "user",
+    "paid",
+    "jwt",
+    "oauth",
+    "apikey",
+    "plaid",
+    "email",
+    "other-user",
+  ]);
   const effects: string[] = [];
   const remove = (table: string) => async (_tx: unknown, userId: string) => {
     expect(userId).toBe("usr_ada");
@@ -49,6 +61,9 @@ async function fixture(identity = caller, failure?: "billing" | "ledger") {
       deleteByUserId: remove("paid"),
     },
     jwt: { deleteByUserId: remove("jwt") },
+    oauthGrant: { revokeAllForUser: remove("oauth") },
+    // w21/156: a deleted account's API keys go with it.
+    apiKey: { deleteByUserId: remove("apikey") },
     plaidItem: { getByUserId: async () => [], deleteByUserId: remove("plaid") },
     emailToken: {
       deleteByUserId: async (userId: string) => remove("email")(null, userId),
@@ -74,6 +89,9 @@ async function fixture(identity = caller, failure?: "billing" | "ledger") {
     expect(username).toBe("ada");
     effects.push("ledger");
     if (failure === "ledger") throw new Error("Ledger service unavailable");
+    // A retry after a lost response: the user is already purged.
+    if (failure === "purged")
+      throw Object.assign(new Error("Not Found"), { status: 404 });
   });
   const service = new AccountService(
     models as never,
@@ -151,13 +169,16 @@ describe("account deletion through real transports and the existing cleanup serv
           success: true,
           result: true,
         });
+        // w21/157: the ledger purge first, then what cannot be undone.
         expect(f.effects).toEqual([
+          "ledger",
           "cancel",
           "plaid",
           "paid",
           "jwt",
+          "oauth",
+          "apikey",
           "user",
-          "ledger",
           "email",
         ]);
         expect([...f.rows]).toEqual(["other-user"]);
@@ -184,6 +205,8 @@ describe("account deletion through real transports and the existing cleanup serv
           "user",
           "paid",
           "jwt",
+          "oauth",
+          "apikey",
           "plaid",
           "email",
           "other-user",
@@ -199,11 +222,13 @@ describe("account deletion through real transports and the existing cleanup serv
       const f = await fixture(caller, "billing");
       try {
         expect((await f.delete(surface)).success).toBe(false);
-        expect(f.effects).toEqual(["cancel"]);
+        expect(f.effects).toEqual(["ledger", "cancel"]);
         expect([...f.rows]).toEqual([
           "user",
           "paid",
           "jwt",
+          "oauth",
+          "apikey",
           "plaid",
           "email",
           "other-user",
@@ -214,7 +239,7 @@ describe("account deletion through real transports and the existing cleanup serv
     },
   );
   it.each(surfaces)(
-    "%s rolls back local rows when ledger-user deletion fails",
+    "%s leaves billing, banks and rows alone when ledger-user deletion fails",
     async (surface) => {
       const f = await fixture(caller, "ledger");
       try {
@@ -223,18 +248,31 @@ describe("account deletion through real transports and the existing cleanup serv
           "user",
           "paid",
           "jwt",
+          "oauth",
+          "apikey",
           "plaid",
           "email",
           "other-user",
         ]);
-        expect(f.effects).toEqual([
-          "cancel",
-          "plaid",
-          "paid",
-          "jwt",
-          "user",
-          "ledger",
-        ]);
+        // w21/157: nothing irreversible ran before the purge failed.
+        expect(f.effects).toEqual(["ledger"]);
+        expect(f.cancel).not.toHaveBeenCalled();
+      } finally {
+        await f.close();
+      }
+    },
+  );
+  it.each(surfaces)(
+    "%s completes a retry whose ledger purge already happened",
+    async (surface) => {
+      const f = await fixture(caller, "purged");
+      try {
+        expect(await f.delete(surface)).toEqual({
+          success: true,
+          result: true,
+        });
+        expect([...f.rows]).toEqual(["other-user"]);
+        expect(f.cancel).toHaveBeenCalledTimes(1);
       } finally {
         await f.close();
       }

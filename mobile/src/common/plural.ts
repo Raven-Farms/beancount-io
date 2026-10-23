@@ -4,7 +4,8 @@
  * i18n-js ships one English-shaped pluralizer (`one` for 1, `other` otherwise),
  * which is wrong for every Slavic locale — Russian says "2 цены" but "5 цен" —
  * and needlessly asks Chinese for a `one` form it does not have. The CLDR rules
- * already live in `Intl.PluralRules`, so the app asks it instead.
+ * already live in `Intl.PluralRules`, so the app asks it instead, and carries
+ * the same rules for the shipped languages for runtimes (Hermes) without it.
  *
  * Import-free so the jest-lite runner can load it, and so the integrity suite
  * checks catalogs against the same rules the app renders with.
@@ -31,13 +32,58 @@ function rulesFor(locale: string): Intl.PluralRules | null {
 }
 
 /**
- * The category `count` takes in `locale`. Falls back to English's rule when the
- * runtime has no plural data for the locale, so a count still renders.
+ * The category `count` takes in `locale` by CLDR's cardinal rules, for the
+ * languages the app ships, with no `Intl` involved. Hermes has no
+ * `Intl.PluralRules`, so on a device every count fell back to English's rule:
+ * Russian read "5 ошибки" and "5 транзакции", Ukrainian "2 запису", Slovak
+ * "2 chýb", and French "0 erreurs" (w21/248). Rules for counts of a whole
+ * number, with the usual treatment of a fraction (`v` is how many decimals it
+ * has); a language not listed is English's.
+ */
+export function builtinPluralCategory(
+  locale: string,
+  count: number,
+): PluralCategory {
+  const language = locale.split(/[-_]/)[0].toLowerCase();
+  const n = Math.abs(count);
+  const i = Math.trunc(n);
+  const fraction = n !== i;
+  switch (language) {
+    case "zh":
+      return "other";
+    case "ru":
+    case "uk": {
+      if (fraction) return "other";
+      if (i % 10 === 1 && i % 100 !== 11) return "one";
+      if (i % 10 >= 2 && i % 10 <= 4 && (i % 100 < 12 || i % 100 > 14)) {
+        return "few";
+      }
+      return "many";
+    }
+    case "sk":
+      if (fraction) return "many";
+      if (i === 1) return "one";
+      return i >= 2 && i <= 4 ? "few" : "other";
+    case "fr":
+    case "pt":
+      // Zero is singular: "0 erreur".
+      return i === 0 || i === 1 ? "one" : "other";
+    case "fa":
+      return i === 0 || n === 1 ? "one" : "other";
+    default:
+      // en, de, nl, es, ca, bg: one only for exactly 1.
+      return n === 1 ? "one" : "other";
+  }
+}
+
+/**
+ * The category `count` takes in `locale`: the runtime's own plural rules when
+ * it has them, else the built-in CLDR rules above.
  */
 export function pluralCategory(locale: string, count: number): PluralCategory {
   const rules = rulesFor(locale);
   if (rules) return rules.select(count) as PluralCategory;
-  return count === 1 ? "one" : "other";
+  return builtinPluralCategory(locale, count);
 }
 
 /**
@@ -87,7 +133,13 @@ export function registerPluralizers(
 /** Every category `locale` distinguishes, as the catalog must provide them. */
 function pluralCategoriesOf(locale: string): PluralCategory[] {
   const rules = rulesFor(locale);
-  if (!rules) return ["one", "other"];
+  if (!rules) {
+    const language = locale.split(/[-_]/)[0].toLowerCase();
+    if (language === "zh") return ["other"];
+    return language === "ru" || language === "uk" || language === "sk"
+      ? ["one", "few", "many", "other"]
+      : ["one", "other"];
+  }
   // Canonical order: ICU versions list the categories in different orders.
   const categories = rules.resolvedOptions().pluralCategories as string[];
   return CANONICAL_ORDER.filter((category) => categories.includes(category));

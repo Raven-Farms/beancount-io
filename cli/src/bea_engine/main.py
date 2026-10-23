@@ -298,12 +298,20 @@ def add(
 
 @contextmanager
 def _redirect_on_failure(redirect: str | None) -> Iterator[None]:
-    """Say a refused write was checked against the root, as the answer would have."""
+    """Say a refused write was checked against the root, as the answer would have.
+
+    In the failure itself: a note on the helper's stderr is shown only on
+    success, so a refused or partial write through an include never said it
+    was checked against the root (w5/828). A partial write's result carries it
+    in `warnings` too, as a whole one does.
+    """
     try:
         yield
-    except protocol.EngineError:
+    except protocol.EngineError as exc:
         if redirect is not None:
-            protocol.note(redirect)
+            exc.details = [*exc.details, redirect]
+            if isinstance(exc.result, dict):
+                exc.result["warnings"] = [redirect, *(exc.result.get("warnings") or [])]
         raise
 
 
@@ -476,6 +484,11 @@ def init_ledger(
         list[str] | None,
         typer.Option("--opening-balance", help="'ACCOUNT NUMBER' in the operating currency; repeat for each account."),
     ] = None,
+    preset: Annotated[
+        str | None,
+        typer.Option("--preset", help="Setup-catalog preset id, e.g. personal@1 (ADR021); replaces the fixed chart."),
+    ] = None,
+    title: Annotated[str | None, typer.Option("--title", help="Ledger title for a preset ledger.")] = None,
 ) -> None:
     """Create a starter personal ledger with common accounts.
 
@@ -485,12 +498,22 @@ def init_ledger(
     with protocol.answering("init") as answer:
         from bea_engine import initiating
 
-        answer.data = initiating.answer(
-            expand_path(file, "--file").absolute(),
-            currency=currency,
-            date=date,
-            opening_balances=list(opening_balance) if opening_balance else None,
-        )
+        if preset is not None:
+            answer.data = initiating.answer_preset(
+                expand_path(file, "--file").absolute(),
+                preset=preset,
+                title=title,
+                currency=currency,
+                date=date,
+                opening_balances=list(opening_balance) if opening_balance else None,
+            )
+        else:
+            answer.data = initiating.answer(
+                expand_path(file, "--file").absolute(),
+                currency=currency,
+                date=date,
+                opening_balances=list(opening_balance) if opening_balance else None,
+            )
 
 
 @app.command("import")
@@ -508,6 +531,11 @@ def import_entries(
     encoding: Annotated[
         str | None, typer.Option("--encoding", help="CSV text encoding for --csv: utf-8, cp1252, or latin-1.")
     ] = None,
+    decimal: Annotated[
+        str | None,
+        typer.Option("--decimal", help="Decimal convention for --csv amounts: 'comma' or 'point'."),
+    ] = None,
+    skip: Annotated[int, typer.Option("--skip", help="Leading rows to skip before the --csv header.")] = 0,
     rules_file: Annotated[
         Path | None, typer.Option("--rules", help="TOML categorization rules for --csv rows.", readable=False)
     ] = None,
@@ -533,6 +561,9 @@ def import_entries(
     config_source: Annotated[
         str, typer.Option("--config-source", help="Label for how the importer/mapping was chosen (for the preview).")
     ] = "--config",
+    delimiter_source: Annotated[
+        str, typer.Option("--delimiter-source", help="Where the delimiter was given: --delimiter or --csv.")
+    ] = "--delimiter",
 ) -> None:
     """Extract bank-export entries, review duplicates, optionally append.
 
@@ -552,9 +583,11 @@ def import_entries(
             protocol.note(redirect)
         # An apply decides its rows against the ledger it read, so it queues
         # behind other `bea` writers before that read rather than refusing
-        # what one of them committed meanwhile (w5/183). A preview writes
-        # nothing and takes no lock.
-        with write.lock_files([ledger, write.destination(ledger, into)], deciding=True) if apply else nullcontext():
+        # what one of them committed meanwhile (w5/183). The lock covers the
+        # whole graph, not just root and target, so a write to an include in
+        # another directory queues too (w5/869). A preview writes nothing and
+        # takes no lock.
+        with write.locked_graph(ledger, write.destination(ledger, into), deciding=True) if apply else nullcontext():
             answer.data = importing.answer(
                 ledger,
                 source,
@@ -563,6 +596,8 @@ def import_entries(
                 date_format=date_format,
                 delimiter=delimiter,
                 encoding=encoding,
+                decimal=decimal,
+                skip=skip,
                 rules_file=rules_file,
                 default_account=default_account,
                 config=config,
@@ -573,6 +608,7 @@ def import_entries(
                 into=into,
                 allow_errors=allow_errors,
                 config_source=config_source,
+                delimiter_source=delimiter_source,
             )
 
 
@@ -743,19 +779,25 @@ def price_status(
 ) -> None:
     """Report every managed price include in the ledger with its freshness.
 
-    Answers `{"sources": [...], "errors": [...]}`: one record per resolved
-    URL with alias, revision, observed-at, fetched-at, next refresh,
-    freshness computed at read time, shadowed count, and the last error when
-    any, plus the load's own errors for the frontend to banner. Status never
-    fails on ledger errors; only strict mode fails it, on stale sources.
+    Answers `{"sources": [...], "refused": [...], "errors": [...]}`: one
+    record per resolved URL with alias, revision, observed-at, fetched-at,
+    next refresh, freshness computed at read time, shadowed count, and the
+    last error when any; one `{url, reason}` per URL include the origin policy
+    refused, which is never fetched; plus the load's own errors for the
+    frontend to banner. Status never fails on ledger errors; only strict mode
+    fails it, on stale sources.
     """
     with protocol.answering("price-status") as answer:
         from bea_engine import managed_load
+        from bea_engine.ledger.write import LedgerSnapshot
         from bea_engine.query import format_error
 
-        loaded = managed_load.load_with_sources(_ledger(file))
+        ledger = _ledger(file)
+        loaded = managed_load.load_with_sources(ledger)
+        refused = managed_load.refused_includes(LedgerSnapshot.capture(ledger))
         answer.data = {
             "sources": [managed_load.source_json(source) for source in loaded.sources],
+            "refused": [{"url": url, "reason": reason} for url, reason in refused.items()],
             "errors": [format_error(error) for error in loaded.errors],
         }
 
@@ -880,7 +922,9 @@ def _request(value: str) -> dict[str, Any]:
     """
     text = _text(value)
     try:
-        request = json.loads(text)
+        from bea_engine.amounts import JsonFloat, restore_json_float
+
+        request = json.loads(text, parse_float=JsonFloat, object_hook=restore_json_float)
     except ValueError as exc:
         raise protocol.UsageError(f"--request is not valid JSON: {exc}.") from None
     if not isinstance(request, dict):

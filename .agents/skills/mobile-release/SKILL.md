@@ -1,6 +1,7 @@
 ---
 name: mobile-release
 description: Summarize mobile changes since the previous release, bump the Beancount mobile version, prepare localized release notes and listings, and release to the Apple App Store and Google Play. Use for $mobile-release or requests to cut a mobile store release. Skip ordinary code shipping, OTA-only updates, release-status questions, and requests to create or edit this skill.
+metadata: {"internal": true}
 ---
 
 # Mobile release

@@ -15,6 +15,11 @@ const react = {
       ? type({ ...props, children })
       : { type, props: props ?? {}, children: children.flat() };
   },
+  // Effects run as they are declared; the cursor-less stub is enough for a
+  // component whose effect only reports.
+  useEffect(effect: () => void) {
+    effect();
+  },
   useState(initial: unknown) {
     const slot = cursor++;
     if (!(slot in states)) states[slot] = initial;
@@ -64,6 +69,11 @@ function loadAvatar(): (props: Record<string, unknown>) => Node {
   return exports.UserAvatar;
 }
 
+const realFetch = globalThis.fetch;
+afterAll(() => {
+  globalThis.fetch = realFetch;
+});
+
 const UserAvatar = loadAvatar();
 const render = (props: Record<string, unknown>): Node => {
   cursor = 0;
@@ -104,6 +114,56 @@ describe("UserAvatar", () => {
     const after = content(render(props));
     expect(after.type).toBe("Text");
     expect(after.children).toEqual(["A"]);
+  });
+
+  const answer = (status: number | Error) => {
+    globalThis.fetch = (async () => {
+      if (status instanceof Error) throw status;
+      return { status };
+    }) as unknown as typeof fetch;
+  };
+  const settle = () => new Promise((resolve) => setTimeout(resolve, 0));
+  const failedAvatar = async (status: number | Error) => {
+    states = [];
+    answer(status);
+    const reports: boolean[] = [];
+    const props = {
+      uri: "https://example.test/ada.png",
+      name: "ada",
+      size: 24,
+      onFallbackChange: (fallback: boolean) => reports.push(fallback),
+    };
+    content(render(props)).props.onError();
+    render(props);
+    await settle();
+    render(props);
+    return reports;
+  };
+
+  it("reports there is no picture once the server says 404 (w21/289)", async () => {
+    // The stub re-runs effects on every render: the last report is the state.
+    const reports = await failedAvatar(404);
+    expect(reports[0]).toBe(false);
+    expect(reports[reports.length - 1]).toBe(true);
+  });
+
+  // w21/430: a failed load is not a missing Gravatar.
+  it("does not report a picture that merely failed to load", async () => {
+    expect((await failedAvatar(new Error("offline"))).includes(true)).toBe(
+      false,
+    );
+    expect((await failedAvatar(503)).includes(true)).toBe(false);
+  });
+
+  it("reports no picture when there is none to load", () => {
+    const none: boolean[] = [];
+    render({
+      uri: null,
+      name: "ada",
+      size: 24,
+      onFallbackChange: (fallback: boolean) => none.push(fallback),
+    });
+    expect(none).toEqual([true]);
   });
 
   it("tries again when the picture changes after a failure", () => {

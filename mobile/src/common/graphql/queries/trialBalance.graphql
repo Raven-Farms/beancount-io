@@ -1,8 +1,4 @@
-query TrialBalance(
-  $ledgerId: String!
-  $time: String
-  $conversion: String!
-) {
+query TrialBalance($ledgerId: String!, $time: String, $conversion: String!) {
   getLedgerTrialBalance(
     ledgerId: $ledgerId
     time: $time

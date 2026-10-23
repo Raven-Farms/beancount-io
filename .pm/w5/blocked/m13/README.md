@@ -39,7 +39,7 @@
 
 ## Source + Goal linkage
 
-- **Source:** `/pm-brainstorm for w5`, both proposals approved with `$pm for all for w5` on 2026-09-28. Builds on [w5/m3's installed-suite baseline](../../done/m3/README.md), the [installation guide](../../../../skills/docs/installation.md), and [the current installer](../../../../skills/scripts/beancount-skills.py). Platform references: [Codex native Windows](https://learn.chatgpt.com/docs/windows/windows-sandbox), [Claude Code setup](https://code.claude.com/docs/en/setup#set-up-on-windows), and [Python symlink prerequisites](https://docs.python.org/3/library/os.html#os.symlink).
+- **Source:** `/pm-brainstorm for w5`, both proposals approved with `$pm for all for w5` on 2026-09-28. Builds on [w5/m3's installed-suite baseline](../../done/m3/README.md), the [installation guide](../../../../docs/skills/installation.md), and [the current installer](../../../../scripts/skills/beancount-skills.py). Platform references: [Codex native Windows](https://learn.chatgpt.com/docs/windows/windows-sandbox), [Claude Code setup](https://code.claude.com/docs/en/setup#set-up-on-windows), and [Python symlink prerequisites](https://docs.python.org/3/library/os.html#os.symlink).
 - **Goal linkage:** **A2 — Frictionless onboarding** and **A3 — Community & distribution**. Native Windows users can install the existing customer suite and obtain their first verified ledger answer through documented commands.
 - **Expected outcome:** Both native Windows agents discover all eight installed skills and answer the existing synthetic first-query example correctly. Record installation success, time to first query, and manual corrections as rehearsal signals; preserve the installer lifecycle in Windows CI.
 - **Why now:** Published CLI installation checks already cover Windows, while the customer-skills installation and first-query guides explicitly leave it uncovered. w5 has capacity and this extends the shipped installer instead of inventing a new distribution system.
@@ -47,7 +47,7 @@
 
 ## Boundaries and dependencies
 
-- Implementation belongs in skills/, plus the package-owned .github/workflows/ci-skills.yml job and root discovery pointers as needed. Keep synthetic workspaces and raw logs under skills/tmp/ or the equivalent job-owned temporary directory on Windows.
+- Implementation belongs in skills/, plus the package-owned .github/workflows/ci-skills.yml job and root discovery pointers as needed. Keep synthetic workspaces and raw logs under scripts/skills/tmp/ or the equivalent job-owned temporary directory on Windows.
 - Retain one source checkout and directory symlinks; do not add junction/copy fallback modes, a plugin distribution system, new dependencies, or changes to the repository's shared development-skill link.
 - Document required symlink capability and verify it on the target host. Do not silently enable Developer Mode, change machine policy, or elevate agent sessions. A host that lacks permission should receive a clear remedy and no false success.
 - The approved deliverable is native Windows onboarding through PowerShell. WSL is a distinct environment and cannot substitute for native acceptance. Reuse the existing first-query fixture rather than building a new accounting journey.

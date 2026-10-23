@@ -4,7 +4,7 @@ Internal workflows for developing and maintaining this monorepo. Follow the [roo
 
 The canonical implementations live in the real directory `.agents/skills/` relative to the repository root. Codex reads that directory; Claude Code reads the same files through `.claude/skills -> ../.agents/skills`. Edit the canonical files and keep the link relative.
 
-Customer-facing `beancount-*` ledger skills belong in [`skills/.claude/skills/`](../skills/.claude/skills), documented in [`skills/AGENTS.md`](../skills/AGENTS.md). Keep them separate from this development suite.
+Customer-facing `beancount-*` ledger skills belong in [`skills/<name>/`](../skills), documented in [`skills/AGENTS.md`](../skills/AGENTS.md). Keep them separate from this development suite.
 
 ## Skills
 
@@ -56,8 +56,8 @@ From the repository root, using the existing CLI environment for Beancount fixtu
 
 ```zsh
 python3 scripts/check-agent-guidance.py
-python3 skills/scripts/ci-check.py
-python3 skills/scripts/test_ci_check.py
+python3 scripts/skills/ci-check.py
+python3 scripts/skills/test_ci_check.py
 node --test .agents/skills/qa-shared/scripts/qa-login.test.mjs .agents/skills/qa-shared/scripts/qa-mcp.test.mjs
 ```
 

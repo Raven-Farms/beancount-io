@@ -397,6 +397,11 @@ const bgCommon: Record<string, TranslationEntry> = {
     message: "Изтегляне",
     description: "Auto-generated from code usage",
   },
+  "common.downloadFailed": {
+    message: "Файлът не можа да бъде изтеглен. Моля, опитайте отново.",
+    description:
+      "Error shown when the browser could not generate a file download",
+  },
   "common.moreActions": {
     message: "Още действия",
     description: "Label for dropdown menu with additional actions",
@@ -736,6 +741,12 @@ const bgCommon: Record<string, TranslationEntry> = {
     message: "Няма намерени сметки",
     description: "Message when no accounts match search",
   },
+  "component.suggestions.unavailable": {
+    message:
+      "Предложенията не можаха да се заредят. Все пак можете да въведете стойност.",
+    description:
+      "Notice under a form field when its suggestions failed to load; the field still accepts typed text",
+  },
   "component.sourceFileCombobox.placeholder": {
     message: "Търсене на файлове...",
     description: "Placeholder for ledger file search",
@@ -1060,6 +1071,25 @@ const bgCommon: Record<string, TranslationEntry> = {
     message: "Всичко е прегледано",
     description:
       "Description under the What's new heading when every release has been read",
+  },
+  "common.failedRenewal": {
+    message:
+      "Не успяхме да таксуваме {card} за {plan}. Обновете я до {date}, за да запазите {plan}.",
+    description:
+      "Banner while a renewal payment is past due: the card, the plan and the next retry date",
+  },
+  "common.failedRenewalUpdate": {
+    message: "Обнови метода на плащане",
+    description: "Button that opens the billing portal to fix a failed renewal",
+  },
+  "common.failedRenewalYourCard": {
+    message: "картата ви",
+    description: "Stands in for the card name when it is unknown",
+  },
+  "common.failedRenewalDismiss": {
+    message: "Скрий засега",
+    description:
+      "Accessible name of the button that hides the failed-renewal banner for this session",
   },
 };
 

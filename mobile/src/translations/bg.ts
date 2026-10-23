@@ -6,6 +6,9 @@ export const bg: Translations = {
   guestTryExample: "Изпробвайте пример",
   guestChooseExample: "Изберете пример",
   guestReadOnly: "Пример само за четене",
+  guestSignInHint: "Отваря вход",
+  guestReadOnlyEditor:
+    "Примерът е само за четене. Влезте, за да редактирате собствения си дневник.",
   guestExit: "Изход от примерите",
   guestIntroduction:
     "Разгледайте реални отчети без профил. Тези книги са само за четене.",
@@ -27,6 +30,7 @@ export const bg: Translations = {
   discoveryTab_explore: "Разглеждане",
   discoverySearch: "Търсене на книги",
   discoveryClear: "Изчистване на търсенето",
+  clearSearch: "Изчистване на търсенето",
   discoveryOpen: "Отваряне на {{name}}",
   discoveryStar: "Добавяне на {{name}} в любими",
   discoveryUnstar: "Премахване на {{name}} от любими",
@@ -47,6 +51,15 @@ export const bg: Translations = {
     "Действието не е изпълнено. Проверете връзката и достъпа до книгата и опитайте отново.",
   ledgerReadOnly:
     "Тази книга е само за четене. Изберете книга, която можете да редактирате.",
+  ledgerGoneTitle: "Тази книга вече не е достъпна",
+  ledgerGoneMessage:
+    "Тя е изтрита, преименувана или вече не е споделена. Изберете друга книга, за да продължите.",
+  ledgerEditorNotUtf8:
+    "Този файл не е текст в UTF-8. Редактирането му тук би променило някои знаци, затова се отваря само за четене. Редактирайте го на компютър.",
+  ledgerEditorTooLarge:
+    "Този файл е твърде голям, за да се отвори на телефона, затова е само за четене. Редактирайте го на компютър.",
+  ledgerEditorTooLargeToEdit:
+    "Този файл е над 1 MiB – повече, отколкото може да се запази от телефона, затова е само за четене. Редактирайте го в мрежата или с CLI.",
 
   // bottom tab bar
   home: "Начало",
@@ -76,25 +89,32 @@ export const bg: Translations = {
   merchantsEmptyMessage:
     "Получателите от вашите транзакции ще се появят тук като директория за търсене.",
   merchantsNoSearchResults: "Няма търговци, които да съвпадат с търсенето.",
-  merchantsLoadError: "Неуспешно зареждане на търговци: ",
+  merchantsLoadError: "Неуспешно зареждане на търговци",
   merchantsSortByCount: "Сортиране по брой транзакции",
   merchantsSortAlphabetical: "Сортиране по азбучен ред",
   merchantsRecurringSection: "Повтарящи се",
+  merchantsAllSection: "Всички търговци",
   merchantsRecurringBadge: "Повтарящ се",
   merchantsCadenceWeekly: "Седмично",
   merchantsCadenceBiweekly: "На 2 седмици",
+  merchantsCadenceSemimonthly: "Два пъти месечно",
   merchantsCadenceMonthly: "Месечно",
+  merchantsCadenceBimonthly: "На 2 месеца",
   merchantsCadenceQuarterly: "На тримесечие",
+  merchantsCadenceSemiannual: "На 6 месеца",
   merchantsCadenceYearly: "Годишно",
   merchantsCadenceIrregular: "Неравномерно",
   merchantsCadenceUnknown: "Недостатъчна история",
+  merchantsCadenceInactive: "Няма скорошни плащания",
   merchantsNextExpected: "Следващо {{date}}",
   merchantsOverdue: "Просрочено",
+  merchantsLastPaid: "Последно платено {{date}}",
+  merchantsScheduled: "Планирано за {{date}}",
   merchantsRecurringToggle: "Повтарящ се",
   merchantsRecurringToggleHelper:
     "Закачи този търговец в Повтарящи се. Ръчният избор надделява над откриването и остава на това устройство.",
   merchantDetailDateRange: "{{first}} – {{last}}",
-  merchantDetailLoadError: "Неуспешно зареждане на търговеца: ",
+  merchantDetailLoadError: "Неуспешно зареждане на търговеца",
   merchantDetailRetry: "Опитай отново",
   merchantDetailEmptyTitle: "Няма транзакции",
   merchantDetailEmptyMessage:
@@ -133,6 +153,7 @@ export const bg: Translations = {
   deleteAccountConfirmMessage:
     'За да потвърдите, моля въведете "sudo delete my account" по-долу:',
   deleteAccountConfirmPhrase: "sudo delete my account",
+  deleteAccountConfirmMismatch: "Въведете фразата точно както е показана.",
   deleteAccountConfirmPlaceholder: "Въведете фразата тук",
   deleteAccountSuccess: "Акаунтът е изтрит",
   deleteAccountFailed: "Акаунтът не беше изтрит. Опитайте отново.",
@@ -142,6 +163,7 @@ export const bg: Translations = {
   accountSettings: "Акаунт",
   supportSettings: "Поддръжка",
   signIn: "Вход",
+  sessionEndedNotice: "Сесията ви приключи. Влезте отново, за да продължите.",
   signUp: "Регистрация",
   serverSettings: "Сървър",
   serverSettingsDescription:
@@ -163,6 +185,13 @@ export const bg: Translations = {
   serverConnectionUnreachable: "Неуспешно свързване със сървъра.",
   serverConnectionIncompatible:
     "Този сървър не предоставя необходимия API на Beancount.io.",
+  serverConnectionOlder:
+    "Този сървър е по-стар от приложението. Можете да се свържете, но някои функции може да не работят.",
+  serverConnectionNotConfigured: "Този сървър все още не е настроен за вход.",
+  serverConnectionMismatch:
+    "Този адрес не съвпада с адреса, който сървърът съобщава. Отворете настройките на сървъра и тествайте връзката.",
+  serverConnectionCanonical: "Този сървър се представя като {{url}}.",
+  serverUseCanonical: "Използвай този адрес",
   serverConnectionAdvisory:
     "Все пак можете да запазите URL адреса и да влезете, когато сървърът е достъпен.",
   restoreDefaultServer: "Възстановяване на Beancount.io по подразбиране",
@@ -184,26 +213,37 @@ export const bg: Translations = {
   multiPostingsInvalidBalance: "Сборът на редовете трябва да е нула",
   multiPostingsMissingAccount: "Всеки ред се нуждае от сметка",
   multiPostingsZeroAmount: "Всеки ред се нуждае от сума, различна от нула",
+  multiPostingsAmountFormat:
+    "Използвайте цифри и една десетична точка, например 1234.56",
   accountPicker: "Избор на сметка",
   accountPickerSearchPlaceholder: "Търсене на сметки",
   accountPickerRecent: "Скорошни",
   accountPickerAllTab: "Всички",
   accountPickerNoResults: "Няма съвпадащи сметки",
   accountPickerCreate: "Създай „%{name}“",
-  next: "Напред",
+  accountPickerClosedOn: "{{name}} е закрита на {{date}}",
+  accountPickerOpensOn:
+    "{{name}} се открива на {{date}}. Променете датата, за да го използвате.",
+  accountPickerOpenLater:
+    "Сметките ви се откриват на {{date}}. Променете датата, за да ги използвате.",
+  accountPickerNoAccounts: "Тази книга все още няма сметки.",
   cancel: "Отказ",
   confirm: "Потвърждение",
   saving: "Запазване...",
+  deleting: "Изтриване...",
   saveSuccess: "Транзакцията е запазена!",
   saveFailed: "Неуспешно запазване",
-  amountEmptyError: "Моля въведете сумата",
-  accountEmptyError: "Изберете сметка източник и сметка получател",
+  profilePartialSave:
+    "Потребителското име е запазено, но името ви не можа да се запази. Опитайте отново.",
   accounts: "Сметки",
   // Column header for the Accounts tab's account column. The balance column
   // reuses `balance`; each root row states its own valuation basis.
   account: "Сметка",
   atCost: "{{amount}} по себестойност",
+  postingCost: "себестойност {{amount}}",
+  postingPrice: "цена {{amount}}",
   notInTotal: "Не е включено в общата сума: {{amounts}}",
+  spendingLastMonthNotInTotal: "Миналия месец, извън сбора: {{amounts}}",
   atMarket: "{{amount}} по пазарна стойност",
   atMarketValue: "По пазарна стойност",
   pricesNotUpdatedSince: {
@@ -232,11 +272,16 @@ export const bg: Translations = {
   equity: "Собствен капитал",
   noDataCharts: "Бързо добавяне за показване на графики",
   notEnoughChartData: "Все още няма достатъчно данни за графика",
+  chartSummary:
+    "От {{start}}, {{startValue}}, до {{end}}, {{endValue}}. Минимум {{low}}, максимум {{high}}.",
+  chartPointValue: "{{period}}, {{value}}, {{change}} от началото",
+  chartAdjustHint: "Плъзнете нагоре или надолу, за да преминете през месеците",
+  chartAdjustHintAndroid:
+    "Отворете менюто с действия, за да преминавате през месеците",
   done: "Готово",
   payee: "Получател",
   narration: "Описание",
   suggestions: "Предложения",
-  aiSuggestions: "Предложения от ИИ",
   from: "От",
   to: "До",
   date: "Дата",
@@ -279,9 +324,11 @@ export const bg: Translations = {
     "Щом добавите транзакции, те ще се появят тук.",
   transactionsNoSearchResults:
     "Няма транзакции, отговарящи на търсенето или филтрите.",
-  transactionsLoadError: "Транзакциите не бяха заредени: ",
+  transactionsLoadError: "Транзакциите не бяха заредени",
   // transactions filter modal
   filters: "Филтри",
+  filtersActive: "Активни: {{count}}",
+  clearAccount: "Изчисти сметката",
   filterStatus: "Състояние",
   filterDateRange: "Период",
   filterDateRangeInvalid:
@@ -297,6 +344,7 @@ export const bg: Translations = {
   transactions: "Транзакции", // TODO: needs native speaker review
   search: "Търсене",
   unknown: "Неизвестно",
+  datePlaceholder: "ГГГГ-ММ-ДД",
   openAccount: "Отвори сметка",
   accountType: "Вид сметка",
   currency: "Валута",
@@ -305,32 +353,72 @@ export const bg: Translations = {
   chooseCurrency: "Изберете валута",
   openAccountNamePlaceholder: "Bank:Checking",
   openAccountNoCurrency: "Няма валута",
+  openAccountOtherCurrency: "Друга…",
+  openAccountOtherCurrencyTitle: "Друга валута",
+  openAccountOtherCurrencyMessage:
+    "Въведете код на валута или актив, например EUR или VTI.",
+  openAccountCurrencyInvalid:
+    "Използвайте главни букви, цифри и ' . _ -, започващи с буква, например EUR или VTI.",
   openAccountSaving: "Открива се...",
   openAccountFailed: "Сметката не беше открита. Опитайте отново.",
   ledgerWouldBreak: "Това ще добави грешка в книгата ви: {{detail}}",
+  ledgerRefusalLine: "ред {{line}}",
+  ledgerRefusalNearEntry: "близо до този запис",
+  ledgerRefusalQuoteHint: 'За кавичка в текста я напишете като \\".',
+  ledgerWriteOffline: "Няма връзка с мрежата. Нищо не е запазено.",
+  ledgerWriteUnconfirmed:
+    "Сървърът не потвърди запазването. Проверете, преди да опитате отново.",
+  ledgerWriteRateLimited:
+    "Твърде много промени наведнъж. Изчакайте малко и опитайте отново.",
+  ledgerInvalidAccount: "{{value}} не е валидно име на сметка.",
+  ledgerInvalidCurrency: "{{value}} не е валидна валута.",
+  ledgerInvalidTag:
+    "#{{value}} не може да се използва като етикет. Използвайте само буквите A–Z, цифри и - _ . /",
+  ledgerInvalidLink:
+    "^{{value}} не може да се използва като връзка. Използвайте само буквите A–Z, цифри и - _ . /",
+  ledgerInvalidFlag: "{{value}} не може да се използва като флаг.",
+  ledgerEntryOneAtATime: "Редактирайте по един запис наведнъж.",
+  ledgerEntryIndent: "Отместете постингите навътре под реда с датата.",
+  ledgerEntryNotAnEntry:
+    "Опциите, плъгините и включванията не са записи. Променяйте ги в редактора на файла на книгата.",
   openAccountInvalidRoot: "Изберете валиден вид сметка.",
   openAccountNameRequired: "Въведете поне една част от името на сметката.",
   openAccountEmptyComponent:
     "Частите от името на сметката не може да са празни.",
   openAccountNamePreview: "Ще бъде създадена като {{account}}",
   openAccountAlreadyOpen: "{{account}} вече е отворена в тази книга.",
+  openAccountClosed:
+    "{{account}} е закрита на {{date}} и не може да бъде отворена отново.",
   openAccountUppercaseComponent:
     "Всяка част от името на сметката трябва да започва с главна буква или цифра.",
   openAccountInvalidCharacters:
     "В имената на сметки използвайте само букви, цифри и тирета.",
   transaction: "Транзакция",
+  transactionActions: "Действия за транзакцията",
   loadingMore: "Зарежда се още...",
   noMoreEntries: "Няма повече записи",
+  loadMoreFailed: "Не успяхме да заредим още записи.",
+  a11yTapToExpand: "Докоснете два пъти, за да разгънете",
+  a11yTapToCollapse: "Докоснете два пъти, за да свиете",
   noEntries: "Няма записи",
   accountDetailUnavailable: "Тази сметка не е налична в избраната книга.",
   transactionDetailUnavailable:
     "Тази транзакция не е налична в избраната книга.",
+  transactionDetailRemoved:
+    "Тази транзакция е променена или премахната. Върнете се, за да видите актуалния списък.",
+  transactionErrorOpenFile: "Отвори в редактора на файлове",
+  pluginCopyNotice:
+    "Този запис е създаден от плъгин от друг запис, затова не може да се редактира или изтрие тук.",
+  pluginCopyOpenSource: "Отвори изходния запис",
   merchantDetailUnavailable: "Този търговец не е наличен в избраната книга.",
   commitDetailUnavailable: "Тази промяна не е налична в избраната книга.",
-  journalLoadError: "Неуспешно зареждане на журнала: ",
+  commitDetailGone: "Тази промяна вече не е налична.",
+  fileEditorUnavailable: "Този файл не е наличен в избраната книга.",
+  journalLoadError: "Неуспешно зареждане на журнала",
   // entry context (transactions screen)
   journalError: "Грешка",
   journalNoData: "Няма налични данни за контекст на запис",
+  dateSectionHeaderTotal: "{{date}}, общо {{total}}",
   journalEntryContext: "Контекст на запис",
   journalBalancesBefore: "Салда преди запис",
   journalBalancesAfter: "Салда след запис",
@@ -339,6 +427,7 @@ export const bg: Translations = {
   open: "Откриване",
   close: "Закриване",
   balance: "Салдо",
+  balanceOffBy: "Разлика {{amount}}",
   note: "Бележка",
   document: "Документ",
   pad: "Изравняване",
@@ -346,9 +435,11 @@ export const bg: Translations = {
   custom: "Собствена",
   cleared: "Потвърдени",
   pending: "Чакащи",
+  entryUpcoming: "Предстоящо",
   other: "Други",
   budget: "Бюджет",
   metadata: "Метаданни",
+  accountOwnPostings: "{{name}} (собствени)",
   postings: "Редове",
   details: "Подробности",
   tags: "Етикети",
@@ -357,6 +448,8 @@ export const bg: Translations = {
   reports: "Справки",
   netProfit: "Нетна печалба",
   cashFlow: "Паричен поток",
+  cashFlowRefunds: "Възстановявания",
+  cashFlowClawbacks: "Удръжки",
   moneyFlow: "Движение на пари",
   cashFlowEmpty: "Няма паричен поток за този период",
   savings: "Спестявания",
@@ -368,12 +461,22 @@ export const bg: Translations = {
   notFoundGoHome: "Към началния екран",
   // home dashboard
   seeAll: "Виж всички",
+  seeAllCard: "Виж всички: {{title}}",
+  seeAllAccounts: "Виж всички сметки",
   netWorth: "Нетна стойност",
   noAccounts: "Няма сметки",
+  reportsNoExpenses: "Няма разходи през този период",
+  reportsNoIncome: "Няма приходи през този период",
   recentTransactions: "Последни транзакции",
   recentTransactionsEmpty: "Още няма транзакции",
+  recentTransactionsUpcoming:
+    "Досега няма нищо. Предстоящите записи са в «Транзакции».",
+  recentTransactionsEmptyRange: "Няма транзакции за този период",
   spending: "Разходи",
   spendingSubtitle: "Този месец спрямо миналия",
+  spendingChartSummary:
+    "Разходи: миналия месец {{lastMonth}}, този месец {{thisMonth}}.",
+  spendingEmpty: "Все още няма разходи",
   thisMonth: "Този месец",
   lastMonth: "Миналия месец",
   range1M: "1М",
@@ -383,6 +486,13 @@ export const bg: Translations = {
   range1Y: "1Г",
   rangeLastYear: "МГ",
   rangeAll: "ВСИЧКИ",
+  rangeSpoken1M: "1 месец",
+  rangeSpoken3M: "3 месеца",
+  rangeSpoken6M: "6 месеца",
+  rangeSpokenYTD: "От началото на годината",
+  rangeSpoken1Y: "1 година",
+  rangeSpokenLastYear: "Миналата година",
+  rangeSpokenAll: "Цялото време",
   // edit / delete transaction
   editTransaction: "Редактиране на транзакция",
   deleteTransaction: "Изтрий",
@@ -391,8 +501,12 @@ export const bg: Translations = {
     "Наистина ли искате да изтриете тази транзакция? Действието е необратимо.",
   deleteSuccess: "Транзакцията е изтрита",
   deleteFailed: "Транзакцията не беше изтрита",
+  deleteTransactionChanged:
+    "Тази транзакция е променена другаде. Заредена е отново; опитайте да я изтриете пак.",
   editSuccess: "Транзакцията е запазена",
   editFailed: "Транзакцията не беше запазена",
+  editTransactionEmpty:
+    "Празен запис не може да бъде запазен. За да премахнете транзакцията, използвайте „Изтриване“ в детайлите ѝ.",
   editTransactionLoadFailed: "Неуспешно зареждане на транзакцията",
   editTransactionSource:
     "Редактирайте изходния текст на beancount по-долу. Остаряла контролна сума или невалиден beancount ще бъдат отхвърлени с грешка.",
@@ -406,12 +520,16 @@ export const bg: Translations = {
   receiptFlashOff: "Изключена",
   receiptFlashOn: "Включена",
   receiptRetake: "Отново",
+  receiptTryAgain: "Опитай отново",
   receiptUpload: "Качи",
   receiptOpenSettings: "Отвори настройките",
+  receiptAllowCamera: "Разреши камерата",
   receiptCancel: "Отказ",
   receiptUploading: "Снимката се качва…",
+  receiptUploadingProgress: "Снимката се качва… {{percent}}%",
   receiptParsing: "ИИ разчита бележката ви…",
   receiptRevealTitle: "Ето какво разчетохме",
+  receiptRevealSpoken: "Разчетена разписка: {{summary}}",
   // Deliberately a proposal: nothing is written to the ledger until the user
   // saves on the next screen.
   receiptRevealHint:
@@ -431,14 +549,29 @@ export const bg: Translations = {
   notificationsChangesSection: "Последни промени",
   notificationsLedgerHealthy: "Книгата е наред — няма грешки.",
   notificationsNoChanges: "Няма скорошни промени.",
+  notificationsShowOlder: "Показване на по-стари промени",
+  commitNoMessage: "(без съобщение)",
   // commit detail
   commitDetailAuthor: "Автор",
   commitDetailStats: "Статистика",
   commitDetailFiles: "Файлове",
+  commitFileAdded: "Добавен",
+  commitFileDeleted: "Изтрит",
+  commitFileRenamedFrom: "Преименуван от {{name}}",
   commitDetailDiff: "Разлики",
+  commitDetailShowMore: {
+    one: "Покажи още {{count}} ред",
+    other: "Покажи още {{count}} реда",
+  },
   commitDetailNoDiff: "Няма налични разлики.",
-  commitDetailAdditions: "+{{count}} реда",
-  commitDetailDeletions: "-{{count}} реда",
+  commitDetailAdditions: {
+    one: "+{{count}} ред",
+    other: "+{{count}} реда",
+  },
+  commitDetailDeletions: {
+    one: "-{{count}} ред",
+    other: "-{{count}} реда",
+  },
   // ledger file browser
   ledgerLoadError: "Зареждането е неуспешно",
   ledgerEmpty: "Няма файлове",
@@ -451,20 +584,34 @@ export const bg: Translations = {
     "Въведете уникално име на файл .bean или .beancount. Без разширение се добавя .bean.",
   ledgerCreateFilePlaceholder: "investments.bean",
   ledgerCreateFileSuccess: "{{name}} е създаден",
+  ledgerCreateFileSuccessIn: "{{name}} е създаден в {{ledger}}",
   ledgerCreateFileFailed: "Файлът не беше създаден",
+  ledgerFileNameExists: "Файл с име {{name}} вече съществува",
+  ledgerFileNameExtension: "Използвайте име с .bean или .beancount",
+  ledgerFileNamePath: "Използвайте име без \\, .. или празни имена на папки",
+  ledgerFileNamePortable:
+    'Избягвайте < > : " | ? *, части, завършващи с точка или интервал, и имена като con или nul',
   ledgerDeleteFile: "Изтрий {{name}}",
+  ledgerFilesFolderLabel: "{{name}}, папка",
+  ledgerFilesFileLabel: "{{name}}, файл",
   ledgerDeleteFileTitle: "Изтриване на файл на книгата",
   ledgerDeleteFileMessage:
     'Да се изтрие ли "{{name}}"? Действието е необратимо.',
   ledgerDeleteFileConfirm: "Изтрий",
   ledgerDeleteFileSuccess: "{{name}} е изтрит",
   ledgerDeleteFileFailed: "Файлът не беше изтрит",
+  ledgerDeleteFileChanged:
+    "Този файл е променен другаде. Списъкът е опреснен; опитайте отново.",
   ledgerMainFileProtected: "main.bean не може да бъде изтрит",
   // ledger file editor
   ledgerEditorSave: "Запази",
   ledgerEditorSaving: "Запазва се...",
   ledgerEditorSaveSuccess: "Файлът е запазен",
   ledgerEditorSaveFailed: "Запазването е неуспешно",
+  ledgerEditorSaveLeftErrorsTitle: "Запазено, с нова грешка в книгата",
+  ledgerEditorSaveLeftErrors:
+    "Файлът е запазен, но книгата ви вече има грешка, която нямаше преди: {{error}}",
+  ledgerEditorViewErrors: "Виж грешките",
   ledgerEditorLoadFailed: "Файлът не беше зареден",
   ledgerEditorFileUnavailable: "Този файл вече не е в книгата.",
   ledgerEditorBackToFiles: "Назад към файловете",
@@ -473,11 +620,37 @@ export const bg: Translations = {
   ledgerEditorDiscardChanges: "Отхвърли",
   ledgerEditorConflictTitle: "Файлът е променен",
   ledgerEditorConflictMessage:
-    "Този файл е променен отдалечено. Да се отхвърлят ли местните промени и файлът да се презареди?",
+    "Този файл е променен отдалечено. Да запазите текста си върху него или да го копирате и да заредите новата версия?",
+  ledgerEditorOverwrite: "Презапис",
+  ledgerEditorCopyReload: "Копирай и презареди",
+  ledgerEditorOverwriteTitle: "Да се презапишат ли отдалечените промени?",
+  ledgerEditorOverwriteMessage:
+    "Вашият текст замества версията, запазена другаде. Техните промени се губят.",
+  ledgerEditorFileGoneTitle: "Файлът е изтрит",
+  ledgerEditorFileGoneMessage:
+    "Този файл е изтрит или преместен другаде и не може да бъде записан. Текстът ви все още е тук: копирайте го или го запишете като нов файл на същия път.",
+  ledgerEditorRecreate: "Запиши като нов файл",
+  ledgerEditorSaveFailedHint:
+    "Текстът ви все още е тук. Опитайте отново след малко.",
+  ledgerEditorAccessRemoved:
+    "Вече нямате право да редактирате тази книга. Текстът ви все още е тук: копирайте го, за да го запазите.",
+  ledgerEditorCopyFailed:
+    "Текстът не можа да се копира, затова файлът не беше презареден.",
   ledgerEditorReload: "Презареди",
   ledgerEditorKeepEditing: "Продължи редактирането",
   keyboardAccessoryInsert: "Вмъкване на {{symbol}}",
+  keyboardInsertDate: "Вмъкване на днешната дата",
+  keyboardInsertCleared: "Вмъкване на флаг „потвърдено“",
+  keyboardInsertPending: "Вмъкване на флаг „в очакване“",
+  keyboardInsertQuotes: "Вмъкване на кавички",
+  keyboardInsertColon: "Вмъкване на двоеточие",
+  keyboardInsertTab: "Вмъкване на табулация",
+  keyboardInsertMinus: "Вмъкване на минус",
+  keyboardInsertTag: "Вмъкване на таг",
+  keyboardInsertLink: "Вмъкване на връзка",
   keyboardAccessoryDismiss: "Скриване на клавиатурата",
+  ledgerEditorErrorLine: "ред {{line}}",
+  ledgerEditorJumpToLine: "Към ред {{line}}",
   ledgerEditorErrorCount: {
     one: "Грешка: {{count}}",
     other: "Грешки: {{count}}",
@@ -499,14 +672,22 @@ export const bg: Translations = {
     "Задайте цел за която и да е сметка, за да започнете проследяване.",
   budgetEmptyStateCta: "Добавете първия си бюджет",
   budgetPanelEmpty: "Задайте цел за сметка",
+  budgetPanelEmptyGuest: "Влезте, за да зададете цели за разходите",
   budgetPanelRowValue:
     "{{actual}} от {{budget}}, използвани {{percent}}%, {{status}}",
+  budgetPanelRowValueNoBudget: "{{actual}} от {{budget}}, {{status}}",
+  budgetStartsOn: "Започва на {{date}}",
   budgetLoadFailed: "Неуспешно зареждане на бюджетите",
   budgetIntervalDaily: "Дневно",
   budgetIntervalWeekly: "Седмично",
   budgetIntervalMonthly: "Месечно",
   budgetIntervalQuarterly: "Тримесечно",
   budgetIntervalYearly: "Годишно",
+  budgetIntervalAdjDaily: "дневният",
+  budgetIntervalAdjWeekly: "седмичният",
+  budgetIntervalAdjMonthly: "месечният",
+  budgetIntervalAdjQuarterly: "тримесечният",
+  budgetIntervalAdjYearly: "годишният",
   // add / update budget
   budgetAdd: "Добавяне на бюджет",
   budgetUpdate: "Актуализиране на бюджета",
@@ -520,10 +701,14 @@ export const bg: Translations = {
   budgetSaveFailed: "Неуспешно записване на бюджета",
   // delete
   budgetDelete: "Изтриване",
+  budgetUpdateNamed: "Актуализиране на бюджета за {{account}}, {{currency}}",
+  budgetDeleteNamed: "Изтриване на бюджетния запис от {{date}}, {{amount}}",
   budgetDeleteTitle: "Изтриване на бюджет",
   budgetDeleteMessage:
     "Да се изтрие ли {{interval}} бюджет от {{amount}} за {{account}}, в сила от {{date}}? Това премахва един запис и не може да бъде отменено.",
   budgetDeleteFailed: "Неуспешно изтриване на бюджета",
+  budgetDeleteChanged:
+    "Този бюджетен запис е променен другаде. Историята е опреснена; опитайте отново.",
 
   // Ask Beancount.io — the agent chat
   agentTitle: "Попитай Beancount.io",
@@ -561,10 +746,16 @@ export const bg: Translations = {
   createLedgerNameMaxLength: "Името трябва да е до 100 знака.",
   createLedgerNameInvalid: "Името трябва да съдържа поне една буква или цифра.",
   createLedgerNameConflict: "Вече съществува книга с това име.",
+  createLedgerNameReserved:
+    "Това име е принадлежало на преименувана книга и все още пренасочва към нея. Изберете друго име.",
+  createLedgerSetupUnsupported:
+    "Този сървър не поддържа насочената настройка. Върнете се и изберете Начална или Примерна, за да създадете книга със стандартните настройки на сървъра.",
+  createLedgerCreated: "{{name}} е създаден",
   createLedgerSlugPreview: "Ще бъде създадена като {{slug}}",
   createLedgerDescription: "Описание",
   createLedgerDescriptionPlaceholder: "По избор",
   createLedgerPrivate: "Частна",
+  createLedgerPublic: "Публична",
   createLedgerTemplate: "Шаблон",
   createLedgerTemplateStarter: "Начална",
   createLedgerTemplateStarterHint: "Празна книга със стандартен сметкоплан.",
@@ -575,6 +766,8 @@ export const bg: Translations = {
     "Достигнат е лимитът за книги. Не може да се създаде друга книга.",
   createLedgerGenericError:
     "Книгата не можа да бъде създадена. Опитайте отново.",
+  createLedgerStillCreating:
+    "Тази книга все още се създава. Изчакайте няколко секунди и натиснете Създай отново.",
   createLedgerDrawerRow: "Нова книга",
   createLedgerEmptyTitle: "Все още няма книги",
   createLedgerEmptyBody: "Създайте книга или открийте публични примери.",
@@ -584,8 +777,14 @@ export const bg: Translations = {
   ledgerGuardMessage: "Създайте книга или открийте такава, за да продължите.",
   removePosting: "Премахни запис",
   toggleAmountSign: "Превключи знака на сумата",
-  incomeExpenseChartSummary:
-    "Приходи и разходи за {{count}} месеца. Приходи {{income}}, разходи {{expense}}, нето {{net}}.",
+  postingSignToggle: "Знак за {{account}}",
+  signPlus: "Плюс",
+  signMinus: "Минус",
+  incomeExpenseChartSummary: {
+    one: "Приходи и разходи за {{count}} месец. Приходи {{income}}, разходи {{expense}}, нето {{net}}.",
+    other:
+      "Приходи и разходи за {{count}} месеца. Приходи {{income}}, разходи {{expense}}, нето {{net}}.",
+  },
   cashFlowChartSummary:
     "Паричен поток от приходи към разходи. Приходи {{income}}, разходи {{expenses}}.",
   cashFlowChartSummaryWithSavings:
@@ -595,6 +794,7 @@ export const bg: Translations = {
   sankeyIncomeNodeLabel: "{{name}} (приходи)",
   sankeyExpensesNodeLabel: "{{name}} (разходи)",
   ledgerNavigateUp: "Нагоре една папка",
+  ledgerNavigateUpTo: "Нагоре към {{folder}}",
   openLedgerDrawer: "Отвори менюто",
   back: "Назад",
   postingAmountLabel: "Сума за {{account}}",
@@ -604,8 +804,13 @@ export const bg: Translations = {
   expandAccount: "Разгъни {{account}}",
   collapseAccount: "Сгъни {{account}}",
   breakdownRowShare: "{{amount}}, {{percent}}% от общото",
-  budgetChartSummary:
-    "Бюджет спрямо действителни за {{span}}. Действителни {{actual}} от бюджет {{budget}} за {{count}} периода, {{over}} над целта.",
+  budgetChartSummary: {
+    one: "Бюджет спрямо действителни за {{span}}. Действителни {{actual}} от бюджет {{budget}} за {{count}} период, {{missed}}.",
+    other:
+      "Бюджет спрямо действителни за {{span}}. Действителни {{actual}} от бюджет {{budget}} за {{count}} периода, {{missed}}.",
+  },
+  budgetSummaryOverTarget: "{{count}} над целта",
+  budgetSummaryBelowTarget: "{{count}} под целта",
   feedSourceLedger: "Счетоводна книга",
   feedSourceBlog: "Блог",
   feedSourceRelease: "Издание",
@@ -618,6 +823,7 @@ export const bg: Translations = {
   profileUsernameHint:
     "Уеб адресите на книгите ви започват с потребителското ви име, затова промяната му променя и тях.",
   profileUsernameRequired: "Въведете потребителско име",
+  profileNameTooLong: "Най-много 100 знака.",
   profileUsernameRule:
     "Използвайте 1–20 знака: малки букви a–z, цифри 0–9 или долни черти.",
   profileUsernameTaken: "Това потребителско име вече е заето",
@@ -625,6 +831,53 @@ export const bg: Translations = {
   profileEmailReadOnly: "Имейлът не може да се променя тук",
   profileNotSet: "Не е зададено",
   profilePhotoFromGravatar: "Снимка от Gravatar",
+  profileAddGravatar: "Добавете снимка в Gravatar",
   profileUpdated: "Профилът е обновен",
   multiplePostings: "Няколко реда",
+  createLedgerNext: "Напред",
+  createLedgerBack: "Назад",
+  createLedgerStep: "Стъпка {{step}} от {{total}}",
+  createLedgerStartPreset: "Предварителна настройка",
+  createLedgerStartPresetHint:
+    "Изберете готов сметкоплан според това, което следите: домакинство, бизнес, инвестиции.",
+  createLedgerCurrency: "Оперативна валута",
+  createLedgerHistoryStart: "Книгите започват на",
+  createLedgerOpeningAccount: "Начална сметка",
+  createLedgerOpeningAmount: "Начално салдо (по избор)",
+  createLedgerReviewOpening: "Начално салдо: {{account}} {{amount}}",
+  createLedgerAmountOwed: "Дължима сума (по избор)",
+  createLedgerOpeningNone: "Реши по-късно",
+  createLedgerReview: "Преглед",
+  createLedgerReviewDescription:
+    "Точно това ще бъде създадено. Върнете се, за да промените нещо.",
+  createLedgerAccounts: "Сметки",
+  createLedgerAmountInvalid: "Въведете сума като 100 или -30.50",
+  createLedgerAmountReenter:
+    "Въведете началното салдо отново или изберете „Реши по-късно“. То не се пази в запазената чернова.",
+  createLedgerCurrencyInvalid: "Изберете код на валута като USD или EUR.",
+  createLedgerHistoryStartInvalid:
+    "Въведете валидна дата, например 2026-01-01.",
+  createLedgerPresetPersonal: "Лична книга",
+  createLedgerPresetPersonalOutcome:
+    "Запишете покупка и разберете ефекта ѝ върху оставащите пари.",
+  createLedgerPresetFreelance: "Книга на свободна практика",
+  createLedgerPresetFreelanceOutcome:
+    "Запишете приходи от клиенти или вижте какво дължи неплатил клиент.",
+  createLedgerPresetBusiness: "Фирмена книга",
+  createLedgerPresetBusinessOutcome:
+    "Създайте начална позиция и разграничете финансиране от приходи.",
+  createLedgerPresetPortfolio: "Портфейлна книга",
+  createLedgerPresetPortfolioOutcome:
+    "Запишете покупка и проверете единици, записи за придобиване и движение на пари.",
+  createLedgerPresetRental: "Книга за наеми",
+  createLedgerPresetRentalOutcome:
+    "Запишете постъпления и разграничете наем от възвръщаем депозит.",
+  createLedgerPresetShared: "Книга за споделени разходи",
+  createLedgerPresetSharedOutcome: "Запишете аванс и вижте кой на кого дължи.",
+  createLedgerPresetCommunity: "Книга на общност",
+  createLedgerPresetCommunityOutcome:
+    "Обяснете вноски, проектни разходи и оставащи средства.",
+  createLedgerPresetBlank: "Празна книга",
+  createLedgerPresetBlankOutcome:
+    "Добавете избрана структура, без да премахвате нежелани категории.",
 };

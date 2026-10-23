@@ -12,7 +12,8 @@ const toolLogger = logger.child({ module: "tool:read-ledger-file" });
 export const description =
   "Read one or more beancount ledger files in a single call. `content` is raw text; the 1-based " +
   "startLine/endLine it spans and the file's totalLines come alongside it, not in the text. " +
-  "Use start_line/end_line per file to limit tokens for large files.";
+  "Use start_line/end_line per file to limit tokens for large files. A file that is not valid UTF-8 " +
+  "comes back with `lossy: true`: its undecodable bytes read as U+FFFD, and edits to it are refused.";
 
 export const readLedgerFilesInputSchema = z.object({
   files: z
@@ -47,6 +48,17 @@ const readLedgerFileSectionSchema = z.object({
   endLine: z.number().int(),
   totalLines: z.number().int(),
   content: z.string(),
+  sha: z
+    .string()
+    .describe(
+      "The file's blob SHA; pass it to updateLedgerFiles content or deleteLedgerFiles to refuse the write if the file changed since.",
+    ),
+  lossy: z
+    .literal(true)
+    .optional()
+    .describe(
+      "Present when the file is not valid UTF-8: `content` shows U+FFFD for its undecodable bytes.",
+    ),
 });
 type ReadLedgerFileSection = z.infer<typeof readLedgerFileSectionSchema>;
 
@@ -89,16 +101,20 @@ export async function executeReadLedgerFiles(
         identity,
         paths: requestedFiles.map((file) => file.path),
       });
-      const contentMap = new Map(files.map((f) => [f.path, f.content]));
+      const fileMap = new Map(files.map((f) => [f.path, f]));
 
       const sections: ReadLedgerFileSection[] = [];
 
       for (const { path, start_line, end_line } of requestedFiles) {
-        const raw = contentMap.get(path);
-        if (raw === undefined) {
+        const file = fileMap.get(path);
+        if (file === undefined) {
           throw new Error(`file not found: ${path}`);
         }
-        const lines = raw.split("\n");
+        const raw = file.content;
+        // A trailing newline ends the last line; it does not start another,
+        // so the count matches `wc -l` and every editor (w23/005).
+        const terminated = raw.endsWith("\n");
+        const lines = (terminated ? raw.slice(0, -1) : raw).split("\n");
         // A start past the last line used to come back as an empty section
         // whose own metadata contradicted itself (startLine 10, endLine 9).
         // An end_line past the end is still clamped: "up to N lines" is an
@@ -113,12 +129,17 @@ export async function executeReadLedgerFiles(
         const s = (start_line ?? 1) - 1;
         const e = end_line ?? lines.length;
         const slice = lines.slice(s, e);
+        const reachesEnd = s + slice.length === lines.length;
         sections.push({
           path,
           startLine: s + 1,
           endLine: s + slice.length,
           totalLines: lines.length,
-          content: slice.join("\n"),
+          // The terminator goes back on when the slice reaches the end, so a
+          // whole-file read is still the file byte for byte.
+          content: slice.join("\n") + (terminated && reachesEnd ? "\n" : ""),
+          sha: file.sha,
+          ...(file.lossy && { lossy: true as const }),
         });
       }
 

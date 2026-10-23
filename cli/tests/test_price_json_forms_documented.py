@@ -65,7 +65,7 @@ def test_status_and_export_answer_with_the_envelope(tmp_path: Path) -> None:
 
     status = _bea(tmp_path, "--json", "-f", str(ledger), "price", "status")
     assert status.returncode == 0, status.stderr
-    assert json.loads(status.stdout)["data"] == {"sources": []}
+    assert json.loads(status.stdout)["data"] == {"sources": [], "refused": []}
 
     export = _bea(tmp_path, "--json", "-f", str(ledger), "price", "export", "--output", "snapshot")
     assert export.returncode == 0, export.stderr

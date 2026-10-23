@@ -53,15 +53,15 @@ describe("pointsToMonthlySeries", () => {
     ]);
   });
 
-  it("parses string amounts and falls back to USD when the currency is absent", () => {
+  it("parses string amounts and reads a point without the currency as zero", () => {
     const points: DateBalancePoint[] = [
       { date: "2025-01-01", balance: { EUR: "1500.50" } },
       { date: "2025-02-01", balance: { USD: 900 } },
     ];
-    // Active currency EUR: first point matches EUR; second falls back to USD.
+    // Active currency EUR: the USD point is not euros (w21/058).
     expect(pointsToMonthlySeries("EUR", points)).toEqual([
       { date: "2025-01-01", value: 1500.5 },
-      { date: "2025-02-01", value: 900 },
+      { date: "2025-02-01", value: 0 },
     ]);
   });
 
@@ -316,5 +316,87 @@ describe("account balance chart periods", () => {
     );
     expect(source.includes("periods={chart.periods}")).toBe(true);
     expect(source.includes("seriesToChartArray(")).toBe(true);
+  });
+});
+
+// w21/414: Home's three curves ended at the month of the ledger's last entry, so
+// 1M/3M/6M counted back from it. Carried to today they window on today.
+describe("Home's series carried to today (w21/414)", () => {
+  const {
+    carryBalanceToToday,
+    filterSeriesByRange,
+  } = require("../series-util");
+  const quiet = [
+    { date: "2026-07-31", value: 15000 },
+    { date: "2026-08-31", value: 17108.51 },
+  ];
+
+  it("windows 1M on the current month, not on the last entry's", () => {
+    const stale = filterSeriesByRange(quiet, "1M", 2026);
+    expect(stale.map((p: { date: string }) => p.date)).toEqual(["2026-08-31"]);
+    const carried = carryBalanceToToday(quiet, "2026-10-21");
+    const window = filterSeriesByRange(carried, "1M", 2026);
+    expect(window.length).toBe(1);
+    expect(window[0].date.slice(0, 7)).toBe("2026-10");
+    expect(window[0].value).toBe(17108.51);
+  });
+
+  it("changes nothing for a ledger active this month", () => {
+    const active = [...quiet, { date: "2026-10-05", value: 18000 }];
+    expect(carryBalanceToToday(active, "2026-10-21")).toBe(active);
+  });
+
+  // w21/641: an entry pre-entered for next month put the last point in
+  // November, and 1M read November's rent instead of October's salary.
+  it("windows on today when an entry or price is dated after it", () => {
+    const series = [
+      { date: "2026-09-30", value: 17108.51 },
+      { date: "2026-10-31", value: 22108.51 },
+      { date: "2026-11-30", value: 20608.51 },
+    ];
+    const carried = carryBalanceToToday(series, "2026-10-22");
+    expect(carried).toEqual([
+      { date: "2026-09-30", value: 17108.51 },
+      { date: "2026-10-22", value: 22108.51 },
+    ]);
+    const window = filterSeriesByRange(carried, "1M", 2026);
+    expect(window.map((p: { value: number }) => p.value)).toEqual([22108.51]);
+    // A quiet October: September's close holds until today.
+    const quietOctober = carryBalanceToToday(
+      [series[0], series[2]],
+      "2026-10-22",
+    );
+    expect(quietOctober[quietOctober.length - 1]).toEqual({
+      date: "2026-10-22",
+      value: 17108.51,
+    });
+    // Only future points: nothing has happened yet.
+    expect(carryBalanceToToday([series[2]], "2026-10-22")).toEqual([]);
+  });
+
+  it("is what Home does for its net worth, assets and liabilities curves", () => {
+    const home = require("fs")
+      .readFileSync(
+        require("path").join(
+          __dirname,
+          "../../screens/home-screen/home-screen.tsx",
+        ),
+        "utf8",
+      )
+      .replace(/\s+/g, "");
+    for (const select of [
+      "selectNetWorthSeries",
+      "selectAssetsSeries",
+      "selectLiabilitiesSeries",
+    ]) {
+      expect(
+        home.includes(
+          `carryBalanceToToday(${select}(currency,balanceSheet),today)`,
+        ) ||
+          home.includes(
+            `carryBalanceToToday(${select}(currency,balanceSheet),today,)`,
+          ),
+      ).toBe(true);
+    }
   });
 });

@@ -62,11 +62,16 @@ interface TransactionFormData {
 interface AccountMappingTableProps {
   control: Control<TransactionFormData>;
   ledgerId: string;
-  onAICategorize?: () => Promise<void>;
+  /** Resolves with the number of target accounts its suggestions filled. */
+  onAICategorize?: () => Promise<number>;
   aiLoading?: boolean;
   transactionCount?: number;
   /** Fired after a local draft edit so the wizard can persist configure state. */
   onDraftChange?: () => void;
+  /** Freezes selection, targets and AI Fill while the import is pending. */
+  disabled?: boolean;
+  /** The id of the visible heading that names the table (w4/319). */
+  labelledBy?: string;
 }
 
 type AmountFilter = "all" | "positive" | "negative";
@@ -78,6 +83,8 @@ export function AccountMappingTable({
   aiLoading = false,
   transactionCount = 0,
   onDraftChange,
+  disabled = false,
+  labelledBy,
 }: AccountMappingTableProps) {
   const { t, i18n } = useTranslations();
   const formatError = useErrorMessage();
@@ -98,11 +105,16 @@ export function AccountMappingTable({
 
     setIsAILoading(true);
     try {
-      await onAICategorize();
+      const applied = await onAICategorize();
+      // Only suggestions confident enough to fill a target count; a
+      // completed request that filled nothing says so (w4/324).
       toast.success(t("importer.accountMapping.aiSuccess"), {
-        description: t("importer.accountMapping.aiSuccessDescription", {
-          count: transactionCount,
-        }),
+        description:
+          applied > 0
+            ? t("importer.accountMapping.aiSuccessDescription", {
+                count: applied,
+              })
+            : t("importer.accountMapping.aiNoneApplied"),
       });
     } catch (err) {
       toast.error(t("importer.accountMapping.aiFailed"), {
@@ -208,7 +220,11 @@ export function AccountMappingTable({
           value={amountFilter}
           onValueChange={(value) => setAmountFilter(value as AmountFilter)}
         >
-          <SelectTrigger className="w-45">
+          {/* The selected value is not the control's purpose (w4/319). */}
+          <SelectTrigger
+            className="w-45"
+            aria-label={t("importer.accountMapping.filterByAmount")}
+          >
             <Filter className="h-4 w-4 mr-2" />
             <SelectValue
               placeholder={t("importer.accountMapping.filterByAmount")}
@@ -230,7 +246,7 @@ export function AccountMappingTable({
 
       {/* Table */}
       <div className="rounded-md border">
-        <Table className="min-w-[960px]">
+        <Table className="min-w-[960px]" aria-labelledby={labelledBy}>
           <TableHeader>
             <TableRow>
               <TableHead className="w-12.5">
@@ -245,7 +261,7 @@ export function AccountMappingTable({
                         : false
                   }
                   onCheckedChange={handleToggleAll}
-                  disabled={filteredCount === 0}
+                  disabled={disabled || filteredCount === 0}
                   aria-label={t("importer.accountMapping.selectAll")}
                 />
               </TableHead>
@@ -268,7 +284,7 @@ export function AccountMappingTable({
                   {onAICategorize && (
                     <Button
                       onClick={handleAICategorize}
-                      disabled={loading || transactionCount === 0}
+                      disabled={disabled || loading || transactionCount === 0}
                       variant="ghost"
                       size="sm"
                       type="button"
@@ -322,6 +338,7 @@ export function AccountMappingTable({
                       <Checkbox
                         checked={txn.selected}
                         onCheckedChange={() => handleToggleRow(index)}
+                        disabled={disabled}
                         aria-label={`${t("importer.accountMapping.selectTransaction")} ${index + 1}`}
                       />
                     </TableCell>
@@ -368,7 +385,7 @@ export function AccountMappingTable({
                                 placeholder={t(
                                   "importer.accountMapping.selectAccountPlaceholder",
                                 )}
-                                disabled={!txn.selected}
+                                disabled={disabled || !txn.selected}
                                 className={cn(
                                   isMissingAccount &&
                                     "border-destructive ring-destructive",

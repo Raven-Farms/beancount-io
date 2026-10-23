@@ -301,14 +301,148 @@ describe("selectAccountTreeFromRoot", () => {
     ]);
   });
 
-  it("parses string balances and falls back to USD when the currency is missing", () => {
+  it("lists an open zero account whose only sub-account is closed and empty (w21/280)", () => {
+    const root = createIncomeRoot("Assets", [
+      {
+        account: "Assets:Savings",
+        balanceChildren: { USD: 0 },
+        children: [
+          { account: "Assets:Savings:CD", balanceChildren: { USD: 0 } },
+        ],
+      },
+      { account: "Assets:Checking", balanceChildren: { USD: 100 } },
+    ]);
+    // The ledger lists Savings (open) but not CD (closed), so CD is dropped
+    // as an empty row and Savings must not vanish with it.
+    const rows = selectAccountTreeFromRoot("USD", root, 1, {
+      accounts: ["Assets:Savings", "Assets:Checking"],
+      rootAccount: "Assets",
+    });
+    expect(rows.map((row) => row.account).sort()).toEqual([
+      "Assets:Checking",
+      "Assets:Savings",
+    ]);
+    const savings = rows.find((row) => row.account === "Assets:Savings");
+    expect(savings?.value).toBe(0);
+    expect(savings?.children).toEqual([]);
+  });
+
+  // w21/423: a parent whose children net to zero was dropped with them.
+  it("keeps closed accounts holding balances that net to zero under their parent", () => {
+    const root = createIncomeRoot("Assets", [
+      {
+        account: "Assets:Receivable",
+        balanceChildren: { USD: 0 },
+        children: [
+          { account: "Assets:Receivable:Alice", balanceChildren: { USD: 20 } },
+          { account: "Assets:Receivable:Bob", balanceChildren: { USD: -20 } },
+        ],
+      },
+      { account: "Assets:Checking", balanceChildren: { USD: 100 } },
+    ]);
+    // Neither child is in the listed (open) set. The Accounts tab's rules.
+    const rows = selectAccountTreeFromRoot("USD", root, 1, {
+      accounts: ["Assets:Checking"],
+      rootAccount: "Assets",
+      wholeBalance: true,
+    });
+    const receivable = rows.find((row) => row.account === "Assets:Receivable");
+    expect(receivable?.children.map((child) => child.account).sort()).toEqual([
+      "Assets:Receivable:Alice",
+      "Assets:Receivable:Bob",
+    ]);
+  });
+
+  // w21/492: the same keep made a Reports category print "$0.00 · 0%" again.
+  it("leaves a report category that nets to zero out, as w21/055 had it", () => {
+    const root = createIncomeRoot("Expenses", [
+      { account: "Expenses:Food:Groceries", balanceChildren: { USD: 300 } },
+      {
+        account: "Expenses:Travel",
+        balanceChildren: { USD: 0 },
+        children: [
+          { account: "Expenses:Travel:Flights", balanceChildren: { USD: 500 } },
+          {
+            account: "Expenses:Travel:Refunds",
+            balanceChildren: { USD: -500 },
+          },
+        ],
+      },
+    ]);
+    // The Reports tree takes no zero-balance options.
+    const rows = selectAccountTreeFromRoot("USD", root);
+    expect(rows.map((row) => row.account)).toEqual(["Expenses:Food:Groceries"]);
+  });
+
+  it("still keeps that parent on the Accounts tab, which counts the whole balance", () => {
+    const root = createIncomeRoot("Expenses", [
+      { account: "Expenses:Food:Groceries", balanceChildren: { USD: 300 } },
+      {
+        account: "Expenses:Travel",
+        balanceChildren: { USD: 0 },
+        children: [
+          { account: "Expenses:Travel:Flights", balanceChildren: { USD: 500 } },
+          {
+            account: "Expenses:Travel:Refunds",
+            balanceChildren: { USD: -500 },
+          },
+        ],
+      },
+    ]);
+    const rows = selectAccountTreeFromRoot("USD", root, 1, {
+      wholeBalance: true,
+    });
+    expect(rows.some((row) => row.account.startsWith("Expenses:Travel"))).toBe(
+      true,
+    );
+  });
+
+  it("still drops a parent that holds nothing at all", () => {
+    const root = createIncomeRoot("Assets", [
+      {
+        account: "Assets:Old",
+        balanceChildren: { USD: 0 },
+        children: [{ account: "Assets:Old:A", balanceChildren: { USD: 0 } }],
+      },
+      { account: "Assets:Checking", balanceChildren: { USD: 100 } },
+    ]);
+    const rows = selectAccountTreeFromRoot("USD", root, 1, {
+      accounts: ["Assets:Checking"],
+      rootAccount: "Assets",
+    });
+    expect(rows.map((row) => row.account)).toEqual(["Assets:Checking"]);
+  });
+
+  it("still lets a rendered child stand in for its listed parent", () => {
+    const root = createIncomeRoot("Assets", [
+      {
+        account: "Assets:Cash",
+        balanceChildren: { USD: 40 },
+        children: [
+          { account: "Assets:Cash:Wallet", balanceChildren: { USD: 40 } },
+        ],
+      },
+      { account: "Assets:Checking", balanceChildren: { USD: 100 } },
+    ]);
+    const rows = selectAccountTreeFromRoot("USD", root, 1, {
+      accounts: ["Assets:Cash", "Assets:Cash:Wallet", "Assets:Checking"],
+      rootAccount: "Assets",
+    });
+    expect(rows.map((row) => row.account).sort()).toEqual([
+      "Assets:Cash:Wallet",
+      "Assets:Checking",
+    ]);
+  });
+
+  it("parses string balances and reads 0 when the currency is missing", () => {
     const root = createIncomeRoot("Income", [
       { account: "Income:Salary", balanceChildren: { USD: "5000.50" } },
       { account: "Income:Euro", balanceChildren: { EUR: 900 } },
     ]);
+    expect(selectAccountTreeFromRoot("USD", root)[0].value).toBe(5000.5);
+    // A USD account in a CNY ledger is not CNY 5,000.50 (w21/058).
     const result = selectAccountTreeFromRoot("CNY", root);
-    expect(result.map((n) => n.name)).toEqual(["Salary"]);
-    expect(result[0].value).toBe(5000.5);
+    expect(result.every((n) => n.value === 0)).toBe(true);
   });
 });
 
@@ -347,5 +481,94 @@ describe("accountCategory and NET_WORTH_SIGN", () => {
     expect(NET_WORTH_SIGN.liabilities === CATEGORY_SIGN.liabilities).toBe(
       false,
     );
+  });
+});
+
+// w21/174: a parent's own postings had no row, so its children did not add
+// up to it.
+describe("a parent's own postings", () => {
+  const bank = {
+    account: "Assets",
+    balanceChildren: {},
+    children: [
+      {
+        account: "Assets:Bank",
+        balance: { USD: 200 },
+        balanceChildren: { USD: 17202.01 },
+        children: [
+          {
+            account: "Assets:Bank:Savings",
+            balance: { USD: 10500 },
+            balanceChildren: { USD: 10500 },
+            children: [],
+            hasTxns: true,
+          },
+          {
+            account: "Assets:Bank:Checking",
+            balance: { USD: 6502.01 },
+            balanceChildren: { USD: 6502.01 },
+            children: [],
+            hasTxns: true,
+          },
+        ],
+        hasTxns: true,
+      },
+    ],
+    hasTxns: true,
+  };
+
+  it("get a row of their own beside the sub-accounts", () => {
+    const [row] = selectAccountTreeFromRoot("USD", bank);
+    expect(row.account).toBe("Assets:Bank");
+    expect(
+      row.children.map((child) => [
+        child.name,
+        child.value,
+        child.own ?? false,
+      ]),
+    ).toEqual([
+      ["Savings", 10500, false],
+      ["Checking", 6502.01, false],
+      ["Bank", 200, true],
+    ]);
+    const sum = row.children.reduce((total, child) => total + child.value, 0);
+    expect(Math.abs(sum - row.value) < 0.005).toBe(true);
+  });
+
+  // w21/331: the Accounts tab passes the ledger's open accounts, which sends the
+  // tree through the graft, and its copy used to drop `balance`.
+  it("keep their own row when the tree is grafted with the open accounts", () => {
+    const [row] = selectAccountTreeFromRoot("USD", bank, 1, {
+      accounts: ["Assets:Bank", "Assets:Bank:Savings", "Assets:Bank:Checking"],
+      rootAccount: "Assets",
+    });
+    expect(row.account).toBe("Assets:Bank");
+    expect(
+      row.children.map((child) => [
+        child.name,
+        child.value,
+        child.own ?? false,
+      ]),
+    ).toEqual([
+      ["Savings", 10500, false],
+      ["Checking", 6502.01, false],
+      ["Bank", 200, true],
+    ]);
+  });
+
+  it("add no row when the parent holds nothing itself", () => {
+    const children = bank.children[0].children;
+    const [row] = selectAccountTreeFromRoot("USD", {
+      ...bank,
+      children: [
+        {
+          ...bank.children[0],
+          balance: {},
+          balanceChildren: { USD: 17002.01 },
+          children,
+        },
+      ],
+    });
+    expect(row.children.some((child) => child.own)).toBe(false);
   });
 });

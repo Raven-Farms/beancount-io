@@ -6,6 +6,9 @@ export const es: Translations = {
   guestTryExample: "Probar un ejemplo",
   guestChooseExample: "Elegir un ejemplo",
   guestReadOnly: "Ejemplo de solo lectura",
+  guestSignInHint: "Abre el inicio de sesión",
+  guestReadOnlyEditor:
+    "Ejemplo de solo lectura. Inicia sesión para editar tu propio libro.",
   guestExit: "Salir de los ejemplos",
   guestIntroduction:
     "Explora informes reales sin una cuenta. Estos libros son de solo lectura.",
@@ -27,6 +30,7 @@ export const es: Translations = {
   discoveryTab_explore: "Explorar",
   discoverySearch: "Buscar libros",
   discoveryClear: "Borrar búsqueda",
+  clearSearch: "Borrar búsqueda",
   discoveryOpen: "Abrir {{name}}",
   discoveryStar: "Guardar {{name}} en favoritos",
   discoveryUnstar: "Quitar {{name}} de favoritos",
@@ -47,6 +51,15 @@ export const es: Translations = {
     "No se pudo completar la acción. Revisa tu conexión y el acceso al libro e inténtalo de nuevo.",
   ledgerReadOnly:
     "Este libro es de solo lectura. Elige un libro que puedas editar para hacer cambios.",
+  ledgerGoneTitle: "Este libro ya no está disponible",
+  ledgerGoneMessage:
+    "Se eliminó, se renombró o se dejó de compartir. Elige otro libro para continuar.",
+  ledgerEditorNotUtf8:
+    "Este archivo no es texto UTF-8. Editarlo aquí cambiaría algunos de sus caracteres, así que se abre en solo lectura. Edítalo en un ordenador.",
+  ledgerEditorTooLarge:
+    "Este archivo es demasiado grande para abrirlo en el teléfono, así que es de solo lectura. Edítalo en un ordenador.",
+  ledgerEditorTooLargeToEdit:
+    "Este archivo supera 1 MiB, más de lo que se puede guardar desde el teléfono, así que es de solo lectura. Edítalo en la web o con la CLI.",
 
   // bottom tab bar
   home: "Inicio",
@@ -78,25 +91,32 @@ export const es: Translations = {
   merchantsEmptyMessage:
     "Los beneficiarios de tus transacciones aparecerán aquí como un directorio buscable.",
   merchantsNoSearchResults: "Ningún comerciante coincide con tu búsqueda.",
-  merchantsLoadError: "Error al cargar comerciantes: ",
+  merchantsLoadError: "Error al cargar comerciantes",
   merchantsSortByCount: "Ordenar por número de transacciones",
   merchantsSortAlphabetical: "Ordenar alfabéticamente",
   merchantsRecurringSection: "Recurrente",
+  merchantsAllSection: "Todos los comerciantes",
   merchantsRecurringBadge: "Recurrente",
   merchantsCadenceWeekly: "Semanal",
   merchantsCadenceBiweekly: "Cada 2 semanas",
+  merchantsCadenceSemimonthly: "Dos veces al mes",
   merchantsCadenceMonthly: "Mensual",
+  merchantsCadenceBimonthly: "Cada 2 meses",
   merchantsCadenceQuarterly: "Trimestral",
+  merchantsCadenceSemiannual: "Cada 6 meses",
   merchantsCadenceYearly: "Anual",
   merchantsCadenceIrregular: "Irregular",
   merchantsCadenceUnknown: "Historial insuficiente",
+  merchantsCadenceInactive: "Sin pagos recientes",
   merchantsNextExpected: "Próximo {{date}}",
   merchantsOverdue: "Vencido",
+  merchantsLastPaid: "Último pago {{date}}",
+  merchantsScheduled: "Programado para el {{date}}",
   merchantsRecurringToggle: "Recurrente",
   merchantsRecurringToggleHelper:
     "Fija este comercio en Recurrente. La elección manual prevalece sobre la detección y se guarda en este dispositivo.",
   merchantDetailDateRange: "{{first}} – {{last}}",
-  merchantDetailLoadError: "Error al cargar el comercio: ",
+  merchantDetailLoadError: "Error al cargar el comercio",
   merchantDetailRetry: "Reintentar",
   merchantDetailEmptyTitle: "Sin transacciones",
   merchantDetailEmptyMessage:
@@ -135,6 +155,7 @@ export const es: Translations = {
   deleteAccountConfirmMessage:
     'Para confirmar, escribe "sudo delete my account" a continuación:',
   deleteAccountConfirmPhrase: "sudo delete my account",
+  deleteAccountConfirmMismatch: "Escribe la frase exactamente como se muestra.",
   deleteAccountConfirmPlaceholder: "Escribe la frase aquí",
   deleteAccountSuccess: "Cuenta eliminada",
   deleteAccountFailed: "No se pudo eliminar la cuenta. Inténtalo de nuevo.",
@@ -144,6 +165,8 @@ export const es: Translations = {
   accountSettings: "Cuenta",
   supportSettings: "Soporte",
   signIn: "Iniciar sesión",
+  sessionEndedNotice:
+    "Tu sesión ha terminado. Vuelve a iniciar sesión para continuar.",
   signUp: "Registrarse",
   serverSettings: "Servidor",
   serverSettingsDescription:
@@ -166,6 +189,14 @@ export const es: Translations = {
   serverConnectionUnreachable: "No se pudo contactar con ese servidor.",
   serverConnectionIncompatible:
     "Este servidor no expone la API necesaria de Beancount.io.",
+  serverConnectionOlder:
+    "Este servidor es más antiguo que la app. Puedes conectarte, pero algunas funciones pueden no funcionar.",
+  serverConnectionNotConfigured:
+    "Este servidor aún no está configurado para iniciar sesión.",
+  serverConnectionMismatch:
+    "Esta dirección no coincide con la que informa el servidor. Abre los ajustes del servidor y prueba la conexión.",
+  serverConnectionCanonical: "Este servidor se identifica como {{url}}.",
+  serverUseCanonical: "Usar esa dirección",
   serverConnectionAdvisory:
     "Aun así puedes guardar esta URL e iniciar sesión cuando el servidor esté disponible.",
   restoreDefaultServer: "Restaurar el valor predeterminado de Beancount.io",
@@ -186,26 +217,38 @@ export const es: Translations = {
   multiPostingsInvalidBalance: "Los apuntes deben sumar cero",
   multiPostingsMissingAccount: "Cada apunte necesita una cuenta",
   multiPostingsZeroAmount: "Cada apunte necesita un importe distinto de cero",
+  multiPostingsAmountFormat:
+    "Usa dígitos y un solo punto decimal, como 1234.56",
   accountPicker: "Selector de cuenta",
   accountPickerSearchPlaceholder: "Buscar cuentas",
   accountPickerRecent: "Recientes",
   accountPickerAllTab: "Todas",
   accountPickerNoResults: "No hay cuentas coincidentes",
   accountPickerCreate: 'Crear "%{name}"',
-  next: "Siguiente",
+  accountPickerClosedOn: "{{name}} se cerró el {{date}}",
+  accountPickerOpensOn:
+    "{{name}} se abre el {{date}}. Cambia la fecha para usarla.",
+  accountPickerOpenLater:
+    "Tus cuentas se abren el {{date}}. Cambia la fecha para usarlas.",
+  accountPickerNoAccounts: "Este libro aún no tiene cuentas.",
   cancel: "Cancelar",
   confirm: "Confirmar",
   saving: "Guardando...",
+  deleting: "Eliminando...",
   saveSuccess: "¡Transacción guardada!",
   saveFailed: "Error al guardar",
-  amountEmptyError: "Por favor ingrese el monto",
-  accountEmptyError: "Elige la cuenta de origen y la de destino",
+  profilePartialSave:
+    "El nombre de usuario se guardó, pero no se pudo guardar tu nombre. Inténtalo de nuevo.",
   accounts: "Cuentas",
   // Column header for the Accounts tab's account column. The balance column
   // reuses `balance`; each root row states its own valuation basis.
   account: "Cuenta",
   atCost: "{{amount}} al costo",
+  postingCost: "costo {{amount}}",
+  postingPrice: "precio {{amount}}",
   notInTotal: "No incluido en el total: {{amounts}}",
+  spendingLastMonthNotInTotal:
+    "El mes pasado, no incluido en el total: {{amounts}}",
   atMarket: "{{amount}} a valor de mercado",
   atMarketValue: "A valor de mercado",
   pricesNotUpdatedSince: {
@@ -235,18 +278,22 @@ export const es: Translations = {
   costBasisLine: "Costo {{cost}} · Resultado no realizado {{gain}}",
   liabilities: "Pasivos",
   equity: "Patrimonio",
-  noDataCharts: "Agregue datos rápidamente para mostrar gráficos",
+  noDataCharts: "Agrega datos para ver gráficos",
   notEnoughChartData: "Aún no hay datos suficientes para el gráfico",
+  chartSummary:
+    "De {{start}}, {{startValue}}, a {{end}}, {{endValue}}. Mínimo {{low}}, máximo {{high}}.",
+  chartPointValue: "{{period}}, {{value}}, {{change}} desde el inicio",
+  chartAdjustHint: "Desliza hacia arriba o abajo para recorrer los meses",
+  chartAdjustHintAndroid: "Abre el menú de acciones para recorrer los meses",
   done: "Hecho",
   payee: "Beneficiario",
   narration: "Descripción",
   suggestions: "Sugerencias",
-  aiSuggestions: "Sugerencias de IA",
   from: "De",
   to: "A",
   date: "Fecha",
   save: "Guardar",
-  pleaseInput: "Por favor ingrese...",
+  pleaseInput: "Introduce...",
   inviteFriends: "Invitar amigos",
   inviteSummary:
     "Comparte esta herramienta profesional de gestión financiera y ayuda a otros a construir su futuro financiero.",
@@ -284,9 +331,11 @@ export const es: Translations = {
     "En cuanto añadas transacciones, aparecerán aquí.",
   transactionsNoSearchResults:
     "Ninguna transacción coincide con tu búsqueda o tus filtros.",
-  transactionsLoadError: "Error al cargar las transacciones: ",
+  transactionsLoadError: "Error al cargar las transacciones",
   // transactions filter modal
   filters: "Filtros",
+  filtersActive: "Activos: {{count}}",
+  clearAccount: "Quitar la cuenta",
   filterStatus: "Estado",
   filterDateRange: "Periodo",
   filterDateRangeInvalid:
@@ -302,6 +351,7 @@ export const es: Translations = {
   transactions: "Transacciones",
   search: "Buscar",
   unknown: "Desconocido",
+  datePlaceholder: "AAAA-MM-DD",
   openAccount: "Abrir cuenta",
   accountType: "Tipo de cuenta",
   currency: "Moneda",
@@ -310,35 +360,77 @@ export const es: Translations = {
   chooseCurrency: "Elige la moneda",
   openAccountNamePlaceholder: "Bank:Checking",
   openAccountNoCurrency: "Sin moneda",
+  openAccountOtherCurrency: "Otra…",
+  openAccountOtherCurrencyTitle: "Otra moneda",
+  openAccountOtherCurrencyMessage:
+    "Introduce un código de moneda o activo, como EUR o VTI.",
+  openAccountCurrencyInvalid:
+    "Usa mayúsculas, dígitos y ' . _ -, empezando por una letra, como EUR o VTI.",
   openAccountSaving: "Abriendo...",
   openAccountFailed: "No se pudo abrir la cuenta. Inténtalo de nuevo.",
   ledgerWouldBreak: "Esto añadiría un error a tu libro: {{detail}}",
+  ledgerRefusalLine: "línea {{line}}",
+  ledgerRefusalNearEntry: "cerca de esta entrada",
+  ledgerRefusalQuoteHint:
+    'Para poner unas comillas dentro de un texto, escríbelas como \\".',
+  ledgerWriteOffline: "Estás sin conexión. No se guardó nada.",
+  ledgerWriteUnconfirmed:
+    "El servidor no confirmó el guardado. Comprueba antes de volver a intentarlo.",
+  ledgerWriteRateLimited:
+    "Demasiados cambios a la vez. Espera un momento e inténtalo de nuevo.",
+  ledgerInvalidAccount: "{{value}} no es un nombre de cuenta válido.",
+  ledgerInvalidCurrency: "{{value}} no es una moneda válida.",
+  ledgerInvalidTag:
+    "#{{value}} no se puede usar como etiqueta. Usa solo las letras A–Z, dígitos y - _ . /",
+  ledgerInvalidLink:
+    "^{{value}} no se puede usar como enlace. Usa solo las letras A–Z, dígitos y - _ . /",
+  ledgerInvalidFlag: "{{value}} no se puede usar como marca.",
+  ledgerEntryOneAtATime: "Edita una sola entrada a la vez.",
+  ledgerEntryIndent: "Sangra los apuntes bajo la línea de la fecha.",
+  ledgerEntryNotAnEntry:
+    "Las opciones, los complementos y las inclusiones no son asientos. Cámbialos en el editor de archivos del libro.",
   openAccountInvalidRoot: "Elige un tipo de cuenta válido.",
   openAccountNameRequired: "Escribe al menos un componente del nombre.",
   openAccountEmptyComponent:
     "Los componentes del nombre no pueden estar vacíos.",
   openAccountNamePreview: "Se creará como {{account}}",
   openAccountAlreadyOpen: "{{account}} ya está abierta en este libro.",
+  openAccountClosed:
+    "{{account}} se cerró el {{date}} y no se puede volver a abrir.",
   openAccountUppercaseComponent:
     "Cada componente del nombre debe empezar por mayúscula o número.",
   openAccountInvalidCharacters:
     "Usa solo letras, números y guiones en los nombres de cuenta.",
   transaction: "Transacción",
+  transactionActions: "Acciones de la transacción",
   loadingMore: "Cargando más...",
   noMoreEntries: "No hay más entradas",
+  loadMoreFailed: "No se pudieron cargar más entradas.",
+  a11yTapToExpand: "Toca dos veces para expandir",
+  a11yTapToCollapse: "Toca dos veces para contraer",
   noEntries: "Sin entradas",
   accountDetailUnavailable:
     "Esta cuenta no está disponible en el libro seleccionado.",
   transactionDetailUnavailable:
     "Esta transacción no está disponible en el libro seleccionado.",
+  transactionDetailRemoved:
+    "Esta transacción se cambió o se eliminó. Vuelve atrás para ver la lista actual.",
+  transactionErrorOpenFile: "Abrir en el editor de archivos",
+  pluginCopyNotice:
+    "Un plugin generó esta entrada a partir de otra, por eso no se puede editar ni eliminar aquí.",
+  pluginCopyOpenSource: "Abrir la entrada de origen",
   merchantDetailUnavailable:
     "Este comercio no está disponible en el libro seleccionado.",
   commitDetailUnavailable:
     "Este cambio no está disponible en el libro seleccionado.",
-  journalLoadError: "Error al cargar el diario: ",
+  commitDetailGone: "Este cambio ya no está disponible.",
+  fileEditorUnavailable:
+    "Este archivo no está disponible en el libro seleccionado.",
+  journalLoadError: "Error al cargar el diario",
   // entry context (transactions screen)
   journalError: "Error",
   journalNoData: "No hay datos de contexto de entrada disponibles",
+  dateSectionHeaderTotal: "{{date}}, total del día {{total}}",
   journalEntryContext: "Contexto de entrada",
   journalBalancesBefore: "Saldos antes de la entrada",
   journalBalancesAfter: "Saldos después de la entrada",
@@ -347,6 +439,7 @@ export const es: Translations = {
   open: "Apertura",
   close: "Cierre",
   balance: "Saldo",
+  balanceOffBy: "Desviación de {{amount}}",
   note: "Nota",
   document: "Documento",
   pad: "Ajuste",
@@ -354,9 +447,11 @@ export const es: Translations = {
   custom: "Personalizada",
   cleared: "Conciliada",
   pending: "Pendiente",
+  entryUpcoming: "Próximo",
   other: "Otras",
   budget: "Presupuesto",
   metadata: "Metadatos",
+  accountOwnPostings: "{{name}} (propias)",
   postings: "Apuntes",
   details: "Detalles",
   tags: "Etiquetas",
@@ -365,6 +460,8 @@ export const es: Translations = {
   reports: "Informes",
   netProfit: "Beneficio neto",
   cashFlow: "Flujo de caja",
+  cashFlowRefunds: "Reembolsos",
+  cashFlowClawbacks: "Reintegros",
   moneyFlow: "Flujo de dinero",
   cashFlowEmpty: "Sin flujo de caja en este período",
   savings: "Ahorros",
@@ -376,12 +473,22 @@ export const es: Translations = {
   notFoundGoHome: "Ir al inicio",
   // home dashboard
   seeAll: "Ver todo",
+  seeAllCard: "Ver todo: {{title}}",
+  seeAllAccounts: "Ver todas las cuentas",
   netWorth: "Patrimonio neto",
   noAccounts: "Sin cuentas",
+  reportsNoExpenses: "Sin gastos en este periodo",
+  reportsNoIncome: "Sin ingresos en este periodo",
   recentTransactions: "Transacciones recientes",
   recentTransactionsEmpty: "Todavía no hay transacciones",
+  recentTransactionsUpcoming:
+    "Nada hasta hoy. Los movimientos futuros aparecen en Transacciones.",
+  recentTransactionsEmptyRange: "Sin transacciones en este período",
   spending: "Gastos",
   spendingSubtitle: "Este mes frente al anterior",
+  spendingChartSummary:
+    "Gastos: el mes pasado {{lastMonth}}, este mes {{thisMonth}}.",
+  spendingEmpty: "Aún no hay gastos",
   thisMonth: "Este mes",
   lastMonth: "Mes pasado",
   range1M: "1M",
@@ -391,6 +498,13 @@ export const es: Translations = {
   range1Y: "1A",
   rangeLastYear: "AA",
   rangeAll: "TODO",
+  rangeSpoken1M: "1 mes",
+  rangeSpoken3M: "3 meses",
+  rangeSpoken6M: "6 meses",
+  rangeSpokenYTD: "En lo que va del año",
+  rangeSpoken1Y: "1 año",
+  rangeSpokenLastYear: "Año pasado",
+  rangeSpokenAll: "Todo el período",
   // edit / delete transaction
   editTransaction: "Editar transacción",
   deleteTransaction: "Eliminar",
@@ -399,8 +513,12 @@ export const es: Translations = {
     "¿Seguro que quieres eliminar esta transacción? Esta acción no se puede deshacer.",
   deleteSuccess: "Transacción eliminada",
   deleteFailed: "Error al eliminar la transacción",
+  deleteTransactionChanged:
+    "Esta transacción se cambió en otro lugar. Se ha vuelto a cargar; intenta eliminarla de nuevo.",
   editSuccess: "Transacción guardada",
   editFailed: "Error al guardar la transacción",
+  editTransactionEmpty:
+    "No se puede guardar una entrada vacía. Para quitar la transacción, usa Eliminar en su detalle.",
   editTransactionLoadFailed: "No se pudo cargar la transacción",
   editTransactionSource:
     "Edita el código beancount original abajo. Una suma de comprobación caducada o un beancount no válido se rechazará con un error.",
@@ -414,12 +532,16 @@ export const es: Translations = {
   receiptFlashOff: "Desactivado",
   receiptFlashOn: "Activado",
   receiptRetake: "Repetir",
+  receiptTryAgain: "Reintentar",
   receiptUpload: "Subir",
   receiptOpenSettings: "Abrir Ajustes",
+  receiptAllowCamera: "Permitir la cámara",
   receiptCancel: "Cancelar",
   receiptUploading: "Subiendo la foto…",
+  receiptUploadingProgress: "Subiendo la foto… {{percent}}%",
   receiptParsing: "La IA está leyendo tu recibo…",
   receiptRevealTitle: "Esto es lo que hemos leído",
+  receiptRevealSpoken: "Recibo leído: {{summary}}",
   // Deliberately a proposal: nothing is written to the ledger until the user
   // saves on the next screen.
   receiptRevealHint:
@@ -439,14 +561,32 @@ export const es: Translations = {
   notificationsChangesSection: "Cambios recientes",
   notificationsLedgerHealthy: "El libro está en orden: sin errores.",
   notificationsNoChanges: "Sin cambios recientes.",
+  notificationsShowOlder: "Mostrar cambios anteriores",
+  commitNoMessage: "(sin mensaje)",
   // commit detail
   commitDetailAuthor: "Autor",
   commitDetailStats: "Estadísticas",
   commitDetailFiles: "Archivos",
+  commitFileAdded: "Añadido",
+  commitFileDeleted: "Eliminado",
+  commitFileRenamedFrom: "Renombrado desde {{name}}",
   commitDetailDiff: "Diferencias",
+  commitDetailShowMore: {
+    one: "Mostrar {{count}} línea más",
+    many: "Mostrar {{count}} líneas más",
+    other: "Mostrar {{count}} líneas más",
+  },
   commitDetailNoDiff: "No hay diferencias disponibles.",
-  commitDetailAdditions: "+{{count}} líneas",
-  commitDetailDeletions: "-{{count}} líneas",
+  commitDetailAdditions: {
+    one: "+{{count}} línea",
+    many: "+{{count}} líneas",
+    other: "+{{count}} líneas",
+  },
+  commitDetailDeletions: {
+    one: "-{{count}} línea",
+    many: "-{{count}} líneas",
+    other: "-{{count}} líneas",
+  },
   // ledger file browser
   ledgerLoadError: "Error al cargar",
   ledgerEmpty: "Sin archivos",
@@ -459,19 +599,33 @@ export const es: Translations = {
     "Escribe un nombre único de archivo .bean o .beancount. Si omites la extensión, se añade .bean.",
   ledgerCreateFilePlaceholder: "investments.bean",
   ledgerCreateFileSuccess: "{{name}} creado",
+  ledgerCreateFileSuccessIn: "Se creó {{name}} en {{ledger}}",
   ledgerCreateFileFailed: "Error al crear el archivo",
+  ledgerFileNameExists: "Ya existe un archivo llamado {{name}}",
+  ledgerFileNameExtension: "Usa un nombre .bean o .beancount",
+  ledgerFileNamePath: "Usa un nombre sin \\, .. ni nombres de carpeta vacíos",
+  ledgerFileNamePortable:
+    'Evita < > : " | ? *, partes que terminen en punto o espacio y nombres como con o nul',
   ledgerDeleteFile: "Eliminar {{name}}",
+  ledgerFilesFolderLabel: "{{name}}, carpeta",
+  ledgerFilesFileLabel: "{{name}}, archivo",
   ledgerDeleteFileTitle: "Eliminar archivo del libro",
   ledgerDeleteFileMessage: '¿Eliminar "{{name}}"? Esto no se puede deshacer.',
   ledgerDeleteFileConfirm: "Eliminar",
   ledgerDeleteFileSuccess: "{{name}} eliminado",
   ledgerDeleteFileFailed: "Error al eliminar el archivo",
+  ledgerDeleteFileChanged:
+    "Este archivo cambió en otro lugar. Se actualizó la lista; inténtalo de nuevo.",
   ledgerMainFileProtected: "main.bean no se puede eliminar",
   // ledger file editor
   ledgerEditorSave: "Guardar",
   ledgerEditorSaving: "Guardando...",
   ledgerEditorSaveSuccess: "Archivo guardado",
   ledgerEditorSaveFailed: "Error al guardar",
+  ledgerEditorSaveLeftErrorsTitle: "Guardado, con un error nuevo en el libro",
+  ledgerEditorSaveLeftErrors:
+    "El archivo se guardó, pero tu libro ahora tiene un error que antes no tenía: {{error}}",
+  ledgerEditorViewErrors: "Ver errores",
   ledgerEditorLoadFailed: "Error al cargar el archivo",
   ledgerEditorFileUnavailable: "Este archivo ya no está en el libro.",
   ledgerEditorBackToFiles: "Volver a archivos",
@@ -480,11 +634,37 @@ export const es: Translations = {
   ledgerEditorDiscardChanges: "Descartar",
   ledgerEditorConflictTitle: "Archivo modificado",
   ledgerEditorConflictMessage:
-    "Este archivo cambió en el servidor. ¿Descartar los cambios locales y volver a cargar?",
+    "Este archivo se cambió de forma remota. ¿Guardar tu texto encima o copiarlo y cargar la versión nueva?",
+  ledgerEditorOverwrite: "Sobrescribir",
+  ledgerEditorCopyReload: "Copiar y recargar",
+  ledgerEditorOverwriteTitle: "¿Sobrescribir los cambios remotos?",
+  ledgerEditorOverwriteMessage:
+    "Tu texto sustituye la versión guardada en otro lugar. Se perderán sus cambios.",
+  ledgerEditorFileGoneTitle: "Archivo eliminado",
+  ledgerEditorFileGoneMessage:
+    "Este archivo se eliminó o movió en otro lugar y no se puede guardar. Tu texto sigue aquí: cópialo o guárdalo como archivo nuevo en la misma ruta.",
+  ledgerEditorRecreate: "Guardar como archivo nuevo",
+  ledgerEditorSaveFailedHint:
+    "Tu texto sigue aquí. Inténtalo de nuevo en un momento.",
+  ledgerEditorAccessRemoved:
+    "Ya no puedes editar este libro. Tu texto sigue aquí: cópialo para conservarlo.",
+  ledgerEditorCopyFailed:
+    "No se pudo copiar tu texto, así que el archivo no se recargó.",
   ledgerEditorReload: "Recargar",
   ledgerEditorKeepEditing: "Seguir editando",
   keyboardAccessoryInsert: "Insertar {{symbol}}",
+  keyboardInsertDate: "Insertar la fecha de hoy",
+  keyboardInsertCleared: "Insertar marca de conciliado",
+  keyboardInsertPending: "Insertar marca de pendiente",
+  keyboardInsertQuotes: "Insertar comillas",
+  keyboardInsertColon: "Insertar dos puntos",
+  keyboardInsertTab: "Insertar tabulación",
+  keyboardInsertMinus: "Insertar menos",
+  keyboardInsertTag: "Insertar etiqueta",
+  keyboardInsertLink: "Insertar enlace",
   keyboardAccessoryDismiss: "Ocultar teclado",
+  ledgerEditorErrorLine: "línea {{line}}",
+  ledgerEditorJumpToLine: "Ir a la línea {{line}}",
   ledgerEditorErrorCount: {
     one: "{{count}} error",
     many: "{{count}} errores",
@@ -508,14 +688,22 @@ export const es: Translations = {
     "Define un objetivo para cualquier cuenta y empieza a hacer seguimiento.",
   budgetEmptyStateCta: "Añadir tu primer presupuesto",
   budgetPanelEmpty: "Define un objetivo para una cuenta",
+  budgetPanelEmptyGuest: "Inicia sesión para fijar objetivos de gasto",
   budgetPanelRowValue:
     "{{actual}} de {{budget}}, {{percent}}% utilizado, {{status}}",
+  budgetPanelRowValueNoBudget: "{{actual}} de {{budget}}, {{status}}",
+  budgetStartsOn: "Empieza el {{date}}",
   budgetLoadFailed: "Error al cargar los presupuestos",
   budgetIntervalDaily: "Diario",
   budgetIntervalWeekly: "Semanal",
   budgetIntervalMonthly: "Mensual",
   budgetIntervalQuarterly: "Trimestral",
   budgetIntervalYearly: "Anual",
+  budgetIntervalAdjDaily: "diario",
+  budgetIntervalAdjWeekly: "semanal",
+  budgetIntervalAdjMonthly: "mensual",
+  budgetIntervalAdjQuarterly: "trimestral",
+  budgetIntervalAdjYearly: "anual",
   // add / update budget
   budgetAdd: "Agregar presupuesto",
   budgetUpdate: "Actualizar presupuesto",
@@ -529,10 +717,15 @@ export const es: Translations = {
   budgetSaveFailed: "Error al guardar el presupuesto",
   // delete
   budgetDelete: "Eliminar",
+  budgetUpdateNamed: "Actualizar el presupuesto de {{account}}, {{currency}}",
+  budgetDeleteNamed:
+    "Eliminar la entrada de presupuesto del {{date}}, {{amount}}",
   budgetDeleteTitle: "Eliminar presupuesto",
   budgetDeleteMessage:
     "¿Eliminar el presupuesto {{interval}} de {{amount}} para {{account}} vigente desde {{date}}? Esto elimina una sola entrada y no se puede deshacer.",
   budgetDeleteFailed: "Error al eliminar el presupuesto",
+  budgetDeleteChanged:
+    "Esta entrada de presupuesto cambió en otro lugar. Se actualizó el historial; inténtalo de nuevo.",
 
   // Ask Beancount.io — the agent chat
   agentTitle: "Pregunta a Beancount.io",
@@ -571,10 +764,16 @@ export const es: Translations = {
   createLedgerNameInvalid:
     "El nombre debe incluir al menos una letra o un número.",
   createLedgerNameConflict: "Ya existe un libro con este nombre.",
+  createLedgerNameReserved:
+    "Ese nombre era de un libro renombrado y todavía redirige a él. Elige otro nombre.",
+  createLedgerSetupUnsupported:
+    "Este servidor no admite la configuración guiada. Vuelve y elige Inicial o Ejemplo para crear un libro con los valores predeterminados del servidor.",
+  createLedgerCreated: "{{name}} creado",
   createLedgerSlugPreview: "Se creará como {{slug}}",
   createLedgerDescription: "Descripción",
   createLedgerDescriptionPlaceholder: "Opcional",
   createLedgerPrivate: "Privado",
+  createLedgerPublic: "Público",
   createLedgerTemplate: "Plantilla",
   createLedgerTemplateStarter: "Inicial",
   createLedgerTemplateStarterHint:
@@ -585,6 +784,8 @@ export const es: Translations = {
   createLedgerTierLimit:
     "Se ha alcanzado el límite de libros. No se puede crear otro.",
   createLedgerGenericError: "No se pudo crear el libro. Inténtalo de nuevo.",
+  createLedgerStillCreating:
+    "Este libro aún se está creando. Espera unos segundos y vuelve a tocar Crear.",
   createLedgerDrawerRow: "Nuevo libro",
   createLedgerEmptyTitle: "Aún no hay libros",
   createLedgerEmptyBody: "Crea un libro o descubre ejemplos públicos.",
@@ -594,8 +795,15 @@ export const es: Translations = {
   ledgerGuardMessage: "Crea un libro o descubre uno para continuar.",
   removePosting: "Eliminar asiento",
   toggleAmountSign: "Cambiar el signo del importe",
-  incomeExpenseChartSummary:
-    "Ingresos y gastos durante {{count}} meses. Ingresos {{income}}, gastos {{expense}}, neto {{net}}.",
+  postingSignToggle: "Signo de {{account}}",
+  signPlus: "Más",
+  signMinus: "Menos",
+  incomeExpenseChartSummary: {
+    one: "Ingresos y gastos durante {{count}} mes. Ingresos {{income}}, gastos {{expense}}, neto {{net}}.",
+    many: "Ingresos y gastos durante {{count}} meses. Ingresos {{income}}, gastos {{expense}}, neto {{net}}.",
+    other:
+      "Ingresos y gastos durante {{count}} meses. Ingresos {{income}}, gastos {{expense}}, neto {{net}}.",
+  },
   cashFlowChartSummary:
     "Flujo de caja de ingresos a gastos. Ingresos {{income}}, gastos {{expenses}}.",
   cashFlowChartSummaryWithSavings:
@@ -605,6 +813,7 @@ export const es: Translations = {
   sankeyIncomeNodeLabel: "{{name}} (ingresos)",
   sankeyExpensesNodeLabel: "{{name}} (gastos)",
   ledgerNavigateUp: "Subir una carpeta",
+  ledgerNavigateUpTo: "Subir a {{folder}}",
   openLedgerDrawer: "Abrir menú",
   back: "Atrás",
   postingAmountLabel: "Importe de {{account}}",
@@ -614,8 +823,14 @@ export const es: Translations = {
   expandAccount: "Expandir {{account}}",
   collapseAccount: "Contraer {{account}}",
   breakdownRowShare: "{{amount}}, {{percent}}% del total",
-  budgetChartSummary:
-    "Presupuesto frente a real de {{span}}. Real {{actual}} de {{budget}} presupuestado en {{count}} periodos, {{over}} por encima del objetivo.",
+  budgetChartSummary: {
+    one: "Presupuesto frente a real de {{span}}. Real {{actual}} de {{budget}} presupuestado en {{count}} periodo, {{missed}}.",
+    many: "Presupuesto frente a real de {{span}}. Real {{actual}} de {{budget}} presupuestado en {{count}} periodos, {{missed}}.",
+    other:
+      "Presupuesto frente a real de {{span}}. Real {{actual}} de {{budget}} presupuestado en {{count}} periodos, {{missed}}.",
+  },
+  budgetSummaryOverTarget: "{{count}} por encima del objetivo",
+  budgetSummaryBelowTarget: "{{count}} por debajo del objetivo",
   feedSourceLedger: "Libro",
   feedSourceBlog: "Blog",
   feedSourceRelease: "Versión",
@@ -628,6 +843,7 @@ export const es: Translations = {
   profileUsernameHint:
     "Las direcciones web de tus libros empiezan por tu nombre de usuario, así que cambiarlo también las cambia.",
   profileUsernameRequired: "Introduce un nombre de usuario",
+  profileNameTooLong: "Máximo 100 caracteres.",
   profileUsernameRule:
     "Usa de 1 a 20 caracteres: minúsculas a–z, dígitos 0–9 o guiones bajos.",
   profileUsernameTaken: "Ese nombre de usuario ya está en uso",
@@ -635,6 +851,54 @@ export const es: Translations = {
   profileEmailReadOnly: "El correo electrónico no se puede cambiar aquí",
   profileNotSet: "Sin definir",
   profilePhotoFromGravatar: "Foto de Gravatar",
+  profileAddGravatar: "Añade una foto en Gravatar",
   profileUpdated: "Perfil actualizado",
   multiplePostings: "Varios apuntes",
+  createLedgerNext: "Siguiente",
+  createLedgerBack: "Atrás",
+  createLedgerStep: "Paso {{step}} de {{total}}",
+  createLedgerStartPreset: "Preajuste",
+  createLedgerStartPresetHint:
+    "Elige un plan de cuentas ya preparado para lo que registras: un hogar, un negocio, inversiones.",
+  createLedgerCurrency: "Moneda de operación",
+  createLedgerHistoryStart: "Los libros comienzan el",
+  createLedgerOpeningAccount: "Cuenta de apertura",
+  createLedgerOpeningAmount: "Saldo inicial (opcional)",
+  createLedgerReviewOpening: "Saldo inicial: {{account}} {{amount}}",
+  createLedgerAmountOwed: "Importe adeudado (opcional)",
+  createLedgerOpeningNone: "Decidir más tarde",
+  createLedgerReview: "Revisar",
+  createLedgerReviewDescription:
+    "Esto es exactamente lo que se creará. Vuelve atrás para cambiar algo.",
+  createLedgerAccounts: "Cuentas",
+  createLedgerAmountInvalid: "Introduce un monto como 100 o -30.50",
+  createLedgerAmountReenter:
+    "Vuelve a introducir el saldo inicial o elige «Decidir más tarde». No se conserva en el borrador guardado.",
+  createLedgerCurrencyInvalid: "Elige un código de moneda como USD o EUR.",
+  createLedgerHistoryStartInvalid:
+    "Introduce una fecha válida como 2026-01-01.",
+  createLedgerPresetPersonal: "Libro personal",
+  createLedgerPresetPersonalOutcome:
+    "Registra una compra y entiende su efecto en tu dinero restante.",
+  createLedgerPresetFreelance: "Libro de autónomo",
+  createLedgerPresetFreelanceOutcome:
+    "Registra ingresos de clientes o mira lo que un cliente impago aún debe.",
+  createLedgerPresetBusiness: "Libro de empresa",
+  createLedgerPresetBusinessOutcome:
+    "Establece una posición inicial y distingue la financiación de los ingresos.",
+  createLedgerPresetPortfolio: "Libro de cartera",
+  createLedgerPresetPortfolioOutcome:
+    "Registra una compra y verifica unidades, registros de adquisición y movimiento de efectivo.",
+  createLedgerPresetRental: "Libro de alquiler",
+  createLedgerPresetRentalOutcome:
+    "Registra recibos y distingue el alquiler de un depósito reembolsable.",
+  createLedgerPresetShared: "Libro de gastos compartidos",
+  createLedgerPresetSharedOutcome:
+    "Registra un anticipo y mira quién debe a quién.",
+  createLedgerPresetCommunity: "Libro de comunidad",
+  createLedgerPresetCommunityOutcome:
+    "Explica aportaciones, gastos de proyectos y fondos restantes.",
+  createLedgerPresetBlank: "Libro en blanco",
+  createLedgerPresetBlankOutcome:
+    "Añade una estructura elegida sin eliminar categorías no deseadas.",
 };

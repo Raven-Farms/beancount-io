@@ -7,6 +7,8 @@ template, aligns it, validates it, and creates the file atomically.
 from __future__ import annotations
 
 import datetime
+import errno
+import json
 import os
 from decimal import MAX_PREC, Decimal, localcontext
 from pathlib import Path
@@ -51,11 +53,7 @@ def answer(
     liability accounts. The file must not already exist; creation is atomic
     (`claim_new_file` of a validated candidate) so a race never overwrites.
     """
-    file = expand_path(file, "--file")
-    if not file.is_absolute():
-        file = file.resolve()
-    if file.exists() or file.is_symlink():
-        raise ConflictError(f"Already exists: {file}. Choose a new path; init never overwrites a ledger.")
+    file = _prepare_new_file(file)
 
     currency = currency.strip().upper()
     try:
@@ -63,21 +61,7 @@ def answer(
     except ValueError as exc:
         raise UsageError(f"--date must be a date in YYYY-MM-DD form, not {date!r}.") from exc
 
-    balances: dict[str, Decimal] = {}
-    for balance in opening_balances or []:
-        parts = balance.split()
-        if len(parts) != 2 or parts[0] not in ACCOUNTS or not parts[0].startswith(("Assets:", "Liabilities:")):
-            raise UsageError(
-                "Opening balance must be 'ACCOUNT NUMBER' for one of the template's asset/liability accounts."
-            )
-        account, number = parts
-        if account in balances:
-            raise UsageError(f"Opening balance specified twice for {account}.")
-        try:
-            amount = parse_decimal_number(number)
-        except ValueError as exc:
-            raise UsageError(str(exc)) from exc
-        balances[account] = amount
+    balances = _parse_opening_balances(opening_balances, list(ACCOUNTS), "template's")
 
     content = f'option "title" "Personal ledger"\noption "operating_currency" "{currency}"\n\n'
     content += "; Add more accounts with bea add open. Amounts on credit accounts are negative.\n"
@@ -102,7 +86,10 @@ def answer(
         with localcontext() as exact:
             exact.prec = MAX_PREC
             total = sum(nonzero.values(), Decimal(0))
-        content += f"  Equity:OpeningBalances  {total.copy_negate():f} {currency}\n"
+        # copy_negate also changes zero's sign; a cancelling opening needs
+        # ordinary zero without sacrificing the exact nonzero negation.
+        equity = total.copy_negate() if total else Decimal(0)
+        content += f"  Equity:OpeningBalances  {equity:f} {currency}\n"
     else:
         content += (
             "\n; Record opening balances with a transaction against Equity:OpeningBalances.\n"
@@ -111,6 +98,18 @@ def answer(
             f";   Equity:OpeningBalances  -1000.00 {currency}\n"
         )
 
+    _write_new_ledger(file, content)
+
+    return {
+        "created": str(file),
+        "currency": currency,
+        "date": day.isoformat(),
+        "accounts": list(ACCOUNTS),
+    }
+
+
+def _write_new_ledger(file: Path, content: str) -> None:
+    """Align, validate, and atomically create `file` with `content`."""
     from beancount.scripts.format import align_beancount
 
     content = align_beancount(content)  # type: ignore[no-untyped-call]
@@ -126,17 +125,203 @@ def answer(
                 raise ConflictError(f"Already exists: {file}; nothing was overwritten.") from exc
             except PermissionError as exc:
                 raise AuthError(f"The filesystem refused to create {file}; nothing was written.") from exc
+    except PermissionError as exc:
+        # The candidate itself could not be created, under an unsearchable
+        # or unwritable directory (w5/793).
+        _remove_created(created)
+        raise AuthError(f"The filesystem refused to create {file}; nothing was written.") from exc
+    except OSError as exc:
+        _remove_created(created)
+        if exc.errno in _USAGE_ERRNOS:
+            blocker = _blocking_component(file, exc.errno)
+            raise UsageError(
+                f"Cannot create {file}: {_uncreatable_reason(blocker, exc.errno)} Nothing was written."
+            ) from exc
+        raise
     except BaseException:
         # "Nothing was written" left the directories it had made (w5/610).
         _remove_created(created)
         raise
 
+
+_CATALOG_PATH = Path(__file__).with_name("setup_catalog.json")
+_CURRENCIES_PATH = Path(__file__).with_name("setup_currencies.json")
+
+
+def _load_catalog() -> dict[str, Any]:
+    return json.loads(_CATALOG_PATH.read_text(encoding="utf-8"))  # type: ignore[no-any-return]
+
+
+def _load_currencies() -> dict[str, Any]:
+    return json.loads(_CURRENCIES_PATH.read_text(encoding="utf-8"))  # type: ignore[no-any-return]
+
+
+def _parse_opening_balances(
+    opening_balances: list[str] | None, allowed: list[str] | tuple[str, ...], noun: str
+) -> dict[str, Decimal]:
+    balances: dict[str, Decimal] = {}
+    for balance in opening_balances or []:
+        parts = balance.split()
+        if len(parts) != 2 or parts[0] not in allowed or not parts[0].startswith(("Assets:", "Liabilities:")):
+            raise UsageError(
+                f"Opening balance must be 'ACCOUNT NUMBER' for one of the {noun} asset/liability accounts."
+            )
+        account, number = parts
+        if account in balances:
+            raise UsageError(f"Opening balance specified twice for {account}.")
+        try:
+            balances[account] = parse_decimal_number(number)
+        except ValueError as exc:
+            raise UsageError(str(exc)) from exc
+    return balances
+
+
+def _prepare_new_file(file: Path) -> Path:
+    file = expand_path(file, "--file")
+    if not file.is_absolute():
+        file = file.resolve()
+    try:
+        present = file.exists() or file.is_symlink()
+    except OSError:
+        # Unstatable, so uncreatable: creation below reports it (w5/793, w5/795).
+        present = False
+    if present:
+        raise ConflictError(f"Already exists: {file}. Choose a new path; init never overwrites a ledger.")
+    return file
+
+
+def answer_preset(
+    file: Path,
+    *,
+    preset: str,
+    title: str | None = None,
+    currency: str,
+    date: str,
+    opening_balances: list[str] | None = None,
+) -> dict[str, Any]:
+    """Write a new ledger from a setup-catalog preset (ADR021).
+
+    Mirrors the hosted builder: preset accounts open with no balance claim,
+    an explicit opening balance posts the day before the history boundary
+    against Equity:OpeningBalances and asserts on the boundary, and the
+    accounts open the day before the boundary when such a posting exists.
+    """
+    file = _prepare_new_file(file)
+
+    catalog = _load_catalog()
+    presets = {entry["id"]: entry for entry in catalog["presets"]}
+    entry = presets.get(preset)
+    if entry is None:
+        raise UsageError(f"Unknown preset {preset!r}. Choose one of: {', '.join(sorted(presets))}.")
+
+    currencies = _load_currencies()
+    currency = currency.strip().upper()
+    if currency not in currencies["supportedCurrencies"]:
+        raise UsageError(f"Unsupported operating currency {currency!r} for a preset ledger.")
+
+    try:
+        day = datetime.date.fromisoformat(date)
+    except ValueError as exc:
+        raise UsageError(f"--date must be a date in YYYY-MM-DD form, not {date!r}.") from exc
+
+    accounts = [account["name"] for account in entry["accounts"]]
+    balances = _parse_opening_balances(opening_balances, accounts, "preset's")
+
+    # A confirmed zero asserts the boundary without posting anything (w5/876).
+    funded = sorted(account for account, amount in balances.items() if amount)
+    if funded and day == datetime.date.min:
+        raise UsageError(
+            f"--date {day.isoformat()} cannot start a ledger with a known opening balance: an opening is recorded on "
+            f"the day before the history starts, and {day.isoformat()} has no day before it. Use "
+            f"{(day + datetime.timedelta(days=1)).isoformat()} or later, or leave the opening balance out. "
+            "Nothing was created."
+        )
+    open_day = day - datetime.timedelta(days=1) if funded else day
+    # Beancount string content: a quote or backslash left bare ended the string
+    # early or began an escape, so the saved title was not the one supplied.
+    saved_title = (title or entry["title"]).replace("\\", "\\\\").replace('"', '\\"')
+    lines = [
+        f'option "title" "{saved_title}"',
+        f'option "operating_currency" "{currency}"',
+        'option "inferred_tolerance_default" "*:0.001"',
+        "",
+        'plugin "beancount.plugins.auto_accounts"',
+        "",
+    ]
+    opened = sorted(accounts)
+    if funded and "Equity:OpeningBalances" not in opened:
+        opened.append("Equity:OpeningBalances")
+        opened.sort()
+    for account in opened:
+        lines.append(f"{open_day} open {account} {currency}")
+    if balances:
+        lines.append("")
+        for account in funded:
+            amount = balances[account]
+            lines.append(f'{day - datetime.timedelta(days=1)} * "Opening balance"')
+            lines.append(f"  {account}  {amount:f} {currency}")
+            # copy_negate keeps every digit: unary minus rounds a wide amount to the context (w5/901).
+            lines.append(f"  Equity:OpeningBalances  {amount.copy_negate():f} {currency}")
+            lines.append("")
+        for account in sorted(balances):
+            lines.append(f"{day} balance {account}  {balances[account]:f} {currency}")
+        lines.append("")
+
+    _write_new_ledger(file, "\n".join(lines) + "\n")
     return {
         "created": str(file),
         "currency": currency,
         "date": day.isoformat(),
-        "accounts": list(ACCOUNTS),
+        "preset": preset,
+        "opened": open_day.isoformat(),
+        "accounts": opened,
     }
+
+
+def _quiet_exists(path: Path) -> bool:
+    """Whether the path exists, counting an unstatable ancestor as absent.
+
+    `Path.exists` raises `PermissionError` where `os.path.lexists` returns
+    false, so the blocker walk below died raw on a path nested two levels
+    under an unsearchable directory (w5/793).
+    """
+    try:
+        return path.exists()
+    except PermissionError:
+        return False
+
+
+#: Creation failures that are bad arguments, not a refusing filesystem (w5/795).
+_USAGE_ERRNOS = frozenset({errno.ELOOP, errno.ENAMETOOLONG, errno.EILSEQ})
+
+
+def _blocking_component(path: Path, number: int | None) -> Path:
+    """The innermost path whose stat fails with this error number.
+
+    A symlink loop, an overlong component and an illegal byte all fail
+    every stat from the target outward to the link or bad name itself; the
+    last failure before the first success names it.
+    """
+    blocker = path
+    for candidate in (path, *path.parents):
+        try:
+            os.stat(candidate)
+        except OSError as exc:
+            if exc.errno != number:
+                break
+            blocker = candidate
+        else:
+            break
+    return blocker
+
+
+def _uncreatable_reason(blocker: Path, number: int | None) -> str:
+    """Why the blocker cannot hold a ledger, as a usage error phrases it."""
+    if number == errno.ELOOP:
+        return f"{blocker} is a symbolic-link loop. Break the loop, or choose another directory."
+    if number == errno.ENAMETOOLONG:
+        return f"{blocker} exceeds the filesystem's name limit. Shorten the name, or choose another directory."
+    return f"{blocker} is not a valid file name. Rename it, or choose another directory."
 
 
 def _make_parent(file: Path) -> list[Path]:
@@ -172,12 +357,17 @@ def _make_parent(file: Path) -> list[Path]:
         ) from exc
     except PermissionError as exc:
         _remove_created(created)
-        existing = next((path for path in parent.parents if path.exists()), parent)
+        existing = next((path for path in parent.parents if _quiet_exists(path)), parent)
         raise AuthError(
             f"Cannot create {parent}: the directory {existing} is not writable. Nothing was written."
         ) from exc
     except OSError as exc:
         _remove_created(created)
+        if exc.errno in _USAGE_ERRNOS:
+            blocker = _blocking_component(parent, exc.errno)
+            raise UsageError(
+                f"Cannot create a ledger in {parent}: {_uncreatable_reason(blocker, exc.errno)} Nothing was written."
+            ) from exc
         # A full disk read as a raw `OSError: [Errno 28]` (w5/610).
         raise LedgerError(
             f"Cannot create {parent} ({exc.strerror or type(exc).__name__}); nothing was written."

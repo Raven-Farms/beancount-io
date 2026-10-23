@@ -9,6 +9,17 @@ const faLedgerEditor: Record<string, { message: string; description: string }> =
       message: "ایجاد فایل",
       description: "Button label to create file",
     },
+    "ledgerEditor.branchNotFound": {
+      message:
+        "شاخهٔ «{branch}» اینجا در دسترس نیست. فایل‌ها از {main} نمایش داده می‌شوند.",
+      description:
+        "404 for a Files URL naming a branch other than the supported one (contains {branch} and {main})",
+    },
+    "ledgerEditor.browseMainFiles": {
+      message: "مرور فایل‌ها در {main}",
+      description:
+        "Link to the Files root on the supported branch (contains {main})",
+    },
     "ledgerEditor.files": {
       message: "فایل‌ها",
       description: "Ledger files management",
@@ -48,6 +59,12 @@ export default {
   "ledgerEditor.unsupportedPreview": {
     message: "این نوع فایل برای پیش نمایش پشتیبانی نمی شود",
     description: "Unsupported preview message without a file type",
+  },
+  "ledgerEditor.notUtf8Text": {
+    message:
+      "این فایل متن UTF-8 نیست، بنابراین نمی‌توان آن را بدون تغییر بایت‌هایش اینجا نمایش داد یا ویرایش کرد. آن را بارگیری کنید تا در برنامهٔ دیگری باز شود.",
+    description:
+      "Shown instead of the editor for a text file whose bytes are not valid UTF-8",
   },
   "ledgerEditor.createFileCommit": {
     message: "ایجاد فایل {path}",

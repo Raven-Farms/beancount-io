@@ -1,0 +1,16 @@
+;; fixture — beancount-property eval5 (sale with payoff)
+option "operating_currency" "USD"
+
+2026-01-01 open Assets:Checking USD
+2026-01-01 open Assets:Property:OakSt OAKST
+2026-01-01 open Assets:Escrow:OakSt USD
+2026-01-01 open Liabilities:Mortgage:OakSt USD
+2026-01-01 open Income:CapitalGains USD
+2026-01-01 open Expenses:ClosingCosts USD
+2026-01-01 open Equity:Opening-Balances
+
+2026-02-01 * "Buy Oak St (closing statement)"
+  Assets:Property:OakSt  1 OAKST {510000.00 USD}
+  Assets:Escrow:OakSt  2100.00 USD
+  Equity:Opening-Balances -112700.00 USD
+  Liabilities:Mortgage:OakSt -399400.00 USD

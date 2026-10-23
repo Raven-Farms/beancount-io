@@ -1,0 +1,18 @@
+{
+  "name": "beancount-mcp",
+  "version": "1.0.0",
+  "description": "Connect to a hosted Beancount ledger for queries, reports, files, reconciliation, and bank imports.",
+  "author": {
+    "name": "Beancount.io"
+  },
+  "homepage": "https://github.com/bex-co/beancount-io/blob/main/backend-cluster/backend-v2/docs/mcp.md",
+  "repository": "https://github.com/bex-co/beancount-io",
+  "license": "MIT",
+  "keywords": [
+    "beancount",
+    "accounting",
+    "finance",
+    "mcp"
+  ],
+  "mcpServers": "./mcp.json"
+}

@@ -310,6 +310,38 @@ it.each([undefined, "beancount-mobile"])(
   },
 );
 
+// w21/325: a HEIC statement photo reached the model and failed there as a
+// generic parse error; only receipts had the format allowlist.
+it("refuses a HEIC statement as bad input naming the formats, before the model, on every surface", async () => {
+  const f = await fixture();
+  f.metadata.mockResolvedValue({ contentType: "image/heic" });
+  try {
+    const r = await f.rest();
+    expect(r.status).toBe(400);
+    expect(await r.json()).toMatchObject({
+      error: {
+        code: "BAD_USER_INPUT",
+        message: expect.stringContaining("JPEG, PNG, GIF, WEBP"),
+      },
+    });
+    const g = await f.gql();
+    expect(g.errors?.[0].originalError).toMatchObject({
+      category: "BAD_USER_INPUT",
+      message: expect.stringContaining("JPEG, PNG, GIF, WEBP"),
+    });
+    const m = await f.mcp();
+    expect(m.isError).toBe(true);
+    expect(
+      (m.structuredContent as { error: { code: string } }).error.code,
+    ).toBe("BAD_USER_INPUT");
+    expect(f.download).not.toHaveBeenCalled();
+    expect(extractTransactionsFromFile).not.toHaveBeenCalled();
+    expect(f.charge).not.toHaveBeenCalled();
+  } finally {
+    await f.close();
+  }
+});
+
 it("refuses exhausted quota before downloading or parsing", async () => {
   const f = await fixture();
   f.check.mockResolvedValue({

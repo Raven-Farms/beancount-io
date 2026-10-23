@@ -44,6 +44,11 @@ const nlAuth: Record<string, TranslationEntry> = {
     message: "Bevestig uw wachtwoord",
     description: "Placeholder for password confirmation",
   },
+  "auth.chooseYourPassword": {
+    message: "Kies een wachtwoord (min. 8 tekens)",
+    description:
+      "Placeholder for the password a new account chooses, with the minimum length",
+  },
   "auth.createAccount": {
     message: "Account aanmaken",
     description: "Button to submit registration",
@@ -179,6 +184,12 @@ const nlAuth: Record<string, TranslationEntry> = {
     message: "Inloggen mislukt",
     description: "Error title when login fails",
   },
+  "auth.loginRateLimited": {
+    message:
+      "Te veel inlogpogingen. Wacht een paar minuten en probeer het opnieuw, of reset uw wachtwoord.",
+    description:
+      "Shown on any password sign-in form when sign-in is rate limited, by address or by too many wrong passwords for the account",
+  },
   "auth.logout": {
     message: "Uitloggen",
     description: "Button label to log out",
@@ -197,11 +208,12 @@ const nlAuth: Record<string, TranslationEntry> = {
     description: "Label for new password field",
   },
   "auth.newPasswordMinLength": {
-    message: "Wachtwoord moet minimaal 6 tekens bevatten",
+    message: "Wachtwoord moet minimaal 8 tekens bevatten",
     description: "Validation error for password length",
   },
   "auth.newPasswordMaxLength": {
-    message: "Wachtwoord mag maximaal 128 tekens bevatten",
+    message:
+      "Wachtwoord is te lang. Gebruik maximaal 72 tekens; letters met accenten, niet-Latijnse schriften en emoji tellen elk als 2 tot 4.",
     description:
       "Validation error when new password exceeds the maximum length",
   },
@@ -245,8 +257,20 @@ const nlAuth: Record<string, TranslationEntry> = {
     message: "Wachtwoord is verplicht",
     description: "Validation error when password is not provided",
   },
+  "auth.passwordBreached": {
+    message:
+      "Dit wachtwoord is aangetroffen in een datalek. Kies er een dat u nergens anders gebruikt.",
+    description:
+      "Error when the server finds the new password in a known data breach (Have I Been Pwned)",
+  },
+  "auth.passwordTooSimilar": {
+    message: "Wachtwoord lijkt te veel op uw e-mailadres of gebruikersnaam.",
+    description:
+      "Error when the new password is too close to the account's email or username",
+  },
   "auth.passwordResetSuccessMessage": {
-    message: "Uw wachtwoord is gereset. Doorverwijzen naar inlogpagina...",
+    message:
+      "Uw wachtwoord is gereset en u bent op alle apparaten en in gekoppelde apps uitgelogd. Doorverwijzen naar inlogpagina...",
     description: "Success message description",
   },
   "auth.passwordResetSuccessful": {
@@ -750,6 +774,76 @@ const nlAuth: Record<string, TranslationEntry> = {
       "Inloggen met een wachtwoord is uitgeschakeld op deze server. Ga in plaats daarvan verder met Google.",
     description:
       "Shown instead of a password form when password sign-in is turned off on the server",
+  },
+  "auth.recoveryTitle": {
+    message: "Bevestig je e-mailadres om in te loggen",
+    description:
+      "Title of the email ownership verification step for sign-in recovery",
+  },
+  "auth.recoveryDescription": {
+    message:
+      "Open de link in je herstelmail en voer daarna de code uit die mail en je huidige wachtwoord in.",
+    description: "Instructions for continuing from the sign-in recovery email",
+  },
+  "auth.recoverySendEmail": {
+    message: "Herstelmail versturen",
+    description: "Button requesting a sign-in recovery email",
+  },
+  "auth.recoverySending": {
+    message: "Herstelmail wordt verstuurd...",
+    description: "Pending state while requesting a sign-in recovery email",
+  },
+  "auth.recoverySent": {
+    message:
+      "Als er een account met dit adres bestaat, ontvang je binnenkort een herstelmail. Open de link daarin om door te gaan. Een recente herstelmail blijft geldig.",
+    description:
+      "Uniform confirmation after requesting recovery; previous valid recovery emails remain usable",
+  },
+  "auth.recoveryResend": {
+    message: "Nog een herstelmail versturen",
+    description: "Button requesting another sign-in recovery email",
+  },
+  "auth.recoveryRetryAt": {
+    message: "Probeer het opnieuw om {time}.",
+    description:
+      "Absolute local retry time after throttling; {time} is formatted using the active locale",
+  },
+  "auth.recoveryCode": {
+    message: "Verificatiecode van zes cijfers",
+    description: "Accessible label for the sign-in recovery email code",
+  },
+  "auth.recoveryCodeInvalid": {
+    message: "Voer de zescijferige code uit je herstelmail in.",
+    description:
+      "Validation error when the recovery code is not exactly six digits",
+  },
+  "auth.recoveryFailed": {
+    message:
+      "Het e-mailadres, de code of het wachtwoord is onjuist, of de code is verlopen. Je kunt een nieuwe herstelmail aanvragen.",
+    description:
+      "Uniform invalid-credentials or expired-code error during sign-in recovery",
+  },
+  "auth.recoveryRequestFailed": {
+    message: "De herstelmail kon niet worden aangevraagd. Probeer het opnieuw.",
+    description: "Error when requesting a sign-in recovery email fails",
+  },
+  "auth.recoveryUnavailable": {
+    message: "Inloggen is tijdelijk niet beschikbaar. Probeer het opnieuw.",
+    description: "Temporary service outage during sign-in recovery",
+  },
+  "auth.recoveryExpiry": {
+    message:
+      "De code verloopt na 10 minuten en geldt voor één wachtwoordpoging.",
+    description:
+      "Explains the expiry and single password-attempt limit of a recovery code",
+  },
+  "auth.recoverySubmit": {
+    message: "Bevestigen en inloggen",
+    description: "Button submitting the recovery code and current password",
+  },
+  "auth.recoveryVerifying": {
+    message: "Bezig met verifiëren...",
+    description: "Pending state while verifying the recovery code and password",
   },
 };
 

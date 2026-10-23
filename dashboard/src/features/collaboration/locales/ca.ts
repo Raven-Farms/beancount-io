@@ -36,6 +36,12 @@ const caCollaboration: Record<string, TranslationEntry> = {
     message: "Error en carregar els col·laboradors",
     description: "Error title when collaborators fail to load",
   },
+  "collaboration.ownerPlanLimitReached": {
+    message:
+      "El pla del propietari d'aquest llibre no permet més col·laboradors. Només el propietari el pot millorar per afegir-ne més.",
+    description:
+      "Shown when adding a collaborator to someone else's ledger hits the owner's plan limit; only the owner can upgrade.",
+  },
   "collaboration.failedToAddCollaborator": {
     message: "Error en afegir el col·laborador",
     description: "Error message when adding collaborator fails",

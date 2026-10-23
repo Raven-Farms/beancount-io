@@ -7,6 +7,7 @@ import {
   SectionList,
   TouchableOpacity,
   useWindowDimensions,
+  Platform,
 } from "react-native";
 import {
   fontSizes,
@@ -19,21 +20,31 @@ import {
 } from "@/common/theme";
 import { useLedgerAccess } from "@/common/hooks/use-ledger-access";
 import { useLedgerReadContext } from "@/common/hooks/use-ledger-read-context";
+import { useAccountCloseDates } from "@/common/hooks/use-account-close-dates";
+import {
+  closedAccountNamed,
+  firstOpeningAfter,
+  notYetOpenAccountNamed,
+} from "@/common/account-close-dates";
+import { formatLedgerDate } from "@/common/date-format";
+import { getFormatDate } from "@/common/format-util";
 import { groupAccountsByRoot } from "@/common/ledger-meta-utils";
 import { splitAccountLeaf } from "@/common/account-util";
 import {
   ALL_ROOTS,
   findAccountLocation,
   isSearchQuery,
+  pickerAccounts,
   showCreateAccountRow,
+  showCreateBelowResults,
   visibleAccountSections,
   type PickerSection,
 } from "./picker-sections";
 import { ColorTheme } from "@/types/theme-props";
-import { useLocalSearchParams, useRouter } from "expo-router";
+import { useRouter } from "expo-router";
 import { SelectedAccount } from "@/common/globalFnFactory";
 import { pushOpenAccount } from "@/screens/open-account-screen/push-open-account";
-import { accountOrderFor } from "./push-account-picker";
+import { accountOrderFor, parseCreateRoot } from "./push-account-picker";
 import {
   SCROLL_RETRY_DELAY_MS,
   SCROLL_SETTLE_MS,
@@ -60,7 +71,12 @@ import { FadeInView } from "@/components/crossfade";
 import { accountUsageVar, recordAccountUsage } from "@/common/vars";
 import { usageFor, type RankingContext } from "@/common/account-frecency";
 import { LEADING_TEXT_ALIGN, directionalIcon } from "@/common/rtl";
-import { capitalizeAccountPrefill } from "./create-account-prefill";
+import {
+  capitalizeAccountPrefill,
+  createdAccountName,
+} from "./create-account-prefill";
+import { useLedgerRootNames } from "@/common/hooks/use-ledger-root-names";
+import { useRouteParams } from "@/common/hooks/use-route-params";
 
 const SKELETON_ROW_WIDTHS = [200, 160, 220, 140, 180, 210, 150, 190];
 
@@ -141,7 +157,9 @@ const getStyles = (theme: ColorTheme) =>
       fontWeight: fontWeights.medium,
     },
     listContent: {
-      paddingBottom: 150,
+      // The keyboard inset below keeps the last rows reachable; a fixed
+      // 150 pt fell short of a 291–336 pt keyboard (w21/145).
+      paddingBottom: gutter,
     },
     emptyText: {
       paddingHorizontal: gutter,
@@ -251,11 +269,13 @@ function AccountPickerScreenComponent(): JSX.Element {
   const router = useRouter();
   const guest = useGuest();
   const ledgerId = useLedgerGuard();
-  const { type, selectedItem } = useLocalSearchParams<{
+  const { type, selectedItem, entryDate, createRoot } = useRouteParams<{
     type: string;
     selectedItem?: string;
+    entryDate?: string;
+    createRoot?: string;
   }>();
-  const { t } = useTranslations();
+  const { t, locale } = useTranslations();
   const theme = useTheme().colorTheme;
   const styles = useThemeStyle(getStyles);
   const { fontScale } = useWindowDimensions();
@@ -289,7 +309,22 @@ function AccountPickerScreenComponent(): JSX.Element {
   const onSelectedRef = useRef(SelectedAccount.getFn());
   useEffect(() => () => SelectedAccount.deleteFn(), []);
 
-  const accounts = accountOrderFor(type) === "from" ? assets : expenses;
+  // Filtering by a category (`Expenses:Food`) is offered alongside the opened
+  // accounts; every other picker chooses an account a posting can use (w21/036).
+  // A posting picker leaves out what is closed by the entry's date (w21/045);
+  // the filter keeps closed accounts, whose history is still searchable.
+  const closeDates = useAccountCloseDates(ledgerId);
+  const opened = accountOrderFor(type) === "from" ? assets : expenses;
+  const accounts = useMemo(
+    () =>
+      pickerAccounts(
+        type,
+        opened,
+        entryDate ?? getFormatDate(new Date()),
+        closeDates,
+      ),
+    [type, opened, entryDate, closeDates],
+  );
 
   // Grouped once: the chips are its titles, and the browse list is a slice of
   // it — two derivations of "root of an account" would have to stay in sync.
@@ -464,11 +499,12 @@ function AccountPickerScreenComponent(): JSX.Element {
   // active (a no-match search yields zero sections — see `picker-sections`),
   // and only for a collaborator who may actually create the account.
   const trimmedQuery = query.trim();
-  const showCreateRow = showCreateAccountRow(query, visibleSections.length, {
-    canWrite,
-    loading: accessLoading,
-    error: accessError,
-  });
+  const roots = useLedgerRootNames();
+  // Destination pickers are choosing where money went, so suggest the
+  // Expenses root for a rootless query; source pickers suggest Assets.
+  const createFallbackRoot =
+    parseCreateRoot(createRoot) ??
+    (accountOrderFor(type) === "to" ? "Expenses" : "Assets");
 
   const onCreate = useCallback(() => {
     if (!canWrite) {
@@ -478,14 +514,106 @@ function AccountPickerScreenComponent(): JSX.Element {
     }
     pushOpenAccount(router, {
       prefill: capitalizeAccountPrefill(trimmedQuery),
-      // Destination pickers are choosing where money went, so suggest the
-      // Expenses root for a rootless query; source pickers suggest Assets.
-      prefillRoot: accountOrderFor(type) === "to" ? "Expenses" : "Assets",
+      prefillRoot: createFallbackRoot,
+      openDate: entryDate,
       onCreated: (account) => {
         confirmSelection(account, Date.now());
       },
     });
-  }, [canWrite, trimmedQuery, type, router, confirmSelection]);
+  }, [
+    canWrite,
+    trimmedQuery,
+    createFallbackRoot,
+    entryDate,
+    router,
+    confirmSelection,
+  ]);
+
+  // A closed account named exactly is not new: say when it closed rather than
+  // offer to create it, which Open Account would refuse (w21/122).
+  // The name Create would compose counts too: `gym` is `Expenses:Gym`
+  // (w21/531).
+  const checkDate = entryDate ?? getFormatDate(new Date());
+  const createdName = createdAccountName(
+    trimmedQuery,
+    createFallbackRoot,
+    roots,
+  );
+  const closedMatch =
+    type === "filter"
+      ? null
+      : (closedAccountNamed(trimmedQuery, checkDate, closeDates) ??
+        closedAccountNamed(createdName, checkDate, closeDates));
+  // The same for an account the ledger opens later than the entry's date.
+  const futureMatch =
+    type === "filter"
+      ? null
+      : (notYetOpenAccountNamed(trimmedQuery, checkDate, closeDates) ??
+        notYetOpenAccountNamed(createdName, checkDate, closeDates));
+  // Nothing to browse because every account opens after the entry's date:
+  // say when, rather than "No matching accounts" (w21/643).
+  const opensLater =
+    type === "filter" || isSearching
+      ? null
+      : firstOpeningAfter(opened, checkDate, closeDates);
+  const showCreateRow =
+    !closedMatch &&
+    !futureMatch &&
+    showCreateAccountRow(
+      query,
+      visibleSections.length,
+      {
+        canWrite,
+        loading: accessLoading,
+        error: accessError,
+      },
+      type,
+      opened.length > 0,
+    );
+  const createLabel = trimmedQuery
+    ? t("accountPickerCreate", { name: trimmedQuery })
+    : t("openAccount");
+
+  // Loose matches ("pets" in `Expenses:Transport:Tram`) must not hide Create
+  // for a name the ledger does not have (w21/258).
+  const searchResults = isSearching ? (visibleSections[0]?.data ?? []) : [];
+  const showCreateFooter =
+    !closedMatch &&
+    !futureMatch &&
+    showCreateBelowResults(
+      query,
+      searchResults,
+      {
+        canWrite,
+        loading: accessLoading,
+        error: accessError,
+      },
+      type,
+    );
+
+  const createRow = (
+    <TouchableOpacity
+      testID="account-picker-create-row"
+      style={[styles.listItem, styles.createRow]}
+      onPress={onCreate}
+      accessibilityRole="button"
+      accessibilityLabel={createLabel}
+    >
+      <Ionicons name="add-circle-outline" size={24} color={theme.primary} />
+      <Text
+        key={fontScale}
+        style={[styles.listItemText, styles.createText]}
+        numberOfLines={1}
+      >
+        {createLabel}
+      </Text>
+      <Ionicons
+        name={directionalIcon("chevron-forward")}
+        size={24}
+        color={theme.black}
+      />
+    </TouchableOpacity>
+  );
 
   if (loading && accounts.length === 0) {
     return (
@@ -543,6 +671,8 @@ function AccountPickerScreenComponent(): JSX.Element {
         sections={visibleSections}
         keyExtractor={(account) => account}
         keyboardShouldPersistTaps="handled"
+        automaticallyAdjustKeyboardInsets={Platform.OS === "ios"}
+        keyboardDismissMode="on-drag"
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.listContent}
         stickySectionHeadersEnabled={false}
@@ -558,7 +688,14 @@ function AccountPickerScreenComponent(): JSX.Element {
         onScrollBeginDrag={onScrollBeginDrag}
         renderSectionHeader={({ section }) =>
           section.title ? (
-            <View style={styles.sectionHeader}>
+            <View
+              style={styles.sectionHeader}
+              // A heading named by its title alone, without the clock glyph
+              // (w21/143).
+              accessible
+              accessibilityRole="header"
+              accessibilityLabel={section.title}
+            >
               {section.source === "recents" && (
                 // The same clock the history suggestion chips wear, so "we saw
                 // you use this" reads the same wherever it appears.
@@ -572,40 +709,47 @@ function AccountPickerScreenComponent(): JSX.Element {
         }
         ListEmptyComponent={
           <View>
-            <Text key={fontScale} style={styles.emptyText}>
-              {t("accountPickerNoResults")}
+            <Text
+              key={fontScale}
+              testID="account-picker-empty-text"
+              style={styles.emptyText}
+            >
+              {opensLater
+                ? t("accountPickerOpenLater", {
+                    date: formatLedgerDate(opensLater, locale),
+                  })
+                : opened.length === 0 && !isSearching
+                  ? t("accountPickerNoAccounts")
+                  : t("accountPickerNoResults")}
             </Text>
-            {showCreateRow && (
-              <TouchableOpacity
-                testID="account-picker-create-row"
-                style={[styles.listItem, styles.createRow]}
-                onPress={onCreate}
-                accessibilityRole="button"
-                accessibilityLabel={t("accountPickerCreate", {
-                  name: trimmedQuery,
-                })}
+            {closedMatch ? (
+              <Text
+                key={`closed-${fontScale}`}
+                testID="account-picker-closed-row"
+                style={styles.emptyText}
               >
-                <Ionicons
-                  name="add-circle-outline"
-                  size={24}
-                  color={theme.primary}
-                />
-                <Text
-                  key={fontScale}
-                  style={[styles.listItemText, styles.createText]}
-                  numberOfLines={1}
-                >
-                  {t("accountPickerCreate", { name: trimmedQuery })}
-                </Text>
-                <Ionicons
-                  name={directionalIcon("chevron-forward")}
-                  size={24}
-                  color={theme.black}
-                />
-              </TouchableOpacity>
-            )}
+                {t("accountPickerClosedOn", {
+                  name: closedMatch.account,
+                  date: formatLedgerDate(closedMatch.closedAt, locale),
+                })}
+              </Text>
+            ) : null}
+            {futureMatch ? (
+              <Text
+                key={`future-${fontScale}`}
+                testID="account-picker-opens-row"
+                style={styles.emptyText}
+              >
+                {t("accountPickerOpensOn", {
+                  name: futureMatch.account,
+                  date: formatLedgerDate(futureMatch.openedAt, locale),
+                })}
+              </Text>
+            ) : null}
+            {showCreateRow && createRow}
           </View>
         }
+        ListFooterComponent={showCreateFooter ? createRow : null}
         renderItem={({ item }) => (
           <AccountRow
             account={item}

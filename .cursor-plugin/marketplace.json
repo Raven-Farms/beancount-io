@@ -1,0 +1,12 @@
+{
+  "name": "beancount-io",
+  "owner": {
+    "name": "Beancount.io"
+  },
+  "plugins": [
+    {
+      "name": "beancount-mcp",
+      "source": "backend-cluster/backend-v2/docs/marketplace-submissions/cursor/official"
+    }
+  ]
+}

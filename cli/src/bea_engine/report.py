@@ -13,7 +13,7 @@ from __future__ import annotations
 import dataclasses
 import re
 import unicodedata
-from collections.abc import Callable, Iterable, Iterator, Mapping, Sequence
+from collections.abc import Callable, Collection, Iterable, Iterator, Mapping, Sequence
 from datetime import date, timedelta
 from decimal import Decimal
 from pathlib import Path
@@ -105,13 +105,21 @@ def answer(
     return _trial_balance(filtered, resolved_conversion, allow_errors, ledger_errors)
 
 
-def too_deep(file: Path) -> protocol.LedgerError:
+# Below this depth the tree cannot have overrun the recursion limit: encoding
+# spends two frames per level and first overruns at 600 (w5/209), so a
+# RecursionError beside shallower accounts came from elsewhere — a
+# pathological regex, say — and must not be reported as deep nesting (w5/806).
+_TOO_DEEP_LEVELS = 100
+
+
+def too_deep(file: Path) -> protocol.LedgerError | None:
     """The refusal for a ledger whose account tree outruns Python's recursion limit.
 
     A report nests one level per account component, and building the tree and
     encoding the answer both walk it recursively, so an account several
     hundred components deep cannot be reported. Loading does not recurse, which
-    is how the deepest account can still be named.
+    is how the deepest account can still be named. None when no account is
+    deep enough to blame: the recursion came from elsewhere.
     """
     from beancount.core.getters import get_accounts
 
@@ -120,6 +128,8 @@ def too_deep(file: Path) -> protocol.LedgerError:
     entries: Any = load_file(str(file))[0]
     deepest = max(sorted(get_accounts(entries)), key=lambda name: name.count(":"), default="")
     parts = deepest.split(":")
+    if len(parts) < _TOO_DEEP_LEVELS:
+        return None
     shown = deepest if len(parts) <= 4 else f"{':'.join(parts[:3])}:…:{parts[-1]}"
     return protocol.LedgerError(f"Account nesting is too deep to report: '{shown}' is {len(parts)} levels deep.")
 
@@ -153,6 +163,7 @@ def _balances(
         pruned = {name: _prune_tree(tree, matches, closed) for name, tree in sections.items()}
     # Valuation covers only the accounts being shown: an unrelated unpriced
     # holding must not make a USD checking balance fail.
+    previous = _summary_pair(filtered.ledger)
     metadata = (
         _metadata(filtered, resolved_conversion, ledger_errors)
         # `_metadata` judges emptiness by a report `--account`, which balance
@@ -163,7 +174,9 @@ def _balances(
             # `"food cash"` (one, matching nothing) read the same (w5/341).
             "account_filters": list(accounts) if accounts else None,
             "account_filter_empty": (empty := bool(accounts) and all(tree is None for tree in pruned.values())),
-            "account_filter_periods": _period_terms(accounts) if empty else [],
+            "account_filter_periods": (
+                _period_terms(accounts, filtered.ledger.fava_options.fiscal_year_end) if empty else []
+            ),
         }
         | _valuation(
             resolved_conversion,
@@ -171,11 +184,12 @@ def _balances(
                 (filtered.end_date, balance)
                 for tree in pruned.values()
                 if tree is not None
-                for balance in _tree_balances(tree)
+                for balance in _tree_balances(tree, previous)
             ),
             allow_errors,
             filtered.ledger,
             ledger_errors,
+            _tree_accounts(pruned.values()),
         )
     )
     return metadata | {
@@ -201,10 +215,13 @@ def _overview(
         filtered.ledger.root_accounts,
     )
     trees = tuple(sections[name] for name in ("assets", "liabilities", "income", "expenses"))
-    balances = [(filtered.end_date, balance) for tree in trees if tree is not None for balance in _tree_balances(tree)]
+    previous = _summary_pair(filtered.ledger)
+    balances = [
+        (filtered.end_date, balance) for tree in trees if tree is not None for balance in _tree_balances(tree, previous)
+    ]
     for series in (data.assets_data, data.liabilities_data, data.income_interval_data, data.expenses_interval_data):
         balances.extend((point.date, point.balance) for point in series)
-    valuation = _valuation(conversion, balances, allow_errors, filtered.ledger, ledger_errors)
+    valuation = _valuation(conversion, balances, allow_errors, filtered.ledger, ledger_errors, _tree_accounts(trees))
     metadata = _metadata(filtered, conversion, ledger_errors, interval) | valuation
     empty = type(data.assets_hierarchy.balance_children)()
     assets = trees[0].balance_children if trees[0] is not None else empty
@@ -242,10 +259,13 @@ def _income_statement(
         filtered.ledger.root_accounts,
     )
     trees = (sections["income"], sections["expenses"])
-    balances = [(filtered.end_date, balance) for tree in trees if tree is not None for balance in _tree_balances(tree)]
+    previous = _summary_pair(filtered.ledger)
+    balances = [
+        (filtered.end_date, balance) for tree in trees if tree is not None for balance in _tree_balances(tree, previous)
+    ]
     for series in (data.income_data, data.expenses_data):
         balances.extend((point.date, point.balance) for point in series)
-    valuation = _valuation(conversion, balances, allow_errors, filtered.ledger, ledger_errors)
+    valuation = _valuation(conversion, balances, allow_errors, filtered.ledger, ledger_errors, _tree_accounts(trees))
     metadata = _metadata(filtered, conversion, ledger_errors, interval) | valuation
     empty = type(data.income_hierarchy.balance_children)()
     kept = [tree.balance_children if tree is not None else empty for tree in trees]
@@ -322,13 +342,16 @@ def _balance_sheet(
         filtered.ledger.root_accounts,
     )
     trees = (sections["assets"], sections["liabilities"], sections["equity"])
-    balances = [(filtered.end_date, balance) for tree in trees if tree is not None for balance in _tree_balances(tree)]
+    previous = _summary_pair(filtered.ledger)
+    balances = [
+        (filtered.end_date, balance) for tree in trees if tree is not None for balance in _tree_balances(tree, previous)
+    ]
     balances.append((filtered.end_date, earnings))
     # The equity lines are as-of figures like the headline: only a commodity
     # still unvalued at the report date withholds them, not an earlier row's gap.
     incomplete = any(_unvalued(balance, conversion) for _, balance in balances)
     balances.extend((point.date, point.balance) for point in data.net_worth_data)
-    valuation = _valuation(conversion, balances, allow_errors, filtered.ledger, ledger_errors)
+    valuation = _valuation(conversion, balances, allow_errors, filtered.ledger, ledger_errors, _tree_accounts(trees))
     metadata = _metadata(filtered, conversion, ledger_errors, interval) | valuation
     empty = type(data.assets_hierarchy.balance_children)()
     assets = trees[0].balance_children if trees[0] is not None else empty
@@ -368,17 +391,19 @@ def _trial_balance(filtered: Any, conversion: str, allow_errors: bool, ledger_er
         name: getattr(data, f"{name}_hierarchy") for name in ("assets", "liabilities", "equity", "income", "expenses")
     }
     sections = _prune_sections(sections, filtered.account, filtered.ledger.root_accounts)
+    previous = _summary_pair(filtered.ledger)
     metadata = _metadata(filtered, conversion, ledger_errors) | _valuation(
         conversion,
         (
             (filtered.end_date, balance)
             for tree in sections.values()
             if tree is not None
-            for balance in _tree_balances(tree)
+            for balance in _tree_balances(tree, previous)
         ),
         allow_errors,
         filtered.ledger,
         ledger_errors,
+        _tree_accounts(sections.values()),
     )
     return metadata | {
         "display_precision": _display_precision(filtered),
@@ -469,18 +494,20 @@ _FISCAL_FILTER_RE = re.compile(r"\bfy\d{4}|fiscal_(?:year|quarter)", re.IGNORECA
 _FISCAL_QUARTER_RE = re.compile(r"\bfy\d{4}-q\d|fiscal_quarter", re.IGNORECASE)
 
 
-def _period_terms(terms: Iterable[str]) -> list[str]:
+def _period_terms(terms: Iterable[str], fiscal_year_end: Any) -> list[str]:
     """The account filter terms `--time` reads as a period.
 
     `bea balance 2026-01` matched no account and said only so, with exit 0,
-    to a user used to another tool's period argument (w5/445).
+    to a user used to another tool's period argument (w5/445). Read with the
+    ledger's fiscal year end, as `--time` reads them: a fiscal quarter of a
+    year without quarters was suggested, then refused (w5/808).
     """
     from fava.util.date import parse_date
 
     periods = []
     for term in terms:
         try:
-            start, end = parse_date(term)
+            start, end = parse_date(term, fiscal_year_end)
         except (ValueError, OverflowError):
             continue
         if start is not None or end is not None:
@@ -495,29 +522,52 @@ def _refuse_quarter_without_quarters(ledger: Any, entries: Any, time: str, ledge
     explicit `FY2027-Q2` came back as `Failed to parse date`, which blamed
     the spelling of a period that does not exist (w5/329).
     """
+    from fava.util.date import parse_fye_string
+
     end = ledger.fava_options.fiscal_year_end
     if end.has_quarters():
         return
+    # The declaration in effect is the last valid one, as Fava reads them;
+    # the first was cited, and could name another year end (w5/808).
     declared = next(
         (
             entry
-            for entry in entries
-            if type(entry).__name__ == "Custom"
-            and entry.type == "fava-option"
-            and entry.values
-            and str(entry.values[0].value).replace("_", "-") == "fiscal-year-end"
+            for entry in reversed(_fiscal_year_end_declarations(entries))
+            if len(entry.values) > 1 and parse_fye_string(str(entry.values[1].value)) == end
         ),
         None,
     )
     where = f" at {declared.meta.get('filename')}:{declared.meta.get('lineno')}" if declared is not None else ""
     value = f"{end.month_of_year:02d}-{end.day:02d}"
+    year = re.search(r"\bfy(\d{4})", time, re.IGNORECASE)
+    whole = f"FY{year.group(1)}" if year is not None else "fiscal_year"
     raise protocol.UsageError(
         f"--time {time!r} names a fiscal quarter, but this ledger's fiscal year ends on {value} "
         f'(custom "fava-option" "fiscal-year-end"{where}), so it does not start on the first of a month and '
         "has no fiscal quarters.",
-        details=["Report the whole fiscal year (FY2027), or name the months by calendar dates."],
+        details=[f"Report the whole fiscal year ({whole}), or name the months by calendar dates."],
         ledger_errors=ledger_errors,
     )
+
+
+def _near_fiscal_year_end(name: str) -> bool:
+    """Whether an option name is a misspelling of `fiscal-year-end`."""
+    from difflib import SequenceMatcher
+
+    letters = re.sub(r"[^a-z0-9]", "", name.casefold())
+    return SequenceMatcher(None, letters, "fiscalyearend").ratio() >= 0.8
+
+
+def _fiscal_year_end_declarations(entries: Iterable[Any]) -> list[Any]:
+    """The ledger's `fiscal-year-end` Fava options, in file order."""
+    return [
+        entry
+        for entry in entries
+        if type(entry).__name__ == "Custom"
+        and entry.type == "fava-option"
+        and entry.values
+        and str(entry.values[0].value).replace("_", "-") == "fiscal-year-end"
+    ]
 
 
 def _require_fiscal_year_end(ledger: Any, file: Path, time: str, ledger_errors: list[str]) -> None:
@@ -528,14 +578,37 @@ def _require_fiscal_year_end(ledger: Any, file: Path, time: str, ledger_errors: 
     December with nothing saying the declared year end was dropped. Only a
     fiscal filter reads the option; every other report is unaffected.
     """
-    invalid = [
-        format_error(error, ledger_file=file)
-        for error in ledger.fava_options_errors
-        if error.entry.values and str(error.entry.values[0].value).replace("-", "_") == "fiscal_year_end"
-    ]
+    # Only the last declaration states the year end in force: Fava keeps the
+    # last valid value, so an invalid line before a valid one refused a
+    # period the later line defined (w5/808). An invalid last line is still
+    # refused rather than silently falling back to an earlier one.
+    declarations = _fiscal_year_end_declarations(ledger.all_entries_by_type.Custom)
+    last = declarations[-1] if declarations else None
+    invalid = [format_error(error, ledger_file=file) for error in ledger.fava_options_errors if error.entry is last]
+    problem = "is invalid"
+    if not declarations:
+        # bea reads no other Fava option, so a misspelled name is the usual
+        # way this one goes missing: `fiscal-year-ends` silently made FY2026
+        # the calendar year, though Fava flags the unknown option (w5/807).
+        problem = "looks misspelled"
+        invalid = [
+            f"{format_error(error, ledger_file=file).rstrip('.')}. It looks like fiscal-year-end, the only Fava "
+            "option bea reads."
+            for error in ledger.fava_options_errors
+            if error.entry.values and _near_fiscal_year_end(str(error.entry.values[0].value))
+        ]
+    # Fava reads months 13-24 as a year end in the following calendar year,
+    # but its parser takes any month modulo 12: "00-31" made FY2026 calendar
+    # 2025, and "99-31" moved it to 2033-34 (w5/809).
+    end = ledger.fava_options.fiscal_year_end
+    if not invalid and not 1 <= end.month <= 24:
+        invalid = [
+            f'"{end.month:02d}-{end.day:02d}" names month {end.month}; a fiscal year end is MM-DD with a month '
+            "from 01 to 12, or 13 to 24 for one that falls in the following calendar year."
+        ]
     if invalid:
         raise protocol.LedgerError(
-            f"The ledger's fiscal-year-end option is invalid, so the fiscal period in --time {time!r} is undefined.",
+            f"The ledger's fiscal-year-end option {problem}, so the fiscal period in --time {time!r} is undefined.",
             details=[
                 *invalid,
                 'Declare the year end as MM-DD, such as "06-30", or name the period by calendar dates.',
@@ -558,8 +631,10 @@ def _invalid_pattern(value: str) -> str | None:
         return None
     try:
         re.compile(value, re.IGNORECASE)
-    except re.error as exc:
-        return str(exc)
+    except (re.error, OverflowError, RecursionError, MemoryError) as exc:
+        # A repetition too large or nesting too deep to compile is an invalid
+        # pattern like any other (w5/806); MemoryError carries no message.
+        return str(exc) or "cannot be compiled"
     return None
 
 
@@ -620,7 +695,9 @@ def _metadata(filtered: Any, conversion: str, ledger_errors: list[str], interval
         "account_filter_empty": (
             empty := bool(filtered.account) and all(isinstance(entry, Custom) for entry in filtered.entries)
         ),
-        "account_filter_periods": _period_terms([filtered.account]) if empty else [],
+        "account_filter_periods": (
+            _period_terms([filtered.account], filtered.ledger.fava_options.fiscal_year_end) if empty else []
+        ),
         "balance_signs": "beancount",
         "ledger_valid": not filtered.ledger.load_errors,
         "ledger_errors": ledger_errors,
@@ -659,8 +736,8 @@ def _unrooted_accounts(filtered: Any) -> list[str]:
 
 def _routed_since(
     currency: str, conversion: str, prices: Any, unvalued: list[date | None], costs: set[str]
-) -> date | None:
-    """The first date a holding with no direct quote is valued through its cost currency.
+) -> tuple[date, set[str]] | None:
+    """The first date a holding with no direct quote is valued through its cost currency, and the routes that value it.
 
     A lot held at cost converts in two hops (ACME → USD → EUR) once both legs
     are quoted, so "no price at any date" would sit above a report that values
@@ -669,8 +746,10 @@ def _routed_since(
     and was told a quote from the route's first date would do (w5/557). The
     route counts only when every row the report left in units precedes it; a
     row still unvalued on or after that date means it is not the one in use.
+    The middle currencies come back too, so the caller can tell whether a lot
+    outside them is left over (w5/905).
     """
-    firsts = []
+    firsts: dict[str, date] = {}
     for pair in prices.commodity_pairs(()):
         if currency not in pair:
             continue
@@ -679,48 +758,83 @@ def _routed_since(
             continue
         legs = [prices.get_all_prices((currency, via)), prices.get_all_prices((via, conversion))]
         if all(legs):
-            firsts.append(max(min(point[0] for point in leg) for leg in legs))
+            firsts[via] = max(min(point[0] for point in leg) for leg in legs)
     if not firsts:
         return None
-    first: date = min(firsts)
-    return first if all(when is not None and when < first for when in unvalued) else None
+    first: date = min(firsts.values())
+    if not all(when is not None and when < first for when in unvalued):
+        return None
+    return first, set(firsts)
 
 
-def _cost_currencies(entries: Iterable[Any]) -> dict[str, set[str]]:
-    """Each commodity's cost currencies: those of the lots postings hold it at."""
+def _held_lots(
+    entries: Iterable[Any], currency: str, when: date | None, accounts: Collection[str] | None
+) -> dict[str | None, Decimal]:
+    """The `currency` lots held at `when` in the given accounts, netted per cost currency (None: held at no cost).
+
+    Netted per cost currency over postings dated then or earlier: a lot sold
+    before the row, or bought after it, is not one the row values, so its
+    cost currency routes nothing (w5/748). Only the accounts a filtered report
+    shows count: an unrelated account's lot says nothing about the rows on
+    screen (w5/905).
+    """
     from beancount.core.data import Transaction
 
-    found: dict[str, set[str]] = {}
+    nets: dict[str | None, Decimal] = {}
     for entry in entries:
-        if isinstance(entry, Transaction):
-            for posting in entry.postings:
-                currency = getattr(posting.cost, "currency", None)
-                if isinstance(currency, str) and posting.units is not None:
-                    found.setdefault(posting.units.currency, set()).add(currency)
-    return found
+        if not isinstance(entry, Transaction):
+            continue
+        if when is not None and entry.date > when:
+            continue
+        for posting in entry.postings:
+            if posting.units is None or posting.units.currency != currency or posting.units.number is None:
+                continue
+            if accounts is not None and posting.account not in accounts:
+                continue
+            cost = getattr(posting.cost, "currency", None)
+            key = cost if isinstance(cost, str) else None
+            nets[key] = nets.get(key, Decimal(0)) + posting.units.number
+    return {key: net for key, net in nets.items() if net != 0}
 
 
 def _price_summary_lines(
-    missing: list[str], dated: list[dict[str, Any]], conversion: str, ledger: Any | None
+    missing: list[str],
+    dated: list[dict[str, Any]],
+    conversion: str,
+    ledger: Any | None,
+    accounts: Collection[str] | None = None,
 ) -> list[str]:
     """One line per unconverted commodity: never one line per interval date."""
     lines = []
-    costs: dict[str, set[str]] | None = None
     for currency in missing:
         if ledger is not None:
             prices = ledger.prices
             all_prices = prices.get_all_prices((currency, conversion))
+            routed: tuple[date, set[str]] | None = None
+            leftover = False
             if all_prices:
-                earliest = min(point[0] for point in all_prices)
+                earliest: date | None = min(point[0] for point in all_prices)
             else:
-                if costs is None:
-                    costs = _cost_currencies(ledger.all_entries)
                 unvalued = [item["date"] for item in dated if item["from"] == currency]
-                earliest = _routed_since(currency, conversion, prices, unvalued, costs.get(currency, set()))
+                lots = [_held_lots(ledger.all_entries, currency, when, accounts) for when in unvalued]
+                held = {key for found in lots for key in found if key is not None}
+                routed = _routed_since(currency, conversion, prices, unvalued, held)
+                earliest = routed[0] if routed else None
+                # A lot outside the route's middle currencies — held at no cost,
+                # or at a cost in another currency — keeps its price gap whatever
+                # quote the route has (w5/905).
+                leftover = routed is not None and any(key not in routed[1] for found in lots for key in found)
             if earliest is None:
                 lines.append(f"{currency} has no {conversion} price at any date; shown in units")
                 continue
-            lines.append(f"{currency} → {conversion} has no price before {earliest}; earlier rows shown in {currency}")
+            line = f"{currency} → {conversion} has no price before {earliest}; earlier rows shown in {currency}"
+            if leftover and routed is not None:
+                vias = ", ".join(sorted(routed[1]))
+                line += (
+                    f"; from then only lots held at a cost in {vias} are valued, "
+                    f"the others still need a direct {currency} → {conversion} price"
+                )
+            lines.append(line)
             continue
         dates = [item["date"] for item in dated if item["from"] == currency and item["date"]]
         if dates:
@@ -738,6 +852,7 @@ def _valuation(
     allow_errors: bool,
     ledger: Any | None,
     ledger_errors: list[str],
+    accounts: Collection[str] | None = None,
 ) -> dict[str, Any]:
     missing_dates = {
         (currency, when)
@@ -751,7 +866,7 @@ def _valuation(
         {"from": currency, "to": conversion, "date": when}
         for currency, when in sorted(missing_dates, key=lambda item: (item[1] or date.min, item[0]))
     ]
-    summary = _price_summary_lines(missing, dated, conversion, ledger)
+    summary = _price_summary_lines(missing, dated, conversion, ledger, accounts)
     if pairs and not allow_errors:
         raise protocol.LedgerError(
             f"Missing prices for {', '.join(missing)} → {conversion}. "
@@ -834,10 +949,62 @@ def _summary_series_json(series: Iterable[Any], conversion: str) -> list[dict[st
     ]
 
 
-def _tree_balances(node: Any) -> Iterable[Mapping[str, Decimal]]:
-    yield node.balance
-    for child in node.children:
-        yield from _tree_balances(child)
+def _summary_pair(ledger: Any) -> frozenset[str]:
+    """The clamp's summary accounts, judged by their combined balance (w5/790).
+
+    Only the transfer pair: previous conversions are never clamp-written,
+    and current conversions stay judged alone as a displayed row.
+    """
+    from beancount.parser.options import get_previous_accounts
+
+    earnings, balances, _conversions = get_previous_accounts(ledger.options)  # type: ignore[no-untyped-call]
+    return frozenset({earnings, balances})
+
+
+def _tree_accounts(trees: Iterable[Any]) -> set[str]:
+    """The accounts a report shows with a balance of their own: the ones whose lots its rows value.
+
+    An ancestor kept only for structure holds nothing in the view, so it is
+    left out (w5/905).
+    """
+    found: set[str] = set()
+    for tree in trees:
+        if tree is None:
+            continue
+        stack = [tree]
+        while stack:
+            node = stack.pop()
+            if _balance_map(node.balance):
+                found.add(node.account)
+            stack.extend(node.children)
+    return found
+
+
+def _tree_balances(node: Any, previous: Collection[str] = ()) -> Iterable[Mapping[str, Decimal]]:
+    """Per-node own balances, except the clamp's summary pair judged combined.
+
+    A time clamp summarizes pre-period activity into the previous-earnings
+    and previous-balances accounts as offsetting legs of its transfers, so
+    each leg alone can hold a foreign currency nothing still holds. Judging
+    the legs one by one refused a period that values cleanly in total; their
+    combined balance is judged instead (w5/790).
+    """
+    if not previous:
+        yield node.balance
+        for child in node.children:
+            yield from _tree_balances(child)
+        return
+    net: dict[str, Decimal] = {}
+    stack = [node]
+    while stack:
+        current = stack.pop()
+        if current.account in previous:
+            for currency, amount in current.balance.items():
+                net[currency] = net.get(currency, Decimal(0)) + amount
+        else:
+            yield current.balance
+        stack.extend(current.children)
+    yield net
 
 
 def _sum(*balances: Mapping[str, Decimal]) -> Any:

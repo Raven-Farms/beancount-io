@@ -1,3 +1,4 @@
+import { CardLoadFailure } from "@/components/card-load-failure";
 import { useCallback, useState } from "react";
 import { useRouter } from "expo-router";
 import { StyleSheet, Text, View, useWindowDimensions } from "react-native";
@@ -12,6 +13,7 @@ import { fontSizes, fontWeights, space, useTheme } from "@/common/theme";
 import { directionalIcon } from "@/common/rtl";
 import {
   RANGE_LABEL_KEYS,
+  rangePillText,
   SeriesPoint,
   TimeRange,
   TIME_RANGES,
@@ -101,7 +103,9 @@ type AccountChartsCardProps = {
   /** Opens the holdings behind a page's status line. */
   onCaptionPress: (key: ChartKey) => void;
   loading: boolean;
+  /** The first load failed: a failure card with Retry, not a skeleton. */
   error: boolean;
+  onRetry?: () => void;
   /**
    * Identifies the ledger on screen. Heights measured for one ledger say
    * nothing about the next one's amounts or captions.
@@ -138,6 +142,7 @@ export function AccountChartsCard({
   onCaptionPress,
   loading,
   error,
+  onRetry,
   ledgerId,
 }: AccountChartsCardProps): JSX.Element {
   const { t, locale } = useTranslations();
@@ -196,7 +201,7 @@ export function AccountChartsCard({
       }
       hitSlop={8}
       accessibilityRole="button"
-      accessibilityLabel={t("seeAll")}
+      accessibilityLabel={t("seeAllAccounts")}
     >
       <Text
         key={fontScale}
@@ -230,7 +235,13 @@ export function AccountChartsCard({
           </View>
           {seeAll}
         </View>
-        <LoadingTile height={PAGE_HEIGHT + PILLS_HEIGHT} mx={16} />
+        {loading ? (
+          <LoadingTile height={PAGE_HEIGHT + PILLS_HEIGHT} mx={16} />
+        ) : (
+          // A failed first load says so and offers a retry; drawn as the
+          // skeleton it looked like loading forever (w21/262).
+          <CardLoadFailure onRetry={onRetry} />
+        )}
       </DashboardCard>
     );
   }
@@ -244,7 +255,7 @@ export function AccountChartsCard({
   ];
   const rangeOptions = TIME_RANGES.map((key) => ({
     key,
-    label: t(RANGE_LABEL_KEYS[key]),
+    ...rangePillText(t, RANGE_LABEL_KEYS[key]),
   }));
 
   const pages = charts.map(({ key, series }) => {
@@ -255,6 +266,9 @@ export function AccountChartsCard({
     return (
       <InteractiveLineChartD3
         key={`${key}|${scope}`}
+        // The tab above names the page for the eye, so no heading is drawn;
+        // a screen reader still gets which curve it is (w21/441, w21/499).
+        a11yLabel={t(key)}
         footnote={footnotes[key]}
         labels={chart.labels}
         periods={chart.periods}

@@ -129,7 +129,7 @@ def test_the_confirm_callback_is_given_the_into_destination(split_ledger: Path) 
     deps = BqlDeps(
         file=split_ledger,
         into=Path("side.bean"),
-        write_permission=WritePermission(confirm_fn=lambda d, t, w: (seen.append((d, t, w)), "n")[1]),
+        write_permission=WritePermission(confirm_fn=lambda d, t, w, p: (seen.append((d, t, w)), "n")[1]),
     )
 
     answer = _write_tool(agent)(SimpleNamespace(deps=deps), CLEAN_DIRECTIVE)
@@ -149,7 +149,7 @@ def test_the_panel_prints_the_destination_in_full_and_escapes_the_directive(
     from cli.ask import repl
 
     deep = tmp_path / ("a" * 40) / ("b" * 40) / "side.bean"
-    monkeypatch.setattr(repl, "_ask_write_permission", lambda: "n")
+    monkeypatch.setattr(repl, "_ask_write_permission", lambda count=1: "n")
     monkeypatch.setattr(repl, "console", repl.Console(width=100, force_terminal=False, record=True))
 
     assert repl.make_confirm_fn([None])(ARMED_DIRECTIVE, str(deep), ["ledger has 1 warning"]) == "n"

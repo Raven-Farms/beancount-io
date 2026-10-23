@@ -65,6 +65,7 @@ describe("owned renewal cache", () => {
       t.live,
       period,
       SUBSCRIPTION_PERIOD_VERIFICATION_VERSION,
+      "ORGANIZATION",
     );
     expect(JSON.stringify(t.retired)).toBe(old);
   });
@@ -73,6 +74,7 @@ describe("owned renewal cache", () => {
     Object.assign(t.live, {
       currentPeriodEnd: period,
       periodVerificationVersion: SUBSCRIPTION_PERIOD_VERIFICATION_VERSION,
+      periodTier: "ORGANIZATION",
     });
     await t.run();
     expect(t.model.updatePeriodIfUnchanged).not.toHaveBeenCalled();
@@ -91,6 +93,7 @@ describe("owned renewal cache", () => {
       t.live,
       period,
       SUBSCRIPTION_PERIOD_VERIFICATION_VERSION,
+      "ORGANIZATION",
     );
   });
   it("leaves an unverified historical period untouched on provider failure", async () => {
@@ -115,6 +118,66 @@ describe("owned renewal cache", () => {
       t.live,
       null,
       SUBSCRIPTION_PERIOD_VERIFICATION_VERSION,
+      null,
+    );
+  });
+  it("records the tier with the period, and rewrites when only the tier moved", async () => {
+    const t = setup();
+    Object.assign(t.live, {
+      currentPeriodEnd: period,
+      periodVerificationVersion: SUBSCRIPTION_PERIOD_VERIFICATION_VERSION,
+      periodTier: "PREMIUM",
+    });
+    await t.run();
+    expect(t.model.updatePeriodIfUnchanged).toHaveBeenCalledWith(
+      {},
+      t.live,
+      period,
+      SUBSCRIPTION_PERIOD_VERIFICATION_VERSION,
+      "ORGANIZATION",
+    );
+  });
+  const retry = 1990000000;
+  it.each([
+    // Held only until the retry, never to the end of the unpaid period.
+    [
+      "a retried past_due",
+      "past_due",
+      retry,
+      new Date(retry * 1000),
+      "ORGANIZATION",
+    ],
+    ["an exhausted past_due", "past_due", null, null, null],
+    ["an unpaid", "unpaid", retry, null, null],
+    ["a canceled", "canceled", retry, null, null],
+  ])(
+    "%s renewal keeps or clears the paid period",
+    async (_label, status, nextAttempt, expectedPeriod, expectedTier) => {
+      const t = setup();
+      const [subscription] = await t.stripe.listSubscriptions();
+      t.stripe.listSubscriptions.mockResolvedValue([
+        {
+          ...subscription,
+          status,
+          latest_invoice: { status: "open", next_payment_attempt: nextAttempt },
+        } as typeof subscription,
+      ]);
+      await t.run();
+      expect(t.model.updatePeriodIfUnchanged).toHaveBeenCalledWith(
+        {},
+        t.live,
+        expectedPeriod,
+        SUBSCRIPTION_PERIOD_VERIFICATION_VERSION,
+        expectedTier,
+      );
+    },
+  );
+  it("lists every subscription not canceled, so a past-due one counts", async () => {
+    const t = setup();
+    await t.run();
+    expect(t.stripe.listSubscriptions).toHaveBeenCalledWith(
+      "u",
+      expect.objectContaining({ status: "current" }),
     );
   });
 });

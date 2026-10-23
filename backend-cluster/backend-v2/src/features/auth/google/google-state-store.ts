@@ -24,32 +24,34 @@ export interface GoogleStateStore {
 const TTL_MS = 10 * 60 * 1000;
 const key = (state: string) => `auth:google_state:${state}`;
 
-interface AtomicRedis {
-  set(
-    key: string,
-    value: string,
-    options: { PX: number; NX: true },
-  ): Promise<unknown>;
-  getDel(key: string): Promise<string | null>;
-}
+// Upstream's bounded client exposes only EVAL (with timeouts and backpressure);
+// both operations are single atomic scripts. Typed from getRedisClient so a
+// change to that client fails the typecheck instead of failing at runtime.
+type RedisClient = NonNullable<ReturnType<typeof getRedisClient>>;
 
-function client(): AtomicRedis {
-  const c = getRedisClient() as unknown as AtomicRedis | null;
+const PUT_SCRIPT = "return redis.call('SET', KEYS[1], ARGV[1], 'PX', ARGV[2], 'NX')";
+const CONSUME_SCRIPT = "return redis.call('GETDEL', KEYS[1])";
+
+function client(): RedisClient {
+  const c = getRedisClient();
   if (!c) throw new Error("Redis unavailable for Google sign-in state");
   return c;
 }
 
 export const redisGoogleStateStore: GoogleStateStore = {
   async put(state, record) {
-    const ok = await client().set(key(state), JSON.stringify(record), {
-      PX: TTL_MS,
-      NX: true,
+    const ok = await client().eval(PUT_SCRIPT, {
+      keys: [key(state)],
+      arguments: [JSON.stringify(record), String(TTL_MS)],
     });
     if (ok !== "OK") throw new Error("Google sign-in state not stored");
   },
   async consume(state) {
-    const raw = await client().getDel(key(state));
-    if (raw === null) return null;
+    const raw = await client().eval(CONSUME_SCRIPT, {
+      keys: [key(state)],
+      arguments: [],
+    });
+    if (typeof raw !== "string") return null;
     const parsed = JSON.parse(raw) as Partial<GoogleCeremonyRecord>;
     if (
       typeof parsed.nonce !== "string" ||

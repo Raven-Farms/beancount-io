@@ -1,16 +1,22 @@
 import { SendGrid, ConsoleSendGrid } from "./sendgrid";
 import { logger } from "@/shared/logger";
 import sendgrid from "@sendgrid/mail";
+import type { MailService as MailServiceInstance } from "@sendgrid/mail";
+import type { Client as SendGridClient } from "@sendgrid/client";
+import { ServiceUnavailableError } from "@/shared/errors";
 
 jest.mock("@sendgrid/mail");
-jest.mock("@/shared/logger", () => ({
-  logger: {
+jest.mock("@/shared/logger", () => {
+  const logger = {
     debug: jest.fn(),
     error: jest.fn(),
     info: jest.fn(),
     warn: jest.fn(),
-  },
-}));
+    child: jest.fn(),
+  };
+  logger.child.mockReturnValue(logger);
+  return { logger };
+});
 
 describe("SendGrid", () => {
   let mockSend: jest.Mock;
@@ -20,7 +26,10 @@ describe("SendGrid", () => {
     mockSend = jest.fn();
     (sendgrid.send as jest.Mock) = mockSend;
     (sendgrid.setApiKey as jest.Mock) = jest.fn();
+    (sendgrid.setTimeout as jest.Mock) = jest.fn();
   });
+
+  afterEach(() => jest.restoreAllMocks());
 
   describe("constructor", () => {
     it("should initialize with API key", () => {
@@ -34,6 +43,49 @@ describe("SendGrid", () => {
 
       expect(sg.opts).toEqual(opts);
       expect(sendgrid.setApiKey).toHaveBeenCalledWith("test-api-key");
+      expect(sendgrid.setTimeout).toHaveBeenCalledWith(10_000);
+    });
+
+    it("applies the 10-second timeout to every real provider request and keeps the retry count", async () => {
+      const { MailService } = jest.requireActual<{
+        MailService: new () => MailServiceInstance;
+      }>("@sendgrid/mail");
+      const { Client } = jest.requireActual<{
+        Client: new () => SendGridClient;
+      }>("@sendgrid/client");
+      const client = new Client();
+      const sdk = new MailService();
+      sdk.setClient(client);
+      (sendgrid.setApiKey as jest.Mock).mockImplementation((apiKey: string) =>
+        sdk.setApiKey(apiKey),
+      );
+      (sendgrid.setTimeout as jest.Mock).mockImplementation((timeout: number) =>
+        sdk.setTimeout(timeout),
+      );
+      mockSend.mockImplementation((data) => sdk.send(data));
+      const requests: unknown[] = [];
+      const transport = jest
+        .spyOn(client, "request")
+        .mockImplementation(async (data) => {
+          requests.push(client.createRequest(data));
+          throw Object.assign(new Error("synthetic provider timeout"), {
+            code: "ETIMEDOUT",
+          });
+        });
+      const sg = new SendGrid({
+        apiKey: "SG.synthetic-api-key",
+        retryLimit: 2,
+      });
+
+      await expect(
+        sg.sendMail({ to: "synthetic@example.com", text: "synthetic message" }),
+      ).rejects.toBeInstanceOf(ServiceUnavailableError);
+
+      expect(transport).toHaveBeenCalledTimes(2);
+      expect(requests).toEqual([
+        expect.objectContaining({ timeout: 10_000 }),
+        expect.objectContaining({ timeout: 10_000 }),
+      ]);
     });
   });
 
@@ -119,9 +171,10 @@ describe("SendGrid", () => {
 
       expect(mockSend).toHaveBeenCalledTimes(2);
       expect(logger.error).toHaveBeenCalledTimes(1);
-      expect(logger.error).toHaveBeenCalledWith(
-        `failed to SendGrid.sendMail: ${error}`,
-      );
+      expect(logger.error).toHaveBeenCalledWith("Email delivery failed", {
+        operation: "sendMail",
+        errorCategory: "MAIL_PROVIDER_FAILURE",
+      });
     });
 
     it("should retry up to retryLimit and throw error after all retries fail", async () => {
@@ -133,7 +186,9 @@ describe("SendGrid", () => {
       const error = new Error("Persistent error");
       mockSend.mockRejectedValue(error);
 
-      await expect(sg.sendMail(mailData)).rejects.toThrow("Persistent error");
+      await expect(sg.sendMail(mailData)).rejects.toBeInstanceOf(
+        ServiceUnavailableError,
+      );
 
       expect(mockSend).toHaveBeenCalledTimes(2);
       expect(logger.error).toHaveBeenCalledTimes(2);
@@ -249,9 +304,10 @@ describe("SendGrid", () => {
 
       expect(mockSend).toHaveBeenCalledTimes(2);
       expect(logger.error).toHaveBeenCalledTimes(1);
-      expect(logger.error).toHaveBeenCalledWith(
-        `failed to SendGrid.sendTemplate: ${error}`,
-      );
+      expect(logger.error).toHaveBeenCalledWith("Email delivery failed", {
+        operation: "sendTemplate",
+        errorCategory: "MAIL_PROVIDER_FAILURE",
+      });
     });
 
     it("should throw error after all retries fail", async () => {
@@ -269,12 +325,59 @@ describe("SendGrid", () => {
           templateId: "d-123456789",
           dynamicTemplateData: { name: "John" },
         }),
-      ).rejects.toThrow("Persistent error");
+      ).rejects.toBeInstanceOf(ServiceUnavailableError);
 
       expect(mockSend).toHaveBeenCalledTimes(2);
       expect(logger.error).toHaveBeenCalledTimes(2);
     });
   });
+
+  it.each(["sendMail", "sendTemplate"] as const)(
+    "does not expose provider errors, recipients, credentials or message content through %s",
+    async (operation) => {
+      const secret = "synthetic-private-reset-token";
+      const providerError = Object.assign(new Error(secret), {
+        name: secret,
+        response: { body: { errors: [{ message: secret }] } },
+        request: { headers: { authorization: secret }, body: { to: secret } },
+      });
+      mockSend.mockRejectedValue(providerError);
+      const sg = new SendGrid({ apiKey: secret, retryLimit: 2 });
+      const failure = await sg[operation]({
+        to: `${secret}@example.com`,
+        from: `${secret}@example.org`,
+        subject: secret,
+        html: secret,
+        text: secret,
+        templateId: secret,
+        dynamicTemplateData: { otp: secret },
+      }).catch((error: unknown) => error);
+
+      expect(failure).toBeInstanceOf(ServiceUnavailableError);
+      expect(failure).toMatchObject({
+        category: "SERVICE_UNAVAILABLE",
+        metadata: { service: "Email delivery", retryAfter: 5 },
+      });
+      expect(JSON.stringify(failure)).not.toContain(secret);
+      expect((failure as Error).message).not.toContain(secret);
+      expect((failure as Error).stack).not.toContain(secret);
+      expect((failure as { cause?: unknown }).cause).toBeUndefined();
+      expect(mockSend).toHaveBeenCalledTimes(2);
+      expect((logger.error as jest.Mock).mock.calls).toEqual([
+        [
+          "Email delivery failed",
+          { operation, errorCategory: "MAIL_PROVIDER_FAILURE" },
+        ],
+        [
+          "Email delivery failed",
+          { operation, errorCategory: "MAIL_PROVIDER_FAILURE" },
+        ],
+      ]);
+      expect(
+        JSON.stringify((logger.error as jest.Mock).mock.calls),
+      ).not.toContain(secret);
+    },
+  );
 });
 
 describe("ConsoleSendGrid", () => {
@@ -298,97 +401,48 @@ describe("ConsoleSendGrid", () => {
     });
   });
 
-  describe("sendMail", () => {
-    it("should log mail data without sending", async () => {
+  it.each(["sendMail", "sendTemplate"] as const)(
+    "%s logs only the recipient count, including for OTP and reset messages",
+    async (operation) => {
+      const secret = "synthetic-private-otp-reset-token";
       const sg = new ConsoleSendGrid({
-        apiKey: "test-key",
+        apiKey: secret,
         retryLimit: 3,
+        defaultFrom: `${secret}@example.org`,
+      });
+      jest.clearAllMocks();
+
+      await sg[operation]({
+        to: [`${secret}@example.com`, "other@example.com"],
+        from: `${secret}@example.org`,
+        subject: secret,
+        html: `<a href="${secret}">${secret}</a>`,
+        text: secret,
+        templateId: secret,
+        dynamicTemplateData: { otp: secret, url: secret },
       });
 
-      await sg.sendMail({
-        to: "recipient@example.com",
-        subject: "Test Subject",
-        html: "<p>This is a test email with some content</p>",
-      });
+      expect((logger.debug as jest.Mock).mock.calls).toEqual([
+        [
+          "Email delivery suppressed in development",
+          { operation, recipientCount: 2 },
+        ],
+      ]);
+      expect(
+        JSON.stringify((logger.debug as jest.Mock).mock.calls),
+      ).not.toContain(secret);
+      expect(sendgrid.send).not.toHaveBeenCalled();
+    },
+  );
 
-      expect(logger.debug).toHaveBeenCalledWith(
-        "ConsoleSendGrid.sendMail called with data:",
-        expect.objectContaining({
-          to: "recipient@example.com",
-          from: "noreply@mail.beancount.io",
-          subject: "Test Subject",
-          html: "<p>This is a test email with some content</p>",
-        }),
-      );
-    });
+  it("counts a single recipient without logging the address", async () => {
+    const sg = new ConsoleSendGrid({ apiKey: "synthetic-key", retryLimit: 2 });
 
-    it("should log full HTML content without truncation", async () => {
-      const sg = new ConsoleSendGrid({
-        apiKey: "test-key",
-        retryLimit: 3,
-      });
+    await sg.sendMail({ to: "synthetic@example.com", text: "private content" });
 
-      const longHtml = "a".repeat(200);
-
-      await sg.sendMail({
-        to: "recipient@example.com",
-        subject: "Test",
-        html: longHtml,
-      });
-
-      expect(logger.debug).toHaveBeenCalledWith(
-        "ConsoleSendGrid.sendMail called with data:",
-        expect.objectContaining({
-          html: longHtml,
-        }),
-      );
-    });
-
-    it("should use custom from address", async () => {
-      const sg = new ConsoleSendGrid({
-        apiKey: "test-key",
-        retryLimit: 3,
-        defaultFrom: "default@example.com",
-      });
-
-      await sg.sendMail({
-        to: "recipient@example.com",
-        subject: "Test",
-        text: "Test content",
-        from: "custom@example.com",
-      });
-
-      expect(logger.debug).toHaveBeenCalledWith(
-        "ConsoleSendGrid.sendMail called with data:",
-        expect.objectContaining({
-          from: "custom@example.com",
-        }),
-      );
-    });
-  });
-
-  describe("sendTemplate", () => {
-    it("should log template data without sending", async () => {
-      const sg = new ConsoleSendGrid({
-        apiKey: "test-key",
-        retryLimit: 3,
-      });
-
-      await sg.sendTemplate({
-        to: "recipient@example.com",
-        templateId: "d-123456789",
-        dynamicTemplateData: { name: "John", date: "2024-01-01" },
-      });
-
-      expect(logger.debug).toHaveBeenCalledWith(
-        "ConsoleSendGrid.sendTemplate called with data:",
-        expect.objectContaining({
-          to: "recipient@example.com",
-          from: "noreply@mail.beancount.io",
-          templateId: "d-123456789",
-          dynamicTemplateData: { name: "John", date: "2024-01-01" },
-        }),
-      );
-    });
+    expect(logger.debug).toHaveBeenLastCalledWith(
+      "Email delivery suppressed in development",
+      { operation: "sendMail", recipientCount: 1 },
+    );
   });
 });

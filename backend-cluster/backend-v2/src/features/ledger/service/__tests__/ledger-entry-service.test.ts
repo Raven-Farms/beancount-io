@@ -721,4 +721,71 @@ describe("LedgerEntryService", () => {
       expect(mockCacheHelper.set).not.toHaveBeenCalled();
     });
   });
+
+  /** w4/m38: early-year dates keep their year in source and routing. */
+  describe("early-year dates", () => {
+    const routedOpen = async (date: string) => {
+      mockGetLedgerBcioOptions.mockResolvedValue({
+        data: {
+          success: true,
+          data: {
+            ...mockBcioOptionsResponse.data.data,
+            account_file: "accounts/{year}/{month}.bean",
+          },
+        },
+      });
+      await service.addBulkEntries(
+        IDENTITY,
+        "testuser",
+        "test-ledger",
+        [
+          {
+            type: "open",
+            entry: {
+              date,
+              account: "Assets:Qa-20261020:Date",
+              currencies: ["USD"],
+            },
+          },
+        ],
+        "web",
+      );
+      return firstItem();
+    };
+
+    it.each([
+      ["0001-01-01", "accounts/0001/01.bean"],
+      ["0099-12-31", "accounts/0099/12.bean"],
+      ["0100-01-01", "accounts/0100/01.bean"],
+      ["2026-01-01", "accounts/2026/01.bean"],
+    ])("writes %s exactly, routed to %s", async (date, filename) => {
+      const entry = await routedOpen(date);
+      expect(entry).toEqual(
+        expect.objectContaining({
+          filename,
+          item: expect.objectContaining({ date }),
+        }),
+      );
+      expect(mockAddBulkEntries).toHaveBeenCalledTimes(1);
+    });
+
+    it("routes by the UTC calendar day on a server west of UTC", async () => {
+      const originalTz = process.env.TZ;
+      process.env.TZ = "America/Los_Angeles";
+      try {
+        expect((await routedOpen("2026-01-01")).filename).toBe(
+          "accounts/2026/01.bean",
+        );
+      } finally {
+        process.env.TZ = originalTz;
+      }
+    });
+
+    it("still refuses year 0000 before any write", async () => {
+      await expect(routedOpen("0000-01-01")).rejects.toThrow(
+        /not a calendar date/,
+      );
+      expect(mockAddBulkEntries).not.toHaveBeenCalled();
+    });
+  });
 });

@@ -9,6 +9,17 @@ const jaLedgerEditor: Record<string, { message: string; description: string }> =
       message: "ファイルを作成",
       description: "Button label to create file",
     },
+    "ledgerEditor.branchNotFound": {
+      message:
+        "ブランチ「{branch}」はここでは利用できません。ファイルは {main} から表示されます。",
+      description:
+        "404 for a Files URL naming a branch other than the supported one (contains {branch} and {main})",
+    },
+    "ledgerEditor.browseMainFiles": {
+      message: "{main} のファイルを表示",
+      description:
+        "Link to the Files root on the supported branch (contains {main})",
+    },
     "ledgerEditor.files": {
       message: "ファイル",
       description: "Ledger files management",
@@ -49,6 +60,12 @@ export default {
   "ledgerEditor.unsupportedPreview": {
     message: "このファイル タイプはプレビューではサポートされていません",
     description: "Unsupported preview message without a file type",
+  },
+  "ledgerEditor.notUtf8Text": {
+    message:
+      "このファイルは UTF-8 テキストではないため、バイトを変更せずにここで表示・編集することはできません。ダウンロードして別のアプリで開いてください。",
+    description:
+      "Shown instead of the editor for a text file whose bytes are not valid UTF-8",
   },
   "ledgerEditor.createFileCommit": {
     message: "ファイル {path} を作成します",

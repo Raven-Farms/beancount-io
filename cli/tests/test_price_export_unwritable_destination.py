@@ -152,10 +152,10 @@ def test_example_into_a_read_only_directory_is_the_same_refusal(tmp_path: Path, 
     assert _listing(lock) == {}
 
 
-def test_a_write_that_fails_midway_names_what_was_already_written(
+def test_a_write_that_fails_midway_writes_nothing(
     tmp_path: Path, source: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """What no check can foresee — a disk filling up — still reports how far it got."""
+    """What no check can foresee — a disk filling up — leaves the destination as it was (w5/826)."""
     from bea_engine import managed_load
     from bea_engine.protocol import EngineError
 
@@ -177,12 +177,42 @@ def test_a_write_that_fails_midway_names_what_was_already_written(
     message = str(caught.value)
     assert caught.value.exit_code == 1
     assert "No space left on device" in message
+    assert "Nothing was written" in message
+    # Every file is staged before any lands, so the one staged before the
+    # failure is gone, and so is the directory the export created for it.
+    assert not output.exists()
+
+
+def test_a_commit_that_fails_midway_names_what_was_already_written(
+    tmp_path: Path, source: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A replace that fails once others landed still reports how far it got."""
+    from bea_engine import managed_load
+    from bea_engine.protocol import EngineError
+
+    replace = os.replace
+    calls: list[str] = []
+
+    def refuse_the_second(src: str | os.PathLike[str], dst: str | os.PathLike[str]) -> None:
+        calls.append(str(dst))
+        if len(calls) > 1:
+            raise OSError(errno.EIO, "Input/output error")
+        replace(src, dst)
+
+    monkeypatch.setattr(os, "replace", refuse_the_second)
+    output = tmp_path / "output"
+
+    with pytest.raises(EngineError) as caught:
+        managed_load.export_portable(source, output, offline=True, root=tmp_path / "cache")
+
+    message = str(caught.value)
+    assert caught.value.exit_code == 1
+    assert "Input/output error" in message
     assert "1 of 2 files were already written" in message
     assert str(output / "main.bean") in message
     assert "Nothing was written" not in message
-    # The include's directory is created only once its content exists (w5/316),
-    # so the failed rewrite leaves no empty `sub/` behind.
-    assert set(_listing(output)) == {"main.bean"}
+    # The staged copy that never landed is not left behind.
+    assert not [name for name in _listing(output) if ".bea-" in name]
 
 
 def test_a_writable_destination_still_exports_a_ledger_that_checks(tmp_path: Path, source: Path) -> None:

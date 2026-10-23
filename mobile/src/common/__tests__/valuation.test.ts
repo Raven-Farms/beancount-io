@@ -1,3 +1,4 @@
+import { isolateLtr } from "../bidi";
 import {
   balanceNotes,
   costBasisLine,
@@ -158,6 +159,38 @@ describe("selectValuation", () => {
       { currency: "VACHR", number: -13, scale: 0 },
     ]);
     expect(valuation.valuesHoldings).toBe(false);
+  });
+
+  it("values a commodity held with and without a cost (w21/278)", () => {
+    const mixed = {
+      ...EXAMPLE,
+      market: { USD: "5100", ETH: "0.05" },
+      cost: { USD: "4100", ETH: "0.05" },
+      units: { USD: "100", ETH: "2.05" },
+    };
+    const valuation = selectValuation(mixed);
+    expect(valuation.valuesHoldings).toBe(true);
+    // The converted part is what is valued; the remainder stays out.
+    expect(valuation.notInTotal).toEqual([
+      { currency: "ETH", number: 0.05, scale: 2 },
+    ]);
+    const held = [...valuation.priced, ...valuation.atCostNoPrice];
+    expect(held.map((holding) => holding.number)).toEqual([2]);
+    // Control without the reward lot.
+    const control = selectValuation({
+      ...mixed,
+      market: { USD: "5100" },
+      cost: { USD: "4100" },
+      units: { USD: "100", ETH: "2" },
+    });
+    expect(control.valuesHoldings).toBe(true);
+    // Only cost-less units stay unvalued.
+    const none = selectValuation({
+      ...mixed,
+      market: { USD: "100", ETH: "2.05" },
+      cost: { USD: "100", ETH: "2.05" },
+    });
+    expect(none.valuesHoldings).toBe(false);
   });
 
   it("values nothing on a cash-only ledger", () => {
@@ -375,7 +408,7 @@ describe("isPriceStale", () => {
 describe("costBasisLine", () => {
   it("shows the cost and the signed unrealized difference", () => {
     expect(costBasisLine(selectValuation(EXAMPLE), "USD", t)).toBe(
-      'costBasisLine({"cost":"$106,826.05","gain":"+$10,823.44"})',
+      'costBasisLine({"cost":"\u2066$106,826.05\u2069","gain":"\u2066+$10,823.44\u2069"})',
     );
   });
 
@@ -386,7 +419,7 @@ describe("costBasisLine", () => {
       cost: { USD: "1000" },
     });
     expect(costBasisLine(valuation, "USD", t)).toBe(
-      'costBasisLine({"cost":"$1,000.00","gain":"-$100.00"})',
+      'costBasisLine({"cost":"\u2066$1,000.00\u2069","gain":"\u2066-$100.00\u2069"})',
     );
   });
 
@@ -410,24 +443,72 @@ describe("balanceNotes", () => {
           kind: "units",
           units: rgagx,
           value: { amount: 48471.38532, basis: "market" },
+          notInTotal: [],
         },
         "USD",
         t,
         "en",
       ),
-    ).toEqual(['atMarket({"amount":"$48,471.39"})']);
+    ).toEqual([`atMarket({"amount":"${isolateLtr("$48,471.39")}"})`]);
     expect(
       balanceNotes(
         {
           kind: "units",
           units: rgagx,
           value: { amount: 49049.66613, basis: "cost" },
+          notInTotal: [],
         },
         "USD",
         t,
         "en",
       ),
-    ).toEqual(['atCost({"amount":"$49,049.67"})']);
+    ).toEqual([`atCost({"amount":"${isolateLtr("$49,049.67")}"})`]);
+  });
+
+  it("names the cost-less remainder under a units figure's value (w21/278)", () => {
+    expect(
+      balanceNotes(
+        {
+          kind: "units",
+          units: { currency: "ETH", number: 2.05, scale: 2 },
+          value: { amount: 5000, basis: "market" },
+          notInTotal: [{ currency: "ETH", number: 0.05, scale: 2 }],
+        },
+        "USD",
+        t,
+        "en",
+      ),
+    ).toEqual([
+      `atMarket({"amount":"${isolateLtr("$5,000.00")}"})`,
+      `notInTotal({"amounts":"${isolateLtr("0.05 ETH")}"})`,
+    ]);
+  });
+
+  it("adds a stale price warning under a units root (w21/279)", () => {
+    const valuation = selectValuation({
+      market: { USD: "1500" },
+      units: { HOOL: "10" },
+      currency: "USD",
+      today: "2026-10-21",
+      prices: [
+        { base: "HOOL", quote: "USD", prices: [{ date: "2026-08-01" }] },
+      ],
+    });
+    const notes = balanceNotes(
+      {
+        kind: "units",
+        units: { currency: "HOOL", number: 10, scale: 0 },
+        value: { amount: 1500, basis: "market" },
+        notInTotal: [],
+        valuation,
+      },
+      "USD",
+      t,
+      "en",
+    );
+    expect(notes.length).toBe(2);
+    expect(notes[0]).toBe(`atMarket({"amount":"${isolateLtr("$1,500.00")}"})`);
+    expect(notes[1]!.startsWith("pricesNotUpdatedSince(")).toBe(true);
   });
 
   it("claims no basis it does not know, and adds nothing to a figure with no value", () => {
@@ -437,6 +518,7 @@ describe("balanceNotes", () => {
           kind: "units",
           units: rgagx,
           value: { amount: 48471.38532, basis: null },
+          notInTotal: [],
         },
         "USD",
         t,
@@ -449,6 +531,7 @@ describe("balanceNotes", () => {
           kind: "units",
           units: { currency: "VACHR", number: -13, scale: 0 },
           value: null,
+          notInTotal: [],
         },
         "USD",
         t,
@@ -486,9 +569,107 @@ describe("balanceNotes", () => {
         t,
         "en",
       ),
-    ).toEqual(['notInTotal({"amounts":"-13 VACHR, 18,000 IRAUSD"})']);
+    ).toEqual([
+      `notInTotal({"amounts":"${isolateLtr("-13 VACHR")}, ${isolateLtr("18,000 IRAUSD")}"})`,
+    ]);
     expect(
       balanceNotes({ kind: "money", value: 1, notInTotal: [] }, "USD", t, "en"),
     ).toEqual([]);
+  });
+});
+
+// w21/124: a lot bought in EUR is valued at an EUR price, else at cost; the
+// caption judged it by a USD price instead.
+describe("a holding bought in a non-operating currency", () => {
+  const veur = {
+    market: { EUR: "550" },
+    cost: { EUR: "500" },
+    units: { VEUR: "10" },
+    currency: "USD",
+    date: "2026-10-21",
+    today: "2026-10-21",
+  };
+
+  it("is priced by a price in its cost currency", () => {
+    const valuation = selectValuation({
+      ...veur,
+      prices: [pair("VEUR", "EUR", ["2026-08-28"])],
+    });
+    expect(valuation.atCostNoPrice).toEqual([]);
+    expect(valuation.priced.map((holding) => holding.priceDate)).toEqual([
+      "2026-08-28",
+    ]);
+  });
+
+  it("is at cost with only an operating-currency price", () => {
+    const valuation = selectValuation({
+      ...veur,
+      market: { EUR: "500" },
+      prices: [pair("VEUR", "USD", ["2026-08-28"])],
+    });
+    expect(valuation.priced).toEqual([]);
+    expect(valuation.atCostNoPrice.map((holding) => holding.currency)).toEqual([
+      "VEUR",
+    ]);
+  });
+
+  it("keeps the operating-currency rule for a lot bought in it", () => {
+    const valuation = selectValuation({
+      ...veur,
+      market: { USD: "600" },
+      cost: { USD: "500" },
+      prices: [pair("VEUR", "USD", ["2026-08-28"])],
+    });
+    expect(valuation.priced.map((holding) => holding.currency)).toEqual([
+      "VEUR",
+    ]);
+  });
+});
+
+// w21/291: the Accounts root and the account detail read no `at_cost` map, so a
+// holding priced in its cost currency was captioned "at cost (no price)" while
+// Home showed it priced.
+describe("a priced cost-currency holding without an at_cost read", () => {
+  // 1000 USD cash and 10 VEUR bought at 50 EUR, priced 52 EUR on 2026-06-01:
+  // at_value leaves the lot in EUR (520), which names its cost currency.
+  const base = {
+    market: { USD: "1000", EUR: "520" },
+    units: { USD: "1000", VEUR: "10" },
+    currency: "USD",
+    today: "2026-10-21",
+    prices: [pair("VEUR", "EUR", ["2026-06-01"])],
+  };
+
+  it("is priced, with its stale price warned, as Home shows it", () => {
+    const valuation = selectValuation(base);
+    expect(valuation.atCostNoPrice).toEqual([]);
+    expect(valuation.priced.map((holding) => holding.currency)).toEqual([
+      "VEUR",
+    ]);
+    expect(valuation.priced[0]?.priceDate).toBe("2026-06-01");
+    expect(valuation.priced[0]?.stale).toBe(true);
+    expect(valuationStatus(valuation, t, "en")).toBe(
+      `atMarketValue · pricesNotUpdatedSince({"count":1,"date":"Jun 1, 2026"}) · notInTotalCount({"count":1})`,
+    );
+  });
+
+  it("agrees with the same read given an at_cost map", () => {
+    const withCost = selectValuation({
+      ...base,
+      cost: { USD: "1000", EUR: "500" },
+    });
+    expect(selectValuation(base).priced).toEqual(withCost.priced);
+  });
+
+  it("still calls a holding with no price in either currency at cost", () => {
+    const valuation = selectValuation({
+      ...base,
+      market: { USD: "1000", EUR: "500" },
+      prices: [],
+    });
+    expect(valuation.priced).toEqual([]);
+    expect(valuation.atCostNoPrice.map((holding) => holding.currency)).toEqual([
+      "VEUR",
+    ]);
   });
 });

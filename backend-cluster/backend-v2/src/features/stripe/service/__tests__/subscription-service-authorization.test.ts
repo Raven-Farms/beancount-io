@@ -24,6 +24,15 @@ const oauth: Identity = {
   scopes: new Set(["ledger.read", "ledger.write", "ledger.admin"]),
 };
 
+const apikey: Identity = {
+  userId: "usr_alice",
+  method: "apikey",
+  scopes: new Set(["ledger.read", "ledger.write", "ledger.admin"]),
+};
+
+/** Every delegated credential billing must refuse, however broadly scoped. */
+const DELEGATED_CREDENTIALS = [oauth, apikey] as const;
+
 function makeDeps() {
   const stripe = {
     listSubscriptions: jest.fn(async () => []),
@@ -32,6 +41,10 @@ function makeDeps() {
     cancelSubscription: jest.fn(async () => ({ success: true })),
     resumeSubscription: jest.fn(async () => ({ success: true })),
     upgradeSubscription: jest.fn(async () => ({ success: true })),
+    previewPlanChange: jest.fn(async () => ({})),
+    changePlan: jest.fn(async () => ({})),
+    cancelScheduledPlanChange: jest.fn(async () => ({ success: true })),
+    defaultCard: jest.fn(async () => null),
   };
   const models = {
     user: { getById: jest.fn(async () => ({ email: "alice@example.com" })) },
@@ -93,6 +106,21 @@ const BILLING_CASES = [
     call: (service: SubscriptionService, identity: Identity) =>
       service.upgradeSubscription(identity, "beancount-web-prod", "price_1"),
   },
+  {
+    action: AUTHORIZATION_ACTIONS.USER_BILLING_PLAN_CHANGE_PREVIEW,
+    call: (service: SubscriptionService, identity: Identity) =>
+      service.previewPlanChange(identity, "beancount-web-prod", "price_1"),
+  },
+  {
+    action: AUTHORIZATION_ACTIONS.USER_BILLING_PLAN_CHANGE_APPLY,
+    call: (service: SubscriptionService, identity: Identity) =>
+      service.changePlan(identity, "beancount-web-prod", "price_1", 1),
+  },
+  {
+    action: AUTHORIZATION_ACTIONS.USER_BILLING_PLAN_CHANGE_CANCEL,
+    call: (service: SubscriptionService, identity: Identity) =>
+      service.cancelScheduledPlanChange(identity, "beancount-web-prod"),
+  },
 ] as const;
 
 function expectNoBillingWork(deps: ReturnType<typeof makeDeps>): void {
@@ -102,6 +130,10 @@ function expectNoBillingWork(deps: ReturnType<typeof makeDeps>): void {
   expect(deps.stripe.cancelSubscription).not.toHaveBeenCalled();
   expect(deps.stripe.resumeSubscription).not.toHaveBeenCalled();
   expect(deps.stripe.upgradeSubscription).not.toHaveBeenCalled();
+  expect(deps.stripe.previewPlanChange).not.toHaveBeenCalled();
+  expect(deps.stripe.changePlan).not.toHaveBeenCalled();
+  expect(deps.stripe.cancelScheduledPlanChange).not.toHaveBeenCalled();
+  expect(deps.stripe.defaultCard).not.toHaveBeenCalled();
   expect(deps.models.user.getById).not.toHaveBeenCalled();
   expect(
     deps.models.paidCustomer.findByUserIdWithActivePeriod,
@@ -145,15 +177,33 @@ describe("SubscriptionService authorization boundary", () => {
     },
   );
 
-  it.each(BILLING_CASES)(
-    "performs no billing work when $action is denied",
-    async ({ call }) => {
+  it("covers every billing action in the registry", () => {
+    const registered = Object.values(AUTHORIZATION_ACTIONS).filter((action) =>
+      action.startsWith("user.billing."),
+    );
+    expect(registered.length).toBeGreaterThanOrEqual(9);
+    expect(BILLING_CASES.map(({ action }) => action).sort()).toEqual(
+      [...registered].sort(),
+    );
+  });
+
+  it.each(
+    BILLING_CASES.flatMap((billingCase) =>
+      DELEGATED_CREDENTIALS.map((identity) => ({
+        ...billingCase,
+        identity,
+        method: identity.method,
+      })),
+    ),
+  )(
+    "performs no billing work when $action is denied to a $method credential",
+    async ({ call, identity }) => {
       const authorization = new AuthorizationService({
         check: async () => true,
       });
       const { service, deps } = makeService(authorization);
 
-      await expect(call(service, oauth)).rejects.toMatchObject({
+      await expect(call(service, identity)).rejects.toMatchObject({
         category: ErrorCategory.FORBIDDEN,
         message: "Managing billing requires a full signed-in session",
       });

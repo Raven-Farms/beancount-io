@@ -446,10 +446,6 @@ const bgJournal: Record<string, TranslationEntry> = {
     message: "В очакване",
     description: "Pending transaction status",
   },
-  "journal.blankStatus": {
-    message: "(празно)",
-    description: "Blank transaction status option",
-  },
   "journal.addPosting": {
     message: "Добави запис",
     description: "Accessible name for adding a transaction posting row",

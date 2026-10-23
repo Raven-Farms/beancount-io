@@ -15,6 +15,7 @@ import {
   sankeySavings,
   sankeyShortfall,
   transformToSankeyData,
+  sankeyLabelLines,
   truncateSankeyLabel,
 } from "../sankey-data";
 import { en } from "../../../../translations/en";
@@ -37,6 +38,8 @@ const labels = {
   otherLabel: "Other",
   cashFlowLabel: "Cash flow",
   savingsLabel: "Savings",
+  refundsLabel: "Refunds",
+  clawbacksLabel: "Clawbacks",
 };
 
 describe("categorizeAccount", () => {
@@ -205,17 +208,38 @@ describe("transformToSankeyData", () => {
     });
 
     expect(result.links.every((l) => l.value > 0)).toBe(true);
+    // A refunded category flows in as Refunds, clawed-back income out as
+    // Clawbacks: no negative ribbon, and every dollar balances (w21/112).
     expect(result.links.map((l) => l.source + "→" + l.target)).toEqual([
       "Income:Salary→cash-flow",
       "cash-flow→Expenses:Food",
+      "__refunds__→cash-flow",
+      "cash-flow→__clawbacks__",
       "cash-flow→savings",
     ]);
     // Statement totals still include the negatives so they match the cards.
     expect(result.totalIncome).toBe(950);
     expect(result.totalExpenses).toBe(380);
-    // Savings balances the *drawn* flows (1000 − 400), not the statement
-    // totals — otherwise the hub would outgrow the income ribbon.
-    expect(result.links.find((l) => l.target === SAVINGS_ID)?.value).toBe(600);
+    // Savings is Net Profit (950 − 380), as the bar chart above reports it.
+    expect(result.links.find((l) => l.target === SAVINGS_ID)?.value).toBe(570);
+  });
+
+  it("matches Net Profit with a refund, and the deficit with a clawback", () => {
+    // The note's fixture: salary 900, food 300, a 100 transport refund.
+    const refund = transformToSankeyData({
+      income: [node("Income:Salary", 900)],
+      expenses: [node("Expenses:Food", 300), node("Expenses:Transport", -100)],
+      ...labels,
+    });
+    expect(refund.links.find((l) => l.target === SAVINGS_ID)?.value).toBe(700);
+    const clawback = transformToSankeyData({
+      income: [node("Income:Salary", -50)],
+      expenses: [node("Expenses:Food", 300)],
+      ...labels,
+    });
+    expect(clawback.links.find((l) => l.source === SHORTFALL_ID)?.value).toBe(
+      350,
+    );
   });
 
   it("keeps drawn inflows and outflows equal when there is a surplus", () => {
@@ -355,9 +379,7 @@ describe("cashFlowChartSummary", () => {
     transformToSankeyData({
       income: [node("Income:Salary", incomeValue)],
       expenses: [node("Expenses:Rent", expenseValue)],
-      otherLabel: "Other",
-      cashFlowLabel: "Cash flow",
-      savingsLabel: "Savings",
+      ...labels,
     });
 
   it("formats the totals with the currency and names savings when drawn", () => {
@@ -396,7 +418,7 @@ describe("cashFlowChartSummary", () => {
       fs.readFileSync(path.join(__dirname, "..", "..", ...parts), "utf8");
     expect(
       read("components", "cash-flow-sankey.tsx").includes(
-        "accessibilityLabel={cashFlowChartSummary(data, currency, t)}",
+        "accessibilityLabel={cashFlowChartSummary(data, currency, t, locale)}",
       ),
     ).toBe(true);
     expect(
@@ -404,5 +426,126 @@ describe("cashFlowChartSummary", () => {
         .replace(/\s+/gu, "")
         .includes("expenses={expense.tree}currency={currency}"),
     ).toBe(true);
+  });
+});
+
+// w21/540: a label cut to one line lost its "(income)" / "(expenses)" suffix, so
+// two groups of the same name read alike.
+describe("sankeyLabelLines", () => {
+  it("gives the name and its suffix a line each", () => {
+    expect(sankeyLabelLines("QaInterest (income)")).toEqual([
+      "QaInterest",
+      "(income)",
+    ]);
+    expect(sankeyLabelLines("Investments (expenses)")).toEqual([
+      "Investmen…",
+      "(expenses)",
+    ]);
+  });
+
+  it("tells the two sides of one name apart", () => {
+    expect(sankeyLabelLines("Insurance (income)")).not.toEqual(
+      sankeyLabelLines("Insurance (expenses)"),
+    );
+  });
+
+  it("keeps a plain label on one line, cut as before", () => {
+    expect(sankeyLabelLines("Salary")).toEqual(["Salary"]);
+    expect(sankeyLabelLines("Transportation")).toEqual(["Transport…"]);
+  });
+
+  it("cuts a long localized suffix too", () => {
+    expect(sankeyLabelLines("Zinsen (Einnahmen und mehr)")[1]).toBe(
+      "(Einnahme…",
+    );
+  });
+});
+
+// w21/541: a flat half cent dropped a BTC ledger's 0.004 Food node and left
+// Savings wrong.
+describe("transformToSankeyData in a commodity the app has no symbol for", () => {
+  const btc = (currency?: string) =>
+    transformToSankeyData({
+      ...labels,
+      income: [node("Income:Salary", 0.05)],
+      expenses: [node("Expenses:Rent", 0.02), node("Expenses:Food", 0.004)],
+      currency,
+    });
+
+  it("keeps a 0.004 node and gives Savings the rest", () => {
+    const data = btc("BTC");
+    expect(data.nodes.some((n) => n.id === "Expenses:Food")).toBe(true);
+    expect(Math.round((sankeySavings(data) ?? 0) * 1e9) / 1e9).toBe(0.026);
+  });
+
+  it("draws a month of 0.004 in and 0.003 out", () => {
+    const data = transformToSankeyData({
+      ...labels,
+      income: [node("Income:Salary", 0.004)],
+      expenses: [node("Expenses:Food", 0.003)],
+      currency: "BTC",
+    });
+    expect(data.links.length > 0).toBe(true);
+  });
+
+  it("still treats half a cent as nothing in a known currency", () => {
+    const data = transformToSankeyData({
+      ...labels,
+      income: [node("Income:Salary", 0.05)],
+      expenses: [node("Expenses:Food", 0.004)],
+      currency: "USD",
+    });
+    expect(data.nodes.some((n) => n.id === "Expenses:Food")).toBe(false);
+  });
+
+  it("still drops float residue in a commodity", () => {
+    const data = transformToSankeyData({
+      ...labels,
+      income: [node("Income:Salary", 1)],
+      expenses: [node("Expenses:Food", 1 + 5.55e-17)],
+      currency: "BTC",
+    });
+    expect(sankeySavings(data)).toBe(null);
+  });
+});
+
+// w21/610: income only under Income:US:* drew one "US" node while the cards
+// listed Hoogle and ETrade, and a refund netted inside the merged expense node.
+describe("a side whose accounts share a sub-account", () => {
+  const opts = { ...labels };
+
+  it("draws the accounts under it, not the shared sub-account", () => {
+    const data = transformToSankeyData({
+      ...opts,
+      income: [node("Income:US:Hoogle", 9000), node("Income:US:ETrade", 400)],
+      expenses: [node("Expenses:P:Rent", 2000), node("Expenses:P:Food", 300)],
+    });
+    const labelsOf = data.nodes.map((n) => n.label);
+    expect(labelsOf.includes("Hoogle")).toBe(true);
+    expect(labelsOf.includes("ETrade")).toBe(true);
+    expect(labelsOf.includes("Rent")).toBe(true);
+    expect(labelsOf.includes("US")).toBe(false);
+    expect(labelsOf.includes("P")).toBe(false);
+  });
+
+  it("keeps the flat depth for accounts directly under the root", () => {
+    const data = transformToSankeyData({
+      ...opts,
+      income: [node("Income:Salary:Gross", 100), node("Income:Gift", 20)],
+      expenses: [node("Expenses:Food:Dining", 50)],
+    });
+    const labelsOf = data.nodes.map((n) => n.label);
+    expect(labelsOf.includes("Salary")).toBe(true);
+    expect(labelsOf.includes("Gross")).toBe(false);
+  });
+
+  it("keeps the flat depth for a single top-level account", () => {
+    const data = transformToSankeyData({
+      ...opts,
+      income: [node("Income:Salary:Gross", 100)],
+      expenses: [node("Expenses:Food", 50)],
+    });
+    const labelsOf = data.nodes.map((n) => n.label);
+    expect(labelsOf.includes("Salary")).toBe(true);
   });
 });

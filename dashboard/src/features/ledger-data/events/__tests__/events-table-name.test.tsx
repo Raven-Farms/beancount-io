@@ -335,3 +335,123 @@ describe("Events table identity", () => {
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
 });
+
+/**
+ * An authored event type spelled "all", or an empty type, is a real type:
+ * it stays distinct from the global All Types action and filters exactly
+ * (w4/271).
+ */
+describe("Events type filter with colliding and empty types", () => {
+  const colliding: GetLedgerEventsQuery["getLedgerEvents"] = [
+    {
+      __typename: "Event",
+      date: "2026-10-20",
+      type: "all",
+      description: "qa-20261020 event type all",
+    },
+    {
+      __typename: "Event",
+      date: "2026-10-20",
+      type: "qa-20261020-other",
+      description: "qa-20261020 event type other",
+    },
+    {
+      __typename: "Event",
+      date: "2026-10-20",
+      type: "",
+      description: "qa-20261020 event type empty",
+    },
+  ];
+
+  const rowsShown = () =>
+    within(screen.getByRole("table", { name: "Events" }))
+      .getAllByRole("row")
+      .slice(1)
+      .map((row) => within(row).getAllByRole("cell")[2]!.textContent?.trim());
+
+  async function choose(
+    user: ReturnType<typeof userEvent.setup>,
+    from: RegExp,
+    item: string,
+  ) {
+    await user.click(screen.getByRole("button", { name: from }));
+    await user.click(await screen.findByRole("menuitem", { name: item }));
+  }
+
+  it("offers one All Types action and the literal types, and filters exactly", async () => {
+    const { requests, user } = await setup("en", "");
+    await resolve(requests[0], colliding);
+    await screen.findByRole("table", { name: "Events" });
+
+    await user.click(screen.getByRole("button", { name: /All Types/ }));
+    const items = (await screen.findAllByRole("menuitem")).map((item) =>
+      item.textContent?.trim(),
+    );
+    expect(items).toEqual([
+      "All Types",
+      "(no type)",
+      "all",
+      "qa-20261020-other",
+    ]);
+    await user.click(screen.getByRole("menuitem", { name: "all" }));
+    await waitFor(() =>
+      expect(rowsShown()).toEqual(["qa-20261020 event type all"]),
+    );
+    expect(screen.getByText("Events: 1 / 3")).toBeInTheDocument();
+
+    await choose(user, /^all$/, "(no type)");
+    await waitFor(() =>
+      expect(rowsShown()).toEqual(["qa-20261020 event type empty"]),
+    );
+    expect(
+      screen.getByRole("button", { name: /\(no type\)/ }),
+    ).toBeInTheDocument();
+
+    await choose(user, /\(no type\)/, "All Types");
+    await waitFor(() => expect(rowsShown()).toHaveLength(3));
+  });
+});
+
+describe("Events dates in a zone that skipped a day (w4/285)", () => {
+  const originalTz = process.env.TZ;
+  afterEach(() => {
+    process.env.TZ = originalTz;
+  });
+
+  it.each(["UTC", "America/Los_Angeles", "Pacific/Apia"])(
+    "shows each source date exactly in %s",
+    async (timeZone) => {
+      process.env.TZ = timeZone;
+      const skipped = [29, 30, 31].map((day) => ({
+        __typename: "Event" as const,
+        date: `2011-12-${day}`,
+        type: "qa-20261020-calendar-display",
+        description: `day${day}`,
+      }));
+      const { requests } = await setup("en", "2011");
+      await resolve(requests[0], skipped);
+
+      const table = await screen.findByRole("table", {
+        name: en["page.events.events"].message,
+      });
+      await waitFor(() =>
+        expect(
+          within(table)
+            .getAllByRole("row")
+            .slice(1)
+            .map((row) =>
+              within(row)
+                .getAllByRole("cell")
+                .map((cell) => cell.textContent?.trim()),
+            )
+            .map(([date, , description]) => [date, description])
+            .sort(),
+        ).toEqual([
+          ["2011-12-29", "day29"],
+          ["2011-12-30", "day30"],
+          ["2011-12-31", "day31"],
+        ]),
+      );
+    },
+  );
+});

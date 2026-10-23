@@ -59,18 +59,34 @@ import {
   LedgerOptionsData,
   FavaOptionsData,
   BcioOptionsData,
+  LEDGER_DESCRIPTION_MAX,
   LedgerTemplate,
 } from "./ledger-workflow.types";
 import { createLedger as createLedgerOperation } from "@/features/ledger/operations/create-ledger";
+import { listDirectory } from "@/features/ledger/utils/directory-listing";
 import {
   BadUserInputError,
+  ConflictError,
+  DomainError,
+  ErrorCategory,
   InternalServerError,
   NotFoundError,
+  ValidationError,
 } from "@/shared/errors";
+import {
+  buildLedgerFiles,
+  CREATE_REQUEST_ID_MAX,
+  previewLedgerSetup,
+  type LedgerSetup,
+  type LedgerSetupPreview,
+  type LedgerSetupValidation,
+} from "@/features/ledger/setup/build-ledger";
+import { CACHE_KEYS, TTL, type CacheHelper } from "@/shared/cache";
 import { operationNotAllowedFromCause } from "@/features/ledger/utils/operation-not-allowed-from-cause";
 import { filterNullish } from "@/shared/tools";
 import { processBatch } from "@/shared/batch-processor";
 import { logger } from "@/shared/logger";
+import { GITEA_PAGE_SIZE, readGiteaPages } from "@/shared/gitea-pages";
 import { systemIdentity, type Identity } from "@/server/api/identity";
 import {
   AUTHORIZATION_ACTIONS,
@@ -79,49 +95,43 @@ import {
   type IAuthorizationService,
   userResource,
 } from "@/server/api/authorization";
-import { assertSafeRepoPath } from "@/features/ledger/utils/safe-repo-path";
+import {
+  assertPortableRepoPath,
+  assertSafeRepoPath,
+} from "@/features/ledger/utils/safe-repo-path";
+import { toBeanCheckErrors } from "@/features/ledger/utils/bean-check-errors";
+import { assertKeepsEntryPoint } from "@/features/ledger/utils/ledger-entry-point";
 import { assertExplicitFileContentSize } from "@/features/ledger/utils/explicit-file-size";
-import { decodeFileContent } from "@/shared/file-content";
+import { assertWritableText, decodeFileContent } from "@/shared/file-content";
+import { posix } from "path";
+import {
+  formatIncludeLine,
+  globMatches,
+  includeTargetFor,
+  isGlobPattern,
+  isUrlTarget,
+  parseIncludeLine,
+  resolveIncludeTarget,
+} from "@/features/ledger/utils/include-target";
 
 const workflowLogger = logger.child({ module: "ledger-workflow" });
 
-// The ledger service relays Gitea's repository lists, and Gitea serves them in
-// pages of at most API.MAX_RESPONSE_ITEMS (50): a larger `limit` is clamped
-// without a word, and an omitted one falls back to DEFAULT_PAGING_NUM (30). A
-// read that must not lose ledgers pages through at this size (w2/m34).
-const CATALOG_PAGE_SIZE = 50;
-// A runaway guard for an upstream that never returns a short page, not a
-// product limit: 10,000 ledgers.
-const MAX_CATALOG_PAGES = 200;
 // Each miss is a real git clone + beancount parse (see beancount-ledger-v2's
 // load-cached-ledger-file-map.ts), so directive-count fan-out stays deliberately narrow.
 const DIRECTIVE_COUNT_CONCURRENCY = 3;
 
-function includeTargetOf(line: string): string | null {
-  const match = line.match(
-    /^\s*include\s+(?:"([^"]+)"|'([^']+)'|(\S+))\s*(;.*)?$/,
-  );
-  return match?.[1] ?? match?.[2] ?? match?.[3] ?? null;
-}
-
-function matchesIncludeLine(line: string, oldPath: string): boolean {
-  return includeTargetOf(line) === oldPath;
-}
-
-function rewriteIncludeLine(
-  line: string,
-  oldPath: string,
-  newPath: string,
-): string {
-  const match = line.match(
-    /^(\s*include\s+)(?:"([^"]+)"|'([^']+)'|(\S+))(\s*(;.*)?)$/,
-  );
-  if (!match) return line;
-  const target = match[2] ?? match[3] ?? match[4];
-  if (target !== oldPath) return line;
-  const quote =
-    match[2] !== undefined ? '"' : match[3] !== undefined ? "'" : "";
-  return `${match[1]}${quote}${newPath}${quote}${match[5] ?? ""}`;
+/**
+ * Refuses a description the repository host would reject as a bare
+ * "[Description]: MaxSize". Gitea counts characters, not UTF-16 units.
+ */
+function assertDescriptionLength(description: string | null | undefined) {
+  const length = description == null ? 0 : [...description].length;
+  if (length > LEDGER_DESCRIPTION_MAX) {
+    throw new BadUserInputError(
+      `description is ${length} characters; a ledger description can be at most ${LEDGER_DESCRIPTION_MAX}`,
+      "description",
+    );
+  }
 }
 
 /**
@@ -164,6 +174,10 @@ export interface ILedgerWorkflow {
     input: CreateLedgerCommand;
     platform?: "web" | "mobile";
   }): Promise<LedgerData>;
+  previewLedgerSetup(params: {
+    identity: Identity;
+    setup: LedgerSetup;
+  }): Promise<LedgerSetupPreview & { validation: LedgerSetupValidation }>;
   updateLedger(params: {
     identity: Identity;
     ledgerId: string;
@@ -230,6 +244,15 @@ export interface ILedgerWorkflow {
     ledgerId: string;
     identity?: Identity;
   }): Promise<LedgerData>;
+  /**
+   * `getLedger` plus the caller's `isStarred`, for the surfaces that return
+   * one serialized object (REST and the MCP `metadata` resource). GraphQL
+   * resolves the same field on demand.
+   */
+  getLedgerMetadata(params: {
+    ledgerId: string;
+    identity?: Identity;
+  }): Promise<LedgerData>;
   getLedgerFile(params: {
     ledgerId: string;
     identity?: Identity;
@@ -283,7 +306,7 @@ interface CatalogWindow {
 /**
  * The window a caller's `page`/`limit` asks for when one upstream call cannot
  * serve it: no paging at all means the whole catalog, and a `limit` above
- * CATALOG_PAGE_SIZE spans several upstream pages. `null` means one call with
+ * GITEA_PAGE_SIZE spans several upstream pages. `null` means one call with
  * the caller's own arguments, so page-only and small-page reads keep exactly
  * the ledger service's semantics.
  */
@@ -292,7 +315,7 @@ function catalogWindow({
   limit,
 }: ListLedgersParams): CatalogWindow | null {
   if (page == null && limit == null) return { offset: 0, count: Infinity };
-  if (limit == null || limit <= CATALOG_PAGE_SIZE) return null;
+  if (limit == null || limit <= GITEA_PAGE_SIZE) return null;
   // The ledger service parseInt()s both values, and Gitea reads a page below 1
   // as page 1.
   const count = Math.trunc(limit);
@@ -303,33 +326,16 @@ function catalogWindow({
   return Number.isSafeInteger(offset) ? { offset, count } : null;
 }
 
-/** A page shorter than CATALOG_PAGE_SIZE is the end of the catalog. */
 async function readCatalogWindow(
   readPage: CatalogPageReader,
   { offset, count }: CatalogWindow,
 ): Promise<LedgerData[]> {
-  const firstPage = Math.floor(offset / CATALOG_PAGE_SIZE) + 1;
-  const skip = offset % CATALOG_PAGE_SIZE;
+  const skip = offset % GITEA_PAGE_SIZE;
   const end = skip + count;
-  const ledgers: LedgerData[] = [];
-  for (let read = 0; ledgers.length < end; read++) {
-    if (read === MAX_CATALOG_PAGES) {
-      workflowLogger.warn(
-        "Catalog read hit the page cap and may be truncated",
-        {
-          firstPage,
-          ledgers: ledgers.length,
-        },
-      );
-      break;
-    }
-    const batch = await readPage({
-      page: firstPage + read,
-      limit: CATALOG_PAGE_SIZE,
-    });
-    ledgers.push(...batch);
-    if (batch.length < CATALOG_PAGE_SIZE) break;
-  }
+  const ledgers = await readGiteaPages(readPage, {
+    firstPage: Math.floor(offset / GITEA_PAGE_SIZE) + 1,
+    enough: (read) => read.length >= end,
+  });
   return ledgers.slice(skip, end);
 }
 
@@ -341,6 +347,53 @@ function readCatalog(
   return window
     ? readCatalogWindow(readPage, window)
     : readPage({ page: args.page, limit: args.limit });
+}
+
+interface CreateRequestRecord {
+  requestHash: string;
+  status: "in-progress" | "done";
+  ledger?: LedgerData;
+}
+
+/**
+ * Search's own arguments, held to the catalog's other lists (w23/019).
+ *
+ * The repository host refuses a bad `sort` or `mode` itself, but ignores a
+ * bad `order`, a `limit` of 0 (returning every match) and a negative id
+ * filter, so a typo like `order=dsc` came back as the default with no signal.
+ * Checked here so GraphQL, whose `Number` arguments arrive unchecked, refuses
+ * the same values the REST and MCP schema do.
+ */
+function assertSearchArgs(args: SearchLedgersParams): void {
+  const page = args.page ?? undefined;
+  if (page !== undefined && (!Number.isSafeInteger(page) || page < 1)) {
+    throw new BadUserInputError("page must be a positive integer", "page");
+  }
+  const limit = args.limit ?? undefined;
+  if (
+    limit !== undefined &&
+    (!Number.isSafeInteger(limit) || limit < 1 || limit > 100)
+  ) {
+    throw new BadUserInputError(
+      "limit must be an integer from 1 to 100",
+      "limit",
+    );
+  }
+  for (const field of [
+    "uid",
+    "priorityOwnerId",
+    "teamId",
+    "starredBy",
+  ] as const) {
+    const id = args[field] ?? undefined;
+    if (id !== undefined && (!Number.isSafeInteger(id) || id < 1)) {
+      throw new BadUserInputError(`${field} must be a positive integer`, field);
+    }
+  }
+  const order = args.order ?? undefined;
+  if (order !== undefined && order !== "asc" && order !== "desc") {
+    throw new BadUserInputError('order must be "asc" or "desc"', "order");
+  }
 }
 
 export class LedgerWorkflow implements ILedgerWorkflow {
@@ -357,6 +410,12 @@ export class LedgerWorkflow implements ILedgerWorkflow {
     private readonly db: DbExecutor,
     private readonly config: Pick<AppConfig, "gitea">,
     private readonly authorization: IAuthorizationService,
+    /** Strict store for creation idempotency records (ADR021); optional so
+     * requestId-less creation works in consumers that do not wire Redis. */
+    private readonly createIdempotencyStore?: Pick<
+      CacheHelper,
+      "getStrict" | "setStrict" | "delStrict"
+    >,
   ) {}
 
   private async authorizeContent(
@@ -491,35 +550,205 @@ export class LedgerWorkflow implements ILedgerWorkflow {
       resource: userResource(identity.userId),
     });
     const userId = identity.userId;
+    assertDescriptionLength(input.description);
+    if (input.setup && input.template) {
+      throw new ValidationError(
+        "setup",
+        "setup and template are mutually exclusive",
+      );
+    }
+    if (
+      input.requestId != null &&
+      (input.requestId.length < 1 ||
+        input.requestId.length > CREATE_REQUEST_ID_MAX)
+    ) {
+      // An empty id would silently turn idempotency off below.
+      throw new ValidationError(
+        "requestId",
+        `requestId must be 1-${CREATE_REQUEST_ID_MAX} characters`,
+      );
+    }
+    const files = input.setup
+      ? buildLedgerFiles(input.setup)
+      : input.template === LedgerTemplate.SAMPLE
+        ? ledgerWithMultipleFilesTemplate
+        : defaultLedgerTemplate;
+    // ADR021: a setup's files are validated before the ledger service is
+    // called, so a new ledger never starts with a bean-check error (w23/048).
+    if (input.setup) {
+      const validation = await this.checkSetupFiles(userId, files);
+      if (!validation.ok) {
+        const [first] = validation.errors;
+        throw new ValidationError(
+          "setup",
+          `the ledger this setup creates would not load: ${first.message}${
+            first.source ? ` (${first.source})` : ""
+          }`,
+        );
+      }
+    }
     const ledgerCreate: LedgerCreate = {
       name: input.name,
       description: input.description,
-      private: input.private,
-      files:
-        input.template === LedgerTemplate.SAMPLE
-          ? ledgerWithMultipleFilesTemplate
-          : defaultLedgerTemplate,
+      // A ledger is financial records: an omitted or null `private` keeps it
+      // private. Left unset, the repository host would create it public
+      // (w1/173). Publishing takes an explicit `private: false`.
+      private: input.private ?? true,
+      files,
     };
 
     const lockKey = LOCK_KEYS.LEDGER.create(userId);
     return lock.acquire(lockKey, async () => {
-      const { favaApiClient } =
-        await this.favaClientFactory.getApiContext(userId);
+      // Idempotent creation (ADR021): inside the per-user lock, a repeated
+      // requestId with the same request returns the original ledger, the
+      // same id with a different request is a validation error, and a repeat
+      // while the first attempt runs reports in-progress instead of creating
+      // a second ledger. Records expire after 24 hours.
+      const store = this.createIdempotencyStore;
+      const idempotency =
+        input.requestId && store
+          ? {
+              store,
+              key: CACHE_KEYS.ledger.createRequestByUserAndId(
+                userId,
+                input.requestId,
+              ),
+              hash: JSON.stringify({
+                name: input.name,
+                description: input.description ?? null,
+                private: input.private ?? null,
+                template: input.template ?? null,
+                setup: input.setup ?? null,
+              }),
+            }
+          : null;
+      if (idempotency) {
+        const raw = await idempotency.store.getStrict<string>(idempotency.key);
+        const record = raw ? (JSON.parse(raw) as CreateRequestRecord) : null;
+        if (record) {
+          if (record.requestHash !== idempotency.hash) {
+            throw new ValidationError(
+              "requestId",
+              "requestId was already used with a different creation request",
+            );
+          }
+          if (record.status === "done" && record.ledger) {
+            return record.ledger;
+          }
+          throw new ConflictError(
+            "Ledger creation",
+            "A creation with this requestId is still in progress",
+            {
+              hint: "Wait a few seconds and repeat the same call with the same requestId: once the first attempt finishes it returns that ledger, or that attempt's refusal. Send a new requestId only to start a separate creation.",
+            },
+          );
+        }
+        await idempotency.store.setStrict(
+          idempotency.key,
+          JSON.stringify({
+            requestHash: idempotency.hash,
+            status: "in-progress",
+          }),
+          TTL.HOUR_24,
+        );
+      }
 
-      // Tier enforcement + Fava ledger creation lives in the cross-service
-      // operation (still shared with the auth signup flow); the workflow owns
-      // the lock + client provisioning around it.
-      return createLedgerOperation({
-        favaApiClient,
-        models: this.models,
-        postgresDb: this.db,
-        stripe: this.stripe,
-        config: this.config,
-        ledgerCreate,
-        userId,
-        platform,
-      });
+      let ledger: LedgerData;
+      try {
+        const { favaApiClient } =
+          await this.favaClientFactory.getApiContext(userId);
+
+        // Tier enforcement + Fava ledger creation lives in the cross-service
+        // operation (still shared with the auth signup flow); the workflow owns
+        // the lock + client provisioning around it.
+        ledger = await createLedgerOperation({
+          favaApiClient,
+          models: this.models,
+          postgresDb: this.db,
+          stripe: this.stripe,
+          config: this.config,
+          ledgerCreate,
+          userId,
+          platform,
+        });
+      } catch (error) {
+        // A refused or failed attempt is finished, not in progress: release
+        // the requestId so the documented retry runs again and returns its
+        // real outcome instead of CONFLICT for 24 hours (w23/008). Still
+        // inside the per-user lock, so no concurrent attempt can slip in.
+        // The attempt's own error is what the caller needs; a failed release
+        // is logged by the strict store and must not replace it.
+        if (idempotency) {
+          await idempotency.store
+            .delStrict(idempotency.key)
+            .catch(() => undefined);
+        }
+        throw error;
+      }
+
+      if (idempotency) {
+        await idempotency.store.setStrict(
+          idempotency.key,
+          JSON.stringify({
+            requestHash: idempotency.hash,
+            status: "done",
+            ledger,
+          }),
+          TTL.HOUR_24,
+        );
+      }
+      return ledger;
     });
+  }
+
+  async previewLedgerSetup({
+    identity,
+    setup,
+  }: {
+    identity: Identity;
+    setup: LedgerSetup;
+  }): Promise<LedgerSetupPreview & { validation: LedgerSetupValidation }> {
+    await this.authorization.authorizeOrThrow({
+      principal: identity,
+      action: AUTHORIZATION_ACTIONS.LEDGER_CREATE,
+      resource: userResource(identity.userId),
+    });
+    const preview = previewLedgerSetup(setup);
+    return {
+      ...preview,
+      validation: await this.checkSetupFiles(identity.userId, preview.files),
+    };
+  }
+
+  /**
+   * bean-check over the files a setup would create, through the ledger
+   * service's repository-free check: the preview reports it and creation
+   * refuses on it, as ADR021 requires (w23/048).
+   */
+  private async checkSetupFiles(
+    userId: string,
+    files: Record<string, string>,
+  ): Promise<LedgerSetupValidation> {
+    const { favaApiClient } =
+      await this.favaClientFactory.getApiContext(userId);
+    const errors = toBeanCheckErrors(
+      await unwrapFavaResponse(
+        favaApiClient.reports.checkLedgerFiles({
+          files: Object.entries(files).map(([path, text]) => ({
+            path,
+            content: Buffer.from(text, "utf8").toString("base64"),
+          })),
+        }),
+        "check setup files",
+      ),
+    );
+    return {
+      ok: errors.length === 0,
+      errors: errors.map(({ message, source }) => ({
+        message,
+        ...(source !== undefined && { source }),
+      })),
+    };
   }
 
   async updateLedger({
@@ -537,6 +766,7 @@ export class LedgerWorkflow implements ILedgerWorkflow {
       resource: ledgerResource(ledgerId),
     });
     const userId = identity.userId;
+    assertDescriptionLength(input.description);
     const ledgerUpdate: LedgerUpdate = {
       name: input.name,
       description: input.description,
@@ -668,7 +898,8 @@ export class LedgerWorkflow implements ILedgerWorkflow {
       resource: ledgerResource(ledgerId),
     });
     const userId = identity.userId;
-    assertSafeRepoPath(input.path);
+    // A new file: its name has to work on every checkout (w23/054).
+    assertPortableRepoPath(input.path);
     assertExplicitFileContentSize(input.content, "base64");
     const fileOptions: LedgerCreateFileOptions = {
       path: input.path,
@@ -755,9 +986,7 @@ export class LedgerWorkflow implements ILedgerWorkflow {
     const userId = identity.userId;
     const { ledgerOwner, ledgerName } = parseLedgerId(ledgerId);
     assertSafeRepoPath(input.path);
-    if (input.path === "main.bean") {
-      throw new BadUserInputError("main.bean file cannot be deleted");
-    }
+    assertKeepsEntryPoint(input.path, "deleted");
 
     const fileOptions: LedgerDeleteFileOptions = {
       path: input.path,
@@ -797,7 +1026,8 @@ export class LedgerWorkflow implements ILedgerWorkflow {
     });
     const userId = identity.userId;
     assertSafeRepoPath(input.oldPath, "oldPath");
-    assertSafeRepoPath(input.newPath, "newPath");
+    assertPortableRepoPath(input.newPath, "newPath");
+    assertKeepsEntryPoint(input.oldPath, "renamed", "oldPath");
     if (input.oldPath === input.newPath) {
       throw new BadUserInputError("oldPath and newPath are the same file");
     }
@@ -860,7 +1090,24 @@ export class LedgerWorkflow implements ILedgerWorkflow {
           beanFiles.push(entry.path);
       }
     }
-    let includingFiles: { path: string; content: string; sha: string }[] = [];
+    // An include names a file relative to the file that declares it, so it
+    // is matched on what it resolves to, not on its text (w23/029).
+    const namesOldPath = (includingPath: string, line: string) => {
+      const include = parseIncludeLine(line);
+      if (!include || isUrlTarget(include.target)) return null;
+      const resolved = resolveIncludeTarget(includingPath, include.target);
+      if (isGlobPattern(resolved)) return null;
+      return resolved === input.oldPath ? include : null;
+    };
+    let includingFiles: {
+      path: string;
+      content: string;
+      lossy: boolean;
+      sha: string;
+    }[] = [];
+    // A glob can't be rewritten for one file; refuse when the file falls out
+    // of a pattern that includes it today.
+    const lostGlobs: string[] = [];
     const candidates = beanFiles.filter(
       (path) => path !== input.oldPath && path !== input.newPath,
     );
@@ -876,14 +1123,31 @@ export class LedgerWorkflow implements ILedgerWorkflow {
       includingFiles = (contents ?? [])
         .map((file) => ({
           path: file.path,
-          content: decodeFileContent(file),
+          ...decodeFileContent(file),
           sha: file.sha,
         }))
-        .filter(({ content }) =>
-          content
-            .split("\n")
-            .some((line) => matchesIncludeLine(line, input.oldPath)),
-        );
+        .filter(({ path, content }) => {
+          const lines = content.split("\n");
+          for (const line of lines) {
+            const include = parseIncludeLine(line);
+            if (!include || isUrlTarget(include.target)) continue;
+            const pattern = resolveIncludeTarget(path, include.target);
+            if (
+              isGlobPattern(pattern) &&
+              globMatches(pattern, input.oldPath) &&
+              !globMatches(pattern, input.newPath)
+            )
+              lostGlobs.push(`${path} (include "${include.target}")`);
+          }
+          return lines.some((line) => namesOldPath(path, line));
+        });
+    }
+    if (lostGlobs.length > 0) {
+      throw new BadUserInputError(
+        `${input.oldPath} is included by the glob in ${lostGlobs.join(", ")}, which ${input.newPath} would not match; a glob include can't be rewritten for one file`,
+        "newPath",
+        "Choose a new path the pattern still matches, or change the include line first.",
+      );
     }
     if (includingFiles.length > 0 && !input.updateIncludes) {
       const names = includingFiles.map((file) => file.path).join(", ");
@@ -896,10 +1160,17 @@ export class LedgerWorkflow implements ILedgerWorkflow {
       );
     }
 
+    const movedContent = this.movedIncludesContent(
+      oldFile,
+      input.oldPath,
+      input.newPath,
+      input.updateIncludes === true,
+    );
     const preservedContent =
-      oldFile.encoding === "base64" && oldFile.content
+      movedContent ??
+      (oldFile.encoding === "base64" && oldFile.content
         ? oldFile.content.replace(/\s/g, "")
-        : Buffer.from(oldFile.content ?? "", "utf-8").toString("base64");
+        : Buffer.from(oldFile.content ?? "", "utf-8").toString("base64"));
     const files: LedgerChangeFileOperation[] = [
       {
         operation: "create",
@@ -912,15 +1183,21 @@ export class LedgerWorkflow implements ILedgerWorkflow {
         sha: oldFile.sha,
       },
     ];
-    const updatedIncludes: string[] = [];
+    const updatedIncludes: string[] = movedContent ? [input.newPath] : [];
     for (const including of includingFiles) {
+      // A rewrite re-encodes the whole including file (w23/030).
+      assertWritableText(including, "updateIncludes");
       const rewritten = including.content
         .split("\n")
-        .map((line) =>
-          matchesIncludeLine(line, input.oldPath)
-            ? rewriteIncludeLine(line, input.oldPath, input.newPath)
-            : line,
-        )
+        .map((line) => {
+          const include = namesOldPath(including.path, line);
+          return include
+            ? formatIncludeLine(
+                include,
+                includeTargetFor(including.path, input.newPath, include.target),
+              )
+            : line;
+        })
         .join("\n");
       if (rewritten === including.content) continue;
       files.push({
@@ -951,6 +1228,67 @@ export class LedgerWorkflow implements ILedgerWorkflow {
       oldPath: input.oldPath,
       updatedIncludes,
     };
+  }
+
+  /**
+   * The moved file's own relative includes resolve from its new folder, so a
+   * move to another one pointed them at files that are not there (w23/056).
+   * Returns the file's content with them rewritten, as base64, or `undefined`
+   * when the move changes none of them and the bytes move as they are.
+   */
+  private movedIncludesContent(
+    file: { content?: string | null; encoding?: string | null },
+    oldPath: string,
+    newPath: string,
+    updateIncludes: boolean,
+  ): string | undefined {
+    if (
+      !/\.(bean|beancount)$/.test(oldPath) ||
+      posix.dirname(oldPath) === posix.dirname(newPath)
+    ) {
+      return undefined;
+    }
+    const decoded = decodeFileContent(file);
+    const moved: string[] = [];
+    const globs: string[] = [];
+    const rewritten = decoded.content.split("\n").map((line) => {
+      const include = parseIncludeLine(line);
+      if (!include || isUrlTarget(include.target)) return line;
+      const before = resolveIncludeTarget(oldPath, include.target);
+      if (before === resolveIncludeTarget(newPath, include.target)) return line;
+      if (isGlobPattern(before)) {
+        globs.push(include.target);
+        return line;
+      }
+      moved.push(include.target);
+      return formatIncludeLine(
+        include,
+        includeTargetFor(newPath, before, include.target),
+      );
+    });
+    if (globs.length > 0) {
+      throw new BadUserInputError(
+        `${oldPath} includes the glob "${globs[0]}" relative to its folder; in ${posix.dirname(newPath)} it would match other files, and a glob can't be rewritten`,
+        "newPath",
+        "Rename it within its folder, or change the include line first.",
+      );
+    }
+    if (moved.length === 0) return undefined;
+    if (!updateIncludes) {
+      throw new BadUserInputError(
+        `${oldPath} includes ${moved.map((target) => `"${target}"`).join(", ")} relative to its folder; pass updateIncludes: true to rewrite ${
+          moved.length === 1 ? "it" : "them"
+        } for ${newPath} in the same commit`,
+        "updateIncludes",
+        "Pass `updateIncludes: true` so the rename rewrites the `include` lines in the same commit.",
+      );
+    }
+    // A rewrite re-encodes the whole file (w23/030).
+    assertWritableText(
+      { path: oldPath, lossy: decoded.lossy },
+      "updateIncludes",
+    );
+    return Buffer.from(rewritten.join("\n"), "utf-8").toString("base64");
   }
 
   async starLedger({
@@ -1191,6 +1529,7 @@ export class LedgerWorkflow implements ILedgerWorkflow {
     identity: Identity;
     args: SearchLedgersParams;
   }): Promise<LedgerData[]> {
+    assertSearchArgs(args);
     await this.authorization.authorizeOrThrow({
       principal: identity,
       action: AUTHORIZATION_ACTIONS.LEDGER_CATALOG_READ,
@@ -1333,13 +1672,15 @@ export class LedgerWorkflow implements ILedgerWorkflow {
     );
     const { ledgerOwner, ledgerName } = parseLedgerId(ledgerId);
 
-    const data = await unwrapFavaResponse(
-      favaApiClient.ledgers.getLedgerDirContent(
-        ledgerOwner,
-        ledgerName,
-        filterNullish({ dir_path: args.dirPath }),
+    const data = await listDirectory(args.dirPath, () =>
+      unwrapFavaResponse(
+        favaApiClient.ledgers.getLedgerDirContent(
+          ledgerOwner,
+          ledgerName,
+          filterNullish({ dir_path: args.dirPath }),
+        ),
+        "get ledger directory content",
       ),
-      "get ledger directory content",
     );
 
     return data.map(mapToLedgerFileContent);
@@ -1502,6 +1843,36 @@ export class LedgerWorkflow implements ILedgerWorkflow {
       receiptStorage: data.receipt_storage ?? null,
       documentFile: data.document_file ?? null,
     };
+  }
+
+  async getLedgerMetadata({
+    ledgerId,
+    identity,
+  }: {
+    ledgerId: string;
+    identity?: Identity;
+  }): Promise<LedgerData> {
+    const ledger = await this.getLedger({ ledgerId, identity });
+    // GraphQL's isStarred is a field only an authenticated caller sees; REST
+    // and MCP serialize this object, so they carried no star state at all
+    // and could set a star but never read it back (w23/009).
+    if (!identity) return ledger;
+    try {
+      const isStarred = await this.isLedgerStarred({ ledgerId, identity });
+      return isStarred === undefined ? ledger : { ...ledger, isStarred };
+    } catch (error) {
+      // The star check has its own credential rule. A credential the
+      // metadata read admits but that rule refuses still gets the metadata,
+      // without a star state it may not see.
+      if (
+        error instanceof DomainError &&
+        (error.category === ErrorCategory.FORBIDDEN ||
+          error.category === ErrorCategory.NOT_FOUND)
+      ) {
+        return ledger;
+      }
+      throw error;
+    }
   }
 
   async isLedgerStarred({

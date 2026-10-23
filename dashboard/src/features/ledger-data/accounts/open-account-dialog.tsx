@@ -1,11 +1,10 @@
-import { useState, type RefObject } from "react";
+import { useEffect, useRef, useState, type RefObject } from "react";
 import { useTranslations } from "@/common/hooks/use-translations";
 import { useErrorMessage } from "@/common/lib/errors/error-message";
 import { restoreFocusOnDialogClose } from "@/common/lib/focus/restore-focus-on-dialog-close";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation } from "@apollo/client/react";
-import { format } from "date-fns";
 import { BulkEntriesDocument, LedgerEntryType } from "@/graphql/definitions";
 import {
   Dialog,
@@ -25,11 +24,13 @@ import {
   FormMessage,
 } from "@/common/components/ui/form";
 import { DatePicker } from "@/common/components/ui/date-picker";
+import { todayIsoDate } from "@/common/components/ui/date-picker-utils";
 import { useOpenAccountSchema } from "@/common/hooks/use-open-account-schema";
 import { useWriteOutcome } from "@/common/hooks/use-write-outcome";
+import { usePendingSubmit } from "@/common/hooks/use-pending-submit";
 
 type OpenAccountFormData = {
-  date: Date;
+  date: string;
   account: string;
 };
 
@@ -59,19 +60,31 @@ export function OpenAccountDialog({
   const form = useForm<OpenAccountFormData>({
     resolver: zodResolver(schema),
     defaultValues: {
-      date: new Date(),
+      date: todayIsoDate(),
       account: "",
     },
     mode: "onChange",
   });
 
   const resetForm = () => {
-    form.reset({ date: new Date(), account: "" });
+    form.reset({ date: todayIsoDate(), account: "" });
     setError(null);
   };
 
+  // Each opening is its own draft. A write settles for the opening it was
+  // submitted from, so a late success cannot reset or close a later draft
+  // (w4/284).
+  const opening = useRef(0);
+  useEffect(() => {
+    if (open) return;
+    opening.current += 1;
+    resetForm();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
+
   const onSubmit = async (data: OpenAccountFormData) => {
     setError(null);
+    const submittedFrom = opening.current;
     const before = writeOutcome.snapshot();
     try {
       const result = await addEntryOpen({
@@ -81,7 +94,7 @@ export function OpenAccountDialog({
             {
               type: LedgerEntryType.Open,
               open: {
-                date: format(data.date, "yyyy-MM-dd"),
+                date: data.date,
                 account: data.account,
                 currencies: [],
               },
@@ -91,10 +104,10 @@ export function OpenAccountDialog({
       });
 
       if (result.data?.bulkEntries.success) {
-        resetForm();
         onSuccess?.();
-        onOpenChange(false);
+        if (opening.current === submittedFrom) onOpenChange(false);
         void writeOutcome.report(before);
+        return true;
       } else {
         setError(result.data?.bulkEntries.message ?? formatError(undefined));
       }
@@ -103,8 +116,12 @@ export function OpenAccountDialog({
     }
   };
 
+  // While the write is in flight its draft stays in front: fields are locked,
+  // and neither Cancel, Escape nor the close button can dismiss it.
+  const { submit, pending } = usePendingSubmit(form, onSubmit);
+
   const handleDialogOpenChange = (nextOpen: boolean) => {
-    if (!nextOpen) resetForm();
+    if (!nextOpen && pending) return;
     onOpenChange(nextOpen);
   };
 
@@ -121,71 +138,70 @@ export function OpenAccountDialog({
         </DialogHeader>
 
         <Form {...form}>
-          <form
-            onSubmit={form.handleSubmit(onSubmit)}
-            className="space-y-4 pt-2"
-          >
-            {error && (
-              <Alert variant="destructive">
-                <AlertDescription>{error}</AlertDescription>
-              </Alert>
-            )}
-
-            <FormField
-              control={form.control}
-              name="date"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>{t("page.accounts.openDate")}</FormLabel>
-                  <FormControl>
-                    <DatePicker
-                      value={field.value}
-                      onChange={(d) => field.onChange(d)}
-                      className="[&>div]:w-full"
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
+          <form onSubmit={submit}>
+            <fieldset disabled={pending} className="min-w-0 space-y-4 pt-2">
+              {error && (
+                <Alert variant="destructive">
+                  <AlertDescription>{error}</AlertDescription>
+                </Alert>
               )}
-            />
 
-            <FormField
-              control={form.control}
-              name="account"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>{t("page.accounts.accountName")}</FormLabel>
-                  <FormControl>
-                    <Input
-                      placeholder={
-                        accountPrefixes.length > 0
-                          ? `${accountPrefixes[0]}:Bank:Checking`
-                          : t("page.accounts.accountSubAccountPlaceholder")
-                      }
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+              <FormField
+                control={form.control}
+                name="date"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{t("page.accounts.openDate")}</FormLabel>
+                    <FormControl>
+                      <DatePicker
+                        value={field.value}
+                        onChange={(d) => field.onChange(d)}
+                        className="[&>div]:w-full"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-            <div className="flex justify-end gap-2 pt-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => handleDialogOpenChange(false)}
-              >
-                {t("common.cancel")}
-              </Button>
-              <Button
-                type="submit"
-                disabled={!form.formState.isValid}
-                loading={form.formState.isSubmitting}
-              >
-                {t("page.accounts.openAccount")}
-              </Button>
-            </div>
+              <FormField
+                control={form.control}
+                name="account"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{t("page.accounts.accountName")}</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder={
+                          accountPrefixes.length > 0
+                            ? `${accountPrefixes[0]}:Bank:Checking`
+                            : t("page.accounts.accountSubAccountPlaceholder")
+                        }
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <div className="flex justify-end gap-2 pt-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => handleDialogOpenChange(false)}
+                >
+                  {t("common.cancel")}
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={!form.formState.isValid}
+                  loading={pending}
+                >
+                  {t("page.accounts.openAccount")}
+                </Button>
+              </div>
+            </fieldset>
           </form>
         </Form>
       </DialogContent>

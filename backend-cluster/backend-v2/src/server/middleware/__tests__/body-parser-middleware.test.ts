@@ -58,6 +58,40 @@ describe("bodyParserMiddleware", () => {
       signal: AbortSignal.timeout(5000),
     });
 
+  // An oversized Content-Length is refused before the upload finishes, which
+  // can race the client's pending writes. Chunked requests exercise the byte
+  // limit while allowing the client to read the actual HTTP refusal.
+  const postOversized = (path: string, body: string) =>
+    new Promise<{ status: number | undefined; body: string }>(
+      (resolve, reject) => {
+        const request = http.request(
+          `${base}${path}`,
+          {
+            method: "POST",
+            agent: false,
+            headers: {
+              "content-type": "application/json",
+              "transfer-encoding": "chunked",
+            },
+            signal: AbortSignal.timeout(5000),
+          },
+          (response) => {
+            const chunks: Buffer[] = [];
+            response.on("data", (chunk: Buffer) => chunks.push(chunk));
+            response.on("error", reject);
+            response.on("end", () =>
+              resolve({
+                status: response.statusCode,
+                body: Buffer.concat(chunks).toString("utf8"),
+              }),
+            );
+          },
+        );
+        request.on("error", reject);
+        request.end(body);
+      },
+    );
+
   it.each([
     ["a scalar", "5", -32600],
     ["a JSON string", '"hello"', -32600],
@@ -79,12 +113,12 @@ describe("bodyParserMiddleware", () => {
   );
 
   it("answers an oversized MCP body as a JSON-RPC error with the parser's status", async () => {
-    const response = await post(
+    const response = await postOversized(
       MCP_ENDPOINT_PATH,
       JSON.stringify({ pad: "x".repeat(2 * 1024 * 1024 + 1) }),
     );
     expect(response.status).toBe(413);
-    expect(await response.json()).toMatchObject({
+    expect(JSON.parse(response.body)).toMatchObject({
       jsonrpc: "2.0",
       error: { code: -32600 },
       id: null,
@@ -115,14 +149,14 @@ describe("bodyParserMiddleware", () => {
   });
 
   it("retains a bounded 2 MiB JSON refusal outside MCP", async () => {
-    const response = await post(
+    const response = await postOversized(
       "/api-gateway",
       JSON.stringify({
         variables: { content: "x".repeat(2 * 1024 * 1024 + 1) },
       }),
     );
     expect(response.status).toBe(413);
-    expect(await response.text()).not.toContain("jsonrpc");
+    expect(response.body).not.toContain("jsonrpc");
     expect(reached).not.toHaveBeenCalled();
   });
 

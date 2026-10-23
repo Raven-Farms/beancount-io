@@ -44,6 +44,11 @@ const ptAuth: Record<string, TranslationEntry> = {
     message: "Confirme sua senha",
     description: "Placeholder for password confirmation",
   },
+  "auth.chooseYourPassword": {
+    message: "Escolha uma senha (mín. 8 caracteres)",
+    description:
+      "Placeholder for the password a new account chooses, with the minimum length",
+  },
   "auth.createAccount": {
     message: "Criar conta",
     description: "Button to submit registration",
@@ -179,6 +184,12 @@ const ptAuth: Record<string, TranslationEntry> = {
     message: "Login falhou",
     description: "Error title when login fails",
   },
+  "auth.loginRateLimited": {
+    message:
+      "Muitas tentativas de login. Aguarde alguns minutos e tente novamente, ou redefina sua senha.",
+    description:
+      "Shown on any password sign-in form when sign-in is rate limited, by address or by too many wrong passwords for the account",
+  },
   "auth.logout": {
     message: "Sair",
     description: "Button label to log out",
@@ -197,11 +208,12 @@ const ptAuth: Record<string, TranslationEntry> = {
     description: "Label for new password field",
   },
   "auth.newPasswordMinLength": {
-    message: "A senha deve ter pelo menos 6 caracteres",
+    message: "A senha deve ter pelo menos 8 caracteres",
     description: "Validation error for password length",
   },
   "auth.newPasswordMaxLength": {
-    message: "A senha deve ter no máximo 128 caracteres",
+    message:
+      "A senha é longa demais. Use no máximo 72 caracteres; letras acentuadas, alfabetos não latinos e emojis contam como 2 a 4 cada.",
     description:
       "Validation error when new password exceeds the maximum length",
   },
@@ -245,8 +257,20 @@ const ptAuth: Record<string, TranslationEntry> = {
     message: "Senha é obrigatória",
     description: "Validation error when password is not provided",
   },
+  "auth.passwordBreached": {
+    message:
+      "Esta senha apareceu em um vazamento de dados. Escolha uma que você não use em nenhum outro lugar.",
+    description:
+      "Error when the server finds the new password in a known data breach (Have I Been Pwned)",
+  },
+  "auth.passwordTooSimilar": {
+    message: "A senha é parecida demais com seu e-mail ou nome de usuário.",
+    description:
+      "Error when the new password is too close to the account's email or username",
+  },
   "auth.passwordResetSuccessMessage": {
-    message: "Sua senha foi redefinida. Redirecionando para login...",
+    message:
+      "Sua senha foi redefinida, e a sessão foi encerrada em todos os dispositivos e aplicativos conectados. Redirecionando para login...",
     description: "Success message description",
   },
   "auth.passwordResetSuccessful": {
@@ -751,6 +775,77 @@ const ptAuth: Record<string, TranslationEntry> = {
       "O login com senha está desativado neste servidor. Continue com o Google.",
     description:
       "Shown instead of a password form when password sign-in is turned off on the server",
+  },
+  "auth.recoveryTitle": {
+    message: "Verifique seu e-mail para entrar",
+    description:
+      "Title of the email ownership verification step for sign-in recovery",
+  },
+  "auth.recoveryDescription": {
+    message:
+      "Abra o link do e-mail de recuperação e informe o código recebido e sua senha atual.",
+    description: "Instructions for continuing from the sign-in recovery email",
+  },
+  "auth.recoverySendEmail": {
+    message: "Enviar e-mail de recuperação",
+    description: "Button requesting a sign-in recovery email",
+  },
+  "auth.recoverySending": {
+    message: "Enviando e-mail de recuperação...",
+    description: "Pending state while requesting a sign-in recovery email",
+  },
+  "auth.recoverySent": {
+    message:
+      "Se houver uma conta com este endereço, um e-mail de recuperação chegará em breve. Abra o link para continuar. Um e-mail de recuperação recente continua válido.",
+    description:
+      "Uniform confirmation after requesting recovery; previous valid recovery emails remain usable",
+  },
+  "auth.recoveryResend": {
+    message: "Enviar outro e-mail de recuperação",
+    description: "Button requesting another sign-in recovery email",
+  },
+  "auth.recoveryRetryAt": {
+    message: "Tente novamente às {time}.",
+    description:
+      "Absolute local retry time after throttling; {time} is formatted using the active locale",
+  },
+  "auth.recoveryCode": {
+    message: "Código de verificação de seis dígitos",
+    description: "Accessible label for the sign-in recovery email code",
+  },
+  "auth.recoveryCodeInvalid": {
+    message: "Informe o código de seis dígitos do e-mail de recuperação.",
+    description:
+      "Validation error when the recovery code is not exactly six digits",
+  },
+  "auth.recoveryFailed": {
+    message:
+      "O e-mail, o código ou a senha está incorreto, ou o código expirou. Você pode solicitar um novo e-mail de recuperação.",
+    description:
+      "Uniform invalid-credentials or expired-code error during sign-in recovery",
+  },
+  "auth.recoveryRequestFailed": {
+    message:
+      "Não foi possível solicitar o e-mail de recuperação. Tente novamente.",
+    description: "Error when requesting a sign-in recovery email fails",
+  },
+  "auth.recoveryUnavailable": {
+    message: "O acesso está temporariamente indisponível. Tente novamente.",
+    description: "Temporary service outage during sign-in recovery",
+  },
+  "auth.recoveryExpiry": {
+    message:
+      "O código expira após 10 minutos e permite uma única tentativa de senha.",
+    description:
+      "Explains the expiry and single password-attempt limit of a recovery code",
+  },
+  "auth.recoverySubmit": {
+    message: "Verificar e entrar",
+    description: "Button submitting the recovery code and current password",
+  },
+  "auth.recoveryVerifying": {
+    message: "Verificando...",
+    description: "Pending state while verifying the recovery code and password",
   },
 };
 

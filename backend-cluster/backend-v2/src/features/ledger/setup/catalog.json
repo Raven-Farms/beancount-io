@@ -1,0 +1,684 @@
+{
+  "catalogVersion": 1,
+  "source": "PRFAQ001 Appendix A (first-release starter catalog) as designed in ADR021; labels, questions, and timing are refined only by a new preset version, never by editing a shipped version in place",
+  "metadataKeys": {
+    "openingBalanceStatus": "bcio_opening_balance_status",
+    "demo": "bcio_demo",
+    "note": "Recorded as ordinary Beancount metadata on the opening directives so a clone or reopen cannot turn an unknown balance into an apparent zero; values must load cleanly in upstream Beancount and the hosted engine"
+  },
+  "capabilityStates": [
+    "enabled",
+    "declined",
+    "deferred"
+  ],
+  "openingStates": [
+    "unknown",
+    "zero",
+    "known"
+  ],
+  "presets": [
+    {
+      "id": "personal@1",
+      "version": 1,
+      "title": "Personal ledger",
+      "outcome": "Record a purchase and understand its effect on money remaining.",
+      "accounts": [
+        {
+          "name": "Assets:Cash",
+          "kind": "cash",
+          "required": false
+        },
+        {
+          "name": "Assets:Bank",
+          "kind": "bank",
+          "required": false
+        },
+        {
+          "name": "Liabilities:CreditCard",
+          "kind": "card",
+          "required": false
+        },
+        {
+          "name": "Liabilities:Loan",
+          "kind": "other",
+          "required": false
+        },
+        {
+          "name": "Income:General",
+          "kind": "income",
+          "required": true
+        },
+        {
+          "name": "Expenses:Food",
+          "kind": "expense",
+          "required": true
+        },
+        {
+          "name": "Expenses:Housing",
+          "kind": "expense",
+          "required": true
+        },
+        {
+          "name": "Expenses:Transport",
+          "kind": "expense",
+          "required": false
+        },
+        {
+          "name": "Expenses:Utilities",
+          "kind": "expense",
+          "required": false
+        },
+        {
+          "name": "Expenses:Health",
+          "kind": "expense",
+          "required": false
+        },
+        {
+          "name": "Expenses:Other",
+          "kind": "expense",
+          "required": false
+        },
+        {
+          "name": "Equity:OpeningBalances",
+          "kind": "equity",
+          "required": true
+        }
+      ],
+      "optionalQuestions": [
+        {
+          "id": "ownership",
+          "prompt": "Track whose income or assets these are?",
+          "effect": "Enable ownership attribution; member details are asked at first use. This does not grant access or establish filing status.",
+          "enablesAccounts": []
+        }
+      ],
+      "categoryMeanings": {
+        "Income:General": "Everyday income until a distinct source is used",
+        "Equity:OpeningBalances": "Confirmed starting position, never a plug for unexplained differences"
+      },
+      "evidenceRequirements": [
+        "Income source and owner",
+        "Available gross pay, withholding, and net pay",
+        "Receipt/source references",
+        "Ownership of jointly held assets"
+      ],
+      "firstResult": "Record a purchase and see money remaining",
+      "teachingExamples": [
+        "Cash purchase",
+        "Income deposit",
+        "Account transfer",
+        "Card payment",
+        "Shared ownership attribution"
+      ],
+      "acceptanceScenario": {
+        "given": "Confirmed opening cash balance of 100 in the chosen currency",
+        "action": "Record a purchase of 12.50 from cash",
+        "expected": {
+          "Assets:Cash": "87.50",
+          "Expenses:Food": "12.50"
+        }
+      }
+    },
+    {
+      "id": "freelance@1",
+      "version": 1,
+      "title": "Freelance ledger",
+      "outcome": "Record customer income or see what an unpaid customer still owes.",
+      "accounts": [
+        {
+          "name": "Assets:Bank",
+          "kind": "bank",
+          "required": false
+        },
+        {
+          "name": "Assets:Cash",
+          "kind": "cash",
+          "required": false
+        },
+        {
+          "name": "Liabilities:CreditCard",
+          "kind": "card",
+          "required": false
+        },
+        {
+          "name": "Income:Services",
+          "kind": "income",
+          "required": true
+        },
+        {
+          "name": "Expenses:Software",
+          "kind": "expense",
+          "required": false
+        },
+        {
+          "name": "Expenses:Supplies",
+          "kind": "expense",
+          "required": false
+        },
+        {
+          "name": "Expenses:Travel",
+          "kind": "expense",
+          "required": false
+        },
+        {
+          "name": "Expenses:Fees",
+          "kind": "expense",
+          "required": false
+        },
+        {
+          "name": "Equity:OwnerContributions",
+          "kind": "equity",
+          "required": true
+        },
+        {
+          "name": "Equity:OwnerDrawings",
+          "kind": "equity",
+          "required": false
+        }
+      ],
+      "optionalQuestions": [
+        {
+          "id": "invoices",
+          "prompt": "Track customer invoices before they are paid?",
+          "effect": "Adds receivables and invoice/payment guidance.",
+          "enablesAccounts": [
+            "Assets:AccountsReceivable"
+          ]
+        },
+        {
+          "id": "client-projects",
+          "prompt": "Review income and costs by client or project?",
+          "effect": "Enables allocation labels without an account per client.",
+          "enablesAccounts": []
+        }
+      ],
+      "categoryMeanings": {
+        "Income:Services": "Customer income for services",
+        "Equity:OwnerContributions": "Owner funding, distinct from customer income"
+      },
+      "evidenceRequirements": [
+        "Business purpose and source documents",
+        "Personal/business splits",
+        "Gross customer receipts and separate payment fees",
+        "Invoice and settlement dates",
+        "Client/project attribution",
+        "Original currencies"
+      ],
+      "firstResult": "Record customer income or an unpaid invoice balance",
+      "teachingExamples": [
+        "Direct customer payment",
+        "Invoice with partial payment",
+        "Owner contribution",
+        "Mixed-use expense",
+        "Payment-processing fee"
+      ],
+      "acceptanceScenario": {
+        "given": "Invoice tracking enabled",
+        "action": "Invoice 1,000 then receive payment of 400",
+        "expected": {
+          "Assets:AccountsReceivable": "600",
+          "Assets:Bank": "400"
+        }
+      }
+    },
+    {
+      "id": "business@1",
+      "version": 1,
+      "title": "Business ledger",
+      "outcome": "Establish an opening position and distinguish funding from revenue.",
+      "accounts": [
+        {
+          "name": "Assets:Bank",
+          "kind": "bank",
+          "required": true
+        },
+        {
+          "name": "Assets:Cash",
+          "kind": "cash",
+          "required": false
+        },
+        {
+          "name": "Income:Sales",
+          "kind": "income",
+          "required": false
+        },
+        {
+          "name": "Income:Services",
+          "kind": "income",
+          "required": false
+        },
+        {
+          "name": "Expenses:Operating",
+          "kind": "expense",
+          "required": true
+        },
+        {
+          "name": "Equity:Capital",
+          "kind": "equity",
+          "required": true
+        },
+        {
+          "name": "Equity:RetainedEarnings",
+          "kind": "equity",
+          "required": false
+        },
+        {
+          "name": "Equity:OpeningBalances",
+          "kind": "equity",
+          "required": true
+        }
+      ],
+      "optionalQuestions": [
+        {
+          "id": "invoices-bills",
+          "prompt": "Track customer invoices and supplier bills before payment?",
+          "effect": "Enables receivables and payables.",
+          "enablesAccounts": [
+            "Assets:AccountsReceivable",
+            "Liabilities:AccountsPayable"
+          ]
+        },
+        {
+          "id": "fixed-assets",
+          "prompt": "Track equipment and other assets over time?",
+          "effect": "Enables fixed-asset records and the acquisition guide.",
+          "enablesAccounts": [
+            "Assets:FixedAssets"
+          ]
+        }
+      ],
+      "categoryMeanings": {
+        "Equity:Capital": "Owner/shareholder funding, never revenue",
+        "Income:Sales": "Revenue from sales"
+      },
+      "evidenceRequirements": [
+        "Entity ownership",
+        "Invoice/payment dates",
+        "Gross/net/tax components",
+        "Business purpose and source documents",
+        "Asset acquisition and in-service dates",
+        "Reviewed capital/loan classifications"
+      ],
+      "firstResult": "Establish an opening position separating funding from revenue",
+      "teachingExamples": [
+        "Capital contribution",
+        "Loan funding",
+        "Customer invoice/payment",
+        "Supplier bill/payment",
+        "Equipment acquisition"
+      ],
+      "acceptanceScenario": {
+        "given": "Capital contribution of 1,000 and a loan of 500",
+        "action": "Record both fundings",
+        "expected": {
+          "Assets:Bank": "1500",
+          "Liabilities:Loan": "500",
+          "Equity:Capital": "1000",
+          "Income:Sales": "0"
+        }
+      }
+    },
+    {
+      "id": "portfolio@1",
+      "version": 1,
+      "title": "Portfolio ledger",
+      "outcome": "Record a purchase and verify units, acquisition records, and cash movement.",
+      "accounts": [
+        {
+          "name": "Assets:BrokerCash",
+          "kind": "bank",
+          "required": true
+        },
+        {
+          "name": "Assets:Holdings",
+          "kind": "other",
+          "required": true
+        },
+        {
+          "name": "Income:Dividends",
+          "kind": "income",
+          "required": false
+        },
+        {
+          "name": "Income:Interest",
+          "kind": "income",
+          "required": false
+        },
+        {
+          "name": "Expenses:Fees",
+          "kind": "expense",
+          "required": false
+        },
+        {
+          "name": "Equity:OpeningBalances",
+          "kind": "equity",
+          "required": true
+        }
+      ],
+      "optionalQuestions": [
+        {
+          "id": "existing-holdings",
+          "prompt": "Bring investments you already own?",
+          "effect": "Starts an opening-holdings task requesting the statement or acquisition records when opened; deferrable.",
+          "enablesAccounts": []
+        }
+      ],
+      "categoryMeanings": {
+        "Assets:Holdings": "Investment positions with lots kept separate where the source provides them",
+        "Expenses:Fees": "Fees recorded separately and recoverably, never folded silently into cost"
+      },
+      "evidenceRequirements": [
+        "Instrument, owner, acquisition and disposal dates",
+        "Quantity, original costs and currencies, fees, lot references",
+        "Broker/wallet source documents",
+        "Original FX amounts and any supplied rate/date/source"
+      ],
+      "firstResult": "Record a purchase and verify units, cost, and cash",
+      "teachingExamples": [
+        "Cash funding",
+        "Purchase with fee",
+        "Dividend",
+        "Partial disposal of a specified lot",
+        "Transfer between tracked accounts"
+      ],
+      "acceptanceScenario": {
+        "given": "Broker cash funded",
+        "action": "Buy 10 units at 20 with a separately recorded fee of 2",
+        "expected": {
+          "Assets:Holdings:units": "10",
+          "cashOutflow": "202",
+          "acquisitionCost": "200",
+          "Expenses:Fees": "2"
+        }
+      }
+    },
+    {
+      "id": "rental@1",
+      "version": 1,
+      "title": "Rental ledger",
+      "outcome": "Record receipts and distinguish rent from a refundable deposit.",
+      "accounts": [
+        {
+          "name": "Assets:Bank",
+          "kind": "bank",
+          "required": true
+        },
+        {
+          "name": "Assets:Cash",
+          "kind": "cash",
+          "required": false
+        },
+        {
+          "name": "Income:Rent",
+          "kind": "income",
+          "required": true
+        },
+        {
+          "name": "Expenses:Repairs",
+          "kind": "expense",
+          "required": false
+        },
+        {
+          "name": "Expenses:Insurance",
+          "kind": "expense",
+          "required": false
+        },
+        {
+          "name": "Expenses:Management",
+          "kind": "expense",
+          "required": false
+        },
+        {
+          "name": "Expenses:PropertyOther",
+          "kind": "expense",
+          "required": false
+        },
+        {
+          "name": "Liabilities:Deposits",
+          "kind": "other",
+          "required": true
+        },
+        {
+          "name": "Equity:OpeningBalances",
+          "kind": "equity",
+          "required": true
+        }
+      ],
+      "optionalQuestions": [
+        {
+          "id": "multiple-properties",
+          "prompt": "Track more than one property?",
+          "effect": "Enables property-level attribution with a stable reference per property.",
+          "enablesAccounts": []
+        },
+        {
+          "id": "property-loan",
+          "prompt": "Track a loan for the property?",
+          "effect": "Adds the loan and the principal/interest recording guide.",
+          "enablesAccounts": [
+            "Liabilities:Loan"
+          ]
+        }
+      ],
+      "categoryMeanings": {
+        "Income:Rent": "Rental income only",
+        "Liabilities:Deposits": "Refundable deposits held, never income"
+      },
+      "evidenceRequirements": [
+        "Property and ownership attribution",
+        "Rental/use periods",
+        "Receipts",
+        "Loan principal/interest details",
+        "Acquisition and improvement records",
+        "Supporting invoices"
+      ],
+      "firstResult": "Record rent separately from a refundable deposit",
+      "teachingExamples": [
+        "Rent receipt",
+        "Refundable deposit and return",
+        "Repair payment",
+        "Loan installment",
+        "Improvement record"
+      ],
+      "acceptanceScenario": {
+        "given": "A tenant pays rent and a deposit",
+        "action": "Receive rent of 1,000 and a refundable deposit of 500",
+        "expected": {
+          "Assets:Bank": "1500",
+          "Income:Rent": "1000",
+          "Liabilities:Deposits": "500"
+        }
+      }
+    },
+    {
+      "id": "shared-expenses@1",
+      "version": 1,
+      "title": "Shared expenses ledger",
+      "outcome": "Record an advance and see who owes whom.",
+      "accounts": [
+        {
+          "name": "Assets:MemberReceivables",
+          "kind": "other",
+          "required": true
+        },
+        {
+          "name": "Liabilities:MemberPayables",
+          "kind": "other",
+          "required": true
+        },
+        {
+          "name": "Expenses:Shared",
+          "kind": "expense",
+          "required": true
+        },
+        {
+          "name": "Equity:OpeningBalances",
+          "kind": "equity",
+          "required": true
+        }
+      ],
+      "optionalQuestions": [
+        {
+          "id": "shared-pot",
+          "prompt": "Use a shared cash pot?",
+          "effect": "Adds a group financial account.",
+          "enablesAccounts": [
+            "Assets:SharedCash"
+          ]
+        },
+        {
+          "id": "equal-split",
+          "prompt": "Split equally by default?",
+          "effect": "Saves a proposed allocation rule, reviewed on each expense.",
+          "enablesAccounts": []
+        }
+      ],
+      "categoryMeanings": {
+        "Expenses:Shared": "The original shared cost; settlements are never another expense",
+        "Assets:MemberReceivables": "Amounts members owe the payer or the group"
+      },
+      "evidenceRequirements": [
+        "Original payer, beneficiaries and their shares",
+        "Purpose and source receipt",
+        "Link between an expense and its reimbursements"
+      ],
+      "firstResult": "Record an advance and see member balances",
+      "teachingExamples": [
+        "Equal split",
+        "Unequal split",
+        "Repayment",
+        "Refund",
+        "Spending from a shared pot"
+      ],
+      "acceptanceScenario": {
+        "given": "Members A, B, and C split equally",
+        "action": "A pays a bill of 90 for all three, then B pays A 30",
+        "expected": {
+          "owedToA": "30",
+          "B:balance": "0",
+          "C:owes": "30",
+          "Expenses:Shared": "90"
+        }
+      }
+    },
+    {
+      "id": "community@1",
+      "version": 1,
+      "title": "Community ledger",
+      "outcome": "Explain contributions, project spending, and funds remaining.",
+      "accounts": [
+        {
+          "name": "Assets:Cash",
+          "kind": "cash",
+          "required": false
+        },
+        {
+          "name": "Assets:Bank",
+          "kind": "bank",
+          "required": false
+        },
+        {
+          "name": "Income:Dues",
+          "kind": "income",
+          "required": false
+        },
+        {
+          "name": "Income:Contributions",
+          "kind": "income",
+          "required": true
+        },
+        {
+          "name": "Income:Events",
+          "kind": "income",
+          "required": false
+        },
+        {
+          "name": "Expenses:Projects",
+          "kind": "expense",
+          "required": false
+        },
+        {
+          "name": "Expenses:Events",
+          "kind": "expense",
+          "required": false
+        },
+        {
+          "name": "Expenses:Administration",
+          "kind": "expense",
+          "required": false
+        },
+        {
+          "name": "Equity:OpeningBalances",
+          "kind": "equity",
+          "required": true
+        }
+      ],
+      "optionalQuestions": [
+        {
+          "id": "project-funds",
+          "prompt": "Track money set aside for named projects?",
+          "effect": "Enables project/fund attribution.",
+          "enablesAccounts": []
+        },
+        {
+          "id": "member-tracking",
+          "prompt": "Track dues or contributions by member?",
+          "effect": "Enables contributor records; details collected when first used.",
+          "enablesAccounts": []
+        }
+      ],
+      "categoryMeanings": {
+        "Income:Contributions": "Contributions to the organization; designation survives recording and never makes all cash unrestricted",
+        "Equity:OpeningBalances": "Opening fund balances"
+      },
+      "evidenceRequirements": [
+        "Source and purpose of receipts",
+        "Contributor references when needed",
+        "Amounts and dates",
+        "Project allocation and supporting documents",
+        "Any supplied restrictions on funds"
+      ],
+      "firstResult": "Explain contributions, spending, and funds remaining",
+      "teachingExamples": [
+        "Member dues",
+        "A contribution",
+        "Project spending",
+        "Reimbursement of a volunteer",
+        "A contribution designated for a project"
+      ],
+      "acceptanceScenario": {
+        "given": "The organization receives contributions and spends on an event",
+        "action": "Contributions of 500 and an event cost of 120",
+        "expected": {
+          "Assets:Bank": "380",
+          "Income:Contributions": "500",
+          "Expenses:Events": "120"
+        }
+      }
+    },
+    {
+      "id": "blank@1",
+      "version": 1,
+      "title": "Blank ledger",
+      "outcome": "Add a chosen structure without removing unwanted categories.",
+      "accounts": [],
+      "optionalQuestions": [],
+      "categoryMeanings": {},
+      "evidenceRequirements": [],
+      "firstResult": "Open chosen accounts and record a first balance",
+      "teachingExamples": [
+        "Minimal account openings",
+        "A balanced transaction",
+        "An include file"
+      ],
+      "acceptanceScenario": {
+        "given": "Initialization with no accounts",
+        "action": "Open own asset and opening-equity accounts and record a balance of 100",
+        "expected": {
+          "openedAccounts": "2",
+          "balance": "100"
+        }
+      }
+    }
+  ]
+}

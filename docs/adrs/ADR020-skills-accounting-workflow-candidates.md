@@ -13,7 +13,7 @@ The requested research list mixes spreadsheet tooling, accounting workflows, sta
 
 ## Research method and source identity
 
-Reviewed the upstream `SKILL.md` files, the additional month-end agent definitions, and three accounting-related Nigo entry points, against the current [suite conventions](../../skills/AGENTS.md), [ask](../../skills/.claude/skills/beancount-ask/SKILL.md), [close](../../skills/.claude/skills/beancount-close/SKILL.md), and [reconcile](../../skills/.claude/skills/beancount-reconcile/SKILL.md). This is source review, not a runtime benchmark or an audit of every supporting script.
+Reviewed the upstream `SKILL.md` files, the additional month-end agent definitions, and three accounting-related Nigo entry points, against the current [suite conventions](../../skills/AGENTS.md), [ask](../../skills/beancount-ask/SKILL.md), [close](../../skills/beancount-close/SKILL.md), and [reconcile](../../skills/beancount-reconcile/SKILL.md). This is source review, not a runtime benchmark or an audit of every supporting script.
 
 The star figures in the request are retained below as supplied. They are repository-level popularity signals, not individual-skill stars or installs, and shared repository counts must not be added together. The original directory and observation dates were not provided, so this review cannot reconstruct or verify them, and it records no fresh counts: a live star count is not reproducible and does not bear on the decision. Source links pin the inspected revision. The requested `accural-schedule` resolves to upstream `accrual-schedule`; `affaan-m/everything-claude-code` currently resolves to `affaan-m/ECC`.
 

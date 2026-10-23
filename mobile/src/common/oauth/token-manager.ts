@@ -171,7 +171,12 @@ export class OAuthTokenManager {
     }
     if (!response.ok) {
       const terminal = isTerminalOAuthError(body);
-      if (terminal) await this.deps.onTerminalFailure();
+      // Only for a refresh that is still current: a Log out that raced it
+      // already ended the session, and "Your session ended" over that was
+      // wrong (w21/329). The failure still reaches the caller as terminal.
+      if (terminal && this.isCurrentRefresh(session, key, generation)) {
+        await this.deps.onTerminalFailure();
+      }
       throw new OAuthRefreshError(terminal);
     }
     let token;

@@ -97,7 +97,7 @@ export function AccountBalancesCard({
             <button
               type="button"
               key={account.account}
-              className="group flex w-full cursor-pointer items-center gap-3 px-5 py-3 text-left transition-colors hover:bg-muted/40 focus-visible:bg-muted/40 focus-visible:outline-none"
+              className="group flex w-full cursor-pointer items-center gap-3 px-5 py-3 text-left transition-colors hover:bg-muted/40 focus-visible:bg-muted/40 focus-visible:outline-none forced-colors:focus-visible:[outline-style:solid] forced-colors:focus-visible:outline-2 forced-colors:focus-visible:-outline-offset-2 forced-colors:focus-visible:outline-[CanvasText]"
               onClick={() => navigateToAccount(account.account)}
             >
               <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground transition-transform group-hover:scale-105">

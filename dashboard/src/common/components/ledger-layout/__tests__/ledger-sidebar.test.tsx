@@ -279,4 +279,82 @@ describe("LedgerSidebar", () => {
       screen.getByRole("navigation", { name: "Ledger" }),
     ).toBeInTheDocument();
   });
+
+  /**
+   * The current page's group opens on arrival, but its disclosure used to be
+   * stuck open: activation flipped nothing because the active route forced
+   * it true (w4/300).
+   */
+  describe("closing the group of the current page", () => {
+    const balanceSheet = "/ledger/alice/book/balance-sheet";
+
+    it("closes and reopens the active Reports group from its chevron", async () => {
+      const user = userEvent.setup();
+      render(
+        <LedgerSidebar ledgerId="alice/book" currentPath={balanceSheet} />,
+      );
+      const chevron = screen.getByRole("button", { name: "Reports" });
+      expect(chevron).toHaveAttribute("aria-expanded", "true");
+      expect(screen.getByRole("link", { name: "Balance Sheet" })).toBeVisible();
+
+      chevron.focus();
+      await user.keyboard("{Enter}");
+      expect(chevron).toHaveAttribute("aria-expanded", "false");
+      expect(screen.queryByRole("link", { name: "Balance Sheet" })).toBeNull();
+      expect(document.activeElement).toBe(chevron);
+
+      await user.keyboard(" ");
+      expect(chevron).toHaveAttribute("aria-expanded", "true");
+      expect(screen.getByRole("link", { name: "Balance Sheet" })).toBeVisible();
+
+      await user.click(chevron);
+      expect(chevron).toHaveAttribute("aria-expanded", "false");
+      // The landing link beside it still navigates.
+      expect(screen.getByRole("link", { name: "Reports" })).toHaveAttribute(
+        "href",
+        "/ledger/alice/book/income-statement",
+      );
+    });
+
+    it("closes an active group whose header is its own button", async () => {
+      const user = userEvent.setup();
+      render(
+        <LedgerSidebar
+          ledgerId="alice/book"
+          currentPath="/ledger/alice/book/commodities"
+        />,
+      );
+      const advanced = screen.getByRole("button", { name: "Advanced" });
+      await user.click(advanced);
+      expect(advanced).toHaveAttribute("aria-expanded", "false");
+      expect(screen.queryByRole("link", { name: "Commodities" })).toBeNull();
+      // An inactive group still opens and closes.
+      const reports = screen.getByRole("button", { name: "Reports" });
+      await user.click(reports);
+      expect(reports).toHaveAttribute("aria-expanded", "true");
+      await user.click(reports);
+      expect(reports).toHaveAttribute("aria-expanded", "false");
+    });
+
+    it("reveals the group again when the reader arrives on another of its pages", async () => {
+      const user = userEvent.setup();
+      const { rerender } = render(
+        <LedgerSidebar ledgerId="alice/book" currentPath={balanceSheet} />,
+      );
+      await user.click(screen.getByRole("button", { name: "Reports" }));
+      expect(screen.queryByRole("link", { name: "Balance Sheet" })).toBeNull();
+
+      rerender(
+        <LedgerSidebar
+          ledgerId="alice/book"
+          currentPath="/ledger/alice/book/trial-balance"
+        />,
+      );
+      expect(screen.getByRole("button", { name: "Reports" })).toHaveAttribute(
+        "aria-expanded",
+        "true",
+      );
+      expect(screen.getByRole("link", { name: "Trial Balance" })).toBeVisible();
+    });
+  });
 });

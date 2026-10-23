@@ -9,6 +9,7 @@ import { Textarea } from "@/common/components/ui/textarea";
 import { Button } from "@/common/components/ui/button";
 import { useTranslations } from "@/common/hooks/use-translations";
 import { cn } from "@/common/lib/utils/utils";
+import { isCompositionKey } from "@/common/lib/keyboard/is-composition-key";
 
 interface EditableCellProps {
   /** Localized column name (same key as the table header), for accessible names. */
@@ -126,6 +127,9 @@ export function EditableCell({
   const handleKeyDown = (
     e: React.KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>,
   ) => {
+    // An input method's Enter confirms and its Escape cancels a candidate;
+    // neither may commit or cancel the cell edit (w4/310).
+    if (isCompositionKey(e.nativeEvent)) return;
     if (e.key === "Enter") {
       // Multiline cells keep a way to type a line break: Shift+Enter or
       // Cmd/Ctrl+Enter falls through to the textarea's default insertion.
@@ -235,10 +239,12 @@ export function EditableCell({
         error && "border border-destructive bg-destructive/5",
         disabled && "cursor-not-allowed opacity-50",
       )}
+      // Name the value the cell shows — a normalized amount, a localized
+      // date — not the raw bank token kept for the editor (w4/245).
       aria-label={t("importer.preview.editCellLabel", {
         field: label,
         row: rowNumber,
-        value,
+        value: displayValue ?? value,
       })}
       // The collapsed cell repeats the field's error underneath it; name it
       // here so the reason travels with the control rather than sitting beside

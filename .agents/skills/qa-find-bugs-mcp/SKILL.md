@@ -8,6 +8,7 @@ description: >-
   failures, tracing root causes, and deduplicating findings. Use for MCP QA or
   an agent-endpoint bug hunt. Skip ordinary code review, bug implementation,
   browser, native-mobile, and CLI QA.
+metadata: {"internal": true}
 ---
 
 # MCP QA bug hunt

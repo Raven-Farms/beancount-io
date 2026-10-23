@@ -1,6 +1,7 @@
 import React from "react";
 import { StyleSheet, Text, View, useWindowDimensions } from "react-native";
 import { useThemeStyle } from "@/common/hooks";
+import { useTranslations } from "@/common/hooks/use-translations";
 import {
   fontSizes,
   fontWeights,
@@ -58,6 +59,7 @@ export const DateSectionHeader: React.FC<DateSectionHeaderProps> = ({
   total,
 }) => {
   const styles = useThemeStyle(getStyles);
+  const { t } = useTranslations();
   // iOS keeps a Text's cached measurement when the system text size changes
   // while the app is open, clipping enlarged dates or leaving tall blank bands
   // after shrinking. Keying the header on the live scale mounts fresh,
@@ -69,6 +71,15 @@ export const DateSectionHeader: React.FC<DateSectionHeaderProps> = ({
     <View
       key={fontScale}
       style={[styles.container, stacked && styles.containerStacked]}
+      // A heading, so the Headings rotor steps day by day; the day total is
+      // read as part of it, not as a bare amount after it (w21/143).
+      accessible
+      accessibilityRole="header"
+      accessibilityLabel={
+        total
+          ? t("dateSectionHeaderTotal", { date: displayDate, total })
+          : displayDate
+      }
     >
       <Text style={styles.date}>{displayDate}</Text>
       {total ? (

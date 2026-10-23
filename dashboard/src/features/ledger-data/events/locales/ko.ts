@@ -16,6 +16,10 @@ const koEvents: Record<string, TranslationEntry> = {
     message: "이벤트: {filtered} / {total}",
     description: "Count of filtered events out of total",
   },
+  "page.events.emptyType": {
+    message: "(유형 없음)",
+    description: "Label for an event whose type is empty, in the type filter",
+  },
   "page.events.noEventsFound": {
     message: "이벤트가 없습니다",
     description: "Empty state title when no events exist",

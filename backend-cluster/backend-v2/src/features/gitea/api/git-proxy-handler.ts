@@ -13,10 +13,16 @@ import {
   HookResponseScanner,
   type DirectiveLimitVerdict,
 } from "@/features/gitea/policy/directive-limit-gate";
-import fetch from "node-fetch";
+import fetch, { type RequestInit } from "node-fetch";
 import { logger } from "@/shared/logger";
-import { createRateLimiter, checkRateLimit } from "@/shared/rate-limiter";
-import { CATEGORY_HTTP_STATUS, RateLimitedError } from "@/shared/errors";
+import { createRateLimiter } from "@/shared/rate-limiter";
+import {
+  BadUserInputError,
+  CATEGORY_HTTP_STATUS,
+  RateLimitedError,
+  ServiceUnavailableError,
+} from "@/shared/errors";
+import { clientAddress } from "@/server/client-address";
 
 const proxyLogger = logger.child({ module: "git-proxy" });
 
@@ -516,46 +522,30 @@ export function setGitProxyHandler(
       }
 
       if (username.includes("@")) {
-        // App email + password: look up user and translate to Gitea credentials
-        const user = await layers.database.models.user.getByMail(
-          layers.database.db,
-          username,
-        );
-        if (!user) {
-          proxyLogger.warn("Git proxy auth failed: user not found", {
+        // App email + password, verified the way dashboard sign-in verifies it
+        // and against the same per-account budget (w0/m7). A spent budget is a
+        // RateLimitedError, answered as a 429 by the catch below.
+        // AUTH_PASSWORD_ENABLED=false: an app password no longer opens git.
+        // Answered like a wrong password, before any account lookup.
+        if (config.passwordAuthEnabled === false) {
+          proxyLogger.warn("Git proxy auth refused: password auth disabled", {
             email: username,
-          });
-          checkRateLimit(`git-auth-fail:${ctx.ip}`, {
-            max: 5,
-            windowMs: 60_000,
-            message:
-              "Too many failed authentication attempts, please try again later.",
           });
           ctx.status = 401;
           ctx.set("WWW-Authenticate", 'Basic realm="Git"');
           ctx.body = "Invalid credentials";
           return;
         }
-
-        // AUTH_PASSWORD_ENABLED=false: an app password no longer opens git.
-        const passwordValid =
-          config.passwordAuthEnabled !== false &&
-          (await layers.database.models.user.verifyPassword(
-            layers.database.db,
-            user.id,
+        let user;
+        try {
+          user = await layers.services.auth.verifyPasswordCredentials(
+            username,
             password,
-          ));
-        if (!passwordValid) {
-          proxyLogger.warn("Git proxy auth failed: invalid password", {
-            email: username,
-            userId: user.id,
-          });
-          checkRateLimit(`git-auth-fail:${ctx.ip}`, {
-            max: 5,
-            windowMs: 60_000,
-            message:
-              "Too many failed authentication attempts, please try again later.",
-          });
+            clientAddress(ctx),
+          );
+        } catch (error) {
+          if (!(error instanceof BadUserInputError)) throw error;
+          proxyLogger.warn("Git proxy auth failed", { email: username });
           ctx.status = 401;
           ctx.set("WWW-Authenticate", 'Basic realm="Git"');
           ctx.body = "Invalid credentials";
@@ -627,13 +617,26 @@ export function setGitProxyHandler(
       const queryString = ctx.querystring ? `?${ctx.querystring}` : "";
       const giteaUrl = `${giteaBaseUrl}${path}${queryString}`;
 
+      // A client that hangs up must end the Gitea request too. Destroying
+      // node-fetch's body, which is all Koa does, leaves the upstream socket
+      // open while Gitea keeps building a pack nobody reads (w0/056).
+      const upstream = new AbortController();
+      ctx.res.once("close", () => {
+        if (!ctx.res.writableFinished) upstream.abort();
+      });
+
       // Make the request to Gitea
       const response = await fetch(giteaUrl, {
         method: ctx.method,
         headers: forwardHeaders,
         body:
           ctx.method !== "GET" && ctx.method !== "HEAD" ? ctx.req : undefined,
+        // @types/node-fetch predates AbortSignal's `reason`; the runtime accepts Node's.
+        signal: upstream.signal as RequestInit["signal"],
       });
+      // node-fetch reports that abort as an `error` on a body the client is no
+      // longer reading, which may have no listener left.
+      response.body.on("error", () => {});
 
       // Forward response status
       ctx.status = response.status;
@@ -685,14 +688,22 @@ export function setGitProxyHandler(
         ctx.body = response.body;
       }
     } catch (error) {
-      if (error instanceof RateLimitedError) {
+      if (
+        error instanceof RateLimitedError ||
+        error instanceof ServiceUnavailableError
+      ) {
         // Respond in git's plain-text idiom rather than the JSON the shared REST
         // error middleware would produce.
         ctx.status = CATEGORY_HTTP_STATUS[error.category];
         ctx.body = error.message;
+        if (error.metadata?.retryAfter) {
+          ctx.set("Retry-After", String(error.metadata.retryAfter));
+        }
         return;
       }
       const err = error as Error;
+      // The client hung up before Gitea answered; there is nobody to tell.
+      if (err.name === "AbortError") return;
       proxyLogger.error("Git proxy error", { error: err.message, path });
       ctx.status = 502;
       ctx.body = "Bad Gateway";

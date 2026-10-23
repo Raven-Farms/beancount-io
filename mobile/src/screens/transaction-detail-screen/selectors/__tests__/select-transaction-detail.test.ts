@@ -1,11 +1,17 @@
+import fs from "fs";
+import { isolateLtr } from "../../../../common/bidi";
+import path from "path";
 import {
   hasEditableSource,
+  postingBasisText,
   selectHeroAmount as selectHeroAmountWithLabel,
   selectPostingRows,
+  userMetadataLines,
   selectTransactionMenuActions,
   selectTransactionTitle,
 } from "../select-transaction-detail";
 import { DirectiveType } from "../../../transactions-screen/types";
+import { en } from "../../../../translations/en";
 import type {
   JournalPosting,
   JournalTransaction,
@@ -43,14 +49,14 @@ const selectHeroAmount = (t: JournalTransaction) =>
   selectHeroAmountWithLabel(t, MIXED);
 
 describe("selectHeroAmount", () => {
-  it("nets cash postings for an expense (unsigned, not positive)", () => {
+  it("nets cash postings for an expense (signed out, not positive)", () => {
     const hero = selectHeroAmount(
       txn([
         posting("Expenses:Food:Coffee", "4.50"),
         posting("Assets:Checking", "-4.50"),
       ]),
     );
-    expect(hero.text).toBe("$4.50");
+    expect(hero.text).toBe("-$4.50");
     expect(hero.isPositive).toBe(false);
   });
 
@@ -65,15 +71,17 @@ describe("selectHeroAmount", () => {
     expect(hero.isPositive).toBe(true);
   });
 
-  it("falls back to the largest posting when no cash accounts exist", () => {
+  it("shows the largest posting unsigned and neutral when no cash accounts exist", () => {
+    // Income → Expenses has no in/out direction; it used to read "+" in green
+    // here while its row read otherwise (w21/003).
     const hero = selectHeroAmount(
       txn([
         posting("Expenses:Food", "30.00"),
         posting("Income:Gifts", "-30.00"),
       ]),
     );
-    expect(hero.text).toBe("+$30.00");
-    expect(hero.isPositive).toBe(true);
+    expect(hero.text).toBe("$30.00");
+    expect(hero.isPositive).toBe(null);
   });
 
   it("formats non-USD currencies with a suffix", () => {
@@ -83,7 +91,7 @@ describe("selectHeroAmount", () => {
         posting("Assets:Cash", "-90.00", "EUR"),
       ]),
     );
-    expect(hero.text).toBe("90.00 EUR");
+    expect(hero.text).toBe("-90.00 EUR");
   });
 
   it("returns empty for a transaction without postings", () => {
@@ -101,7 +109,7 @@ describe("selectHeroAmount", () => {
         posting("Assets:Vanguard:Cash", "-3177.39"),
       ]),
     );
-    expect(hero).toEqual({ text: "$3,177.39", isPositive: false });
+    expect(hero).toEqual({ text: "-$3,177.39", isPositive: false });
   });
 
   function costed(account: string, number: string): JournalPosting {
@@ -213,6 +221,16 @@ describe("selectPostingRows", () => {
 });
 
 describe("selectTransactionTitle", () => {
+  // w21/568: a payee of spaces won the title and left it blank.
+  it("skips a payee that is only spaces", () => {
+    expect(
+      selectTransactionTitle(txn([], { payee: " ", narration: "Coffee" })),
+    ).toBe("Coffee");
+    expect(
+      selectTransactionTitle(txn([], { payee: " ", narration: " " })),
+    ).toBe("");
+  });
+
   it("prefers payee, then narration, then empty", () => {
     expect(selectTransactionTitle(txn([]))).toBe("Blue Bottle");
     expect(selectTransactionTitle(txn([], { payee: null }))).toBe(
@@ -282,5 +300,324 @@ describe("selectTransactionMenuActions", () => {
       "copyLink",
       "deleteTransaction",
     ]);
+  });
+});
+
+// w21/059: Money flow showed a sale as "−4 QAX" with no cost basis or price.
+describe("selectPostingRows: cost and price", () => {
+  const t = (key: "postingCost" | "postingPrice", params: { amount: string }) =>
+    en[key].replace("{{amount}}", params.amount);
+  const sale = txn([
+    {
+      ...posting("Assets:Brokerage", "-4", "QAX"),
+      cost: { number: "1.50", currency: "USD", date: "2026-10-01" },
+      price: { number: "2.00", currency: "USD" },
+    },
+    posting("Assets:Bank:Checking", "8.00"),
+    posting("Income:Salary", "-2.00"),
+  ]);
+
+  it("shows a sale's cost basis and price under its units", () => {
+    const [lot, cash] = selectPostingRows(sale);
+    expect(lot).toEqual({
+      account: "Assets:Brokerage",
+      amount: "-4 QAX",
+      sign: -1,
+      cost: "$1.50",
+      lot: "2026-10-01",
+      price: "$2.00",
+    });
+    // Each amount isolated, so Persian keeps its currency on the written side
+    // (w21/536).
+    expect(postingBasisText(lot, t)).toBe(
+      `cost ${isolateLtr("$1.50")} · ${isolateLtr("2026-10-01")} · price ${isolateLtr("$2.00")}`,
+    );
+    expect(postingBasisText(cash, t)).toBe(null);
+  });
+
+  it("names a cost alone, and a price alone as the ledger writes it", () => {
+    const [buy] = selectPostingRows(
+      txn([
+        {
+          ...posting("Assets:Brokerage", "10", "QAX"),
+          cost: { number: "1.50", currency: "USD", date: "2026-10-01" },
+        },
+      ]),
+    );
+    expect(postingBasisText(buy, t)).toBe(
+      `cost ${isolateLtr("$1.50")} · ${isolateLtr("2026-10-01")}`,
+    );
+    const [eur] = selectPostingRows(
+      txn([
+        {
+          ...posting("Assets:Bank:Eur", "50.00", "EUR"),
+          price: { number: "1.10", currency: "USD" },
+        },
+      ]),
+    );
+    expect(eur.amount).toBe("+50.00 EUR");
+    expect(postingBasisText(eur, t)).toBe("@ $1.10");
+  });
+
+  // w21/160: a total divided per unit came through at full precision.
+  it("rounds a per-unit figure derived from @@ or {{…}}, marked approximate", () => {
+    const [fx] = selectPostingRows(
+      txn([
+        {
+          ...posting("Expenses:Qa20261020Fx", "3.00", "EUR"),
+          price: { number: "3.3333333333333333333333333333", currency: "USD" },
+        },
+      ]),
+    );
+    expect(postingBasisText(fx, t)).toBe("@ ≈$3.3333");
+    const [lot] = selectPostingRows(
+      txn([
+        {
+          ...posting("Assets:Brokerage", "3", "QAX"),
+          cost: {
+            number: "33.333333333333333333333333333",
+            currency: "USD",
+            date: "2026-10-01",
+          },
+        },
+      ]),
+    );
+    expect(postingBasisText(lot, t)).toBe(
+      `cost ${isolateLtr("≈$33.3333")} · ${isolateLtr("2026-10-01")}`,
+    );
+    const [dust] = selectPostingRows(
+      txn([
+        {
+          ...posting("Assets:Wallet", "3", "QAX"),
+          price: { number: "0.0000666666666666666666", currency: "USD" },
+        },
+      ]),
+    );
+    expect(postingBasisText(dust, t)).toBe("@ ≈$0.00006667");
+  });
+
+  // w21/322: eight decimals marked precise FX rates and tiny prices "≈".
+  it("shows an exact written price of up to twelve decimals as written", () => {
+    const shown = (number: string) => {
+      const [row] = selectPostingRows(
+        txn([
+          {
+            ...posting("Assets:Wallet", "100", "QAX"),
+            price: { number, currency: "USD" },
+          },
+        ]),
+      );
+      return postingBasisText(row!, t);
+    };
+    expect(shown("1.123456789")).toBe("@ $1.123456789");
+    expect(shown("0.000000012")).toBe("@ $0.000000012");
+    expect(shown("0.123456789012")).toBe("@ $0.123456789012");
+    // Beyond twelve it is still a division carried out at full precision.
+    expect(shown("0.1234567890123")).toBe("@ ≈$0.1235");
+  });
+
+  it("keeps a price as written, however many decimals it has", () => {
+    const [btc] = selectPostingRows(
+      txn([
+        {
+          ...posting("Assets:Bank:Checking", "-50.00"),
+          price: { number: "0.00001234", currency: "BTC" },
+        },
+      ]),
+    );
+    expect(postingBasisText(btc, t)).toBe("@ 0.00001234 BTC");
+  });
+
+  it("leaves an ordinary posting unchanged", () => {
+    const [row] = selectPostingRows(txn([posting("Expenses:Food", "4.50")]));
+    expect(row).toEqual({
+      account: "Expenses:Food",
+      amount: "+$4.50",
+      sign: 1,
+    });
+    expect(postingBasisText(row, t)).toBe(null);
+  });
+
+  it("is read out with the row", () => {
+    const source = require("fs").readFileSync(
+      require("path").join(
+        __dirname,
+        "..",
+        "..",
+        "components",
+        "posting-row.tsx",
+      ),
+      "utf8",
+    ) as string;
+    expect(source.includes('${basis ? `, ${basis}` : ""}')).toBe(true);
+  });
+});
+
+// w21/161: a `!` on one posting was dropped, so the transaction read as
+// fully cleared everywhere.
+describe("a posting flagged pending", () => {
+  it("is marked on its own row only", () => {
+    const [transport, cash] = selectPostingRows(
+      txn([
+        { ...posting("Expenses:Transport", "8.00"), flag: "!" },
+        posting("Assets:Cash", "-8.00"),
+      ]),
+    );
+    expect(transport.pending).toBe(true);
+    expect("pending" in cash).toBe(false);
+  });
+
+  it("shows the P badge and reads pending on that row", () => {
+    const row = fs.readFileSync(
+      path.join(__dirname, "..", "..", "components", "posting-row.tsx"),
+      "utf8",
+    );
+    expect(row.includes('{posting.pending ? `, ${t("pending")}` : ""}')).toBe(
+      true,
+    );
+    expect(row.includes("{posting.pending ? (")).toBe(true);
+  });
+});
+
+// w21/162: metadata was readable only in the raw source.
+describe("user metadata", () => {
+  it("lists the user's keys, without the source position or internal keys", () => {
+    expect(
+      userMetadataLines({
+        filename: "main.bean",
+        lineno: 12,
+        __tolerances__: { USD: "0.005" },
+        invoice: "INV-0914",
+        paid: true,
+        total: { number: "12.00", currency: "USD" },
+      }),
+    ).toEqual(["invoice: INV-0914", "paid: true", "total: 12.00 USD"]);
+    expect(userMetadataLines(null)).toEqual([]);
+  });
+
+  // w21/322: a bare `key:` line has no value to print.
+  it("shows a bare key without a value as just the key", () => {
+    expect(
+      userMetadataLines({ reviewed: null, invoice: "INV-1", note: undefined }),
+    ).toEqual(["reviewed", "invoice: INV-1", "note"]);
+  });
+
+  it("puts a posting's metadata under its own row", () => {
+    const [transport, cash] = selectPostingRows(
+      txn([
+        {
+          ...posting("Expenses:Transport", "1.00"),
+          meta: { filename: "main.bean", lineno: 5, note: "posting meta" },
+        },
+        posting("Assets:Cash", "-1.00"),
+      ]),
+    );
+    expect(transport.meta).toEqual(["note: posting meta"]);
+    expect("meta" in cash).toBe(false);
+  });
+
+  it("is shown in Details and under the posting", () => {
+    const screen = fs.readFileSync(
+      path.join(__dirname, "..", "..", "transaction-detail-screen.tsx"),
+      "utf8",
+    );
+    expect(
+      screen.includes("const entryMeta = userMetadataLines(entry.meta);"),
+    ).toBe(true);
+    expect(
+      screen.includes(
+        "entry.tags?.length || entry.links?.length || entryMeta.length",
+      ),
+    ).toBe(true);
+    const row = fs.readFileSync(
+      path.join(__dirname, "..", "..", "components", "posting-row.tsx"),
+      "utf8",
+    );
+    expect(row.includes("{posting.meta?.map((line) => (")).toBe(true);
+  });
+});
+
+// w21/445: only USD was padded, so "4.5 EUR" sat under a "-4.50 EUR" headline.
+describe("selectPostingRows amounts", () => {
+  const amounts = (number: string, currency: string) =>
+    selectPostingRows(txn([posting("Expenses:Food", number, currency)]))[0]!
+      .amount;
+
+  it("pads a currency to its own minor units, as the headline does", () => {
+    expect(amounts("4.5", "EUR")).toBe("+4.50 EUR");
+    expect(amounts("-5", "EUR")).toBe("-5.00 EUR");
+    expect(amounts("12.3", "KWD")).toBe("+12.300 KWD");
+    expect(amounts("4.5", "USD")).toBe("+$4.50");
+  });
+
+  it("keeps a yen amount whole and a longer recorded scale as written", () => {
+    expect(amounts("1500", "JPY")).toBe("+1,500 JPY");
+    expect(amounts("1.2345", "EUR")).toBe("+1.2345 EUR");
+  });
+
+  it("leaves a commodity that is not a currency at its recorded digits", () => {
+    expect(amounts("10", "QAX")).toBe("+10 QAX");
+    expect(amounts("0.5", "QAX")).toBe("+0.5 QAX");
+  });
+
+  // w21/506: BND, AMD and NOK are also currency codes, so a share count of
+  // them read as money.
+  it("leaves units held at a cost at their recorded digits", () => {
+    const held = (number: string, currency: string) =>
+      selectPostingRows(
+        txn([
+          {
+            ...posting("Assets:Brokerage", number, currency),
+            cost: { number: "80", currency: "USD", date: "2026-07-06" },
+          },
+        ]),
+      )[0]!.amount;
+    expect(held("10", "BND")).toBe("+10 BND");
+    expect(held("10", "AMD")).toBe("+10 AMD");
+    expect(held("3", "NOK")).toBe("+3 NOK");
+    // Without a cost the same codes are currencies, as before.
+    expect(amounts("4.5", "EUR")).toBe("+4.50 EUR");
+    expect(amounts("10", "NOK")).toBe("+10.00 NOK");
+  });
+});
+
+// w21/603: two sales from different lots read "-5 VTI · cost $100.00 · price
+// $120.00", though the lot's date decides short- or long-term gain.
+describe("selectPostingRows: the lot behind a cost", () => {
+  const t = (key: "postingCost" | "postingPrice", params: { amount: string }) =>
+    en[key].replace("{{amount}}", params.amount);
+  const sale = (date: string, label?: string) =>
+    selectPostingRows(
+      txn([
+        {
+          ...posting("Assets:Brokerage", "-5", "VTI"),
+          cost: { number: "100.00", currency: "USD", date, label },
+          price: { number: "120.00", currency: "USD" },
+        },
+      ]),
+    )[0]!;
+
+  it("tells two sales from different lots apart, on screen and to VoiceOver", () => {
+    const old = sale("2023-01-15");
+    const recent = sale("2025-06-01", "lot-b");
+    expect(old.lot).toBe("2023-01-15");
+    expect(recent.lot).toBe("2025-06-01 · lot-b");
+    expect(postingBasisText(old, t)).not.toBe(postingBasisText(recent, t));
+    expect(postingBasisText(recent, t)).toBe(
+      `cost ${isolateLtr("$100.00")} · ${isolateLtr("2025-06-01 · lot-b")} · price ${isolateLtr("$120.00")}`,
+    );
+  });
+
+  it("names no lot when the cost has neither a date nor a label", () => {
+    const bare = selectPostingRows(
+      txn([
+        {
+          ...posting("Assets:Brokerage", "5", "VTI"),
+          cost: { number: "100.00", currency: "USD" } as never,
+        },
+      ]),
+    )[0]!;
+    expect(bare.lot).toBe(undefined);
+    expect(postingBasisText(bare, t)).toBe(`cost ${isolateLtr("$100.00")}`);
   });
 });

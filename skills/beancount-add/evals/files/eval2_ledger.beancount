@@ -1,0 +1,10 @@
+;; Test fixture for beancount-add — a ledger that loads nounused
+option "operating_currency" "USD"
+plugin "beancount.plugins.nounused"
+
+2026-01-01 open Assets:Bank:Checking USD
+2026-01-01 open Equity:OpeningBalances USD
+
+2026-01-01 * "Opening balance"
+  Assets:Bank:Checking   800.00 USD
+  Equity:OpeningBalances

@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { Link } from "@tanstack/react-router";
 import {
   Activity,
   ArrowUpRight,
@@ -8,7 +7,8 @@ import {
   Plus,
 } from "lucide-react";
 import { Button } from "@/common/components/ui/button";
-import { useFormatRelativeTime } from "@/common/hooks/use-date-locale";
+import { useHydratedTime } from "@/common/hooks/use-date-locale";
+import { Link } from "@tanstack/react-router";
 import { useTranslations } from "@/common/hooks/use-translations";
 import type {
   UserActivityFeedItem,
@@ -25,7 +25,7 @@ export function ProfileActivity({
   example?: UserRepository;
 }) {
   const { t } = useTranslations();
-  const formatRelativeTime = useFormatRelativeTime();
+  const { exactTime, relativeTime } = useHydratedTime();
   const [expanded, setExpanded] = useState(false);
   const recent = [...activities].sort(
     (a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt),
@@ -114,10 +114,13 @@ export function ProfileActivity({
                     {!Number.isNaN(date.getTime()) && (
                       <time
                         dateTime={date.toISOString()}
-                        title={date.toLocaleString()}
+                        title={exactTime(date, {
+                          dateStyle: "medium",
+                          timeStyle: "long",
+                        })}
                         className="mt-1 block text-xs text-muted-foreground"
                       >
-                        {formatRelativeTime(date)}
+                        {relativeTime(date, { dateStyle: "medium" })}
                       </time>
                     )}
                   </div>

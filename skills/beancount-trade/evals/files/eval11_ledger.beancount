@@ -1,0 +1,10 @@
+;; fixture — beancount-trade eval11/12 (crypto swap)
+option "operating_currency" "USD"
+
+2025-01-01 open Assets:Crypto:Exchange BTC,ETH,USD
+2025-01-01 open Income:CapitalGains USD
+2025-01-01 open Equity:Opening-Balances
+
+2025-01-10 * "Buy BTC"
+  Assets:Crypto:Exchange  0.500000 BTC {40000.00 USD}
+  Equity:Opening-Balances -20000.00 USD

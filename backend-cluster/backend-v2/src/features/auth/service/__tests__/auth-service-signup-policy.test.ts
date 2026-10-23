@@ -1,6 +1,13 @@
 import "reflect-metadata";
+import {
+  fakeRedisAdmission as mockFakeRedisAdmission,
+  fakeRedisAdmissionState,
+} from "@/foundation/redis/__tests__/fake-redis-counter";
 import { AuthService } from "../auth-service";
 import { ForbiddenError } from "@/shared/errors";
+
+jest.mock("@/foundation/redis/redis-admission", () => mockFakeRedisAdmission);
+beforeEach(() => fakeRedisAdmissionState.reset());
 
 function createService(signup?: {
   allowedEmails: Set<string>;
@@ -29,6 +36,7 @@ function createService(signup?: {
       favaApi: { adminUser: "admin", adminPassword: "pw" },
       ...(signup ? { signup } : {}),
     } as any,
+    async () => false,
   );
   return { service, user, signupOtpSession, createUser, sendgrid };
 }

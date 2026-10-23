@@ -1,0 +1,15 @@
+{
+  "identifier": "beancount-io",
+  "name": "Beancount.io",
+  "version": "1.0.0",
+  "description": "Query, edit, and reconcile a hosted Beancount ledger: BQL, reports, files, and bank imports.",
+  "author": "Beancount.io",
+  "authorUrl": "https://github.com/bex-co",
+  "homepage": "https://github.com/bex-co/beancount-io/blob/main/backend-cluster/backend-v2/docs/mcp.md",
+  "cloudEndpoint": "https://beancount.io/api-gateway/mcp",
+  "tags": [
+    "beancount",
+    "accounting",
+    "finance"
+  ]
+}

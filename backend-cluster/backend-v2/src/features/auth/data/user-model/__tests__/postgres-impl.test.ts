@@ -86,6 +86,19 @@ describe("UserPostgresModel", () => {
     });
   });
 
+  it("locks the credential row FOR UPDATE when revalidating a password proof", async () => {
+    const query = jest.fn().mockResolvedValue({ rows: [] });
+    const tx = drizzle({ query } as never);
+
+    await expect(model.getByIdForUpdate(tx, "user-id-1")).resolves.toBeNull();
+
+    const [statement, parameters] = query.mock.calls[0];
+    expect(statement.text).toMatch(
+      /where "users"\."id" = \$1 limit \$2 for update$/,
+    );
+    expect(parameters).toEqual(["user-id-1", 1]);
+  });
+
   it("orders active-user pages by ID before applying limit and offset", async () => {
     const query = jest.fn().mockResolvedValue({ rows: [] });
     const db = drizzle({ query } as never);

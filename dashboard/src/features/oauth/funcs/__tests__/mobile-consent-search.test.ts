@@ -10,6 +10,15 @@ describe("mobile consent search params", () => {
     ).toEqual({ ...base, screen_hint: "signup" });
   });
 
+  it("carries the after-sign-out account-choice hint (w21/153)", () => {
+    expect(
+      mobileConsentSearchSchema.parse({
+        ...base,
+        screen_hint: "select_account",
+      }),
+    ).toEqual({ ...base, screen_hint: "select_account" });
+  });
+
   it("opens normally when there is no hint", () => {
     expect(mobileConsentSearchSchema.parse(base)).toEqual(base);
   });

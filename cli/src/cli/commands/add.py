@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import datetime
 import json
+import os
 import re
 import sys
 from decimal import Decimal
@@ -21,11 +22,11 @@ from typing import Annotated, Any
 import typer
 
 from cli import context, output
-from cli.amounts import check_decimal_notation, parse_decimal_number
+from cli.amounts import JsonFloat, check_decimal_notation, json_float_default, parse_decimal_number
 from cli.completion import fixed_values
 from cli.errors import UsageError
 from cli.single_value import SingleValueCommand
-from cli.utils import IntoPath, decode_error_message, parse_date
+from cli.utils import IntoPath, RawPath, decode_error_message, parse_date
 
 add_app = typer.Typer(
     help="Add beancount directives to a local .bean file", no_args_is_help=True, rich_markup_mode=None
@@ -98,7 +99,7 @@ def _write(
         argv.append("--allow-errors")
     if strict_read:
         argv.append("--strict-read")
-    data = launch.helper_json(argv, stdin=json.dumps(request), writes=True)
+    data = launch.helper_json(argv, stdin=json.dumps(request, default=json_float_default), writes=True)
     # A write through an included leaf is the root's write: `target.file`
     # named the leaf, and the same write with `--into` named the root (w5/613).
     root = data.pop("root", None)
@@ -114,12 +115,13 @@ def _appended(name: str, file: Path, data: dict[str, Any]) -> None:
     """Report one appended directive — the same way for every type."""
     target = data.pop("target")
     warnings = data.pop("warnings", [])
+    dest = output.write_target(file, target)
     if context.current().json_output:
-        output.emit({**data, "warnings": warnings}, target=output.write_target(file, target))
+        output.emit({**data, "warnings": warnings}, target=dest)
     else:
         for warning in warnings:
             output.note(warning)
-        output.success(f"Added 1 {name} to {target}.")
+        output.success(f"Added 1 {name} to {dest['into']}.")
 
 
 # Positional narrations that are almost certainly something else (w5/443):
@@ -259,11 +261,14 @@ def add_close(
     account: Annotated[str, typer.Option("--account", "-a", help="Account name")],
     allow_errors: AllowErrorsOpt = False,
     into: IntoOpt = None,
+    force: Annotated[
+        bool,
+        typer.Option("--force", help="Close the account even though it still holds a balance on the close date"),
+    ] = False,
 ) -> None:
     """Append a close directive."""
-    file, data = _write(
-        "close", {"date": parse_date(date).isoformat(), "account": account}, allow_errors=allow_errors, into=into
-    )
+    request = {"date": parse_date(date).isoformat(), "account": account, "force": force}
+    file, data = _write("close", request, allow_errors=allow_errors, into=into)
     _appended("close", file, data)
 
 
@@ -276,7 +281,11 @@ def add_balance(
     into: IntoOpt = None,
     force: Annotated[
         bool,
-        typer.Option("--force", help="Record another assertion when the date/account already has one"),
+        typer.Option(
+            "--force",
+            help="Record another assertion when the date/account already has one, or pad to an amount whose "
+            "sign is refused",
+        ),
     ] = False,
     pad_from: Annotated[
         str | None,
@@ -286,7 +295,7 @@ def add_balance(
         str | None, typer.Option("--pad-date", help="Pad date; defaults to the day before the balance assertion")
     ] = None,
 ) -> None:
-    """Append a strict balance assertion, or explicitly pad from another account.
+    """Append a balance assertion, or pad from another account.
 
     --pad-from writes both directives atomically. It creates an adjustment;
     review missing transactions before using it to reconcile a discrepancy.
@@ -344,26 +353,27 @@ def add_balance(
     data.setdefault("source", None)
     written = int(data.get("written") or 0)
     source = data.get("source")
+    dest = output.write_target(file, target)
     if ctx.json_output:
-        output.emit({**data, "warnings": warnings}, target=output.write_target(file, target))
+        output.emit({**data, "warnings": warnings}, target=dest)
     else:
         for warning in warnings:
             output.note(warning)
         if source:
             _already_recorded("Balance", source)
         elif written == 1:
-            output.success(f"Added 1 balance to {target}.")
+            output.success(f"Added 1 balance to {dest['into']}.")
         else:
             pad = data.get("pad") or {}
             inserted = pad.get("amount") or {}
             if inserted:
                 # The amount was never said, so a sign error padded twice the balance unseen (w5/611).
                 output.success(
-                    f"Added 1 pad and 1 balance to {target}; the pad inserts {inserted['number']} "
+                    f"Added 1 pad and 1 balance to {dest['into']}; the pad inserts {inserted['number']} "
                     f"{inserted['currency']} into {pad.get('account')} from {pad.get('source_account')}."
                 )
             else:
-                output.success(f"Added 1 pad and 1 balance to {target}.")
+                output.success(f"Added 1 pad and 1 balance to {dest['into']}.")
 
 
 @add_app.command("pad", cls=_SingleValueCommand)
@@ -420,7 +430,10 @@ def add_price(
         typer.Option("--force", help="Record another quote when the ledger already has one for the date/commodity"),
     ] = False,
 ) -> None:
-    """Append a price, or report an exact ledger-authored date/commodity/amount match."""
+    """Append a price directive.
+
+    An exact ledger-authored date/commodity/amount match is reported instead of duplicated.
+    """
     number, price_currency = _parse_amount(_single_amount(amount, "price"))
     request = {
         "date": parse_date(date).isoformat(),
@@ -445,15 +458,16 @@ def add_price(
         output.render_ledger_errors(ledger_errors, allow=True)
     target = data.pop("target")
     source = data["source"]
+    dest = output.write_target(file, target)
     if ctx.json_output:
-        output.emit(data, target=output.write_target(file, target))
+        output.emit(data, target=dest)
     else:
         for warning in data["warnings"]:
             output.note(warning)
         if source:
             _already_recorded("Price", source)
         else:
-            output.success(f"Added 1 price to {target}.")
+            output.success(f"Added 1 price to {dest['into']}.")
 
 
 @add_app.command("commodity", cls=_SingleValueCommand)
@@ -580,24 +594,45 @@ def _nesting_depth(value: Any) -> int:
     return deepest
 
 
-def _load_transactions_json(from_file: Path) -> Any:
+def _alternating_nuls(data: bytes) -> bool:
+    """Whether NULs sit on one byte parity densely, as BOM-less UTF-16 ASCII does.
+
+    The parity half of import's UTF-16 rule (`csv_mapper._refuse_utf16`),
+    with a floor: a lone stray NUL does not alternate, however short the
+    file (w5/738).
+    """
+    even, odd = data[0::2].count(0), data[1::2].count(0)
+    return min(even, odd) == 0 and max(even, odd) >= 2 and 4 * max(even, odd) >= len(data) // 2
+
+
+def _load_transactions_json(from_file: str) -> Any:
     """Read and parse `--from`; unreadable input is a usage error, phrased like `--file`'s.
 
     Stdin is read as bytes and decoded exactly like a file: the text stream
     would decode with the locale's codec (and its error handler), so the same
     bytes could pass on one machine and fail with a raw codec error on another.
     """
-    stdin = str(from_file) == "-"
-    name = "stdin" if stdin else str(from_file)
+    # Raw text, not a Path: Path("./-") normalizes to Path("-"), which would
+    # read stdin instead of the file named `-` (w5/736).
+    stdin = from_file == "-"
+    name = "stdin" if stdin else from_file
+    unattended = (
+        "Transactions are required with --no-input. Pipe the JSON array on stdin or name a file with --from PATH."
+    )
     if stdin:
-        context.refuse_terminal_stdin(
-            "Transactions are required with --no-input. Pipe the JSON array on stdin or name a file with --from PATH."
-        )
+        context.refuse_terminal_stdin(unattended)
         buffer = getattr(sys.stdin, "buffer", None)
         data = buffer.read() if buffer is not None else sys.stdin.read().encode("utf-8")
     else:
         try:
-            data = from_file.read_bytes()
+            with Path(from_file).open("rb") as handle:
+                # A named terminal (`--from /dev/stdin`) waits for a human
+                # exactly like `-` does, so it is refused the same way when
+                # unattended; pipes and regular files are read as before
+                # (w5/737).
+                if os.isatty(handle.fileno()) and context.current().no_input:
+                    raise UsageError(unattended)
+                data = handle.read()
         except FileNotFoundError as exc:
             raise UsageError(
                 f"No transactions file at '{from_file}' (from --from). "
@@ -614,17 +649,20 @@ def _load_transactions_json(from_file: Path) -> Any:
         # utf-8-sig matches CSV import: editors that emit a BOM stay valid.
         text = data.decode("utf-8-sig")
     except UnicodeDecodeError as exc:
-        message = decode_error_message(name, exc)
+        message = decode_error_message(name, exc, data)
         if data.startswith((b"\xff\xfe", b"\xfe\xff")):
             message = f"{message} {utf16}"
         raise UsageError(message) from exc
     if "\x00" in text:
         # BOM-less UTF-16 decodes as UTF-8 with a NUL beside every ASCII byte;
         # JSON text can never hold a raw NUL.
-        raise UsageError(utf16)
+        if _alternating_nuls(data):
+            raise UsageError(utf16)
+        offset = data.index(b"\x00")
+        raise UsageError(f"'{name}' (from --from) contains a NUL byte at byte {offset}; remove it and retry.")
     too_deep = f"'{name}' (from --from) nests JSON too deeply; send a flat array of rows."
     try:
-        loaded = json.loads(text, object_pairs_hook=_unique_keys)
+        loaded = json.loads(text, object_pairs_hook=_unique_keys, parse_float=JsonFloat)
     except json.JSONDecodeError as exc:
         raise UsageError(f"Invalid JSON at line {exc.lineno}, column {exc.colno}: {exc.msg}.") from exc
     except RecursionError as exc:
@@ -659,7 +697,9 @@ def _json_value_problem(exc: ValueError) -> str:
 
 @add_app.command("transactions", cls=_SingleValueCommand)
 def add_transactions(
-    from_file: Annotated[Path, typer.Option("--from", help="JSON file with a list of transactions; - reads stdin")],
+    from_file: Annotated[
+        str, typer.Option("--from", click_type=RawPath(), help="JSON file with a list of transactions; - reads stdin")
+    ],
     partial: Annotated[
         bool, typer.Option("--partial", help="Append the valid rows even when some rows are rejected")
     ] = False,
@@ -688,12 +728,13 @@ def add_transactions(
     target = data.pop("target")
     warnings = data.pop("warnings", [])
     written = int(data["written"])
+    dest = output.write_target(file, target)
     if context.current().json_output:
         if warnings:
             data["warnings"] = warnings
-        output.emit(data, target=output.write_target(file, target))
+        output.emit(data, target=dest)
     else:
         for warning in warnings:
             output.note(warning)
         noun = "transaction" if written == 1 else "transactions"
-        output.success(f"Added {written} {noun} to {target}.")
+        output.success(f"Added {written} {noun} to {dest['into']}.")

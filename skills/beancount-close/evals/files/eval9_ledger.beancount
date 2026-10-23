@@ -1,0 +1,20 @@
+;; fixture — beancount-close eval9 (statement covers only part of the close period)
+option "operating_currency" "USD"
+
+2026-01-01 open Assets:Bank:Checking USD
+2026-01-01 open Expenses:Food:Groceries USD
+2026-01-01 open Equity:Opening-Balances
+
+2026-05-31 * "Opening balance"
+  Assets:Bank:Checking      1000.00 USD
+  Equity:Opening-Balances
+
+2026-06-01 balance Assets:Bank:Checking   1000.00 USD
+
+2026-06-10 * "WHOLE FOODS"
+  Assets:Bank:Checking       -50.00 USD
+  Expenses:Food:Groceries
+
+2026-06-25 * "MARKET DELI"
+  Assets:Bank:Checking       -20.00 USD
+  Expenses:Food:Groceries

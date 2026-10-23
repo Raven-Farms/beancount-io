@@ -30,9 +30,27 @@ interface PushAccountPickerOptions {
   /** The field's current account, scrolled into view and check-marked. */
   current?: string;
   preview?: boolean;
+  /**
+   * The picking form's entry date (`YYYY-MM-DD`), handed to Open Account when
+   * the pick is a new account, so it opens by then (w21/008).
+   */
+  entryDate?: string;
+  /**
+   * The root a new account created from this picker starts under, when the
+   * caller knows better than the picker's type: every New Transaction row is a
+   * `posting` picker, so the expense row suggested `Assets:` (w21/259).
+   */
+  createRoot?: CreateRoot;
   /** Receives the pick. Registered here so it cannot be registered wrongly. */
   onSelect: (account: string) => void;
 }
+
+/** The roots a picker can suggest for Create. */
+export type CreateRoot = "Assets" | "Expenses";
+
+/** A route param that names a suggestion, else null. */
+export const parseCreateRoot = (value?: string): CreateRoot | null =>
+  value === "Assets" || value === "Expenses" ? value : null;
 
 /**
  * Open the account picker and register who receives the pick.
@@ -50,11 +68,23 @@ interface PushAccountPickerOptions {
  */
 export const pushAccountPicker = (
   router: PickerRouter,
-  { type, current, onSelect, preview = false }: PushAccountPickerOptions,
+  {
+    type,
+    current,
+    onSelect,
+    preview = false,
+    entryDate,
+    createRoot,
+  }: PushAccountPickerOptions,
 ): void => {
   SelectedAccount.setFn(onSelect);
   router.push({
     pathname: preview ? "/examples/account-picker" : "/(app)/account-picker",
-    params: { type, selectedItem: current },
+    params: {
+      type,
+      selectedItem: current,
+      ...(entryDate ? { entryDate } : {}),
+      ...(createRoot ? { createRoot } : {}),
+    },
   });
 };

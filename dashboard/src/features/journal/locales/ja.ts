@@ -428,10 +428,6 @@ const jaJournal: Record<string, TranslationEntry> = {
     message: "保留中",
     description: "Pending transaction status",
   },
-  "journal.blankStatus": {
-    message: "(空白)",
-    description: "Blank transaction status option",
-  },
   "journal.addPosting": {
     message: "仕訳行を追加",
     description: "Accessible name for adding a transaction posting row",

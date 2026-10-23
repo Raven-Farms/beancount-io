@@ -53,14 +53,16 @@ def test_the_panel_shows_the_aligned_text_and_it_is_what_lands(ledger: Path, mon
 
     shown: list[str] = []
     agent = make_agent("gpt-4o", "http://unused", "tok")
-    deps = BqlDeps(file=ledger, write_permission=WritePermission(confirm_fn=lambda d, t, w: (shown.append(d), "y")[1]))
+    deps = BqlDeps(
+        file=ledger, write_permission=WritePermission(confirm_fn=lambda d, t, w, p: (shown.append(d), "y")[1])
+    )
     before = ledger.read_text(encoding="utf-8")
 
     answer = _write_tool(agent)(SimpleNamespace(deps=deps), TABBED)
 
     assert answer.startswith("Added 1 directive(s)"), answer
     assert shown[0] == ledger.read_text(encoding="utf-8")[len(before) :].strip("\n") + "\n"
-    monkeypatch.setattr(repl, "_ask_write_permission", lambda: "y")
+    monkeypatch.setattr(repl, "_ask_write_permission", lambda count=1: "y")
     monkeypatch.setattr(repl, "console", repl.Console(width=100, force_terminal=False, record=True))
     repl.make_confirm_fn([None])(shown[0], str(ledger), [])
     panel = repl.console.export_text()
@@ -71,7 +73,9 @@ def test_the_panel_shows_the_aligned_text_and_it_is_what_lands(ledger: Path, mon
 def test_a_real_control_character_is_still_refused_before_any_panel(ledger: Path) -> None:
     shown: list[str] = []
     agent = make_agent("gpt-4o", "http://unused", "tok")
-    deps = BqlDeps(file=ledger, write_permission=WritePermission(confirm_fn=lambda d, t, w: (shown.append(d), "y")[1]))
+    deps = BqlDeps(
+        file=ledger, write_permission=WritePermission(confirm_fn=lambda d, t, w, p: (shown.append(d), "y")[1])
+    )
 
     answer = _write_tool(agent)(SimpleNamespace(deps=deps), TABBED.replace('"coffee"', '"coffee\x07"'))
 

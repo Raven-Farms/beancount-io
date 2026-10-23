@@ -5,7 +5,9 @@ import os
 import random
 import shutil
 import stat
+import unicodedata
 from collections.abc import Callable
+from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from prompt_toolkit import PromptSession
@@ -23,10 +25,10 @@ if TYPE_CHECKING:
     from cli.ask.agent import BqlDeps
 
 from cli import output
-from cli.ask.render import answer_markdown
+from cli.ask.render import answer_console, answer_markdown
 from cli.config import history_path
 from cli.context import env_flag
-from cli.errors import AuthError
+from cli.errors import AuthError, BeaError
 from cli.utils import inert_text
 
 _STYLE = Style.from_dict(
@@ -87,9 +89,29 @@ def _history() -> History:
     directory = history_file.parent
     directory.mkdir(parents=True, exist_ok=True)
     directory.chmod(stat.S_IRWXU)
-    os.close(os.open(history_file, os.O_WRONLY | os.O_CREAT | os.O_APPEND, stat.S_IRUSR | stat.S_IWUSR))
-    history_file.chmod(stat.S_IRUSR | stat.S_IWUSR)
+    # Never through a link or into anything but a regular file: a linked
+    # history had its target chmodded and every question appended to it,
+    # outside the config directory, and a FIFO there hung the prompt (w5/810).
+    flags = os.O_WRONLY | os.O_CREAT | os.O_APPEND | getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_NONBLOCK", 0)
+    try:
+        fd = os.open(history_file, flags, stat.S_IRUSR | stat.S_IWUSR)
+    except OSError:
+        return _history_in_memory(history_file)
+    try:
+        if not stat.S_ISREG(os.fstat(fd).st_mode):
+            return _history_in_memory(history_file)
+        os.fchmod(fd, stat.S_IRUSR | stat.S_IWUSR)
+    finally:
+        os.close(fd)
     return FileHistory(str(history_file))
+
+
+def _history_in_memory(history_file: Path) -> History:
+    output.note(
+        f"{history_file} is not a regular file bea can keep, so this session's questions are kept in memory "
+        "only. Remove it to keep history again."
+    )
+    return InMemoryHistory()
 
 
 def _make_session(hint: str, key_bindings: KeyBindings | None = None) -> PromptSession[str]:
@@ -104,7 +126,7 @@ def _make_session(hint: str, key_bindings: KeyBindings | None = None) -> PromptS
     )
 
 
-def _ask_write_permission() -> str:
+def _ask_write_permission(count: int = 1) -> str:
     """Arrow-key navigable selector. Returns y/n/a/d.
 
     It starts on "No", and each option's number and letter move the selection
@@ -120,7 +142,7 @@ def _ask_write_permission() -> str:
     from prompt_toolkit.styles import Style as PtStyle
 
     options = [
-        ("Yes", "y", "Append this directive to the ledger"),
+        ("Yes", "y", "Append this directive to the ledger" if count == 1 else f"Append these {count} directives"),
         ("No", "n", "Skip this write"),
         ("Yes to all", "a", "Approve all remaining writes this session"),
         ("Deny all", "d", "Reject all remaining writes this session"),
@@ -195,7 +217,16 @@ def _ask_write_permission() -> str:
     return app.run()
 
 
-def make_confirm_fn(active_status: list[Any]) -> Callable[[str, str, list[str]], str]:
+def _visible_format(text: str) -> str:
+    """Show each invisible format character (`Cf`: zero-width space, soft hyphen, BOM, …) as `\\uNNNN`.
+
+    The panel is the only gate between AI-proposed text and the books: a
+    zero-width space in an account name was on screen as nothing (w5/847).
+    """
+    return "".join(f"\\u{ord(ch):04x}" if unicodedata.category(ch) == "Cf" else ch for ch in text)
+
+
+def make_confirm_fn(active_status: list[Any]) -> Callable[[str, str, list[str], dict[str, Any]], str]:
     """Return a callback that stops the spinner, shows the panel, and runs arrow-key selection.
 
     Everything on the panel comes from the engine's dry run of the write that is
@@ -210,15 +241,23 @@ def make_confirm_fn(active_status: list[Any]) -> Callable[[str, str, list[str]],
     unreadable.
     """
 
-    def confirm(directive: str, target: str, warnings: list[str]) -> str:
+    def confirm(directive: str, target: str, warnings: list[str], proposal: dict[str, Any] | None = None) -> str:
+        proposal = proposal or {}
+        count = int(proposal.get("count") or 1)
         if s := active_status[0]:
             s.stop()
         console.print()
         content = Text()
-        content.append("Allow the AI to append this directive to your ledger?\n\n", style="dim")
+        what = "this directive" if count == 1 else f"these {count} directives"
+        content.append(f"Allow the AI to append {what} to your ledger?\n\n", style="dim")
         content.append("File: ", style="dim")
-        content.append(f"{inert_text(target)}\n\n", style="bold")
-        content.append(inert_text(directive), style="green")
+        content.append(inert_text(target), style="bold")
+        if proposal.get("created"):
+            content.append(" (new file, created by this write)", style="dim")
+        content.append("\n\n")
+        # A new include starts with the root's `name_*` options; they are
+        # written too, so they are shown with what follows them.
+        content.append(_visible_format(inert_text(str(proposal.get("seed") or "") + directive)), style="green")
         for warning in warnings:
             content.append(f"\n\nWarning: {inert_text(warning)}", style="yellow")
         console.print(
@@ -229,7 +268,7 @@ def make_confirm_fn(active_status: list[Any]) -> Callable[[str, str, list[str]],
                 padding=(0, 1),
             )
         )
-        result = _ask_write_permission()
+        result = _ask_write_permission(count)
         if s := active_status[0]:
             s.start()
         return result
@@ -246,9 +285,10 @@ def run_repl(agent: Agent[BqlDeps, str], deps: BqlDeps, *, default_input: str | 
     from pydantic_ai import capture_run_messages
 
     from cli.ask.agent import (
-        CUT_OFF_NOTICE,
         WritePermission,
-        cut_off,
+        _naming_writes,
+        begin_turn,
+        cut_off_notice,
         translated_failures,
         usage_limits,
         written_so_far,
@@ -301,13 +341,17 @@ def run_repl(agent: Agent[BqlDeps, str], deps: BqlDeps, *, default_input: str | 
             if user_input.lower() in {"?", "/help", "help"}:
                 _print_help()
                 continue
-            status = console.status("", spinner="dots")
-            active_status[0] = status
-            status.start()
+            # Both bound before the turn starts, so a Ctrl-C inside the spinner
+            # startup still reports (w5/734).
+            status: Any = None
+            turn: list[Any] = []
             try:
+                begin_turn(deps)
+                status = console.status("", spinner="dots")
+                active_status[0] = status
+                status.start()
                 # The spinner is stopped before any arm below prints: a live display
                 # left running would overwrite the line it is reporting on.
-                turn: list[Any] = []
                 try:
                     with capture_run_messages() as turn, translated_failures(deps):
                         asyncio.set_event_loop(turn_loop)
@@ -326,7 +370,20 @@ def run_repl(agent: Agent[BqlDeps, str], deps: BqlDeps, *, default_input: str | 
             except KeyboardInterrupt:
                 # A turn costs one Ctrl-C, not the session. `messages` is left as it
                 # was before the turn, so the next question still carries the history
-                # — and keeps this turn too if it wrote to the ledger.
+                # — and keeps this turn too if it wrote to the ledger. The spinner
+                # startup sits inside the turn for the same reason: a Ctrl-C there
+                # cancelled the session with exit 130 (w5/734). Stopping what never
+                # started is a no-op; a start interrupted halfway still unwinds.
+                if status is not None:
+                    status.stop()
+                active_status[0] = None
+                deps.cancel_event.set()
+                # An approved write landing now still records first: the report
+                # below must name it. Queued workers see the flag and return
+                # without a panel or a write, and none outlives the turn to
+                # draw over the next prompt or hold the process open (w5/731).
+                with deps.write_lock:
+                    pass
                 messages = _history_after_a_failed_turn(messages, turn, deps)
                 done = f": {inert_text(written_so_far(deps))}" if deps.writes else ""
                 # Text, not markup: the file name is not ours to have interpreted.
@@ -344,13 +401,18 @@ def run_repl(agent: Agent[BqlDeps, str], deps: BqlDeps, *, default_input: str | 
                 # one such failure ended the process and discarded the conversation.
                 messages = _history_after_a_failed_turn(messages, turn, deps)
                 console.print()
+                if not isinstance(exc, BeaError):
+                    # Translated failures already name this turn's writes; one no
+                    # arm translates reaches here bare (w5/744).
+                    exc = _naming_writes(exc, deps)
                 output.failure(exc)
                 continue
             messages = list(result.all_messages())
             console.print()
-            console.print(answer_markdown(result.output))
-            if cut_off(result):
-                console.print(Text(CUT_OFF_NOTICE, style="yellow"))
+            answer_console(result.output).print(answer_markdown(result.output))
+            notice = cut_off_notice(result)
+            if notice is not None:
+                console.print(Text(notice, style="yellow"))
     finally:
         turn_loop.close()
 

@@ -7,6 +7,12 @@ import {
 } from "@/features/gitea/utils/gitea-error";
 import { readGiteaFileText } from "@/features/gitea/utils/gitea-file-content";
 import { giteaWriteErrorFromCause } from "@/features/ledger/utils/operation-not-allowed-from-cause";
+import type { GiteaCommitClient } from "@/foundation/clients/load-cached-ledger-file-map";
+import {
+  checkDirectiveLimitForFileChanges,
+  type DirectiveLimitOptions,
+} from "@/core/directive-limit";
+import { getMaxDirectives } from "@/core/backend-v2-limits";
 
 const log = logger.child({ module: "commit-ledger-files" });
 
@@ -40,9 +46,12 @@ interface CommitOperation {
   sha?: string;
 }
 
-/** The narrow slice of the Gitea client this helper needs. */
+/**
+ * The slice of the Gitea client this helper needs: file reads and the commit,
+ * plus what the directive-limit check reads (the committed file map at HEAD).
+ */
 export interface GiteaFileCommitClient {
-  repos: {
+  repos: GiteaCommitClient["repos"] & {
     repoGetContents(
       owner: string,
       repo: string,
@@ -77,6 +86,9 @@ const MAX_ATTEMPTS = 5;
 // the conflict taxonomy (`isGiteaWriteConflict`) are shared with the other
 // Gitea-write paths — see `@/features/ledger/utils/gitea-error`.
 
+/** U+FEFF, the byte-order mark a UTF-8 file may start with. */
+const BOM = "\uFEFF";
+
 /**
  * Read a file's current content + blob SHA, or `null` when it does not exist
  * (Gitea `404`). Content and SHA come from the SAME response, so the SHA the
@@ -87,7 +99,7 @@ async function readFileOrNull(
   owner: string,
   repo: string,
   path: string,
-): Promise<{ content: string; sha: string } | null> {
+): Promise<{ content: string; sha: string; bom: boolean } | null> {
   try {
     // Transform keys can carry user-authored routing (bcio options) — guard
     // the URL splice like every other repoGetContents call.
@@ -97,18 +109,21 @@ async function readFileOrNull(
       toSafeRepoUrlPath(path),
     );
     const sha = res.data.sha;
-    return sha
-      ? {
-          content: await readGiteaFileText(
-            client.repos,
-            owner,
-            repo,
-            toSafeRepoUrlPath(path),
-            res.data,
-          ),
-          sha,
-        }
-      : null;
+    if (!sha) return null;
+    const text = await readGiteaFileText(
+      client.repos,
+      owner,
+      repo,
+      toSafeRepoUrlPath(path),
+      res.data,
+    );
+    // The ledger load decodes with `TextDecoder`, which drops a leading BOM,
+    // while this read kept it. On the file's first line it hid the entry's date
+    // from the block splitter, so an entry opened from the load could never be
+    // found to save or delete (w21/368). Hand the transform the same text the
+    // load saw; the BOM is written back, so the file keeps its bytes.
+    const bom = text.startsWith(BOM);
+    return { content: bom ? text.slice(BOM.length) : text, sha, bom };
   } catch (error) {
     if (isGiteaNotFound(error)) return null;
     if (error instanceof DomainError) throw error;
@@ -140,6 +155,11 @@ async function readFileOrNull(
  * `rawCreates` are pre-encoded binary files created in the SAME `repoChangeFiles`
  * commit as the text transforms — so an attachment (e.g. a receipt image) and
  * the ledger entries that reference it are atomic: both land or neither.
+ *
+ * Every commit made here is held to the free-tier directive limit, checked on
+ * each attempt against the content that attempt would commit, so no caller has
+ * to remember the check. `directiveLimit` is required so none forgets the
+ * request's exemption either.
  */
 export async function commitLedgerFiles(
   client: GiteaFileCommitClient,
@@ -147,8 +167,15 @@ export async function commitLedgerFiles(
   repo: string,
   transforms: Map<string, LedgerFileTransform>,
   message: string,
-  rawCreates: RawFileCreate[] = [],
+  {
+    directiveLimit,
+    rawCreates = [],
+  }: { directiveLimit: DirectiveLimitOptions; rawCreates?: RawFileCreate[] },
 ): Promise<void> {
+  // One tier lookup per commit, however many attempts it takes.
+  const limit: DirectiveLimitOptions = directiveLimit.exempt
+    ? directiveLimit
+    : { ...directiveLimit, maxDirectives: getMaxDirectives(owner) };
   const rawOperations: CommitOperation[] = rawCreates.map(
     ({ path, contentBase64 }) => ({
       operation: "create",
@@ -167,7 +194,8 @@ export async function commitLedgerFiles(
           // failed) can discover the desired block already exists. Do not send
           // a byte-identical update: Gitea may reject an empty commit as 422.
           if (read && transformed === read.content) return null;
-          const content = Buffer.from(transformed, "utf-8").toString("base64");
+          const body = read?.bom ? BOM + transformed : transformed;
+          const content = Buffer.from(body, "utf-8").toString("base64");
           return read
             ? { operation: "update", path, content, sha: read.sha }
             : { operation: "create", path, content };
@@ -179,6 +207,16 @@ export async function commitLedgerFiles(
     );
     const operations = [...textOperations, ...rawOperations];
     if (operations.length === 0) return;
+
+    await checkDirectiveLimitForFileChanges(
+      client,
+      owner,
+      repo,
+      Object.fromEntries(
+        textOperations.map(({ path, content }) => [path, content]),
+      ),
+      limit,
+    );
 
     try {
       await client.repos.repoChangeFiles(owner, repo, {

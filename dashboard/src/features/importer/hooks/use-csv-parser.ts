@@ -1,6 +1,7 @@
 import { useState, useCallback } from "react";
 import { useTranslations } from "@/common/hooks/use-translations";
 import type { ParsedRow, CSVParseResult } from "../types";
+import { CsvEncodingError, decodeCsvBytes } from "../utils/decode-csv-bytes";
 import {
   isValidRowFormat,
   detectHeaderRow,
@@ -19,16 +20,23 @@ type ParseRecordsResult =
 
 const DELIMITERS = [",", ";", "\t"] as const;
 
-/** The first record's text, up to the first newline outside quotes. */
+/**
+ * The first nonblank record's text, up to its newline outside quotes. The
+ * reader skips empty and whitespace-only records, so a file opening with
+ * them must not leave nothing to detect its delimiter from (w4/311).
+ */
 function firstRecordText(text: string): string {
   let inQuotes = false;
+  let start = 0;
   for (let i = 0; i < text.length; i++) {
     if (text[i] === '"') inQuotes = !inQuotes;
     else if (!inQuotes && (text[i] === "\n" || text[i] === "\r")) {
-      return text.slice(0, i);
+      const record = text.slice(start, i);
+      if (record.trim() !== "") return record;
+      start = i + 1;
     }
   }
-  return text;
+  return text.slice(start);
 }
 
 /**
@@ -69,7 +77,16 @@ function parseRecords(text: string, delimiter: string): ParseRecordsResult {
   let columns: string[] = [];
   let currentField = "";
   let inQuotes = false;
+  // A quoted field has closed: only padding, the delimiter or the record's
+  // end may follow. Joining `"vendor"tail` or reading `"1"2.50` as 12.50
+  // invented values the file never held (w4/308).
+  let afterQuote = false;
   let i = 0;
+
+  const malformed = (what: string): ParseRecordsResult => ({
+    ok: false,
+    error: `${what} in CSV record ${records.length + 1}`,
+  });
 
   const pushRecord = () => {
     columns.push(currentField.trim());
@@ -93,6 +110,7 @@ function parseRecords(text: string, delimiter: string): ParseRecordsResult {
           continue;
         }
         inQuotes = false;
+        afterQuote = true;
         i += 1;
         continue;
       }
@@ -106,20 +124,34 @@ function parseRecords(text: string, delimiter: string): ParseRecordsResult {
       continue;
     }
 
-    if (char === '"') {
-      inQuotes = true;
-      i += 1;
-      continue;
-    }
     if (char === delimiter) {
       columns.push(currentField.trim());
       currentField = "";
+      afterQuote = false;
       i += 1;
       continue;
     }
     if (char === "\r" || char === "\n") {
       i += char === "\r" && text[i + 1] === "\n" ? 2 : 1;
       pushRecord();
+      afterQuote = false;
+      continue;
+    }
+    if (afterQuote) {
+      // Fields are trimmed, so padding before the delimiter is harmless.
+      if (char === " " || char === "\t") {
+        i += 1;
+        continue;
+      }
+      return malformed("Unexpected text after a quoted field");
+    }
+    if (char === '"') {
+      if (currentField.trim() !== "") {
+        return malformed("Unexpected quote inside an unquoted field");
+      }
+      currentField = "";
+      inQuotes = true;
+      i += 1;
       continue;
     }
 
@@ -269,6 +301,11 @@ export function useCSVParser() {
     const hasUnsupportedPrecision = rows.some(
       (row) => row.amountFailureReason === "unsupported-precision",
     );
+    // The file named columns we read and every record has them: whatever is
+    // wrong is in the values, for the Preview to show and the reader to fix.
+    // Headerless files and records of the wrong width stay unreadable.
+    const recognizedLayout =
+      hasHeader && dataRecords.every((columns) => isValidRowFormat(columns));
 
     return {
       rows,
@@ -277,7 +314,9 @@ export function useCSVParser() {
       hasErrors: errorCount > 0,
       blockLlmFallback: hasUnsupportedPrecision
         ? "unsupported-precision"
-        : undefined,
+        : recognizedLayout
+          ? "recognized-layout"
+          : undefined,
     };
   }, []);
 
@@ -294,11 +333,17 @@ export function useCSVParser() {
 
         reader.onload = (e) => {
           try {
-            const content = e.target?.result as string;
-            const result = parseCSV(content);
+            const bytes = new Uint8Array(e.target?.result as ArrayBuffer);
+            const result = parseCSV(decodeCsvBytes(bytes));
             setIsLoading(false);
             resolve(result);
           } catch (err) {
+            if (err instanceof CsvEncodingError) {
+              setError(t("importer.error.notUtf8Description"));
+              setIsLoading(false);
+              reject(err);
+              return;
+            }
             console.error("Failed to parse CSV:", err);
             const errorMessage = t("importer.error.failedToParse");
             setError(errorMessage);
@@ -314,7 +359,7 @@ export function useCSVParser() {
           reject(new Error(errorMessage));
         };
 
-        reader.readAsText(file);
+        reader.readAsArrayBuffer(file);
       });
     },
     [parseCSV, t],

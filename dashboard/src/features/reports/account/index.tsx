@@ -60,6 +60,7 @@ import { useErrorMessage } from "@/common/lib/errors/error-message";
 import { useTranslations } from "@/common/hooks/use-translations";
 import { accountQueryDefaults } from "./constants";
 import { getAccountJournalWithChildren } from "@/common/lib/fava-options";
+import { useQueryRetry } from "@/common/hooks/use-query-retry";
 
 import { isAccountReportEmpty } from "./lib/account-report-empty";
 import { useReportConversion } from "@/features/reports/components/use-report-conversion";
@@ -213,6 +214,11 @@ export function AccountJournalTable({
     },
     fetchPolicy: "cache-and-network",
   });
+  const {
+    failure: journalFailure,
+    retrying: retryingJournal,
+    retry: retryJournal,
+  } = useQueryRetry(journalError, refetchJournal);
 
   // A genuine filter change starts again at the first page.
   useEffect(() => {
@@ -298,12 +304,14 @@ export function AccountJournalTable({
       </CardContent>
       <CardContent>
         <div ref={entryFallbackRef} tabIndex={-1} className="outline-none">
-          {journalLoading ? (
-            <LoadingSpinner />
-          ) : journalError ? (
+          {journalFailure ? (
             <ReportErrorState
               message={t("page.accountReport.errorLoadingJournal")}
+              onRetry={retryJournal}
+              retrying={retryingJournal}
             />
+          ) : journalLoading ? (
+            <LoadingSpinner />
           ) : journalTableData.length === 0 ? (
             <div className="flex items-center justify-center py-12">
               <div className="text-center">

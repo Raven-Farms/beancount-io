@@ -22,6 +22,7 @@ and the rewrite can never disagree about what would change.
 
 from __future__ import annotations
 
+import signal
 import sys
 import unicodedata
 from collections.abc import Callable, Iterator
@@ -38,10 +39,6 @@ BOM_CHARACTER = "\ufeff"
 
 # Match the frontend's explicit-width ceiling without importing frontend code.
 _MAX_ALIGNMENT_WIDTH = 200
-
-#: Descriptors an in-place run needs besides its locks: the standard streams,
-#: the file being read, its staging copy, a directory listing, lazy imports.
-_DESCRIPTOR_HEADROOM = 64
 
 #: Characters `str.splitlines` treats as line breaks besides `\n`.
 #: Beancount's lexer counts only `\n`, and upstream's aligner splits with
@@ -113,13 +110,16 @@ def format_files(
     if not in_place:
         return {"changed": [str(file) for file in targets if _would_change(file, widths)]}
 
+    from bea_engine import stopping
+
     changed: list[str] = []
     unchanged: list[str] = []
+    stopped: int | None = None
     try:
         with ExitStack() as stack:
             locks = write.lock_order(targets)
             # Each file's directory is locked as well, always after its lock file (w5/181).
-            together = _descriptors_allow(2 * len(locks))
+            together = write.descriptors_allow(2 * len(locks))
             for file in locks if together else ():
                 stack.enter_context(write.lock_file(file))
             if together:
@@ -129,6 +129,13 @@ def format_files(
             for directory in dict.fromkeys(file.parent for file in targets):
                 write.sweep_abandoned_candidates(directory)
             for file in targets:
+                # Once a file is rewritten a stop is only noted, so the run
+                # went on rewriting until the frontend's grace period ended
+                # in SIGKILL, and nothing said which files had changed
+                # (w5/825). A stop now ends it here, reporting both.
+                stopped = stopping.requested()
+                if stopped is not None:
+                    break
                 with ExitStack() as each:
                     if not together:
                         each.enter_context(write.lock_file(file))
@@ -155,31 +162,20 @@ def format_files(
         if error is exc:
             raise
         raise error from exc
+    if stopped is not None:
+        name = signal.Signals(stopped).name
+        completed = {*changed, *unchanged}
+        raise LedgerError(
+            f"Stopped ({name}) before formatting the remaining files.",
+            result={
+                "formatted": changed,
+                "unchanged": unchanged,
+                "failed": [],
+                "not_attempted": [str(target) for target in targets if str(target) not in completed],
+                "stopped": name,
+            },
+        )
     return {"changed": changed}
-
-
-def _descriptors_allow(locks: int) -> bool:
-    """Whether `locks` lock files can be open at once, raising the soft limit when that is all it takes.
-
-    macOS starts a process with a soft limit of 256 descriptors, well under
-    what a directory of ledger files can ask for, and a hard limit far above.
-    """
-    if sys.platform == "win32":
-        return True
-    import resource
-
-    needed = locks + _DESCRIPTOR_HEADROOM
-    soft, hard = resource.getrlimit(resource.RLIMIT_NOFILE)
-    if soft == resource.RLIM_INFINITY or needed <= soft:
-        return True
-    if hard != resource.RLIM_INFINITY and needed > hard:
-        return False
-    try:
-        resource.setrlimit(resource.RLIMIT_NOFILE, (needed, hard))
-    except (OSError, ValueError):
-        # An "unlimited" hard limit is still capped by the kernel's per-process maximum.
-        return False
-    return True
 
 
 def render_file(file: Path, widths: tuple[int | None, int | None, int | None]) -> str:
@@ -267,7 +263,9 @@ def _aligned(file: Path, text: str, widths: tuple[int | None, int | None, int | 
         ) from None
     formatted = _split_lines(aligned)
     for index, original in protected.items():
-        formatted[index] = original if original.endswith("\n") else original + "\n"
+        # Normalize the whole trailing CR run before restoring one LF. Leaving
+        # a CR beside that LF would lose another CR on each later format pass.
+        formatted[index] = original.removesuffix("\n").rstrip("\r") + "\n"
     return "".join(formatted)
 
 

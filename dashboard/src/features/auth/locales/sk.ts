@@ -44,6 +44,11 @@ const skAuth: Record<string, TranslationEntry> = {
     message: "Potvrďte heslo",
     description: "Placeholder for password confirmation",
   },
+  "auth.chooseYourPassword": {
+    message: "Zvoľte heslo (min 8 znakov)",
+    description:
+      "Placeholder for the password a new account chooses, with the minimum length",
+  },
   "auth.createAccount": {
     message: "Vytvoriť účet",
     description: "Button to submit registration",
@@ -179,6 +184,12 @@ const skAuth: Record<string, TranslationEntry> = {
     message: "Prihlásenie zlyhalo",
     description: "Error title when login fails",
   },
+  "auth.loginRateLimited": {
+    message:
+      "Príliš veľa pokusov o prihlásenie. Počkajte niekoľko minút a skúste to znova, alebo si resetujte heslo.",
+    description:
+      "Shown on any password sign-in form when sign-in is rate limited, by address or by too many wrong passwords for the account",
+  },
   "auth.logout": {
     message: "Odhlásiť",
     description: "Button label to log out",
@@ -197,11 +208,12 @@ const skAuth: Record<string, TranslationEntry> = {
     description: "Label for new password field",
   },
   "auth.newPasswordMinLength": {
-    message: "Heslo musí mať aspoň 6 znakov",
+    message: "Heslo musí mať aspoň 8 znakov",
     description: "Validation error for password length",
   },
   "auth.newPasswordMaxLength": {
-    message: "Heslo musí mať najviac 128 znakov",
+    message:
+      "Heslo je príliš dlhé. Použite najviac 72 znakov; písmená s diakritikou, nelatinské písma a emoji sa počítajú ako 2 až 4 znaky.",
     description:
       "Validation error when new password exceeds the maximum length",
   },
@@ -245,8 +257,20 @@ const skAuth: Record<string, TranslationEntry> = {
     message: "Heslo je povinné",
     description: "Validation error when password is not provided",
   },
+  "auth.passwordBreached": {
+    message:
+      "Toto heslo sa objavilo pri úniku údajov. Zvoľte heslo, ktoré nepoužívate nikde inde.",
+    description:
+      "Error when the server finds the new password in a known data breach (Have I Been Pwned)",
+  },
+  "auth.passwordTooSimilar": {
+    message: "Heslo sa príliš podobá na váš e-mail alebo používateľské meno.",
+    description:
+      "Error when the new password is too close to the account's email or username",
+  },
   "auth.passwordResetSuccessMessage": {
-    message: "Vaše heslo bolo resetované. Presmerovávam na prihlásenie...",
+    message:
+      "Vaše heslo bolo resetované a na všetkých zariadeniach a v pripojených aplikáciách ste boli odhlásení. Presmerovávam na prihlásenie...",
     description: "Success message description",
   },
   "auth.passwordResetSuccessful": {
@@ -749,6 +773,77 @@ const skAuth: Record<string, TranslationEntry> = {
       "Prihlásenie heslom je na tomto serveri vypnuté. Pokračujte radšej cez Google.",
     description:
       "Shown instead of a password form when password sign-in is turned off on the server",
+  },
+  "auth.recoveryTitle": {
+    message: "Overte e-mail a prihláste sa",
+    description:
+      "Title of the email ownership verification step for sign-in recovery",
+  },
+  "auth.recoveryDescription": {
+    message:
+      "Otvorte odkaz v e-maile na obnovenie prístupu a zadajte kód z e-mailu a svoje aktuálne heslo.",
+    description: "Instructions for continuing from the sign-in recovery email",
+  },
+  "auth.recoverySendEmail": {
+    message: "Odoslať e-mail na obnovenie prístupu",
+    description: "Button requesting a sign-in recovery email",
+  },
+  "auth.recoverySending": {
+    message: "Odosiela sa e-mail na obnovenie prístupu...",
+    description: "Pending state while requesting a sign-in recovery email",
+  },
+  "auth.recoverySent": {
+    message:
+      "Ak k tejto adrese existuje účet, čoskoro dostanete e-mail na obnovenie prístupu. Pokračujte otvorením odkazu v e-maile. Nedávno doručený e-mail na obnovenie prístupu je stále platný.",
+    description:
+      "Uniform confirmation after requesting recovery; previous valid recovery emails remain usable",
+  },
+  "auth.recoveryResend": {
+    message: "Odoslať ďalší e-mail na obnovenie prístupu",
+    description: "Button requesting another sign-in recovery email",
+  },
+  "auth.recoveryRetryAt": {
+    message: "Skúste to znova o {time}.",
+    description:
+      "Absolute local retry time after throttling; {time} is formatted using the active locale",
+  },
+  "auth.recoveryCode": {
+    message: "Šesťmiestny overovací kód",
+    description: "Accessible label for the sign-in recovery email code",
+  },
+  "auth.recoveryCodeInvalid": {
+    message: "Zadajte šesťmiestny kód z e-mailu na obnovenie prístupu.",
+    description:
+      "Validation error when the recovery code is not exactly six digits",
+  },
+  "auth.recoveryFailed": {
+    message:
+      "E-mail, kód alebo heslo je nesprávne, alebo platnosť kódu vypršala. Môžete požiadať o nový e-mail na obnovenie prístupu.",
+    description:
+      "Uniform invalid-credentials or expired-code error during sign-in recovery",
+  },
+  "auth.recoveryRequestFailed": {
+    message:
+      "Nepodarilo sa vyžiadať e-mail na obnovenie prístupu. Skúste to znova.",
+    description: "Error when requesting a sign-in recovery email fails",
+  },
+  "auth.recoveryUnavailable": {
+    message: "Prihlásenie je dočasne nedostupné. Skúste to znova.",
+    description: "Temporary service outage during sign-in recovery",
+  },
+  "auth.recoveryExpiry": {
+    message:
+      "Platnosť kódu vyprší po 10 minútach a umožňuje jeden pokus o zadanie hesla.",
+    description:
+      "Explains the expiry and single password-attempt limit of a recovery code",
+  },
+  "auth.recoverySubmit": {
+    message: "Overiť a prihlásiť sa",
+    description: "Button submitting the recovery code and current password",
+  },
+  "auth.recoveryVerifying": {
+    message: "Overuje sa...",
+    description: "Pending state while verifying the recovery code and password",
   },
 };
 

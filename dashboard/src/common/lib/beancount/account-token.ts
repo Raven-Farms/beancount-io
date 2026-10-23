@@ -1,11 +1,13 @@
 /**
  * Beancount account names are colon-separated components with no spaces.
- * Each component starts with an uppercase letter, caseless letter, or digit,
- * then letters, digits, or hyphens — matching the live Open Account controls
- * (hyphenated, numeric, and accented names) while rejecting empty segments,
- * whitespace, and lowercase-leading Latin components like `Assets:checking`.
+ * Each component starts with an uppercase, titlecase (`ǅ`) or caseless letter,
+ * or a digit, then letters, combining marks, digits, or hyphens — matching
+ * what the ledger accepts (hyphenated, numeric, accented, decomposed `É` and
+ * Devanagari `हिंदी` names, w4/279) while rejecting empty segments, whitespace,
+ * and lowercase-leading Latin components like `Assets:checking`. Names are
+ * kept as authored, never normalized.
  */
-const ACCOUNT_COMPONENT = /^[\p{Lu}\p{Lo}\p{Nd}][\p{L}\p{Nd}-]*$/u;
+const ACCOUNT_COMPONENT = /^[\p{Lu}\p{Lt}\p{Lo}\p{Nd}][\p{L}\p{M}\p{Nd}-]*$/u;
 
 /** Why a name is not a complete account token (w0/017). */
 export type AccountTokenProblem =
@@ -15,7 +17,7 @@ export type AccountTokenProblem =
   | { kind: "component-start"; component: string }
   | { kind: "invalid-character"; component: string };
 
-const COMPONENT_START = /^[\p{Lu}\p{Lo}\p{Nd}]/u;
+const COMPONENT_START = /^[\p{Lu}\p{Lt}\p{Lo}\p{Nd}]/u;
 
 /**
  * The first reason `account` is not a complete account token, or `null` when

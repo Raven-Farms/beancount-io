@@ -20,9 +20,10 @@
  *  - Slow / failed queries never block: with no results we surface nothing and
  *    the add flow behaves exactly as before.
  */
+import { foldQuotes } from "./merchant-key";
 
 /** Where a suggestion came from. */
-export type SuggestionSource = "history" | "llm";
+type SuggestionSource = "history" | "llm";
 
 export interface AccountSuggestion {
   account: string;
@@ -311,17 +312,23 @@ export function twoPostingPayees(entries: JournalEntryLike[]): string[] {
 }
 
 /**
- * For one payee, rank the FROM and TO accounts seen across its two-posting
- * transactions (by frequency) and split each into an auto-fill + chips.
- * Multi-leg transactions and other payees are ignored.
+ * For one payee, the accounts seen across its two-posting transactions, split
+ * into an auto-fill and chips per side. The auto-fill pair is the most common
+ * (from, to) pair: ranking the sides separately filled a pair that never
+ * occurred together, even the same account twice (a PayPal payee's top-ups
+ * `Checking → PayPal` and purchases `PayPal → Shopping` filled
+ * `PayPal → PayPal`) (w21/412). Ties go to the pair seen first. The chips are
+ * the other accounts seen on each side, by frequency. Multi-leg transactions
+ * and other payees are ignored.
  */
 export function deriveTwoPostingSuggestions(
   entries: JournalEntryLike[],
   payee: string,
 ): { from: SideSuggestions; to: SideSuggestions } {
-  const target = payee.trim();
+  const target = foldQuotes(payee.trim());
   const fromCounts = new Map<string, number>();
   const toCounts = new Map<string, number>();
+  const pairCounts = new Map<string, { pair: AccountPair; count: number }>();
   const fromOrder: string[] = [];
   const toOrder: string[] = [];
   const bump = (
@@ -336,7 +343,7 @@ export function deriveTwoPostingSuggestions(
   };
 
   for (const entry of entries) {
-    if (entry.payee?.trim() !== target) {
+    if (foldQuotes(entry.payee?.trim() ?? "") !== target) {
       continue;
     }
     const pair = extractTwoPostingPair(entry);
@@ -345,11 +352,35 @@ export function deriveTwoPostingSuggestions(
     }
     bump(fromCounts, fromOrder, pair.from);
     bump(toCounts, toOrder, pair.to);
+    const key = `${pair.from}\u0000${pair.to}`;
+    const seen = pairCounts.get(key);
+    if (seen) seen.count += 1;
+    else pairCounts.set(key, { pair, count: 1 });
   }
 
+  // The most common pair that is a real transfer between two accounts.
+  let best: AccountPair | null = null;
+  let bestCount = 0;
+  for (const { pair, count } of pairCounts.values()) {
+    if (pair.from !== pair.to && count > bestCount) {
+      best = pair;
+      bestCount = count;
+    }
+  }
+  const ranked = (
+    counts: Map<string, number>,
+    order: string[],
+    chosen: string | undefined,
+  ) => {
+    const rest = rankByFrequency(counts, order);
+    return chosen === undefined
+      ? rest
+      : [chosen, ...rest.filter((account) => account !== chosen)];
+  };
+
   return {
-    from: buildSide(rankByFrequency(fromCounts, fromOrder), "history"),
-    to: buildSide(rankByFrequency(toCounts, toOrder), "history"),
+    from: buildSide(ranked(fromCounts, fromOrder, best?.from), "history"),
+    to: buildSide(ranked(toCounts, toOrder, best?.to), "history"),
   };
 }
 

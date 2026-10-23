@@ -4,8 +4,12 @@ import { getClient } from "./common/apollo/client";
 import { createLocalization } from "./i18n/init";
 import { LocalizationProvider } from "./i18n/provider";
 import { ApolloProvider } from "@apollo/client/react";
+import { respectPreHydrationScroll } from "./common/lib/respect-pre-hydration-scroll";
 
 export type { RouterContext } from "@/common/types/router-context";
+
+/** The ledger shell's own scroll pane, restored and reset like the window. */
+const SCROLL_CONTAINERS = ['[data-scroll-restoration-id="ledger-content"]'];
 
 export function getRouter() {
   const client = getClient();
@@ -16,8 +20,8 @@ export function getRouter() {
     // and backticks cannot become raw characters in a repeating redirect.
     // Remove after adopting router-core >=1.171.14 (TanStack/router#7695).
     rewrite: { input: ({ url }) => url },
-    scrollRestoration: true,
-    scrollToTopSelectors: ['[data-scroll-restoration-id="ledger-content"]'],
+    scrollRestoration: respectPreHydrationScroll(SCROLL_CONTAINERS),
+    scrollToTopSelectors: SCROLL_CONTAINERS,
     defaultPreload: "intent",
     defaultPreloadStaleTime: 0,
     context: {

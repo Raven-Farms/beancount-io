@@ -1,4 +1,7 @@
-import { filterExactPayee } from "../screens/merchant-detail-screen/selectors/filter-exact-payee";
+import {
+  exactPayeeFilter,
+  filterExactPayee,
+} from "../screens/merchant-detail-screen/selectors/filter-exact-payee";
 
 describe("filterExactPayee", () => {
   const entries = [
@@ -45,5 +48,68 @@ describe("filterExactPayee", () => {
     expect(filterExactPayee(entries, "uber").map((e) => e.id)).toEqual([3]);
     expect(filterExactPayee(entries, "   ")).toEqual([]);
     expect(filterExactPayee(entries, "")).toEqual([]);
+  });
+});
+
+// w21/181: free-text filtering paged through longer names ("Ace" among "Ace
+// Deli") and stopped at 500, so the merchant's own rows vanished.
+describe("exactPayeeFilter", () => {
+  it("anchors every spelling, escaped, and pads for trailing spaces", () => {
+    expect(exactPayeeFilter(["QA Ace"])).toBe('payee:"^\\s*(?:QA Ace)\\s*$"');
+    expect(exactPayeeFilter(["Lowe's", "Ethereum 2.0", 'A "B"'])).toBe(
+      'payee:"^\\s*(?:Lowe\'s|Ethereum 2\\.0|A \\x22B\\x22)\\s*$"',
+    );
+  });
+
+  // w21/361: the ledger service refuses a filter pattern over 256 characters,
+  // which failed the whole journal for a merchant with long merged spellings.
+  it("merges spellings that differ only in case or trailing space", () => {
+    expect(exactPayeeFilter(["QA Ace", "qa ace", "QA Ace ", "Qa ACE"])).toBe(
+      'payee:"^\\s*(?:QA Ace)\\s*$"',
+    );
+  });
+
+  it("stays under the server's pattern limit, falling back to the primary spelling as text", () => {
+    const long = "ACME INTERNATIONAL PAYMENT PROCESSING SERVICES 0123456789";
+    const spellings = [
+      long,
+      long.toLowerCase(),
+      `${long} `,
+      `${long} EU`,
+      `${long} UK`,
+      `${long} DE`,
+      `${long} FR`,
+      `${long} IT`,
+    ];
+    const filter = exactPayeeFilter(spellings)!;
+    // Six distinct spellings of 57-60 characters do not fit in 256, so the
+    // primary one is matched as text instead.
+    expect(filter).toBe(`"${long.replace(/ /g, "\\s+")}"`);
+    // Case variants alone collapse to one alternative, which fits.
+    expect(
+      exactPayeeFilter([long, long.toLowerCase(), `${long} `])!.startsWith(
+        'payee:"^',
+      ),
+    ).toBe(true);
+  });
+
+  it("is nothing for no payee", () => {
+    expect(exactPayeeFilter([" "])).toBe(undefined);
+  });
+
+  it("is what merchant detail pages with", () => {
+    const screen = require("fs").readFileSync(
+      require("path").join(
+        __dirname,
+        "..",
+        "screens",
+        "merchant-detail-screen",
+        "merchant-detail-screen.tsx",
+      ),
+      "utf8",
+    );
+    expect(screen.includes("exactPayeeFilter(spellings), [spellings]")).toBe(
+      true,
+    );
   });
 });

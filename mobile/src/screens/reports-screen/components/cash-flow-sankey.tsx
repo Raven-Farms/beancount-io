@@ -1,3 +1,4 @@
+import { useLedgerRootNames } from "@/common/hooks/use-ledger-root-names";
 import { useMemo, useState } from "react";
 import { LayoutChangeEvent, StyleSheet, View } from "react-native";
 import Svg, { Path, Rect, Text as SvgText } from "react-native-svg";
@@ -25,6 +26,7 @@ import { useEntranceProgress } from "@/common/d3/use-entrance-progress";
 import {
   type SankeyNodeDatum,
   transformToSankeyData,
+  sankeyLabelLines,
   truncateSankeyLabel,
   sankeyColorForRole,
   cashFlowChartSummary,
@@ -38,6 +40,9 @@ const NODE_PADDING = 10;
 const LABEL_COL = 72;
 const PLOT_PAD = 8;
 const LABEL_GAP = 4;
+/** Two lines of beside-node label (w21/540). */
+const LABEL_LINE_HEIGHT = fontSizes.xs * 1.2;
+const LABEL_TWO_LINE_HEIGHT = LABEL_LINE_HEIGHT * 2;
 /** Resting ribbon opacity — named so the draw-in worklet does not inline a literal. */
 const RIBBON_OPACITY = 0.35;
 const RIBBON_DIM_OPACITY = 0.1;
@@ -124,6 +129,8 @@ function sankeyRibbonPath(link: LayoutLink): string | null {
 }
 
 type CashFlowSankeyProps = {
+  /** What the empty state says: see `IncomeExpenseBarChart`'s (w21/515). */
+  emptyLabel?: string;
   income: AccountNode[];
   expenses: AccountNode[];
   /** Ledger currency code, for the screen-reader summary's amounts. */
@@ -223,13 +230,17 @@ function AnimatedNodeRect({
 }
 
 function CashFlowSankeyPlot({
+  emptyLabel,
   income,
   expenses,
   currency,
 }: CashFlowSankeyProps): JSX.Element {
   const theme = useTheme().colorTheme;
   const styles = useThemeStyle(getStyles);
-  const { t } = useTranslations();
+  const { t, locale } = useTranslations();
+  // A ledger that renames its roots has Ingresos/Gastos, not Income/Expenses
+  // (w21/235).
+  const roots = useLedgerRootNames();
   const [width, setWidth] = useState(ScreenWidth - gutter * 2);
   const [pressed, setPressed] = useState<string | null>(null);
 
@@ -241,10 +252,14 @@ function CashFlowSankeyPlot({
         otherLabel: t("other"),
         cashFlowLabel: t("cashFlow"),
         savingsLabel: t("savings"),
+        refundsLabel: t("cashFlowRefunds"),
+        clawbacksLabel: t("cashFlowClawbacks"),
         incomeNodeLabel: (name) => t("sankeyIncomeNodeLabel", { name }),
         expensesNodeLabel: (name) => t("sankeyExpensesNodeLabel", { name }),
+        roots,
+        currency,
       }),
-    [income, expenses, t],
+    [income, expenses, roots, t, currency],
   );
 
   const ready = data.links.length > 0;
@@ -278,7 +293,10 @@ function CashFlowSankeyPlot({
 
   if (!ready) {
     return (
-      <ChartPlaceholder height={SANKEY_HEIGHT} label={t("cashFlowEmpty")} />
+      <ChartPlaceholder
+        height={SANKEY_HEIGHT}
+        label={emptyLabel ?? t("cashFlowEmpty")}
+      />
     );
   }
 
@@ -289,7 +307,7 @@ function CashFlowSankeyPlot({
       style={styles.plot}
       onLayout={onLayout}
       accessible
-      accessibilityLabel={cashFlowChartSummary(data, currency, t)}
+      accessibilityLabel={cashFlowChartSummary(data, currency, t, locale)}
     >
       <Svg width={width} height={SANKEY_HEIGHT}>
         {graph?.links.map((link, index) => {
@@ -349,19 +367,26 @@ function CashFlowSankeyPlot({
           const isSource = (node.targetLinks?.length ?? 0) === 0;
           const x = isSource ? box.x0 - LABEL_GAP : box.x1 + LABEL_GAP;
           const y = (box.y0 + box.y1) / 2;
-          return (
+          // The name and its "(income)" / "(expenses)" suffix on a line each
+          // when the node is tall enough, so two groups of one name differ
+          // (w21/540); a short node keeps one cut line.
+          const lines = sankeyLabelLines(node.label);
+          const twoLines =
+            lines.length === 2 && box.y1 - box.y0 >= LABEL_TWO_LINE_HEIGHT;
+          const shown = twoLines ? lines : [truncateSankeyLabel(node.label)];
+          return shown.map((text, index) => (
             <SvgText
-              key={`label-${node.id}`}
+              key={`label-${node.id}-${index}`}
               x={x}
-              y={y}
+              y={y + (index - (shown.length - 1) / 2) * LABEL_LINE_HEIGHT}
               fontSize={fontSizes.xs}
               fill={theme.text01}
               textAnchor={isSource ? "end" : "start"}
               alignmentBaseline="middle"
             >
-              {truncateSankeyLabel(node.label)}
+              {text}
             </SvgText>
-          );
+          ));
         })}
       </Svg>
       <ChartLegend>

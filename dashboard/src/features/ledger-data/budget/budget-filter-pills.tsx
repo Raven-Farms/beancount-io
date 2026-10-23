@@ -38,7 +38,7 @@ export function BudgetFilterPills({
               variant="ghost"
               size="sm"
               className={cn(
-                "h-8 rounded-md px-3 text-xs text-muted-foreground",
+                "h-8 rounded-md px-3 text-xs text-muted-foreground aria-pressed:forced-selected",
                 isSelected &&
                   "bg-background text-foreground shadow-xs ring-1 ring-border hover:bg-background",
               )}

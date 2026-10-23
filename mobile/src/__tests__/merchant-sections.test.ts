@@ -27,26 +27,32 @@ const RENT: MerchantAggregate = {
 const MONTHLY: RecurrenceVerdict = {
   cadence: "monthly",
   typicalAmountByCurrency: { USD: -15.99 },
+  primaryCurrency: "USD",
   isApproximate: false,
   nextExpected: "2025-07-01",
   isOverdue: false,
+  isLapsed: false,
+  lastPaid: "2026-01-01",
 };
 
 const OVERDUE: RecurrenceVerdict = {
   ...MONTHLY,
   nextExpected: "2025-05-01",
   isOverdue: true,
+  isLapsed: false,
+  lastPaid: "2026-01-01",
 };
 
-// Payees whose series had enough dates for detection to analyse.
-const ANALYSED: ReadonlySet<string> = new Set(["Netflix", "Uber", "Landlord"]);
+// Merchants whose series had enough dates for detection to analyse, keyed by
+// `merchantKey` as detection is (w21/169).
+const ANALYSED: ReadonlySet<string> = new Set(["netflix", "uber", "landlord"]);
 
 describe("buildMerchantSections", () => {
   it("pins detected recurring merchants above the general list", () => {
     const detections = new Map<string, RecurrenceVerdict | null>([
-      ["Netflix", MONTHLY],
-      ["Uber", null],
-      ["Landlord", OVERDUE],
+      ["netflix", MONTHLY],
+      ["uber", null],
+      ["landlord", OVERDUE],
     ]);
     const sections = buildMerchantSections(
       [UBER, NETFLIX, RENT],
@@ -62,7 +68,8 @@ describe("buildMerchantSections", () => {
       "Netflix",
     ]);
     expect(sections[0]!.titleKey).toBe("merchantsRecurringSection");
-    expect(sections[1]!.titleKey).toBe(null);
+    // Titled once a Recurring section precedes it (w21/020).
+    expect(sections[1]!.titleKey).toBe("merchantsAllSection");
     expect(sections[1]!.data.map((row) => row.merchant.payee)).toEqual([
       "Uber",
       "Netflix",
@@ -73,7 +80,7 @@ describe("buildMerchantSections", () => {
   });
 
   it("lets a notRecurring override hide a detection from the pin", () => {
-    const detections = new Map([["Netflix", MONTHLY]]);
+    const detections = new Map([["netflix", MONTHLY]]);
     const sections = buildMerchantSections(
       [NETFLIX, UBER],
       detections,
@@ -84,12 +91,14 @@ describe("buildMerchantSections", () => {
     );
     expect(sections.map((s) => s.key)).toEqual(["all"]);
     expect(sections[0]!.data[0]!.resolved.isRecurring).toBe(false);
+    // The only section: no heading needed (w21/020).
+    expect(sections[0]!.titleKey).toBe(null);
   });
 
   it("lets a recurring override pin an undetected payee", () => {
     const sections = buildMerchantSections(
       [UBER],
-      new Map([["Uber", null]]),
+      new Map([["uber", null]]),
       ANALYSED,
       (payee) => (payee === "Uber" ? "recurring" : null),
       "",
@@ -103,7 +112,7 @@ describe("buildMerchantSections", () => {
     // Two identical monthly rent payments read "Irregular" (w0/039).
     const sections = buildMerchantSections(
       [RENT],
-      new Map([["Landlord", null]]),
+      new Map([["landlord", null]]),
       new Set<string>(),
       (payee) => (payee === "Landlord" ? "recurring" : null),
       "",
@@ -114,7 +123,7 @@ describe("buildMerchantSections", () => {
   });
 
   it("filters both sections by search", () => {
-    const detections = new Map([["Netflix", MONTHLY]]);
+    const detections = new Map([["netflix", MONTHLY]]);
     const sections = buildMerchantSections(
       [NETFLIX, UBER],
       detections,

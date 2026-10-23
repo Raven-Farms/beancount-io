@@ -18,6 +18,7 @@ import { setEntriesHandler } from "@/api/entries";
 import { setLegacyHandler } from "@/api/legacy";
 import { setMetricsHandler } from "@/api/metrics";
 import { restErrorMiddleware } from "@/server/error-middleware";
+import { getRustledgerWorkerPool } from "@/foundation/rustledger";
 import { requestContextMiddleware } from "@/server/request-context-middleware";
 
 export function buildApp(): Koa {
@@ -57,8 +58,12 @@ export async function startServer(): Promise<http.Server> {
   await new Promise<void>((resolve) => {
     server.listen(config.port, () => resolve());
   });
+  // The worker count decides whether a small ledger waits behind a large one,
+  // so the deployed value is printed rather than inferred (w0/055).
   // eslint-disable-next-line no-console
-  console.log(`beancount-ledger-v2 listening on :${config.port}`);
+  console.log(
+    `beancount-ledger-v2 listening on :${config.port} (${getRustledgerWorkerPool().workerCount} rustledger workers)`,
+  );
 
   const shutdown = () => {
     server.close(() => process.exit(0));

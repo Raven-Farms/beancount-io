@@ -167,12 +167,14 @@ function SwitchAccountButton({
 
 function ChooseAccountStep({
   email,
+  alternative,
   onContinue,
-  onCreateDifferentAccount,
+  onSwitch,
 }: {
   email: string;
+  alternative: "register" | "login";
   onContinue: () => void;
-  onCreateDifferentAccount: () => Promise<void>;
+  onSwitch: () => Promise<void>;
 }) {
   const { t } = useTranslations();
 
@@ -186,8 +188,12 @@ function ChooseAccountStep({
           {t("auth.oauthMobileContinueAs", { email })}
         </Button>
         <SwitchAccountButton
-          label={t("auth.oauthMobileCreateDifferentAccount")}
-          onSwitch={onCreateDifferentAccount}
+          label={
+            alternative === "register"
+              ? t("auth.oauthMobileCreateDifferentAccount")
+              : t("auth.oauthUseAnotherAccount")
+          }
+          onSwitch={onSwitch}
           variant="outline"
         />
       </div>
@@ -276,11 +282,17 @@ export default function MobileOAuthConsentPage() {
           {state.step === "choose_account" && (
             <ChooseAccountStep
               email={state.email}
+              alternative={state.alternative}
               onContinue={() =>
                 dispatch({ type: "authenticated", email: state.email })
               }
-              onCreateDifferentAccount={() =>
-                switchAccount({ type: "show_register" })
+              onSwitch={() =>
+                switchAccount({
+                  type:
+                    state.alternative === "register"
+                      ? "show_register"
+                      : "show_login",
+                })
               }
             />
           )}

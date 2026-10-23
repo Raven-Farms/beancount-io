@@ -135,11 +135,11 @@ const lightEditorTheme: EditorTheme = {
   gutterBorder: "#e0dfd3", // = light black40
   comment: STONE,
   keyword: "#d73a49",
-  string: "#28a745",
+  string: "#1a7f37", // was #28a745, 3.13:1 on white (w21/483)
   number: "#005cc5",
   account: "#6f42c1",
   tag: "#0366d6",
-  currency: "#e36209",
+  currency: "#b35000", // was #e36209, 3.49:1 on white (w21/483)
 };
 
 const darkEditorTheme: EditorTheme = {
@@ -193,6 +193,8 @@ const lightTheme: ColorTheme = {
   error: "#cc4534", //    Error
   success: "#0a8748", //    Success
   warning: "#e08a1e", //    Warning
+  onWarning: "#1b1e16", //    text on Warning (= black): white was 2.7:1
+  warningText: "#935300", //    Warning as text: 6.0 on white, 5.3 on its 14% tint
   information: "#4c8dd6", //    Information
 
   nav01: CHARCOAL, //    Global top bar
@@ -242,6 +244,8 @@ const darkTheme: ColorTheme = {
   error: "#e8695c", //    Error
   success: "#37c07c", //    Success
   warning: "#f0b24e", //    Warning
+  onWarning: CHARCOAL, //    text on Warning: white was 1.9:1
+  warningText: "#f0b24e", //    = warning: 9.4 on the surface
   information: "#6fb0e8", //    Information
 
   nav01: "#0f110c", //    Global top bar

@@ -36,6 +36,12 @@ const ukCollaboration: Record<string, TranslationEntry> = {
     message: "Помилка завантаження співробітників",
     description: "Error title when collaborators fail to load",
   },
+  "collaboration.ownerPlanLimitReached": {
+    message:
+      "Тариф власника цієї книги не дозволяє більше співробітників. Лише власник може перейти на вищий тариф.",
+    description:
+      "Shown when adding a collaborator to someone else's ledger hits the owner's plan limit; only the owner can upgrade.",
+  },
   "collaboration.failedToAddCollaborator": {
     message: "Не вдалося додати співробітника",
     description: "Error message when adding collaborator fails",

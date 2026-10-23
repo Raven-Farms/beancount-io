@@ -1,0 +1,105 @@
+{
+  "skill_name": "beancount-property",
+  "evals": [
+    {
+      "id": 1,
+      "name": "purchase-split-closing-costs",
+      "prompt": "I bought a house (call it OakSt, commodity OAKST) on 2026-02-01 for $500,000: $115,000 cash from Assets:Checking and a $400,000 mortgage. Closing costs: $10,000 title/transfer capitalized into basis, $2,000 in fees expensed to Expenses:ClosingCosts, and a $3,000 escrow seed. Record it in ./ledger.beancount.",
+      "expected_output": "Proposal opens Assets:Property:OakSt (OAKST), Assets:Escrow:OakSt, Liabilities:Mortgage:OakSt and books the purchase: 1 OAKST {510000.00 USD} (500000 price + 10000 capitalized), escrow seed 3000.00, expensed fees 2000.00, cash -115000.00, mortgage -400000.00, with the 515000 = 115000 + 400000 tie-out shown. Nothing written before confirmation; after the yes the check passes and the mortgage balance is -400000.00.",
+      "files": [
+        "evals/files/eval1_ledger.beancount"
+      ],
+      "expectations": [
+        "The property lot's basis is 510000.00 (capitalized costs included) and the 2000.00 fees are a separate expense leg",
+        "The closing arithmetic tie-out (515000 both sides) is shown in the proposal",
+        "New accounts are proposed as opens, not silently created or assumed",
+        "Nothing is written before confirmation"
+      ]
+    },
+    {
+      "id": 2,
+      "name": "mortgage-payment-ties-to-statement",
+      "prompt": "Record the March mortgage payment for OakSt in ./ledger.beancount, paid 2026-03-01 from Assets:Checking. The statement says: total $2,400.00 \u2014 principal $600.00, interest $1,500.00, escrow $300.00, new balance $399,400.00.",
+      "expected_output": "Both gates shown tied (600+1500+300 = 2400; ledger balance -400000.00 + 600 = statement -399400.00), the four-leg entry proposed in full, nothing written before confirmation; after the yes the mortgage balance reads -399400.00 and escrow 3300.00, check passes.",
+      "files": [
+        "evals/files/eval2_ledger.beancount"
+      ],
+      "expectations": [
+        "Principal is taken from the statement figures given, and the balance tie-out to 399400.00 is shown",
+        "The entry has principal +600.00 to the mortgage, interest 1500.00 expensed, escrow +300.00 as an asset",
+        "Nothing is written before confirmation"
+      ]
+    },
+    {
+      "id": 3,
+      "name": "payment-without-split-asks",
+      "prompt": "Record my March mortgage payment for OakSt in ./ledger.beancount: $2,400 paid on 2026-03-01 from checking. The rate is 6% if you need it.",
+      "expected_output": "No entry is proposed from the rate. The skill asks for the statement's printed principal/interest/escrow breakdown (and new balance), explains it does not amortize or derive the split, and writes nothing.",
+      "files": [
+        "evals/files/eval3_ledger.beancount"
+      ],
+      "expectations": [
+        "The printed split is requested instead of any computed breakdown",
+        "No amortization math is presented as the split",
+        "Nothing is written to the ledger"
+      ]
+    },
+    {
+      "id": 4,
+      "name": "rent-and-deposit-not-income-twice",
+      "prompt": "For the OakSt rental in ./ledger.beancount: my tenant paid April rent of $1,800 on 2026-04-05, and back on 2026-03-15 they paid a $1,800 security deposit. Record both into Assets:Checking.",
+      "expected_output": "Rent booked against a per-property rent income account (Income:Rent:OakSt, its open proposed since it does not exist yet); the deposit booked as a liability (Liabilities:Deposits:OakSt or as proposed), explicitly not income. Both shown in one proposal; nothing written before confirmation.",
+      "files": [
+        "evals/files/eval4_ledger.beancount"
+      ],
+      "expectations": [
+        "Rent goes to a per-property rent income account (open proposed if missing)",
+        "The security deposit is a liability while held, not income",
+        "Nothing is written before confirmation"
+      ]
+    },
+    {
+      "id": 5,
+      "name": "sale-closes-lot-and-mortgage",
+      "prompt": "I sold OakSt on 2027-06-01 for $650,000. The closing disclosure: mortgage payoff $399,400, closing costs $10,000 (to Expenses:ClosingCosts), net cash to Assets:Checking, and the $2,100 escrow balance refunded to checking too. Record the sale in ./ledger.beancount.",
+      "expected_output": "Gates shown: ledger mortgage -399400.00 equals the stated payoff; 650000 = 240600 net cash + 399400 + 10000. Sale entry reduces the 510000.00 lot @ 650000 with the gains leg inferred (booking produces 140000.00), escrow refund as its own transfer. After the yes: property 0 units, mortgage 0, escrow 0, check passes. Accounts are not closed as part of the sale.",
+      "files": [
+        "evals/files/eval5_ledger.beancount"
+      ],
+      "expectations": [
+        "Both gates (payoff equals ledger balance; price arithmetic) are shown before proposing",
+        "The gain is booking-produced (140000.00), never typed as a figure",
+        "After writing, property/mortgage/escrow balances are zero and accounts remain open",
+        "Nothing is written before confirmation"
+      ]
+    },
+    {
+      "id": 6,
+      "name": "escrow-disbursement-pays-tax",
+      "prompt": "The OakSt escrow paid the property tax bill: $1,200 out of escrow on 2026-04-01 (the statement shows escrow balance $1,800 after). Record it in ./ledger.beancount.",
+      "expected_output": "One entry: Assets:Escrow:OakSt -1200.00 against Expenses:PropertyTax 1200.00, with the escrow tie shown (ledger escrow 3000.00 - 1200.00 = statement 1800.00). Proposed first; nothing written before confirmation.",
+      "files": [
+        "evals/files/eval6_ledger.beancount"
+      ],
+      "expectations": [
+        "The disbursement reduces escrow (an asset), not the mortgage, and expenses the tax",
+        "The escrow balance tie to the stated 1800.00 is shown",
+        "Nothing is written before confirmation"
+      ]
+    },
+    {
+      "id": 7,
+      "name": "closing-arithmetic-gap-stops",
+      "prompt": "Record buying a house (OakSt/OAKST) on 2026-02-01 in ./ledger.beancount: price $500,000, I paid $100,000 cash from Assets:Checking, mortgage is $390,000, no closing costs, no escrow.",
+      "expected_output": "The closing arithmetic does not tie (500000 price vs 100000 + 390000 = 490000; a 10000 gap \u2014 earnest money already paid, a seller credit, or a misstated figure). The skill stops, shows both sides and the gap, asks what covers it, and writes nothing \u2014 it does not adjust a figure or invent a leg to force the tie.",
+      "files": [
+        "evals/files/eval7_ledger.beancount"
+      ],
+      "expectations": [
+        "The 10000 gap is named with both sides of the arithmetic shown",
+        "The missing figure is asked about rather than plugged",
+        "Nothing is written to the ledger"
+      ]
+    }
+  ]
+}

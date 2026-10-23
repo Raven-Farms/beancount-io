@@ -5,6 +5,7 @@ import type {
   FinishSignupSessionParams,
   IAuthService,
   LoginUserParams,
+  SignInRecoveryParams,
   SignInWithOneTimeTokenParams,
 } from "@/features/auth/service/auth-service";
 import type { VerifiedGoogleIdentity } from "@/features/auth/google/google-oidc";
@@ -17,6 +18,7 @@ const OPEN_LEDGER_USERNAME = "open_ledger";
 
 export interface IAuthSessionWorkflow {
   loginUser(params: LoginUserParams): Promise<AuthResponse>;
+  signInWithEmailCode(params: SignInRecoveryParams): Promise<AuthResponse>;
   signInWithMagicLinkToken(
     params: SignInWithOneTimeTokenParams,
   ): Promise<AuthResponse>;
@@ -33,6 +35,7 @@ export class AuthSessionWorkflow implements IAuthSessionWorkflow {
     private readonly authService: Pick<
       IAuthService,
       | "loginUser"
+      | "signInWithEmailCode"
       | "signInWithMagicLinkToken"
       | "verifySignUpOtp"
       | "signInWithGoogle"
@@ -47,6 +50,14 @@ export class AuthSessionWorkflow implements IAuthSessionWorkflow {
 
   async loginUser(params: LoginUserParams): Promise<AuthResponse> {
     const result = await this.authService.loginUser(params);
+    await this.followOpenLedger(result.token);
+    return result;
+  }
+
+  async signInWithEmailCode(
+    params: SignInRecoveryParams,
+  ): Promise<AuthResponse> {
+    const result = await this.authService.signInWithEmailCode(params);
     await this.followOpenLedger(result.token);
     return result;
   }

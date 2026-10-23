@@ -6,6 +6,7 @@ import {
   View,
   useWindowDimensions,
 } from "react-native";
+import { disclosureAccessibility } from "@/common/accessibility";
 import { Ionicons } from "@expo/vector-icons";
 import { ColorTheme } from "@/types/theme-props";
 import { useThemeStyle } from "@/common/hooks/use-theme-style";
@@ -26,7 +27,12 @@ import { AmountText } from "@/components/amount-text";
 import { DashboardCard } from "@/components/dashboard-card";
 import { LoadingTile } from "@/components/loading-tile";
 import { AccountNode } from "@/components/account-list/select-account-list";
-import { breakdownRowAccessibilityValue } from "../selectors/select-breakdown-rows";
+import {
+  breakdownRowAccessibilityValue,
+  breakdownShare,
+  roundedShares,
+  shareBase,
+} from "../selectors/select-breakdown-rows";
 import { LEADING_TEXT_ALIGN, directionalIcon } from "@/common/rtl";
 
 /** One step of tree indent for expanded sub-rows (matches AccountListPage). */
@@ -158,6 +164,12 @@ const getStyles = (theme: ColorTheme) =>
       backgroundColor: theme.black20,
       marginHorizontal: gutter,
     },
+    note: {
+      marginTop: space.xs,
+      textAlign: LEADING_TEXT_ALIGN,
+      fontSize: fontSizes.sm,
+      color: theme.black80,
+    },
     empty: {
       paddingHorizontal: gutter,
       fontSize: fontSizes.md,
@@ -175,6 +187,13 @@ type CategoryBreakdownProps = {
   currency: string;
   /** Bar fill accent, echoing the chart legend (expenses=error, income=success). */
   tone: (theme: ColorTheme) => string;
+  /**
+   * What the total leaves out, e.g. "Not in total: 50 EUR (Travel)", shown
+   * under the headline (w21/038).
+   */
+  note?: string | null;
+  /** What an empty section says, e.g. "No expenses in this period". */
+  emptyMessage: string;
 };
 
 /**
@@ -190,6 +209,8 @@ export function CategoryBreakdown({
   items,
   currency,
   tone,
+  note,
+  emptyMessage,
 }: CategoryBreakdownProps): JSX.Element {
   const styles = useThemeStyle(getStyles);
   const theme = useTheme().colorTheme;
@@ -197,6 +218,9 @@ export function CategoryBreakdown({
   const { fontScale } = useWindowDimensions();
   const stacked = prefersStackedLayout(fontScale);
   const [overrides, setOverrides] = useState<Record<string, boolean>>({});
+  const base = shareBase(items);
+  // The whole percents the labels print, adding up to 100 (w21/373).
+  const shares = roundedShares(items);
 
   const toggle = (account: string, currentlyExpanded: boolean) => {
     setOverrides((prev) => ({ ...prev, [account]: !currentlyExpanded }));
@@ -204,6 +228,10 @@ export function CategoryBreakdown({
 
   const renderChild = (node: AccountNode, depth: number): JSX.Element => {
     const hasChildren = node.children.length > 0;
+    // A parent's own postings, beside its sub-accounts (w21/174).
+    const name = node.own
+      ? t("accountOwnPostings", { name: node.name })
+      : node.name;
     const isExpanded = overrides[node.account] ?? false;
     const paddingStart = gutter + depth * INDENT_STEP;
 
@@ -228,7 +256,7 @@ export function CategoryBreakdown({
       <>
         {chevron}
         <View style={styles.stackedColumn}>
-          <Text style={styles.stackedChildName}>{node.name}</Text>
+          <Text style={styles.stackedChildName}>{name}</Text>
           <AmountText style={styles.stackedChildValue}>{amountText}</AmountText>
         </View>
       </>
@@ -236,7 +264,7 @@ export function CategoryBreakdown({
       <>
         {chevron}
         <Text style={styles.childName} numberOfLines={1}>
-          {node.name}
+          {name}
         </Text>
         <AmountText style={styles.childValue}>{amountText}</AmountText>
       </>
@@ -246,21 +274,21 @@ export function CategoryBreakdown({
       <Fragment key={node.account}>
         {hasChildren ? (
           <TouchableOpacity
-            testID={`category-row-${node.account}`}
+            testID={`category-row-${node.account}${node.own ? "-own" : ""}`}
             style={[styles.childRow, { paddingStart }]}
             onPress={() => toggle(node.account, isExpanded)}
             accessibilityRole="button"
-            accessibilityLabel={node.name}
+            accessibilityLabel={name}
             accessibilityValue={{
               text: breakdownRowAccessibilityValue(amountText, null, t),
             }}
-            accessibilityState={{ expanded: isExpanded }}
+            {...disclosureAccessibility(isExpanded, t)}
           >
             {rowContent}
           </TouchableOpacity>
         ) : (
           <View
-            testID={`category-row-${node.account}`}
+            testID={`category-row-${node.account}${node.own ? "-own" : ""}`}
             style={[styles.childRow, { paddingStart }]}
           >
             {rowContent}
@@ -276,10 +304,11 @@ export function CategoryBreakdown({
   const renderTop = (node: AccountNode): JSX.Element => {
     const hasChildren = node.children.length > 0;
     const isExpanded = overrides[node.account] ?? false;
-    // Share of the section total. Negative rows (a net-refunded category) can't
-    // draw a meaningful slice, so the bar is hidden but the amount still shows.
-    const pct =
-      total > 0 ? Math.max(0, Math.min(100, (node.value / total) * 100)) : 0;
+    // Share of the section's positive rows, which add up to 100%. Negative rows
+    // (a net-refunded category) have none: the bar is hidden and no percentage
+    // is printed or spoken, but the amount still shows (w21/039, w21/370).
+    const pct = breakdownShare(node.value, base);
+    const printed = shares.get(node.account) ?? null;
 
     const amountText = formatSignedMoneyWithCurrency(
       node.value,
@@ -324,11 +353,13 @@ export function CategoryBreakdown({
           <View
             style={[
               styles.fill,
-              { width: `${pct}%`, backgroundColor: tone(theme) },
+              { width: `${pct ?? 0}%`, backgroundColor: tone(theme) },
             ]}
           />
         </View>
-        <Text style={styles.pctLabel}>{Math.round(pct)}%</Text>
+        <Text style={styles.pctLabel}>
+          {printed === null ? "" : `${printed}%`}
+        </Text>
       </View>
     );
 
@@ -342,9 +373,9 @@ export function CategoryBreakdown({
             accessibilityRole="button"
             accessibilityLabel={node.name}
             accessibilityValue={{
-              text: breakdownRowAccessibilityValue(amountText, pct, t),
+              text: breakdownRowAccessibilityValue(amountText, printed, t),
             }}
-            accessibilityState={{ expanded: isExpanded }}
+            {...disclosureAccessibility(isExpanded, t)}
           >
             {line1}
             {line2}
@@ -369,9 +400,19 @@ export function CategoryBreakdown({
         <AmountText style={styles.headline}>
           {formatSignedMoneyWithCurrency(total, currency, false)}
         </AmountText>
+        {note ? (
+          <Text testID="category-breakdown-not-in-total" style={styles.note}>
+            {note}
+          </Text>
+        ) : null}
       </View>
       {items.length === 0 ? (
-        <Text style={styles.empty}>{t("noAccounts")}</Text>
+        // "No accounts" was wrong for a quiet period and for one whose activity
+        // is all in other currencies, which the note under the headline names
+        // (w21/372).
+        note ? null : (
+          <Text style={styles.empty}>{emptyMessage}</Text>
+        )
       ) : (
         items.map((node, index) => (
           <Fragment key={`group-${node.account}`}>

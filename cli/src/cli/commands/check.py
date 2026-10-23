@@ -14,7 +14,7 @@ import typer
 
 from cli import context, output
 from cli.engine import launch
-from cli.errors import BeaError, LedgerError, UsageError, refuse_misplaced_global
+from cli.errors import BeaError, EngineError, LedgerError, UsageError, refuse_misplaced_global
 from cli.native_help import native_options
 from cli.paths import expand_path
 
@@ -49,8 +49,12 @@ def check(ctx: typer.Context) -> None:
         # NFC and NFD spellings of one account as two accounts, and cannot
         # fetch URL includes, so these closures run the helper check in both
         # modes; bean-check-only flags cannot be forwarded to a run that
-        # never starts upstream.
+        # never starts upstream. `--no-cache` alone is honoured by bea
+        # itself, through the helper with the load cache disabled (w5/776).
         if ctx.args:
+            if _only_disables_cache(list(ctx.args)):
+                launch.helper_json(["check", "--file", str(file)], env_extra=_CACHE_DISABLED)
+                raise typer.Exit(0)
             tokens = " ".join(ctx.args)
             reason, advice = compat
             raise UsageError(f"bea check cannot pass bean-check options ({tokens}) for this ledger: {reason}. {advice}")
@@ -61,6 +65,10 @@ def check(ctx: typer.Context) -> None:
         # bean-check-only flags (-v, --auto, …) are not implemented on bea-engine
         # check — refuse them up front as usage, not as a false "engine did not answer".
         if ctx.args:
+            if _only_disables_cache(list(ctx.args)):
+                data = launch.helper_json(["check", "--file", str(file)], env_extra=_CACHE_DISABLED)
+                output.emit(data, target=output.file_target(file))
+                return
             tokens = " ".join(ctx.args)
             raise UsageError(
                 f"bea --json check does not accept bean-check options ({tokens}). "
@@ -100,6 +108,12 @@ def check(ctx: typer.Context) -> None:
     # options, so it loads afresh unless the user named a cache file.
     fresh = _enables_auto(args) or not _names_cache_file(args)
     isolate = ["--no-cache"] if fresh and not _disables_cache(args) else []
+    if isolate and _names_cache_file(args):
+        # bea's own `--no-cache`: `--auto` loads with its own plugins, so a
+        # named cache file would be ignored with a raw `WARNING:root:` line,
+        # as under a typed `--no-cache` (w5/761).
+        output.note("--auto turns the shared load cache off, so --cache-filename is ignored.")
+        args = _without_cache_file(args)
     # bean-check does not cover document paths that resolve outside the ledger tree;
     # the helper check does, so copies that still resolve against another tree fail.
     # Only that rule: this second load knows none of bean-check's options, so
@@ -109,11 +123,20 @@ def check(ctx: typer.Context) -> None:
     # appearing or vanishing has made stale, which bean-check would trust (w5/116);
     # its own finding still waits for bean-check to accept the ledger.
     portable: BeaError | None = None
+    added: list[str] = []
     root_hint: str | None = None
     if not _INFORMATIONAL & set(args):
         try:
             loaded = launch.helper_json(["check", "--file", str(file), "--documents-only"])
         except BeaError as error:
+            if isinstance(error, EngineError):
+                # The managed engine is missing or damaged: bean-check needs
+                # the same one, so falling through would install it twice and
+                # then report this stale failure after the retry succeeded
+                # (w5/784), or crash the same way (w5/785).
+                if as_json:
+                    _emit_json_errors(file, [str(error), *error.details], error.exit_code)
+                raise
             if str(error).endswith("plugin(s) terminated while loading."):
                 # The plugin terminated the load. Falling through to native
                 # bean-check would execute it again and leak its exit status.
@@ -137,6 +160,12 @@ def check(ctx: typer.Context) -> None:
             reserved = [str(line) for line in loaded.get("reserved_keys") or []]
             if current.debug:
                 failed, unbookable = [], []
+            if reserved and (args or as_json) and not (failed or unbookable):
+                # Not a crash: bean-check loads past the key, so with its own
+                # options it still reports the rest, and the key is added to
+                # its answer. Short-circuited, `-C`, `-v` and `--json` showed
+                # the key alone with the wrong count (w5/850).
+                added, reserved = reserved, []
             if failed or unbookable or reserved:
                 # bean-check reports a plugin that cannot load as a traceback at
                 # `<load>:0`, and a transaction booking cannot do the arithmetic
@@ -159,10 +188,14 @@ def check(ctx: typer.Context) -> None:
                 # native run would only load it again, every plugin twice (w5/430).
                 # Errors still come from bean-check, in its own words.
                 raise typer.Exit(0)
-    if as_json and portable is not None:
+    if as_json and (portable is not None or added):
         answer = launch.capture_native("bean-check", [*isolate, str(file), *args], ledger=file)
-        _merge_json_errors(file, answer, portable)
+        _merge_json_errors(file, answer, [*added, *(portable.details if portable is not None else [])])
     code = launch.run_native("bean-check", [*isolate, str(file), *args], ledger=file)
+    if added:
+        # After bean-check's own list, in its form: location, message, blank line.
+        sys.stderr.write("".join(f"{line}\n\n" for line in added))
+        code = code or 1
     if code != 0:
         # An included leaf fails on accounts its root opens; say which root
         # to check instead (w5/348).
@@ -199,8 +232,8 @@ def _emit_json_errors(file: Path, details: list[str], code: int) -> None:
     raise typer.Exit(code or 1)
 
 
-def _merge_json_errors(file: Path, completed: subprocess.CompletedProcess[str], finding: BeaError) -> None:
-    """bean-check's JSON answer with bea's portable-document finding added to its list."""
+def _merge_json_errors(file: Path, completed: subprocess.CompletedProcess[str], findings: list[str]) -> None:
+    """bean-check's JSON answer with bea's own findings added to its list: reserved keys, portable documents."""
     stdout = completed.stdout or ""
     sys.stderr.write(completed.stderr or "")
     code = launch.captured_status(completed)
@@ -211,7 +244,7 @@ def _merge_json_errors(file: Path, completed: subprocess.CompletedProcess[str], 
         # Not the shape documented: leave bean-check's words as they were.
         sys.stdout.write(stdout)
         raise typer.Exit(code or 1) from None
-    errors.extend(_json_error(file, detail) for detail in finding.details)
+    errors.extend(_json_error(file, detail) for detail in findings)
     typer.echo(json.dumps({**answer, "errors": errors}))
     raise typer.Exit(code or 1)
 
@@ -230,9 +263,19 @@ def _refuse_positional_ledger(args: list[str]) -> None:
             index += 2
             continue
         if arg != "--" and not arg.startswith("-") and expand_path(Path(arg), "check argument").is_file():
-            raise UsageError(
-                f"bea check takes the ledger from --file, not as an argument: run bea --file {shlex.quote(arg)} check."
-            )
+            # The whole command, `--json` and the check's own options kept: the
+            # bare form ran without them, and printed no envelope (w5/838).
+            rest = [*args[:index], *args[index + 1 :]]
+            json = context.current().json_output
+            if json and rest and not _only_disables_cache(rest):
+                # `--json` takes no bean-check options, so keeping both is refused next.
+                command = shlex.join(["bea", "--file", arg, "check", *rest])
+                raise UsageError(
+                    "bea check takes the ledger from --file, not as an argument, and bea --json check takes no "
+                    f"bean-check options: run {command}"
+                )
+            command = shlex.join(["bea", *(["--json"] if json else []), "--file", arg, "check", *rest])
+            raise UsageError(f"bea check takes the ledger from --file, not as an argument: run {command}")
         index += 1
 
 
@@ -244,6 +287,14 @@ _UNDECODABLE = "Cannot decode '"
 
 
 _CACHE_FLAG = "--cache-filename"
+
+#: Disabling the load cache for one helper run, as `--no-cache` asks (w5/776).
+_CACHE_DISABLED = {"BEANCOUNT_DISABLE_LOAD_CACHE": "1"}
+
+
+def _only_disables_cache(args: list[str]) -> bool:
+    """Whether the arguments only turn the load cache off, which bea honours itself."""
+    return bool(args) and all(arg in ("--no-cache", "-C") for arg in args)
 
 
 def _enables_auto(args: list[str]) -> bool:

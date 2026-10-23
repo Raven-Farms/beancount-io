@@ -100,6 +100,16 @@ const ruCommodities: Record<string, TranslationEntry> = {
     message: "Не удалось обновить цены",
     description: "Toast shown when refreshing managed prices fails",
   },
+  "page.commodities.chartsReloadFailed": {
+    message: "Цены обновлены, но графики не удалось перезагрузить.",
+    description:
+      "Shown on the managed price sources card when a refresh was acknowledged but reading the price charts again failed",
+  },
+  "page.commodities.reloadCharts": {
+    message: "Перезагрузить графики",
+    description:
+      "Button that reads the price charts again after a failed reload, without refreshing the managed feeds",
+  },
 };
 
 export default ruCommodities;

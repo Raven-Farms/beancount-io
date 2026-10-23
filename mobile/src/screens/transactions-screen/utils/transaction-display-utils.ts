@@ -1,4 +1,9 @@
 import { formatLedgerDate } from "../../../common/date-format";
+import { getAccountRoot, type RootNames } from "../../../common/account-root";
+import {
+  currencyMinorUnits,
+  isFiatCurrency,
+} from "../../../common/currency-util";
 import { amountScale } from "../../../common/number-utils";
 import {
   JournalDirectiveType,
@@ -13,8 +18,11 @@ export type JournalSection = {
   data: JournalDirectiveType[];
 };
 
-/** Display floor: money always reads with cents, so 1.5 shows as 1.50. */
+/** Default scale: money reads with cents, so 1.5 shows as 1.50. */
 const MIN_FRACTION_DIGITS = 2;
+/** Most recorded digits a commodity amount is padded out to. */
+const COMMODITY_RECORDED_DIGITS = 8;
+
 /** `Intl.NumberFormat` rejects anything above this. */
 const MAX_FRACTION_DIGITS = 20;
 
@@ -29,13 +37,23 @@ export const formatAmount = (
   value: number,
   currency: string,
   scale = MIN_FRACTION_DIGITS,
+  heldAtCost = false,
 ): string => {
+  // The display floor is the currency's minor unit: "1,500 JPY" as account
+  // detail shows it, not "1,500.00 JPY" (w21/070). Only for a national
+  // currency: a share count or a points balance keeps the digits it was
+  // recorded with, as Money flow shows it, and so do units held at a cost,
+  // whatever their ticker spells (BND, AMD, NOK) (w21/445, w21/506, w21/601).
+  const minimumFractionDigits =
+    !heldAtCost && isFiatCurrency(currency)
+      ? currencyMinorUnits(currency)
+      : Math.min(COMMODITY_RECORDED_DIGITS, scale);
   const maximumFractionDigits = Math.min(
     MAX_FRACTION_DIGITS,
-    Math.max(MIN_FRACTION_DIGITS, scale),
+    Math.max(minimumFractionDigits, scale),
   );
   const formatted = Math.abs(value).toLocaleString("en-US", {
-    minimumFractionDigits: MIN_FRACTION_DIGITS,
+    minimumFractionDigits,
     maximumFractionDigits,
   });
   return currency === "USD" ? `$${formatted}` : `${formatted} ${currency}`;
@@ -70,6 +88,89 @@ export const isMixedPostingsAmount = (
 const moneyCurrencyOf = (p: JournalPosting): string | undefined =>
   p.cost?.currency ?? p.price?.currency ?? undefined;
 
+const isBalanceSheet = (account: string, roots: RootNames): boolean => {
+  const root = getAccountRoot(account, roots);
+  return root === "assets" || root === "liabilities";
+};
+
+/** An Expenses or Income posting: the fee or rounding line of an exchange. */
+const isFeeLine = (account: string, roots: RootNames): boolean => {
+  const root = getAccountRoot(account, roots);
+  return root === "expenses" || root === "income";
+};
+
+/**
+ * The amount an exchange's fee and rounding lines leave, signed from the cash
+ * side (spent is negative), or null when they are in several currencies or
+ * cancel out, where the exchange stays neutral.
+ */
+const feeAmount = (lines: JournalPosting[]): TransactionAmount | null => {
+  const currencies = new Set(lines.map((p) => p.units.currency));
+  if (currencies.size !== 1) return null;
+  const currency = lines[0]!.units.currency;
+  let total = 0;
+  let scale = 0;
+  for (const p of lines) {
+    const value = parseFloat(p.units.number);
+    if (!Number.isFinite(value)) return null;
+    total += value;
+    scale = Math.max(scale, amountScale(p.units.number));
+  }
+  const value = -total;
+  if (Math.abs(value) < 0.5 * 10 ** -scale) return null;
+  return { text: formatAmount(value, currency, scale), value, currency };
+};
+
+/**
+ * A corporate action: every posting is a held lot (it has a cost), and the cost
+ * of what left equals the cost of what arrived in each cost currency. A split
+ * (-10 NVDA {1200 USD}, +100 NVDA {120 USD}) or a merger (-10 OLDCO {100 USD},
+ * +5 NEWCO {200 USD}) moves no money, yet read as shares gained or lost in
+ * money colours (w21/571). Its size is the largest leg, unsigned and neutral.
+ */
+const corporateActionAmount = (
+  postings: JournalPosting[],
+  roots: RootNames,
+): TransactionAmount | null => {
+  if (
+    postings.length < 2 ||
+    !postings.every((p) => p.cost?.currency && isBalanceSheet(p.account, roots))
+  ) {
+    return null;
+  }
+  const costs = new Map<string, number>();
+  let largest: JournalPosting | null = null;
+  for (const p of postings) {
+    const units = parseFloat(p.units.number);
+    const unitCost = parseFloat(p.cost!.number ?? "");
+    if (!Number.isFinite(units) || !Number.isFinite(unitCost)) return null;
+    costs.set(
+      p.cost!.currency,
+      (costs.get(p.cost!.currency) ?? 0) + units * unitCost,
+    );
+    if (
+      largest === null ||
+      Math.abs(units) > Math.abs(parseFloat(largest.units.number))
+    ) {
+      largest = p;
+    }
+  }
+  if ([...costs.values()].some((net) => Math.abs(net) >= 0.005) || !largest) {
+    return null;
+  }
+  const currency = largest.units.currency;
+  return {
+    text: formatAmount(
+      Math.abs(parseFloat(largest.units.number)),
+      currency,
+      amountScale(largest.units.number),
+      true,
+    ),
+    value: 0,
+    currency,
+  };
+};
+
 /**
  * The one number to show for a transaction, in a single currency.
  *
@@ -79,9 +180,18 @@ const moneyCurrencyOf = (p: JournalPosting): string | undefined =>
  * means nothing. So legs are bucketed by currency and summed within a bucket,
  * never across.
  *
- * With several buckets we want the money leg, not the commodity leg: prefer the
- * currency some posting quotes its cost or price in (in a trade that is the
- * cash side), and otherwise the bucket with the largest magnitude. When no
+ * With several buckets the pick goes by meaning, never by comparing numbers
+ * in different units (w21/057):
+ *
+ * - A trade, where some posting holds a commodity `{cost}`, shows the bucket
+ *   its cost or price is quoted in: the cash side.
+ * - An exchange between own accounts (every posting on the balance sheet, no
+ *   cost) has no direction, so it reads unsigned and neutral, sized by its
+ *   operating-currency leg, or else its alphabetically first currency, so the
+ *   same exchange reads the same whichever leg carries the `@`.
+ * - Anything else (a card purchase that also earns miles) shows the operating
+ *   currency, then the currency an Expenses posting is in, then the bucket a
+ *   price is quoted in, then the largest magnitude. When no
  * Assets/Liabilities posting exists at all (an Income → Expenses entry, say),
  * fall back to the single largest posting.
  *
@@ -91,19 +201,28 @@ const moneyCurrencyOf = (p: JournalPosting): string | undefined =>
  * improvements and depreciation spreads it over several accounts, and its sum
  * is then an unexplained partial subtotal, so that trade is reported as mixed.
  *
+ * @param operatingCurrency - The ledger's first `operating_currency`, when known.
+ * @param roots - The ledger's renamed roots, so `Activos:Banco` counts as a
+ *   balance-sheet leg and `Gastos:…` as spending (w21/073).
  * @returns The amount; `{ mixed: true }` for a trade whose money side spans
  *   several balance-sheet accounts; or null when the transaction has no usable
  *   posting.
  */
 export const selectTransactionAmount = (
   txn: JournalTransaction,
+  operatingCurrency?: string,
+  roots: RootNames = {},
 ): TransactionAmount | null => {
   const postings = txn.postings ?? [];
   if (!postings.length) return null;
 
-  const cashPostings = postings.filter(
-    (p) =>
-      p.account.startsWith("Assets:") || p.account.startsWith("Liabilities:"),
+  const corporateAction = corporateActionAmount(postings, roots);
+  if (corporateAction) return corporateAction;
+
+  const cashPostings = postings.filter((p) => isBalanceSheet(p.account, roots));
+  // Units a lot is held in, whatever the commodity's ticker looks like.
+  const heldAtCost = new Set(
+    postings.filter((p) => p.cost?.currency).map((p) => p.units.currency),
   );
 
   if (cashPostings.length > 0) {
@@ -146,18 +265,75 @@ export const selectTransactionAmount = (
     if (buckets.length > 0) {
       let picked = buckets[0];
       if (buckets.length > 1) {
-        const moneyCurrencies = new Set(
-          postings.map(moneyCurrencyOf).filter(Boolean),
+        const isTrade = postings.some((p) => p.cost?.currency);
+        const operating = buckets.find(([c]) => c === operatingCurrency);
+        // An exchange between your own accounts may carry a fee or a rounding
+        // line (Expenses or Income). Only that line left, so it is the amount;
+        // the cash that moved from one account to the other is neutral
+        // (w21/570).
+        const feeLines = postings.filter((p) => isFeeLine(p.account, roots));
+        // The exchange is priced (`@ 1.09 USD`), which is how an entry like it
+        // balances; a card purchase that also earns miles balances without one
+        // and keeps reading as the money spent.
+        const exchangeWithFee =
+          !isTrade &&
+          feeLines.length > 0 &&
+          postings.some((p) => p.price) &&
+          postings.every(
+            (p) =>
+              isBalanceSheet(p.account, roots) || isFeeLine(p.account, roots),
+          );
+        if (exchangeWithFee) {
+          const fee = feeAmount(feeLines);
+          if (fee) return fee;
+        }
+        if (
+          !isTrade &&
+          (exchangeWithFee ||
+            postings.every((p) => isBalanceSheet(p.account, roots)))
+        ) {
+          const [currency, bucket] =
+            operating ??
+            [...buckets].sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))[0];
+          const size =
+            Math.abs(bucket.value) < 0.5 * 10 ** -bucket.scale
+              ? bucket.largestLeg
+              : Math.abs(bucket.value);
+          return {
+            text: formatAmount(
+              size,
+              currency,
+              bucket.scale,
+              heldAtCost.has(currency),
+            ),
+            value: 0,
+            currency,
+          };
+        }
+        const expenseCurrencies = new Set(
+          postings
+            .filter((p) => getAccountRoot(p.account, roots) === "expenses")
+            .map((p) => p.units.currency),
         );
-        const money = buckets.filter(([currency]) =>
-          moneyCurrencies.has(currency),
-        );
-        const candidates = money.length > 0 ? money : buckets;
-        picked = candidates.reduce((best, bucket) =>
-          Math.abs(bucket[1].value) > Math.abs(best[1].value) ? bucket : best,
-        );
-        if (money.length > 0 && picked[1].accounts.size > 1) {
-          return { mixed: true };
+        const spent = isTrade
+          ? undefined
+          : (operating ?? buckets.find(([c]) => expenseCurrencies.has(c)));
+        if (spent) {
+          picked = spent;
+        } else {
+          const moneyCurrencies = new Set(
+            postings.map(moneyCurrencyOf).filter(Boolean),
+          );
+          const money = buckets.filter(([currency]) =>
+            moneyCurrencies.has(currency),
+          );
+          const candidates = money.length > 0 ? money : buckets;
+          picked = candidates.reduce((best, bucket) =>
+            Math.abs(bucket[1].value) > Math.abs(best[1].value) ? bucket : best,
+          );
+          if (money.length > 0 && picked[1].accounts.size > 1) {
+            return { mixed: true };
+          }
         }
       }
       const [currency, { value, scale, legs, largestLeg }] = picked;
@@ -168,12 +344,21 @@ export const selectTransactionAmount = (
       const netsToZero = Math.abs(value) < 0.5 * 10 ** -scale;
       if (netsToZero && legs > 1 && largestLeg > 0) {
         return {
-          text: formatAmount(largestLeg, currency, scale),
+          text: formatAmount(
+            largestLeg,
+            currency,
+            scale,
+            heldAtCost.has(currency),
+          ),
           value: 0,
           currency,
         };
       }
-      return { text: formatAmount(value, currency, scale), value, currency };
+      return {
+        text: formatAmount(value, currency, scale, heldAtCost.has(currency)),
+        value,
+        currency,
+      };
     }
   }
 
@@ -189,11 +374,20 @@ export const selectTransactionAmount = (
   }
   if (max === null) return null;
 
-  const value = parseFloat(max.units.number);
+  // With no Assets or Liabilities posting (an Income → Expenses statement, a
+  // padding entry between equity accounts) nothing moved in or out, so like a
+  // transfer the size is the largest leg and the value stays zero: the row
+  // and the detail hero both render it unsigned and neutral (w21/003). Its
+  // sign used to be whichever leg was largest, which read as money in or out.
   const currency = max.units.currency;
   return {
-    text: formatAmount(value, currency, amountScale(max.units.number)),
-    value,
+    text: formatAmount(
+      Math.abs(parseFloat(max.units.number)),
+      currency,
+      amountScale(max.units.number),
+      heldAtCost.has(currency),
+    ),
+    value: 0,
     currency,
   };
 };

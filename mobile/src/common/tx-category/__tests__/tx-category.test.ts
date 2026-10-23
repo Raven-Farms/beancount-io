@@ -31,6 +31,37 @@ describe("tx-category", () => {
       ).toBe("Expenses:Food:Groceries");
     });
 
+    // w21/211: 1,500 miles outweighed 500 dollars, so a flight that earns
+    // miles got the Income tile beside "-$500.00".
+    it("compares category legs only within one currency", () => {
+      const flight = [
+        { account: "Liabilities:Visa", amount: -500, currency: "USD" },
+        { account: "Expenses:Transport", amount: 500, currency: "USD" },
+        { account: "Assets:Miles", amount: 1500, currency: "MILES" },
+        { account: "Income:Miles", amount: -1500, currency: "MILES" },
+      ];
+      // Without the operating currency, spending outranks the miles earned.
+      expect(pickPrimaryAccount(flight)).toBe("Expenses:Transport");
+      expect(pickPrimaryAccount(flight, {}, "USD")).toBe("Expenses:Transport");
+      // Whatever order the postings arrive in.
+      expect(pickPrimaryAccount([...flight].reverse(), {}, "USD")).toBe(
+        "Expenses:Transport",
+      );
+    });
+
+    it("picks the operating-currency leg of a JPY and USD mix", () => {
+      const mixed = [
+        { account: "Expenses:Food:Groceries", amount: 3000, currency: "JPY" },
+        { account: "Expenses:Transport", amount: 150, currency: "USD" },
+        { account: "Liabilities:Visa", amount: -150, currency: "USD" },
+        { account: "Liabilities:Yen", amount: -3000, currency: "JPY" },
+      ];
+      expect(pickPrimaryAccount(mixed, {}, "USD")).toBe("Expenses:Transport");
+      expect(pickPrimaryAccount(mixed, {}, "JPY")).toBe(
+        "Expenses:Food:Groceries",
+      );
+    });
+
     it("flags account-to-account moves as a transfer", () => {
       expect(
         pickPrimaryAccount([

@@ -11,6 +11,8 @@ from __future__ import annotations
 import ast
 import os
 import re
+import shlex
+import unicodedata
 from collections.abc import Iterator
 from pathlib import Path
 from typing import Annotated
@@ -45,7 +47,11 @@ def _ingest_script(supplied: Path | None) -> Path:
     must stay the link, not become the shared script it points to.
     """
     if supplied is not None:
-        return expand_path(supplied, "--config").absolute()
+        script = expand_path(supplied, "--config").absolute()
+        # Before anything opens it: reading a pipe nobody feeds waits forever (w5/885).
+        if script.exists() and not script.is_file():
+            raise UsageError(f"--config {script} is not a regular file. Save the ingest script as a Python file.")
+        return script
     try:
         ledger = context.current().entry_file()
     except UsageError:
@@ -71,27 +77,83 @@ _EXTRACT_FLAGS = "rxq"
 
 def _forward(operation: str, ctx: typer.Context, config: Path | None) -> None:
     refuse_json("ingest", hint="Run without --json for native output; use bea import for a JSON preview.")
-    if operation == "extract":
-        # `archive -o DIR` moves source documents into a directory tree — not a
-        # ledger write — so it stays outside the guard on purpose, and
-        # `identify` writes nothing at all.
-        output.guard_forwarded_output(list(ctx.args), _extract_ledgers(ctx), flags=_EXTRACT_FLAGS)
-    script = _ingest_script(config)
-    if operation == "extract":
-        _refuse_output_over_inputs(list(ctx.args), script)
-    _refuse_config_only_script(script)
     existing = (
         output.forwarded_option(list(ctx.args), "-e", "--existing", flags=_EXTRACT_FLAGS)
         if operation == "extract"
         else None
     )
     placed = {"ledger": os.path.abspath(expand_path(Path(existing), "--existing"))} if existing else {}
+    if placed:
+        # Before any output guard walks the closure: a FIFO must not be read,
+        # and a directory cannot supply existing transactions (w5/706).
+        _require_existing_ledger(Path(placed["ledger"]))
+    if operation == "extract":
+        # `archive -o DIR` moves source documents into a directory tree — not a
+        # ledger write — so it stays outside the guard on purpose, and
+        # `identify` writes nothing at all.
+        destination = output.forwarded_option(list(ctx.args), "-o", "--output", flags=_EXTRACT_FLAGS)
+        if destination is not None and destination != "-":
+            output.guard_forwarded_output(list(ctx.args), _extract_ledgers(ctx), flags=_EXTRACT_FLAGS)
+            path = expand_path(Path(destination), "--output").absolute()
+            output.check_output_destination(path)
+            output.require_writable_destination(path)
+    script = _ingest_script(config)
+    if operation == "extract":
+        _refuse_output_over_inputs(list(ctx.args), script)
+    _refuse_config_only_script(script)
     if placed and output.has_unreadable_include(Path(placed["ledger"])):
         # Beangulp loads `-e` with Beancount, which answers an include it
         # cannot open with a traceback; the helper names it (w5/120, w5/438).
         launch.helper_json(["check", "--file", placed["ledger"]])
+    if placed:
+        _refuse_noncanonical_existing(Path(placed["ledger"]))
     code = launch.run_optional_script("beangulp", script, [operation, *ctx.args], **placed)
     raise typer.Exit(code)
+
+
+def _require_existing_ledger(path: Path) -> None:
+    """Require a root ledger before any include walk or user script runs."""
+    if path.is_dir():
+        from cli.config import DEFAULT_ENTRY_FILE_FALLBACKS
+
+        hint = next(
+            (path / name for name in DEFAULT_ENTRY_FILE_FALLBACKS if (path / name).is_file()),
+            path / DEFAULT_ENTRY_FILE_FALLBACKS[0],
+        )
+        raise UsageError(
+            f"--existing {path} is a directory; expected a root ledger file. "
+            f"Pass --existing {shlex.quote(str(hint))}. Nothing was extracted."
+        )
+    if not path.is_file():
+        raise UsageError(f"--existing {path} is not a regular ledger file. Name its root file. Nothing was extracted.")
+
+
+def _refuse_noncanonical_existing(root: Path) -> None:
+    """Do not let Beangulp silently deduplicate against a misread ledger.
+
+    The user's script loads `-e` through stock Beancount, outside the helper's
+    BOM/NFC compatibility layer. Refuse before running it or opening `-o`;
+    importing the script here could itself extract or archive documents.
+    """
+    for member in output.ledger_closure(root):
+        if output.is_encrypted(member):
+            continue
+        try:
+            raw = member.read_bytes()
+        except OSError:
+            continue  # Existing unreadable-include handling and native errors still apply.
+        if raw.startswith(b"\xef\xbb\xbf"):
+            remedy = shlex.join(["bea", "format", "-i", str(member)])
+            raise UsageError(
+                f"Existing ledger file {member} starts with a UTF-8 BOM, which Beangulp cannot read reliably "
+                f"for duplicate detection. Run {remedy} to strip the mark, then retry. Nothing was extracted."
+            )
+        if not unicodedata.is_normalized("NFC", raw.decode("utf-8", errors="surrogateescape")):
+            raise UsageError(
+                f"Existing ledger file {member} is not Unicode NFC. Beangulp reads it without bea's "
+                "normalization, so duplicate detection may miss entries. Re-save that file in Unicode NFC, "
+                "then retry; 'bea format -i' does not normalize Unicode. Nothing was extracted."
+            )
 
 
 def _extract_ledgers(ctx: typer.Context) -> list[Path]:
@@ -121,7 +183,7 @@ def _refuse_output_over_inputs(args: list[str], script: Path) -> None:
     directory covers every file Beangulp would walk inside it.
     """
     value = output.forwarded_option(args, "-o", "--output", flags=_EXTRACT_FLAGS)
-    if value is None:
+    if value is None or value == "-":
         return
     destination = expand_path(Path(value), "--output")
     if not destination.exists():
@@ -176,16 +238,21 @@ def _refuse_config_only_script(script: Path) -> None:
     imports. `CONFIG` bound by an import or inside `try`/`if`/`with` is the
     same module too, and an `Ingest(` in a comment or a docstring calls
     nothing (w5/635). A file Python cannot parse is left for Python to report.
+
+    Read as Python reads it — bytes, so a UTF-8 BOM or an encoding cookie
+    parses — and `from helpers import *` binds whatever a sibling
+    `helpers.py` binds. Only an entrypoint that runs counts: one constructed
+    and never called, or called only inside a function nothing calls, is the
+    same silent exit, while an import alias such as `Ingest as Main` still
+    names it (w5/851).
     """
-    try:
-        text = script.read_text(encoding="utf-8", errors="replace")
-        tree = ast.parse(text)
-    except (OSError, SyntaxError, ValueError):
-        return
-    if any(_calls_ingest(node) for node in ast.walk(tree)):
+    tree = _parsed(script)
+    if tree is None:
         return
     statements = list(_module_statements(tree.body))
-    if any(_binds_config(node) for node in statements) and not any(_is_main_guard(node) for node in statements):
+    if any(_is_main_guard(node) for node in statements) or _runs_ingest(tree, statements):
+        return
+    if any(_binds_config(node, script.parent) for node in statements):
         raise UsageError(
             f"{script} looks like a `bea import --config` module (CONFIG = [...]). "
             "`bea ingest` needs a script that calls beangulp.Ingest(...)(); "
@@ -193,12 +260,57 @@ def _refuse_config_only_script(script: Path) -> None:
         )
 
 
-def _calls_ingest(node: ast.AST) -> bool:
-    """Whether a node calls `Ingest(...)` or `something.Ingest(...)`."""
+def _parsed(script: Path) -> ast.Module | None:
+    """The module's syntax tree, read from its bytes as Python reads them, or None when it does not parse."""
+    try:
+        return ast.parse(script.read_bytes())
+    except (OSError, SyntaxError, ValueError):
+        return None
+
+
+def _runs_ingest(tree: ast.Module, statements: list[ast.stmt]) -> bool:
+    """Whether the Beangulp entrypoint is called as the module loads, directly or through a function it calls.
+
+    A construction alone — the bare statement `Ingest(CONFIG)` — runs nothing;
+    one called, assigned, passed or returned is taken as used.
+    """
+    names = {"Ingest"} | {
+        alias.asname
+        for node in ast.walk(tree)
+        if isinstance(node, ast.ImportFrom)
+        for alias in node.names
+        if alias.name == "Ingest" and alias.asname
+    }
+    running: list[ast.AST] = [node for node in statements if not isinstance(node, _SCOPES)]
+    called = {
+        node.func.id
+        for scope in running
+        for node in _running_nodes(scope)
+        if isinstance(node, ast.Call) and isinstance(node.func, ast.Name)
+    }
+    running += [node for node in statements if isinstance(node, _SCOPES[:2]) and node.name in called]
+    nodes = [node for scope in running for node in _running_nodes(scope)]
+    bare = {id(node.value) for node in nodes if isinstance(node, ast.Expr)}
+    return any(_constructs_ingest(node, names) and id(node) not in bare for node in nodes)
+
+
+_SCOPES = (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef, ast.Lambda)
+
+
+def _running_nodes(node: ast.AST) -> Iterator[ast.AST]:
+    """`ast.walk` over code that runs with `node`, not into a nested function or class body."""
+    yield node
+    for child in ast.iter_child_nodes(node):
+        if not isinstance(child, _SCOPES):
+            yield from _running_nodes(child)
+
+
+def _constructs_ingest(node: ast.AST, names: set[str]) -> bool:
+    """Whether a node constructs the entrypoint: `Ingest(...)`, `beangulp.Ingest(...)` or an alias's call."""
     if not isinstance(node, ast.Call):
         return False
     func = node.func
-    return (isinstance(func, ast.Name) and func.id == "Ingest") or (
+    return (isinstance(func, ast.Name) and func.id in names) or (
         isinstance(func, ast.Attribute) and func.attr == "Ingest"
     )
 
@@ -217,8 +329,20 @@ def _module_statements(body: list[ast.stmt]) -> Iterator[ast.stmt]:
             yield from _module_statements(case.body)
 
 
-def _binds_config(node: ast.stmt) -> bool:
-    """Whether a statement binds `CONFIG`: assigned, annotated, or imported under that name."""
+def _binds_config(node: ast.stmt, directory: Path, depth: int = 0) -> bool:
+    """Whether a statement binds `CONFIG`: assigned, annotated, or imported under that name.
+
+    `from helpers import *` binds it when the sibling module it names does.
+    """
+    if isinstance(node, ast.ImportFrom) and node.level == 0 and node.module and depth < 3:
+        if any(alias.name == "*" for alias in node.names):
+            parts = node.module.split(".")
+            for candidate in (directory.joinpath(*parts).with_suffix(".py"), directory.joinpath(*parts, "__init__.py")):
+                tree = _parsed(candidate) if candidate.is_file() else None
+                if tree is not None and any(
+                    _binds_config(child, candidate.parent, depth + 1) for child in _module_statements(tree.body)
+                ):
+                    return True
     if isinstance(node, ast.Import | ast.ImportFrom):
         return any((alias.asname or alias.name) == "CONFIG" for alias in node.names)
     if isinstance(node, ast.Assign):
@@ -246,13 +370,16 @@ def _is_main_guard(node: ast.stmt) -> bool:
 
 @ingest_app.command("identify", cls=ForwardingCommand, epilog=native_help("ingest identify"), context_settings=_EXTRA)
 def identify(ctx: typer.Context, config: _CONFIG = None) -> None:
-    """Identify which importer matches each document (Beangulp identify)."""
+    """Identify which importer matches each document."""
     _forward("identify", ctx, config)
 
 
 @ingest_app.command("extract", cls=ForwardingCommand, epilog=native_help("ingest extract"), context_settings=_EXTRA)
 def extract(ctx: typer.Context, config: _CONFIG = None) -> None:
-    """Extract raw entries from documents (Beangulp extract; not bea import --apply)."""
+    """Extract raw entries from documents.
+
+    The Beangulp extract step. This is not bea import --apply.
+    """
     _forward("extract", ctx, config)
 
 

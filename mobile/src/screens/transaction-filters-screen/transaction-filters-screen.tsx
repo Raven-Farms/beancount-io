@@ -36,12 +36,17 @@ import {
 } from "@/screens/transactions-screen/filters/types";
 import {
   isDateRangeValid,
+  MAX_FILTER_DAY,
+  monthsBack,
   selectFiltersForLedger,
 } from "@/screens/transactions-screen/filters/select-filter-query";
 import { transactionFiltersVar } from "@/screens/transactions-screen/filters/var";
 import { useLedgerGuard } from "@/components/ledger-guard";
 
 type PickerTarget = "start" | "end";
+
+/** The latest day the server can query past (w21/307). */
+const MAX_FILTER_DATE = parseFormatDate(MAX_FILTER_DAY);
 
 const getStyles = (theme: ColorTheme) =>
   StyleSheet.create({
@@ -163,7 +168,7 @@ const FilterChip = ({
       accessibilityState={{ selected: active }}
     >
       <Text
-        key={fontScale}
+        key={`chip-${fontScale}`}
         style={[styles.chipText, active && styles.chipTextActive]}
       >
         {label}
@@ -223,14 +228,13 @@ const TransactionFiltersSheet = ({
         return { ...prev, range };
       }
       // Seed a usable window so a half-filled custom range never silently
-      // filters nothing: last month through today.
+      // filters nothing: last month through today, clamped like the 1M pill
+      // so 31 March seeds 28 February rather than 3 March.
       const today = new Date();
-      const monthAgo = new Date(today.getTime());
-      monthAgo.setMonth(monthAgo.getMonth() - 1);
       return {
         ...prev,
         range,
-        startDate: prev.startDate ?? getFormatDate(monthAgo),
+        startDate: prev.startDate ?? getFormatDate(monthsBack(today, 1)),
         endDate: prev.endDate ?? getFormatDate(today),
       };
     });
@@ -284,7 +288,7 @@ const TransactionFiltersSheet = ({
               accessibilityRole="button"
             >
               <Text
-                key={fontScale}
+                key={`header-reset-${fontScale}`}
                 style={styles.headerAction}
                 numberOfLines={1}
                 maxFontSizeMultiplier={headerActionMaxFontSizeMultiplier}
@@ -300,7 +304,7 @@ const TransactionFiltersSheet = ({
               accessibilityRole="button"
             >
               <Text
-                key={fontScale}
+                key={`header-close-${fontScale}`}
                 style={styles.headerAction}
                 numberOfLines={1}
                 maxFontSizeMultiplier={headerActionMaxFontSizeMultiplier}
@@ -314,7 +318,11 @@ const TransactionFiltersSheet = ({
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.section}>
-          <Text key={fontScale} style={styles.sectionTitle}>
+          <Text
+            key={`status-title-${fontScale}`}
+            style={styles.sectionTitle}
+            accessibilityRole="header"
+          >
             {t("filterStatus")}
           </Text>
           <View style={styles.chipRow}>
@@ -330,7 +338,11 @@ const TransactionFiltersSheet = ({
         </View>
 
         <View style={styles.section}>
-          <Text key={fontScale} style={styles.sectionTitle}>
+          <Text
+            key={`range-title-${fontScale}`}
+            style={styles.sectionTitle}
+            accessibilityRole="header"
+          >
             {t("filterDateRange")}
           </Text>
           <View style={styles.chipRow}>
@@ -362,7 +374,7 @@ const TransactionFiltersSheet = ({
           )}
           {draft.range === "custom" && !isRangeValid ? (
             <Text
-              key={fontScale}
+              key={`range-error-${fontScale}`}
               style={styles.rangeError}
               testID="filter-range-error"
             >
@@ -372,13 +384,17 @@ const TransactionFiltersSheet = ({
         </View>
 
         <View style={styles.section}>
-          <Text key={fontScale} style={styles.sectionTitle}>
+          <Text
+            key={`account-title-${fontScale}`}
+            style={styles.sectionTitle}
+            accessibilityRole="header"
+          >
             {t("filterAccount")}
           </Text>
           <View style={[styles.rows, styles.accountRow]}>
             <View style={styles.accountRowItem}>
               <ListItem
-                key={fontScale}
+                key={`account-row-${fontScale}`}
                 // title={t("account").toUpperCase()}
                 content={draft.account ?? t("allAccounts")}
                 onPress={pickAccount}
@@ -392,7 +408,7 @@ const TransactionFiltersSheet = ({
                 }
                 hitSlop={10}
                 accessibilityRole="button"
-                accessibilityLabel={t("reset")}
+                accessibilityLabel={t("clearAccount")}
               >
                 <Ionicons name="close-circle" size={20} color={theme.black60} />
               </TouchableOpacity>
@@ -402,7 +418,11 @@ const TransactionFiltersSheet = ({
       </ScrollView>
 
       <View style={styles.footer}>
-        <Button key={fontScale} onPress={apply} disabled={!isRangeValid}>
+        <Button
+          key={`apply-${fontScale}`}
+          onPress={apply}
+          disabled={!isRangeValid}
+        >
           {t("apply")}
         </Button>
       </View>
@@ -411,6 +431,7 @@ const TransactionFiltersSheet = ({
         isVisible={pickerTarget !== null}
         mode="date"
         date={pickerDate}
+        maximumDate={MAX_FILTER_DATE}
         onConfirm={confirmDate}
         onCancel={() => setPickerTarget(null)}
       />

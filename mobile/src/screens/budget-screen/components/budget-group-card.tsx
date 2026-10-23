@@ -1,10 +1,18 @@
-import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { formatLedgerDate } from "@/common/date-format";
+import {
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+  useWindowDimensions,
+} from "react-native";
 import { FadeInView } from "@/components/crossfade";
 import { ColorTheme } from "@/types/theme-props";
 import {
   fontSizes,
   fontWeights,
   gutter,
+  prefersStackedLayout,
   space,
   useTheme,
 } from "@/common/theme";
@@ -14,15 +22,19 @@ import {
   formatMoneyWithCurrency,
   formatSignedMoneyWithCurrency,
 } from "@/common/number-utils";
-import { AmountText, DashboardCard } from "@/components";
+import { AmountText, DashboardCard, StaleDataBanner } from "@/components";
 import { LoadingTile } from "@/components/loading-tile";
 import {
   BudgetBarChartD3,
   LEGEND_HEIGHT,
 } from "@/common/d3/budget-bar-chart-d3";
+import { useToday } from "@/common/hooks/use-today";
+import { useAccountCloseDates } from "@/common/hooks/use-account-close-dates";
+import { budgetEndsOn, budgetHasEnded } from "@/common/account-close-dates";
 import { useBudgetActuals } from "@/screens/budget-screen/hooks/use-budget-actuals";
 import {
-  budgetDirection,
+  groupDirection,
+  budgetDisplayScale,
   type BudgetGroup,
 } from "@/screens/budget-screen/selectors/budget-selectors";
 import {
@@ -35,6 +47,7 @@ import {
   periodAxisLabel,
   STATUS_LABEL_KEYS,
 } from "@/screens/budget-screen/selectors/budget-labels";
+import { withYearMarks } from "@/common/d3/axis-year-marks";
 import { BudgetHistoryRows } from "@/screens/budget-screen/components/budget-history-rows";
 import { BudgetMeter } from "@/screens/budget-screen/components/budget-meter";
 import { LEADING_TEXT_ALIGN } from "@/common/rtl";
@@ -50,6 +63,21 @@ const getStyles = (theme: ColorTheme) =>
     titleRow: {
       flexDirection: "row",
       alignItems: "center",
+    },
+    // Accessibility text sizes: the account gets the full width and Update
+    // Budget moves under it, as DashboardCard stacks its title and action.
+    titleStacked: {
+      flexDirection: "column",
+      alignItems: "flex-start",
+    },
+    // `flex: 1` sizes the row's title; in a column it would collapse it.
+    accountStacked: {
+      flex: 0,
+      alignSelf: "stretch",
+    },
+    updateButtonStacked: {
+      marginStart: 0,
+      marginTop: space.xxs,
     },
     account: {
       flex: 1,
@@ -88,7 +116,13 @@ const getStyles = (theme: ColorTheme) =>
       fontSize: fontSizes.xs,
       color: theme.black80,
     },
+    // The fill is the page's quiet grey and the text is the primary text colour,
+    // both 4.5:1 or better in both themes; the status shows in the border, not
+    // in text that failed contrast ("Above target" was 2.22:1 in dark)
+    // (w21/482).
     statusBadge: {
+      backgroundColor: theme.black20,
+      borderWidth: 1,
       borderRadius: 6,
       paddingHorizontal: space.sm,
       paddingVertical: 2,
@@ -98,6 +132,7 @@ const getStyles = (theme: ColorTheme) =>
     statusText: {
       fontSize: fontSizes.xs,
       fontWeight: fontWeights.medium,
+      color: theme.text01,
     },
     stats: {
       flexDirection: "row",
@@ -153,36 +188,59 @@ export function BudgetGroupCard({
 }: BudgetGroupCardProps): JSX.Element {
   const styles = useThemeStyle(getStyles);
   const theme = useTheme().colorTheme;
-  const { t } = useTranslations();
+  const { t, locale } = useTranslations();
+  // At AX2 the row left the account a few letters — "Ex…ing", "Ex…ries" —
+  // so budgets could not be told apart (w21/027).
+  const { fontScale } = useWindowDimensions();
+  const stacked = prefersStackedLayout(fontScale);
 
-  const direction = budgetDirection(group.value);
+  const direction = groupDirection(group);
   const { currency } = group;
+  // The day a budget dated after it has not started on (w21/301).
+  const today = useToday();
 
-  const { series, loading, error } = useBudgetActuals({
+  // A budget on a closed account ends with it (w21/398).
+  const closeDates = useAccountCloseDates(ledgerId);
+  const endsOn = budgetEndsOn(group.account, closeDates);
+  const { series, loading, error, stale, settled } = useBudgetActuals({
     ledgerId,
     group,
     currency,
     time,
     direction,
+    endsOn,
   });
 
-  const stats = selectBudgetCardStats(group, series);
-  const favorables = selectPointFavorability(series, direction);
+  // While the current period's read is pending or failed there is nothing to
+  // judge: the budget alone, never a $0 actual and a green "Below target".
+  const stats = selectBudgetCardStats(group, settled ? series : [], today);
+  const favorables = selectPointFavorability(
+    series,
+    direction,
+    group.budgetHistory,
+    today,
+    group.currency,
+  );
 
   // One object so the chart and its spoken summary can never describe different
   // series.
+  const periodLabels = series.map((point) =>
+    periodAxisLabel(point.date, group.interval, t, locale),
+  );
+  const periodDates = series.map((point) => point.date);
   const chartSeries = {
-    labels: series.map((point) =>
-      periodAxisLabel(point.date, group.interval, t),
-    ),
+    // A year where it changes, so a 12-month window's two Octobers differ
+    // (w21/497); the spoken summary names its own years.
+    labels: withYearMarks(periodLabels, periodDates),
     actuals: series.map((point) => point.actual),
     budgets: series.map((point) => point.budget),
     favorables,
     currency,
   };
 
+  const scale = budgetDisplayScale(group.budgetHistory);
   const formatAmount = (value: number) =>
-    formatMoneyWithCurrency(value, currency);
+    formatMoneyWithCurrency(value, currency, scale);
 
   const statusColor = stats.favorable ? theme.success : theme.error;
 
@@ -191,16 +249,30 @@ export function BudgetGroupCard({
     // history rows can run edge to edge.
     <DashboardCard bleed>
       <View style={styles.header}>
-        <View style={styles.titleRow}>
-          <Text style={styles.account} numberOfLines={1} ellipsizeMode="middle">
+        <View style={[styles.titleRow, stacked && styles.titleStacked]}>
+          <Text
+            // Remeasured on a live size change (mobile/AGENTS.md).
+            key={`account-${fontScale}`}
+            style={[styles.account, stacked && styles.accountStacked]}
+            numberOfLines={stacked ? 2 : 1}
+            // Stacked, the leaf is what tells two budgets apart.
+            ellipsizeMode={stacked ? "head" : "middle"}
+          >
             {group.account}
           </Text>
-          {onUpdate && (
+          {onUpdate && !budgetHasEnded(endsOn, today) && (
             <TouchableOpacity
-              style={styles.updateButton}
+              style={[
+                styles.updateButton,
+                stacked && styles.updateButtonStacked,
+              ]}
               onPress={() => onUpdate(group)}
               accessibilityRole="button"
-              accessibilityLabel={t("budgetUpdate")}
+              // Which budget: every card's button read "Update" (w21/142).
+              accessibilityLabel={t("budgetUpdateNamed", {
+                account: group.account,
+                currency,
+              })}
             >
               <Text style={styles.updateText}>{t("budgetUpdate")}</Text>
             </TouchableOpacity>
@@ -215,14 +287,19 @@ export function BudgetGroupCard({
           <View style={styles.badge}>
             <Text style={styles.badgeText}>{currency}</Text>
           </View>
+          {stats.startsOn !== null && (
+            // Not yet in effect: neutral, never "Above target" (w21/101).
+            <View style={[styles.statusBadge, { borderColor: theme.black60 }]}>
+              <Text style={styles.statusText}>
+                {t("budgetStartsOn", {
+                  date: formatLedgerDate(stats.startsOn, locale),
+                })}
+              </Text>
+            </View>
+          )}
           {stats.status !== null && (
-            <View
-              style={[
-                styles.statusBadge,
-                { backgroundColor: theme.black20, borderColor: statusColor },
-              ]}
-            >
-              <Text style={[styles.statusText, { color: statusColor }]}>
+            <View style={[styles.statusBadge, { borderColor: statusColor }]}>
+              <Text style={styles.statusText}>
                 {t(STATUS_LABEL_KEYS[stats.status])}
               </Text>
             </View>
@@ -241,7 +318,12 @@ export function BudgetGroupCard({
           <View style={styles.stat}>
             <Text style={styles.statLabel}>{t("budgetActual")}</Text>
             <AmountText style={styles.statValue}>
-              {formatAmount(stats.actual)}
+              {formatSignedMoneyWithCurrency(
+                stats.actual,
+                currency,
+                false,
+                scale,
+              )}
             </AmountText>
           </View>
         )}
@@ -249,7 +331,12 @@ export function BudgetGroupCard({
           <View style={styles.stat}>
             <Text style={styles.statLabel}>{t("budgetVariance")}</Text>
             <AmountText style={[styles.statValue, { color: statusColor }]}>
-              {formatSignedMoneyWithCurrency(stats.variance, currency, true)}
+              {formatSignedMoneyWithCurrency(
+                stats.variance,
+                currency,
+                true,
+                scale,
+              )}
             </AmountText>
           </View>
         )}
@@ -264,6 +351,7 @@ export function BudgetGroupCard({
         </View>
       )}
 
+      {stale ? <StaleDataBanner /> : null}
       <View style={styles.chartWrap}>
         {loading && series.length === 0 ? (
           <LoadingTile height={CHART_HEIGHT + LEGEND_HEIGHT} />
@@ -273,7 +361,16 @@ export function BudgetGroupCard({
           <FadeInView>
             <BudgetBarChartD3
               {...chartSeries}
-              accessibilityLabel={budgetChartSummary(chartSeries, t)}
+              accessibilityLabel={budgetChartSummary(
+                {
+                  ...chartSeries,
+                  labels: periodLabels,
+                  dates: periodDates,
+                  direction,
+                },
+                t,
+                locale,
+              )}
               height={CHART_HEIGHT}
             />
           </FadeInView>

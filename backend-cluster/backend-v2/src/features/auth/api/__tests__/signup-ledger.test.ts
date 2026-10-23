@@ -1,4 +1,8 @@
 import "reflect-metadata";
+import {
+  fakeRedisAdmission as mockFakeRedisAdmission,
+  fakeRedisAdmissionState,
+} from "@/foundation/redis/__tests__/fake-redis-counter";
 import { graphql } from "graphql";
 import { buildSchema } from "type-graphql";
 import { AuthResolver } from "../auth-resolver";
@@ -11,6 +15,7 @@ import { COOKIE_NAME } from "@/shared/cookie-utils";
 jest.mock("@/foundation/redis/redis-counter", () => ({
   incrementInWindow: jest.fn(async () => ({ count: 1, resetInMs: 60_000 })),
 }));
+jest.mock("@/foundation/redis/redis-admission", () => mockFakeRedisAdmission);
 jest.mock("@/shared/execute", () => ({ delayRun: jest.fn() }));
 
 const authResponse = {
@@ -68,7 +73,7 @@ async function createFixture(withDefaultLedger: boolean) {
     getApiContext: jest.fn(async () => ({
       favaApiClient: {
         ledgers: {
-          listLedgers: jest.fn(async () => ({
+          listUserLedgers: jest.fn(async () => ({
             data: { success: true, data: [] },
           })),
           createLedger,
@@ -86,6 +91,7 @@ async function createFixture(withDefaultLedger: boolean) {
       favaApi: { adminUser: "admin", adminPassword: "" },
       gitea: { hostname: "gitea.example", externalHttpPort: 443, sshPort: 22 },
     } as never,
+    async () => false,
   );
   const workflow = new AuthSessionWorkflow(
     service,
@@ -129,6 +135,7 @@ async function createFixture(withDefaultLedger: boolean) {
 
 // Signup is a browser ceremony; GraphQL is its only eligible API surface.
 describe("signup default ledger", () => {
+  beforeEach(() => fakeRedisAdmissionState.reset());
   it.each([true, false])(
     "completes signup with a private ledger only when requested (withDefaultLedger=%s)",
     async (withDefaultLedger) => {

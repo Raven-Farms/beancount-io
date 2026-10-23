@@ -34,6 +34,11 @@ export function canPlotQuery(result: QueryResultTable): boolean {
   return firstIsDateOrString && secondIsNumeric;
 }
 
+/** The cell's own decimal text — what a tooltip should say, not the float. */
+function sourceText(value: unknown): string {
+  return typeof value === "string" ? value.trim() : String(value);
+}
+
 /** Parse a JSON number or decimal string into a finite number. */
 export function parseFiniteNumber(value: unknown): number | null {
   if (typeof value === "number") {
@@ -55,14 +60,16 @@ export function parseFiniteNumber(value: unknown): number | null {
  *   `{ number, currency }` Amount objects
  *
  * Multi-unit maps and unparseable cells return null so the chart is omitted.
+ * `text` keeps the source decimal: `amount` is a float for plotting and can
+ * lose digits a ledger value really has (w4/254).
  */
 export function decodeQueryChartValue(
   value: unknown,
   dtype: string,
-): { amount: number; unit?: string } | null {
+): { amount: number; text: string; unit?: string } | null {
   if (dtype === "Decimal" || dtype === "int") {
     const amount = parseFiniteNumber(value);
-    return amount === null ? null : { amount };
+    return amount === null ? null : { amount, text: sourceText(value) };
   }
 
   if (dtype !== "Inventory" && dtype !== "Amount") {
@@ -71,22 +78,24 @@ export function decodeQueryChartValue(
 
   if (typeof value !== "object" || value === null || Array.isArray(value)) {
     const amount = parseFiniteNumber(value);
-    return amount === null ? null : { amount };
+    return amount === null ? null : { amount, text: sourceText(value) };
   }
 
   const record = value as Record<string, unknown>;
 
   if ("number" in record || "currency" in record || "value" in record) {
-    const amount = parseFiniteNumber(record.number ?? record.value);
+    const raw = record.number ?? record.value;
+    const amount = parseFiniteNumber(raw);
     if (amount === null) return null;
+    const text = sourceText(raw);
     const unit =
       typeof record.currency === "string" ? record.currency : undefined;
-    return unit ? { amount, unit } : { amount };
+    return unit ? { amount, text, unit } : { amount, text };
   }
 
   const entries = Object.entries(record);
   if (entries.length === 0) {
-    return { amount: 0 };
+    return { amount: 0, text: "0" };
   }
   if (entries.length !== 1) {
     return null;
@@ -94,7 +103,7 @@ export function decodeQueryChartValue(
 
   const [unit, raw] = entries[0];
   const amount = parseFiniteNumber(raw);
-  return amount === null ? null : { amount, unit };
+  return amount === null ? null : { amount, text: sourceText(raw), unit };
 }
 
 /**
@@ -115,6 +124,9 @@ export function parseQueryChart(result: QueryResultTable): ChartConfig | null {
 
   const categories: string[] = [];
   const values: number[] = [];
+  // Each point's source decimal, by index, so a repeated category label
+  // never borrows another row's text.
+  const texts: string[] = [];
   let seriesUnit: string | undefined;
 
   for (const row of rows) {
@@ -138,6 +150,7 @@ export function parseQueryChart(result: QueryResultTable): ChartConfig | null {
 
     categories.push(String(category ?? ""));
     values.push(decoded.amount);
+    texts.push(decoded.text);
   }
 
   if (categories.length === 0) {
@@ -151,9 +164,11 @@ export function parseQueryChart(result: QueryResultTable): ChartConfig | null {
       axisPointer: {
         type: chartType === "line" ? "line" : "shadow",
       },
-      valueFormatter: seriesUnit
-        ? (value) => `${value as number} ${seriesUnit}`
-        : undefined,
+      // Say the source value; the plotted float may have dropped digits.
+      valueFormatter: (value, dataIndex) => {
+        const text = texts[dataIndex] ?? String(value);
+        return seriesUnit ? `${text} ${seriesUnit}` : text;
+      },
     },
     grid: {
       left: "3%",

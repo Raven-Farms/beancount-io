@@ -22,7 +22,7 @@ describe("createLedger operation", () => {
   let mockFavaApiClient: {
     ledgers: {
       createLedger: jest.Mock;
-      listLedgers: jest.Mock;
+      listUserLedgers: jest.Mock;
     };
   };
   let mockUserModel: { getById: jest.Mock };
@@ -44,7 +44,7 @@ describe("createLedger operation", () => {
     mockFavaApiClient = {
       ledgers: {
         createLedger: jest.fn(),
-        listLedgers: jest.fn(),
+        listUserLedgers: jest.fn(),
       },
     };
 
@@ -95,7 +95,7 @@ describe("createLedger operation", () => {
         },
       };
 
-      mockFavaApiClient.ledgers.listLedgers.mockResolvedValue({
+      mockFavaApiClient.ledgers.listUserLedgers.mockResolvedValue({
         data: { success: true, data: [] },
       });
       mockFavaApiClient.ledgers.createLedger.mockResolvedValue(
@@ -118,7 +118,7 @@ describe("createLedger operation", () => {
     });
 
     it("should throw error when list ledgers fails", async () => {
-      mockFavaApiClient.ledgers.listLedgers.mockResolvedValue({
+      mockFavaApiClient.ledgers.listUserLedgers.mockResolvedValue({
         data: { success: false, data: null },
       });
 
@@ -132,7 +132,7 @@ describe("createLedger operation", () => {
     });
 
     it("should preserve an authentication failure while listing ledgers", async () => {
-      mockFavaApiClient.ledgers.listLedgers.mockRejectedValue(
+      mockFavaApiClient.ledgers.listUserLedgers.mockRejectedValue(
         new FavaApiError("Missing authorization header", 401, {
           success: false,
           error: "Missing authorization header",
@@ -149,7 +149,7 @@ describe("createLedger operation", () => {
     });
 
     it("should throw error when user not found", async () => {
-      mockFavaApiClient.ledgers.listLedgers.mockResolvedValue({
+      mockFavaApiClient.ledgers.listUserLedgers.mockResolvedValue({
         data: { success: true, data: [] },
       });
       mockUserModel.getById.mockResolvedValue(null);
@@ -172,7 +172,7 @@ describe("createLedger operation", () => {
 
     it("should throw error when tier limit is exceeded", async () => {
       // FREE tier allows 1 ledger; user already has 1
-      mockFavaApiClient.ledgers.listLedgers.mockResolvedValue({
+      mockFavaApiClient.ledgers.listUserLedgers.mockResolvedValue({
         data: {
           success: true,
           data: [{ name: "existing-ledger", full_name: "testuser/existing" }],
@@ -190,15 +190,6 @@ describe("createLedger operation", () => {
 
     it("treats a -1 ledger limit as unlimited", async () => {
       mockGetUserTier.mockResolvedValue(SubscriptionTier.ENTERPRISE);
-      mockFavaApiClient.ledgers.listLedgers.mockResolvedValue({
-        data: {
-          success: true,
-          data: [
-            { name: "a", full_name: "testuser/a" },
-            { name: "b", full_name: "testuser/b" },
-          ],
-        },
-      });
       mockFavaApiClient.ledgers.createLedger.mockResolvedValue({
         data: {
           success: true,
@@ -223,10 +214,12 @@ describe("createLedger operation", () => {
         userId,
       });
       expect(ledger.fullName).toBe("testuser/new-ledger");
+      // Unlimited: no need to count existing ledgers.
+      expect(mockFavaApiClient.ledgers.listUserLedgers).not.toHaveBeenCalled();
     });
 
     it("should throw error when create ledger API fails", async () => {
-      mockFavaApiClient.ledgers.listLedgers.mockResolvedValue({
+      mockFavaApiClient.ledgers.listUserLedgers.mockResolvedValue({
         data: { success: true, data: [] },
       });
       mockFavaApiClient.ledgers.createLedger.mockResolvedValue({
@@ -243,7 +236,7 @@ describe("createLedger operation", () => {
     });
 
     it("should translate a duplicate ledger name into a structured conflict", async () => {
-      mockFavaApiClient.ledgers.listLedgers.mockResolvedValue({
+      mockFavaApiClient.ledgers.listUserLedgers.mockResolvedValue({
         data: { success: true, data: [] },
       });
       mockFavaApiClient.ledgers.createLedger.mockRejectedValue(
@@ -280,7 +273,7 @@ describe("createLedger operation", () => {
     });
 
     it("should recognize the ledger service's machine-readable duplicate code", async () => {
-      mockFavaApiClient.ledgers.listLedgers.mockResolvedValue({
+      mockFavaApiClient.ledgers.listUserLedgers.mockResolvedValue({
         data: { success: true, data: [] },
       });
       mockFavaApiClient.ledgers.createLedger.mockRejectedValue(
@@ -306,17 +299,14 @@ describe("createLedger operation", () => {
       });
     });
 
-    it("should correctly filter user's own ledgers from all ledgers", async () => {
+    it("counts the owner's own ledger list, asked for by username", async () => {
       // GROWTH tier (maxLedgers: 20) so 1 own ledger is under the limit
       mockGetUserTier.mockResolvedValue(SubscriptionTier.GROWTH);
 
-      mockFavaApiClient.ledgers.listLedgers.mockResolvedValue({
+      mockFavaApiClient.ledgers.listUserLedgers.mockResolvedValue({
         data: {
           success: true,
-          data: [
-            { name: "ledger1", full_name: "testuser/ledger1" },
-            { name: "ledger2", full_name: "otheruser/ledger2" },
-          ],
+          data: [{ name: "ledger1", full_name: "testuser/ledger1" }],
         },
       });
       mockFavaApiClient.ledgers.createLedger.mockResolvedValue({
@@ -337,18 +327,21 @@ describe("createLedger operation", () => {
         },
       });
 
-      // Succeeds because user only has 1 own ledger (not 2)
       await createLedger({
         ...deps,
         ledgerCreate: createValidLedgerInput(),
         userId,
       });
 
+      expect(mockFavaApiClient.ledgers.listUserLedgers).toHaveBeenCalledWith(
+        "testuser",
+        { page: 1, limit: 50 },
+      );
       expect(mockFavaApiClient.ledgers.createLedger).toHaveBeenCalled();
     });
 
     it("should throw resource limit error with correct metadata", async () => {
-      mockFavaApiClient.ledgers.listLedgers.mockResolvedValue({
+      mockFavaApiClient.ledgers.listUserLedgers.mockResolvedValue({
         data: {
           success: true,
           data: [{ name: "existing-ledger", full_name: "testuser/existing" }],
@@ -373,6 +366,126 @@ describe("createLedger operation", () => {
         });
         expect(domainError.category).toBe("RESOURCE_LIMIT_REACHED");
       }
+    });
+  });
+
+  // PRFAQ005 question 21 item 6: the count read only the first 10 repositories
+  // the ledger service listed, so Growth's 20 and Organization's 500 never fired.
+  describe("ledger limit across every listed page", () => {
+    const repo = (fullName: string) => ({ full_name: fullName });
+    /** The owner's own list as Gitea pages it, 50 per page. */
+    const pages = (owned: number) => {
+      const all = Array.from({ length: owned }, (_, i) =>
+        repo(`testuser/books-${i}`),
+      );
+      mockFavaApiClient.ledgers.listUserLedgers.mockImplementation(
+        (_owner: string, { page, limit }: { page: number; limit: number }) =>
+          Promise.resolve({
+            data: {
+              success: true,
+              data: all.slice((page - 1) * limit, page * limit),
+            },
+          }),
+      );
+    };
+    const created = () =>
+      mockFavaApiClient.ledgers.createLedger.mockResolvedValue({
+        data: {
+          success: true,
+          data: { full_name: "testuser/new", name: "new" },
+        },
+      });
+
+    it.each([
+      [SubscriptionTier.PREMIUM, 5],
+      [SubscriptionTier.GROWTH, 20],
+      [SubscriptionTier.ORGANIZATION, 500],
+    ])(
+      "refuses a %s owner at %i owned ledgers, however many pages they span",
+      async (tier, max) => {
+        mockGetUserTier.mockResolvedValue(tier);
+        pages(max);
+
+        await expect(
+          createLedger({
+            ...deps,
+            ledgerCreate: createValidLedgerInput(),
+            userId,
+          }),
+        ).rejects.toMatchObject({
+          category: "RESOURCE_LIMIT_REACHED",
+          metadata: { resource: "Ledger", limit: max, current: max },
+          // Names the plan the user is on, not "Premium" for everyone.
+          message: expect.stringContaining(
+            `Your ${tier.charAt(0)}${tier.slice(1).toLowerCase()} plan allows ${max} ledgers, and you own ${max}.`,
+          ),
+        });
+        expect(mockFavaApiClient.ledgers.createLedger).not.toHaveBeenCalled();
+      },
+    );
+
+    it("lets an Organization owner under the limit create, reading past the first page", async () => {
+      mockGetUserTier.mockResolvedValue(SubscriptionTier.ORGANIZATION);
+      pages(55);
+      created();
+
+      await createLedger({
+        ...deps,
+        ledgerCreate: createValidLedgerInput(),
+        userId,
+      });
+
+      expect(mockFavaApiClient.ledgers.createLedger).toHaveBeenCalledTimes(1);
+      expect(mockFavaApiClient.ledgers.listUserLedgers).toHaveBeenCalledWith(
+        "testuser",
+        { page: 2, limit: 50 },
+      );
+    });
+
+    it("states the limit truthfully when a downgrade left more ledgers than it allows", async () => {
+      mockGetUserTier.mockResolvedValue(SubscriptionTier.FREE);
+      pages(3);
+
+      await expect(
+        createLedger({
+          ...deps,
+          ledgerCreate: createValidLedgerInput(),
+          userId,
+        }),
+      ).rejects.toMatchObject({
+        message:
+          "Your Free plan allows 1 ledger, and you own 3. Upgrade for more, or delete one you no longer need.",
+      });
+    });
+
+    it("never refuses an unlimited Enterprise owner, and does not list to find out", async () => {
+      mockGetUserTier.mockResolvedValue(SubscriptionTier.ENTERPRISE);
+      created();
+
+      await createLedger({
+        ...deps,
+        ledgerCreate: createValidLedgerInput(),
+        userId,
+      });
+
+      expect(mockFavaApiClient.ledgers.listUserLedgers).not.toHaveBeenCalled();
+      expect(mockFavaApiClient.ledgers.createLedger).toHaveBeenCalledTimes(1);
+    });
+
+    it("keeps the mobile app exempt from the ledger limit", async () => {
+      pages(5);
+      created();
+
+      await createLedger({
+        ...deps,
+        ledgerCreate: createValidLedgerInput(),
+        userId,
+        platform: "mobile",
+      });
+
+      expect(mockGetUserTier).not.toHaveBeenCalled();
+      expect(mockFavaApiClient.ledgers.listUserLedgers).not.toHaveBeenCalled();
+      expect(mockFavaApiClient.ledgers.createLedger).toHaveBeenCalledTimes(1);
     });
   });
 });

@@ -24,9 +24,11 @@ let transformedErrors: BeancountError[] = [];
 let rawPaddingTransactions: DirectiveJson[] = [];
 let transformedPaddingTransactions: DirectiveJson[] = [];
 let queryCalls = 0;
+let locatedParseErrors: BeancountError[] = [];
 
 jest.mock("@/foundation/rustledger/loader", () => ({
   loadRustledger: async () => ({
+    parseMultiFile: () => locatedParseErrors,
     Ledger: {
       fromFiles: (files: Record<string, string>) => {
         filesSeenByWasm = files;
@@ -156,8 +158,7 @@ const paddingCash: DirectiveJson = {
   type: "transaction",
   date: "2017-01-02",
   flag: "P",
-  narration:
-    "(Padding inserted for Balance of 100 USD for difference 100 USD)",
+  narration: "(Padding inserted for Balance of 100 USD for difference 100 USD)",
   tags: [],
   links: [],
   postings: [
@@ -181,6 +182,7 @@ beforeEach(() => {
   rawPaddingTransactions = [];
   transformedPaddingTransactions = [];
   queryCalls = 0;
+  locatedParseErrors = [];
   // Tests reuse identical file content with DIFFERENT stubbed parse results —
   // the content-addressed snapshot cache would otherwise serve test A's
   // snapshot to test B.
@@ -206,6 +208,114 @@ describe("parseLedgerFiles — plugin orchestration (stubbed WASM)", () => {
       balanceCash,
     ]);
     expect(snapshot.directiveCount).toBe(5);
+  });
+
+  // w21/443: a padding transaction answers with its pad's text, so it is a copy.
+  it("marks the padding transaction as generated, not its pad", async () => {
+    const { isGeneratedDirective } = await import("../plugins/provenance");
+    parsedDirectives = [openCash, openEquity, padCash, balanceCash];
+    rawPaddingTransactions = [paddingCash];
+
+    const snapshot = await parseLedgerFiles(
+      { "main.bean": "2017-01-02 pad Assets:Cash Equity:Opening" },
+      "main.bean",
+    );
+
+    expect(isGeneratedDirective(paddingCash)).toBe(true);
+    expect(isGeneratedDirective(padCash)).toBe(false);
+    expect(snapshot.directives).toContain(paddingCash);
+  });
+
+  it("walks a same-day transaction written before a pad first (w21/134)", async () => {
+    const deposit: DirectiveJson = {
+      type: "transaction",
+      date: padCash.date,
+      flag: "*",
+      narration: "Deposit",
+      tags: [],
+      links: [],
+      postings: [
+        { account: "Assets:Cash", units: { number: "1.00", currency: "USD" } },
+        { account: "Equity:Opening" },
+      ],
+    } as DirectiveJson;
+    // The engine groups the day by kind: pad before the transaction.
+    parsedDirectives = [padCash, deposit];
+    rawPaddingTransactions = [paddingCash];
+
+    const snapshot = await parseLedgerFiles(
+      {
+        "main.bean": `${padCash.date} * "Deposit"\n  Assets:Cash  1.00 USD\n  Equity:Opening\n${padCash.date} pad Assets:Cash Equity:Opening\n`,
+      },
+      "main.bean",
+    );
+
+    expect(snapshot.directives).toEqual([deposit, padCash, paddingCash]);
+  });
+
+  it("leaves padding inside the balance tolerance out and reports the pad (w21/135)", async () => {
+    const tolerant = {
+      ...balanceCash,
+      tolerance: "1000",
+    } as DirectiveJson;
+    parsedDirectives = [openCash, openEquity, padCash, tolerant];
+    rawPaddingTransactions = [paddingCash];
+
+    const snapshot = await parseLedgerFiles(
+      { "main.bean": "2017-01-02 pad Assets:Cash Equity:Opening" },
+      "main.bean",
+    );
+
+    expect(snapshot.directives).toEqual([
+      openCash,
+      openEquity,
+      padCash,
+      tolerant,
+    ]);
+    expect(snapshot.errors.map((error) => [error.code, error.line])).toEqual([
+      ["E2003", 1],
+    ]);
+    expect(snapshot.valid).toBe(false);
+  });
+
+  it("locates the syntax errors the engine summarizes per file (w21/187)", async () => {
+    rawErrors = [
+      {
+        message: "parse errors in main.bean",
+        code: "LOAD",
+        phase: "load",
+        hint: null,
+        file: null,
+        line: null,
+        column: null,
+        end_line: null,
+        end_column: null,
+        severity: "error",
+      },
+    ];
+    locatedParseErrors = [
+      {
+        message: "main.bean: parse error: unexpected input",
+        code: "P0012",
+        phase: "parse",
+        hint: null,
+        file: "main.bean",
+        line: 5,
+        column: 16,
+        end_line: 5,
+        end_column: 19,
+        severity: "error",
+      },
+    ];
+
+    const snapshot = await parseLedgerFiles(
+      { "main.bean": "2026-01-01 open Assets:Cash\nbroken" },
+      "main.bean",
+    );
+
+    expect(
+      snapshot.errors.map((error) => [error.message, error.file, error.line]),
+    ).toEqual([["parse error: unexpected input", "main.bean", 5]]);
   });
 
   it("strips the fava plugin before parse and applies the amortize transform", async () => {
@@ -418,9 +528,7 @@ describe("parseLedgerFiles — plugin orchestration (stubbed WASM)", () => {
     );
     const materializedSource = String(result.rows[0][0]);
     expect(materializedSource).toContain("Padding inserted for Balance");
-    expect(materializedSource).not.toContain(
-      "pad Assets:Cash Equity:Opening",
-    );
+    expect(materializedSource).not.toContain("pad Assets:Cash Equity:Opening");
   });
 
   it("does not execute BQL over a materialized stream with parse errors", async () => {

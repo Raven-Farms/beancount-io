@@ -2,11 +2,14 @@ import {
   AccountJournalItem,
   AccountJournalRow,
   accountJournalItemKey,
+  accountJournalItemKeys,
+  accountJournalPageOverlapped,
   hasMoreAccountJournal,
   mergeAccountJournalItems,
   selectAccountJournalRows,
   groupAccountJournalRowsToSections,
   directiveTypeLabelKey,
+  formatOtherChanges,
 } from "../select-account-journal";
 import { en } from "../../../../translations/en";
 
@@ -43,9 +46,49 @@ function item(
 }
 
 describe("accountJournalItemKey", () => {
-  it("prefers the beancount entry hash", () => {
+  it("is built on the beancount entry hash", () => {
     const a = item({ entry_hash: "abc", date: "2025-01-01" });
-    expect(accountJournalItemKey(a)).toBe("abc");
+    expect(JSON.parse(accountJournalItemKey(a))[0]).toBe("abc");
+  });
+
+  // w21/419: two identical entries share a hash; their running balances differ.
+  it("tells identical twins apart by their running balance", () => {
+    const first = item(
+      { entry_hash: "twin", date: "2025-01-01" },
+      { USD: -4.5 },
+      { USD: 95.5 },
+    );
+    const second = item(
+      { entry_hash: "twin", date: "2025-01-01" },
+      { USD: -4.5 },
+      { USD: 91 },
+    );
+    expect(accountJournalItemKey(first)).not.toBe(
+      accountJournalItemKey(second),
+    );
+    // A page that repeats a row (a shifted offset) still carries its own pair.
+    const repeat = item(
+      { entry_hash: "twin", date: "2025-01-01" },
+      { USD: -4.5 },
+      { USD: 95.5 },
+    );
+    expect(accountJournalItemKey(first)).toBe(accountJournalItemKey(repeat));
+  });
+
+  it("merges a page holding the second twin without calling it an overlap", () => {
+    const first = item(
+      { entry_hash: "twin", date: "2025-01-01" },
+      { USD: -4.5 },
+      { USD: 95.5 },
+    );
+    const second = item(
+      { entry_hash: "twin", date: "2025-01-01" },
+      { USD: -4.5 },
+      { USD: 91 },
+    );
+    const merged = mergeAccountJournalItems([first], [second]);
+    expect(merged.length).toBe(2);
+    expect(accountJournalPageOverlapped({ incoming: 1, added: 1 })).toBe(false);
   });
 
   it("falls back to a date+change+balance signature without a hash", () => {
@@ -113,22 +156,22 @@ describe("hasMoreAccountJournal", () => {
 
 describe("selectAccountJournalRows", () => {
   it("maps description, date, change and running balance in the active currency", () => {
-    const rows = selectAccountJournalRows("USD", [
-      item(
-        { entry_hash: "a", date: "2025-01-02", payee: "Blue Bottle" },
-        { USD: -4.5 },
-        { USD: 120.5 },
-      ),
-    ]);
+    const rowItem = item(
+      { entry_hash: "a", date: "2025-01-02", payee: "Blue Bottle" },
+      { USD: -4.5 },
+      { USD: 120.5 },
+    );
+    const rows = selectAccountJournalRows("USD", [rowItem]);
     expect(rows).toEqual([
       {
-        key: "a",
+        key: accountJournalItemKey(rowItem),
         title: "Blue Bottle",
         date: "2025-01-02",
         flag: undefined,
         payee: "Blue Bottle",
         postings: [],
         directiveType: undefined,
+        detail: undefined,
         change: -4.5,
         balance: 120.5,
         moneyScale: 1,
@@ -174,8 +217,10 @@ describe("selectAccountJournalRows", () => {
     expect(rows[1].balance).toBe(-532257);
 
     const [balanceDay] = groupAccountJournalRowsToSections([rows[0]], "MRMB");
+    // Shown at the digits the ledger recorded (none here), as the real row is
+    // (w21/601).
     const [zeroDay] = groupAccountJournalRowsToSections(
-      [row("2026-06-30", "Balance", 0, 0)],
+      [{ ...row("2026-06-30", "Balance", 0, 0), moneyScale: 0 }],
       "MRMB",
     );
     expect(balanceDay.totalChange).toBe(zeroDay.totalChange);
@@ -193,7 +238,7 @@ describe("selectAccountJournalRows", () => {
     expect(row.balance).toBe(1200.5);
   });
 
-  it("falls back to USD per map, independently", () => {
+  it("reads each map in the active currency only (w21/058)", () => {
     const [usdBalance] = selectAccountJournalRows("MRMB", [
       item(
         { entry_hash: "u1", date: "2026-07-01", directive_type: "Balance" },
@@ -202,8 +247,7 @@ describe("selectAccountJournalRows", () => {
       ),
     ]);
     expect(usdBalance.change).toBe(0);
-    expect(usdBalance.balance).toBe(55911000000);
-    expect(usdBalance.moneyScale).toBe(2);
+    expect(usdBalance.balance).toBe(0);
 
     const [usdChange] = selectAccountJournalRows("MRMB", [
       item(
@@ -212,8 +256,13 @@ describe("selectAccountJournalRows", () => {
         { MRMB: -40 },
       ),
     ]);
-    expect(usdChange.change).toBe(-7);
+    // The running total stays in MRMB; the USD movement is shown beside it
+    // rather than read as a zero (w21/100).
+    expect(usdChange.change).toBe(0);
     expect(usdChange.balance).toBe(-40);
+    expect(usdChange.otherChanges).toEqual([
+      { currency: "USD", number: -7, scale: 0 },
+    ]);
   });
 
   it("takes the wider recorded scale from a zero-change row's balance", () => {
@@ -555,6 +604,38 @@ describe("account-journal rows in a commodity's units", () => {
     expect(near(row.units?.cost, -250)).toBe(true);
   });
 
+  // w21/422: -10 VTI {200} for +5 VOO {400} summed to $0.00.
+  it("costs only the shown commodity's leg of an exchange", () => {
+    const exchange = (shown: string) =>
+      selectAccountJournalRows(
+        "USD",
+        [
+          item(
+            {
+              entry_hash: "x",
+              postings: [
+                {
+                  account: "Assets:Brokerage",
+                  units: { number: "-10", currency: "VTI" },
+                  cost: { number: "200", currency: "USD" },
+                },
+                {
+                  account: "Assets:Brokerage",
+                  units: { number: "5", currency: "VOO" },
+                  cost: { number: "400", currency: "USD" },
+                },
+              ],
+            },
+            { VTI: "-10", VOO: "5" },
+            { VTI: "0", VOO: "5" },
+          ),
+        ],
+        { account: "Assets:Brokerage", currency: shown },
+      )[0];
+    expect(near(exchange("VOO").units?.cost, 2000)).toBe(true);
+    expect(near(exchange("VTI").units?.cost, -2000)).toBe(true);
+  });
+
   it("gives no cost to a commodity whose postings carry none", () => {
     const [row] = selectAccountJournalRows(
       "USD",
@@ -587,5 +668,415 @@ describe("account-journal rows in a commodity's units", () => {
     });
     const [section] = groupAccountJournalRowsToSections(rows, "USD");
     expect(section.totalChange).toBe("+5.528 RGAGX");
+  });
+});
+
+// w21/050: Note, Balance and Document rows read only "Assets:Cash · Note",
+// with the note's text, the asserted amount and the file nowhere in the app.
+describe("selectAccountJournalRows: what a directive says", () => {
+  const directive = (entry: Record<string, unknown>) =>
+    selectAccountJournalRows("USD", [
+      item(
+        {
+          entry_hash: String(entry.directive_type),
+          date: "2026-10-11",
+          account: "Assets:Cash",
+          ...entry,
+        },
+        {},
+        { USD: "49.75" },
+      ),
+    ])[0]!.detail;
+
+  it("carries a note's text", () => {
+    expect(
+      directive({
+        directive_type: "Note",
+        comment: 'qa-20261020 note "quoted" text',
+      }),
+    ).toEqual({ kind: "note", text: 'qa-20261020 note "quoted" text' });
+  });
+
+  it("carries a document's file", () => {
+    expect(
+      directive({
+        directive_type: "Document",
+        filename: "qa-20261020/receipt.pdf",
+      }),
+    ).toEqual({ kind: "document", text: "qa-20261020/receipt.pdf" });
+  });
+
+  it("carries a balance assertion's amount, and how far a failed one was off", () => {
+    expect(
+      directive({
+        directive_type: "Balance",
+        amount: { number: "49.75", currency: "USD" },
+        diff_amount: null,
+      }),
+    ).toEqual({ kind: "balance", amount: "49.75 USD", offBy: null });
+    expect(
+      directive({
+        directive_type: "Balance",
+        amount: { number: "50.00", currency: "USD" },
+        diff_amount: { number: "-0.25", currency: "USD" },
+      }),
+    ).toEqual({ kind: "balance", amount: "50.00 USD", offBy: "-0.25 USD" });
+  });
+
+  // w21/212: two "QA REPEAT" rows differed only by amount here, while
+  // Transactions told them apart by their narrations.
+  it("shows a transaction's narration under its payee, as Transactions does", () => {
+    expect(
+      directive({
+        directive_type: "Transaction",
+        payee: "QA REPEAT",
+        narration: "Bus pass September",
+      }),
+    ).toEqual({ kind: "narration", text: "Bus pass September" });
+  });
+
+  it("adds nothing when the narration repeats or replaces the payee", () => {
+    expect(directive({ directive_type: "Transaction", payee: "Cafe" })).toBe(
+      undefined,
+    );
+    expect(
+      directive({
+        directive_type: "Transaction",
+        payee: "Cafe",
+        narration: "Cafe",
+      }),
+    ).toBe(undefined);
+    expect(
+      directive({ directive_type: "Transaction", narration: "Lunch" }),
+    ).toBe(undefined);
+  });
+
+  it("words the failed difference in every locale", () => {
+    expect(en.balanceOffBy).toBe("Off by {{amount}}");
+  });
+});
+
+// w21/072: a head entry added while paging shifted page 2 down a row; dedup
+// dropped the repeat and the new entry was never fetched.
+describe("paging past an entry added at the head", () => {
+  const hashes = (n: number, from = 0) =>
+    Array.from({ length: n }, (_, i) => item({ entry_hash: `e${from + i}` }));
+
+  it("flags the overlapping page so the screen refetches", () => {
+    const loaded = hashes(50);
+    // "new" now sits at the top, so offset 50 starts at the old 50th row.
+    const page2 = hashes(50, 49);
+    const merged = mergeAccountJournalItems(loaded, page2);
+    const page = {
+      incoming: page2.length,
+      added: merged.length - loaded.length,
+    };
+    expect(accountJournalPageOverlapped(page)).toBe(true);
+    expect(accountJournalPageOverlapped({ incoming: 50, added: 50 })).toBe(
+      false,
+    );
+    expect(accountJournalPageOverlapped({ incoming: 0, added: 0 })).toBe(false);
+  });
+
+  it("is refetched by the screen", () => {
+    const source = require("fs").readFileSync(
+      require("path").join(__dirname, "..", "..", "account-detail-screen.tsx"),
+      "utf8",
+    ) as string;
+    expect(
+      source.includes("listMoved = accountJournalPageOverlapped(page);"),
+    ).toBe(true);
+    expect(
+      source.includes("void journalRefetch().catch(() => undefined);"),
+    ).toBe(true);
+  });
+});
+
+// w21/100: a 500 EUR deposit to a USD-read account showed "$0.00" on its row
+// and day, as if nothing moved.
+describe("a movement only in another currency", () => {
+  const rows = selectAccountJournalRows("USD", [
+    item(
+      { entry_hash: "eur", date: "2026-08-06", payee: "QA WISE EUR" },
+      { EUR: "500.00" },
+      { USD: "1000.00", EUR: "500.00" },
+    ),
+    item(
+      { entry_hash: "usd", date: "2026-08-05", payee: "QA WISE USD" },
+      { USD: "1000.00" },
+      { USD: "1000.00" },
+    ),
+  ]);
+
+  it("shows the row's own amount, not a zero", () => {
+    expect(rows[0].change).toBe(0);
+    expect(formatOtherChanges(rows[0].otherChanges!)).toBe("+500.00 EUR");
+    // The running balance stays in the account's currency.
+    expect(rows[0].balance).toBe(1000);
+    // USD rows are unchanged.
+    expect(rows[1].otherChanges).toBe(undefined);
+  });
+
+  it("shows the day's own amount, not $0.00", () => {
+    const sections = groupAccountJournalRowsToSections(rows, "USD");
+    expect(sections[0].totalChange).toBe("+500.00 EUR");
+    expect(sections[1].totalChange).toBe("+$1,000.00");
+  });
+
+  it("is rendered with a not-in-total note", () => {
+    const source = require("fs").readFileSync(
+      require("path").join(
+        __dirname,
+        "..",
+        "..",
+        "components",
+        "account-entry-row.tsx",
+      ),
+      "utf8",
+    ) as string;
+    expect(source.includes("? formatOtherChanges(otherChanges)")).toBe(true);
+    expect(source.includes('t("valuationNotInTotalTag")')).toBe(true);
+  });
+});
+
+// w21/421: an FX conversion moves two currencies; only the shown one was drawn.
+describe("a movement in the shown currency and another", () => {
+  const rows = selectAccountJournalRows("USD", [
+    item(
+      { entry_hash: "fx", date: "2026-08-06", payee: "Wise" },
+      { USD: "-110.00", EUR: "100.00" },
+      { USD: "890.00", EUR: "100.00" },
+    ),
+  ]);
+
+  it("keeps the shown change and names the other leg", () => {
+    expect(rows[0].change).toBe(-110);
+    expect(formatOtherChanges(rows[0].otherChanges!)).toBe("+100.00 EUR");
+  });
+
+  it("names the other leg in the day's total", () => {
+    expect(groupAccountJournalRowsToSections(rows, "USD")[0].totalChange).toBe(
+      "-$110.00 · +100.00 EUR",
+    );
+  });
+
+  it("reads the units view the same way", () => {
+    const [swap] = selectAccountJournalRows(
+      "USD",
+      [
+        item(
+          { entry_hash: "sw", date: "2026-08-07", payee: "Swap" },
+          { VOO: "5", VTI: "-10" },
+          { VOO: "5" },
+        ),
+      ],
+      { currency: "VOO" } as never,
+    );
+    expect(swap.change).toBe(5);
+    expect(formatOtherChanges(swap.otherChanges!)).toBe("-10 VTI");
+  });
+});
+
+// w21/163: float residue signed a day that nets to zero.
+describe("a day that nets to zero", () => {
+  it("reads an unsigned zero, not -$0.00 or +$0.00", () => {
+    const expenses = groupAccountJournalRowsToSections(
+      [
+        row("2026-08-30", "QA GROCER", -12.3, 0),
+        row("2026-08-30", "QA GROCER", 8.2, 12.3),
+        row("2026-08-30", "QA GROCER", 4.1, 4.1),
+      ],
+      "USD",
+    );
+    expect(expenses[0].totalChange).toBe("$0.00");
+    const cash = groupAccountJournalRowsToSections(
+      [
+        row("2026-08-30", "QA GROCER", 12.3, 0),
+        row("2026-08-30", "QA GROCER", -8.2, 0),
+        row("2026-08-30", "QA GROCER", -4.1, 0),
+      ],
+      "USD",
+    );
+    expect(cash[0].totalChange).toBe("$0.00");
+  });
+
+  it("still signs a real day total", () => {
+    const [day] = groupAccountJournalRowsToSections(
+      [row("2026-08-30", "A", 4.1, 0), row("2026-08-30", "B", 8.2, 0)],
+      "USD",
+    );
+    expect(day.totalChange).toBe("+$12.30");
+  });
+});
+
+// w21/207: buying a commodity at cost left the account's dollars at 9-10
+// decimals ("+$7,422.647539491") from the buy onward, though its Accounts row
+// read $8,427.65.
+describe("money precision in an account that holds a commodity", () => {
+  const buy = item(
+    {
+      date: "2026-08-04",
+      directive_type: "Transaction",
+      narration: "QA EXCH BUY",
+      postings: [
+        {
+          account: "Assets:Exch",
+          units: { number: "0.12345678", currency: "QABTC" },
+          cost: { number: "60123.45", currency: "USD" },
+        },
+        {
+          account: "Assets:Checking",
+          units: { number: "-7422.65", currency: "USD" },
+        },
+      ],
+    },
+    { USD: "7422.647539491" },
+    { USD: "8422.647539491" },
+  );
+  const deposit = item(
+    {
+      date: "2026-08-03",
+      directive_type: "Transaction",
+      postings: [
+        {
+          account: "Assets:Exch",
+          units: { number: "1000.00", currency: "USD" },
+        },
+      ],
+    },
+    { USD: "1000.00" },
+    { USD: "1000.00" },
+  );
+  const later = item(
+    {
+      date: "2026-09-01",
+      directive_type: "Transaction",
+      postings: [
+        { account: "Assets:Exch", units: { number: "5.00", currency: "USD" } },
+      ],
+    },
+    { USD: "5.00" },
+    { USD: "8427.647539491" },
+  );
+
+  it("reads a converted figure at the scale the ledger recorded in the currency", () => {
+    const rows = selectAccountJournalRows("USD", [deposit, buy, later]);
+    expect(rows.map((r) => r.moneyScale)).toEqual([2, 2, 2]);
+    const sections = groupAccountJournalRowsToSections(rows, "USD");
+    expect(sections.map((s) => s.totalChange)).toEqual([
+      "+$1,000.00",
+      "+$7,422.65",
+      "+$5.00",
+    ]);
+  });
+
+  it("keeps a sub-cent amount the ledger really recorded", () => {
+    const tax = item(
+      {
+        date: "2026-08-05",
+        directive_type: "Transaction",
+        postings: [
+          {
+            account: "Assets:Exch",
+            units: { number: "0.005", currency: "USD" },
+          },
+        ],
+      },
+      { USD: "0.005" },
+      { USD: "0.005" },
+    );
+    const [only] = selectAccountJournalRows("USD", [tax]);
+    expect(only.moneyScale).toBe(3);
+  });
+});
+
+// w21/241: a transaction with no payee or narration was titled with the
+// English directive type, so the row's translated fallback never ran.
+describe("the title of a bare transaction", () => {
+  const titleOf = (entry: Record<string, unknown>) =>
+    selectAccountJournalRows("USD", [item(entry)])[0].title;
+
+  it("is left empty for the row's translated fallback", () => {
+    expect(titleOf({ date: "2026-10-01", directive_type: "Transaction" })).toBe(
+      "",
+    );
+    expect(
+      titleOf({
+        date: "2026-10-01",
+        directive_type: "Transaction",
+        payee: "",
+        narration: "",
+      }),
+    ).toBe("");
+  });
+
+  it("still names a transaction by its payee, else its narration", () => {
+    expect(
+      titleOf({ directive_type: "Transaction", payee: "Cafe", narration: "x" }),
+    ).toBe("Cafe");
+    expect(titleOf({ directive_type: "Transaction", narration: "Lunch" })).toBe(
+      "Lunch",
+    );
+  });
+
+  it("keeps naming other directives by their account or type", () => {
+    expect(titleOf({ directive_type: "Open", account: "Assets:Cash" })).toBe(
+      "Assets:Cash",
+    );
+    expect(titleOf({ directive_type: "Balance" })).toBe("Balance");
+  });
+
+  it("is translated by the rows that show it", () => {
+    const fs = require("fs") as typeof import("fs");
+    const path = require("path") as typeof import("path");
+    const read = (...parts: string[]) =>
+      fs
+        .readFileSync(path.join(__dirname, "..", "..", "..", ...parts), "utf8")
+        .replace(/\s+/g, "");
+    expect(
+      read(
+        "account-detail-screen",
+        "components",
+        "account-entry-row.tsx",
+      ).includes('consttitle=row.title||t("transaction");'),
+    ).toBe(true);
+    expect(
+      read("transactions-screen", "entry-row", "index.tsx").includes(
+        "constname=entryRowTitle(entry)??untitledLabel;",
+      ),
+    ).toBe(true);
+  });
+});
+
+// w21/613: a transfer between two children of a parent nets to no change, so
+// identical twins share the whole key; the second was dropped as a repeat and the
+// list reloaded from page 1 on every scroll.
+describe("identical twins on a parent account", () => {
+  const twin = () =>
+    item({ entry_hash: "twin", date: "2025-01-01" }, {}, { USD: 100 });
+
+  it("appends a twin on the next page when the total has not moved", () => {
+    const merged = mergeAccountJournalItems([twin()], [twin()], {
+      loaded: 2,
+      page: 2,
+    });
+    expect(merged.length).toBe(2);
+    expect(accountJournalPageOverlapped({ incoming: 1, added: 1 })).toBe(false);
+  });
+
+  it("still drops a repeat when the total moved under the user", () => {
+    const merged = mergeAccountJournalItems([twin()], [twin()], {
+      loaded: 2,
+      page: 3,
+    });
+    expect(merged.length).toBe(1);
+  });
+
+  it("gives twins different row keys", () => {
+    const keys = accountJournalItemKeys([twin(), twin(), twin()]);
+    expect(new Set(keys).size).toBe(3);
+    expect(keys[0]).toBe(accountJournalItemKey(twin()));
+    const rows = selectAccountJournalRows("USD", [twin(), twin()]);
+    expect(rows[0].key === rows[1].key).toBe(false);
   });
 });

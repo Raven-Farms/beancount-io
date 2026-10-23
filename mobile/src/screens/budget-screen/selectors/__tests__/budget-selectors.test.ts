@@ -6,8 +6,11 @@
  * (no toMatchObject / toHaveLength).
  */
 import {
+  budgetForInterval,
   calculateBudgetForInterval,
   groupBudgetEntries,
+  prepareBudgetHistory,
+  selectHistoryRows,
 } from "../budget-selectors";
 import type { BudgetEntry, BudgetHistoryEntry } from "../budget-selectors";
 import { DirectiveType } from "../../../transactions-screen/types";
@@ -131,11 +134,62 @@ describe("calculateBudgetForInterval", () => {
     );
   });
 
-  it("does not apply a directive before its effective date", () => {
+  it("budgets the first directive's whole period, not only the days after its date (w21/301)", () => {
+    // A monthly 310 set on January 16 is January's budget: the actuals it is
+    // judged against cover the whole month.
     const history = [historyEntry("2025-01-16", "monthly", "310 USD")];
 
     expect(calculateBudgetForInterval("2025-01-31", "monthly", history)).toBe(
-      160,
+      310,
+    );
+  });
+
+  // w21/622: Add then Update the same day (500, then 300) left the 500 covering
+  // the period start and the 300 only from its own date.
+  it("lets a same-day correction govern from the period start", () => {
+    const history = [
+      historyEntry("2025-01-16", "monthly", "500 USD"),
+      historyEntry("2025-01-16", "monthly", "300 USD"),
+    ];
+
+    expect(calculateBudgetForInterval("2025-01-31", "monthly", history)).toBe(
+      300,
+    );
+    // Prorated to a mid-month day, it is still the correction's rate.
+    expect(
+      calculateBudgetForInterval(
+        "2025-01-31",
+        "monthly",
+        history,
+        "2025-01-16",
+      ),
+    ).toBe(Math.round(((300 * 16) / 31) * 100) / 100);
+  });
+
+  it("still starts a later-dated directive on its own date", () => {
+    const history = [
+      historyEntry("2025-01-16", "monthly", "500 USD"),
+      historyEntry("2025-01-16", "monthly", "300 USD"),
+      historyEntry("2025-01-24", "monthly", "620 USD"),
+    ];
+
+    const expected = (300 * 23 + 620 * 8) / 31;
+    expect(
+      Math.abs(
+        calculateBudgetForInterval("2025-01-31", "monthly", history) - expected,
+      ) < 0.01,
+    ).toBe(true);
+  });
+
+  it("does not apply a later directive before its effective date", () => {
+    // Only the first directive back-fills; a raise still starts on its date.
+    const history = [
+      historyEntry("2025-01-01", "monthly", "310 USD"),
+      historyEntry("2025-01-16", "monthly", "620 USD"),
+    ];
+
+    expect(calculateBudgetForInterval("2025-01-31", "monthly", history)).toBe(
+      470,
     );
   });
 
@@ -193,5 +247,63 @@ describe("calculateBudgetForInterval", () => {
     expect(calculateBudgetForInterval("2025-01-31", "monthly", history)).toBe(
       -310,
     );
+  });
+});
+
+// w21/040: Update Budget on the original target's date writes a second
+// directive on that date. The journal returns them newest first, and the
+// older one used to stay the current target and the chart's basis.
+describe("groupBudgetEntries with two targets on one date", () => {
+  // Newest first, as getLedgerJournal returns them.
+  const journal = [
+    budgetEntry(
+      "2026-08-01",
+      "Expenses:Food:Groceries",
+      "monthly",
+      "500",
+      "USD",
+      "newer",
+    ),
+    budgetEntry(
+      "2026-08-01",
+      "Expenses:Food:Groceries",
+      "monthly",
+      "300",
+      "USD",
+      "older",
+    ),
+  ];
+
+  it("makes the later directive the current target and last history step", () => {
+    const [group] = groupBudgetEntries(journal, "2026-10-20");
+    expect(group.amount).toBe("500 USD");
+    expect(group.entry_hash).toBe("newer");
+    expect(group.budgetHistory.map((entry) => entry.entry_hash)).toEqual([
+      "older",
+      "newer",
+    ]);
+    // History is shown newest first, current row on top.
+    expect(
+      selectHistoryRows(group).map((row) => [row.entry_hash, row.isCurrent]),
+    ).toEqual([
+      ["newer", true],
+      ["older", false],
+    ]);
+  });
+
+  it("prorates the later target, not the older one", () => {
+    const [group] = groupBudgetEntries(journal, "2026-10-20");
+    const prorated = budgetForInterval(
+      "2026-10-31",
+      "monthly",
+      prepareBudgetHistory(group.budgetHistory),
+      "2026-10-20",
+    );
+    expect(Math.round(prorated * 100) / 100).toBe(322.58);
+  });
+
+  it("returns to the older target once the later one is deleted", () => {
+    const [group] = groupBudgetEntries([journal[1]], "2026-10-20");
+    expect(group.amount).toBe("300 USD");
   });
 });

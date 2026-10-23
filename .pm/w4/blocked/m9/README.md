@@ -29,7 +29,7 @@
 - Without the `price` extra installed, both `price` verbs exit with the documented `usage` code and the exact install hint; the default `bea` install gains no new runtime dependency.
 - `bea price sources` lists every commodity in the ledger with its declared source or `none`, and prints the metadata line to add for the ones without one.
 - The close skill's report lists the period-end prices it fetched, and the ask skill names the newest price date behind any market-value answer and points at the fetch verb when quotes are stale, without writing anything itself.
-- Every command in the new USAGE and TUTORIAL sections runs as written; `make check-all` and `python3 skills/scripts/ci-check.py` pass.
+- Every command in the new USAGE and TUTORIAL sections runs as written; `make check-all` and `python3 scripts/skills/ci-check.py` pass.
 
 ## Source + Goal linkage
 

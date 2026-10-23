@@ -36,6 +36,10 @@ vi.mock("@tanstack/react-router", () => ({
 }));
 
 vi.mock("@apollo/client/react", () => ({
+  useApolloClient: () => ({
+    query: async () => ({ data: undefined }),
+    cache: { evict: () => true, gc: () => [] },
+  }),
   useMutation: () => [createFile],
   useQuery: () => ({ data: undefined }),
 }));

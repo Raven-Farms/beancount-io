@@ -446,10 +446,6 @@ const nlJournal: Record<string, TranslationEntry> = {
     message: "In behandeling",
     description: "Pending transaction status",
   },
-  "journal.blankStatus": {
-    message: "(leeg)",
-    description: "Blank transaction status option",
-  },
   "journal.addPosting": {
     message: "Boekingsregel toevoegen",
     description: "Accessible name for adding a transaction posting row",

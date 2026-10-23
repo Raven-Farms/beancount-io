@@ -1,15 +1,19 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Alert, Pressable, StyleSheet, Text, View } from "react-native";
+import {
+  Alert,
+  Platform,
+  Pressable,
+  StyleSheet,
+  Text,
+  useWindowDimensions,
+  View,
+} from "react-native";
+import { InlineError } from "@/components/inline-error";
 import {
   SafeAreaView,
   useSafeAreaInsets,
 } from "react-native-safe-area-context";
-import {
-  Stack,
-  useLocalSearchParams,
-  useNavigation,
-  useRouter,
-} from "expo-router";
+import { Stack, useRouter } from "expo-router";
 import { useApolloClient } from "@apollo/client";
 import {
   fontSizes,
@@ -20,11 +24,13 @@ import {
 import { useThemeStyle } from "@/common/hooks";
 import { useLedgerWrite } from "@/common/hooks/use-ledger-write";
 import { useTranslations } from "@/common/hooks/use-translations";
+import { useUnsavedChangesGuard } from "@/common/hooks/use-unsaved-changes-guard";
 import { useLedgerAccess } from "@/common/hooks/use-ledger-access";
 import { useLedgerMeta } from "@/common/hooks/use-ledger-meta";
 import { useSession } from "@/common/hooks/use-session";
 import { ColorTheme } from "@/types/theme-props";
 import {
+  GetLedgerEntryContextDocument,
   useGetLedgerEntryContextQuery,
   useUpdateLedgerEntrySourceSliceMutation,
 } from "@/generated-graphql/graphql";
@@ -42,6 +48,7 @@ import CodeEditor, {
   type EditorDocumentSpec,
   type InsertSpec,
 } from "@/components/code-editor/code-editor";
+import { createEditorRecovery } from "@/components/code-editor/editor-recovery";
 import {
   applyEditorEdit,
   createRevisionTracker,
@@ -49,7 +56,13 @@ import {
   resetRevisionTracker,
 } from "@/components/code-editor/revision-tracker";
 import { applySavedIdentity, resolveSaveExit } from "./save-exit";
-import { selectSaveFailure } from "./save-failure";
+import { saveToastMessage, selectOutcomeFailure } from "./save-failure";
+import { isEntryGone } from "@/screens/transaction-detail-screen/selectors/select-entry-gone";
+import { selectedTransactionVar } from "@/screens/transaction-detail-screen/open-transaction-detail";
+import { RouteLedgerUnavailable } from "@/components/route-ledger-unavailable";
+import { i18n } from "@/translations";
+import { useIsHere } from "@/common/hooks/use-is-here";
+import { useRouteParams } from "@/common/hooks/use-route-params";
 
 const SKELETON_WIDTHS = [220, 160, 280, 120, 200, 260, 140];
 
@@ -61,7 +74,7 @@ const getStyles = (theme: ColorTheme) =>
     },
     hint: {
       fontSize: fontSizes.sm,
-      color: theme.black60,
+      color: theme.black80,
       paddingHorizontal: 16,
       paddingTop: 12,
       paddingBottom: 8,
@@ -102,22 +115,23 @@ const getStyles = (theme: ColorTheme) =>
     },
     cancelButton: {
       fontSize: fontSizes.lg,
-      color: theme.black60,
+      color: theme.black80,
     },
   });
 
 export const EditTransactionScreen = (): JSX.Element => {
+  const { fontScale } = useWindowDimensions();
   const router = useRouter();
-  const navigation = useNavigation();
   const { t } = useTranslations();
   const styles = useThemeStyle(getStyles);
   const theme = useTheme().colorTheme;
   const insets = useSafeAreaInsets();
   const confirmWrite = useLedgerWrite();
+  const isHere = useIsHere();
   const client = useApolloClient();
   const { canWrite } = useLedgerAccess();
   const { userId } = useSession();
-  const { entryHash, ledgerId, originAccount } = useLocalSearchParams<{
+  const { entryHash, ledgerId, originAccount } = useRouteParams<{
     entryHash: string;
     ledgerId: string;
     originAccount?: string;
@@ -156,6 +170,11 @@ export const EditTransactionScreen = (): JSX.Element => {
   const entryHashRef = useRef(entryHash ?? "");
   const documentEpochRef = useRef(0);
   const revisionTrackerRef = useRef(createRevisionTracker());
+  // The editor's text, kept so iOS killing its web view does not lose the draft
+  // (w21/342, as the file editor; w21/621).
+  const recoveryRef = useRef(createEditorRecovery());
+  const insertSeq = useRef(0);
+  const [insertSpec, setInsertSpec] = useState<InsertSpec | null>(null);
   // Set when a successful save navigates back, so the beforeRemove guard does
   // not mistake that navigation for a draft discard.
   const savedOutRef = useRef(false);
@@ -170,6 +189,7 @@ export const EditTransactionScreen = (): JSX.Element => {
     documentEpochRef.current = epoch;
     resetRevisionTracker(revisionTrackerRef.current);
     shaRef.current = context.sha256sum;
+    recoveryRef.current.loaded(context.slice);
     setDocumentSpec({ value: context.slice, epoch });
     setHasUnsavedChanges(false);
     setInitialized(true);
@@ -178,21 +198,37 @@ export const EditTransactionScreen = (): JSX.Element => {
   // After a stale-checksum rejection the draft can never be saved as it is:
   // re-read the entry (under its current identity) and reseed the editor, the
   // same reset the effect above performs on first load.
+  // Reload finds the entry gone when it was changed or removed elsewhere: its
+  // hash no longer resolves. Say so instead of leaving a draft that fails on
+  // every save, and refresh the lists behind (w21/028, as w21/013).
+  const [entryGone, setEntryGone] = useState(false);
   const handleReload = useCallback(async () => {
-    const result = await refetchContext({
-      entryHash: entryHashRef.current,
-      ledgerId: ledgerId ?? "",
-    });
-    const context = result.data?.getLedgerEntryContext;
-    if (!context) return;
+    let context;
+    try {
+      const result = await refetchContext({
+        entryHash: entryHashRef.current,
+        ledgerId: ledgerId ?? "",
+      });
+      context = result.data?.getLedgerEntryContext;
+    } catch (error: unknown) {
+      if (!isEntryGone(error)) return;
+    }
+    if (!context) {
+      setHasUnsavedChanges(false);
+      setEntryGone(true);
+      void invalidateLedgerData(client, "entries");
+      return;
+    }
     const epoch = documentEpochRef.current + 1;
     documentEpochRef.current = epoch;
     resetRevisionTracker(revisionTrackerRef.current);
     shaRef.current = context.sha256sum;
+    recoveryRef.current.loaded(context.slice);
     setDocumentSpec({ value: context.slice, epoch });
     setHasUnsavedChanges(false);
     setSaveError(null);
-  }, [ledgerId, refetchContext]);
+    setInsertSpec(null);
+  }, [ledgerId, refetchContext, client]);
 
   // ── Save ────────────────────────────────────────────────────────────────────
 
@@ -216,9 +252,35 @@ export const EditTransactionScreen = (): JSX.Element => {
       if (dirty === null) return;
       setHasUnsavedChanges(dirty);
       setSaveError(null);
+      // The editor has made the edit, so the insert that asked for it is spent.
+      setInsertSpec(null);
     },
     [],
   );
+
+  // The editor's text shortly after it changes; a draft from before a reload
+  // (an older epoch) is dropped.
+  const handleDraft = useCallback(async (text: string, epoch: number) => {
+    if (epoch === documentEpochRef.current) recoveryRef.current.draft(text);
+  }, []);
+
+  // The editor's page is up. The second time is iOS having killed its web view:
+  // the page restarted from its first props (the original slice, a revision
+  // counter at 0 and the last insert), so the draft goes back in under a new
+  // epoch and the revision tracker restarts with it (w21/621).
+  const handleEditorReady = useCallback(async () => {
+    const plan = recoveryRef.current.ready();
+    if (!plan) return;
+    const epoch = documentEpochRef.current + 1;
+    documentEpochRef.current = epoch;
+    resetRevisionTracker(revisionTrackerRef.current);
+    setDocumentSpec({
+      value: plan.value,
+      epoch,
+      savedValue: plan.savedValue,
+    });
+    setInsertSpec(null);
+  }, []);
 
   const handleSave = useCallback(
     async (
@@ -232,6 +294,13 @@ export const EditTransactionScreen = (): JSX.Element => {
         saveInFlightRef.current
       )
         return false;
+
+      // An empty edit would replace the entry with a blank line: a delete
+      // without Delete's confirmation, reported as saved (w21/120).
+      if (!content.trim()) {
+        setSaveError(t("editTransactionEmpty"));
+        return false;
+      }
 
       const sha = shaRef.current;
       if (!sha) {
@@ -274,6 +343,10 @@ export const EditTransactionScreen = (): JSX.Element => {
           loadingMessage: t("saving"),
           successMessage: t("editSuccess"),
           failureMessage: t("editFailed"),
+          // The banner below explains a refusal in editor terms; the toast
+          // would repeat it with the file's line numbers (w21/507).
+          failureMessageFor: (error) =>
+            saveToastMessage(error, i18n, t("editFailed")),
           // We navigate back ourselves (only when the save covered the latest
           // edit) because runLedgerWrite's own goBack would fire while the
           // draft still reads dirty and trip the unsaved-changes guard.
@@ -282,11 +355,23 @@ export const EditTransactionScreen = (): JSX.Element => {
         });
 
         if (!outcome.ok) {
-          const failure = selectSaveFailure(
-            outcome.error instanceof Error
-              ? outcome.error.message
-              : outcome.message,
-          );
+          // The refusal cites lines of the file; the editor shows the entry
+          // from line 1 (w21/369).
+          const meta = (
+            data?.getLedgerEntryContext?.entry as unknown as
+              { meta?: { filename?: string; lineno?: number } } | undefined
+          )?.meta;
+          const failure = selectOutcomeFailure(outcome, i18n, {
+            draft: content,
+            where:
+              meta?.filename && typeof meta.lineno === "number"
+                ? {
+                    filename: meta.filename,
+                    lineno: meta.lineno,
+                    lineCount: content.split("\n").length,
+                  }
+                : undefined,
+          });
           if (failure.kind === "conflict") {
             // A draft is never discarded without asking: reload is a choice.
             setSaveError(t("editConflict"));
@@ -305,6 +390,7 @@ export const EditTransactionScreen = (): JSX.Element => {
           return false;
         }
 
+        recoveryRef.current.saved(content);
         // Edits typed while the save was in flight are NOT covered by it —
         // stay on the screen with an accurate dirty flag in that case.
         const stillDirty = markRevisionsSaved(
@@ -317,7 +403,15 @@ export const EditTransactionScreen = (): JSX.Element => {
         if (!stillDirty) {
           savedOutRef.current = true;
           const exit = resolveSaveExit(targetEntryHash, saved.entryHash);
-          if (exit.kind === "detail") {
+          // An edit that kept the entry's hash leaves the detail screen behind
+          // with the copy stashed when its row was opened. It predates the
+          // edit, and the screen preferred it to the refetched entry, so the
+          // save looked lost: drop it, here or not (w21/388).
+          if (exit.kind === "unchanged") selectedTransactionVar(null);
+          // `dismiss(2)` pops two screens from wherever the user is now; left
+          // during "Saving…", they stay where they are (w21/194).
+          const here = isHere();
+          if (here && exit.kind === "detail") {
             // The write changed the entry's content-derived identity, so the
             // detail screen behind holds a dead entryHash. The server told us
             // the new one: pop back to that screen with its params replaced
@@ -334,10 +428,29 @@ export const EditTransactionScreen = (): JSX.Element => {
                   }
                 : { entry_hash: exit.entryHash, ledger: ledgerId },
             });
-          } else {
-            // No usable new identity (an older server echoes the request
-            // hash): land on the journal, which the entries invalidation just
-            // refetched, rather than on a detail screen that can only error.
+          } else if (here && exit.kind === "unchanged") {
+            // The entry kept its identity (a metadata edit, a comment, a
+            // reordered posting): the detail screen behind is still the right
+            // one. Its focus refetch can run before the write's invalidation
+            // has bumped the revision it checks, and its context was never
+            // evicted, so the entry is read again here first: the detail
+            // screen watches this cache entry and paints what was saved
+            // (w21/251, w21/472).
+            await client
+              .query({
+                query: GetLedgerEntryContextDocument,
+                variables: { entryHash: targetEntryHash, ledgerId },
+                fetchPolicy: "network-only",
+              })
+              .catch(() => undefined);
+            if (isHere()) {
+              if (router.canGoBack()) router.back();
+              else router.dismiss(2);
+            }
+          } else if (here) {
+            // The server reported no new identity: land on the journal, which
+            // the entries invalidation just refetched, rather than on a detail
+            // screen that can only error.
             router.dismiss(2);
           }
         }
@@ -347,11 +460,13 @@ export const EditTransactionScreen = (): JSX.Element => {
       }
     },
     [
+      isHere,
       handleReload,
       canWrite,
       client,
       confirmWrite,
       ledgerId,
+      data,
       originAccount,
       router,
       t,
@@ -361,39 +476,23 @@ export const EditTransactionScreen = (): JSX.Element => {
 
   // ── Unsaved changes guard ───────────────────────────────────────────────────
 
-  useEffect(() => {
-    const unsubscribe = navigation.addListener("beforeRemove", (e) => {
-      // A successful save navigates back itself; that is not a draft discard.
-      if (savedOutRef.current || !hasUnsavedChanges) return;
-      e.preventDefault();
-      Alert.alert(
-        t("ledgerEditorUnsavedTitle"),
-        t("ledgerEditorUnsavedMessage"),
-        [
-          { text: t("cancel"), style: "cancel" },
-          {
-            text: t("ledgerEditorDiscardChanges"),
-            style: "destructive",
-            onPress: () => navigation.dispatch(e.data.action),
-          },
-        ],
-      );
-    });
-    return unsubscribe;
-  }, [navigation, hasUnsavedChanges, t]);
+  // A successful save navigates back itself; that is not a draft discard.
+  useUnsavedChangesGuard(hasUnsavedChanges, savedOutRef);
 
   // ── Keyboard + accessory bar ────────────────────────────────────────────────
 
   const keyboardHeight = useKeyboardHeight();
   const isKeyboardVisible = keyboardHeight > 0;
   const showAccessory = canWrite && isKeyboardVisible && initialized;
-  const keyboardOverlap = getKeyboardOverlap(keyboardHeight, insets.bottom);
+  const keyboardOverlap = getKeyboardOverlap(
+    keyboardHeight,
+    insets.bottom,
+    Platform.OS,
+  );
   const editorKeyboardInset = isKeyboardVisible
     ? keyboardOverlap + (showAccessory ? KEYBOARD_ACCESSORY_BAR_HEIGHT : 0)
     : 0;
 
-  const insertSeq = useRef(0);
-  const [insertSpec, setInsertSpec] = useState<InsertSpec | null>(null);
   const editorRef = useRef<CodeEditorRef>(null);
 
   const handleInsert = (text: string, cursorOffset?: number) => {
@@ -416,6 +515,25 @@ export const EditTransactionScreen = (): JSX.Element => {
     !initialized &&
     (Boolean(contextError) ||
       (!contextLoading && !data?.getLedgerEntryContext));
+
+  // The entry changed or vanished elsewhere before the editor ever loaded it:
+  // the context read answers NOT_FOUND (its content hash moved). That is the
+  // removed state, not a bare load failure that fails the same on every tap,
+  // and the ledger is invalidated so the detail behind shows it on return
+  // (w21/253).
+  const contextGone = !initialized && isEntryGone(contextError);
+  useEffect(() => {
+    if (contextGone) void invalidateLedgerData(client, "entries");
+  }, [contextGone, client]);
+
+  if (entryGone || contextGone) {
+    return (
+      <RouteLedgerUnavailable
+        title={t("editTransaction")}
+        message={t("transactionDetailRemoved")}
+      />
+    );
+  }
 
   return (
     <SafeAreaView edges={["bottom"]} style={styles.container}>
@@ -466,7 +584,9 @@ export const EditTransactionScreen = (): JSX.Element => {
       />
 
       <Text style={styles.hint}>{t("editTransactionSource")}</Text>
-      {saveError ? <Text style={styles.errorText}>{saveError}</Text> : null}
+      {saveError ? (
+        <InlineError style={styles.errorText} message={saveError} />
+      ) : null}
 
       <View style={styles.editorWrapper}>
         {isFirstLoad ? (
@@ -489,9 +609,12 @@ export const EditTransactionScreen = (): JSX.Element => {
               documentSpec={documentSpec}
               onEdit={handleEdit}
               onSave={handleSave}
+              onReady={handleEditorReady}
+              onDraft={handleDraft}
               editorTheme={theme.editor}
               beancount
               keyboardInset={editorKeyboardInset}
+              fontScale={fontScale}
               insertSpec={insertSpec}
               jumpToLine={null}
               // WKWebView adds its own form-navigation bar (∧ ∨ ✓) under the

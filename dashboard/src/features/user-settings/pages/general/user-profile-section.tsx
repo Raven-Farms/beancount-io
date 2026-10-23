@@ -36,6 +36,8 @@ import { toast } from "sonner";
 import { useTranslations } from "@/common/hooks/use-translations";
 import { useErrorMessage } from "@/common/lib/errors/error-message";
 import { usernameRuleError } from "@/common/lib/auth/username-rule";
+import { isCompositionKey } from "@/common/lib/keyboard/is-composition-key";
+import { usePendingAction } from "@/common/hooks/use-pending-action";
 
 /** The server refused the name as outside the username rule (w0/036). */
 function isUsernameRuleRefusal(error: unknown): boolean {
@@ -47,6 +49,19 @@ function isUsernameRuleRefusal(error: unknown): boolean {
         extensions.field === "username",
     )
   );
+}
+
+/**
+ * `true` once a write landed. A failed mutation rejects (the default error
+ * policy), after its `onError` has reported it.
+ */
+async function landed(write: Promise<unknown>) {
+  try {
+    await write;
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 interface UserProfileSectionProps {
@@ -68,8 +83,13 @@ export function UserProfileSection({ userData }: UserProfileSectionProps) {
   const [usernameRefused, setUsernameRefused] = useState(false);
   const [newFirstName, setNewFirstName] = useState("");
   const [newLastName, setNewLastName] = useState("");
+  // One save per dialog at a time. While it is pending the dialog keeps the
+  // draft it sent: inputs are read-only and dismissal waits, so the
+  // completion closes the session it belongs to and no other (w4/m47).
+  const usernameSave = usePendingAction();
+  const nameSave = usePendingAction();
 
-  const [updateUsername, { loading: updatingUsername }] = useMutation<
+  const [updateUsername] = useMutation<
     UpdateUsernameMutation,
     UpdateUsernameMutationVariables
   >(UpdateUsernameDocument, {
@@ -90,7 +110,7 @@ export function UserProfileSection({ userData }: UserProfileSectionProps) {
     ],
   });
 
-  const [updateProfile, { loading: updatingProfile }] = useMutation<
+  const [updateProfile] = useMutation<
     UpdateProfileMutation,
     UpdateProfileMutationVariables
   >(UpdateProfileDocument, {
@@ -122,16 +142,17 @@ export function UserProfileSection({ userData }: UserProfileSectionProps) {
       setUsernameEdited(true);
       return;
     }
-    void updateUsername({ variables: { username: trimmedUsername } });
+    void usernameSave.run(() =>
+      landed(updateUsername({ variables: { username: trimmedUsername } })),
+    );
   };
 
   const handleUpdateName = () => {
-    void updateProfile({
-      variables: {
-        firstName: newFirstName.trim(),
-        lastName: newLastName.trim(),
-      },
-    });
+    const variables = {
+      firstName: newFirstName.trim(),
+      lastName: newLastName.trim(),
+    };
+    void nameSave.run(() => landed(updateProfile({ variables })));
   };
 
   return (
@@ -157,7 +178,12 @@ export function UserProfileSection({ userData }: UserProfileSectionProps) {
                 : t("userSettings.notSet")}
             </p>
           </div>
-          <Dialog open={isNameDialogOpen} onOpenChange={setIsNameDialogOpen}>
+          <Dialog
+            open={isNameDialogOpen}
+            onOpenChange={(open) => {
+              if (open || !nameSave.pending) setIsNameDialogOpen(open);
+            }}
+          >
             <DialogTrigger asChild>
               <Button
                 variant="outline"
@@ -186,10 +212,15 @@ export function UserProfileSection({ userData }: UserProfileSectionProps) {
                     <Input
                       id="firstName"
                       value={newFirstName}
+                      readOnly={nameSave.pending}
                       onChange={(e) => setNewFirstName(e.target.value)}
                       placeholder={t("auth.enterFirstName")}
                       onKeyDown={(e) => {
-                        if (e.key === "Enter") {
+                        // An IME's Enter commits its text, not the form (w4/296).
+                        if (
+                          e.key === "Enter" &&
+                          !isCompositionKey(e.nativeEvent)
+                        ) {
                           handleUpdateName();
                         }
                       }}
@@ -202,10 +233,14 @@ export function UserProfileSection({ userData }: UserProfileSectionProps) {
                     <Input
                       id="lastName"
                       value={newLastName}
+                      readOnly={nameSave.pending}
                       onChange={(e) => setNewLastName(e.target.value)}
                       placeholder={t("auth.enterLastName")}
                       onKeyDown={(e) => {
-                        if (e.key === "Enter") {
+                        if (
+                          e.key === "Enter" &&
+                          !isCompositionKey(e.nativeEvent)
+                        ) {
                           handleUpdateName();
                         }
                       }}
@@ -217,12 +252,12 @@ export function UserProfileSection({ userData }: UserProfileSectionProps) {
                 <Button
                   variant="outline"
                   onClick={() => setIsNameDialogOpen(false)}
-                  disabled={updatingProfile}
+                  disabled={nameSave.pending}
                 >
                   {t("common.cancel")}
                 </Button>
-                <Button onClick={handleUpdateName} disabled={updatingProfile}>
-                  {updatingProfile ? t("common.updating") : t("common.save")}
+                <Button onClick={handleUpdateName} disabled={nameSave.pending}>
+                  {nameSave.pending ? t("common.updating") : t("common.save")}
                 </Button>
               </DialogFooter>
             </DialogContent>
@@ -241,7 +276,9 @@ export function UserProfileSection({ userData }: UserProfileSectionProps) {
           </div>
           <Dialog
             open={isUsernameDialogOpen}
-            onOpenChange={setIsUsernameDialogOpen}
+            onOpenChange={(open) => {
+              if (open || !usernameSave.pending) setIsUsernameDialogOpen(open);
+            }}
           >
             <DialogTrigger asChild>
               <Button
@@ -266,6 +303,7 @@ export function UserProfileSection({ userData }: UserProfileSectionProps) {
               <div className="space-y-2 py-4">
                 <Input
                   value={newUsername}
+                  readOnly={usernameSave.pending}
                   onChange={(e) => {
                     setNewUsername(e.target.value);
                     setUsernameEdited(true);
@@ -280,7 +318,7 @@ export function UserProfileSection({ userData }: UserProfileSectionProps) {
                       : "username-rule"
                   }
                   onKeyDown={(e) => {
-                    if (e.key === "Enter") {
+                    if (e.key === "Enter" && !isCompositionKey(e.nativeEvent)) {
                       handleUpdateUsername();
                     }
                   }}
@@ -307,15 +345,17 @@ export function UserProfileSection({ userData }: UserProfileSectionProps) {
                 <Button
                   variant="outline"
                   onClick={() => setIsUsernameDialogOpen(false)}
-                  disabled={updatingUsername}
+                  disabled={usernameSave.pending}
                 >
                   {t("common.cancel")}
                 </Button>
                 <Button
                   onClick={handleUpdateUsername}
-                  disabled={updatingUsername}
+                  disabled={usernameSave.pending}
                 >
-                  {updatingUsername ? t("common.updating") : t("common.save")}
+                  {usernameSave.pending
+                    ? t("common.updating")
+                    : t("common.save")}
                 </Button>
               </DialogFooter>
             </DialogContent>

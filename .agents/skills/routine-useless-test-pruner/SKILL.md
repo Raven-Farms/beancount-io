@@ -9,6 +9,7 @@ description: Autonomous maintenance routine that finds tests that cannot fail â€
   for tests that fail intermittently (routine-flaky-test-fixer), tests of code
   being deleted (they travel with their code), and slow-but-valid tests. The
   core trigger is "delete tests that can't fail".
+metadata: {"internal": true}
 ---
 
 # Task: Delete tests that cannot fail

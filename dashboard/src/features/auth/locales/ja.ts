@@ -33,6 +33,11 @@ const jaAuth: Record<string, TranslationEntry> = {
     message: "パスワードを確認してください",
     description: "Placeholder for password confirmation",
   },
+  "auth.chooseYourPassword": {
+    message: "パスワードを設定してください（最低8文字）",
+    description:
+      "Placeholder for the password a new account chooses, with the minimum length",
+  },
   "auth.createAccount": {
     message: "アカウントを作成",
     description: "Button to submit registration",
@@ -160,6 +165,12 @@ const jaAuth: Record<string, TranslationEntry> = {
     message: "ログインに失敗しました",
     description: "Error title when login fails",
   },
+  "auth.loginRateLimited": {
+    message:
+      "ログインの試行回数が多すぎます。数分待ってから再度お試しいただくか、パスワードをリセットしてください。",
+    description:
+      "Shown on any password sign-in form when sign-in is rate limited, by address or by too many wrong passwords for the account",
+  },
   "auth.logout": {
     message: "ログアウト",
     description: "Button label to log out",
@@ -169,11 +180,12 @@ const jaAuth: Record<string, TranslationEntry> = {
     description: "Label for new password field",
   },
   "auth.newPasswordMinLength": {
-    message: "パスワードは6文字以上で入力してください",
+    message: "パスワードは8文字以上で入力してください",
     description: "Validation error for password length",
   },
   "auth.newPasswordMaxLength": {
-    message: "パスワードは128文字以下で入力してください",
+    message:
+      "パスワードが長すぎます。72文字以内にしてください（アクセント付きの文字、日本語などラテン文字以外の文字、絵文字は1文字につき2〜4文字分と数えます）。",
     description:
       "Validation error when new password exceeds the maximum length",
   },
@@ -197,9 +209,20 @@ const jaAuth: Record<string, TranslationEntry> = {
     message: "パスワードは必須です",
     description: "Validation error when password is not provided",
   },
+  "auth.passwordBreached": {
+    message:
+      "このパスワードは過去のデータ漏洩で流出しています。他で使用していないパスワードを選んでください。",
+    description:
+      "Error when the server finds the new password in a known data breach (Have I Been Pwned)",
+  },
+  "auth.passwordTooSimilar": {
+    message: "パスワードがメールアドレスまたはユーザー名に似すぎています。",
+    description:
+      "Error when the new password is too close to the account's email or username",
+  },
   "auth.passwordResetSuccessMessage": {
     message:
-      "パスワードがリセットされました。ログインページにリダイレクト中...",
+      "パスワードがリセットされ、すべてのデバイスと連携アプリからログアウトしました。ログインページにリダイレクト中...",
     description: "Success message description",
   },
   "auth.passwordResetSuccessful": {
@@ -750,6 +773,77 @@ const jaAuth: Record<string, TranslationEntry> = {
       "このサーバーではパスワードでのログインが無効になっています。代わりに Google で続行してください。",
     description:
       "Shown instead of a password form when password sign-in is turned off on the server",
+  },
+  "auth.recoveryTitle": {
+    message: "メールアドレスを確認してログイン",
+    description:
+      "Title of the email ownership verification step for sign-in recovery",
+  },
+  "auth.recoveryDescription": {
+    message:
+      "ログイン復旧メールのリンクを開き、メールに記載されたコードと現在のパスワードを入力してください。",
+    description: "Instructions for continuing from the sign-in recovery email",
+  },
+  "auth.recoverySendEmail": {
+    message: "ログイン復旧メールを送信",
+    description: "Button requesting a sign-in recovery email",
+  },
+  "auth.recoverySending": {
+    message: "ログイン復旧メールを送信中...",
+    description: "Pending state while requesting a sign-in recovery email",
+  },
+  "auth.recoverySent": {
+    message:
+      "このメールアドレスのアカウントがある場合は、まもなくログイン復旧メールが届きます。メールのリンクを開いて続けてください。最近届いた復旧メールも引き続き利用できます。",
+    description:
+      "Uniform confirmation after requesting recovery; previous valid recovery emails remain usable",
+  },
+  "auth.recoveryResend": {
+    message: "ログイン復旧メールを再送信",
+    description: "Button requesting another sign-in recovery email",
+  },
+  "auth.recoveryRetryAt": {
+    message: "{time} にもう一度お試しください。",
+    description:
+      "Absolute local retry time after throttling; {time} is formatted using the active locale",
+  },
+  "auth.recoveryCode": {
+    message: "6 桁の確認コード",
+    description: "Accessible label for the sign-in recovery email code",
+  },
+  "auth.recoveryCodeInvalid": {
+    message: "ログイン復旧メールに記載された 6 桁のコードを入力してください。",
+    description:
+      "Validation error when the recovery code is not exactly six digits",
+  },
+  "auth.recoveryFailed": {
+    message:
+      "メールアドレス、コード、パスワードのいずれかが正しくないか、コードの有効期限が切れています。新しいログイン復旧メールをリクエストできます。",
+    description:
+      "Uniform invalid-credentials or expired-code error during sign-in recovery",
+  },
+  "auth.recoveryRequestFailed": {
+    message:
+      "ログイン復旧メールをリクエストできませんでした。もう一度お試しください。",
+    description: "Error when requesting a sign-in recovery email fails",
+  },
+  "auth.recoveryUnavailable": {
+    message: "現在、一時的にログインできません。もう一度お試しください。",
+    description: "Temporary service outage during sign-in recovery",
+  },
+  "auth.recoveryExpiry": {
+    message:
+      "コードは 10 分で有効期限が切れ、パスワードの確認に一度だけ使用できます。",
+    description:
+      "Explains the expiry and single password-attempt limit of a recovery code",
+  },
+  "auth.recoverySubmit": {
+    message: "確認してログイン",
+    description: "Button submitting the recovery code and current password",
+  },
+  "auth.recoveryVerifying": {
+    message: "確認中...",
+    description: "Pending state while verifying the recovery code and password",
   },
 };
 

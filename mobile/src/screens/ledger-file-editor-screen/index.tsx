@@ -1,8 +1,15 @@
+import {
+  isAuthTeardownError,
+  ledgerWriteFailureMessage,
+} from "@/common/ledger-refusal";
 import { useGuest } from "@/common/guest/guest-context";
+import { isLedgerGone, isWriteForbidden } from "@/common/graphql-error-codes";
+import { disclosureAccessibility } from "@/common/accessibility";
 import { useLedgerAccess } from "@/common/hooks/use-ledger-access";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Alert,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -10,14 +17,8 @@ import {
   View,
   useWindowDimensions,
 } from "react-native";
-import {
-  Redirect,
-  Stack,
-  useLocalSearchParams,
-  useNavigation,
-  useFocusEffect,
-  useRouter,
-} from "expo-router";
+import * as Clipboard from "expo-clipboard";
+import { Redirect, Stack, useFocusEffect, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import {
   SafeAreaView,
@@ -30,11 +31,13 @@ import {
   headerActionMaxFontSizeMultiplier,
   useTheme,
 } from "@/common/theme";
+import { registerUnsavedEditsGuard } from "@/common/unsaved-edits-guard";
 import { invalidateLedgerData } from "@/common/apollo/invalidate-ledger";
 import { haptics } from "@/common/haptics";
 import { useThemeStyle } from "@/common/hooks";
 import { useLedgerReadContext } from "@/common/hooks/use-ledger-read-context";
 import { useTranslations } from "@/common/hooks/use-translations";
+import { useUnsavedChangesGuard } from "@/common/hooks/use-unsaved-changes-guard";
 import { useLedgerErrors } from "@/common/hooks/use-ledger-errors";
 import { useLedgerGuard } from "@/components/ledger-guard";
 import { LoadingTile } from "@/components/loading-tile";
@@ -48,9 +51,17 @@ import { getKeyboardOverlap } from "@/components/keyboard-accessory-bar/utils";
 import {
   decodeLedgerFileContent,
   encodeLedgerFileContent,
+  isLosslessLedgerFileContent,
+  lineEndingOf,
+  withLineEnding,
+  type LineEnding,
+  isOverEditLimit,
+  isUnreadableLargeFile,
 } from "@/common/ledger-file-content";
+import { createEditorRecovery } from "@/components/code-editor/editor-recovery";
 import { isBeancountFile } from "@/common/ledger-file-types";
 import {
+  useCreateLedgerFileMutation,
   useGetLedgerFileQuery,
   useUpdateLedgerFileMutation,
 } from "@/generated-graphql/graphql";
@@ -65,10 +76,23 @@ import {
   markRevisionsSaved,
   resetRevisionTracker,
 } from "@/components/code-editor/revision-tracker";
-import { isConflictError } from "@/common/ledger-conflict";
-import { filterFileErrors, readOnlyNoticeColors } from "./utils";
+import { isConflictFailure } from "@/common/ledger-conflict";
+import { queryLedgerErrors } from "@/common/ledger-errors-read";
+import {
+  errorHint,
+  errorMessageWithHint,
+  firstNewLedgerError,
+} from "@/common/new-ledger-error";
+import {
+  editorPathLine,
+  fileBannerErrors,
+  readOnlyNoticeColors,
+} from "./utils";
 import { selectLedgerFileEditorState } from "./select-editor-state";
 import { LEADING_TEXT_ALIGN, directionalIcon } from "@/common/rtl";
+import { useRouteParams } from "@/common/hooks/use-route-params";
+import { bindRouteLedger } from "@/common/route-ledger";
+import { RouteLedgerUnavailable } from "@/components/route-ledger-unavailable";
 
 // ─── Styles ──────────────────────────────────────────────────────────────────
 
@@ -144,10 +168,16 @@ const getStyles = (theme: ColorTheme) =>
       lineHeight: 16,
       textAlign: LEADING_TEXT_ALIGN,
     },
+    errorHint: {
+      fontSize: 12,
+      lineHeight: 17,
+      color: theme.black80,
+      marginTop: 2,
+    },
     errorLocation: {
       fontSize: 11,
       fontFamily: fonts.mono,
-      color: theme.black60,
+      color: theme.black80,
     },
     errorDivider: {
       height: StyleSheet.hairlineWidth,
@@ -171,9 +201,16 @@ const getStyles = (theme: ColorTheme) =>
     saveBtnTextDisabled: {
       color: theme.black40,
     },
+    pathLine: {
+      paddingHorizontal: 16,
+      paddingVertical: 4,
+      fontFamily: fonts.mono,
+      fontSize: 12,
+      color: theme.black60,
+    },
     savingText: {
       fontSize: 14,
-      color: theme.black60,
+      color: theme.black80,
       paddingHorizontal: 12,
     },
     loadErrorText: {
@@ -196,7 +233,11 @@ const getStyles = (theme: ColorTheme) =>
 
 // ─── Error panel ─────────────────────────────────────────────────────────────
 
-type FileError = { message: string; lineno: number | null | undefined };
+type FileError = {
+  message: string;
+  lineno: number | null | undefined;
+  hint?: string | null;
+};
 
 function ErrorBanner({
   errors,
@@ -221,7 +262,7 @@ function ErrorBanner({
         activeOpacity={0.7}
         accessibilityRole="button"
         accessibilityLabel={errorCountLabel}
-        accessibilityState={{ expanded }}
+        {...disclosureAccessibility(expanded, t)}
         onPress={() => setExpanded((value) => !value)}
       >
         <Ionicons name="warning-outline" size={16} color={theme.error} />
@@ -237,28 +278,29 @@ function ErrorBanner({
         <ScrollView
           testID="ledger-editor-error-list"
           style={styles.errorList}
-          scrollEnabled={errors.length > 3}
+          // A message is shown whole (w21/312), so a list of even one long row
+          // can outgrow `maxHeight` and has to scroll.
+          scrollEnabled
         >
-          {errors.map((err, i) => (
-            <View key={`${err.lineno ?? "unknown"}-${i}`}>
-              <TouchableOpacity
-                style={styles.errorRow}
-                activeOpacity={err.lineno != null ? 0.7 : 1}
-                onPress={() => err.lineno != null && onJump(err.lineno)}
-              >
+          {errors.map((err, i) => {
+            const body = (
+              <>
                 <Ionicons
                   name="warning-outline"
                   size={14}
                   color={theme.error}
                 />
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.errorText} numberOfLines={2}>
-                    {err.message}
-                  </Text>
+                  <Text style={styles.errorText}>{err.message}</Text>
+                  {errorHint(err) && (
+                    // The engine's fix, when it has one (w21/424).
+                    <Text style={styles.errorHint}>{errorHint(err)}</Text>
+                  )}
                   {err.lineno != null && (
-                    <Text
-                      style={styles.errorLocation}
-                    >{`line ${err.lineno}`}</Text>
+                    // Translated, as the banner's count is (w21/091).
+                    <Text style={styles.errorLocation}>
+                      {t("ledgerEditorErrorLine", { line: err.lineno })}
+                    </Text>
                   )}
                 </View>
                 {err.lineno != null && (
@@ -268,10 +310,41 @@ function ErrorBanner({
                     color={theme.black60}
                   />
                 )}
-              </TouchableOpacity>
-              {i < errors.length - 1 && <View style={styles.errorDivider} />}
-            </View>
-          ))}
+              </>
+            );
+            return (
+              <View key={`${err.lineno ?? "unknown"}-${i}`}>
+                {err.lineno != null ? (
+                  <TouchableOpacity
+                    style={styles.errorRow}
+                    activeOpacity={0.7}
+                    onPress={() => onJump(err.lineno!)}
+                    // A row that jumps to its line is a button; the label keeps
+                    // the warning and arrow glyphs out of its name (w21/141).
+                    accessibilityRole="button"
+                    accessibilityHint={t("ledgerEditorJumpToLine", {
+                      line: err.lineno,
+                    })}
+                    accessibilityLabel={`${errorMessageWithHint(err)}, ${t("ledgerEditorErrorLine", { line: err.lineno })}`}
+                  >
+                    {body}
+                  </TouchableOpacity>
+                ) : (
+                  // No line to jump to: plain text, not a disabled button
+                  // VoiceOver reads as "dimmed" (w21/276, w21/428).
+                  <View
+                    style={styles.errorRow}
+                    accessible
+                    accessibilityRole="text"
+                    accessibilityLabel={errorMessageWithHint(err)}
+                  >
+                    {body}
+                  </View>
+                )}
+                {i < errors.length - 1 && <View style={styles.errorDivider} />}
+              </View>
+            );
+          })}
         </ScrollView>
       )}
     </View>
@@ -293,10 +366,13 @@ function ErrorBanner({
 export function LedgerFileEditorScreen(): JSX.Element {
   const ledgerId = useLedgerGuard();
   const guest = useGuest();
-  const { path, initialLine } = useLocalSearchParams<{
+  const { path, initialLine, ledger } = useRouteParams<{
     path?: string;
     initialLine?: string;
+    ledger?: string;
   }>();
+  const { t } = useTranslations();
+  const binding = bindRouteLedger(ledger, ledgerId);
 
   // Opened by URL without a file there is nothing to edit; the Files tab lists
   // what can be opened.
@@ -304,6 +380,18 @@ export function LedgerFileEditorScreen(): JSX.Element {
     return (
       <Redirect
         href={guest ? "/examples/(tabs)/ledger" : "/(app)/(tabs)/ledger"}
+      />
+    );
+  }
+
+  // A link to another ledger's file, before the switch lands or for a ledger
+  // that cannot be read: the file in the selected ledger is a different file
+  // (w21/199). Send no request.
+  if (binding.status === "mismatch") {
+    return (
+      <RouteLedgerUnavailable
+        title={path}
+        message={t("fileEditorUnavailable")}
       />
     );
   }
@@ -334,10 +422,18 @@ function LedgerFileEditorSession({
   // remounting this session or its editor (see DateSectionHeader).
   const { fontScale } = useWindowDimensions();
   const insets = useSafeAreaInsets();
-  const navigation = useNavigation();
   const router = useRouter();
   const guest = useGuest();
-  const { canWrite } = useLedgerAccess();
+  const { canWrite: canWriteLedger } = useLedgerAccess();
+  // A file that does not round-trip as UTF-8 opens read-only: saving it would
+  // replace its non-UTF-8 bytes with U+FFFD (w21/042).
+  const [lossy, setLossy] = useState(false);
+  // A file the server sent no text for: read-only, never an empty document to
+  // type over (w21/185).
+  const [tooLarge, setTooLarge] = useState(false);
+  // One the server would refuse to save back, though it opens (w21/186).
+  const [overLimit, setOverLimit] = useState(false);
+  const canWrite = canWriteLedger && !lossy && !tooLarge && !overLimit;
   const { currencies: operatingCurrencies } = useLedgerReadContext(ledgerId);
 
   const beancount = isBeancountFile(path);
@@ -363,19 +459,37 @@ function LedgerFileEditorSession({
   });
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const shaRef = useRef("");
+  const lineEndingRef = useRef<LineEnding>("\n");
   const documentEpochRef = useRef(0);
   const revisionTrackerRef = useRef(createRevisionTracker());
+  // The latest text the editor reported, to put back if its web view restarts
+  // (w21/342).
+  const recoveryRef = useRef(createEditorRecovery());
+  // The accessory bar's last insert. Cleared once the editor reports the edit
+  // it made: a web view that restarts is handed its first props again, and the
+  // insert would be applied a second time at the top of the file.
+  const [insertSpec, setInsertSpec] = useState<InsertSpec | null>(null);
 
   useEffect(() => {
     if (!fileData?.getLedgerFile || initialized) return;
     const raw = fileData.getLedgerFile.content ?? "";
     const enc = fileData.getLedgerFile.encoding;
     const fc = decodeLedgerFileContent(raw, enc);
+    setLossy(!isLosslessLedgerFileContent(raw, enc));
+    setTooLarge(
+      isUnreadableLargeFile(
+        fileData.getLedgerFile.content,
+        fileData.getLedgerFile.size,
+      ),
+    );
+    setOverLimit(isOverEditLimit(fileData.getLedgerFile.size));
+    lineEndingRef.current = lineEndingOf(fc);
     const fs = fileData.getLedgerFile.sha;
     const epoch = documentEpochRef.current + 1;
     documentEpochRef.current = epoch;
     resetRevisionTracker(revisionTrackerRef.current);
     shaRef.current = fs;
+    recoveryRef.current.loaded(fc);
     setDocumentSpec({ value: fc, epoch });
     setHasUnsavedChanges(false);
     setInitialized(true);
@@ -384,6 +498,7 @@ function LedgerFileEditorSession({
   // ── Save / conflict ───────────────────────────────────────────────────────
 
   const [updateLedgerFile, { loading: saving }] = useUpdateLedgerFileMutation();
+  const [createLedgerFile] = useCreateLedgerFileMutation();
   const saveInFlightRef = useRef(false);
   const client = useApolloClient();
   // A `.bean` save can rewrite every balance in the ledger, but users save
@@ -391,29 +506,128 @@ function LedgerFileEditorSession({
   // affordable. So the save fires only the cheap `errors` scope (this screen
   // renders those), and the full sweep waits until the user leaves.
   const savedThisSessionRef = useRef(false);
+  const { errors: allErrors, loaded: errorsLoaded } = useLedgerErrors(ledgerId);
 
-  useEffect(
-    () => () => {
+  // A raw save is never refused — this editor is how a broken ledger gets
+  // repaired, and repair can pass through invalid states — but it must not
+  // pass for a clean save either (w21/m1). Refresh the errors this screen and
+  // the Home bell render, and warn with the first one the save added, as the
+  // dashboard's write outcome does.
+  const reportNewErrors = useCallback(
+    async (before: typeof allErrors | null) => {
+      await invalidateLedgerData(client, "errors");
+      let after: typeof allErrors | undefined;
+      try {
+        after = await queryLedgerErrors(client, ledgerId);
+      } catch {
+        return;
+      }
+      const first = firstNewLedgerError(before, after);
+      if (!first) return;
+      Alert.alert(
+        t("ledgerEditorSaveLeftErrorsTitle"),
+        t("ledgerEditorSaveLeftErrors", { error: first.message }),
+        [
+          { text: t("done"), style: "cancel" },
+          {
+            text: t("ledgerEditorViewErrors"),
+            onPress: () => router.navigate("/(app)/notifications"),
+          },
+        ],
+      );
+    },
+    [client, ledgerId, router, t],
+  );
+
+  // Set when the screen goes, so a save still in flight can finish the sweep
+  // the unmount could not: that ran first with `savedThisSessionRef` still
+  // false, and nothing swept afterwards (w21/195).
+  const unmountedRef = useRef(false);
+  useEffect(() => {
+    unmountedRef.current = false;
+    return () => {
+      unmountedRef.current = true;
       if (savedThisSessionRef.current) {
         void invalidateLedgerData(client, "file");
       }
+    };
+  }, [client]);
+
+  // Swap the remote text in: the buffer, the sha and the flags that follow the
+  // text, under a new epoch.
+  const applyRemoteFile = useCallback(
+    (file: {
+      content?: string | null;
+      encoding?: string | null;
+      size?: number | null;
+      sha?: string | null;
+    }) => {
+      const raw = file.content ?? "";
+      const enc = file.encoding;
+      const fc = decodeLedgerFileContent(raw, enc);
+      setLossy(!isLosslessLedgerFileContent(raw, enc));
+      setTooLarge(isUnreadableLargeFile(file.content, file.size));
+      setOverLimit(isOverEditLimit(file.size));
+      lineEndingRef.current = lineEndingOf(fc);
+      const fs = file.sha ?? "";
+      const epoch = documentEpochRef.current + 1;
+      documentEpochRef.current = epoch;
+      resetRevisionTracker(revisionTrackerRef.current);
+      shaRef.current = fs;
+      recoveryRef.current.loaded(fc);
+      setDocumentSpec({ value: fc, epoch });
+      setHasUnsavedChanges(false);
     },
-    [client],
+    [],
   );
 
-  const handleReload = useCallback(async () => {
-    const result = await refetch();
-    const raw = result.data?.getLedgerFile?.content ?? "";
-    const enc = result.data?.getLedgerFile?.encoding;
-    const fc = decodeLedgerFileContent(raw, enc);
-    const fs = result.data?.getLedgerFile?.sha ?? "";
-    const epoch = documentEpochRef.current + 1;
-    documentEpochRef.current = epoch;
-    resetRevisionTracker(revisionTrackerRef.current);
-    shaRef.current = fs;
-    setDocumentSpec({ value: fc, epoch });
-    setHasUnsavedChanges(false);
-  }, [refetch]);
+  const handleReload = useCallback(async (): Promise<boolean> => {
+    // The error strip follows the cache after mount; a reload that swaps in
+    // the remote text must refresh it too, or it keeps a fixed error at a line
+    // that no longer exists (w21/048).
+    void invalidateLedgerData(client, "errors");
+    // A reload that fails (a flaky network) says so and changes nothing: the
+    // buffer and the sha stay, and the text is not lost (w21/446).
+    const result = await refetch().catch(() => null);
+    if (!result?.data?.getLedgerFile) {
+      Alert.alert(t("ledgerEditorLoadFailed"));
+      return false;
+    }
+    applyRemoteFile(result.data.getLedgerFile);
+    return true;
+  }, [applyRemoteFile, client, refetch, t]);
+
+  // Coming back to this editor after the file was saved from another one (View
+  // errors opens Notifications, whose error row opens a second editor on the
+  // same file) leaves this copy outdated, and a save from it hits the conflict.
+  // With nothing unsaved and no save running, return to the remote text when its
+  // sha has moved (w21/544).
+  const unsavedRef = useRef(false);
+  unsavedRef.current = hasUnsavedChanges;
+  const focusedBeforeRef = useRef(false);
+  useFocusEffect(
+    useCallback(() => {
+      if (!initialized) return undefined;
+      if (!focusedBeforeRef.current) {
+        focusedBeforeRef.current = true;
+        return undefined;
+      }
+      if (unsavedRef.current || saveInFlightRef.current) return undefined;
+      let live = true;
+      void refetch()
+        .then((result) => {
+          const file = result.data?.getLedgerFile;
+          if (!live || !file?.sha || file.sha === shaRef.current) return;
+          if (unsavedRef.current || saveInFlightRef.current) return;
+          applyRemoteFile(file);
+          void invalidateLedgerData(client, "errors");
+        })
+        .catch(() => undefined);
+      return () => {
+        live = false;
+      };
+    }, [applyRemoteFile, client, initialized, refetch]),
+  );
 
   const handleEdit = useCallback(
     async (epoch: number, revision: number, isDirty: boolean) => {
@@ -426,16 +640,244 @@ function LedgerFileEditorSession({
       );
       if (dirty === null) return;
       setHasUnsavedChanges(dirty);
+      // The editor has made the edit, so the insert that asked for it is spent.
+      setInsertSpec(null);
     },
     [],
   );
 
-  const handleSave = useCallback(
+  // The editor's text shortly after it changes; a draft from before a reload
+  // (an older epoch) is dropped.
+  const handleDraft = useCallback(async (text: string, epoch: number) => {
+    if (epoch === documentEpochRef.current) recoveryRef.current.draft(text);
+  }, []);
+
+  // The editor's page is up. The second time is iOS having killed its web view:
+  // the page restarted from its first props (the original text and a revision
+  // counter at 0), so the draft goes back in under a new epoch, and the revision
+  // tracker restarts with it (w21/342).
+  const handleEditorReady = useCallback(async () => {
+    const plan = recoveryRef.current.ready();
+    if (!plan) return;
+    const epoch = documentEpochRef.current + 1;
+    documentEpochRef.current = epoch;
+    resetRevisionTracker(revisionTrackerRef.current);
+    setDocumentSpec({
+      value: plan.value,
+      epoch,
+      savedValue: plan.savedValue,
+    });
+    setInsertSpec(null);
+  }, []);
+
+  // The conflict alert's way out for the user's text (w21/273): copy it and
+  // load the remote version, or save it over that version.
+  const copyThenReload = useCallback(
+    async (content: string) => {
+      try {
+        await Clipboard.setStringAsync(
+          withLineEnding(content, lineEndingRef.current),
+        );
+      } catch {
+        // Reloading now would drop text that was not kept.
+        Alert.alert(t("ledgerEditorCopyFailed"));
+        return;
+      }
+      if (await handleReload()) haptics.success();
+    },
+    [handleReload, t],
+  );
+
+  const handleSaveRef = useRef<
+    | ((
+        content: string,
+        epoch: number,
+        revision: number,
+        viaRestore?: boolean,
+      ) => Promise<boolean>)
+    | null
+  >(null);
+
+  // Overwrite and Recreate write outside the editor's own save. Without a guard
+  // of their own, a Save tapped meanwhile sent a stale sha: a false "File
+  // Deleted" over a restore that was succeeding, or a "File Changed" that held
+  // the guard and dropped Overwrite's own save (w21/578). While one runs, Save
+  // is ignored and the header says "Saving…".
+  const restoringRef = useRef(false);
+  const [restoring, setRestoring] = useState(false);
+  const startRestore = (): boolean => {
+    if (restoringRef.current || saveInFlightRef.current) return false;
+    restoringRef.current = true;
+    setRestoring(true);
+    return true;
+  };
+  const endRestore = () => {
+    restoringRef.current = false;
+    setRestoring(false);
+  };
+
+  // A save that bypassed the editor's own (Overwrite, Recreate) leaves its
+  // saved-text baseline at the text first loaded, so reverting the edit read
+  // as no change: Save stayed grey and Back left without asking (w21/522). The
+  // editor is handed the text it had, against the text just saved.
+  const rebaseOnSaved = useCallback((latest: string, saved: string) => {
+    const epoch = documentEpochRef.current + 1;
+    documentEpochRef.current = epoch;
+    resetRevisionTracker(revisionTrackerRef.current);
+    setDocumentSpec({ value: latest, epoch, savedValue: saved });
+    setHasUnsavedChanges(latest !== saved);
+    setInsertSpec(null);
+  }, []);
+
+  // Take the sha of the version on the server, not its text, and save over it.
+  const overwriteRemote = useCallback(
     async (content: string, epoch: number, revision: number) => {
+      if (!startRestore()) return;
+      try {
+        try {
+          const result = await refetch();
+          const current = result.data?.getLedgerFile?.sha;
+          if (!current) throw new Error("no sha");
+          shaRef.current = current;
+        } catch {
+          Alert.alert(t("ledgerEditorSaveFailed"));
+          return;
+        }
+        const latest = recoveryRef.current.latest();
+        if (await handleSaveRef.current?.(content, epoch, revision, true)) {
+          rebaseOnSaved(latest, content);
+        }
+      } finally {
+        endRestore();
+      }
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [rebaseOnSaved, refetch, t],
+  );
+
+  // The file was deleted or moved elsewhere (w21/378): the text goes back as a
+  // new file at the same path, or to the clipboard, and is never dropped.
+  const copyDraft = useCallback(
+    async (content: string) => {
+      try {
+        await Clipboard.setStringAsync(
+          withLineEnding(content, lineEndingRef.current),
+        );
+        haptics.success();
+      } catch {
+        Alert.alert(t("ledgerEditorCopyFailed"));
+      }
+    },
+    [t],
+  );
+
+  // The changed-elsewhere alert: keep editing, copy and reload, or overwrite the
+  // remote after a confirmation. A save that lost a race and a Recreate that
+  // found the file already back (w21/564) both end here.
+  const presentConflict = useCallback(
+    (content: string, epoch: number, revision: number) => {
+      Alert.alert(
+        t("ledgerEditorConflictTitle"),
+        t("ledgerEditorConflictMessage"),
+        [
+          { text: t("ledgerEditorKeepEditing"), style: "cancel" },
+          {
+            text: t("ledgerEditorCopyReload"),
+            onPress: () => void copyThenReload(content),
+          },
+          {
+            text: t("ledgerEditorOverwrite"),
+            style: "destructive",
+            onPress: () =>
+              Alert.alert(
+                t("ledgerEditorOverwriteTitle"),
+                t("ledgerEditorOverwriteMessage"),
+                [
+                  { text: t("cancel"), style: "cancel" },
+                  {
+                    text: t("ledgerEditorOverwrite"),
+                    style: "destructive",
+                    onPress: () =>
+                      void overwriteRemote(content, epoch, revision),
+                  },
+                ],
+              ),
+          },
+        ],
+      );
+    },
+    [copyThenReload, overwriteRemote, t],
+  );
+
+  const recreateFile = useCallback(
+    async (content: string, epoch: number, revision: number) => {
+      if (!startRestore()) return;
+      const latest = recoveryRef.current.latest();
+      try {
+        const result = await createLedgerFile({
+          variables: {
+            ledgerId,
+            path,
+            content: encodeLedgerFileContent(
+              withLineEnding(content, lineEndingRef.current),
+            ),
+            message: `restore ${path}`,
+          },
+        });
+        const newSha = result.data?.createLedgerFile?.sha;
+        if (!newSha) throw new Error(t("ledgerEditorSaveFailed"));
+        shaRef.current = newSha;
+        recoveryRef.current.saved(content);
+        if (epoch === documentEpochRef.current) {
+          setHasUnsavedChanges(
+            markRevisionsSaved(revisionTrackerRef.current, revision),
+          );
+        }
+        haptics.success();
+        savedThisSessionRef.current = true;
+        if (epoch === documentEpochRef.current) rebaseOnSaved(latest, content);
+        void invalidateLedgerData(client, "file");
+      } catch (err: unknown) {
+        if (isAuthTeardownError(err)) return;
+        haptics.error();
+        // Someone else put the file back first: the server says CONFLICT, which
+        // is the changed-elsewhere case, not a bodiless "Save failed" (w21/564).
+        if (isConflictFailure(err)) {
+          presentConflict(content, epoch, revision);
+          return;
+        }
+        Alert.alert(
+          t("ledgerEditorSaveFailed"),
+          ledgerWriteFailureMessage(err, { t }) ?? undefined,
+        );
+      } finally {
+        endRestore();
+      }
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [
+      client,
+      createLedgerFile,
+      ledgerId,
+      path,
+      presentConflict,
+      rebaseOnSaved,
+      t,
+    ],
+  );
+
+  const handleSave = useCallback(
+    async (
+      content: string,
+      epoch: number,
+      revision: number,
+      viaRestore = false,
+    ) => {
       if (
         !canWrite ||
         epoch !== documentEpochRef.current ||
-        saveInFlightRef.current
+        saveInFlightRef.current ||
+        (restoringRef.current && !viaRestore)
       )
         return false;
 
@@ -446,12 +888,16 @@ function LedgerFileEditorSession({
       }
 
       saveInFlightRef.current = true;
+      // Read before sending: the refresh after the save replaces it.
+      const before = errorsLoaded ? allErrors : null;
       try {
         const result = await updateLedgerFile({
           variables: {
             ledgerId,
             path,
-            content: encodeLedgerFileContent(content),
+            content: encodeLedgerFileContent(
+              withLineEnding(content, lineEndingRef.current),
+            ),
             sha,
             message: `edit ${path}`,
           },
@@ -460,6 +906,7 @@ function LedgerFileEditorSession({
         if (!newSha) throw new Error(t("ledgerEditorSaveFailed"));
 
         shaRef.current = newSha;
+        recoveryRef.current.saved(content);
         if (epoch === documentEpochRef.current) {
           setHasUnsavedChanges(
             markRevisionsSaved(revisionTrackerRef.current, revision),
@@ -472,65 +919,132 @@ function LedgerFileEditorSession({
         // before the save — it is fetched once at mount, and this screen never
         // remounts while the user edits.
         savedThisSessionRef.current = true;
-        void invalidateLedgerData(client, "errors");
+        if (unmountedRef.current) {
+          // Left during "Saving…": sweep now, and no alert over another screen.
+          void invalidateLedgerData(client, "file");
+          return true;
+        }
+        void reportNewErrors(before);
         return true;
       } catch (err: unknown) {
+        // Signed out mid-save: Welcome says why (w21/119).
+        if (isAuthTeardownError(err)) return false;
         haptics.error();
-        const msg = err instanceof Error ? err.message : String(err);
-        if (isConflictError(msg)) {
+        if (isConflictFailure(err)) {
+          presentConflict(content, epoch, revision);
+        } else if (isLedgerGone(err)) {
+          // Deleted elsewhere: the update can never succeed, and the draft is
+          // the only copy (w21/378).
           Alert.alert(
-            t("ledgerEditorConflictTitle"),
-            t("ledgerEditorConflictMessage"),
+            t("ledgerEditorFileGoneTitle"),
+            t("ledgerEditorFileGoneMessage"),
             [
               { text: t("ledgerEditorKeepEditing"), style: "cancel" },
+              { text: t("copy"), onPress: () => void copyDraft(content) },
               {
-                text: t("ledgerEditorReload"),
-                style: "destructive",
-                onPress: handleReload,
+                text: t("ledgerEditorRecreate"),
+                onPress: () => void recreateFile(content, epoch, revision),
               },
             ],
           );
+        } else if (isWriteForbidden(err)) {
+          // Edit access was removed: a retry cannot succeed, and the draft is
+          // the only copy (w21/474).
+          Alert.alert(
+            t("ledgerEditorSaveFailed"),
+            t("ledgerEditorAccessRemoved"),
+            [
+              { text: t("ledgerEditorKeepEditing"), style: "cancel" },
+              { text: t("copy"), onPress: () => void copyDraft(content) },
+            ],
+          );
         } else {
-          Alert.alert(t("ledgerEditorSaveFailed"), msg);
+          // The ledger's own text for a refusal, translated copy otherwise;
+          // never "Network request failed" (w21/117). A failure with no text
+          // of its own still says the draft is safe, instead of an empty alert.
+          Alert.alert(
+            t("ledgerEditorSaveFailed"),
+            ledgerWriteFailureMessage(err, { t }) ??
+              t("ledgerEditorSaveFailedHint"),
+          );
         }
         return false;
       } finally {
         saveInFlightRef.current = false;
       }
     },
-    [canWrite, client, handleReload, ledgerId, path, t, updateLedgerFile],
+    [
+      allErrors,
+      canWrite,
+      copyDraft,
+      copyThenReload,
+      errorsLoaded,
+      ledgerId,
+      overwriteRemote,
+      path,
+      presentConflict,
+      recreateFile,
+      reportNewErrors,
+      t,
+      updateLedgerFile,
+    ],
   );
+  useEffect(() => {
+    handleSaveRef.current = handleSave;
+  }, [handleSave]);
 
   // ── Unsaved changes guard ────────────────────────────────────────────────
 
+  useUnsavedChangesGuard(hasUnsavedChanges);
+
+  // An app link to another ledger switches ledgers before it navigates, which
+  // would remount this session clean; it asks here first (w21/090).
   useEffect(() => {
-    const unsubscribe = navigation.addListener("beforeRemove", (e) => {
-      if (!hasUnsavedChanges) return;
-      e.preventDefault();
-      Alert.alert(
-        t("ledgerEditorUnsavedTitle"),
-        t("ledgerEditorUnsavedMessage"),
-        [
-          { text: t("cancel"), style: "cancel" },
-          {
-            text: t("ledgerEditorDiscardChanges"),
-            style: "destructive",
-            onPress: () => navigation.dispatch(e.data.action),
-          },
-        ],
-      );
-    });
-    return unsubscribe;
-  }, [navigation, hasUnsavedChanges, t]);
+    if (!hasUnsavedChanges) return undefined;
+    return registerUnsavedEditsGuard(
+      () =>
+        new Promise<boolean>((resolve) => {
+          Alert.alert(
+            t("ledgerEditorUnsavedTitle"),
+            t("ledgerEditorUnsavedMessage"),
+            [
+              {
+                text: t("cancel"),
+                style: "cancel",
+                onPress: () => resolve(false),
+              },
+              {
+                text: t("ledgerEditorDiscardChanges"),
+                style: "destructive",
+                onPress: () => resolve(true),
+              },
+            ],
+            { cancelable: true, onDismiss: () => resolve(false) },
+          );
+        }),
+    );
+  }, [hasUnsavedChanges, t]);
+
+  // The first load's Reload, for a file that failed or is unavailable.
+  const retryLoad = () => {
+    void invalidateLedgerData(client, "errors");
+    void refetch();
+  };
 
   // ── Keyboard height ──────────────────────────────────────────────────────
 
   const keyboardHeight = useKeyboardHeight();
 
   const isKeyboardVisible = keyboardHeight > 0;
-  const showAccessory =
-    canWrite && beancount && isKeyboardVisible && initialized;
-  const keyboardOverlap = getKeyboardOverlap(keyboardHeight, insets.bottom);
+  // Every writable file gets the bar: its chevron is the only way to hide
+  // the keyboard once the web view's own ✓ is suppressed. Only Beancount
+  // files get the insert buttons (w21/144).
+  const showAccessory = canWrite && isKeyboardVisible && initialized;
+  const keyboardOverlap = getKeyboardOverlap(
+    keyboardHeight,
+    insets.bottom,
+    Platform.OS,
+  );
   const editorKeyboardInset = isKeyboardVisible
     ? keyboardOverlap + (showAccessory ? KEYBOARD_ACCESSORY_BAR_HEIGHT : 0)
     : 0;
@@ -538,7 +1052,6 @@ function LedgerFileEditorSession({
   // ── Accessory bar insert ─────────────────────────────────────────────────
 
   const insertSeq = useRef(0);
-  const [insertSpec, setInsertSpec] = useState<InsertSpec | null>(null);
   const editorRef = useRef<CodeEditorRef>(null);
 
   const handleInsert = (text: string, cursorOffset?: number) => {
@@ -551,16 +1064,17 @@ function LedgerFileEditorSession({
   const [jumpToLine, setJumpToLine] = useState<number | null>(
     !isNaN(initialLineNum ?? NaN) ? initialLineNum : null,
   );
-  // Re-arm the jump target whenever the screen gains focus.
-  // This handles screen reuse: if the user navigates away and back (or
-  // the same deep-link fires again), the jump re-triggers instead of
-  // being skipped because the state was already cleared.
-  useFocusEffect(
-    useCallback(() => {
-      const n = !isNaN(initialLineNum ?? NaN) ? initialLineNum : null;
-      if (n !== null) setJumpToLine(n);
-    }, [initialLineNum]),
-  );
+  // Re-arm the jump only when a link asks for a line, then clear the param:
+  // a link opened again sets it anew and jumps again. Re-arming on every
+  // focus also fired on an ordinary return to the screen (back from View
+  // errors), throwing the cursor to the old line and opening the keyboard
+  // (w21/152).
+  useEffect(() => {
+    const n = !isNaN(initialLineNum ?? NaN) ? initialLineNum : null;
+    if (n === null) return;
+    setJumpToLine(n);
+    router.setParams({ initialLine: undefined });
+  }, [initialLineNum, router]);
   // Only start the clear-timer once the file is loaded so CodeEditor has a
   // chance to receive the non-null value and scroll before we reset it.
   useEffect(() => {
@@ -575,32 +1089,31 @@ function LedgerFileEditorSession({
 
   const fileName = path.split("/").pop() ?? path;
 
-  const { errors: allErrors } = useLedgerErrors(ledgerId);
-  const fileErrors: FileError[] = filterFileErrors(allErrors, path).map(
-    (e) => ({ message: e.message, lineno: e.lineno }),
-  );
+  const fileErrors: FileError[] = fileBannerErrors(allErrors, path);
 
   // ── Header right ────────────────────────────────────────────────────────
 
-  const headerRight = saving
-    ? () => <Text style={styles.savingText}>{t("ledgerEditorSaving")}</Text>
-    : () => (
-        <TouchableOpacity
-          style={styles.saveBtn}
-          disabled={!hasUnsavedChanges}
-          onPress={() => editorRef.current?.requestSave()}
-        >
-          <Text
-            style={[
-              styles.saveBtnText,
-              !hasUnsavedChanges && styles.saveBtnTextDisabled,
-            ]}
-            maxFontSizeMultiplier={headerActionMaxFontSizeMultiplier}
+  const headerRight =
+    saving || restoring
+      ? () => <Text style={styles.savingText}>{t("ledgerEditorSaving")}</Text>
+      : () => (
+          <TouchableOpacity
+            style={styles.saveBtn}
+            accessibilityRole="button"
+            disabled={!hasUnsavedChanges}
+            onPress={() => editorRef.current?.requestSave()}
           >
-            {t("ledgerEditorSave")}
-          </Text>
-        </TouchableOpacity>
-      );
+            <Text
+              style={[
+                styles.saveBtnText,
+                !hasUnsavedChanges && styles.saveBtnTextDisabled,
+              ]}
+              maxFontSizeMultiplier={headerActionMaxFontSizeMultiplier}
+            >
+              {t("ledgerEditorSave")}
+            </Text>
+          </TouchableOpacity>
+        );
 
   // ── Render ───────────────────────────────────────────────────────────────
 
@@ -628,7 +1141,9 @@ function LedgerFileEditorSession({
 
       {/* The Save button's absence is otherwise the only sign. Yields to the
           error banner so the two never stack. */}
-      {!canWrite && fileErrors.length === 0 && editorState === "content" ? (
+      {!canWrite &&
+      (lossy || tooLarge || overLimit || fileErrors.length === 0) &&
+      editorState === "content" ? (
         <View style={styles.readOnlyBanner} testID="ledger-editor-read-only">
           <Ionicons
             name="lock-closed-outline"
@@ -636,7 +1151,17 @@ function LedgerFileEditorSession({
             color={readOnlyNoticeColors(theme).foreground}
           />
           <Text key={fontScale} style={styles.readOnlyText}>
-            {t("ledgerReadOnly")}
+            {t(
+              tooLarge
+                ? "ledgerEditorTooLarge"
+                : overLimit
+                  ? "ledgerEditorTooLargeToEdit"
+                  : lossy
+                    ? "ledgerEditorNotUtf8"
+                    : guest
+                      ? "guestReadOnlyEditor"
+                      : "ledgerReadOnly",
+            )}
           </Text>
         </View>
       ) : null}
@@ -647,6 +1172,17 @@ function LedgerFileEditorSession({
           onJump={(line) => setJumpToLine(line)}
         />
       )}
+
+      {editorPathLine(path) ? (
+        <Text
+          testID="ledger-editor-path"
+          style={styles.pathLine}
+          numberOfLines={1}
+          ellipsizeMode="middle"
+        >
+          {editorPathLine(path)}
+        </Text>
+      ) : null}
 
       <View style={styles.editorWrapper}>
         {editorState === "loading" ? (
@@ -660,6 +1196,13 @@ function LedgerFileEditorSession({
             <Text style={styles.loadErrorText}>
               {t("ledgerEditorLoadFailed")}
             </Text>
+            <View style={styles.unavailableActions}>
+              <TouchableOpacity accessibilityRole="button" onPress={retryLoad}>
+                <Text style={styles.unavailableAction}>
+                  {t("ledgerEditorReload")}
+                </Text>
+              </TouchableOpacity>
+            </View>
           </FadeInView>
         ) : editorState === "unavailable" ? (
           <FadeInView>
@@ -667,16 +1210,13 @@ function LedgerFileEditorSession({
               {t("ledgerEditorFileUnavailable")}
             </Text>
             <View style={styles.unavailableActions}>
-              <TouchableOpacity
-                onPress={() => {
-                  void refetch();
-                }}
-              >
+              <TouchableOpacity accessibilityRole="button" onPress={retryLoad}>
                 <Text style={styles.unavailableAction}>
                   {t("ledgerEditorReload")}
                 </Text>
               </TouchableOpacity>
               <TouchableOpacity
+                accessibilityRole="button"
                 onPress={() => {
                   // Always land on Files for this labeled recovery action —
                   // history existence does not mean the prior screen is Files.
@@ -699,9 +1239,12 @@ function LedgerFileEditorSession({
               documentSpec={documentSpec}
               onEdit={handleEdit}
               onSave={handleSave}
+              onReady={handleEditorReady}
+              onDraft={handleDraft}
               editorTheme={theme.editor}
               beancount={beancount}
               keyboardInset={editorKeyboardInset}
+              fontScale={fontScale}
               insertSpec={insertSpec}
               jumpToLine={jumpToLine}
               // WKWebView adds its own form-navigation bar (∧ ∨ ✓) under the
@@ -717,6 +1260,7 @@ function LedgerFileEditorSession({
               onInsert={handleInsert}
               operatingCurrencies={operatingCurrencies}
               onDismiss={() => editorRef.current?.blur()}
+              shortcuts={beancount}
             />
           </View>
         )}

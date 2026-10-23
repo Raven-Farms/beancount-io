@@ -5,8 +5,10 @@ import { InteractiveLineChartD3 } from "@/common/d3/interactive-line-chart";
 import { DashboardCard } from "@/components/dashboard-card";
 import { TimeRangePills } from "@/components/time-range-pills";
 import { LoadingTile } from "@/components/loading-tile";
+import { CardLoadFailure } from "@/components/card-load-failure";
 import {
   RANGE_LABEL_KEYS,
+  rangePillText,
   SeriesPoint,
   TIME_RANGES,
   TimeRange,
@@ -41,7 +43,14 @@ type BalanceChartCardProps = {
   /** Full monthly series (ascending); sliced client-side by the range pills. */
   series: SeriesPoint[];
   loading: boolean;
+  /**
+   * The first load failed and there is nothing to draw. A failed refresh over
+   * a chart that is already loaded is not this: the caller keeps `error`
+   * false and shows the stale banner (w21/239).
+   */
   error?: boolean;
+  /** Tries the first load again; offered with the failure. */
+  onRetry?: () => void;
   /** Which way a change moves net worth; see `InteractiveLineChartD3`. */
   netWorthSign?: 1 | -1;
 };
@@ -59,15 +68,25 @@ export function BalanceChartCard({
   series,
   loading,
   error,
+  onRetry,
   netWorthSign,
 }: BalanceChartCardProps): JSX.Element {
   const { t } = useTranslations();
   const [range, setRange] = useState<TimeRange>("6M");
 
-  if (loading || error) {
+  if (loading) {
     return (
       <DashboardCard bleed>
         <LoadingTile height={CARD_HEIGHT} mx={16} />
+      </DashboardCard>
+    );
+  }
+  // A failed first load says so and offers a retry; drawn as the skeleton it
+  // looked like loading forever (w21/239).
+  if (error) {
+    return (
+      <DashboardCard bleed>
+        <CardLoadFailure onRetry={onRetry} />
       </DashboardCard>
     );
   }
@@ -78,7 +97,7 @@ export function BalanceChartCard({
   );
   const rangeOptions = TIME_RANGES.map((key) => ({
     key,
-    label: t(RANGE_LABEL_KEYS[key]),
+    ...rangePillText(t, RANGE_LABEL_KEYS[key]),
   }));
 
   return (

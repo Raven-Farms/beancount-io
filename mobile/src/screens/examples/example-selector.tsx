@@ -1,3 +1,5 @@
+import { exampleCardAccessibilityLabel } from "./example-card-label";
+import { EXAMPLE_TITLE_KEYS } from "./example-titles";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
 import { EXAMPLE_IDS, type ExampleId } from "@/common/guest/guest-state";
 import { useTranslations } from "@/common/hooks/use-translations";
@@ -7,7 +9,7 @@ import { LoadingTile } from "@/components/loading-tile";
 import { PressableScale } from "@/components/pressable-scale";
 
 import type { ExampleAvailability } from "./use-example-catalog";
-const titles = ["guestExample0", "guestExample1", "guestExample2"];
+const titles = EXAMPLE_TITLE_KEYS;
 const descriptions = [
   "guestExampleDescription0",
   "guestExampleDescription1",
@@ -42,6 +44,17 @@ export function ExampleSelector({
   const { t } = useTranslations();
   const theme = useTheme().colorTheme;
   const hasConnectionError = availability?.includes("connection");
+  // The caption under a card: its description, or why it cannot be opened.
+  const exampleCaption = (index: number): string | null =>
+    !availability
+      ? null
+      : availability[index] === "available"
+        ? t(descriptions[index])
+        : t(
+            availability[index] === "connection"
+              ? "guestConnectionError"
+              : "guestUnavailable",
+          );
   const noneAvailable = availability && !availability.includes("available");
   return (
     <ScrollView contentContainerStyle={styles.content}>
@@ -56,9 +69,10 @@ export function ExampleSelector({
           key={id}
           testID={`guest-example-${index}`}
           accessibilityRole="button"
-          accessibilityLabel={t("discoveryOpen", {
-            name: t(titles[index]),
-          })}
+          accessibilityLabel={exampleCardAccessibilityLabel(
+            t("discoveryOpen", { name: t(titles[index]) }),
+            exampleCaption(index),
+          )}
           accessibilityState={{
             disabled: availability?.[index] !== "available",
           }}
@@ -92,13 +106,7 @@ export function ExampleSelector({
             </View>
           ) : (
             <Text style={[styles.caption, { color: theme.black80 }]}>
-              {availability[index] === "available"
-                ? t(descriptions[index])
-                : t(
-                    availability[index] === "connection"
-                      ? "guestConnectionError"
-                      : "guestUnavailable",
-                  )}
+              {exampleCaption(index)}
             </Text>
           )}
         </PressableScale>

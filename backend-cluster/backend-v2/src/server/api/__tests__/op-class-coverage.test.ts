@@ -91,16 +91,21 @@ describe("op-class coverage", () => {
     // introspection endpoint (ADR 0017); 79 since w2/m32 added
     // `getLedgerManagedPrices` (ADR 015 managed price status); 80 since w6/m3
     // added `getLedgerOptions`, the root twin of the nested `Ledger.options`
-    // that REST `/options` and the `ledgerOptions` resource bind to.
+    // that REST `/options` and the `ledgerOptions` resource bind to; 81 since
+    // w1/m39 added `previewPlanChange` (PRFAQ005), browser-session billing;
+    // 82 since w3/m53 added `previewLedgerSetup` (ADR021 setup preview).
     expect(graphqlOps.filter((op) => op.startsWith("GQL Query.")).length).toBe(
-      80,
+      82,
     );
     // 63 since w2/m28:t005 added `appendLedgerText`, the Beancount-text
     // dialect of `bulkEntries`, on all three surfaces; 64 since w2/m32 added
-    // `refreshLedgerManagedPrices`.
+    // `refreshLedgerManagedPrices`; 65 since w1/m39 added `changePlan`
+    // (PRFAQ005), browser-session billing; 66 since w1/m40 added
+    // `cancelScheduledPlanChange`, its undo; 68 since w4/m31 added the
+    // recovery request and email-code password sign-in ceremonies.
     expect(
       graphqlOps.filter((op) => op.startsWith("GQL Mutation.")).length,
-    ).toBe(64);
+    ).toBe(68);
   });
 
   it("gives every GraphQL root field exactly one explicit access mode", () => {
@@ -241,8 +246,9 @@ describe("op-class coverage", () => {
     // w1/m38 splits the grouped tools into one tool per operation (ADR 019,
     // 2026-10-18): the two bank tools become eight, and ledger lifecycle,
     // collaborators, and pull requests become three each, and the two editing
-    // tools become three each, so 43 here.
-    expect(tools).toHaveLength(43);
+    // tools become three each, so 43 here. w3/m53 adds the 44th,
+    // previewLedgerSetup, the read-only twin of createLedger's setup input.
+    expect(tools).toHaveLength(44);
 
     // Resources are counted apart on purpose. They do not compete for tool
     // selection (ADR 0008 D2), which is the entire reason 50 in-scope reads can

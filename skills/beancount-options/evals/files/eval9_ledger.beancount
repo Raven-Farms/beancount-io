@@ -1,0 +1,27 @@
+;; Personal beancount ledger
+;; Test fixture for beancount-options skill — eval 9 (covered call assigned under sellgains)
+;; sellgains refuses a strike+premium disposal price, so the sale prices the stock at the strike.
+
+plugin "beancount.plugins.sellgains"
+
+2026-01-01 open Assets:Brokerage:Robinhood:Cash USD
+2026-01-01 open Assets:Brokerage:Robinhood:Options
+2026-01-01 open Assets:Brokerage:Robinhood:Stock
+2026-01-01 open Income:Trading:OptionPremium USD
+2026-01-01 open Income:Trading:CapitalGains USD
+2026-01-01 open Expenses:Trading:Fees USD
+2026-01-01 open Equity:Opening-Balances
+
+2026-01-01 * "Initial deposit"
+  Assets:Brokerage:Robinhood:Cash      100000.00 USD
+  Equity:Opening-Balances
+
+2026-03-20 * "BUY 100 AAPL @ 148"
+  Assets:Brokerage:Robinhood:Cash      -14800.65 USD
+  Assets:Brokerage:Robinhood:Stock       100 AAPL {148.00 USD}
+  Expenses:Trading:Fees                      0.65 USD
+
+2026-05-01 * "STO AAPL 160C 6/20 (covered)" ^aapl-160c-20260620
+  Assets:Brokerage:Robinhood:Cash         199.35 USD
+  Assets:Brokerage:Robinhood:Options    -1 AAPL_CALL_20260620_00160000 {200.00 USD}
+  Expenses:Trading:Fees                     0.65 USD

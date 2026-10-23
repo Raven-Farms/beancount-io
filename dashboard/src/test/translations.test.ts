@@ -475,6 +475,64 @@ describe("Translation Files Validation", () => {
 
       expect(errors).toHaveLength(0);
     });
+
+    // A line break English lacks is a translation artifact: zh's "Unlimited
+    // collaborators" shipped as "无限合作者\n每个账本最多" on the plan cards.
+    it("should not add line breaks the English message does not have", async () => {
+      const locales = await loadAllLocales();
+      const enTranslations = locales.get("en")!;
+      const breaks = (message: string) => message.split("\n").length - 1;
+      const errors: string[] = [];
+      let compared = 0;
+
+      for (const [lang, translations] of locales) {
+        if (lang === "en") continue;
+        for (const [key, entry] of Object.entries(translations)) {
+          const en = enTranslations[key];
+          if (!en) continue;
+          compared++;
+          if (breaks(entry.message) > breaks(en.message)) {
+            errors.push(`[${lang}] ${key}: ${JSON.stringify(entry.message)}`);
+          }
+        }
+      }
+
+      expect(compared).toBeGreaterThan(10_000);
+      expect(errors).toEqual([]);
+    });
+
+    // fa's "{count} directives" shipped as a bare "{count}", so the plan
+    // banner read "۱٬۰۰۰ ·" with no noun.
+    it("should not reduce a worded message to bare placeholders", async () => {
+      // Sentences assembled from fragments that carry every word themselves.
+      const assembledFromFragments = new Set([
+        "zh:plaid.management.toast.syncAllCompleteDescription",
+      ]);
+      const locales = await loadAllLocales();
+      const enTranslations = locales.get("en")!;
+      const hasWords = (message: string) =>
+        /\p{L}/u.test(message.replace(/\{\w+\}/g, ""));
+      const errors: string[] = [];
+      const exempted = new Set<string>();
+
+      for (const [lang, translations] of locales) {
+        if (lang === "en") continue;
+        for (const [key, entry] of Object.entries(translations)) {
+          const en = enTranslations[key];
+          if (!en || hasWords(entry.message) || !hasWords(en.message)) continue;
+          const id = `${lang}:${key}`;
+          if (assembledFromFragments.has(id)) exempted.add(id);
+          else
+            errors.push(`[${lang}] ${key}: ${JSON.stringify(entry.message)}`);
+        }
+      }
+
+      expect(errors).toEqual([]);
+      // An exemption that no longer matches anything must be deleted.
+      expect(
+        [...assembledFromFragments].filter((id) => !exempted.has(id)),
+      ).toEqual([]);
+    });
   });
 
   describe("Namespace Validation", () => {

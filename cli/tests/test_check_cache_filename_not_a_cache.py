@@ -60,6 +60,16 @@ def test_no_cache_drops_the_ignored_path_in_bea_words(tmp_path: Path) -> None:
     assert "WARNING:root" not in result.stderr
 
 
+def test_auto_drops_the_ignored_path_in_bea_words(tmp_path: Path) -> None:
+    """`--auto` isolates the cache itself, so bea drops the path it added `--no-cache` for (w5/761)."""
+    (tmp_path / "main.bean").write_text(LEDGER)
+    result = _check(tmp_path, "--auto", "--cache-filename", str(tmp_path / "x.cache"))
+    assert result.returncode == 0, result.stderr
+    assert "--auto turns the shared load cache off, so --cache-filename is ignored." in result.stderr
+    assert "WARNING:root" not in result.stderr
+    assert not (tmp_path / "x.cache").exists()
+
+
 def test_a_real_cache_at_the_path_still_works(tmp_path: Path) -> None:
     """A load over Beancount's one-second threshold writes the cache the next check reads."""
     plugins = tmp_path / "plugins"

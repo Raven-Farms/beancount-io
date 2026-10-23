@@ -211,9 +211,13 @@ describe("MCP tool list", () => {
     // requests, file edits, and entry-source edits became three each. Each
     // entry-source tool publishes only its own result shape; the shared
     // union would have put the list about 8 KB over this line.
+    //
+    // 104 KB since w3/m53 (ADR021) added the 44th tool, previewLedgerSetup,
+    // and the setup specification on createLedger: measured at 100,992 bytes
+    // across 44 tools after trimming the setup schema's descriptions.
     const { tools } = await listToolsRaw();
     const bytes = Buffer.byteLength(JSON.stringify(tools), "utf8");
-    expect(bytes).toBeLessThan(96 * 1024);
+    expect(bytes).toBeLessThan(104 * 1024);
   });
 
   it("exposes each operation as its own tool, never behind a selector argument", async () => {
@@ -294,6 +298,8 @@ const RETIRED_TOOLS = [
   "managePullRequests",
   "manageLedgers",
   "manageLedgerCollaborators",
+  // Renamed for what it does: a merge, not a review verdict (w1/172).
+  "approvePullRequest",
   // Withdrawn by directory policy (ADR 019, 2026-10-09; w1/m36).
   "manageApiKeys",
   "listPublicKeys",

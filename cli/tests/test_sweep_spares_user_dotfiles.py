@@ -4,6 +4,10 @@ Before each write the ledger's directory is swept for staging copies a killed
 write left behind. The sweep matched any old regular file named `.bea-*` or
 `..bea-*`, so a user's `.bea-rules.yaml` beside the books was deleted silently
 — also by a write that was refused with "nothing was written".
+
+w5/719 extends the sweep: a candidate whose writer is alive stays locked
+(POSIX) or open (Windows), so the test's simulated in-flight file is held
+for the run; an unlocked one is an orphan however young and goes at once.
 """
 
 from __future__ import annotations
@@ -12,6 +16,8 @@ import os
 import subprocess
 import sys
 import time
+from collections.abc import Iterator
+from contextlib import contextmanager
 from pathlib import Path
 
 import pytest
@@ -33,6 +39,7 @@ USER_FILES = [".bea-rules.yaml", ".bea-notes.md", "..bea-thing", ".beanotes.txt"
 CANDIDATE = ".bea-0123456789abcdef.tmp"
 SIDECAR = f".{CANDIDATE}.picklecache"
 IN_FLIGHT = ".bea-fedcba9876543210.tmp"
+FRESH_ORPHAN = ".bea-aaaaaaaaaaaaaaaa.tmp"
 
 WRITES = {
     "add": (["add", "note", "-a", "Assets:Checking", "--date", "2026-05-02", "-m", "n"], 0, "Added 1 note"),
@@ -55,7 +62,25 @@ def _books(tmp_path: Path) -> Path:
     for name in (*USER_FILES, CANDIDATE, SIDECAR):
         _aged(books / name)
     (books / IN_FLIGHT).write_text("staged\n", encoding="utf-8")
+    (books / FRESH_ORPHAN).write_text("staged\n", encoding="utf-8")
     return books
+
+
+@contextmanager
+def _held(path: Path) -> Iterator[None]:
+    """Hold a candidate the way its writer would, on any platform (w5/719)."""
+    if sys.platform == "win32":
+        with open(path, "rb"):
+            yield
+    else:
+        import fcntl
+
+        fd = os.open(path, os.O_RDWR)
+        try:
+            fcntl.flock(fd, fcntl.LOCK_EX)
+            yield
+        finally:
+            os.close(fd)
 
 
 def _bea(tmp_path: Path, books: Path, *args: str) -> subprocess.CompletedProcess[str]:
@@ -88,7 +113,8 @@ def test_a_write_leaves_the_users_own_dotfiles_beside_the_ledger(tmp_path: Path,
     args, status, said = WRITES[write]
     books = _books(tmp_path)
 
-    result = _bea(tmp_path, books, *args)
+    with _held(books / IN_FLIGHT):
+        result = _bea(tmp_path, books, *args)
 
     assert result.returncode == status, result.stderr
     assert said in " ".join((result.stdout + result.stderr).split())

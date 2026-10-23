@@ -2,7 +2,6 @@ import { useEffect, useMemo, useRef } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { format } from "date-fns";
 import {
   Form,
   FormControl,
@@ -22,34 +21,40 @@ import {
 } from "@/common/components/ui/card";
 import { DatePicker } from "@/common/components/ui/date-picker";
 import {
+  ISO_PATTERN,
+  parseStrictCalendarDate,
+  todayIsoDate,
+} from "@/common/components/ui/date-picker-utils";
+import {
   AccountCombobox,
   CurrencyCombobox,
 } from "@/common/components/ledger-comboboxes";
 import { useTranslations } from "@/common/hooks/use-translations";
+import { usePendingSubmit } from "@/common/hooks/use-pending-submit";
 import { isPositiveDecimalNumber } from "@/common/lib/beancount/decimal-number";
 import type {
   ParsedReceipt,
   ReviewFormData,
 } from "../hooks/use-receipt-workflow";
 
-// Parse the receipt's date, defaulting to today when it's missing or invalid
-// (e.g. the receipt had no printed date, so the backend returned null).
-function toReviewDate(value: string | null): Date {
-  if (value) {
-    const parsed = new Date(value + "T00:00:00");
-    if (!Number.isNaN(parsed.getTime())) return parsed;
-  }
-  return new Date();
+// Keep the receipt's `yyyy-MM-dd` date as that exact day, defaulting to today
+// when it's missing or invalid (e.g. the receipt had no printed date, so the
+// backend returned null). It never round-trips through a local midnight.
+function toReviewDate(value: string | null): string {
+  return (
+    (value && parseStrictCalendarDate(value, ISO_PATTERN)) || todayIsoDate()
+  );
 }
 
 interface ReceiptReviewFormProps {
   ledgerId: string;
   parsed: ParsedReceipt;
   primaryCurrency: string;
-  onSubmit: (data: ReviewFormData) => Promise<void>;
+  /** Resolves `true` once the transaction is written. */
+  onSubmit: (data: ReviewFormData) => Promise<boolean | void>;
   onReset: () => void;
-  isSubmitting: boolean;
-  error?: string | null;
+  /** Why the last Record failed. */
+  error?: string;
 }
 
 export function ReceiptReviewForm({
@@ -58,7 +63,6 @@ export function ReceiptReviewForm({
   primaryCurrency,
   onSubmit,
   onReset,
-  isSubmitting,
   error,
 }: ReceiptReviewFormProps) {
   const { t } = useTranslations();
@@ -66,7 +70,7 @@ export function ReceiptReviewForm({
   const reviewFormSchema = useMemo(
     () =>
       z.object({
-        date: z.date({ message: t("receipt.review.dateRequired") }),
+        date: z.iso.date({ message: t("receipt.review.dateRequired") }),
         payee: z.string().min(1, t("receipt.review.payeeRequired")),
         description: z.string().min(1, t("receipt.review.descriptionRequired")),
         amount: z
@@ -103,6 +107,10 @@ export function ReceiptReviewForm({
     },
   });
 
+  // While Record is pending the review is locked: the request already holds
+  // its values, and an edit made now would be dropped by the success (w4/m48).
+  const { submit, pending } = usePendingSubmit(form, onSubmit);
+
   // Auto-sync documentAccount from expenseAccount
   const expenseAccount = useWatch({
     control: form.control,
@@ -119,9 +127,7 @@ export function ReceiptReviewForm({
 
   // Beancount preview
   const watched = useWatch({ control: form.control });
-  const previewDate = watched.date
-    ? format(watched.date, "yyyy-MM-dd")
-    : "YYYY-MM-DD";
+  const previewDate = watched.date || "YYYY-MM-DD";
   const previewText = [
     `${previewDate} * "${watched.payee || "Payee"}" "${watched.description || "Description"}"`,
     `  ${watched.expenseAccount || "Expenses:Account"}  ${watched.amount || "0.00"} ${watched.currency || primaryCurrency}`,
@@ -130,14 +136,11 @@ export function ReceiptReviewForm({
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)}>
-        {error && (
-          <Alert variant="destructive" className="mb-6">
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
-        )}
-
-        <div className="grid grid-cols-1 gap-2 lg:grid-cols-2 lg:items-start">
+      <form onSubmit={submit}>
+        <fieldset
+          disabled={pending}
+          className="grid min-w-0 grid-cols-1 gap-2 lg:grid-cols-2 lg:items-start"
+        >
           {/* Left column — input fields */}
           <div className="space-y-2">
             <Card>
@@ -336,21 +339,22 @@ export function ReceiptReviewForm({
                 </pre>
               </CardContent>
             </Card>
+            {/* Beside Record, where focus returns after a failure. */}
+            {error && !pending && (
+              <Alert variant="destructive">
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            )}
             <div className="flex justify-end space-x-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={onReset}
-                disabled={isSubmitting}
-              >
+              <Button type="button" variant="outline" onClick={onReset}>
                 {t("receipt.review.uploadDifferentReceipt")}
               </Button>
-              <Button type="submit" loading={isSubmitting}>
+              <Button type="submit" loading={pending}>
                 {t("receipt.review.recordTransaction")}
               </Button>
             </div>
           </div>
-        </div>
+        </fieldset>
       </form>
     </Form>
   );

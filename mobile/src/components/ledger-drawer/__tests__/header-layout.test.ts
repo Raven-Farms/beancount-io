@@ -169,4 +169,27 @@ describe("tab header layout contract", () => {
       expect(buttons(trees[3])[2].props.disabled).toBe(true);
     });
   }
+
+  // w21/246: at AX2 the Transactions tab's header read "Transacti…", because the
+  // title scales with Dynamic Type between two fixed action groups.
+  it("lets the title shrink to fit rather than truncate", () => {
+    fontScale = 2.35;
+    for (const title of ["Transactions", "Transaktionen", "Reports"]) {
+      const tree: Node = LedgerDrawerHeader({ title });
+      const find = (node: Node): Node | undefined =>
+        node.type === "Text" && node.children.includes(title as never)
+          ? node
+          : node.children
+              .filter((child) => typeof child === "object")
+              .map(find)
+              .find(Boolean);
+      const text = find(tree);
+      expect(text !== undefined).toBe(true);
+      expect(text!.props.numberOfLines).toBe(1);
+      expect(text!.props.adjustsFontSizeToFit).toBe(true);
+      // Low enough that the longest title fits the ~190 pt between the groups.
+      expect(text!.props.minimumFontScale <= 0.65).toBe(true);
+    }
+    fontScale = 1;
+  });
 });

@@ -2,6 +2,7 @@ import BigNumber from "bignumber.js";
 import type { DirectiveJson, MetaValueJson } from "@rustledger/wasm";
 import { collectLedgerAccounts } from "./account-list";
 import { divideWithPythonDecimalContext } from "./decimal-context";
+import { documentFilePath } from "./document-validation";
 
 /**
  * Pure directive-walk reports over a parsed `DirectiveJson[]` — the Tier-2
@@ -276,12 +277,16 @@ export function commodityPairsWithPrices(
     priceMap.set(key, perDay);
   });
 
-  // Forward pairs: the direction seen at least as often as its inverse.
+  // Forward pairs: the direction quoted more often than its inverse. Fava
+  // drops both directions of a tie, which left a commodity quoted equally
+  // each way without a pair while the ledger still valued it at market
+  // (w21/208); a tie keeps the one whose base sorts first.
   const forward: Array<[string, string]> = [];
   pairs.forEach(([base, quote], key) => {
     const count = counts.get(key) ?? 0;
     if (count === 0) return; // inverse-only synthetic direction
-    if ((counts.get(pairKey(quote, base)) ?? 0) < count) {
+    const inverse = counts.get(pairKey(quote, base)) ?? 0;
+    if (inverse < count || (inverse === count && base < quote)) {
       forward.push([base, quote]);
     }
   });
@@ -317,6 +322,7 @@ export function commodityPairsWithPrices(
 export interface LedgerDocument {
   date: string;
   account: string;
+  /** Repository-relative, resolved against the declaring file (w4/301). */
   path: string;
   tags: string[];
   links: string[];
@@ -335,7 +341,7 @@ export function collectDocuments(
     .map((directive) => ({
       date: directive.date,
       account: directive.account,
-      path: directive.path,
+      path: documentFilePath(directive),
       tags: directive.tags ?? [],
       links: directive.links ?? [],
       meta: directive.meta ?? {},

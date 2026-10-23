@@ -117,3 +117,87 @@ def test_a_title_only_overlay_in_the_parent_folder_is_no_root(tmp_path: Path) ->
 
     assert result.returncode == 0, result.stderr
     assert "is included by" not in result.stderr
+
+
+def test_a_forecast_plugin_overlay_is_no_root(tmp_path: Path) -> None:
+    """The forecast plugin is exactly what a forecast overlay needs (w5/774)."""
+    (tmp_path / "main.bean").write_text(MAIN)
+    (tmp_path / "forecast.bean").write_text('plugin "fava.plugins.forecast"\ninclude "main.bean"\n' + FORECAST)
+
+    wrong = _bea(tmp_path, *_balance("4000.00 USD"))
+    right = _bea(tmp_path, *_balance("5000.00 USD"))
+
+    assert wrong.returncode == 1 and "accumulated 5000.00 USD" in wrong.stderr, wrong.stderr
+    assert right.returncode == 0, right.stderr
+    assert "is included by" not in right.stderr
+
+
+def test_a_fava_overlay_repeating_an_option_is_no_root(tmp_path: Path) -> None:
+    """An option the ledger already sets is a repeat, not a definition (w5/774)."""
+    (tmp_path / "books").mkdir()
+    (tmp_path / "books" / "main.bean").write_text(MAIN)
+    (tmp_path / "fava.bean").write_text(
+        'option "title" "Household"\noption "operating_currency" "USD"\ninclude "books/main.bean"\n' + FORECAST
+    )
+
+    result = _bea(tmp_path / "books", *_balance("5000.00 USD"))
+
+    assert result.returncode == 0, result.stderr
+    assert "is included by" not in result.stderr
+
+
+def test_a_leaf_below_the_root_stops_below_the_overlay(tmp_path: Path) -> None:
+    """The climb stops at the working ledger, not the overlay above it (w5/774)."""
+    (tmp_path / "main.bean").write_text(MAIN + 'include "2026.bean"\n')
+    (tmp_path / "2026.bean").write_text("; 2026\n")
+    (tmp_path / "forecast.bean").write_text('include "main.bean"\n' + FORECAST)
+
+    result = _bea(tmp_path, "--file", str(tmp_path / "2026.bean"), *_balance("5000.00 USD"))
+
+    assert result.returncode == 0, result.stderr
+    assert "is included by" in result.stderr and "main.bean" in result.stderr
+    assert "forecast.bean" not in result.stderr
+    assert "2026-03-01 balance Assets:Checking  5000.00 USD" in (tmp_path / "2026.bean").read_text()
+
+
+def test_an_unknown_account_is_not_sent_to_the_overlay(books: Path) -> None:
+    """The --into recipe names a defining root, never an overlay (w5/774)."""
+    result = _bea(
+        books,
+        "add",
+        "transaction",
+        "Cafe",
+        "--date",
+        "2026-03-01",
+        "-p",
+        "Expenses:Fodo 5.00 USD",
+        "-p",
+        "Assets:Checking",
+    )
+
+    assert result.returncode == 1, result.stderr
+    assert "forecast.bean" not in result.stdout + result.stderr
+
+
+def test_a_leaf_posting_to_unopened_accounts_still_needs_its_plugin_root(tmp_path: Path) -> None:
+    """A plugin counts when the file posts to accounts it never opens (w5/774)."""
+    (tmp_path / "root.bean").write_text('plugin "beancount.plugins.auto_accounts"\ninclude "leaf.bean"\n')
+    (tmp_path / "leaf.bean").write_text('2026-02-01 * "Pay"\n  Expenses:Food  10 USD\n  Assets:Cash\n')
+
+    result = _bea(
+        tmp_path,
+        "--file",
+        str(tmp_path / "leaf.bean"),
+        "add",
+        "transaction",
+        "Cafe",
+        "--date",
+        "2026-03-01",
+        "-p",
+        "Expenses:Books 5.00 USD",
+        "-p",
+        "Assets:Cash",
+    )
+
+    assert result.returncode == 0, result.stderr
+    assert f"leaf.bean is included by {tmp_path / 'root.bean'}" in result.stderr

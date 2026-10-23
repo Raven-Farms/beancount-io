@@ -74,8 +74,8 @@ def _base(ledger: Path) -> list[str]:
 @pytest.mark.parametrize(
     ("extra", "needle"),
     [
-        (["--tag", "has space"], "--tag: 'has space' is not one tag or link"),
-        (["--link", "bad link"], "--link: 'bad link' is not one tag or link"),
+        (["--tag", "has space"], "--tag: 'has space' is not one tag"),
+        (["--link", "bad link"], "--link: 'bad link' is not one link"),
         (["--flag", "??"], "--flag: '??' is not a flag"),
         # A line break no longer reaches the parser, where it blamed --posting 1 (w1/046).
         (["--tag", "a\n2024-01-01 open Assets:Evil"], "--tag: 'a\\n2024-01-01 open Assets:Evil' is not one tag"),

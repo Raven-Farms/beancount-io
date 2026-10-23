@@ -18,6 +18,7 @@ jest.mock("@/foundation/fava", () => ({
 
 const makeTestContext = (overrides: Partial<IContext> = {}): IContext => ({
   reqHeaders: {},
+  clientIp: "unknown",
   platform: "web",
   config: {} as AppConfig,
   koaCtx: {} as IContext["koaCtx"],

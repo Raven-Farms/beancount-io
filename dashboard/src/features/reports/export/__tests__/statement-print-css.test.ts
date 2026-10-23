@@ -31,6 +31,25 @@ describe("statement print pagination", () => {
   });
 });
 
+describe("statement print amounts", () => {
+  // Stylesheet contract only (jsdom has no print layout); the portrait PDF
+  // render is the end-to-end check (w4/289).
+  it("lets an amount wider than its column wrap instead of clipping", () => {
+    const printBlock = printStyles.slice(printStyles.indexOf("@media print"));
+    const amountRule = printBlock.match(
+      /\.statement-print-amount\s*\{(?<declarations>[^}]*)\}/,
+    )?.groups?.declarations;
+    const cellRule = printBlock.match(
+      /\.statement-print-section td\s*\{(?<declarations>[^}]*)\}/,
+    )?.groups?.declarations;
+
+    expect(amountRule).toBeDefined();
+    expect(amountRule).not.toMatch(/white-space\s*:\s*nowrap/);
+    expect(amountRule).not.toMatch(/overflow\s*:\s*(hidden|clip)/);
+    expect(cellRule).toMatch(/overflow-wrap\s*:\s*anywhere/);
+  });
+});
+
 describe("statement print stylesheet delivery", () => {
   it("rides the inline root stylesheet so the print tree stays hidden in production", () => {
     // The app ships CSS exclusively via the `src/style.css?inline` <style> tag

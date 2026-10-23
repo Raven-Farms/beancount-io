@@ -3,10 +3,6 @@ import { apiKeyTranslations } from "../pages/api-keys/translations";
 
 const jaUserSettings: Record<string, TranslationEntry> = {
   ...apiKeyTranslations.ja,
-  "userSettings.accessUntil": {
-    message: "アクセス期限",
-    description: "Label for access remaining until date",
-  },
   "userSettings.accountDeleted": {
     message: "アカウントが正常に削除されました",
     description: "Success message when account is deleted",
@@ -232,22 +228,9 @@ const jaUserSettings: Record<string, TranslationEntry> = {
     message: "サブスクリプションをキャンセル",
     description: "Button text to cancel subscription",
   },
-  "userSettings.cancelSubscriptionDescription": {
-    message:
-      "サブスクリプションをキャンセルしてよろしいですか？現在の請求期間が終了するまでアクセスを継続できます。",
-    description: "Confirmation dialog description for canceling subscription",
-  },
-  "userSettings.cancelSubscriptionTitle": {
-    message: "サブスクリプションをキャンセルしますか？",
-    description: "Confirmation dialog title for canceling subscription",
-  },
   "userSettings.canceling": {
     message: "キャンセル中...",
     description: "Button text while canceling subscription",
-  },
-  "userSettings.confirmCancel": {
-    message: "はい、キャンセルする",
-    description: "Button text to confirm subscription cancellation",
   },
   "userSettings.failedToCancelSubscription": {
     message: "サブスクリプションのキャンセルに失敗しました",
@@ -369,13 +352,49 @@ const jaUserSettings: Record<string, TranslationEntry> = {
     message: "SSHキー",
     description: "Page title for SSH keys",
   },
+  "userSettings.subscriptionStatus.active": {
+    message: "有効",
+    description:
+      "Billing badge for a subscription whose Stripe status is active: paid and current.",
+  },
+  "userSettings.subscriptionStatus.trialing": {
+    message: "トライアル",
+    description:
+      "Billing badge for a subscription whose Stripe status is trialing: in a free trial.",
+  },
+  "userSettings.subscriptionStatus.past_due": {
+    message: "支払い遅延",
+    description:
+      "Billing badge for a subscription whose Stripe status is past_due: the last renewal failed and Stripe is retrying.",
+  },
+  "userSettings.subscriptionStatus.unpaid": {
+    message: "未払い",
+    description:
+      "Billing badge for a subscription whose Stripe status is unpaid: Stripe stopped retrying a failed renewal.",
+  },
+  "userSettings.subscriptionStatus.incomplete": {
+    message: "未完了",
+    description:
+      "Billing badge for a subscription whose Stripe status is incomplete: the first payment has not completed.",
+  },
+  "userSettings.subscriptionStatus.incomplete_expired": {
+    message: "期限切れ",
+    description:
+      "Billing badge for a subscription whose Stripe status is incomplete_expired: the first payment never completed.",
+  },
+  "userSettings.subscriptionStatus.canceled": {
+    message: "キャンセル済み",
+    description:
+      "Billing badge for a subscription whose Stripe status is canceled: ended.",
+  },
+  "userSettings.subscriptionStatus.paused": {
+    message: "一時停止",
+    description:
+      "Billing badge for a subscription whose Stripe status is paused: paused.",
+  },
   "userSettings.subscription": {
     message: "サブスクリプション",
     description: "Subscription section title",
-  },
-  "userSettings.subscriptionCanceled": {
-    message: "サブスクリプションがキャンセルされました",
-    description: "Message when subscription is already canceled",
   },
   "userSettings.subscriptionCanceledSuccess": {
     message: "サブスクリプションが正常にキャンセルされました",
@@ -384,12 +403,6 @@ const jaUserSettings: Record<string, TranslationEntry> = {
   "userSettings.subscriptionUpgraded": {
     message: "サブスクリプションが正常にアップグレードされました",
     description: "Success message after upgrading subscription",
-  },
-  "userSettings.paymentRequiresAuth": {
-    message:
-      "お支払いには追加認証が必要です。メールまたはカード発行会社をご確認ください。",
-    description:
-      "Message when 3DS authentication is needed for subscription upgrade",
   },
   "userSettings.system": {
     message: "システム",
@@ -479,6 +492,10 @@ const jaUserSettings: Record<string, TranslationEntry> = {
     message: "今月 {used} リクエスト使用済み（無制限）",
     description: "AI CFO usage display for unlimited tier",
   },
+  "userSettings.aiCfoUsageUnavailable": {
+    message: "現在、使用量を表示できません。",
+    description: "Shown in place of AI token usage when its read fails",
+  },
   "userSettings.currentPlan": {
     message: "現在のプラン",
     description: "Badge label for the user's current subscription tier",
@@ -503,10 +520,6 @@ const jaUserSettings: Record<string, TranslationEntry> = {
     message: "{used} / {max} 元帳",
     description: "Ledger usage count display",
   },
-  "userSettings.upgradeYourPlan": {
-    message: "プランをアップグレード",
-    description: "Section header for upgrade tier cards",
-  },
   "userSettings.billing": {
     message: "請求",
     description: "Section header for billing management",
@@ -522,6 +535,10 @@ const jaUserSettings: Record<string, TranslationEntry> = {
   "userSettings.aiTokensPerMonth": {
     message: "{count} AI トークン / 月",
     description: "AI token allowance for a subscription tier",
+  },
+  "userSettings.unlimitedAiTokens": {
+    message: "無制限の AI トークン",
+    description: "Unlimited AI token allowance",
   },
   "userSettings.unlimitedLedgers": {
     message: "無制限の台帳",
@@ -567,6 +584,399 @@ const jaUserSettings: Record<string, TranslationEntry> = {
   "userSettings.fingerprint": {
     message: "指紋",
     description: "Label for an SSH key fingerprint",
+  },
+  "userSettings.yearly": {
+    message: "毎年",
+    description: "Yearly billing option in the billing-cycle toggle",
+  },
+  "userSettings.billingCycle": {
+    message: "請求サイクル",
+    description: "Accessible label for the monthly/yearly billing-cycle toggle",
+  },
+  "userSettings.plans": {
+    message: "プラン",
+    description: "Section header above every plan on the Billing page",
+  },
+  "userSettings.switchToYearly": {
+    message: "年払いに切り替える",
+    description: "Button that moves a monthly subscription to yearly billing",
+  },
+  "userSettings.switchToMonthly": {
+    message: "月払いに切り替える",
+    description: "Button that moves a yearly subscription to monthly billing",
+  },
+  "userSettings.downgrade": {
+    message: "ダウングレード",
+    description: "Button for moving to a lower plan",
+  },
+  "userSettings.contactUs": {
+    message: "お問い合わせ",
+    description: "Enterprise plan call to action and price label",
+  },
+  "userSettings.billedYearly": {
+    message: "年額 {amount}",
+    description: "Total charged once a year; {amount} is a formatted price",
+  },
+  "userSettings.saveYearlyPercent": {
+    message: "{percent}%お得",
+    description: "Badge with the yearly saving; {percent} is a whole number",
+  },
+  "userSettings.payYearlyOffer": {
+    message:
+      "年払いなら年額 {yearly}（月払いでは {monthlyTotal}）で、毎年 {saving} お得です。",
+    description:
+      "Offer on a monthly plan; {yearly}, {monthlyTotal} and {saving} are formatted prices",
+  },
+  "userSettings.perYear": {
+    message: "/年",
+    description: "Price interval suffix for yearly prices",
+  },
+  "userSettings.legacyPrice": {
+    message: "旧料金",
+    description: "Label for an older price an existing subscriber keeps",
+  },
+  "userSettings.checkoutConfirming": {
+    message: "お支払いを確認しています…",
+    description:
+      "Shown while waiting for Stripe to confirm a just-completed checkout",
+  },
+  "userSettings.checkoutDone": {
+    message: "{plan} をご利用中です",
+    description:
+      "Confirmation after checkout; {plan} is a plan name and billing cycle such as 'Premium \u00b7 Yearly'",
+  },
+  "userSettings.checkoutRenews": {
+    message: "{date} に {amount} で更新されます。領収書はメールで届きます。",
+    description:
+      "Renewal line after checkout; {date} is a formatted date and {amount} a formatted price",
+  },
+  "userSettings.checkoutUnlocked": {
+    message: "利用できるようになった内容: {limits}",
+    description: "What the new plan includes; {limits} is a list of quotas",
+  },
+  "userSettings.checkoutPending": {
+    message:
+      "お支払いを受け付けました。1 分ほどでプランが反映されます。更新して確認してください。",
+    description:
+      "Shown when the payment is done but the subscription is not recorded yet",
+  },
+  "userSettings.refresh": {
+    message: "更新",
+    description: "Button that reloads the subscription status",
+  },
+  "userSettings.backToWork": {
+    message: "元のページに戻る",
+    description: "Button that returns to the page where the purchase began",
+  },
+  "userSettings.startUsingPlan": {
+    message: "{plan} を使い始める",
+    description:
+      "Primary button on the checkout confirmation when the purchase did not start at an in-product prompt; opens the ledgers. {plan} is the plan name, e.g. Premium",
+  },
+  "userSettings.checkoutCanceled": {
+    message: "お支払いはキャンセルされました。請求は発生していません。",
+    description:
+      "Notice on Billing after the customer leaves Stripe Checkout without paying",
+  },
+  "userSettings.viewBilling": {
+    message: "お支払い情報を見る",
+    description:
+      "Button that closes the checkout confirmation and shows billing settings",
+  },
+  "userSettings.planChangeTitle": {
+    message: "{plan} に変更",
+    description:
+      "Title of the plan-change sheet; {plan} is a plan and cycle such as 'Premium \u00b7 Yearly'",
+  },
+  "userSettings.planChangePreviewing": {
+    message: "この変更の料金を計算しています…",
+    description: "Shown while the server prices a plan change",
+  },
+  "userSettings.planChangePreviewFailed": {
+    message: "この変更の料金を計算できませんでした。もう一度お試しください。",
+    description: "Shown when the plan-change price could not be loaded",
+  },
+  "userSettings.planChangeStartsToday": {
+    message: "本日から適用されます。",
+    description: "The plan change takes effect immediately",
+  },
+  "userSettings.planChangeDueToday": {
+    message: "本日のお支払い",
+    description: "Label for the amount charged today",
+  },
+  "userSettings.planChangeCredit": {
+    message:
+      "現在のプランの未使用期間分として {credit} のクレジットが含まれます。",
+    description: "Credit for unused time; {credit} is a formatted price",
+  },
+  "userSettings.planChangeNext": {
+    message: "以降は {amount}、次回のお支払いは {date} です。",
+    description:
+      "Next charge; {amount} is a price with its interval and {date} a formatted date",
+  },
+  "userSettings.planChangeChargedTo": {
+    message: "{card} に請求されます",
+    description:
+      "Card the change is charged to; {card} is a card brand and its last four digits",
+  },
+  "userSettings.planChangeWhatYouGet": {
+    message: "追加される内容",
+    description: "Heading above what the new plan adds",
+  },
+  "userSettings.planChangePayAndSwitch": {
+    message: "{amount} を支払って変更",
+    description:
+      "Confirm button; {amount} is the formatted amount charged today",
+  },
+  "userSettings.planChangeContinueToCheckout": {
+    message: "お支払いに進む",
+    description: "Confirm button that opens Stripe Checkout",
+  },
+  "userSettings.planChangeNotNow": {
+    message: "今はしない",
+    description:
+      "Button that closes the plan-change sheet without changing anything",
+  },
+  "userSettings.planChangeCreditNote": {
+    message:
+      "未使用期間は必ずクレジットされるため、二重に支払うことはありません。",
+    description: "Reassurance under the confirm button",
+  },
+  "userSettings.planChangeRefusalCurrent": {
+    message: "すでにこのプランをご利用中です。",
+    description: "The chosen plan is the one the customer already has",
+  },
+  "userSettings.planChangeRefusalSameTier": {
+    message:
+      "このプランを以前の安い料金でご利用中です。変更すると料金が上がるだけです。",
+    description:
+      "The customer keeps an older, cheaper price for the same plan and cycle",
+  },
+  "userSettings.planChangeRefusalMultiple": {
+    message:
+      "アカウントに有効なサブスクリプションが複数あります。プランを変更するにはサポートにお問い合わせください。",
+    description: "The account has duplicate subscriptions and needs support",
+  },
+  "userSettings.planChangeRefusalNoSubscription": {
+    message:
+      "変更できる有効なサブスクリプションがありません。ページを再読み込みしてプランを選択してください。",
+    description: "The subscription ended before the change was confirmed",
+  },
+  "userSettings.planChangeRefusalPastDue": {
+    message:
+      "前回の更新のお支払いが完了しませんでした。「請求を管理」でお支払い方法を更新してから、プランを変更してください。",
+    description:
+      "A plan change is refused until a failed renewal payment is fixed",
+  },
+  "userSettings.planChangeStartsOn": {
+    message:
+      "{date} から適用されます。それまでは {plan} をご利用いただけます。",
+    description:
+      "When a scheduled change takes effect and the plan kept until then",
+  },
+  "userSettings.planChangeNothingToday": {
+    message: "本日のお支払いはありません。",
+    description: "A scheduled change charges nothing today",
+  },
+  "userSettings.planChangeWhatChanges": {
+    message: "{date} に変わること",
+    description:
+      "Heading for the limits and features that change on the effective date",
+  },
+  "userSettings.planChangeLimitCollaborators": {
+    message: "元帳ごとの共同作業者",
+    description: "Row label: collaborators allowed per ledger",
+  },
+  "userSettings.planChangeLimitAiTokens": {
+    message: "月あたりの AI トークン",
+    description: "Row label: AI tokens allowed per month",
+  },
+  "userSettings.planChangeYouHave": {
+    message: "現在 {count}",
+    description: "The reader's current usage beside a limit row",
+  },
+  "userSettings.planChangeOverLimit": {
+    message:
+      "すべての元帳はそのまま残り、引き続き使えます。新しい上限の {max} を下回るまで、新しい元帳は作成できません。",
+    description:
+      "Explains what happens when usage is above the lower plan's ledger limit",
+  },
+  "userSettings.planChangeScheduleDowngrade": {
+    message: "ダウングレードを予約",
+    description:
+      "Button that schedules a downgrade for the end of the paid period",
+  },
+  "userSettings.planChangeScheduleSwitch": {
+    message: "切り替えを予約",
+    description:
+      "Button that schedules a billing-cycle switch for the end of the paid period",
+  },
+  "userSettings.planChangeKeep": {
+    message: "{plan} を継続",
+    description: "Button that keeps the current plan and closes the sheet",
+  },
+  "userSettings.planChangeScheduled": {
+    message: "{date} に予約しました。それまでは何も変わりません。",
+    description: "Toast after a change was scheduled",
+  },
+  "userSettings.planChangeReplacesScheduled": {
+    message:
+      "{date} に予定されている {plan} への変更は、これに置き換わります。",
+    description: "Note that this choice replaces an already scheduled change",
+  },
+  "userSettings.planChangeWithdrawsCancellation": {
+    message: "解約も取り消され、サブスクリプションは継続します。",
+    description: "Note that this choice withdraws a pending cancellation",
+  },
+  "userSettings.planChangeLegacyEnds": {
+    message: "現在の料金はすでに提供終了のため、この変更で終了します。",
+    description: "Note for a subscriber on a price that is no longer offered",
+  },
+  "userSettings.planChangeSplitIntro": {
+    message:
+      "月払いの {plan} は {date} の更新時から開始できます。今日から {plan} にしますか？",
+    description:
+      "Introduces the two options when choosing a higher tier on monthly while on yearly",
+  },
+  "userSettings.planChangeSplitNow": {
+    message: "年払いで今日から {plan} — 今 {amount}",
+    description:
+      "Option: the higher tier today on yearly billing, with the amount due now",
+  },
+  "userSettings.planChangeSplitLater": {
+    message: "{date} に月払いの {plan} へ切り替え — 本日のお支払いなし",
+    description: "Option: the higher tier on monthly from the renewal date",
+  },
+  "userSettings.planChangeAtRenewal": {
+    message: "更新時に適用",
+    description:
+      "Under a plan card whose change waits for the end of the paid period",
+  },
+  "userSettings.planChangeFeaturesEnd": {
+    message: "含まれなくなる機能",
+    description:
+      "Heading above the plan features the lower plan does not include",
+  },
+  "userSettings.planChangeLimitDirectives": {
+    message: "ディレクティブ",
+    description: "Row label: entries (Beancount directives) allowed in total",
+  },
+  "userSettings.scheduledHeading": {
+    message: "予定",
+    description:
+      "Heading of the panel listing what happens at the end of the paid period",
+  },
+  "userSettings.scheduledChangesTo": {
+    message: "{date} に {plan} に変更されます。",
+    description: "A scheduled plan change and its date",
+  },
+  "userSettings.scheduledEnds": {
+    message: "{plan} は {date} に終了します。",
+    description: "A pending cancellation and the date the plan ends",
+  },
+  "userSettings.scheduledKeepCurrent": {
+    message: "現在のプランを継続",
+    description: "Button that undoes a scheduled plan change",
+  },
+  "userSettings.scheduledKept": {
+    message: "プランはそのままです。",
+    description: "Toast after undoing a scheduled plan change",
+  },
+  "userSettings.scheduledKeepFailed": {
+    message:
+      "予定されている変更を取り消せませんでした。もう一度お試しください。",
+    description: "Toast when undoing a scheduled plan change fails",
+  },
+  "userSettings.cancelSheetTitle": {
+    message: "{plan} を解約しますか？",
+    description: "Title of the sheet shown before cancelling",
+  },
+  "userSettings.cancelSheetKeepUntil": {
+    message:
+      "{date} まで {plan} をご利用いただけます。その後は無料プランになります：{limits}。",
+    description:
+      "What the reader keeps until the period ends, and the Free limits afterwards",
+  },
+  "userSettings.cancelSheetPlainText": {
+    message:
+      "帳簿はプレーンテキストなので、いつでもエクスポートできます。何も削除されません。",
+    description: "Reassurance that cancelling deletes nothing",
+  },
+  "userSettings.cancelSheetOtherOptions": {
+    message: "ほかの選択肢",
+    description: "Heading above the cheaper alternative to cancelling",
+  },
+  "userSettings.cancelSheetSwitchToYearly": {
+    message: "年払いに切り替え — 月あたり {price}",
+    description:
+      "Alternative to cancelling: switch to yearly at the per-month price",
+  },
+  "userSettings.cancelSheetDowngradeTo": {
+    message: "{plan} にダウングレード",
+    description: "Alternative to cancelling: the next lower plan",
+  },
+  "userSettings.cancelSheetReason": {
+    message: "主な理由は何ですか？（任意）",
+    description: "Optional question about why the reader cancels",
+  },
+  "userSettings.cancelReasonTooExpensive": {
+    message: "高すぎる",
+    description: "Cancellation reason",
+  },
+  "userSettings.cancelReasonMissingFeatures": {
+    message: "機能が足りない",
+    description: "Cancellation reason",
+  },
+  "userSettings.cancelReasonUnused": {
+    message: "使っていない",
+    description: "Cancellation reason",
+  },
+  "userSettings.cancelReasonSwitchedService": {
+    message: "別のツールに移る",
+    description: "Cancellation reason: moving to another tool",
+  },
+  "userSettings.cancelReasonOther": {
+    message: "その他",
+    description: "Cancellation reason",
+  },
+  "userSettings.planChangeRequiresAction": {
+    message:
+      "このお支払いには銀行の承認が必要です。承認されるまで何も変更されません。承認後、このページを更新してください。",
+    description: "The bank must approve the payment before the change applies",
+  },
+  "userSettings.planChangeApproving": {
+    message: "銀行によるお支払いの承認を待っています…",
+    description:
+      "Shown while Stripe asks the bank to approve a plan change's payment",
+  },
+  "userSettings.planChangeApprovePayment": {
+    message: "お支払いを承認する",
+    description: "Button that opens Stripe's page to approve the payment",
+  },
+  "userSettings.planChangeFailed": {
+    message: "銀行がお支払いを承認しませんでした。何も変更されていません。",
+    description: "The payment was declined and the plan did not change",
+  },
+  "userSettings.planChangeUseAnotherCard": {
+    message: "別のカードを使う",
+    description: "Button that opens billing settings to change the card",
+  },
+  "userSettings.featureAutomaticBackups": {
+    message: "自動バックアップ",
+    description: "Plan feature from the pricing table",
+  },
+  "userSettings.featureAutomationIntegrations": {
+    message: "高度な自動化と連携",
+    description: "Plan feature from the pricing table",
+  },
+  "userSettings.featureOidcSso": {
+    message: "OIDC によるシングルサインオン（SSO）",
+    description:
+      "Plan feature from the pricing table; OIDC and SSO stay as written",
+  },
+  "userSettings.featureMultiEntity": {
+    message: "複数事業体の連結",
+    description: "Plan feature from the pricing table",
   },
 };
 

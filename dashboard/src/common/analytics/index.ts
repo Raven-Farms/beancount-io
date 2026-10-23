@@ -22,7 +22,7 @@ export {
 } from "./track";
 
 // Typed event taxonomy — prefer these over the raw trackEvent for product events.
-export { track, setUserProperties } from "./events";
+export { track, setUserProperties, UPGRADE_SURFACES } from "./events";
 export type {
   AnalyticsEvents,
   AnalyticsEventName,
@@ -30,4 +30,8 @@ export type {
   StandardParams,
   AuthMethod,
   PlanTier,
+  UpgradeSurface,
+  BillingSurface,
+  PlanValue,
+  CancelReason,
 } from "./events";

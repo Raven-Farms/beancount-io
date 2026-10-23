@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { useNavigate } from "@tanstack/react-router";
+import { useNavigate, useRouterState } from "@tanstack/react-router";
 import { useQuery } from "@apollo/client/react";
 import { History } from "lucide-react";
 import { useTranslations } from "@/common/hooks/use-translations";
@@ -8,6 +8,7 @@ import { CommitsList } from "./commits-list";
 import { CommitDetail } from "./commit-detail";
 import { ListCommitsDocument } from "@/graphql/definitions";
 import { Button } from "@/common/components/ui/button";
+import { ReportLoadingState } from "@/common/components/state-components";
 import {
   Sheet,
   SheetContent,
@@ -50,6 +51,19 @@ function CommitsWorkspace({
   const [lastPageSize, setLastPageSize] = useState<number | null>(null);
   const [loadedOlderCount, setLoadedOlderCount] = useState<number | null>(null);
   const [ledgerOwner, ledgerName] = ledgerId.split("/");
+  // Another commit is loading: the layout keeps this workspace mounted, so
+  // the detail pane says so instead of showing the previous diff (w4/246).
+  const pendingCommitSha = useRouterState({
+    select: (state) => {
+      if (!state.isLoading) return undefined;
+      const params = state.pendingMatches?.at(-1)?.params as
+        | { commitSha?: string }
+        | undefined;
+      return params?.commitSha;
+    },
+  });
+  const detailPending =
+    pendingCommitSha !== undefined && pendingCommitSha !== selectedCommitSha;
 
   useEffect(() => {
     active.current = true;
@@ -177,6 +191,7 @@ function CommitsWorkspace({
           selectedCommitSha ? "block" : "hidden",
         )}
         aria-label={t("commits.detailTitle")}
+        aria-busy={detailPending || undefined}
       >
         {selectedCommitSha ? (
           <>
@@ -206,11 +221,15 @@ function CommitsWorkspace({
                 </SheetContent>
               </Sheet>
             </div>
-            <CommitDetail
-              key={`${ledgerId}:${selectedCommitSha}`}
-              ledgerId={ledgerId}
-              commitSha={selectedCommitSha}
-            />
+            {detailPending ? (
+              <ReportLoadingState />
+            ) : (
+              <CommitDetail
+                key={`${ledgerId}:${selectedCommitSha}`}
+                ledgerId={ledgerId}
+                commitSha={selectedCommitSha}
+              />
+            )}
           </>
         ) : (
           <div className="flex h-full items-center justify-center p-4 text-sm text-muted-foreground">

@@ -7,6 +7,9 @@ import type {
   LedgerOptions,
   QueryResult,
 } from "@rustledger/wasm";
+import { locateParseErrors } from "./parse-errors";
+import { restoreEntrySortOrder } from "./entry-sort-order";
+import { dropPaddingWithinTolerance } from "./pad-tolerance";
 import { loadRustledger } from "./loader";
 import { queryResultToRecords, type QueryRecordsResult } from "./mappers";
 import { buildSnapshotCacheKey, CoalescingLruCache } from "./snapshot-cache";
@@ -14,13 +17,18 @@ import { LedgerHandleCache } from "./ledger-handle-cache";
 import {
   applyPlugins,
   captureDirectiveSourceIds,
+  captureDirectiveSourceLocations,
+  captureGeneratedDirectives,
   collectLedgerPlugins,
   getDirectiveSourceId,
   getDirectiveSourceLocation,
   HANDLED_PLUGIN_NAMES,
   inheritDirectiveSourceId,
+  markGeneratedDirective,
   seedDirectiveSourceIds,
   restoreDirectiveSourceIds,
+  restoreDirectiveSourceLocations,
+  restoreGeneratedDirectives,
   localTodayStr,
   neutralizeIncludedOptionsAndPlugins,
   skippedPluginWarning,
@@ -28,14 +36,26 @@ import {
   type DirectiveSourceLocation,
 } from "./plugins";
 import { reconcileDocumentErrors } from "./document-validation";
+import { locateBookErrors } from "./book-errors";
+import {
+  isRawPluginProcessing,
+  locateOptionErrors,
+  reconcileOptionErrors,
+  withoutPadAndBalanceChecks,
+} from "./option-validation";
 import { isDocumentValidationError } from "./document-validation";
 import { reportUrlIncludes } from "./url-include-errors";
+import { parseableFiles } from "./parseable-files";
+import { reportUndecodableSources } from "./undecodable-sources";
+import { collapsedCostOfSumError } from "./cost-of-sum-guard";
+import { atValueError } from "./at-value-guard";
 import { OPTION_LINE_RE } from "./beancount-options";
 import { directiveToText } from "./journal-serialize";
 import {
   buildSourceDetailsProbe,
   sourceDetailsFromProbe,
   type EntrySourceDetails,
+  type SourceSyntax,
 } from "./source-slice";
 import { getRustledgerWorkerPool } from "./rustledger-worker-pool";
 
@@ -91,6 +111,14 @@ export interface LedgerSnapshot {
   directiveCount: number;
   /** Worker-safe provenance, parallel to `directives`; internal engine data. */
   sourceIds?: Array<string | null>;
+  /**
+   * Each directive's declaring file and line, parallel to `directives`, so a
+   * Document path resolves against its own file after the worker clone
+   * (w4/301).
+   */
+  sourceLocations?: Array<DirectiveSourceLocation | null>;
+  /** Which directives are generated copies, parallel to `directives`. */
+  generated?: boolean[];
   /** Complete source index, built only for callers that explicitly request it. */
   sourceDetails?: Record<string, EntrySourceDetails>;
 }
@@ -123,7 +151,10 @@ export async function withLedger<T>(
   fn: (ledger: Ledger) => T,
 ): Promise<T> {
   const mod = await loadRustledger();
-  const ledger = mod.Ledger.fromFiles(files, entryPoint);
+  const ledger = mod.Ledger.fromFiles(
+    parseableFiles(files, entryPoint),
+    entryPoint,
+  );
   try {
     return fn(ledger);
   } finally {
@@ -212,6 +243,7 @@ function mergePaddingTransactions(
     if (!transactions) return;
     transactions.forEach((transaction) => {
       inheritDirectiveSourceId(directive, transaction);
+      markGeneratedDirective(transaction);
       merged.push(transaction);
     });
     pending.delete(key);
@@ -347,23 +379,27 @@ async function transformedValidationErrors(
     .map((error) => remapMaterializedError(error, materialized.sourceByLine));
 }
 
-function mergeSourceDocumentSyntax(
+/**
+ * Restore the tags and links rustledger leaves off a Document (inline ones,
+ * pushed tags) or a Note (all of them, w21/655) from the source.
+ */
+function mergeSourceSyntax(
   directives: DirectiveJson[],
   sourceDetails: ReadonlyMap<string, EntrySourceDetails>,
 ): DirectiveJson[] {
   return directives.map((directive) => {
-    if (directive.type !== "document") return directive;
+    if (directive.type !== "document" && directive.type !== "note") {
+      return directive;
+    }
     const sourceId = getDirectiveSourceId(directive);
     const detail =
       sourceId === undefined ? undefined : sourceDetails.get(sourceId);
+    const own = directive as SourceSyntax;
     const tags = [
-      ...new Set([...(directive.tags ?? []), ...(detail?.documentTags ?? [])]),
+      ...new Set([...(own.tags ?? []), ...(detail?.syntaxTags ?? [])]),
     ];
     const links = [
-      ...new Set([
-        ...(directive.links ?? []),
-        ...(detail?.documentLinks ?? []),
-      ]),
+      ...new Set([...(own.links ?? []), ...(detail?.syntaxLinks ?? [])]),
     ];
     if (tags.length === 0 && links.length === 0) return directive;
     const enriched: DirectiveJson = {
@@ -373,6 +409,34 @@ function mergeSourceDocumentSyntax(
     };
     inheritDirectiveSourceId(directive, enriched);
     return enriched;
+  });
+}
+
+/**
+ * Whether any file declares a `pad`. The engine pads every non-zero difference,
+ * and the parse path drops the padding a balance's tolerance would not (w21/135),
+ * so BQL has to run over that corrected stream or it sums the padded balance the
+ * journal and trial balance do not show (w21/323).
+ */
+function sourceHasPad(files: FileMap): boolean {
+  return Object.values(files).some((source) =>
+    /^\d{4}-\d{2}-\d{2}\s+pad\s/mu.test(source),
+  );
+}
+
+/**
+ * Whether a note may carry tags or links rustledger drops: a note line with a
+ * `#`/`^` token, or a note in a file that pushes tags (w21/655). Cheap and
+ * loose; a false positive only costs the source probe.
+ */
+function sourceHasNoteSyntax(files: FileMap): boolean {
+  return Object.values(files).some((source) => {
+    const notes = source.match(/^\d{4}-\d{2}-\d{2}\s+note\s.*$/gmu);
+    if (notes === null) return false;
+    return (
+      /^pushtag\s/mu.test(source) ||
+      notes.some((line) => /\s[#^][A-Za-z0-9\-_/.]+/u.test(line))
+    );
   });
 }
 
@@ -440,6 +504,15 @@ export async function parseLedgerFiles(
     if (snapshot.sourceIds !== undefined) {
       restoreDirectiveSourceIds(snapshot.directives, snapshot.sourceIds);
     }
+    if (snapshot.sourceLocations !== undefined) {
+      restoreDirectiveSourceLocations(
+        snapshot.directives,
+        snapshot.sourceLocations,
+      );
+    }
+    if (snapshot.generated !== undefined) {
+      restoreGeneratedDirectives(snapshot.directives, snapshot.generated);
+    }
     return Object.freeze({
       ...snapshot,
       errors: Object.freeze(snapshot.errors) as BeancountError[],
@@ -449,6 +522,16 @@ export async function parseLedgerFiles(
             sourceIds: Object.freeze(snapshot.sourceIds) as Array<
               string | null
             >,
+          }
+        : {}),
+      ...(snapshot.generated
+        ? { generated: Object.freeze(snapshot.generated) as boolean[] }
+        : {}),
+      ...(snapshot.sourceLocations
+        ? {
+            sourceLocations: Object.freeze(
+              snapshot.sourceLocations,
+            ) as Array<DirectiveSourceLocation | null>,
           }
         : {}),
       ...(snapshot.sourceDetails
@@ -531,8 +614,21 @@ async function parseLedgerFilesUncached(
     snapshotOf,
   );
 
-  let directives = raw.directives;
-  let errors = raw.errors;
+  // Beancount's same-day order, before plugins and pad expansion walk it: the
+  // engine groups a day by directive kind (w21/134).
+  // A syntax error is reported once per file with no location; find it
+  // (w21/187).
+  const located = locateParseErrors(
+    raw.errors,
+    parseableFiles(stripResult?.strippedFiles ?? scoped, entryPoint),
+    entryPoint,
+    await loadRustledger(),
+  );
+  let directives = restoreEntrySortOrder(
+    raw.directives,
+    stripResult?.strippedFiles ?? scoped,
+  );
+  let errors = located;
   let paddingTransactions = raw.paddingTransactions;
 
   // rustledger 0.21's Document JSON omits inline tags/links. Recover them from
@@ -542,7 +638,8 @@ async function parseLedgerFilesUncached(
   if (
     options.includeSourceDetails === true ||
     hasHandledPlugin ||
-    directives.some((directive) => directive.type === "document")
+    directives.some((directive) => directive.type === "document") ||
+    sourceHasNoteSyntax(files)
   ) {
     const needsCompleteSourceIndex =
       options.includeSourceDetails === true || hasHandledPlugin;
@@ -556,14 +653,14 @@ async function parseLedgerFilesUncached(
       (ledger) => ledger.getDirectives(),
     );
     sourceDetails = sourceDetailsFromProbe(probedDirectives, sourceProbe, {
-      documentsOnly: !needsCompleteSourceIndex,
+      syntaxOnly: !needsCompleteSourceIndex,
     });
   }
   if (applyTs || sourceDetails !== undefined) {
     seedDirectiveSourceIds(directives, sourceDetails);
   }
   if (sourceDetails !== undefined) {
-    directives = mergeSourceDocumentSyntax(directives, sourceDetails);
+    directives = mergeSourceSyntax(directives, sourceDetails);
   }
 
   if (applyTs && stripResult) {
@@ -609,13 +706,37 @@ async function parseLedgerFilesUncached(
   // existence checks always fail. Reconcile them against the real repo file
   // inventory (`repoPaths`), then recompute validity from the resulting errors.
   errors = reconcileDocumentErrors(errors, options.repoPaths);
+  errors = locateOptionErrors(reconcileOptionErrors(errors), files, entryPoint);
+  errors = locateBookErrors(errors, files, entryPoint);
   errors = reportUrlIncludes(errors, files);
+  errors = reportUndecodableSources(errors, files, entryPoint);
 
-  directives = mergePaddingTransactions(directives, paddingTransactions);
+  if (isRawPluginProcessing(files, entryPoint)) {
+    paddingTransactions = [];
+    errors = withoutPadAndBalanceChecks(errors);
+  }
+  const padding = dropPaddingWithinTolerance(
+    directives,
+    paddingTransactions,
+    stripResult?.strippedFiles ?? scoped,
+  );
+  errors = [...errors, ...padding.errors];
+  directives = mergePaddingTransactions(
+    directives,
+    padding.paddingTransactions,
+  );
 
   const capturedSourceIds =
     applyTs || sourceDetails !== undefined
       ? captureDirectiveSourceIds(directives)
+      : undefined;
+  const capturedGenerated =
+    capturedSourceIds !== undefined
+      ? captureGeneratedDirectives(directives)
+      : undefined;
+  const capturedLocations =
+    capturedSourceIds !== undefined
+      ? captureDirectiveSourceLocations(directives)
       : undefined;
   const serializedSourceDetails =
     options.includeSourceDetails === true && sourceDetails !== undefined
@@ -633,6 +754,16 @@ async function parseLedgerFilesUncached(
     ...(capturedSourceIds !== undefined
       ? {
           sourceIds: Object.freeze(capturedSourceIds) as Array<string | null>,
+        }
+      : {}),
+    ...(capturedGenerated !== undefined
+      ? { generated: Object.freeze(capturedGenerated) as boolean[] }
+      : {}),
+    ...(capturedLocations !== undefined
+      ? {
+          sourceLocations: Object.freeze(
+            capturedLocations,
+          ) as Array<DirectiveSourceLocation | null>,
         }
       : {}),
     ...(serializedSourceDetails !== undefined
@@ -688,7 +819,9 @@ export async function queryLedgerFilesResultInProcess(
     HANDLED_PLUGIN_NAMES.has(name),
   );
   const needsMaterializedStream =
-    needsTsPluginStream || sourceHasTaggedDocument(files);
+    needsTsPluginStream ||
+    sourceHasTaggedDocument(files) ||
+    sourceHasPad(files);
   const materialized = needsMaterializedStream
     ? materializeDirectiveStreamWithSourceMap(
         (await parseLedgerFilesInProcess(files, entryPoint)).directives,
@@ -720,7 +853,10 @@ export async function queryLedgerFilesResultInProcess(
     key,
     async () => {
       const mod = await loadRustledger();
-      return mod.Ledger.fromFiles(queryFiles, queryEntryPoint);
+      return mod.Ledger.fromFiles(
+        parseableFiles(queryFiles, queryEntryPoint),
+        queryEntryPoint,
+      );
     },
     (ledger) => {
       if (materialized !== undefined) {
@@ -737,7 +873,14 @@ export async function queryLedgerFilesResultInProcess(
         }
       }
       try {
-        return ledger.query(query);
+        const refused = atValueError(query);
+        if (refused !== undefined) return refused;
+        const result = ledger.query(query);
+        return (
+          collapsedCostOfSumError(query, result, (probe) =>
+            ledger.query(probe),
+          ) ?? result
+        );
       } catch (error) {
         if (isUnsupportedIntegerResultError(error)) {
           return unsupportedIntegerResultQueryError(
@@ -779,6 +922,48 @@ export async function queryLedgerFiles(
 }
 
 /**
+ * Counts by content, so the map one write projects is a hit when it comes back
+ * as the next write's committed ledger, and a commit is counted once however
+ * many writes and push checks ask. Values are numbers: a few hundred entries
+ * cost nothing but their keys.
+ */
+const directiveCountCache = new CoalescingLruCache<number>(256);
+
+/**
+ * How many directives a ledger holds, following `include` from `entryPoint`.
+ * The parse is CPU-proportional to the ledger's size, so request-path callers
+ * use this and it runs in the worker pool, under its queue bound and timeout.
+ * A failed count is not cached.
+ */
+export function countLedgerDirectives(
+  files: FileMap,
+  entryPoint: string,
+): Promise<number> {
+  const key = buildSnapshotCacheKey({
+    files,
+    entryPoint,
+    // WASM-native plugins may read the clock; same rationale as the snapshot cache.
+    effectiveToday: localTodayStr(),
+    repoPaths: undefined,
+    applyTsPlugins: false,
+  });
+  return directiveCountCache.getOrLoad(key, () =>
+    // Jest cannot bootstrap the worker entry; see parseLedgerFiles.
+    process.env.JEST_WORKER_ID !== undefined
+      ? countLedgerDirectivesInProcess(files, entryPoint)
+      : getRustledgerWorkerPool().countDirectives(files, entryPoint),
+  );
+}
+
+/** Worker-local implementation; request-path callers use countLedgerDirectives. */
+export function countLedgerDirectivesInProcess(
+  files: FileMap,
+  entryPoint: string,
+): Promise<number> {
+  return withLedger(files, entryPoint, (ledger) => ledger.directiveCount());
+}
+
+/**
  * Count the top-level directives in a single beancount source string. Mirrors
  * the Python service's `directive_limit.py` free-tier pre-check (which used
  * `beancount.loader.load_string` purely for a count) — the rustledger
@@ -788,9 +973,7 @@ export function countDirectives(
   content: string,
   entryPoint = "main.beancount",
 ): Promise<number> {
-  return withLedger({ [entryPoint]: content }, entryPoint, (ledger) =>
-    ledger.directiveCount(),
-  );
+  return countLedgerDirectivesInProcess({ [entryPoint]: content }, entryPoint);
 }
 
 /** Format a beancount source string with rustledger's canonical alignment. */

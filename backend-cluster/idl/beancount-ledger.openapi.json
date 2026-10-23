@@ -1898,68 +1898,6 @@
         }
       }
     },
-    "/ledgers/{owner}/{repo_name}/archive/{archive}": {
-      "get": {
-        "tags": [
-          "ledger-files"
-        ],
-        "summary": "Get Ledger Archive",
-        "description": "Download a repository archive (e.g., main.zip, main.tar.gz).",
-        "operationId": "getLedgerArchive",
-        "security": [
-          {
-            "HTTPBasic": []
-          },
-          {
-            "APIKeyHeader": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "owner",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Owner"
-            }
-          },
-          {
-            "name": "repo_name",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Repo Name"
-            }
-          },
-          {
-            "name": "archive",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Archive"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response"
-          },
-          "422": {
-            "description": "Validation error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/reports/{owner}/{repo_name}/attributes": {
       "get": {
         "tags": [
@@ -2296,6 +2234,66 @@
             }
           }
         ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SuccessResponse_list_str__"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "reports"
+        ],
+        "summary": "Projected source files",
+        "description": "The files the projected ledger loads (base64 text; null deletes): its include closure, globs included. How a write tells whether a file it routes to would be read.",
+        "operationId": "getProjectedSourceFiles",
+        "parameters": [
+          {
+            "name": "owner",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Owner"
+            }
+          },
+          {
+            "name": "repo_name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Repo Name"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LedgerCheckProjectedFilesOptions"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "Successful Response",
@@ -3376,6 +3374,68 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/SuccessResponse_list_BeancountErrorPublic__"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/reports/{owner}/{repo_name}/entry-ids": {
+      "post": {
+        "tags": [
+          "reports"
+        ],
+        "summary": "Resolve projected entry IDs",
+        "description": "The entry ID of the directive starting on each 1-based line of the projected ledger (base64 text; null deletes), or null where none does. How a write that commits these files reports the hashes it created.",
+        "operationId": "getProjectedEntryIds",
+        "parameters": [
+          {
+            "name": "owner",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Owner"
+            }
+          },
+          {
+            "name": "repo_name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Repo Name"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LedgerProjectedEntryIdsOptions"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SuccessResponse_ProjectedEntryIds_"
                 }
               }
             }
@@ -5215,7 +5275,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/SuccessResponse_NoneType_"
+                  "$ref": "#/components/schemas/SuccessResponse_EntryAddBulkEntriesResult_"
                 }
               }
             }
@@ -5928,6 +5988,44 @@
               "title": "Time"
             },
             "description": "Time filter"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Entries per page; omitted, every entry",
+              "title": "Limit"
+            },
+            "description": "Entries per page; omitted, every entry"
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Entries to skip",
+              "title": "Offset"
+            },
+            "description": "Entries to skip"
           }
         ],
         "responses": {
@@ -7242,6 +7340,48 @@
           }
         }
       }
+    },
+    "/reports/check-files": {
+      "post": {
+        "tags": [
+          "reports"
+        ],
+        "summary": "Check ledger files",
+        "description": "bean-check over a complete set of files that is not a repository yet (base64 text, entry point main.bean), parsed without creating anything. Powers guided-setup previews.",
+        "operationId": "checkLedgerFiles",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LedgerCheckFilesOptions"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SuccessResponse_list_BeancountErrorPublic__"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -7885,6 +8025,22 @@
             ],
             "title": "Hint",
             "description": "The engine's own remediation hint for this error, when it has one."
+          },
+          "severity": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "error",
+                  "warning"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Severity",
+            "description": "`error` for what bean-check fails on; `warning` for what the engine only remarks on. Count only errors. Absent means error."
           }
         },
         "type": "object",
@@ -8627,6 +8783,18 @@
             ],
             "title": "Managed Source",
             "description": "The feed URL when the entry comes from a managed price include (ADR 015), else null. The entry is read-only."
+          },
+          "generated_from": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Generated From",
+            "description": "The entry hash of the source entry when this entry is a copy a plugin or a pad generated from it (amortize_over, forecast, padding), else null. A copy shares its source's text and checksum, so editing or deleting it changes the source and every other copy."
           }
         },
         "type": "object",
@@ -9035,6 +9203,10 @@
             "type": "array",
             "title": "Entries",
             "description": "List of entries to delete"
+          },
+          "allowInvalid": {
+            "type": "boolean",
+            "description": "Delete the entries even when that would add bean-check errors (NEW_LEDGER_ERRORS), instead of refusing it."
           }
         },
         "type": "object",
@@ -9058,6 +9230,14 @@
             "type": "array",
             "title": "Deleted Hashes",
             "description": "Hashes of the deleted entries"
+          },
+          "files": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Files",
+            "description": "Each ledger file the write rewrote, once."
           }
         },
         "type": "object",
@@ -9079,6 +9259,10 @@
             "type": "string",
             "title": "Sha256Sum",
             "description": "SHA256 hash of the current entry source for validation"
+          },
+          "allowInvalid": {
+            "type": "boolean",
+            "description": "Delete the entry even when that would add bean-check errors (NEW_LEDGER_ERRORS), instead of refusing it."
           }
         },
         "type": "object",
@@ -9100,6 +9284,14 @@
             "type": "string",
             "title": "Entry Hash",
             "description": "Hash of the deleted entry"
+          },
+          "files": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Files",
+            "description": "Each ledger file the write rewrote, once."
           }
         },
         "type": "object",
@@ -9575,6 +9767,18 @@
           "allowInvalid": {
             "type": "boolean",
             "description": "Record entries deliberately even when they are unbalanced (UNBALANCED) or would add bean-check errors (NEW_LEDGER_ERRORS), instead of refusing them."
+          },
+          "dryRun": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dryrun",
+            "description": "Run every check — balance, tokens, bean-check, the directive limit — and commit nothing."
           }
         },
         "type": "object",
@@ -11962,11 +12166,23 @@
             "type": "string",
             "title": "Content",
             "description": "Plaintext journal content"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total",
+            "description": "Entries the filters select, before offset and limit"
+          },
+          "truncated": {
+            "type": "boolean",
+            "title": "Truncated",
+            "description": "Whether entries remain after this page"
           }
         },
         "type": "object",
         "required": [
-          "content"
+          "content",
+          "total",
+          "truncated"
         ],
         "title": "PlaintextJournalResponse",
         "description": "Response schema for plaintext journal."
@@ -12361,7 +12577,10 @@
             "description": "Formatted query output as plain text"
           },
           "rowCount": {
-            "type": ["integer", "null"],
+            "type": [
+              "integer",
+              "null"
+            ],
             "minimum": 0,
             "title": "Row Count",
             "description": "Canonical rows from the same query execution, independent of rendered text lines. Omitted or null when unknown."
@@ -13937,6 +14156,10 @@
             "type": "string",
             "title": "New Content",
             "description": "New content for the entry"
+          },
+          "allowInvalid": {
+            "type": "boolean",
+            "description": "Commit the edit even when it would add bean-check errors (NEW_LEDGER_ERRORS), instead of refusing it."
           }
         },
         "type": "object",
@@ -13969,6 +14192,14 @@
             "type": "string",
             "title": "New Entry Hash",
             "description": "The entry's public ID after the commit, re-read from the fresh post-commit parse."
+          },
+          "files": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Files",
+            "description": "Each ledger file the write rewrote, once."
           }
         },
         "type": "object",
@@ -14788,6 +15019,173 @@
           "data"
         ],
         "title": "SuccessResponse[list[ManagedPriceSourcePublic]]"
+      },
+      "LedgerCheckFilesOptions": {
+        "properties": {
+          "files": {
+            "items": {
+              "$ref": "#/components/schemas/LedgerCheckFile"
+            },
+            "type": "array",
+            "title": "Files",
+            "description": "Every file of the ledger; the entry point is main.bean"
+          }
+        },
+        "type": "object",
+        "required": [
+          "files"
+        ],
+        "title": "LedgerCheckFilesOptions",
+        "description": "A complete set of files that is not a repository yet, such as the ledger a guided setup would create."
+      },
+      "LedgerCheckFile": {
+        "properties": {
+          "path": {
+            "type": "string",
+            "title": "Path"
+          },
+          "content": {
+            "type": "string",
+            "title": "Content",
+            "description": "Base64 text"
+          }
+        },
+        "type": "object",
+        "required": [
+          "path",
+          "content"
+        ],
+        "title": "LedgerCheckFile"
+      },
+      "EntryAddBulkEntriesResult": {
+        "properties": {
+          "entry_hashes": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Entry Hashes",
+            "description": "The entry hash each committed entry now carries, in request order; empty for a dry run, or when they could not be resolved after the commit."
+          },
+          "included_files": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Included Files",
+            "description": "Files the write reached outside the include closure, now included from the entry point in the same commit."
+          }
+        },
+        "type": "object",
+        "required": [
+          "entry_hashes",
+          "included_files"
+        ],
+        "title": "EntryAddBulkEntriesResult"
+      },
+      "SuccessResponse_EntryAddBulkEntriesResult_": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success",
+            "default": true
+          },
+          "data": {
+            "$ref": "#/components/schemas/EntryAddBulkEntriesResult"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "title": "SuccessResponse[EntryAddBulkEntriesResult]"
+      },
+      "SourceLineLocation": {
+        "properties": {
+          "path": {
+            "type": "string",
+            "title": "Path"
+          },
+          "line": {
+            "type": "integer",
+            "minimum": 1,
+            "title": "Line",
+            "description": "1-based line the directive starts on."
+          }
+        },
+        "type": "object",
+        "required": [
+          "path",
+          "line"
+        ],
+        "title": "SourceLineLocation"
+      },
+      "LedgerProjectedEntryIdsOptions": {
+        "properties": {
+          "files": {
+            "items": {
+              "$ref": "#/components/schemas/ProjectedFileOverlay"
+            },
+            "type": "array",
+            "title": "Files",
+            "description": "Projected file contents: base64 UTF-8 text, or null to project a deletion."
+          },
+          "locations": {
+            "items": {
+              "$ref": "#/components/schemas/SourceLineLocation"
+            },
+            "type": "array",
+            "maxItems": 200,
+            "title": "Locations"
+          }
+        },
+        "type": "object",
+        "required": [
+          "files",
+          "locations"
+        ],
+        "title": "LedgerProjectedEntryIdsOptions"
+      },
+      "ProjectedEntryIds": {
+        "properties": {
+          "entry_hashes": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Entry Hashes",
+            "description": "One per location, in order; null where no directive starts on that line."
+          }
+        },
+        "type": "object",
+        "required": [
+          "entry_hashes"
+        ],
+        "title": "ProjectedEntryIds"
+      },
+      "SuccessResponse_ProjectedEntryIds_": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success",
+            "default": true
+          },
+          "data": {
+            "$ref": "#/components/schemas/ProjectedEntryIds"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "title": "SuccessResponse[ProjectedEntryIds]"
       }
     },
     "securitySchemes": {

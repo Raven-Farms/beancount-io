@@ -19,6 +19,10 @@ vi.mock("@tanstack/react-router", () => ({
 
 const mutate = vi.hoisted(() => vi.fn());
 vi.mock("@apollo/client/react", () => ({
+  useApolloClient: () => ({
+    query: async () => ({ data: undefined }),
+    cache: { evict: () => true, gc: () => [] },
+  }),
   useMutation: () => [mutate],
   // The target folder already holds main.bean.
   useQuery: () => ({

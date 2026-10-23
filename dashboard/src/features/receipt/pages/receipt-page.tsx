@@ -99,14 +99,14 @@ function ReceiptWorkflow() {
         </div>
       )}
 
-      {(state.step === "review" || state.step === "submitting") && (
+      {state.step === "review" && (
         <ReceiptReviewForm
           ledgerId={ledgerId}
           parsed={state.parsed}
           primaryCurrency={primaryCurrency}
           onSubmit={(data) => workflow.submit(data)}
           onReset={workflow.reset}
-          isSubmitting={state.step === "submitting"}
+          error={state.error}
         />
       )}
 

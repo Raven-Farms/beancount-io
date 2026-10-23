@@ -106,7 +106,8 @@ describe("formatAmount", () => {
   });
 
   it("clamps an absurd scale instead of throwing on Intl's 20-digit cap", () => {
-    expect(formatAmount(1.5, "XYZ", 99)).toBe("1.50 XYZ");
+    // Never throws on Intl's 20-digit cap, and keeps to the digits it has.
+    expect(formatAmount(1.5, "XYZ", 99)).toBe("1.50000000 XYZ");
   });
 });
 
@@ -272,14 +273,133 @@ describe("selectTransactionAmount", () => {
     });
   });
 
-  it("falls back to the largest bucket when no leg quotes a cost", () => {
+  it("reads an exchange with no cost as neutral, in the operating currency", () => {
     const tx = makeTransaction({
       postings: [
         makePosting("Assets:Wallet:BTC", "0.25", "BTC"),
         makePosting("Assets:Checking", "-12000.00"),
       ],
     });
-    expect(entryAmount(tx).currency).toBe("USD");
+    expect(selectTransactionAmount(tx, "USD")).toEqual({
+      text: "$12,000.00",
+      value: 0,
+      currency: "USD",
+    });
+  });
+
+  // w21/571: a split or merger moves no money, yet read as shares gained or lost.
+  describe("a corporate action", () => {
+    it("reads a 10:1 split as a neutral amount, not +90 NVDA", () => {
+      const tx = makeTransaction({
+        postings: [
+          makePosting("Assets:QaNvda", "-10", "NVDA", {
+            number: "1200.00",
+            currency: "USD",
+          }),
+          makePosting("Assets:QaNvda", "100", "NVDA", {
+            number: "120.00",
+            currency: "USD",
+          }),
+        ],
+      });
+      expect(selectTransactionAmount(tx, "USD")).toEqual({
+        text: "100 NVDA",
+        value: 0,
+        currency: "NVDA",
+      });
+    });
+
+    it("reads a merger as neutral too, not -10 OLDCO", () => {
+      const tx = makeTransaction({
+        postings: [
+          makePosting("Assets:QaBroker", "-10", "OLDCO", {
+            number: "100.00",
+            currency: "USD",
+          }),
+          makePosting("Assets:QaBroker", "5", "NEWCO", {
+            number: "200.00",
+            currency: "USD",
+          }),
+        ],
+      });
+      const amount = selectTransactionAmount(tx, "USD");
+      expect(amount && "value" in amount ? amount.value : null).toBe(0);
+      expect(amount && "text" in amount ? amount.text : "").toBe("10 OLDCO");
+    });
+
+    it("leaves a purchase and a sale with cash as they were", () => {
+      const buy = makeTransaction({
+        postings: [
+          makePosting("Assets:QaBroker", "10", "NVDA", {
+            number: "100.00",
+            currency: "USD",
+          }),
+          makePosting("Assets:QaBroker:Cash", "-1000.00"),
+        ],
+      });
+      const amount = selectTransactionAmount(buy, "USD");
+      expect(amount && "value" in amount ? amount.value : 0).not.toBe(0);
+    });
+  });
+
+  // w21/570: a fee or rounding line made the whole USD side read as spent.
+  describe("a currency exchange with a fee or rounding line", () => {
+    const exchange = (...extra: ReturnType<typeof makePosting>[]) =>
+      makeTransaction({
+        postings: [
+          makePosting("Assets:Cash", "-110.00"),
+          {
+            ...makePosting("Assets:QaEurBank", "100.00", "EUR"),
+            price: { number: "1.09", currency: "USD" },
+          },
+          ...extra,
+        ],
+      });
+
+    it("reads only the fee that left, not the cash that moved", () => {
+      expect(
+        selectTransactionAmount(
+          exchange(makePosting("Expenses:QaFees", "1.00")),
+          "USD",
+        ),
+      ).toEqual({ text: "$1.00", value: -1, currency: "USD" });
+    });
+
+    it("reads a rounding income line as the small amount that came in", () => {
+      expect(
+        selectTransactionAmount(
+          exchange(makePosting("Income:Rounding", "-0.01")),
+          "USD",
+        ),
+      ).toEqual({ text: "$0.01", value: 0.01, currency: "USD" });
+    });
+
+    it("stays a neutral exchange when the lines cancel out or are in two currencies", () => {
+      const cancels = selectTransactionAmount(
+        exchange(
+          makePosting("Expenses:QaFees", "1.00"),
+          makePosting("Income:Rounding", "-1.00"),
+        ),
+        "USD",
+      );
+      expect(cancels).toEqual({ text: "$110.00", value: 0, currency: "USD" });
+      const mixed = selectTransactionAmount(
+        exchange(
+          makePosting("Expenses:QaFees", "1.00"),
+          makePosting("Expenses:Other", "2.00", "EUR"),
+        ),
+        "USD",
+      );
+      expect(mixed && "value" in mixed ? mixed.value : null).toBe(0);
+    });
+
+    it("still reads the exchange with no fee as neutral", () => {
+      expect(selectTransactionAmount(exchange(), "USD")).toEqual({
+        text: "$110.00",
+        value: 0,
+        currency: "USD",
+      });
+    });
   });
 
   it("falls back to the largest single posting when no cash accounts exist", () => {
@@ -289,8 +409,46 @@ describe("selectTransactionAmount", () => {
         makePosting("Income:Gifts", "-30.00"),
       ],
     });
-    // Netting would read $0.00 — an Income → Expenses entry still moved $30.
-    expect(entryAmount(tx).value).toBe(30);
+    // Netting would read $0.00 — an Income → Expenses entry still moved $30,
+    // but in no direction: no money entered or left a cash account (w21/003).
+    expect(selectTransactionAmount(tx)).toEqual({
+      text: "$30.00",
+      value: 0,
+      currency: "USD",
+    });
+  });
+
+  it("gives an entry with no cash posting no direction, whichever leg is largest", () => {
+    // One income → many expenses used to read "-", many incomes → one
+    // expense "+": the sign of the largest leg (w21/003).
+    const statement = makeTransaction({
+      postings: [
+        makePosting("Income:Revenue", "-6760", "MUSD"),
+        makePosting("Expenses:Cost", "4000", "MUSD"),
+        makePosting("Expenses:Opex", "2760", "MUSD"),
+      ],
+    });
+    const gathered = makeTransaction({
+      postings: [
+        makePosting("Income:A", "-30.00"),
+        makePosting("Income:B", "-20.00"),
+        makePosting("Expenses:C", "50.00"),
+      ],
+    });
+    const padding = makeTransaction({
+      postings: [
+        makePosting("Equity:OtherComprehensiveIncome", "-42", "MUSD"),
+        makePosting("Equity:Adjustments", "42", "MUSD"),
+      ],
+    });
+    expect(entryAmount(statement)).toEqual({
+      text: "6,760 MUSD",
+      value: 0,
+      currency: "MUSD",
+    });
+    expect(entryAmount(gathered).value).toBe(0);
+    expect(entryAmount(gathered).text).toBe("$50.00");
+    expect(entryAmount(padding).value).toBe(0);
   });
 
   it("skips postings whose amount is not a finite number", () => {
@@ -366,7 +524,7 @@ describe("selectTransactionAmount", () => {
       ],
     });
     expect(selectTransactionAmount(tx)).toEqual({
-      text: "0.00 ETH",
+      text: "0.000 ETH",
       value: 0,
       currency: "ETH",
     });
@@ -488,6 +646,112 @@ describe("selectTransactionAmount", () => {
 // groupToSections
 // ---------------------------------------------------------------------------
 
+// w21/057: the bucket was picked by comparing magnitudes across currencies, so
+// a $500 fare that earned 1500 miles read "+1,500.00 MILES", and an exchange
+// read as an inflow or an outflow depending on which leg carried the `@`.
+describe("selectTransactionAmount: mixed currencies", () => {
+  const withPrice = (
+    account: string,
+    number: string,
+    currency: string,
+    price: { number: string; currency: string },
+  ) => ({ ...makePosting(account, number, currency), price });
+
+  const airline = makeTransaction({
+    postings: [
+      makePosting("Liabilities:CreditCard:Visa", "-500.00"),
+      makePosting("Expenses:Transport", "500.00"),
+      makePosting("Assets:Rewards:Miles", "1500", "MILES"),
+      makePosting("Income:Rewards", "-1500", "MILES"),
+    ],
+  });
+
+  it("shows a card purchase that earns miles as the money spent", () => {
+    for (const operating of ["USD", undefined]) {
+      expect(selectTransactionAmount(airline, operating)).toEqual({
+        text: "$500.00",
+        value: -500,
+        currency: "USD",
+      });
+    }
+  });
+
+  const fxA = makeTransaction({
+    postings: [
+      withPrice("Assets:Bank:Checking", "-100.00", "USD", {
+        number: "150",
+        currency: "JPY",
+      }),
+      makePosting("Assets:Bank:Jpy", "15000", "JPY"),
+    ],
+  });
+  const fxB = makeTransaction({
+    postings: [
+      {
+        ...makePosting("Assets:Bank:Jpy", "15000", "JPY"),
+        price: { number: "100.00", currency: "USD" },
+      },
+      makePosting("Assets:Bank:Checking", "-100.00"),
+    ],
+  });
+
+  it("reads one exchange the same whichever leg carries the price", () => {
+    for (const operating of ["USD", undefined, "JPY"]) {
+      expect(selectTransactionAmount(fxA, operating)).toEqual(
+        selectTransactionAmount(fxB, operating),
+      );
+    }
+    expect(selectTransactionAmount(fxA, "USD")).toEqual({
+      text: "$100.00",
+      value: 0,
+      currency: "USD",
+    });
+    // With no operating currency the first currency by name sizes it.
+    expect(selectTransactionAmount(fxB)).toEqual({
+      text: "15,000 JPY",
+      value: 0,
+      currency: "JPY",
+    });
+  });
+
+  it("keeps a cost-basis buy and sell on their cash side", () => {
+    const buy = makeTransaction({
+      postings: [
+        makePosting("Assets:Broker:AAPL", "10", "AAPL", {
+          number: "150.00",
+          currency: "USD",
+        }),
+        makePosting("Assets:Broker:Cash", "-1500.00"),
+      ],
+    });
+    const sell = makeTransaction({
+      postings: [
+        {
+          ...makePosting("Assets:Broker:AAPL", "-10", "AAPL", {
+            number: "150.00",
+            currency: "USD",
+          }),
+          price: { number: "160.00", currency: "USD" },
+        },
+        makePosting("Assets:Broker:Cash", "1600.00"),
+        makePosting("Income:Gains", "-100.00"),
+      ],
+    });
+    for (const operating of ["USD", undefined]) {
+      expect(selectTransactionAmount(buy, operating)).toEqual({
+        text: "$1,500.00",
+        value: -1500,
+        currency: "USD",
+      });
+      expect(selectTransactionAmount(sell, operating)).toEqual({
+        text: "$1,600.00",
+        value: 1600,
+        currency: "USD",
+      });
+    }
+  });
+});
+
 describe("groupToSections", () => {
   it("returns an empty array for no entries", () => {
     expect(groupToSections([], "").length).toBe(0);
@@ -578,5 +842,51 @@ describe("groupToSections", () => {
     const sections = groupToSections([close, tx], "");
     expect(sections.length).toBe(1);
     expect(sections[0].data.length).toBe(2);
+  });
+});
+
+// w21/070: Home Recent read "+1,500.00 JPY" for the posting account detail
+// shows as "+1,500 JPY".
+describe("formatAmount at the currency's minor unit", () => {
+  it("drops the cents a zero-decimal currency never had", () => {
+    expect(formatAmount(1500, "JPY", amountScale("1500"))).toBe("1,500 JPY");
+    expect(formatAmount(50000, "KRW")).toBe("50,000 KRW");
+    expect(formatAmount(12.345, "KWD", amountScale("12.345"))).toBe(
+      "12.345 KWD",
+    );
+    expect(formatAmount(1.5, "USD", amountScale("1.5"))).toBe("$1.50");
+  });
+});
+
+// w21/601: the headline and the list row padded shares and points to ".00"
+// ("+10.00 GOOG") while Money flow showed what the ledger recorded ("+10 GOOG").
+describe("formatAmount for a commodity that is not a currency", () => {
+  it("keeps the recorded digits", () => {
+    expect(formatAmount(10, "GOOG", 0)).toBe("10 GOOG");
+    expect(formatAmount(1500, "PTS", 0)).toBe("1,500 PTS");
+    expect(formatAmount(0.5, "VTI", 1)).toBe("0.5 VTI");
+    expect(formatAmount(0.004, "ETH", 3)).toBe("0.004 ETH");
+  });
+
+  it("still pads a national currency to its minor unit, and units held at a cost do not pad", () => {
+    expect(formatAmount(1.5, "EUR", 1)).toBe("1.50 EUR");
+    expect(formatAmount(1500, "JPY", 0)).toBe("1,500 JPY");
+    // A ticker that is also a currency code (BND, NOK) is shares when held at a cost.
+    expect(formatAmount(10, "BND", 0, true)).toBe("10 BND");
+    expect(formatAmount(10, "BND", 0)).toBe("10.00 BND");
+  });
+
+  it("reads the Google RSU as +10 GOOG, as Money flow does", () => {
+    const tx = makeTransaction({
+      postings: [
+        makePosting("Assets:QaGoog", "10", "GOOG", {
+          number: "150.00",
+          currency: "USD",
+        }),
+        makePosting("Income:QaRsu", "-1500.00"),
+      ],
+    });
+    const amount = selectTransactionAmount(tx, "USD");
+    expect(amount && "text" in amount ? amount.text : "").toBe("10 GOOG");
   });
 });

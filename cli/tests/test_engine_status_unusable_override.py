@@ -93,3 +93,69 @@ def test_an_override_without_native_tools_beside_it_is_reported(tmp_path: Path) 
     text = _status(tmp_path, str(python))
     assert f"Usable: no — no bean-check, bean-doctor, bean-example, treeify beside {python}" in text.stdout
     assert "cannot load the engine" not in text.stdout
+
+
+def _wrapped(tmp_path: Path, shape: str) -> Path:
+    wrap = tmp_path / "wrap"
+    wrap.mkdir()
+    python = wrap / "python"
+    python.write_text(f'#!/bin/sh\nexec "{sys.executable}" "$@"\n')
+    python.chmod(0o755)
+    for name in ("bean-check", "bean-doctor", "bean-example", "treeify"):
+        tool = wrap / name
+        if shape == "directory":
+            tool.mkdir()
+        elif shape == "mode-644":
+            tool.write_text("#!/bin/sh\nexit 0\n")
+            tool.chmod(0o644)
+        else:
+            tool.symlink_to(Path(sys.executable).parent / name)
+    return python
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="POSIX execute bits")
+@pytest.mark.parametrize(("shape", "problem"), [("mode-644", "not executable"), ("directory", "a directory")])
+def test_native_tools_that_cannot_run_make_the_override_unusable(tmp_path: Path, shape: str, problem: str) -> None:
+    """A directory or a mode-644 script read as present, so status said usable while `check -v` failed (w5/863)."""
+    python = _wrapped(tmp_path, shape)
+    tools = ", ".join(f"{name} ({problem})" for name in ("bean-check", "bean-doctor", "bean-example", "treeify"))
+
+    data = json.loads(_status(tmp_path, str(python), "--json").stdout)["data"]
+    assert data["usable"] is False
+    assert data["unusable"] == f"{tools} cannot run beside {python} ({python.parent})"
+
+    text = _status(tmp_path, str(python))
+    assert f"Usable: no — {tools} cannot run beside {python}" in text.stdout
+
+    ledger = tmp_path / "main.bean"
+    ledger.write_text("2026-01-01 open Assets:Cash USD\n")
+    env = {k: v for k, v in os.environ.items() if not k.startswith("BEA_") and k != "CI"}
+    env.update(
+        BEA_CONFIG_DIR=str(tmp_path / "config"),
+        XDG_CACHE_HOME=str(tmp_path / "cache"),
+        BEA_NO_UPDATE_NOTIFIER="1",
+        BEA_ENGINE_PYTHON=str(python),
+        PYTHONPATH=str(ROOT / "src"),
+    )
+    check = subprocess.run(
+        [sys.executable, "-m", "cli.main", "--file", str(ledger), "check", "-v"],
+        cwd=tmp_path,
+        env=env,
+        stdin=subprocess.DEVNULL,
+        capture_output=True,
+        text=True,
+        timeout=120,
+        check=False,
+    )
+    assert check.returncode == 1, check.stdout + check.stderr
+    assert f"a 'bean-check' that cannot run ({python.parent / 'bean-check'} is {problem})" in check.stderr
+    assert "Errno" not in check.stderr and "--debug" not in check.stderr
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="symlinks need privileges on Windows")
+def test_native_tools_linked_to_real_executables_stay_usable(tmp_path: Path) -> None:
+    python = _wrapped(tmp_path, "symlink")
+
+    data = json.loads(_status(tmp_path, str(python), "--json").stdout)["data"]
+    assert data["usable"] is True
+    assert "unusable" not in data

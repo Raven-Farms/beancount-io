@@ -1,7 +1,9 @@
 import { refreshSubscriptionPeriods } from "../operations/refresh-subscription-periods";
 import {
+  expandedLatestInvoice,
+  pastDueRetry,
   subscriptionTier,
-  SUBSCRIPTION_PERIOD_VERIFICATION_VERSION,
+  holdsVerifiedPeriod,
 } from "./subscription-plan";
 import type Stripe from "stripe";
 import type { DbExecutor } from "@/drizzle/drizzle";
@@ -14,13 +16,31 @@ import {
   userResource,
 } from "@/server/api/authorization";
 import { logger } from "@/shared/logger";
+import { SUBSCRIPTION_CONFIG, TIER_LIMITS, SubscriptionTier } from "./stripe";
+import type { CancellationReason, IStripeService } from "./stripe-service";
+import type {
+  PaymentMethodSummaryView,
+  PlanChangePreviewView,
+} from "../operations/plan-change-preview";
+import type { PlanChangeResultView } from "../operations/plan-change-apply";
+import type { BillingEmailDeps } from "../operations/billing-email";
+import { emailScheduledChange } from "../operations/plan-change-email";
 import {
-  BILLING_CLIENT_ID,
-  SUBSCRIPTION_CONFIG,
-  TIER_LIMITS,
-  SubscriptionTier,
-} from "./stripe";
-import type { IStripeService } from "./stripe-service";
+  pendingChange,
+  type ScheduledChangeNotice,
+  type ScheduledChangeView,
+} from "../operations/plan-change-schedule";
+
+function sameChange(
+  a: ScheduledChangeView | null | undefined,
+  b: ScheduledChangeView,
+): boolean {
+  return (
+    !!a &&
+    a.priceId === b.priceId &&
+    a.effectiveAt.getTime() === b.effectiveAt.getTime()
+  );
+}
 
 interface SubscriptionPriceView {
   id: string;
@@ -55,6 +75,21 @@ interface SubscriptionView {
   canceledAt?: Date;
   cancelAtPeriodEnd: boolean;
   items: SubscriptionItemView[];
+  paymentMethod: PaymentMethodSummaryView | null;
+  scheduledChange: ScheduledChangeView | null;
+  /** With `past_due`: when Stripe next retries the failed renewal. */
+  nextPaymentAttempt: Date | null;
+  latestInvoice: SubscriptionInvoiceView | null;
+}
+
+/** What the subscription's latest invoice collected, discounts applied. */
+interface SubscriptionInvoiceView {
+  id: string;
+  /** Minor units. */
+  amountPaid: number;
+  currency: string;
+  billingReason: string | null;
+  created: Date;
 }
 
 export interface CustomerSubscriptionStatusView {
@@ -86,6 +121,27 @@ export interface TierQuotaView {
   maxDirectives: number;
 }
 
+/** The latest invoice, when the listing expanded it (the full view does). */
+function latestInvoice(
+  subscription: Stripe.Subscription,
+): SubscriptionInvoiceView | null {
+  const invoice = expandedLatestInvoice(subscription);
+  if (!invoice?.id) return null;
+  return {
+    id: invoice.id,
+    amountPaid: invoice.amount_paid,
+    currency: invoice.currency,
+    billingReason: invoice.billing_reason ?? null,
+    created: new Date(invoice.created * 1000),
+  };
+}
+
+/** A past-due renewal's next retry, for the failed-renewal banner. */
+function retryDate(subscription: Stripe.Subscription): Date | null {
+  const retry = pastDueRetry(subscription);
+  return retry === null ? null : new Date(retry * 1000);
+}
+
 export interface ISubscriptionService {
   allTierQuotas(): Promise<TierQuotaView[]>;
   subscriptionStatus(
@@ -96,6 +152,7 @@ export interface ISubscriptionService {
     identity: Identity,
     clientId: string,
     priceId: string,
+    returnTo?: CheckoutReturnTo,
   ): Promise<SubscriptionSessionResultView>;
   createStripePortalSession(
     identity: Identity,
@@ -105,6 +162,7 @@ export interface ISubscriptionService {
     identity: Identity,
     subscriptionId: string,
     clientId: string,
+    reason?: CancellationReason | null,
   ): Promise<SubscriptionActionResultView>;
   resumeSubscription(
     identity: Identity,
@@ -116,6 +174,51 @@ export interface ISubscriptionService {
     clientId: string,
     priceId: string,
   ): Promise<UpgradeSubscriptionResultView>;
+  previewPlanChange(
+    identity: Identity,
+    clientId: string,
+    priceId: string,
+  ): Promise<PlanChangePreviewView>;
+  changePlan(
+    identity: Identity,
+    clientId: string,
+    priceId: string,
+    prorationDate?: number | null,
+  ): Promise<PlanChangeResultView>;
+  cancelScheduledPlanChange(
+    identity: Identity,
+    clientId: string,
+  ): Promise<SubscriptionActionResultView>;
+}
+
+/** Where the Checkout began, so an abandoned one returns there. */
+export type CheckoutReturnTo = "PRICING" | "BILLING";
+
+/**
+ * Where a cancelled Checkout returns. From the pricing page (the default, so
+ * its two-argument call is unchanged): back there with the plan and cycle
+ * still chosen. The pricing page already reads `billing`; `plan` and
+ * `checkout=canceled` are ignored until it reads them too. From the
+ * dashboard: Billing, which says nothing was charged.
+ */
+function checkoutCancelUrl(
+  clientConfig: { cancelUrl: string; portalReturnUrl: string },
+  plan: { tier: SubscriptionTier; interval: "month" | "year" },
+  returnTo: CheckoutReturnTo,
+): string {
+  if (returnTo === "BILLING") {
+    const billing = new URL(clientConfig.portalReturnUrl);
+    billing.searchParams.set("checkout", "canceled");
+    return billing.toString();
+  }
+  const url = new URL(clientConfig.cancelUrl);
+  url.searchParams.set("plan", plan.tier.toLowerCase());
+  url.searchParams.set(
+    "billing",
+    plan.interval === "year" ? "yearly" : "monthly",
+  );
+  url.searchParams.set("checkout", "canceled");
+  return url.toString();
 }
 
 /**
@@ -132,7 +235,40 @@ export class SubscriptionService implements ISubscriptionService {
     private readonly models: Pick<IModels, "paidCustomer" | "user">,
     private readonly db: DbExecutor,
     private readonly authorization: IAuthorizationService,
+    /** Without it, a scheduled change sends no confirmation email. */
+    private readonly planChangeEmail?: Pick<BillingEmailDeps, "sendgrid"> &
+      Pick<IModels, "sentBillingEmail">,
   ) {}
+
+  /**
+   * Confirm a scheduled change by email. The change is already stored in
+   * Stripe, so a lost email is logged and never fails the change.
+   */
+  private async confirmScheduledChange(
+    userId: string,
+    clientId: string,
+    notice: ScheduledChangeNotice,
+  ): Promise<void> {
+    if (!this.planChangeEmail) return;
+    const { sendgrid, sentBillingEmail } = this.planChangeEmail;
+    try {
+      await emailScheduledChange(
+        {
+          sendgrid,
+          models: { user: this.models.user, sentBillingEmail },
+          db: this.db,
+        },
+        "scheduled",
+        userId,
+        clientId,
+        notice,
+      );
+    } catch (error) {
+      logger.warn("Plan change scheduled, but its confirmation email failed", {
+        errorType: error instanceof Error ? error.name : typeof error,
+      });
+    }
+  }
 
   private async authorize(
     identity: Identity,
@@ -170,12 +306,8 @@ export class SubscriptionService implements ISubscriptionService {
         );
       if (
         cached?.userId === userId &&
-        cached.clientId === BILLING_CLIENT_ID &&
         cached.stripeCustomerId &&
-        cached.periodVerificationVersion ===
-          SUBSCRIPTION_PERIOD_VERIFICATION_VERSION &&
-        cached.currentPeriodEnd &&
-        cached.currentPeriodEnd.getTime() > Date.now()
+        holdsVerifiedPeriod(cached)
       ) {
         return { hasActiveSubscription: true, subscriptions: [] };
       }
@@ -186,7 +318,10 @@ export class SubscriptionService implements ISubscriptionService {
       this.models,
       this.db,
       userId,
-      onlyActiveStatus ? "active" : "all",
+      // Only the full view reports a pending change and a failed renewal.
+      onlyActiveStatus
+        ? { status: "current" }
+        : { status: "all", expandForStatus: true },
     );
     const filteredSubscriptions = stripeSubscriptions.filter(
       (subscription) =>
@@ -221,6 +356,11 @@ export class SubscriptionService implements ISubscriptionService {
     };
     const subscriptionsResults = await Promise.allSettled(
       filteredSubscriptions.map(async (subscription) => {
+        // Never throws, so it can run alongside the item lookups.
+        const paymentMethod = this.stripe.defaultCard(
+          subscription.clientId,
+          subscription,
+        );
         const itemsResults = await Promise.allSettled(
           subscription.items.data.map(async (item) => {
             const { price } = item;
@@ -281,6 +421,13 @@ export class SubscriptionService implements ISubscriptionService {
             : undefined,
           cancelAtPeriodEnd: subscription.cancel_at_period_end,
           items,
+          paymentMethod: await paymentMethod,
+          scheduledChange: pendingChange(
+            subscription,
+            SUBSCRIPTION_CONFIG[subscription.clientId]?.plans ?? [],
+          ),
+          nextPaymentAttempt: retryDate(subscription),
+          latestInvoice: latestInvoice(subscription),
         } satisfies SubscriptionView;
       }),
     );
@@ -300,6 +447,7 @@ export class SubscriptionService implements ISubscriptionService {
     identity: Identity,
     clientId: string,
     priceId: string,
+    returnTo: CheckoutReturnTo = "PRICING",
   ): Promise<SubscriptionSessionResultView> {
     await this.authorize(
       identity,
@@ -329,6 +477,14 @@ export class SubscriptionService implements ISubscriptionService {
           message: `Plan configuration not found for price ID: ${priceId}`,
         };
       }
+      // Still billed to the subscribers on it, never sold again.
+      if (planConfig.retired) {
+        return {
+          success: false,
+          message:
+            "This price is no longer offered. Choose a plan again on the pricing page.",
+        };
+      }
 
       const stripe = this.stripe.getStripeInstance(clientId);
       const existingCustomer =
@@ -337,12 +493,34 @@ export class SubscriptionService implements ISubscriptionService {
           userId,
           clientId,
         );
+      if (existingCustomer?.stripeCustomerId) {
+        // A second Checkout would bill the customer twice; plan changes go
+        // through changePlan. The pricing page only offers Checkout to
+        // visitors without a subscription, so this catches races and stale
+        // pages rather than an ordinary path.
+        const current = await this.stripe.listSubscriptions(userId, {
+          status: "current",
+          bindings: [existingCustomer],
+        });
+        if (
+          current.some(
+            (subscription) =>
+              subscriptionTier(subscription) !== SubscriptionTier.FREE,
+          )
+        ) {
+          return {
+            success: false,
+            message:
+              "You already have an active subscription. Change your plan in Billing settings.",
+          };
+        }
+      }
       const sharedSession = {
         line_items: [{ price: priceId, quantity: 1 }],
         allow_promotion_codes: true,
         mode: planConfig.type,
         success_url: clientConfig.successUrl,
-        cancel_url: clientConfig.cancelUrl,
+        cancel_url: checkoutCancelUrl(clientConfig, planConfig, returnTo),
         metadata: { userId, clientId },
         ...(planConfig.type === "subscription"
           ? { subscription_data: { metadata: { userId, clientId } } }
@@ -393,6 +571,7 @@ export class SubscriptionService implements ISubscriptionService {
     identity: Identity,
     subscriptionId: string,
     clientId: string,
+    reason?: CancellationReason | null,
   ): Promise<SubscriptionActionResultView> {
     await this.authorize(
       identity,
@@ -402,6 +581,7 @@ export class SubscriptionService implements ISubscriptionService {
       subscriptionId,
       identity.userId,
       clientId,
+      reason,
     );
   }
 
@@ -431,5 +611,59 @@ export class SubscriptionService implements ISubscriptionService {
       AUTHORIZATION_ACTIONS.USER_BILLING_SUBSCRIPTION_UPGRADE,
     );
     return this.stripe.upgradeSubscription(identity.userId, clientId, priceId);
+  }
+
+  public async previewPlanChange(
+    identity: Identity,
+    clientId: string,
+    priceId: string,
+  ): Promise<PlanChangePreviewView> {
+    await this.authorize(
+      identity,
+      AUTHORIZATION_ACTIONS.USER_BILLING_PLAN_CHANGE_PREVIEW,
+    );
+    return this.stripe.previewPlanChange(identity.userId, clientId, priceId);
+  }
+
+  public async changePlan(
+    identity: Identity,
+    clientId: string,
+    priceId: string,
+    prorationDate?: number | null,
+  ): Promise<PlanChangeResultView> {
+    await this.authorize(
+      identity,
+      AUTHORIZATION_ACTIONS.USER_BILLING_PLAN_CHANGE_APPLY,
+    );
+    const { scheduledNotice, ...result } = await this.stripe.changePlan(
+      identity.userId,
+      clientId,
+      priceId,
+      prorationDate,
+    );
+    // A confirm that leaves the schedule as it was (a double click) announces
+    // nothing new.
+    if (
+      scheduledNotice &&
+      !sameChange(scheduledNotice.previous, scheduledNotice.change)
+    ) {
+      await this.confirmScheduledChange(
+        identity.userId,
+        clientId,
+        scheduledNotice,
+      );
+    }
+    return result;
+  }
+
+  public async cancelScheduledPlanChange(
+    identity: Identity,
+    clientId: string,
+  ): Promise<SubscriptionActionResultView> {
+    await this.authorize(
+      identity,
+      AUTHORIZATION_ACTIONS.USER_BILLING_PLAN_CHANGE_CANCEL,
+    );
+    return this.stripe.cancelScheduledPlanChange(identity.userId, clientId);
   }
 }

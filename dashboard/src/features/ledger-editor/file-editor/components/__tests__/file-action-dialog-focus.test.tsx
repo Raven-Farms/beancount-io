@@ -75,7 +75,12 @@ function FilesDestination() {
 
 async function setup(
   language: "en" | "de" = "en",
-  deleteNavigation: "none" | "immediate" | "held" = "none",
+  deleteNavigation:
+    | "none"
+    | "immediate"
+    | "held"
+    | "fail"
+    | "heldFail" = "none",
 ) {
   const localization = createLocalization();
   await localization.changeLanguage(language);
@@ -83,8 +88,14 @@ async function setup(
   const pendingDelete = new Promise<void>((resolve) => {
     finishDelete = resolve;
   });
+  let failDelete!: () => void;
+  const pendingFailure = new Promise<void>((_, reject) => {
+    failDelete = () => reject(new Error("Connection problem"));
+  });
   const onDelete = vi.fn(async () => {
     if (deleteNavigation === "none") return;
+    if (deleteNavigation === "fail") throw new Error("Connection problem");
+    if (deleteNavigation === "heldFail") return pendingFailure;
     if (deleteNavigation === "held") await pendingDelete;
     await router.navigate({ to: "/files" });
   });
@@ -154,6 +165,7 @@ async function setup(
     openMenu,
     openDelete,
     finishDelete,
+    failDelete,
   };
 }
 
@@ -239,7 +251,8 @@ describe("file actions menu-launched Delete dialog focus", () => {
     await drainRadixFocus();
     expect(onDelete).toHaveBeenCalledTimes(1);
     expect(router.state.location.pathname).toBe("/file");
-    expect(opener).not.toHaveFocus();
+    // Pending, the reader keeps a usable place, not the body (w4/306).
+    expect(opener).toHaveFocus();
 
     await act(async () => finishDelete());
     const heading = await screen.findByRole("heading", {
@@ -250,5 +263,100 @@ describe("file actions menu-launched Delete dialog focus", () => {
     expect(opener).not.toBeInTheDocument();
     expect(heading).toHaveFocus();
     expect(onDelete).toHaveBeenCalledTimes(1);
+  });
+
+  /**
+   * A failed delete took the success-only focus path: the dialog closed,
+   * focus fell to the body and the next Tab reached the skip link (w4/306).
+   */
+  describe("when the deletion fails", () => {
+    async function confirm(dialog: HTMLElement, t: (key: string) => string) {
+      const user = userEvent.setup();
+      await user.tab();
+      expect(
+        within(dialog).getByRole("button", { name: t("common.delete") }),
+      ).toHaveFocus();
+      await user.keyboard("{Enter}");
+    }
+
+    it("returns to the file actions after an immediate rejection", async () => {
+      const { user, t, opener, onDelete, router, openDelete } = await setup(
+        "en",
+        "fail",
+      );
+      await confirm(await openDelete(), t);
+      await waitFor(() =>
+        expect(screen.queryByRole("dialog")).not.toBeInTheDocument(),
+      );
+      await drainRadixFocus();
+      expect(onDelete).toHaveBeenCalledTimes(1);
+      expect(router.state.location.pathname).toBe("/file");
+      expect(opener).toHaveFocus();
+
+      // A retry from there succeeds once and leaves for Files.
+      onDelete.mockImplementationOnce(async () => {
+        await router.navigate({ to: "/files" });
+      });
+      await user.keyboard("{Enter}");
+      await screen.findByRole("menu");
+      await user.keyboard("{End}");
+      await user.keyboard("{Enter}");
+      const dialog = await screen.findByRole("dialog", {
+        name: t("ledgerEditor.deleteFileTitle"),
+      });
+      await waitFor(() =>
+        expect(
+          within(dialog).getByRole("button", { name: t("common.cancel") }),
+        ).toHaveFocus(),
+      );
+      await confirm(dialog, t);
+      expect(
+        await screen.findByRole("heading", {
+          level: 1,
+          name: t("ledgerEditor.files"),
+        }),
+      ).toBeInTheDocument();
+      expect(onDelete).toHaveBeenCalledTimes(2);
+    });
+
+    it("keeps the actions focused through a held request that then fails", async () => {
+      const { t, opener, openDelete, failDelete, router } = await setup(
+        "en",
+        "heldFail",
+      );
+      await confirm(await openDelete(), t);
+      await waitFor(() =>
+        expect(screen.queryByRole("dialog")).not.toBeInTheDocument(),
+      );
+      await drainRadixFocus();
+      expect(opener).toHaveFocus();
+
+      await act(async () => failDelete());
+      await drainRadixFocus();
+      expect(router.state.location.pathname).toBe("/file");
+      expect(opener).toHaveFocus();
+    });
+
+    it("keeps a focus the reader chose while the request was pending", async () => {
+      const { t, opener, openDelete, failDelete } = await setup(
+        "en",
+        "heldFail",
+      );
+      await confirm(await openDelete(), t);
+      await waitFor(() =>
+        expect(screen.queryByRole("dialog")).not.toBeInTheDocument(),
+      );
+      await drainRadixFocus();
+      const elsewhere = document.createElement("button");
+      elsewhere.textContent = "elsewhere";
+      document.body.appendChild(elsewhere);
+      elsewhere.focus();
+
+      await act(async () => failDelete());
+      await drainRadixFocus();
+      expect(elsewhere).toHaveFocus();
+      expect(opener).not.toHaveFocus();
+      elsewhere.remove();
+    });
   });
 });

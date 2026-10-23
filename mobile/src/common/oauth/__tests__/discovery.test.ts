@@ -95,6 +95,97 @@ describe("OAuth discovery", () => {
     await expectFailure(discoverOAuthServer(serverUrl, fetcher));
   });
 
+  // w21/214: every mismatch read as "does not expose the required API", with
+  // the address the server names itself by never shown.
+  describe("what an incompatible server says that the user can act on", () => {
+    const detailOf = async (
+      selected: string,
+      fetcher: typeof fetch,
+    ): Promise<unknown> => {
+      try {
+        await discoverOAuthServer(selected, fetcher);
+        return "resolved";
+      } catch (error: unknown) {
+        return error instanceof OAuthDiscoveryError ? error.detail : "other";
+      }
+    };
+    const scopes = ["ledger.read", "ledger.write", "ledger.admin"];
+
+    it("offers the address a mismatched server identifies as", async () => {
+      // The API address of a deployment whose issuer is the app domain.
+      const fetcher = (async () =>
+        response({
+          resource: "https://app.example.test/v1",
+          authorization_servers: ["https://app.example.test"],
+          scopes_supported: scopes,
+        })) as typeof fetch;
+      expect(await detailOf("https://api.example.test/", fetcher)).toEqual({
+        reason: "mismatch",
+        canonicalUrl: "https://app.example.test/",
+      });
+    });
+
+    it("offers the issuer when only the authorization server differs", async () => {
+      const fetcher = (async () =>
+        response({
+          resource: "https://api.example.test/v1",
+          authorization_servers: ["https://app.example.test"],
+          scopes_supported: scopes,
+        })) as typeof fetch;
+      expect(await detailOf("https://api.example.test/", fetcher)).toEqual({
+        reason: "mismatch",
+        canonicalUrl: "https://app.example.test/",
+      });
+    });
+
+    it("offers no address that the app would not accept", async () => {
+      for (const claimed of [
+        "javascript:alert(1)",
+        "http://plain.example.test",
+        "https://user:pw@app.example.test",
+      ]) {
+        const fetcher = (async () =>
+          response({
+            resource: `${claimed}/v1`,
+            authorization_servers: [claimed],
+            scopes_supported: scopes,
+          })) as typeof fetch;
+        expect(await detailOf("https://api.example.test/", fetcher)).toBe(
+          undefined,
+        );
+      }
+    });
+
+    it("names a server that is not yet set up for sign-in", async () => {
+      const fetcher = (async () =>
+        ({
+          ok: false,
+          status: 503,
+          json: async () => ({ error: "oauth_not_configured" }),
+        }) as Response) as typeof fetch;
+      expect(await detailOf(serverUrl, fetcher)).toEqual({
+        reason: "not_configured",
+      });
+    });
+
+    it("keeps the generic message for a server that is not Beancount.io", async () => {
+      const notFound = (async () =>
+        ({
+          ok: false,
+          status: 404,
+          json: async () => ({}),
+        }) as Response) as typeof fetch;
+      expect(await detailOf(serverUrl, notFound)).toBe(undefined);
+      const otherUnavailable = (async () =>
+        ({
+          ok: false,
+          status: 503,
+          json: async () => ({ error: "maintenance" }),
+        }) as Response) as typeof fetch;
+      expect(await detailOf(serverUrl, otherUnavailable)).toBe(undefined);
+    });
+  });
+
   it("rejects wrong-origin endpoints, implicit flow, and missing S256", async () => {
     for (const mutate of [
       (metadata: Record<string, unknown>) => {

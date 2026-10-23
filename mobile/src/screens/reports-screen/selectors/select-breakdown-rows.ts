@@ -11,7 +11,7 @@ export const OTHER_ACCOUNT = "__other__";
  *
  * Passthrough when there would be at most one extra row (`items.length <= n + 1`):
  * bucketing a single leftover into "Other" only hides a row behind a tap for no
- * gain. `otherLabel` is injected (kept i18n-free so this stays a pure function).
+ * gain. The same holds when only one non-negative row is left to fold. `otherLabel` is injected (kept i18n-free so this stays a pure function).
  * `otherAccount` defaults to `OTHER_ACCOUNT`; the Sankey passes distinct ids so
  * the income and expense tails do not collide as one node.
  *
@@ -29,11 +29,72 @@ export function topNWithOther(
   }
   const head = items.slice(0, n);
   const rest = items.slice(n);
-  const value = rest.reduce((sum, row) => sum + row.value, 0);
+  // Only spending folds: a net-refunded row netted against the tail made
+  // "Other" read $10 while hiding $500 of travel behind a -$490 return, and the
+  // cash-flow chart keeps refunds as their own flow (w21/371). Those rows stay
+  // visible after it.
+  const folded = rest.filter((row) => row.value >= 0);
+  const refunded = rest.filter((row) => row.value < 0);
+  if (folded.length <= 1) {
+    return items;
+  }
+  const value = folded.reduce((sum, row) => sum + row.value, 0);
   return [
     ...head,
-    { account: otherAccount, name: otherLabel, value, children: rest },
+    { account: otherAccount, name: otherLabel, value, children: folded },
+    ...refunded,
   ];
+}
+
+/**
+ * What the shares are divided by: the sum of the rows that count towards one.
+ * The headline is the net total, so with a refunded category in the period
+ * (Food 300, Shopping 200, a TV return -100) the section reads $400 and the
+ * shares came out 75% + 50% = 125%. Dividing by the positive rows gives 60% and
+ * 40% (w21/370). Zero when no row is positive, which leaves no shares at all.
+ */
+export function shareBase(rows: readonly { value: number }[]): number {
+  return rows.reduce((sum, row) => sum + Math.max(0, row.value), 0);
+}
+
+/**
+ * The whole-percent share each non-negative row prints, by largest remainder:
+ * every row keeps the integer part of its share and the points still owed go to
+ * the largest fractional parts, so the printed shares add up to exactly 100
+ * (three equal categories read 34 + 33 + 33, not 33 three times) (w21/373).
+ * Negative rows have no entry. Empty when nothing is positive.
+ */
+export function roundedShares(
+  rows: readonly { account: string; value: number }[],
+): Map<string, number> {
+  const shares = new Map<string, number>();
+  const base = shareBase(rows);
+  if (base <= 0) return shares;
+  const counted = rows.filter((row) => row.value >= 0);
+  const exact = counted.map((row) => (row.value / base) * 100);
+  const whole = exact.map((pct) => Math.floor(pct + 1e-9));
+  let owed = 100 - whole.reduce((sum, n) => sum + n, 0);
+  const order = exact
+    .map((pct, index) => ({ index, fraction: pct - whole[index] }))
+    .sort((a, b) => b.fraction - a.fraction || a.index - b.index);
+  for (const { index } of order) {
+    if (owed <= 0) break;
+    whole[index] += 1;
+    owed -= 1;
+  }
+  counted.forEach((row, index) => shares.set(row.account, whole[index]));
+  return shares;
+}
+
+/**
+ * A top-level row's share of its section, in percent, or `null` when it has
+ * none worth stating: a section that nets to zero or below, or a net-refunded
+ * row. Those used to print and speak a literal "0%" beside a lone -$250.00
+ * clawback that was the whole section (w21/039).
+ */
+export function breakdownShare(value: number, total: number): number | null {
+  if (total <= 0 || value < 0) return null;
+  return Math.max(0, Math.min(100, (value / total) * 100));
 }
 
 /**

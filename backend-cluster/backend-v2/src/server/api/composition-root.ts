@@ -922,9 +922,46 @@ export function assembleMcpRegistry(
  * already decided — strict, or with its own catchall — is left alone.
  */
 function refusingUnknownArguments(schema: ZodTypeAny): ZodTypeAny {
-  return schema instanceof z.ZodObject && schema.def.catchall === undefined
-    ? schema.strict()
-    : schema;
+  // Nested objects too, through arrays, optionals, defaults and unions: a
+  // misspelt `startLine` in `readLedgerFiles` items was dropped and the whole
+  // file returned, and a misspelt `sourceAccount` in a bank import booked
+  // rows against the default account (w23/057). Cloning keeps each schema's
+  // own checks and defaults.
+  if (schema instanceof z.ZodObject) {
+    if (schema.def.catchall !== undefined) return schema;
+    const shape = Object.fromEntries(
+      Object.entries(schema.shape).map(([key, value]) => [
+        key,
+        refusingUnknownArguments(value as ZodTypeAny),
+      ]),
+    );
+    return schema.clone({ ...schema.def, shape, catchall: z.never() });
+  }
+  if (schema instanceof z.ZodArray) {
+    return schema.clone({
+      ...schema.def,
+      element: refusingUnknownArguments(schema.def.element as ZodTypeAny),
+    });
+  }
+  if (
+    schema instanceof z.ZodOptional ||
+    schema instanceof z.ZodNullable ||
+    schema instanceof z.ZodDefault
+  ) {
+    return schema.clone({
+      ...schema.def,
+      innerType: refusingUnknownArguments(schema.def.innerType as ZodTypeAny),
+    } as never);
+  }
+  if (schema instanceof z.ZodUnion) {
+    return schema.clone({
+      ...schema.def,
+      options: schema.def.options.map((option) =>
+        refusingUnknownArguments(option as ZodTypeAny),
+      ),
+    } as never);
+  }
+  return schema;
 }
 
 /** The catch-all template's name, in `resources/templates/list` and the logs. */

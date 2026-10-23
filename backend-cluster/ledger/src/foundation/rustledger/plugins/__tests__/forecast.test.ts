@@ -1,6 +1,7 @@
 import type { DirectiveJson, LedgerOptions } from "@rustledger/wasm";
 import { getDirectiveSourceId, seedDirectiveSourceIds } from "../index";
 import { forecast, MAX_FORECAST_OCCURRENCES } from "../forecast";
+import { isGeneratedDirective } from "../provenance";
 
 type Transaction = Extract<DirectiveJson, { type: "transaction" }>;
 
@@ -311,6 +312,32 @@ describe("fava.plugins.forecast — ordering and resource bounds", () => {
     ]);
     expect(
       result.directives.some((directive) => directive.date.includes("NaN")),
+    ).toBe(false);
+  });
+});
+
+// w21/443: an occurrence shares its template's identity, so clients must be told
+// it is a copy; the template itself and a markerless `#` entry are not.
+describe("forecast provenance", () => {
+  it("marks each occurrence as generated, not the entries it passes through", () => {
+    const regular = transaction("2024-01-01", "Rent", { flag: "*" });
+    const markerless = transaction("2024-02-01", "Planned");
+    const template = transaction(
+      "2024-06-01",
+      "Power [MONTHLY REPEAT 3 TIMES]",
+    );
+    const out = run([regular, markerless, template]);
+    const occurrences = out.filter(
+      (directive) =>
+        directive.type === "transaction" && directive.narration === "Power",
+    );
+    expect(occurrences.length).toBeGreaterThan(0);
+    expect(occurrences.every((entry) => isGeneratedDirective(entry))).toBe(
+      true,
+    );
+    expect(isGeneratedDirective(regular)).toBe(false);
+    expect(
+      out.some((entry) => entry === markerless && isGeneratedDirective(entry)),
     ).toBe(false);
   });
 });

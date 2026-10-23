@@ -446,10 +446,6 @@ const deJournal: Record<string, TranslationEntry> = {
     message: "Ausstehend",
     description: "Pending transaction status",
   },
-  "journal.blankStatus": {
-    message: "(leer)",
-    description: "Blank transaction status option",
-  },
   "journal.addPosting": {
     message: "Buchungszeile hinzufügen",
     description: "Accessible name for adding a transaction posting row",

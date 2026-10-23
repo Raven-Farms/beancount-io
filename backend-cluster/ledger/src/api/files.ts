@@ -3,23 +3,21 @@ import type { ContentsResponse } from "@/features/gitea/client/gitea-api";
 import {
   authMiddleware,
   giteaClientForRequest,
-  type RequestAuth,
   directiveLimitExempt,
 } from "@/server/auth";
 import { successResponse } from "@/server/envelope";
 import { checkDirectiveLimitForFileChanges } from "@/core/directive-limit";
-import { config } from "@/config";
-import { DomainError, ErrorCategory, NotFoundError } from "@/shared/errors";
 import { NotFoundDetailError } from "@/server/py-errors";
-import { assertSafeRepoPath, toSafeRepoUrlPath } from "@/shared/safe-repo-path";
-import { assertSafeArchiveName } from "@/shared/safe-archive-name";
-
-/** Gitea archive failure forwarded with its upstream status (Python parity). */
-class ArchiveDownloadError extends DomainError {
-  constructor(message: string, status: number) {
-    super(ErrorCategory.INTERNAL_SERVER_ERROR, message, undefined, status);
-  }
-}
+import { readGiteaRawBuffer } from "@/features/gitea/utils/gitea-file-content";
+import {
+  giteaErrorStatus,
+  isGiteaWriteConflict,
+} from "@/features/gitea/utils/gitea-error";
+import {
+  assertPortableRepoPath,
+  assertSafeRepoPath,
+  toSafeRepoUrlPath,
+} from "@/shared/safe-repo-path";
 
 /** Python `LedgerFileContentPublic` — fixed projection, nulls included. */
 interface LedgerFileContentPublic {
@@ -54,6 +52,43 @@ export function toFileContentPublic(
   };
 }
 
+/** Largest blob served inline once Gitea's own contents limit is passed. */
+export const MAX_LARGE_FILE_BYTES = 32 * 1024 * 1024;
+
+type GiteaClient = ReturnType<typeof giteaClientForRequest>;
+
+/**
+ * Gitea answers a file past its inline limit (~10 MiB) with `content: null`
+ * and a valid sha. Served as is, a client reads it as an empty document and a
+ * save on that sha replaces the whole file (w21/343). Fetch the blob through
+ * the raw endpoint and return it in the usual base64 form; past
+ * `MAX_LARGE_FILE_BYTES` the read fails with a size error rather than null.
+ */
+export async function withLargeContent(
+  client: GiteaClient,
+  owner: string,
+  repo: string,
+  item: ContentsResponse,
+): Promise<ContentsResponse> {
+  if (
+    item.type !== "file" ||
+    (item.content !== null && item.content !== undefined) ||
+    !(typeof item.size === "number" && item.size > 0)
+  ) {
+    return item;
+  }
+  const bytes = await readGiteaRawBuffer(
+    client.repos,
+    owner,
+    repo,
+    item.path as string,
+    item,
+    undefined,
+    MAX_LARGE_FILE_BYTES,
+  );
+  return { ...item, content: bytes.toString("base64"), encoding: "base64" };
+}
+
 interface CreateFileBody {
   path: string;
   content: string;
@@ -83,6 +118,98 @@ interface ChangeFilesBody {
 const is404 = (err: unknown): boolean =>
   (err as { status?: number }).status === 404;
 
+/**
+ * Whether a thrown Gitea error is a 5xx that is not a lost write race. Gitea has
+ * no 404 for an update of a path that no longer exists: it answers 500, which
+ * backend-v2 reports as SERVICE_UNAVAILABLE ("try again in a moment") for a save
+ * that can never succeed (w21/468).
+ */
+function isUnexplainedServerError(err: unknown): boolean {
+  const status = giteaErrorStatus(err);
+  return status !== undefined && status >= 500 && !isGiteaWriteConflict(err);
+}
+
+/**
+ * After a failed update: read each path. One that is gone is the answer
+ * (NOT_FOUND); if every one exists, the original error stands.
+ */
+async function rethrowAsMissing(
+  client: ReturnType<typeof giteaClientForRequest>,
+  owner: string,
+  repoName: string,
+  paths: readonly string[],
+  original: unknown,
+): Promise<never> {
+  for (const path of paths) {
+    try {
+      await client.repos.repoGetContents(
+        owner,
+        repoName,
+        toSafeRepoUrlPath(path),
+      );
+    } catch (probe) {
+      if (is404(probe)) {
+        throw new NotFoundDetailError(`File ${path} does not exist`);
+      }
+    }
+  }
+  throw original;
+}
+
+/** Update a file, answering NOT_FOUND when the file is gone (w21/468). */
+export async function updateExistingFile(
+  client: ReturnType<typeof giteaClientForRequest>,
+  owner: string,
+  repoName: string,
+  safeUrlPath: string,
+  path: string,
+  options: { content: string; sha: string; message: string },
+) {
+  try {
+    return await client.repos.repoUpdateFile(
+      owner,
+      repoName,
+      safeUrlPath,
+      options,
+    );
+  } catch (err) {
+    if (!isUnexplainedServerError(err)) throw err;
+    return rethrowAsMissing(client, owner, repoName, [path], err);
+  }
+}
+
+/** Commit a set of file operations, answering NOT_FOUND for an update or delete of a path that is gone (w21/468, w21/551). */
+export async function changeExistingFiles(
+  client: ReturnType<typeof giteaClientForRequest>,
+  owner: string,
+  repoName: string,
+  body: ChangeFilesBody,
+  operations: ChangeFilesBody["files"] = [],
+): Promise<void> {
+  try {
+    await client.repos.repoChangeFiles(owner, repoName, {
+      files: operations.map((op) => ({
+        operation: op.operation,
+        path: op.path,
+        content: op.content ?? undefined,
+        from_path: op.from_path ?? undefined,
+        sha: op.sha ?? undefined,
+      })),
+      message: body.message ?? undefined,
+      branch: body.branch ?? undefined,
+      new_branch: body.new_branch ?? undefined,
+    });
+  } catch (err) {
+    if (!isUnexplainedServerError(err)) throw err;
+    // A delete of a path that is gone fails the same way (w21/551): Gitea has no
+    // 404 for it either.
+    const existing = operations
+      .filter((op) => op.operation === "update" || op.operation === "delete")
+      .map((op) => op.path);
+    await rethrowAsMissing(client, owner, repoName, existing, err);
+  }
+}
+
 export function setFilesHandler(router: Router): void {
   // operationId: getLedgerFile — GET /ledgers/{o}/{r}/files?path=
   // Python returns null (not 404) when the file does not exist.
@@ -104,7 +231,16 @@ export function setFilesHandler(router: Router): void {
           ctx.body = successResponse(null);
           return;
         }
-        ctx.body = successResponse(toFileContentPublic(data));
+        ctx.body = successResponse(
+          toFileContentPublic(
+            await withLargeContent(
+              client,
+              ctx.params.owner,
+              ctx.params.repo_name,
+              data,
+            ),
+          ),
+        );
       } catch (err) {
         if (is404(err)) {
           ctx.body = successResponse(null);
@@ -132,11 +268,21 @@ export function setFilesHandler(router: Router): void {
         { files },
       );
       const items = (res.data ?? []) as Array<ContentsResponse | null>;
-      ctx.body = successResponse(
-        items
-          .filter((item): item is ContentsResponse => item !== null)
-          .map(toFileContentPublic),
+      const present = items.filter(
+        (item): item is ContentsResponse => item !== null,
       );
+      const filled: ContentsResponse[] = [];
+      for (const item of present) {
+        filled.push(
+          await withLargeContent(
+            client,
+            ctx.params.owner,
+            ctx.params.repo_name,
+            item,
+          ),
+        );
+      }
+      ctx.body = successResponse(filled.map(toFileContentPublic));
     },
   );
 
@@ -147,6 +293,8 @@ export function setFilesHandler(router: Router): void {
     async (ctx) => {
       const { owner, repo_name: repoName } = ctx.params;
       const body = (ctx.request.body ?? {}) as CreateFileBody;
+      // A new file's name has to work on every checkout (w23/054).
+      assertPortableRepoPath(body.path);
       const safeUrlPath = toSafeRepoUrlPath(body.path);
       const client = giteaClientForRequest(ctx);
       await checkDirectiveLimitForFileChanges(
@@ -189,10 +337,12 @@ export function setFilesHandler(router: Router): void {
         { [body.path]: body.content },
         { exempt: directiveLimitExempt(ctx) },
       );
-      const res = await client.repos.repoUpdateFile(
+      const res = await updateExistingFile(
+        client,
         owner,
         repoName,
         safeUrlPath,
+        body.path,
         {
           content: body.content,
           sha: body.sha,
@@ -234,6 +384,8 @@ export function setFilesHandler(router: Router): void {
       const fileChanges: Record<string, string | null> = {};
       operations.forEach((op, index) => {
         assertSafeRepoPath(op.path, `files[${index}].path`);
+        if (op.operation === "create")
+          assertPortableRepoPath(op.path, `files[${index}].path`);
         if (op.from_path !== null && op.from_path !== undefined) {
           assertSafeRepoPath(op.from_path, `files[${index}].from_path`);
         }
@@ -253,18 +405,7 @@ export function setFilesHandler(router: Router): void {
         fileChanges,
         { exempt: directiveLimitExempt(ctx) },
       );
-      await client.repos.repoChangeFiles(owner, repoName, {
-        files: operations.map((op) => ({
-          operation: op.operation,
-          path: op.path,
-          content: op.content ?? undefined,
-          from_path: op.from_path ?? undefined,
-          sha: op.sha ?? undefined,
-        })),
-        message: body.message ?? undefined,
-        branch: body.branch ?? undefined,
-        new_branch: body.new_branch ?? undefined,
-      });
+      await changeExistingFiles(client, owner, repoName, body, operations);
       ctx.body = successResponse(null);
     },
   );
@@ -308,42 +449,4 @@ export function setFilesHandler(router: Router): void {
     }
     ctx.body = successResponse(content.map(toFileContentPublic));
   });
-
-  // operationId: getLedgerArchive — GET /ledgers/{o}/{r}/archive/{archive}
-  // Streams raw bytes with the caller's credentials, or no credential for a
-  // public-ledger request carrying backend-v2's private Anonymous marker.
-  router.get(
-    "/ledgers/:owner/:repo_name/archive/:archive",
-    authMiddleware,
-    async (ctx) => {
-      const auth = ctx.state.auth as RequestAuth;
-      assertSafeArchiveName(ctx.params.archive);
-      const url = `${config.gitea.baseUrl}/api/v1/repos/${encodeURIComponent(ctx.params.owner)}/${encodeURIComponent(ctx.params.repo_name)}/archive/${encodeURIComponent(ctx.params.archive)}`;
-      const upstream = await fetch(url, {
-        ...(auth.authType === "anonymous"
-          ? {}
-          : { headers: { Authorization: auth.header } }),
-      });
-      if (upstream.status !== 200) {
-        if (upstream.status === 404) {
-          throw new NotFoundError("Archive");
-        }
-        throw new ArchiveDownloadError(
-          `Failed to download archive: ${upstream.statusText}`,
-          upstream.status,
-        );
-      }
-      ctx.status = 200;
-      ctx.set(
-        "content-type",
-        upstream.headers.get("content-type") ?? "application/octet-stream",
-      );
-      const disposition = upstream.headers.get("content-disposition");
-      if (disposition) {
-        ctx.set("content-disposition", disposition);
-      }
-      const buffer = Buffer.from(await upstream.arrayBuffer());
-      ctx.body = buffer;
-    },
-  );
 }

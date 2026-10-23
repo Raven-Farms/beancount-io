@@ -10,6 +10,7 @@ import { createPlaidSyncJob } from "./jobs/plaid-sync-job";
 import { createPlaidWebhookProcessorJob } from "./jobs/plaid-webhook-processor-job";
 import { createPlaidWebhookCleanupJob } from "./jobs/plaid-webhook-cleanup-job";
 import { createLlmProbeJob } from "./jobs/llm-probe-job";
+import { createAuthMailJob } from "./jobs/auth-mail-job";
 
 const jobLogger = logger.child({ module: "job-scheduler" });
 
@@ -76,7 +77,14 @@ export class JobScheduler {
       this.config,
     );
     const llmProbe = createLlmProbeJob(this.layers, this.config);
+    const authMail = createAuthMailJob(this.layers, this.config);
     const jobs: ScheduledJob[] = [
+      {
+        name: "auth-mail",
+        schedule: authMail.schedule,
+        task: authMail.task,
+        enabled: true,
+      },
       {
         name: "dev-test",
         schedule: devTest.schedule,

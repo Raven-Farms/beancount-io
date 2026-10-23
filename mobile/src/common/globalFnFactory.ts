@@ -64,13 +64,20 @@ export const AccountCreated =
  * Accounts-tab open has nothing registered, making this a no-op, so the
  * open-account screen needs no origin flag.
  */
-export const runAccountCreatedCallback = (account: string): void => {
-  const callback = AccountCreated.getFn();
-  if (!callback) {
+export const runAccountCreatedCallback = (
+  account: string,
+  /**
+   * The callback taken when the create started. The screen discards the
+   * registration when it unmounts, so a Back during "Saving…" left nothing to
+   * find here, and the picker's posting stayed unfilled (w21/581).
+   */
+  captured: ((account: string) => void) | undefined = AccountCreated.getFn(),
+): void => {
+  if (!captured) {
     return;
   }
   AccountCreated.deleteFn();
-  callback(account);
+  captured(account);
 };
 
 export const SelectedCurrency =

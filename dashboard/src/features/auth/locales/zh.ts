@@ -44,6 +44,11 @@ const zhAuth: Record<string, TranslationEntry> = {
     message: "确认你的密码",
     description: "Placeholder for password confirmation",
   },
+  "auth.chooseYourPassword": {
+    message: "设置你的密码（至少8个字符）",
+    description:
+      "Placeholder for the password a new account chooses, with the minimum length",
+  },
   "auth.createAccount": {
     message: "创建账户",
     description: "Button to submit registration",
@@ -177,6 +182,11 @@ const zhAuth: Record<string, TranslationEntry> = {
     message: "登录失败",
     description: "Error title when login fails",
   },
+  "auth.loginRateLimited": {
+    message: "登录尝试次数过多。请等待几分钟后重试，或重置密码。",
+    description:
+      "Shown on any password sign-in form when sign-in is rate limited, by address or by too many wrong passwords for the account",
+  },
   "auth.logout": {
     message: "登出",
     description: "Button label to log out",
@@ -194,11 +204,12 @@ const zhAuth: Record<string, TranslationEntry> = {
     description: "Label for new password field",
   },
   "auth.newPasswordMinLength": {
-    message: "密码至少需要6个字符",
+    message: "密码至少需要8个字符",
     description: "Validation error for password length",
   },
   "auth.newPasswordMaxLength": {
-    message: "密码最多不能超过128个字符",
+    message:
+      "密码过长。最多72个字符；带重音符号的字母、中文等非拉丁文字以及表情符号，每个按2到4个字符计算。",
     description:
       "Validation error when new password exceeds the maximum length",
   },
@@ -242,8 +253,20 @@ const zhAuth: Record<string, TranslationEntry> = {
     message: "需要输入密码",
     description: "Validation error when password is not provided",
   },
+  "auth.passwordBreached": {
+    message:
+      "该密码曾出现在数据泄露中。请选择一个你没有在其他地方使用过的密码。",
+    description:
+      "Error when the server finds the new password in a known data breach (Have I Been Pwned)",
+  },
+  "auth.passwordTooSimilar": {
+    message: "密码与你的邮箱或用户名过于相似。",
+    description:
+      "Error when the new password is too close to the account's email or username",
+  },
   "auth.passwordResetSuccessMessage": {
-    message: "你的密码已重置。正在跳转到登录页面...",
+    message:
+      "你的密码已重置，所有设备和已连接的应用均已登出。正在跳转到登录页面...",
     description: "Success message description",
   },
   "auth.passwordResetSuccessful": {
@@ -732,6 +755,74 @@ const zhAuth: Record<string, TranslationEntry> = {
     message: "此服务器已关闭密码登录。请改用 Google 继续。",
     description:
       "Shown instead of a password form when password sign-in is turned off on the server",
+  },
+  "auth.recoveryTitle": {
+    message: "验证邮箱以登录",
+    description:
+      "Title of the email ownership verification step for sign-in recovery",
+  },
+  "auth.recoveryDescription": {
+    message: "打开登录恢复邮件中的链接，然后输入邮件中的验证码和当前密码。",
+    description: "Instructions for continuing from the sign-in recovery email",
+  },
+  "auth.recoverySendEmail": {
+    message: "发送登录恢复邮件",
+    description: "Button requesting a sign-in recovery email",
+  },
+  "auth.recoverySending": {
+    message: "正在发送登录恢复邮件...",
+    description: "Pending state while requesting a sign-in recovery email",
+  },
+  "auth.recoverySent": {
+    message:
+      "如果此邮箱已注册账户，你将很快收到登录恢复邮件。请打开邮件中的链接继续。最近收到的恢复邮件仍然有效。",
+    description:
+      "Uniform confirmation after requesting recovery; previous valid recovery emails remain usable",
+  },
+  "auth.recoveryResend": {
+    message: "重新发送登录恢复邮件",
+    description: "Button requesting another sign-in recovery email",
+  },
+  "auth.recoveryRetryAt": {
+    message: "请在 {time} 重试。",
+    description:
+      "Absolute local retry time after throttling; {time} is formatted using the active locale",
+  },
+  "auth.recoveryCode": {
+    message: "六位验证码",
+    description: "Accessible label for the sign-in recovery email code",
+  },
+  "auth.recoveryCodeInvalid": {
+    message: "请输入登录恢复邮件中的六位验证码。",
+    description:
+      "Validation error when the recovery code is not exactly six digits",
+  },
+  "auth.recoveryFailed": {
+    message:
+      "邮箱、验证码或密码不正确，或验证码已过期。你可以重新请求登录恢复邮件。",
+    description:
+      "Uniform invalid-credentials or expired-code error during sign-in recovery",
+  },
+  "auth.recoveryRequestFailed": {
+    message: "无法请求登录恢复邮件，请重试。",
+    description: "Error when requesting a sign-in recovery email fails",
+  },
+  "auth.recoveryUnavailable": {
+    message: "登录服务暂时不可用，请重试。",
+    description: "Temporary service outage during sign-in recovery",
+  },
+  "auth.recoveryExpiry": {
+    message: "验证码将在 10 分钟后过期，且仅可用于一次密码验证。",
+    description:
+      "Explains the expiry and single password-attempt limit of a recovery code",
+  },
+  "auth.recoverySubmit": {
+    message: "验证并登录",
+    description: "Button submitting the recovery code and current password",
+  },
+  "auth.recoveryVerifying": {
+    message: "正在验证...",
+    description: "Pending state while verifying the recovery code and password",
   },
 };
 

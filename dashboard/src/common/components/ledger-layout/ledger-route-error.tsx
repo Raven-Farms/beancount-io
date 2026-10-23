@@ -4,7 +4,7 @@ import type { ErrorComponentProps } from "@tanstack/react-router";
 import { isUnauthenticatedError } from "@/common/apollo/links/auth-error-link";
 import { LedgerLayoutError } from "./ledger-layout-error";
 import { NOINDEX_ROBOTS_CONTENT } from "@/common/lib/seo/indexability";
-import { useLoginNextPath } from "@/common/hooks/use-login-next-path";
+import { useSafeReturnPath } from "@/common/hooks/use-safe-return-path";
 
 /**
  * Keeps errors thrown by the ledger route loader inside the ledger error
@@ -16,7 +16,7 @@ export function LedgerRouteError({ error, reset }: ErrorComponentProps) {
   const router = useRouter();
   // The whole destination, not just its path: a reader sent to login from
   // here was losing their time filter and their anchor.
-  const next = useLoginNextPath();
+  const next = useSafeReturnPath();
   const unauthenticated = isUnauthenticatedError(error);
 
   useEffect(() => {

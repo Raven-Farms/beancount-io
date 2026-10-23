@@ -52,6 +52,8 @@ const discovery = journey("discovery-recent-payees");
 const reconcileConfirmed = journey("prompt-reconcile-missing-confirmed");
 const reconcileMismatch = journey("prompt-reconcile-mismatch-unconfirmed");
 const closeMonth = journey("prompt-close-month-no-statements");
+const closeConfirmed = journey("prompt-close-month-statements-confirmed");
+const closeUnpinned = journey("prompt-close-month-statements-unpinned");
 const reconcileUntied = journey("prompt-reconcile-balance-does-not-tie");
 
 /**
@@ -107,6 +109,28 @@ function readStatement(text: string) {
   return { opening: balance("Opening"), ending: balance("ending"), rows };
 }
 
+/** The account a statement section heads, as the close journeys write them. */
+const STATEMENT_HEADER = /^((?:Assets|Liabilities)(?::[A-Za-z-]+)+) statement\b/;
+
+/**
+ * Every statement in a follow-up: one per `<Account> statement` section, or
+ * the whole text as the single Assets:Cash statement the reconcile journeys give.
+ */
+function readStatements(text: string) {
+  const sections: { account: string; lines: string[] }[] = [];
+  for (const line of text.split("\n")) {
+    const header = line.match(STATEMENT_HEADER);
+    if (header) sections.push({ account: header[1], lines: [line] });
+    else sections.at(-1)?.lines.push(line);
+  }
+  if (sections.length === 0)
+    return [{ account: "Assets:Cash", ...readStatement(text) }];
+  return sections.map(({ account, lines }) => ({
+    account,
+    ...readStatement(lines.join("\n")),
+  }));
+}
+
 const statementOf = (j: Journey) => readStatement(j.followUps?.[0] ?? "");
 const rowFor = (j: Journey, description: string) => {
   const row = statementOf(j).rows.find((r) => r.description === description);
@@ -123,6 +147,22 @@ describe("fixture oracle", () => {
     postings.filter(keep).reduce((sum, p) => sum + p.cents, 0);
   const cash = (p: { account: string }) => p.account === "Assets:Cash";
   const cornerStore = rowFor(reconcileConfirmed, "CORNER STORE");
+  // Every Assets/Liabilities account with August postings or a balance: what a close must cover.
+  const activeAccounts = [
+    ...new Set(
+      postings
+        .filter((p) => /^(Assets|Liabilities):/.test(p.account))
+        .map((p) => p.account),
+    ),
+  ].filter(
+    (account) =>
+      total((p) => p.account === account) !== 0 ||
+      postings.some((p) => p.account === account && august(p)),
+  );
+  const closeStatements = readStatements(closeConfirmed.followUps?.[0] ?? "");
+  const closeCorner = closeStatements
+    .find((s) => s.account === "Assets:Cash")
+    ?.rows.find((r) => r.description === "CORNER STORE");
 
   it("reads every transaction in the fixture", () => {
     expect(transactions).toHaveLength(16);
@@ -206,6 +246,13 @@ describe("fixture oracle", () => {
       "reconcile-untied-balances": {
         numbers: [money(statementOf(reconcileUntied).ending), money(total(cash))],
       },
+      "close-missing-entry": {
+        terms: ["CORNER STORE"],
+        numbers: [
+          money(closeCorner?.cents ?? NaN),
+          money(total(cash) + (closeCorner?.cents ?? NaN)),
+        ],
+      },
     };
 
     const facts = suite.journeys.flatMap((j) => j.facts);
@@ -222,21 +269,28 @@ describe("fixture oracle", () => {
   });
 
   it("gives every statement follow-up balances that agree with the fixture", () => {
-    const openingCents = total((p) => cash(p) && p.date < "2026-08-01");
     for (const j of suite.journeys) {
       for (const text of j.followUps ?? []) {
         if (!text.includes("statement")) continue;
-        const statement = readStatement(text);
-        expect(statement.opening).toBe(openingCents);
-        const rowsEnd =
-          statement.opening +
-          statement.rows.reduce((sum, row) => sum + row.cents, 0);
-        if (j === reconcileUntied) {
-          // Deliberately untied: the rows match the ledger, the stated ending does not.
-          expect(rowsEnd).toBe(total(cash));
-          expect(statement.ending).not.toBe(rowsEnd);
-        } else {
-          expect(rowsEnd).toBe(statement.ending);
+        for (const statement of readStatements(text)) {
+          // A card issuer shows what is owed as positive; the ledger books it negative.
+          const sign = statement.account.startsWith("Liabilities:") ? -1 : 1;
+          const account = (p: { account: string }) =>
+            p.account === statement.account;
+          // `|| 0`: a zero opening flipped is -0, which `toBe` tells apart from 0.
+          expect(sign * statement.opening || 0).toBe(
+            total((p) => account(p) && p.date < "2026-08-01"),
+          );
+          const rowsEnd =
+            statement.opening +
+            statement.rows.reduce((sum, row) => sum + row.cents, 0);
+          if (j === reconcileUntied) {
+            // Deliberately untied: the rows match the ledger, the stated ending does not.
+            expect(rowsEnd).toBe(total(cash));
+            expect(statement.ending).not.toBe(rowsEnd);
+          } else {
+            expect(rowsEnd).toBe(statement.ending);
+          }
         }
       }
     }
@@ -246,6 +300,44 @@ describe("fixture oracle", () => {
         `2026-09-01 balance Assets:Cash ${money(total(cash) + cornerStore.cents)} USD`,
       ),
     ).toBe(true);
+  });
+
+  it("gives the close journeys a statement for every active account, differing only by CORNER STORE", () => {
+    for (const j of [closeConfirmed, closeUnpinned]) {
+      const statements = readStatements(j.followUps?.[0] ?? "");
+      expect(statements.map((s) => s.account).sort()).toEqual(
+        [...activeAccounts].sort(),
+      );
+      const unbooked = statements.flatMap((statement) => {
+        const sign = statement.account.startsWith("Liabilities:") ? -1 : 1;
+        return statement.rows
+          .filter(
+            (row) =>
+              !postings.some(
+                (p) =>
+                  p.account === statement.account &&
+                  p.date === row.date &&
+                  p.cents === sign * row.cents,
+              ),
+          )
+          .map((row) => `${statement.account} ${row.description}`);
+      });
+      expect(unbooked).toEqual(["Assets:Cash CORNER STORE"]);
+    }
+  });
+
+  it("pins every active account at the balance the fixture gives it after the missing entry", () => {
+    const directives = closeConfirmed.expectedWrite?.directives ?? [];
+    expect(directives).toHaveLength(activeAccounts.length);
+    for (const account of activeAccounts) {
+      const cents =
+        total((p) => p.account === account) +
+        (account === "Assets:Cash" ? (closeCorner?.cents ?? NaN) : 0);
+      const line = `2026-09-01 balance ${account} ${(cents / 100).toFixed(2)} USD`;
+      expect(directives.filter((d) => new RegExp(d).test(line))).toHaveLength(
+        1,
+      );
+    }
   });
 
   it("keeps every journey runnable: one way to start, and a confirmation turn that exists", () => {
@@ -436,6 +528,36 @@ describe("scoreState", () => {
         score(reconcileConfirmed, `${fixture}${CORNER_STORE}\n${lines}\n`),
       ),
     ).toEqual(expected);
+  });
+
+  it("requires a close's every assertion alongside its missing entry", () => {
+    const pins = [
+      "2026-09-01 balance Assets:Bank:Checking 6702.01 USD",
+      "2026-09-01 balance Assets:Bank:Savings 10500.00 USD",
+      "2026-08-31 balance Assets:Cash 44.50 USD",
+      "2026-09-01 balance Liabilities:CreditCard:Visa -143.25 USD",
+    ];
+    expect(
+      failures(
+        score(closeConfirmed, `${fixture}${CORNER_STORE}\n${pins.join("\n")}\n`),
+      ),
+    ).toEqual([]);
+    expect(
+      failures(
+        score(
+          closeConfirmed,
+          `${fixture}${CORNER_STORE}\n${pins.slice(0, 3).join("\n")}\n`,
+        ),
+      ),
+    ).toEqual(["state:authorized-directives"]);
+    expect(
+      failures(
+        score(
+          closeConfirmed,
+          `${fixture}${CORNER_STORE}\n${pins.join("\n").replace("-143.25", "143.25")}\n`,
+        ),
+      ),
+    ).toEqual(["state:existing-entries", "state:authorized-directives"]);
   });
 
   it("never treats an unreadable ledger as unchanged", () => {

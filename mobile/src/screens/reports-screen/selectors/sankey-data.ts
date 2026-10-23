@@ -1,8 +1,30 @@
 import type { AccountNode } from "../../../components/account-list/select-account-list";
 import { leafName } from "../../../common/account-util";
+import { getCurrencySymbol } from "../../../common/currency-util";
 import { topNWithOther } from "./select-breakdown-rows";
 import { formatShortMoneyWithCurrency } from "../../../common/number-utils";
+import { getAccountRoot, type RootNames } from "../../../common/account-root";
 
+/**
+ * Below half a cent a flow is float residue, not money: a month whose income
+ * equals its expenses drew a "Savings" node of 5.55e-17, and a category that
+ * nets to zero a node with no ribbon (w21/055). Budget variance already treats
+ * it as zero (w4/130).
+ */
+const HALF_CENT = 0.005;
+
+/**
+ * Below this a flow is residue in `currency`. Half a cent for a currency the app
+ * knows; a commodity it has no symbol for (BTC as the operating currency) keeps
+ * what is recorded, where a flat half cent dropped a 0.004 BTC Food node and left
+ * Savings wrong (w21/541). Float residue is far below the floor.
+ */
+const COMMODITY_RESIDUE = 1e-9;
+function flowResidue(currency: string | undefined): number {
+  return currency === undefined || getCurrencySymbol(currency) !== ""
+    ? HALF_CENT
+    : COMMODITY_RESIDUE;
+}
 /** Depth of account path the Sankey draws — matches the web transformer. */
 const SANKEY_DEPTH = 2;
 
@@ -23,6 +45,13 @@ export const SAVINGS_ID = "savings";
  * so on the source side it reads as money from savings.
  */
 export const SHORTFALL_ID = "shortfall";
+/**
+ * Categories whose period net ran against their side: refunded spending flows
+ * into the hub, clawed-back income out of it. Left off, Savings was drawn from
+ * the other ribbons alone and disagreed with Net Profit (w21/112).
+ */
+const REFUNDS_ID = "__refunds__";
+const CLAWBACKS_ID = "__clawbacks__";
 export const OTHER_INCOME_ACCOUNT = "__other_income__";
 export const OTHER_EXPENSES_ACCOUNT = "__other_expenses__";
 
@@ -55,20 +84,27 @@ export type AccountCategory =
 /**
  * Categorize a Beancount account by its type prefix.
  * Port of the web `account-categorizer` — typed copy, no cross-package import.
+ *
+ * `roots` are the ledger's own names for the five roots: a ledger with
+ * `option "name_income" "Ingresos"` has `Ingresos:Salario`, which read as
+ * excluded here, so every node of a fully renamed ledger was dropped and the
+ * card said "No cash flow" under a chart full of money (w21/235).
  */
-export function categorizeAccount(accountName: string): AccountCategory {
+export function categorizeAccount(
+  accountName: string,
+  roots: RootNames = {},
+): AccountCategory {
   if (!accountName) {
     return "exclude";
   }
-  const prefix = accountName.split(":")[0];
-  switch (prefix) {
-    case "Income":
+  switch (getAccountRoot(accountName, roots)) {
+    case "income":
       return "source";
-    case "Expenses":
+    case "expenses":
       return "operating";
-    case "Assets":
+    case "assets":
       return "investing";
-    case "Liabilities":
+    case "liabilities":
       return "financing";
     default:
       return "exclude";
@@ -80,15 +116,22 @@ export function categorizeAccount(accountName: string): AccountCategory {
  * Port of the web helper; income/expense trees rarely hit it, but the
  * transformer still consults it so a stray asset path cannot leak through.
  */
-export function isExcludedAccount(accountName: string): boolean {
+export function isExcludedAccount(
+  accountName: string,
+  roots: RootNames = {},
+): boolean {
   if (!accountName) {
     return false;
   }
+  const assets = (roots.assets ?? "Assets").replace(
+    /[.*+?^${}()|[\]\\]/g,
+    "\\$&",
+  );
   const exclusionPatterns = [
-    /^Assets:.*Cash$/i,
-    /^Assets:.*Checking$/i,
-    /^Assets:.*Savings$/i,
-    /^Assets:.*Bank/i,
+    new RegExp(`^${assets}:.*Cash$`, "i"),
+    new RegExp(`^${assets}:.*Checking$`, "i"),
+    new RegExp(`^${assets}:.*Savings$`, "i"),
+    new RegExp(`^${assets}:.*Bank`, "i"),
   ];
   return exclusionPatterns.some((pattern) => pattern.test(accountName));
 }
@@ -147,20 +190,39 @@ export function truncateSankeyLabel(
   return `${label.slice(0, maxChars - 1)}…`;
 }
 
-export function sankeyRoleForId(id: string): SankeyRole {
+/**
+ * The lines a beside-node label is drawn on. A group that shares its name with
+ * one on the other side reads "Interest (income)" / "Interest (expenses)": cut
+ * to one line the suffix went first and both read "Interest …" (w21/540). The
+ * name and the parenthesized suffix get a line each, each cut to fit; a label
+ * without a suffix is one line.
+ */
+export function sankeyLabelLines(
+  label: string,
+  maxChars: number = SANKEY_LABEL_MAX_CHARS,
+): string[] {
+  const split = /^(.*\S)\s+(\([^()]*\))$/u.exec(label);
+  if (!split) return [truncateSankeyLabel(label, maxChars)];
+  return [
+    truncateSankeyLabel(split[1], maxChars),
+    truncateSankeyLabel(split[2], maxChars),
+  ];
+}
+
+export function sankeyRoleForId(id: string, roots: RootNames = {}): SankeyRole {
   if (id === CASH_FLOW_ID) {
     return "hub";
   }
   if (id === SAVINGS_ID || id === SHORTFALL_ID) {
     return "savings";
   }
-  if (id === OTHER_INCOME_ACCOUNT) {
+  if (id === OTHER_INCOME_ACCOUNT || id === REFUNDS_ID) {
     return "source";
   }
-  if (id === OTHER_EXPENSES_ACCOUNT) {
+  if (id === OTHER_EXPENSES_ACCOUNT || id === CLAWBACKS_ID) {
     return "operating";
   }
-  const category = categorizeAccount(id);
+  const category = categorizeAccount(id, roots);
   switch (category) {
     case "source":
       return "source";
@@ -199,6 +261,9 @@ type TransformOptions = {
   otherLabel: string;
   cashFlowLabel: string;
   savingsLabel: string;
+  /** The inflow of refunded spending, and the outflow of clawed-back income. */
+  refundsLabel: string;
+  clawbacksLabel: string;
   /**
    * Labels an income or expense group whose name the other side also uses
    * (`Income:Crypto` and `Expenses:Crypto` both read "Crypto"), so the two
@@ -206,26 +271,57 @@ type TransformOptions = {
    */
   incomeNodeLabel?: (name: string) => string;
   expensesNodeLabel?: (name: string) => string;
+  /** The ledger's names for its roots; Beancount's own when left out. */
+  roots?: RootNames;
   depth?: number;
   topN?: number;
+  /** The currency the amounts are in; sets what counts as residue. */
+  currency?: string;
 };
 
 function treeTotal(nodes: AccountNode[]): number {
   return nodes.reduce((sum, node) => sum + node.value, 0);
 }
 
+/**
+ * The depth to draw a side at. The tree arrives with its single-child levels
+ * lifted (`Income:US` holding only Hoogle and ETrade lists those two), so when
+ * every top-level account sits under one shared sub-account the nodes belong
+ * below it: keyed at a flat depth, the whole side merged into one "US" node
+ * while the cards listed its parts, and a refunded category netted inside it
+ * hid the Refunds ribbon (w21/610). One top-level account keeps the flat depth.
+ */
+function sideDepth(nodes: AccountNode[], depth: number): number {
+  const live = nodes.filter((node) => node?.account);
+  if (live.length < 2) {
+    return depth;
+  }
+  const parents = live.map((node) => node.account.split(":").slice(0, -1));
+  let common = 0;
+  const shortest = Math.min(...parents.map((parent) => parent.length));
+  while (
+    common < shortest &&
+    parents.every((parent) => parent[common] === parents[0][common])
+  ) {
+    common += 1;
+  }
+  return Math.max(depth, common + 1);
+}
+
 function extractAtDepth(
   nodes: AccountNode[],
   targetDepth: number,
   out: Map<string, number>,
+  roots: RootNames,
+  residue: number,
 ): void {
   for (const node of nodes) {
     if (!node || !node.account) {
       continue;
     }
     if (
-      categorizeAccount(node.account) === "exclude" ||
-      isExcludedAccount(node.account)
+      categorizeAccount(node.account, roots) === "exclude" ||
+      isExcludedAccount(node.account, roots)
     ) {
       continue;
     }
@@ -235,11 +331,11 @@ function extractAtDepth(
       // Zero is dropped here so a balanced-to-nothing category does not
       // occupy a node; negatives are kept in the map so totals still match
       // the statement, then stripped from *links* below.
-      if (node.value !== 0) {
+      if (Math.abs(node.value) >= residue) {
         out.set(key, (out.get(key) ?? 0) + node.value);
       }
     } else {
-      extractAtDepth(node.children, targetDepth, out);
+      extractAtDepth(node.children, targetDepth, out, roots, residue);
     }
   }
 }
@@ -247,9 +343,10 @@ function extractAtDepth(
 function toRankedNodes(
   values: Map<string, number>,
   labelOf: (id: string) => string,
+  residue: number,
 ): AccountNode[] {
   return Array.from(values.entries())
-    .filter(([, value]) => value > 0)
+    .filter(([, value]) => value >= residue)
     .map(([account, value]) => ({
       account,
       name: labelOf(account),
@@ -289,28 +386,45 @@ export function transformToSankeyData(options: TransformOptions): SankeyData {
     otherLabel,
     cashFlowLabel,
     savingsLabel,
+    refundsLabel,
+    clawbacksLabel,
     incomeNodeLabel = (name: string) => name,
     expensesNodeLabel = (name: string) => name,
+    roots = {},
     depth = SANKEY_DEPTH,
     topN = SANKEY_TOP_N,
+    currency,
   } = options;
+  const residue = flowResidue(currency);
 
   const totalIncome = treeTotal(income);
   const totalExpenses = treeTotal(expenses);
 
   const incomeValues = new Map<string, number>();
   const expenseValues = new Map<string, number>();
-  extractAtDepth(income, depth, incomeValues);
-  extractAtDepth(expenses, depth, expenseValues);
+  extractAtDepth(
+    income,
+    sideDepth(income, depth),
+    incomeValues,
+    roots,
+    residue,
+  );
+  extractAtDepth(
+    expenses,
+    sideDepth(expenses, depth),
+    expenseValues,
+    roots,
+    residue,
+  );
 
   const incomeRows = topNWithOther(
-    toRankedNodes(incomeValues, leafName),
+    toRankedNodes(incomeValues, leafName, residue),
     topN,
     otherLabel,
     OTHER_INCOME_ACCOUNT,
   );
   const expenseRows = topNWithOther(
-    toRankedNodes(expenseValues, leafName),
+    toRankedNodes(expenseValues, leafName, residue),
     topN,
     otherLabel,
     OTHER_EXPENSES_ACCOUNT,
@@ -333,7 +447,19 @@ export function transformToSankeyData(options: TransformOptions): SankeyData {
   const links: SankeyLinkDatum[] = [];
   const seen = new Set<string>();
 
-  const hasFlows = incomeRows.length > 0 || expenseRows.length > 0;
+  // What ran against its side, as positive amounts (w21/112).
+  const against = (values: Map<string, number>) =>
+    Array.from(values.values())
+      .filter((value) => value <= -residue)
+      .reduce((sum, value) => sum - value, 0);
+  const refunds = against(expenseValues);
+  const clawbacks = against(incomeValues);
+
+  const hasFlows =
+    incomeRows.length > 0 ||
+    expenseRows.length > 0 ||
+    refunds >= residue ||
+    clawbacks >= residue;
   if (!hasFlows) {
     return { nodes, links, totalIncome, totalExpenses };
   }
@@ -352,7 +478,7 @@ export function transformToSankeyData(options: TransformOptions): SankeyData {
       row.account === OTHER_INCOME_ACCOUNT
         ? row.name
         : sideLabel(row, expenseNames, incomeNodeLabel),
-      sankeyRoleForId(row.account),
+      sankeyRoleForId(row.account, roots),
     );
     links.push({
       source: row.account,
@@ -372,7 +498,7 @@ export function transformToSankeyData(options: TransformOptions): SankeyData {
       row.account === OTHER_EXPENSES_ACCOUNT
         ? row.name
         : sideLabel(row, incomeNames, expensesNodeLabel),
-      sankeyRoleForId(row.account),
+      sankeyRoleForId(row.account, roots),
     );
     links.push({
       source: CASH_FLOW_ID,
@@ -381,13 +507,25 @@ export function transformToSankeyData(options: TransformOptions): SankeyData {
     });
   }
 
-  // Balance the graph from the links we actually drew, not the statement
-  // totals: refunds and other non-positive rows still count toward
-  // `totalIncome` / `totalExpenses` (so those match the cards) but never
-  // become ribbons — using them for Savings would make the hub taller than
-  // the income flow and break conservation on screen. Conservation runs both
-  // ways: a surplus leaves the hub as Savings, and a deficit enters it from
-  // savings, or the hub stood taller than everything feeding it (w0/034).
+  // A category's own ribbon never goes negative; what ran against its side
+  // has one ribbon of its own instead, so the hub balances on every dollar
+  // and Savings equals Net Profit (w21/112).
+  if (refunds >= residue) {
+    pushNode(nodes, seen, REFUNDS_ID, refundsLabel, "source");
+    links.push({ source: REFUNDS_ID, target: CASH_FLOW_ID, value: refunds });
+  }
+  if (clawbacks >= residue) {
+    pushNode(nodes, seen, CLAWBACKS_ID, clawbacksLabel, "operating");
+    links.push({
+      source: CASH_FLOW_ID,
+      target: CLAWBACKS_ID,
+      value: clawbacks,
+    });
+  }
+
+  // Balance the graph from the links drawn. Conservation runs both ways: a
+  // surplus leaves the hub as Savings, and a deficit enters it from savings,
+  // or the hub stood taller than everything feeding it (w0/034).
   const linkedIncome = links
     .filter((l) => l.target === CASH_FLOW_ID)
     .reduce((sum, l) => sum + l.value, 0);
@@ -395,14 +533,14 @@ export function transformToSankeyData(options: TransformOptions): SankeyData {
     .filter((l) => l.source === CASH_FLOW_ID)
     .reduce((sum, l) => sum + l.value, 0);
   const savings = linkedIncome - linkedExpenses;
-  if (savings > 0) {
+  if (savings >= residue) {
     pushNode(nodes, seen, SAVINGS_ID, savingsLabel, "savings");
     links.push({
       source: CASH_FLOW_ID,
       target: SAVINGS_ID,
       value: savings,
     });
-  } else if (savings < 0) {
+  } else if (savings <= -residue) {
     pushNode(nodes, seen, SHORTFALL_ID, savingsLabel, "savings");
     links.push({
       source: SHORTFALL_ID,
@@ -439,9 +577,10 @@ export function cashFlowChartSummary(
   data: SankeyData,
   currency: string,
   t: (key: string, params?: Record<string, unknown>) => string,
+  locale = "en",
 ): string {
   const money = (value: number) =>
-    formatShortMoneyWithCurrency(value, currency);
+    formatShortMoneyWithCurrency(value, currency, locale);
   const totals = {
     income: money(data.totalIncome),
     expenses: money(data.totalExpenses),

@@ -158,6 +158,29 @@ def test_a_zero_weight_across_costs_is_still_refused(tmp_path: Path) -> None:
     assert ledger.read_bytes() == before
 
 
+@pytest.mark.parametrize(
+    "posting",
+    [
+        "Assets:Broker 2 HOOL {100 # USD}",
+        "Assets:Broker 2 HOOL {# USD}",
+        "Assets:Broker 2 HOOL {100 # USD, 2024-01-01}",
+        "Assets:Broker 2 HOOL {100 # USD} @ 120 USD",
+    ],
+    ids=["total-interpolated", "empty-interpolated", "dated", "with-price"],
+)
+def test_interpolated_cost_beside_an_omitted_amount_is_refused_readably(tmp_path: Path, posting: str) -> None:
+    """w5/803: `{100 # USD}` beside an omitted amount crashed with AttributeError MISSING.copy_sign."""
+    ledger = tmp_path / "main.bean"
+    ledger.write_text(BROKER)
+    before = ledger.read_bytes()
+    refused = _add(tmp_path, ledger, posting, "Assets:Cash")
+    assert refused.returncode == 1, refused.stderr
+    assert "Too many missing numbers" in refused.stderr
+    assert "AttributeError" not in refused.stderr
+    assert '"category": "validation"' in refused.stderr
+    assert ledger.read_bytes() == before
+
+
 # Bulk rows get the same lost-leg refusal as a single add (w4/166).
 ZERO_ROW = {
     "date": "2024-03-01",

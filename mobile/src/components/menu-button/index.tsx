@@ -214,6 +214,10 @@ export const MenuButton = ({
                   key={item.label}
                   testID={item.testID}
                   accessibilityRole="button"
+                  // The icon is a glyph in a Text node, which iOS adds to the
+                  // name ("Enter new transaction, <glyph>, button"): the label
+                  // is the name and the icon is hidden (w21/558).
+                  accessibilityLabel={item.label}
                   style={({ pressed }) => [
                     styles.item,
                     (i > 0 || !!title) && styles.itemDivider,
@@ -222,7 +226,14 @@ export const MenuButton = ({
                   onPress={() => selectItem(item)}
                 >
                   <Text style={styles.itemLabel}>{item.label}</Text>
-                  {item.icon}
+                  {item.icon ? (
+                    <View
+                      accessibilityElementsHidden
+                      importantForAccessibility="no-hide-descendants"
+                    >
+                      {item.icon}
+                    </View>
+                  ) : null}
                 </Pressable>
               ))}
             </ScrollView>

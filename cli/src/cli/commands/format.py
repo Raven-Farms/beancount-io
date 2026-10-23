@@ -32,9 +32,9 @@ import typer
 from cli import context, output
 from cli.amounts import zero_divisor_line
 from cli.engine import launch
-from cli.errors import BeaError, LedgerError, UsageError
-from cli.paths import expand_path
-from cli.utils import atomic_write, decode_error_message, single_line
+from cli.errors import BeaError, LedgerError, SignalError, UsageError
+from cli.paths import expand_path, is_descriptor_path
+from cli.utils import RawPath, atomic_write, decode_error_message, single_line
 
 SUFFIXES = {".bean", ".beancount"}
 STDIN = "-"
@@ -48,8 +48,11 @@ def _require_output_file(path: Path) -> None:
 
 def format_beans(
     paths: Annotated[
-        list[Path] | None,
-        typer.Argument(help="Ledger files, directories to expand recursively, or - for stdin (default: stdin)"),
+        list[str] | None,
+        typer.Argument(
+            click_type=RawPath(),
+            help="Ledger files, directories to expand recursively, or - for stdin (default: stdin)",
+        ),
     ] = None,
     in_place: Annotated[
         bool, typer.Option("--in-place", "-i", help="Rewrite each file instead of writing stdout")
@@ -93,7 +96,7 @@ def format_beans(
         *(["-i"] if in_place else []),
         *(["-o", str(output_file)] if output_file is not None else []),
     ]
-    files, missing, skipped = _targets(paths, ctx.file, asked, alignment, expand_includes=walking)
+    files, missing, skipped, lexical = _targets(paths, ctx.file, asked, alignment, expand_includes=walking)
     if files is None:
         if reporting or in_place:
             raise UsageError("Name the files to format: reading stdin has nothing to compare or rewrite.")
@@ -114,7 +117,7 @@ def format_beans(
             output.emit(_wrote(0, output_file), target={"stdin": STDIN})
         return
 
-    target = _target(paths, files)
+    target = _target(paths, files, lexical)
     # The walk modes scan the include closure together so invalid files can be
     # skipped while valid ones are formatted. Single-file rendering checks its
     # own text in the engine before returning anything to stdout or --output.
@@ -291,6 +294,15 @@ def _partial_message(
 ) -> str:
     """The headline of an `-i` run the engine stopped after rewriting some files."""
     parts = [f"{formatted_count} file(s) formatted"]
+    stopped = progress.get("stopped")
+    if isinstance(stopped, str) and not (write_failed or failed or missing):
+        # A stop ended the run between two files (w5/825): nothing to fix.
+        not_attempted = progress.get("not_attempted")
+        left = len(not_attempted) if isinstance(not_attempted, list) else 0
+        return (
+            f"Stopped ({stopped}) after {formatted_count} file(s) formatted; {left} file(s) not attempted. "
+            "Each file is listed below; re-run to format the rest."
+        )
     if write_failed:
         parts.append(f"{len(write_failed)} file(s) could not be written")
     parts.extend(_problem_parts(failed, missing))
@@ -390,14 +402,14 @@ def _text(file: Path) -> str:
         raise LedgerError(f"Could not read {file}: {exc.strerror or exc}.") from exc
 
 
-def _named(paths: list[Path] | None, default: Path | None) -> list[Path]:
+def _named(paths: list[str] | None, default: Path | None) -> list[Path]:
     """The paths on the command line, or the global `--file` when none were given."""
-    return [path for path in (paths or []) if str(path)] or ([default] if default is not None else [])
+    return [Path(path) for path in (paths or []) if path] or ([default] if default is not None else [])
 
 
 def _targets(
-    paths: list[Path] | None, default: Path | None, asked: list[str], alignment: list[str], *, expand_includes: bool
-) -> tuple[list[Path] | None, list[output.MissingInclude], list[dict[str, str]]]:
+    paths: list[str] | None, default: Path | None, asked: list[str], alignment: list[str], *, expand_includes: bool
+) -> tuple[list[Path] | None, list[output.MissingInclude], list[dict[str, str]], dict[Path, Path]]:
     """The files to format (None for stdin), missing includes, and intentional encrypted skips.
 
     An explicit path wins; otherwise the global `--file` names the ledger. A
@@ -426,17 +438,30 @@ def _targets(
             f"Ledger path '{directory}' (from --file) is a directory; expected a ledger file. "
             f"Name the directory as an argument instead: {positional}."
         )
-    if any(str(path) == STDIN for path in named):
+    # Stdin is the raw token `-`: Path("./-") normalizes to Path("-"), which
+    # would read stdin instead of the file named `-` (w5/736). The global
+    # `--file` arrives already parsed, so only the exact parsed `-` still
+    # means stdin there.
+    if any(raw == STDIN for raw in (paths or [])) or (not paths and default is not None and str(default) == STDIN):
         if len(named) > 1:
             raise UsageError(f"Read either stdin ('{STDIN}') or named files, not both.")
-        return None, [], []
+        return None, [], [], {}
     if not named:
-        return None, [], []
+        return None, [], [], {}
 
     files: set[Path] = set()
     roots: list[Path] = []
+    # Each named root as it was spelled, for reporting: the scan and the
+    # writes run on the resolved paths, but `target` keeps the name the
+    # command used, as every other command does (w5/581, w5/795).
+    lexical: dict[Path, Path] = {}
     for path in named:
-        resolved = expand_path(path, "format").resolve()
+        expanded = expand_path(path, "format")
+        if is_descriptor_path(expanded):
+            # Stdin is the raw `-`; a descriptor spelling names no file the
+            # formatter can compare or rewrite (w5/792).
+            raise UsageError(f"Formatting target {expanded} is a file descriptor, not a file.")
+        resolved = expanded.resolve()
         if not resolved.exists():
             raise UsageError(f"Formatting target does not exist: {resolved}")
         if resolved.is_dir():
@@ -475,11 +500,12 @@ def _targets(
             # includes sit beside the link, as the loader and every other
             # command read them, not beside its target (w5/087). The resolved
             # path stays the write target and the deduplication key.
+            lexical[resolved] = Path(os.path.abspath(expanded))
             roots.append(Path(os.path.abspath(expand_path(path, "format"))))
         else:
             raise UsageError(f"Not a regular file or directory: {resolved}")
     if not expand_includes:
-        return sorted(files), [], []
+        return sorted(files), [], [], lexical
     # Every member, whatever its suffix: `SUFFIXES` says which files a
     # directory walk treats as ledgers, but an `include` already made
     # `entries.inc` part of this ledger (w1/041). One shared walk per set of
@@ -499,7 +525,7 @@ def _targets(
     # walk skips a file it has already seen through another spelling.
     for item in output.walk_closure(*roots, *sorted(files))[1]:
         missing[(item.include, item.source)] = item
-    return sorted(files), list(missing.values()), skipped
+    return sorted(files), list(missing.values()), skipped, lexical
 
 
 def _syntax_failures(files: list[Path]) -> dict[str, list[str]]:
@@ -522,10 +548,28 @@ def _syntax_failures(files: list[Path]) -> dict[str, list[str]]:
                 "zero divisor, so this file was not parsed."
             ]
     parsed = [str(file) for file in files if str(file) not in divided]
-    reported = launch.helper_json(["syntax", *parsed]).get("files", {}) if parsed else {}
+    crashed: dict[str, list[str]] = {}
+    try:
+        reported = launch.helper_json(["syntax", *parsed]).get("files", {}) if parsed else {}
+    except SignalError:
+        # The batch died on a signal — a zero divisor the literal scan
+        # cannot see, like `100/(0)` — so isolate it per file: the one that
+        # kills the engine is named, and the rest still format (w5/759). One
+        # call per file only on this path; the batch stays a single call.
+        reported = {}
+        for single in parsed:
+            try:
+                reported.update(launch.helper_json(["syntax", single]).get("files", {}))
+            except SignalError as exc:
+                crashed[single] = [
+                    f"{single}: Beancount's parser crashed reading this file "
+                    f"(the engine was killed by {exc.signal_name}), so it was not parsed. {exc.hint}"
+                ]
     failures: dict[str, list[str]] = {}
     for file in files:
-        errors = divided.get(str(file)) or [str(error) for error in reported.get(str(file), [])]
+        errors = (
+            divided.get(str(file)) or crashed.get(str(file)) or [str(error) for error in reported.get(str(file), [])]
+        )
         if not errors:
             continue
         if len(errors) == 1 and errors[0].startswith(f"{file}: cannot read file"):
@@ -661,10 +705,11 @@ def _stdin_text() -> str:
     stream = getattr(sys.stdin, "buffer", None)
     if stream is None:
         return sys.stdin.read()
+    data = bytes(stream.read())
     try:
-        return bytes(stream.read()).decode("utf-8-sig")
+        return data.decode("utf-8-sig")
     except UnicodeDecodeError as exc:
-        raise LedgerError(decode_error_message("stdin", exc)) from exc
+        raise LedgerError(decode_error_message("stdin", exc, data)) from exc
 
 
 def _require_json_destination(in_place: bool, output_file: Path | None) -> None:
@@ -712,10 +757,11 @@ def _result(
     }
 
 
-def _target(paths: list[Path] | None, files: list[Path]) -> dict[str, str | list[str]]:
-    named = [path for path in (paths or []) if str(path)]
+def _target(paths: list[str] | None, files: list[Path], lexical: dict[Path, Path]) -> dict[str, str | list[str]]:
+    named = [Path(path) for path in (paths or []) if path]
     if len(named) == 1 and expand_path(named[0], "format").resolve().is_dir():
         return {"directory": str(expand_path(named[0], "format").resolve())}
-    if len(files) == 1:
-        return {"file": str(files[0])}
-    return {"files": [str(file) for file in files]}
+    shown = [str(lexical.get(file, file)) for file in files]
+    if len(shown) == 1:
+        return {"file": shown[0]}
+    return {"files": shown}

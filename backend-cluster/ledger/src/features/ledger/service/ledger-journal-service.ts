@@ -4,12 +4,15 @@ import {
   ConflictError,
   NotFoundError,
   OperationNotAllowedError,
+  type LedgerWriteAction,
 } from "@/shared/errors";
+import { assertSingleEntryText } from "@/features/ledger/utils/entry-tokens";
 import type {
   DirectiveType,
   TransactionSubtype,
   DocumentSubtype,
   CustomSubtype,
+  JournalAmountPublic,
 } from "@/foundation/ledger-api-types";
 import type { IGiteaClientFactory } from "@/foundation/clients/gitea-client-factory";
 import type { DirectiveJson, FileMap } from "@rustledger/wasm";
@@ -29,13 +32,18 @@ import {
   findEntrySliceAsync,
   formatFiscalYearEnd,
   getDirectiveSourceId,
+  isGeneratedDirective,
   hashEntry,
   parseDateRange,
   parseEntryId,
   parseFavaOptions,
   parseLedgerFiles,
+  normalizeSliceReplacement,
   replaceSliceInFile,
+  replacementLineEnding,
+  servedSliceText,
   resolveEntryIdAtSource,
+  failedBalanceDiffs,
   serializeDirective,
   sliceSha256,
   splitIntoBlocks,
@@ -60,6 +68,9 @@ import {
   type GiteaFileCommitClient,
   type LedgerFileTransform,
 } from "@/features/ledger/operations/commit-ledger-files";
+import type { DirectiveLimitOptions } from "@/core/directive-limit";
+import { toBeancountErrorsPublic } from "@/features/ledger/service/ledger-data-mappers";
+import { refuseNewLedgerErrors } from "@/features/ledger/utils/new-ledger-errors";
 import type { CacheHelper } from "@/shared/cache";
 import { logger } from "@/shared/logger";
 
@@ -184,6 +195,8 @@ interface AppliedReplace {
   content: string;
   /** 0-based start line of the replaced block in `content`. */
   startLine: number;
+  /** The block as stored, line endings and trimmed newlines included. */
+  stored: string;
 }
 
 /**
@@ -207,7 +220,14 @@ function makeReplaceTransform(
       slice.endLine,
       newContent,
     );
-    onApplied?.({ content, startLine: slice.startLine });
+    onApplied?.({
+      content,
+      startLine: slice.startLine,
+      stored: normalizeSliceReplacement(
+        newContent,
+        replacementLineEnding(current, slice.startLine, slice.endLine),
+      ),
+    });
     return content;
   };
 }
@@ -255,6 +275,13 @@ export type EntryContextResult = {
    * no edit, delete, or open-file action for it.
    */
   managed_source: string | null;
+  /**
+   * The entry hash of the source entry when this entry is a copy a plugin or a
+   * pad generated from it (`amortize_over`, `forecast`, padding), else null. A
+   * copy shares its source's text and checksum, so editing or deleting "it"
+   * changes the source and every other copy; clients offer neither (w21/443).
+   */
+  generated_from: string | null;
 };
 
 /**
@@ -281,7 +308,16 @@ export function attachResolvedSourceMeta(
   };
 }
 
-export type PlaintextJournalResult = { content: string };
+export type PlaintextJournalResult = {
+  content: string;
+  /** Entries the filters select, before `offset`/`limit` (w23/044). */
+  total: number;
+  /** Whether entries remain after this page. */
+  truncated: boolean;
+};
+
+/** The paging a plaintext export takes; omitted, it holds every entry. */
+type PlaintextPage = { limit?: number; offset?: number };
 
 export type AccountJournalResult = {
   items: {
@@ -294,14 +330,20 @@ export type AccountJournalResult = {
   with_children: boolean;
 };
 
-export type DeleteSliceResult = { message: string; entryHash: string };
+/** The files a slice write rewrote, each once (w23/042). */
+type TouchedFiles = { files: string[] };
+
+export type DeleteSliceResult = {
+  message: string;
+  entryHash: string;
+} & TouchedFiles;
 
 export type DeleteMultiSlicesResult = {
   message: string;
   deletedHashes: string[];
-};
+} & TouchedFiles;
 
-export type UpdateSliceResult = {
+export type UpdateSliceResult = TouchedFiles & {
   message: string;
   entryHash: string;
   newSha256sum: string;
@@ -362,7 +404,11 @@ interface ILedgerJournalService {
   plaintextJournal(params: {
     ledgerId: string;
     userId: string | undefined;
-    query?: { account?: string; filter?: string; time?: string };
+    query?: {
+      account?: string;
+      filter?: string;
+      time?: string;
+    } & PlaintextPage;
   }): Promise<PlaintextJournalResult>;
 
   getAccountJournal(params: {
@@ -397,6 +443,8 @@ export class LedgerJournalService implements ILedgerJournalService {
   constructor(
     private readonly giteaClientFactory: IGiteaClientFactory,
     private readonly cacheHelper: CacheHelper,
+    /** The request's directive-limit exemption, applied to every commit. */
+    private readonly directiveLimit: DirectiveLimitOptions = {},
   ) {}
 
   private async loadSnapshot(ledgerId: string, userId: string | undefined) {
@@ -475,6 +523,36 @@ export class LedgerJournalService implements ILedgerJournalService {
   }
 
   /**
+   * Refuse a source-slice write that would leave the ledger with bean-check
+   * errors it did not have, as structured adds are refused (w0/m2, w21/m1).
+   * The transforms run over the loaded files, so nothing is committed; the
+   * commit re-applies them to fresh content under CAS. Errors the ledger
+   * already had never block.
+   */
+  private async assertNoNewErrors(
+    loaded: LoadedLedgerWithManagedPrices,
+    transforms: Map<string, LedgerFileTransform>,
+    action: LedgerWriteAction,
+    allowInvalid: boolean | undefined,
+  ): Promise<void> {
+    if (allowInvalid) return;
+    const { files, entryPoint, repoPaths } = loaded;
+    const projected: FileMap = { ...files };
+    for (const [path, transform] of transforms) {
+      projected[path] = await transform(files[path] ?? null);
+    }
+    const errorsOf = async (fileMap: FileMap) =>
+      toBeancountErrorsPublic(
+        (await parseLedgerFiles(fileMap, entryPoint, { repoPaths })).errors,
+      );
+    await refuseNewLedgerErrors(
+      await errorsOf(projected),
+      () => errorsOf(files),
+      action,
+    );
+  }
+
+  /**
    * Commit source-slice edits (delete/replace) with optimistic-concurrency
    * safety: each transform re-locates + re-applies against the FRESH file
    * content immediately before the commit, and retries on a concurrent-write
@@ -497,6 +575,7 @@ export class LedgerJournalService implements ILedgerJournalService {
       ledgerName,
       transforms,
       message,
+      { directiveLimit: this.directiveLimit },
     );
   }
 
@@ -577,8 +656,15 @@ export class LedgerJournalService implements ILedgerJournalService {
    * back to the bare content hash for a directive absent from the id map (e.g. a
    * synthetic clamp entry), which is never a user-editable duplicate.
    */
-  private serialize(directive: DirectiveJson, entryId: string): JournalItem {
-    return { ...serializeDirective(directive), entry_hash: entryId };
+  private serialize(
+    directive: DirectiveJson,
+    entryId: string,
+    balanceDiffs?: ReadonlyMap<DirectiveJson, JournalAmountPublic>,
+  ): JournalItem {
+    return {
+      ...serializeDirective(directive, balanceDiffs),
+      entry_hash: entryId,
+    };
   }
 
   async getJournal(params: {
@@ -594,6 +680,11 @@ export class LedgerJournalService implements ILedgerJournalService {
     // (the same stream `getContext`/`findEntrySlice` resolve against), so a
     // duplicate's ID is stable regardless of how the journal is filtered/paged.
     const entryIds = buildEntryIdMap(snapshot.directives);
+    // A failed assertion's difference, from the validator (w21/087).
+    const balanceDiffs = failedBalanceDiffs(
+      snapshot.directives,
+      snapshot.errors,
+    );
 
     const filtered = await this.clampForJournal(snapshot.directives, {
       account: query?.account || undefined,
@@ -611,7 +702,9 @@ export class LedgerJournalService implements ILedgerJournalService {
           !(d.type === "transaction" && (d.flag === "C" || d.flag === "S")),
       )
       .reverse()
-      .map((d) => this.serialize(d, entryIds.get(d) ?? hashEntry(d)));
+      .map((d) =>
+        this.serialize(d, entryIds.get(d) ?? hashEntry(d), balanceDiffs),
+      );
 
     items = items.filter((item) =>
       matchesJournalDisplayFilters(item, query ?? {}),
@@ -638,7 +731,7 @@ export class LedgerJournalService implements ILedgerJournalService {
     const { ledgerId, userId, entryHash } = params;
     const { files, entryPoint, repoPaths, managedPrices } =
       await this.loadFileMap(ledgerId, userId);
-    const { directives } = await parseLedgerFiles(files, entryPoint, {
+    const { directives, errors } = await parseLedgerFiles(files, entryPoint, {
       repoPaths,
     });
     const entryIds = buildEntryIdMap(directives);
@@ -655,7 +748,11 @@ export class LedgerJournalService implements ILedgerJournalService {
 
     const balances = entryBalances(directives, entryHash);
     const serialized = (directive
-      ? this.serialize(directive, entryHash)
+      ? this.serialize(
+          directive,
+          entryHash,
+          failedBalanceDiffs(directives, errors),
+        )
       : {}) as unknown as Record<string, unknown>;
 
     return {
@@ -665,15 +762,33 @@ export class LedgerJournalService implements ILedgerJournalService {
       sha256sum: found.sha256,
       slice: found.slice,
       managed_source: managedPriceSourceFor(found.file, managedPrices),
+      generated_from:
+        directive !== undefined && isGeneratedDirective(directive)
+          ? sourceEntryHash
+          : null,
     };
   }
 
   async plaintextJournal(params: {
     ledgerId: string;
     userId: string | undefined;
-    query?: { account?: string; filter?: string; time?: string };
+    query?: {
+      account?: string;
+      filter?: string;
+      time?: string;
+    } & PlaintextPage;
   }): Promise<PlaintextJournalResult> {
     const { ledgerId, userId, query } = params;
+    const { limit, offset = 0 } = query ?? {};
+    if (limit !== undefined && (!Number.isInteger(limit) || limit < 1)) {
+      throw new BadUserInputError("limit must be a positive integer", "limit");
+    }
+    if (!Number.isInteger(offset) || offset < 0) {
+      throw new BadUserInputError(
+        "offset must be a non-negative integer",
+        "offset",
+      );
+    }
     const snapshot = await this.loadSnapshot(ledgerId, userId);
     const filtered = await this.clampForJournal(snapshot.directives, {
       account: query?.account || undefined,
@@ -710,11 +825,21 @@ export class LedgerJournalService implements ILedgerJournalService {
     const exported = plaintextExportDirectives(filtered, {
       windowed: Boolean(query?.time),
     });
-    for (const directive of exported) {
+    // Every page keeps the option header, so each one loads on its own; the
+    // whole ledger in one read was a context blowup for agents (w23/044).
+    const page =
+      limit === undefined
+        ? exported.slice(offset)
+        : exported.slice(offset, offset + limit);
+    for (const directive of page) {
       content += `${directiveToText(directive)}\n`;
     }
 
-    return { content };
+    return {
+      content,
+      total: exported.length,
+      truncated: offset + page.length < exported.length,
+    };
   }
 
   async getAccountJournal(params: {
@@ -731,6 +856,10 @@ export class LedgerJournalService implements ILedgerJournalService {
     // Occurrence-disambiguated IDs over the full stream (as in getJournal), so
     // the account view's edit/delete links target the right duplicate.
     const entryIds = buildEntryIdMap(snapshot.directives);
+    const balanceDiffs = failedBalanceDiffs(
+      snapshot.directives,
+      snapshot.errors,
+    );
     // Clamp (not truncate) on `time` so the running balance carries the opening
     // balance into the window; honors the ledger's fiscal-year-end + clamp
     // account names.
@@ -761,6 +890,7 @@ export class LedgerJournalService implements ILedgerJournalService {
         entry: this.serialize(
           row.entry,
           entryIds.get(row.entry) ?? hashEntry(row.entry),
+          balanceDiffs,
         ),
         change: row.change,
         balance: row.balance,
@@ -786,10 +916,12 @@ export class LedgerJournalService implements ILedgerJournalService {
     userId: string;
     entryHash: string;
     sha256sum: string;
+    /** Commit even when the delete adds bean-check errors. */
+    allowInvalid?: boolean;
   }): Promise<DeleteSliceResult> {
-    const { ledgerId, userId, entryHash, sha256sum } = params;
-    const { files, entryPoint, repoPaths, managedPricePaths } =
-      await this.loadFileMap(ledgerId, userId);
+    const { ledgerId, userId, entryHash, sha256sum, allowInvalid } = params;
+    const loaded = await this.loadFileMap(ledgerId, userId);
+    const { files, entryPoint, repoPaths, managedPricePaths } = loaded;
     const sourceEntryHash = await this.resolveSourceEntryId(
       files,
       entryPoint,
@@ -807,35 +939,38 @@ export class LedgerJournalService implements ILedgerJournalService {
       sourceEntryHash,
       sha256sum,
     );
-    await this.commitTransforms(
-      ledgerId,
-      userId,
-      new Map([
-        [
-          found.file,
-          makeDeleteTransform(found.file, [
-            {
-              base: parseEntryId(sourceEntryHash).base,
-              localOccurrence: found.localOccurrence,
-              sha256sum,
-              startLine: found.startLine,
-            },
-          ]),
-        ],
-      ]),
-      "Delete entry",
-    );
-    return { message: "Entry deleted successfully", entryHash };
+    const transforms = new Map([
+      [
+        found.file,
+        makeDeleteTransform(found.file, [
+          {
+            base: parseEntryId(sourceEntryHash).base,
+            localOccurrence: found.localOccurrence,
+            sha256sum,
+            startLine: found.startLine,
+          },
+        ]),
+      ],
+    ]);
+    await this.assertNoNewErrors(loaded, transforms, "delete", allowInvalid);
+    await this.commitTransforms(ledgerId, userId, transforms, "Delete entry");
+    return {
+      message: "Entry deleted successfully",
+      entryHash,
+      files: [found.file],
+    };
   }
 
   async deleteMultiSourceSlices(params: {
     ledgerId: string;
     userId: string;
     entries: { entryHash: string; sha256sum: string }[];
+    /** Commit even when the deletes add bean-check errors. */
+    allowInvalid?: boolean;
   }): Promise<DeleteMultiSlicesResult> {
-    const { ledgerId, userId, entries } = params;
-    const { files, entryPoint, repoPaths, managedPricePaths } =
-      await this.loadFileMap(ledgerId, userId);
+    const { ledgerId, userId, entries, allowInvalid } = params;
+    const loaded = await this.loadFileMap(ledgerId, userId);
+    const { files, entryPoint, repoPaths, managedPricePaths } = loaded;
     const snapshot = await parseLedgerFiles(files, entryPoint, { repoPaths });
     const sourceIds = sourceEntryIds(snapshot.directives);
     const sourceHashes = entries.map(
@@ -890,10 +1025,12 @@ export class LedgerJournalService implements ILedgerJournalService {
       ),
     );
 
+    await this.assertNoNewErrors(loaded, transforms, "delete", allowInvalid);
     await this.commitTransforms(ledgerId, userId, transforms, "Delete entries");
     return {
       message: `Deleted ${deletedHashes.length} entries successfully`,
       deletedHashes,
+      files: [...byFile.keys()],
     };
   }
 
@@ -903,10 +1040,14 @@ export class LedgerJournalService implements ILedgerJournalService {
     entryHash: string;
     sha256sum: string;
     newContent: string;
+    /** Commit even when the edit adds bean-check errors. */
+    allowInvalid?: boolean;
   }): Promise<UpdateSliceResult> {
-    const { ledgerId, userId, entryHash, sha256sum, newContent } = params;
-    const { files, entryPoint, repoPaths, managedPricePaths } =
-      await this.loadFileMap(ledgerId, userId);
+    const { ledgerId, userId, entryHash, sha256sum, newContent, allowInvalid } =
+      params;
+    assertSingleEntryText(newContent, "newContent");
+    const loaded = await this.loadFileMap(ledgerId, userId);
+    const { files, entryPoint, repoPaths, managedPricePaths } = loaded;
     const sourceEntryHash = await this.resolveSourceEntryId(
       files,
       entryPoint,
@@ -922,29 +1063,27 @@ export class LedgerJournalService implements ILedgerJournalService {
       sha256sum,
     );
     const applied: { current?: AppliedReplace } = {};
-    await this.commitTransforms(
-      ledgerId,
-      userId,
-      new Map([
-        [
+    const transforms = new Map([
+      [
+        found.file,
+        makeReplaceTransform(
           found.file,
-          makeReplaceTransform(
-            found.file,
-            {
-              base: parseEntryId(sourceEntryHash).base,
-              localOccurrence: found.localOccurrence,
-              sha256sum,
-              startLine: found.startLine,
-            },
-            newContent,
-            (result) => {
-              applied.current = result;
-            },
-          ),
-        ],
-      ]),
-      "Update entry",
-    );
+          {
+            base: parseEntryId(sourceEntryHash).base,
+            localOccurrence: found.localOccurrence,
+            sha256sum,
+            startLine: found.startLine,
+          },
+          newContent,
+          (result) => {
+            applied.current = result;
+          },
+        ),
+      ],
+    ]);
+    // The projection also reports to `applied`; the commit's run overwrites it.
+    await this.assertNoNewErrors(loaded, transforms, "update", allowInvalid);
+    await this.commitTransforms(ledgerId, userId, transforms, "Update entry");
     // The entry's identity is content-derived, so the edit almost always
     // changed it. Resolve the NEW hash from the committed content so a client
     // can keep the edited entry on screen; fall back to echoing the request
@@ -961,13 +1100,20 @@ export class LedgerJournalService implements ILedgerJournalService {
             {
               file: found.file,
               startLine: applied.current.startLine,
-              lineCount: newContent.split("\n").length,
+              lineCount: applied.current.stored.split("\n").length,
             },
           )) ?? entryHash);
     return {
       message: "Entry updated successfully",
       entryHash: newEntryHash,
-      newSha256sum: sliceSha256(newContent),
+      files: [found.file],
+      // The block as stored, served as a fresh read serves it: the checksum
+      // the entry's next edit presents (w21/252).
+      newSha256sum: sliceSha256(
+        applied.current === undefined
+          ? newContent
+          : servedSliceText(applied.current.stored),
+      ),
       newEntryHash,
     };
   }

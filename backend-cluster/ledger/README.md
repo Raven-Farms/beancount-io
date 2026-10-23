@@ -45,6 +45,26 @@ the latest 100 intervals: a full non-leap year with `interval=daily` returns
 365 rows. Consumers should aggregate or window charts explicitly if needed;
 the report service does not apply a chart display limit to financial data.
 
+## BQL column types
+
+BQL query tables include column names and `dtype` labels. The pinned
+`@rustledger/wasm` 0.24.0 result does not expose an expression schema, so the
+ledger service infers these labels from non-null returned cells and canonical
+column names. Numeric-looking or date-looking string literals can be labelled
+`Decimal` or `date`, and a projection alias can change a label. Empty or
+entirely null columns fall back to their output names.
+
+For example, `'00123' AS reference` can be labelled `Decimal` while
+`'00123' AS account` is labelled `str`; both preserve the string `"00123"`.
+Numeric `1.25 AS account` can conversely be labelled `str`. Consumers should
+not coerce an identifier to a number solely from this inferred label. Scalar
+text and decimal strings retain their values and precision.
+
+REST, GraphQL and MCP share this query producer and its limitations. Reliable
+expression types independent of aliases, including empty or entirely null
+columns, require a supported engine schema. The service does not reconstruct
+that schema by parsing user queries or coercing values.
+
 ## Getting started
 
 Requires Node.js 20.19+, 22.13+, or 24+ and a running Gitea instance. See

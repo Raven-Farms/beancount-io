@@ -2,6 +2,7 @@ import { describe, it, expect, vi, afterEach, beforeEach } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { LedgerForm } from "../ledger-form";
+import { ledgerFormTranslations } from "../../ledger-form-translations";
 import {
   LedgerTemplate,
   type CreateLedgerMutationVariables,
@@ -15,6 +16,10 @@ import {
 // Mock Apollo Client
 vi.mock("@apollo/client/react", () => ({
   useQuery: vi.fn(),
+  useLazyQuery: vi.fn(() => [
+    vi.fn(async () => ({ data: undefined })),
+    { data: undefined, loading: false, error: undefined },
+  ]),
 }));
 
 // Mock ReactNativeBridgeProvider context
@@ -30,6 +35,7 @@ describe("LedgerForm", () => {
   const mockOnCancel = vi.fn();
 
   beforeEach(() => {
+    sessionStorage.clear();
     // Create a call counter to distinguish between different useQuery calls
     let queryCallCount = 0;
 
@@ -85,27 +91,56 @@ describe("LedgerForm", () => {
   });
 
   afterEach(() => {
+    sessionStorage.clear();
     vi.clearAllMocks();
   });
 
-  it("should render all form fields", () => {
+  it("should render the staged creation start step", () => {
     render(<LedgerForm onSubmit={mockOnSubmit} onCancel={mockOnCancel} />);
 
-    // Check for form fields
-    expect(screen.getByLabelText("Ledger Name")).toBeInTheDocument();
-    expect(screen.getByLabelText("Description (Optional)")).toBeInTheDocument();
-    expect(screen.getByLabelText("Private")).toBeInTheDocument();
+    // The staged flow opens on how to start; details come next.
+    expect(screen.getByTestId("ledger-create-step")).toHaveTextContent(
+      "Step 1 of 3",
+    );
     expect(
       screen.getByRole("radio", { name: /Starter template/i }),
     ).toBeChecked();
     expect(
       screen.getByRole("radio", { name: /Sample ledger/i }),
     ).toBeInTheDocument();
+    expect(screen.queryByLabelText("Ledger Name")).not.toBeInTheDocument();
 
     // Check for buttons
     expect(screen.getByRole("button", { name: "Cancel" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Save" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Next" })).toBeInTheDocument();
   });
+
+  it("should describe the Starter as empty books in every locale (w3/648)", () => {
+    render(<LedgerForm onSubmit={mockOnSubmit} onCancel={mockOnCancel} />);
+    expect(
+      screen.getByText("Empty books with a standard chart of accounts."),
+    ).toBeInTheDocument();
+    // The hosted Starter seeds no example transaction, so no locale's
+    // Starter copy may promise one.
+    const examplePromise =
+      /example|beispiel|ejemplo|exemple|exemplo|voorbeeld|vzorová|примерн|прикладна|サンプル|例|نمونه/i;
+    for (const languageMessages of Object.values(ledgerFormTranslations)) {
+      expect(
+        languageMessages["page.dashboard.starterTemplateDescription"].message,
+      ).not.toMatch(examplePromise);
+    }
+  });
+
+  async function throughDetails(user: ReturnType<typeof userEvent.setup>) {
+    await user.click(screen.getByRole("button", { name: "Next" }));
+    expect(screen.getByLabelText("Ledger Name")).toBeInTheDocument();
+  }
+
+  async function throughReview(user: ReturnType<typeof userEvent.setup>) {
+    await throughDetails(user);
+    await user.click(screen.getByRole("button", { name: "Next" }));
+    expect(screen.getByTestId("ledger-create-review")).toBeInTheDocument();
+  }
 
   it("should populate form with initial data", () => {
     const initialData: Partial<CreateLedgerMutationVariables> = {
@@ -133,6 +168,7 @@ describe("LedgerForm", () => {
     const user = userEvent.setup();
     render(<LedgerForm onSubmit={mockOnSubmit} onCancel={mockOnCancel} />);
 
+    await throughDetails(user);
     // Fill out form (select all and replace default value)
     const nameInput = screen.getByLabelText("Ledger Name");
     await user.tripleClick(nameInput);
@@ -143,8 +179,8 @@ describe("LedgerForm", () => {
     );
     // Private is true by default, no need to click
 
-    // Submit form
-    await user.click(screen.getByRole("button", { name: "Save" }));
+    await user.click(screen.getByRole("button", { name: "Next" }));
+    await user.click(screen.getByRole("button", { name: "Create Ledger" }));
 
     await waitFor(() => {
       // Name should be slugified before submission
@@ -152,7 +188,31 @@ describe("LedgerForm", () => {
         name: "my-ledger",
         description: "My Description",
         private: true,
+        requestId: expect.any(String),
       });
+    });
+  });
+
+  it("creates from a preset with a known opening balance", async () => {
+    const user = userEvent.setup();
+    render(<LedgerForm onSubmit={mockOnSubmit} onCancel={mockOnCancel} />);
+
+    await user.click(screen.getByRole("radio", { name: /^Template/ }));
+    await user.click(screen.getByRole("radio", { name: /Personal ledger/i }));
+    await throughReview(user);
+    await user.click(screen.getByRole("button", { name: "Create Ledger" }));
+
+    await waitFor(() => {
+      expect(mockOnSubmit).toHaveBeenCalledWith(
+        expect.objectContaining({
+          private: true,
+          requestId: expect.any(String),
+          setup: expect.objectContaining({
+            operatingCurrency: expect.any(String),
+            accounts: undefined,
+          }),
+        }),
+      );
     });
   });
 
@@ -160,11 +220,13 @@ describe("LedgerForm", () => {
     const user = userEvent.setup();
     render(<LedgerForm onSubmit={mockOnSubmit} onCancel={mockOnCancel} />);
 
+    await user.click(screen.getByRole("radio", { name: /Sample ledger/i }));
+    await throughDetails(user);
     const nameInput = screen.getByLabelText("Ledger Name");
     await user.tripleClick(nameInput);
     await user.keyboard("Sample Book");
-    await user.click(screen.getByRole("radio", { name: /Sample ledger/i }));
-    await user.click(screen.getByRole("button", { name: "Save" }));
+    await user.click(screen.getByRole("button", { name: "Next" }));
+    await user.click(screen.getByRole("button", { name: "Create Ledger" }));
 
     await waitFor(() => {
       expect(mockOnSubmit).toHaveBeenCalledWith({
@@ -172,8 +234,22 @@ describe("LedgerForm", () => {
         description: undefined,
         private: true,
         template: LedgerTemplate.Sample,
+        requestId: expect.any(String),
       });
     });
+  });
+
+  it("gates the forced-colors highlight on each card's checked radio (w4/m43)", () => {
+    // The checked card's ring and faint fill vanish in forced colors; it
+    // claims the system highlight instead, and focus keeps its own outline.
+    render(<LedgerForm onSubmit={mockOnSubmit} onCancel={mockOnCancel} />);
+
+    for (const radio of screen.getAllByRole("radio")) {
+      expect(radio.closest("label")).toHaveClass(
+        "has-[:checked]:forced-selected",
+        "forced-colors:has-[:focus-visible]:outline-[CanvasText]",
+      );
+    }
   });
 
   it("draws keyboard focus on the template card whose hidden radio has it (w3/561)", async () => {
@@ -198,13 +274,14 @@ describe("LedgerForm", () => {
     const user = userEvent.setup();
     render(<LedgerForm onSubmit={mockOnSubmit} onCancel={mockOnCancel} />);
 
+    await throughDetails(user);
     // Fill only name (select all and replace default value)
     const nameInput = screen.getByLabelText("Ledger Name");
     await user.tripleClick(nameInput);
     await user.keyboard("My Ledger");
 
-    // Submit form
-    await user.click(screen.getByRole("button", { name: "Save" }));
+    await user.click(screen.getByRole("button", { name: "Next" }));
+    await user.click(screen.getByRole("button", { name: "Create Ledger" }));
 
     await waitFor(() => {
       // Name should be slugified before submission
@@ -212,6 +289,7 @@ describe("LedgerForm", () => {
         name: "my-ledger",
         description: undefined,
         private: true,
+        requestId: expect.any(String),
       });
     });
   });
@@ -219,7 +297,6 @@ describe("LedgerForm", () => {
   // TODO: This test is skipped because of test library limitation with clearing default values
   // The feature works correctly in the browser - this is a testing-only issue
   it.skip("should show validation error for empty name", async () => {
-    const user = userEvent.setup();
     render(<LedgerForm onSubmit={mockOnSubmit} onCancel={mockOnCancel} />);
 
     // Wait for default name to load, then select all and type a space, then delete it
@@ -243,11 +320,12 @@ describe("LedgerForm", () => {
   it("should show validation error for name exceeding max length", async () => {
     const user = userEvent.setup();
     render(<LedgerForm onSubmit={mockOnSubmit} onCancel={mockOnCancel} />);
+    await throughDetails(user);
 
     // Fill with name exceeding 100 characters
     const longName = "a".repeat(101);
     await user.type(screen.getByLabelText("Ledger Name"), longName);
-    await user.click(screen.getByRole("button", { name: "Save" }));
+    await user.click(screen.getByRole("button", { name: "Next" }));
 
     await waitFor(() => {
       expect(
@@ -271,6 +349,7 @@ describe("LedgerForm", () => {
   it("should disable form fields and buttons when loading", () => {
     render(
       <LedgerForm
+        initialData={{ name: "Existing" }}
         onSubmit={mockOnSubmit}
         onCancel={mockOnCancel}
         isLoading={true}
@@ -287,6 +366,7 @@ describe("LedgerForm", () => {
   it("should show 'Saving...' text on submit button when loading", () => {
     render(
       <LedgerForm
+        initialData={{ name: "Existing" }}
         onSubmit={mockOnSubmit}
         onCancel={mockOnCancel}
         isLoading={true}
@@ -306,17 +386,21 @@ describe("LedgerForm", () => {
     const asyncOnSubmit = vi.fn().mockResolvedValue(undefined);
 
     render(<LedgerForm onSubmit={asyncOnSubmit} onCancel={mockOnCancel} />);
+    await throughDetails(user);
 
     await user.type(screen.getByLabelText("Ledger Name"), "Test");
-    await user.click(screen.getByRole("button", { name: "Save" }));
+    await user.click(screen.getByRole("button", { name: "Next" }));
+    await user.click(screen.getByRole("button", { name: "Create Ledger" }));
 
     await waitFor(() => {
       expect(asyncOnSubmit).toHaveBeenCalled();
     });
   });
 
-  it("should set private to true by default", () => {
+  it("should set private to true by default", async () => {
+    const user = userEvent.setup();
     render(<LedgerForm onSubmit={mockOnSubmit} onCancel={mockOnCancel} />);
+    await throughDetails(user);
 
     const privateSwitch = screen.getByRole("switch");
     expect(privateSwitch).toBeChecked();
@@ -325,6 +409,7 @@ describe("LedgerForm", () => {
   it("should update private switch when toggled", async () => {
     const user = userEvent.setup();
     render(<LedgerForm onSubmit={mockOnSubmit} onCancel={mockOnCancel} />);
+    await throughDetails(user);
 
     const privateSwitch = screen.getByRole("switch");
     expect(privateSwitch).toBeChecked();
@@ -339,12 +424,13 @@ describe("LedgerForm", () => {
   it("should show validation error for invalid name (only special characters)", async () => {
     const user = userEvent.setup();
     render(<LedgerForm onSubmit={mockOnSubmit} onCancel={mockOnCancel} />);
+    await throughDetails(user);
 
     // Fill with only special characters (select all and replace default value)
     const nameInput = screen.getByLabelText("Ledger Name");
     await user.tripleClick(nameInput);
     await user.keyboard("!@#$%^");
-    await user.click(screen.getByRole("button", { name: "Save" }));
+    await user.click(screen.getByRole("button", { name: "Next" }));
 
     await waitFor(() => {
       expect(
@@ -360,11 +446,12 @@ describe("LedgerForm", () => {
   it("explains the Latin-letter rule for an all non-Latin name (w0/023)", async () => {
     const user = userEvent.setup();
     render(<LedgerForm onSubmit={mockOnSubmit} onCancel={mockOnCancel} />);
+    await throughDetails(user);
 
     const nameInput = screen.getByLabelText("Ledger Name");
     await user.tripleClick(nameInput);
     await user.keyboard("我的账本");
-    await user.click(screen.getByRole("button", { name: "Save" }));
+    await user.click(screen.getByRole("button", { name: "Next" }));
 
     await waitFor(() => {
       expect(screen.getByText(/at least one Latin letter/)).toBeInTheDocument();
@@ -376,6 +463,7 @@ describe("LedgerForm", () => {
   it("should show slugified name preview when name differs", async () => {
     const user = userEvent.setup();
     render(<LedgerForm onSubmit={mockOnSubmit} onCancel={mockOnCancel} />);
+    await throughDetails(user);
 
     // Type a name with spaces (select all and replace default value)
     const nameInput = screen.getByLabelText("Ledger Name");
@@ -392,6 +480,7 @@ describe("LedgerForm", () => {
   it("should not show slugified preview when name is already slugified", async () => {
     const user = userEvent.setup();
     render(<LedgerForm onSubmit={mockOnSubmit} onCancel={mockOnCancel} />);
+    await throughDetails(user);
 
     // Type a name that's already slugified
     await user.type(screen.getByLabelText("Ledger Name"), "my-ledger");
@@ -406,18 +495,21 @@ describe("LedgerForm", () => {
   it("should accept names with underscores", async () => {
     const user = userEvent.setup();
     render(<LedgerForm onSubmit={mockOnSubmit} onCancel={mockOnCancel} />);
+    await throughDetails(user);
 
     // Select all and replace default value
     const nameInput = screen.getByLabelText("Ledger Name");
     await user.tripleClick(nameInput);
     await user.keyboard("my_ledger_2024");
-    await user.click(screen.getByRole("button", { name: "Save" }));
+    await user.click(screen.getByRole("button", { name: "Next" }));
+    await user.click(screen.getByRole("button", { name: "Create Ledger" }));
 
     await waitFor(() => {
       expect(mockOnSubmit).toHaveBeenCalledWith({
         name: "my_ledger_2024",
         description: undefined,
         private: true,
+        requestId: expect.any(String),
       });
     });
   });
@@ -425,18 +517,21 @@ describe("LedgerForm", () => {
   it("should accept names with numbers", async () => {
     const user = userEvent.setup();
     render(<LedgerForm onSubmit={mockOnSubmit} onCancel={mockOnCancel} />);
+    await throughDetails(user);
 
     // Select all and replace default value
     const nameInput = screen.getByLabelText("Ledger Name");
     await user.tripleClick(nameInput);
     await user.keyboard("budget-2024");
-    await user.click(screen.getByRole("button", { name: "Save" }));
+    await user.click(screen.getByRole("button", { name: "Next" }));
+    await user.click(screen.getByRole("button", { name: "Create Ledger" }));
 
     await waitFor(() => {
       expect(mockOnSubmit).toHaveBeenCalledWith({
         name: "budget-2024",
         description: undefined,
         private: true,
+        requestId: expect.any(String),
       });
     });
   });
@@ -444,6 +539,7 @@ describe("LedgerForm", () => {
   it("should show preview with special characters removed", async () => {
     const user = userEvent.setup();
     render(<LedgerForm onSubmit={mockOnSubmit} onCancel={mockOnCancel} />);
+    await throughDetails(user);
 
     // Type a name with special characters (select all and replace default value)
     const nameInput = screen.getByLabelText("Ledger Name");
@@ -500,6 +596,8 @@ describe("LedgerForm", () => {
       });
 
       render(<LedgerForm onSubmit={mockOnSubmit} onCancel={mockOnCancel} />);
+      const user = userEvent.setup();
+      await throughDetails(user);
 
       await waitFor(() => {
         expect(screen.getByDisplayValue("my-book")).toBeInTheDocument();
@@ -569,6 +667,8 @@ describe("LedgerForm", () => {
       });
 
       render(<LedgerForm onSubmit={mockOnSubmit} onCancel={mockOnCancel} />);
+      const user = userEvent.setup();
+      await throughDetails(user);
 
       await waitFor(() => {
         expect(screen.getByDisplayValue("my-book-1")).toBeInTheDocument();
@@ -658,6 +758,8 @@ describe("LedgerForm", () => {
       });
 
       render(<LedgerForm onSubmit={mockOnSubmit} onCancel={mockOnCancel} />);
+      const user = userEvent.setup();
+      await throughDetails(user);
 
       await waitFor(() => {
         expect(screen.getByDisplayValue("my-book-2")).toBeInTheDocument();
@@ -685,8 +787,9 @@ describe("LedgerForm", () => {
     });
 
     it("should allow user to override default name", async () => {
-      const user = userEvent.setup();
       render(<LedgerForm onSubmit={mockOnSubmit} onCancel={mockOnCancel} />);
+      const user = userEvent.setup();
+      await throughDetails(user);
 
       await waitFor(() => {
         expect(screen.getByDisplayValue("my-book")).toBeInTheDocument();
@@ -697,15 +800,55 @@ describe("LedgerForm", () => {
       await user.tripleClick(nameInput);
       await user.keyboard("custom-ledger");
 
-      await user.click(screen.getByRole("button", { name: "Save" }));
+      await user.click(screen.getByRole("button", { name: "Next" }));
+      await user.click(screen.getByRole("button", { name: "Create Ledger" }));
 
       await waitFor(() => {
         expect(mockOnSubmit).toHaveBeenCalledWith({
           name: "custom-ledger",
           description: undefined,
           private: true,
+          requestId: expect.any(String),
         });
       });
     });
+  });
+});
+
+describe("LedgerForm draft resume (w3/m54/t006)", () => {
+  it("resumes the step and requestId after leaving and returning", async () => {
+    const user = userEvent.setup();
+    // Resolving true reports a created ledger (w4/320).
+    const onSubmit = vi.fn().mockResolvedValue(true);
+    const first = render(<LedgerForm onSubmit={onSubmit} onCancel={vi.fn()} />);
+    await user.click(screen.getByRole("button", { name: "Next" }));
+    expect(screen.getByTestId("ledger-create-step")).toHaveTextContent(
+      "Step 2 of 3",
+    );
+    first.unmount();
+
+    const second = render(
+      <LedgerForm onSubmit={onSubmit} onCancel={vi.fn()} />,
+    );
+    // The draft restored the details step instead of restarting.
+    expect(screen.getByTestId("ledger-create-step")).toHaveTextContent(
+      "Step 2 of 3",
+    );
+    expect(screen.getByLabelText("Ledger Name")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Next" }));
+    await user.click(screen.getByRole("button", { name: "Create Ledger" }));
+    await waitFor(() => expect(onSubmit).toHaveBeenCalled());
+    const resumedRequestId = onSubmit.mock.calls[0][0].requestId;
+    expect(typeof resumedRequestId).toBe("string");
+
+    // A fresh form (draft cleared by the successful submit) mints a new id.
+    onSubmit.mockClear();
+    second.unmount();
+    render(<LedgerForm onSubmit={onSubmit} onCancel={vi.fn()} />);
+    await user.click(screen.getByRole("button", { name: "Next" }));
+    await user.click(screen.getByRole("button", { name: "Next" }));
+    await user.click(screen.getByRole("button", { name: "Create Ledger" }));
+    await waitFor(() => expect(onSubmit).toHaveBeenCalled());
+    expect(onSubmit.mock.calls[0][0].requestId).not.toBe(resumedRequestId);
   });
 });

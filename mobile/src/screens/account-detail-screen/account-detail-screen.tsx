@@ -1,3 +1,4 @@
+import { contentPadding } from "@/common/screen-util";
 import { useGuest } from "@/common/guest/guest-context";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
@@ -8,16 +9,19 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Stack, useLocalSearchParams, useRouter } from "expo-router";
+import { Stack, useRouter } from "expo-router";
 import { NetworkStatus } from "@apollo/client";
 import { ColorTheme } from "@/types/theme-props";
 import { fontSizes, fontWeights, useTheme } from "@/common/theme";
 import { useThemeStyle } from "@/common/hooks";
 import { useTranslations } from "@/common/hooks/use-translations";
-import { getPrimaryCurrency } from "@/common/currency-util";
-import { BalanceChartCard } from "@/components";
+import { selectReadContextState } from "@/common/apollo/card-load-state";
+import { BalanceChartCard, StaleDataBanner } from "@/components";
+import { isShowingStaleDataFromQueries } from "@/common/apollo/stale-data";
+import { selectChartFailed } from "./selectors/select-chart-failed";
 import { LedgerGuard, useLedgerGuard } from "@/components/ledger-guard";
 import { ThemedRefreshControl } from "@/components/dashboard-scroll-view";
+import { LoadMoreFailed } from "@/components/load-more-failed";
 import { useLedgerReadContext } from "@/common/hooks/use-ledger-read-context";
 import { useAccountReport } from "@/screens/accounts-screen/hooks/use-account-report";
 import { useTrialBalance } from "@/screens/accounts-screen/hooks/use-trial-balance";
@@ -33,19 +37,21 @@ import {
 import { BALANCE_CONVERSION } from "@/common/balance-util";
 import { balanceNotes } from "@/common/valuation";
 import { useLedgerPrices } from "@/common/hooks/use-ledger-prices";
-import { getFormatDate } from "@/common/format-util";
+import { useToday } from "@/common/hooks/use-today";
 import { formatUnits } from "@/common/number-utils";
 import {
   selectAccountBalanceDisplay,
   selectAccountBalanceSeries,
+  selectAccountUnitsScale,
   selectAccountUnitsSeries,
 } from "@/screens/account-detail-screen/selectors/select-account-balance-series";
 import {
   AccountJournalItem,
   AccountJournalRow,
   AccountJournalSection,
-  accountJournalItemKey,
+  accountJournalItemKeys,
   hasMoreAccountJournal,
+  accountJournalPageOverlapped,
   mergeAccountJournalItems,
   selectAccountJournalRows,
   groupAccountJournalRowsToSections,
@@ -57,9 +63,11 @@ import {
 import { openTransactionDetail } from "@/screens/transaction-detail-screen/open-transaction-detail";
 import { AccountEntryRow } from "@/screens/account-detail-screen/components/account-entry-row";
 import { DateSectionHeader } from "@/screens/transactions-screen/date-section-header";
+import { AccountJournalListEmpty } from "./components/account-journal-empty";
 import { selectAccountDetailTarget } from "@/screens/account-detail-screen/select-account-detail-target";
 import { LEADING_TEXT_ALIGN } from "@/common/rtl";
 import { RouteLedgerUnavailable } from "@/components/route-ledger-unavailable";
+import { useRouteParams } from "@/common/hooks/use-route-params";
 
 /** Leaf segment for the compact navigation title. */
 function accountLeafName(account: string): string {
@@ -89,16 +97,6 @@ const getStyles = (theme: ColorTheme) =>
       marginBottom: 8,
       paddingHorizontal: 16,
     },
-    stateContainer: {
-      alignItems: "center",
-      justifyContent: "center",
-      paddingVertical: 40,
-    },
-    stateText: {
-      fontSize: fontSizes.md,
-      color: theme.black60,
-      textAlign: "center",
-    },
     footer: {
       flexDirection: "row",
       alignItems: "center",
@@ -108,10 +106,12 @@ const getStyles = (theme: ColorTheme) =>
     },
     footerText: {
       fontSize: fontSizes.md,
-      color: theme.black60,
+      color: theme.black80,
     },
     chartContainer: {
-      paddingHorizontal: 10,
+      // The chart is `ScreenWidth - contentPadding * 2` wide: padded by 10 it
+      // sat flush left with 12 pt spare on the right (w21/220).
+      paddingHorizontal: contentPadding,
     },
   });
 
@@ -130,11 +130,14 @@ const AccountDetailScreenImpl = ({
   const { colorTheme: theme, name: themeName } = useTheme();
 
   const {
-    currencies,
+    primaryCurrency: currency,
     data: ledgerReadData,
+    error: ledgerReadError,
     refetch: ledgerMetaRefetch,
   } = useLedgerReadContext(ledgerId);
-  const currency = getPrimaryCurrency(currencies);
+  // Until the read context lands the currency is a blind "USD"; a failed one
+  // leaves it so for good. Held like the account's own reads (w21/406).
+  const contextState = selectReadContextState(ledgerReadData, ledgerReadError);
   // Income, Expenses and Equity mirror net worth, so their changes color the
   // other way round; the figures themselves keep the ledger's sign (w0/033).
   const roots = ledgerReadData?.getLedger.options;
@@ -183,7 +186,13 @@ const AccountDetailScreenImpl = ({
   } = useTrialBalance(ledgerId);
   const valuationPending =
     (pricesLoading && !pricesData) || (accountsLoading && !accountsData);
-  const today = useMemo(() => getFormatDate(new Date()), []);
+  const today = useToday();
+  // The account's balance at the ledger's latest prices, as its Accounts row
+  // reads it (w21/179).
+  const currentBalance = useMemo(
+    () => selectTrialBalanceAccount(accountsData, account),
+    [accountsData, account],
+  );
   const display = useMemo(
     () =>
       selectAccountBalanceDisplay(
@@ -192,7 +201,7 @@ const AccountDetailScreenImpl = ({
         unitsReportData,
         prices,
         today,
-        selectTrialBalanceAccount(accountsData, account),
+        currentBalance,
         managed,
       ),
     [
@@ -230,17 +239,35 @@ const AccountDetailScreenImpl = ({
   const balanceSeries = useMemo(
     () =>
       unitsCurrency
-        ? selectAccountUnitsSeries(unitsCurrency, unitsReportData)
-        : selectAccountBalanceSeries(currency, reportData),
-    [currency, reportData, unitsCurrency, unitsReportData],
+        ? selectAccountUnitsSeries(unitsCurrency, unitsReportData, today)
+        : selectAccountBalanceSeries(
+            currency,
+            reportData,
+            currentBalance ? { balance: currentBalance, today } : undefined,
+            today,
+          ),
+    [
+      currency,
+      reportData,
+      unitsCurrency,
+      unitsReportData,
+      currentBalance,
+      today,
+    ],
+  );
+  // Every chart point and change at the widest scale the series holds, not
+  // the latest balance's (w21/125).
+  const chartScale = Math.max(
+    unitsScale ?? 0,
+    unitsCurrency ? selectAccountUnitsScale(unitsCurrency, unitsReportData) : 0,
   );
   const formatChartValue = useMemo(
     () =>
       unitsCurrency === undefined
         ? undefined
         : (value: number, includePlus?: boolean) =>
-            formatUnits(value, unitsCurrency, unitsScale ?? 0, includePlus),
-    [unitsCurrency, unitsScale],
+            formatUnits(value, unitsCurrency, chartScale, includePlus),
+    [unitsCurrency, chartScale],
   );
   const chartLabel = [
     t("balance"),
@@ -279,9 +306,8 @@ const AccountDetailScreenImpl = ({
   // key so a tapped row can hand its full entry to the detail screen.
   const itemsByKey = useMemo(() => {
     const map = new Map<string, AccountJournalItem>();
-    for (const item of items) {
-      map.set(accountJournalItemKey(item), item);
-    }
+    const keys = accountJournalItemKeys(items);
+    items.forEach((item, index) => map.set(keys[index], item));
     return map;
   }, [items]);
 
@@ -292,59 +318,89 @@ const AccountDetailScreenImpl = ({
   );
   const isLoadingMore = networkStatus === NetworkStatus.fetchMore;
   const isInitialLoading =
-    (journalLoading || unitsReportPending) && items.length === 0;
+    ((journalLoading || unitsReportPending) && items.length === 0) ||
+    contextState === "loading";
 
-  const loadMore = useCallback(async () => {
-    if (isLoadingMore || !hasMore || journalLoading || !ledgerId) {
-      return;
-    }
-    try {
-      await fetchMore({
-        variables: {
-          ledgerId,
-          query: {
-            account,
-            limit: ACCOUNT_JOURNAL_PAGE_SIZE,
-            offset: items.length,
-            with_children: true,
-            conversion: journalConversion,
-          },
-        },
-        updateQuery: (prev, { fetchMoreResult }) => {
-          if (!fetchMoreResult?.getLedgerAccountJournal) {
-            return prev;
-          }
-          const incoming = fetchMoreResult.getLedgerAccountJournal.items;
-          const merged = mergeAccountJournalItems(
-            prev.getLedgerAccountJournal.items,
-            incoming,
-          );
-          setLastJournalPage({
-            incoming: incoming.length,
-            added: merged.length - prev.getLedgerAccountJournal.items.length,
-          });
-          return {
-            ...prev,
-            getLedgerAccountJournal: {
-              ...fetchMoreResult.getLedgerAccountJournal,
-              items: merged,
+  // The list whose next page failed to load, so another account or ledger
+  // starts clean. While set, scrolling to the end does not ask again; Retry
+  // does (w21/353).
+  const listKey = `${ledgerId}|${account}|${journalConversion}`;
+  const [loadMoreFailedFor, setLoadMoreFailedFor] = useState<string | null>(
+    null,
+  );
+  const loadMoreFailed = loadMoreFailedFor === listKey;
+
+  const loadMore = useCallback(
+    async (retry = false) => {
+      if (isLoadingMore || !hasMore || journalLoading || !ledgerId) {
+        return;
+      }
+      if (loadMoreFailed && !retry) return;
+      setLoadMoreFailedFor(null);
+      let listMoved = false;
+      try {
+        await fetchMore({
+          variables: {
+            ledgerId,
+            query: {
+              account,
+              limit: ACCOUNT_JOURNAL_PAGE_SIZE,
+              offset: items.length,
+              with_children: true,
+              conversion: journalConversion,
             },
-          };
-        },
-      });
-    } catch (err) {
-      console.error("Error loading more account entries:", err);
-    }
-  }, [
-    isLoadingMore,
-    hasMore,
-    journalLoading,
-    ledgerId,
-    account,
-    items.length,
-    journalConversion,
-    fetchMore,
-  ]);
+          },
+          updateQuery: (prev, { fetchMoreResult }) => {
+            if (!fetchMoreResult?.getLedgerAccountJournal) {
+              return prev;
+            }
+            const incoming = fetchMoreResult.getLedgerAccountJournal.items;
+            const merged = mergeAccountJournalItems(
+              prev.getLedgerAccountJournal.items,
+              incoming,
+              {
+                loaded: prev.getLedgerAccountJournal.total,
+                page: fetchMoreResult.getLedgerAccountJournal.total,
+              },
+            );
+            const page = {
+              incoming: incoming.length,
+              added: merged.length - prev.getLedgerAccountJournal.items.length,
+            };
+            listMoved = accountJournalPageOverlapped(page);
+            setLastJournalPage(page);
+            return {
+              ...prev,
+              getLedgerAccountJournal: {
+                ...fetchMoreResult.getLedgerAccountJournal,
+                items: merged,
+              },
+            };
+          },
+        });
+        if (listMoved) {
+          setLastJournalPage(null);
+          void journalRefetch().catch(() => undefined);
+        }
+      } catch (err) {
+        console.error("Error loading more account entries:", err);
+        setLoadMoreFailedFor(listKey);
+      }
+    },
+    [
+      isLoadingMore,
+      hasMore,
+      journalLoading,
+      loadMoreFailed,
+      listKey,
+      ledgerId,
+      account,
+      items.length,
+      journalConversion,
+      fetchMore,
+      journalRefetch,
+    ],
+  );
 
   const [refreshing, setRefreshing] = useState(false);
   const onRefresh = async () => {
@@ -359,6 +415,8 @@ const AccountDetailScreenImpl = ({
         pricesRefetch(),
         accountsRefetch(),
       ]);
+      // Back at the first page: scrolling asks for the next one again (w21/465).
+      setLoadMoreFailedFor(null);
     } finally {
       setRefreshing(false);
     }
@@ -394,6 +452,29 @@ const AccountDetailScreenImpl = ({
     [],
   );
 
+  const contextFailed = contextState === "failed";
+  const chartFailed =
+    contextFailed ||
+    selectChartFailed({
+      unitsCurrency,
+      report: { data: reportData, error: reportError },
+      unitsReport: { data: unitsReportData, error: unitsReportError },
+    });
+  const retryChart = useCallback(() => {
+    void ledgerMetaRefetch().catch(() => undefined);
+    void (unitsCurrency ? unitsReportRefetch() : reportRefetch());
+    // The journal beneath failed with the chart when the account never loaded,
+    // and its "Failed to load journal" has no retry of its own: one Try again
+    // recovers the whole screen (w21/577).
+    void journalRefetch().catch(() => undefined);
+  }, [
+    unitsCurrency,
+    unitsReportRefetch,
+    reportRefetch,
+    ledgerMetaRefetch,
+    journalRefetch,
+  ]);
+
   const listHeader = useMemo(
     () => (
       <>
@@ -413,12 +494,22 @@ const AccountDetailScreenImpl = ({
             // Skeleton only on first load: a pull-to-refresh keeps the chart
             // visible under the RefreshControl spinner rather than collapsing
             // it back to a tile.
-            loading={reportPending || unitsReportPending || valuationPending}
-            error={Boolean(unitsCurrency ? unitsReportError : reportError)}
+            loading={
+              reportPending ||
+              unitsReportPending ||
+              valuationPending ||
+              contextState === "loading"
+            }
+            // Only a first load with nothing to draw is an error card; a failed
+            // refresh keeps the chart under the stale banner (w21/239).
+            error={chartFailed}
+            onRetry={retryChart}
             netWorthSign={netWorthSign}
           />
         </View>
-        <Text style={styles.sectionTitle}>{t("transactions")}</Text>
+        <Text style={styles.sectionTitle} accessibilityRole="header">
+          {t("transactions")}
+        </Text>
       </>
     ),
     [
@@ -431,8 +522,9 @@ const AccountDetailScreenImpl = ({
       reportPending,
       unitsReportPending,
       valuationPending,
-      reportError,
-      unitsReportError,
+      contextState,
+      chartFailed,
+      retryChart,
       styles.sectionTitle,
       styles.accountPath,
       account,
@@ -443,8 +535,18 @@ const AccountDetailScreenImpl = ({
   return (
     <SafeAreaView edges={["bottom"]} style={styles.container}>
       <Stack.Screen options={{ title: accountLeafName(account) }} />
+      {isShowingStaleDataFromQueries([
+        { data: journalData, error: journalError },
+        // A refresh that failed over a chart already drawn (w21/239).
+        { data: reportData, error: reportError },
+        { data: unitsReportData, error: unitsReportError },
+      ]) ? (
+        <StaleDataBanner />
+      ) : null}
       <SectionList
-        sections={isInitialLoading || journalError ? [] : sections}
+        // A failed refresh keeps the rows already loaded, under the stale
+        // banner; only a failed first load has nothing to list (w21/081).
+        sections={isInitialLoading || contextFailed ? [] : sections}
         renderItem={renderItem}
         renderSectionHeader={renderSectionHeader}
         keyExtractor={(item) => item.key}
@@ -456,25 +558,20 @@ const AccountDetailScreenImpl = ({
         showsVerticalScrollIndicator={false}
         indicatorStyle={themeName === "dark" ? "white" : "default"}
         stickySectionHeadersEnabled={false}
-        onEndReached={loadMore}
+        onEndReached={() => void loadMore()}
         onEndReachedThreshold={0.5}
         refreshControl={
           <ThemedRefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
         ListEmptyComponent={
-          isInitialLoading ? (
-            <View style={styles.stateContainer}>
-              <ActivityIndicator color={theme.primary} />
-            </View>
-          ) : journalError ? (
-            <View style={styles.stateContainer}>
-              <Text style={styles.stateText}>{t("journalLoadError")}</Text>
-            </View>
-          ) : (
-            <View style={styles.stateContainer}>
-              <Text style={styles.stateText}>{t("noEntries")}</Text>
-            </View>
-          )
+          <AccountJournalListEmpty
+            loading={isInitialLoading}
+            message={
+              journalError || contextFailed
+                ? t("journalLoadError")
+                : t("noEntries")
+            }
+          />
         }
         ListFooterComponent={
           isLoadingMore ? (
@@ -482,6 +579,8 @@ const AccountDetailScreenImpl = ({
               <ActivityIndicator color={theme.primary} />
               <Text style={styles.footerText}>{t("loadingMore")}</Text>
             </View>
+          ) : loadMoreFailed && hasMore ? (
+            <LoadMoreFailed onRetry={() => void loadMore(true)} />
           ) : !hasMore && rows.length > 0 ? (
             <View style={styles.footer}>
               <Text style={styles.footerText}>{t("noMoreEntries")}</Text>
@@ -524,7 +623,7 @@ const AccountDetailRoute = ({
 export const AccountDetailScreen = (): JSX.Element => {
   // `ledger` binds the entry to the ledger it was opened for; see
   // `select-account-detail-target` for why the ambient selection is not enough.
-  const params = useLocalSearchParams<{ account?: string; ledger?: string }>();
+  const params = useRouteParams<{ account?: string; ledger?: string }>();
 
   return (
     <LedgerGuard>

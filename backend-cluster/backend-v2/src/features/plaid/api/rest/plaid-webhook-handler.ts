@@ -13,7 +13,7 @@ const webhookLogger = logger.child({ module: "plaid-webhook-handler" });
 /**
  * Fast webhook receiver following Plaid best practices:
  *
- * 1. Verify signature (Plaid-Verification header)
+ * 1. Verify signature (Plaid-Verification header); refuse unsigned requests
  * 2. Store raw event in database (idempotent)
  * 3. Return 200 quickly (< 10 seconds)
  * 4. Let scheduled job process asynchronously
@@ -28,70 +28,69 @@ export function setPlaidWebhookHandler(
   const webhookEventModel = new PlaidWebhookEventPostgresModel();
 
   router.post("/api/plaid/webhook", async (ctx) => {
-    // Always return 200 to prevent Plaid from retrying
-    // Store the event even if parsing fails (for debugging)
-    let rawBody = "{}";
-    let webhookType = "unknown";
-    let webhookCode = "unknown";
-    let itemId = "unknown";
-
+    // Step 1: Verify the Plaid-Verification signature. A request without a
+    // valid one is not a Plaid event: refuse it and store nothing. Storing it
+    // queued anyone's unsigned posts ahead of real events (w0/052). Plaid
+    // retries its own deliveries, so a signed event refused by a transient
+    // verification failure comes back.
     try {
-      webhookLogger.debug("Parsed webhook event", ctx.request.body);
-
-      // Step 2: Verify webhook signature
       await validatePlaidWebhook(
         layers.clients.plaidClient,
         ctx.headers["plaid-verification"] as string | undefined,
         // validate the body as a JSON stringified object JSON.stringify(ctx.request.body, null, 2),
         JSON.stringify(ctx.request.body, null, 2),
       );
-
-      rawBody = JSON.stringify(ctx.request.body);
-
-      // Step 3: Safely parse event structure (fallback to "unknown")
-      const parsed = safeParseWebhookEvent(ctx.request.body);
-      webhookType = parsed.webhookType;
-      webhookCode = parsed.webhookCode;
-      itemId = parsed.itemId;
-
-      // Step 4: Store raw event in database (ID auto-generated)
-      const event = await webhookEventModel.create(layers.database.db, {
-        webhookType,
-        webhookCode,
-        itemId,
-        rawBody,
-      });
-
-      webhookLogger.debug("Webhook received and queued", {
-        eventId: event.id,
-        webhookType,
-        webhookCode,
-        itemId,
-      });
     } catch (err) {
-      webhookLogger.error("Webhook storage failed", {
-        error: err,
-        webhookType,
-        webhookCode,
-        itemId,
+      webhookLogger.warn("Plaid webhook refused: verification failed", {
+        error: err instanceof Error ? err.message : String(err),
       });
+      ctx.status = 401;
+      ctx.body = { received: false };
+      return;
+    }
 
-      // Try to store failed webhook event for debugging
+    // Step 2: Safely parse event structure (fallback to "unknown"). A verified
+    // body that cannot be parsed is still stored, for debugging.
+    const rawBody = JSON.stringify(ctx.request.body);
+    let webhookType = "unknown";
+    let webhookCode = "unknown";
+    let itemId = "unknown";
+    try {
+      ({ webhookType, webhookCode, itemId } = safeParseWebhookEvent(
+        ctx.request.body,
+      ));
+    } catch (err) {
+      webhookLogger.error("Webhook parse failed", { error: err });
+    }
+
+    // Step 3: Store the verified event (ID auto-generated), retrying once.
+    for (let attempt = 1; attempt <= 2; attempt += 1) {
       try {
-        await webhookEventModel.create(layers.database.db, {
+        const event = await webhookEventModel.create(layers.database.db, {
           webhookType,
           webhookCode,
           itemId,
           rawBody,
         });
-      } catch (storageErr) {
-        webhookLogger.error("Failed to store failed webhook event", {
-          error: storageErr,
+        webhookLogger.debug("Webhook received and queued", {
+          eventId: event.id,
+          webhookType,
+          webhookCode,
+          itemId,
+        });
+        break;
+      } catch (err) {
+        webhookLogger.error("Webhook storage failed", {
+          error: err,
+          attempt,
+          webhookType,
+          webhookCode,
+          itemId,
         });
       }
     }
 
-    // Step 5: Always return 200 (< 10 seconds)
+    // Step 4: Return 200 (< 10 seconds)
     ctx.status = 200;
     ctx.body = { received: true };
   });

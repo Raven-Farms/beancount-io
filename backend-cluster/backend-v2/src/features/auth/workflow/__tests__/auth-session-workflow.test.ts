@@ -1,5 +1,11 @@
 import "reflect-metadata";
 import {
+  fakeRedisCounter as mockFakeRedisCounter,
+  fakeRedisCounterState,
+  fakeRedisAdmission as mockFakeRedisAdmission,
+  fakeRedisAdmissionState,
+} from "@/foundation/redis/__tests__/fake-redis-counter";
+import {
   AuthSessionWorkflow,
   type IAuthSessionWorkflow,
 } from "../auth-session-workflow";
@@ -17,12 +23,13 @@ import {
   BadUserInputError,
   ForbiddenError,
   NotFoundError,
+  RateLimitedError,
+  ServiceUnavailableError,
 } from "@/shared/errors";
 import type { SessionJwtVerification } from "@/features/auth/data/jwt-model/types";
 
-jest.mock("@/foundation/redis/redis-counter", () => ({
-  incrementInWindow: jest.fn(async () => ({ count: 1, resetInMs: 60_000 })),
-}));
+jest.mock("@/foundation/redis/redis-counter", () => mockFakeRedisCounter);
+jest.mock("@/foundation/redis/redis-admission", () => mockFakeRedisAdmission);
 jest.mock("@/shared/execute", () => ({ delayRun: jest.fn() }));
 
 const credentials = { email: "person@example.com", password: "password123" };
@@ -36,6 +43,7 @@ function createFixture() {
   const user = {
     id: "usr_person",
     email: credentials.email,
+    password: "$2b$10$5mBgP06bwKPcyhp0Fg7sqeIACeCt.enWK4cu2U7FJjlUzB9as/vQS",
     ledger_username: "person",
     isBlocked: false,
   };
@@ -59,6 +67,7 @@ function createFixture() {
     user: {
       getByMail: jest.fn(async () => user as typeof user | null),
       getById: jest.fn(async () => user as typeof user | null),
+      getByIdForUpdate: jest.fn(async () => user as typeof user | null),
       verifyPassword: jest.fn(async () => true),
       create: jest.fn(async () => user),
     },
@@ -67,6 +76,7 @@ function createFixture() {
       verify: jest.fn(
         async (): Promise<SessionJwtVerification | null> => ({
           userId: user.id as string,
+          tokenId: "synthetic-session-id",
           issuedAt: 1_700_000_000,
           expiresAt: 1_800_000_000,
         }),
@@ -109,6 +119,7 @@ function createFixture() {
     {} as never,
     favaFactory as never,
     { favaApi: { adminUser: "admin", adminPassword: "" } } as never,
+    async () => false,
   );
   // Exercise the real credential and exact-self policies with the real services.
   const authorization = new AuthorizationService(
@@ -164,6 +175,10 @@ function authenticate(fixture: Fixture, path: (typeof authPaths)[number]) {
 }
 
 describe("AuthSessionWorkflow default community follow", () => {
+  beforeEach(() => {
+    fakeRedisCounterState.reset();
+    fakeRedisAdmissionState.reset();
+  });
   it.each(authPaths)("follows open_ledger after %s", async (path) => {
     const fixture = createFixture();
 
@@ -380,5 +395,75 @@ describe("AuthSessionWorkflow default community follow", () => {
     await fixture.authService.refreshToken(fixture.user.id, "old-token");
 
     expect(fixture.fetch).not.toHaveBeenCalled();
+  });
+
+  describe("email ownership recovery", () => {
+    const recovery = {
+      ...credentials,
+      challengeId: "rcv_mail_only_challenge",
+      code: "001234",
+      ip: "198.51.100.7",
+    };
+
+    afterEach(() => jest.restoreAllMocks());
+
+    it("follows using the newly issued recovery session and preserves its source identity", async () => {
+      const fixture = createFixture();
+      const authenticate = jest
+        .spyOn(fixture.authService, "signInWithEmailCode")
+        .mockResolvedValue(authResponse);
+
+      await expect(
+        fixture.workflow.signInWithEmailCode(recovery),
+      ).resolves.toEqual(authResponse);
+
+      expect(authenticate).toHaveBeenCalledWith(recovery);
+      expect(fixture.models.jwt.verify).toHaveBeenCalledWith(
+        fixture.db,
+        authResponse.token,
+      );
+      expect(fixture.isFollowing()).toBe(true);
+      expect(fixture.fetch.mock.calls.map(([, init]) => init.method)).toEqual([
+        "GET",
+        "PUT",
+      ]);
+    });
+
+    it.each([
+      new BadUserInputError("Invalid email, verification code or password"),
+      new RateLimitedError(60),
+      new ServiceUnavailableError("Authentication", 5),
+    ])(
+      "does not perform post-login work after a failed recovery",
+      async (error) => {
+        const fixture = createFixture();
+        jest
+          .spyOn(fixture.authService, "signInWithEmailCode")
+          .mockRejectedValue(error);
+
+        await expect(
+          fixture.workflow.signInWithEmailCode(recovery),
+        ).rejects.toBe(error);
+
+        expect(fixture.models.jwt.verify).not.toHaveBeenCalled();
+        expect(fixture.giteaFactory.getUserApiClient).not.toHaveBeenCalled();
+        expect(fixture.fetch).not.toHaveBeenCalled();
+      },
+    );
+
+    it("keeps an authenticated recovery usable when the community follow is unavailable", async () => {
+      const fixture = createFixture();
+      jest
+        .spyOn(fixture.authService, "signInWithEmailCode")
+        .mockResolvedValue(authResponse);
+      fixture.fetch.mockResolvedValueOnce(new Response(null, { status: 503 }));
+
+      await expect(
+        fixture.workflow.signInWithEmailCode(recovery),
+      ).resolves.toEqual(authResponse);
+
+      expect(fixture.isFollowing()).toBe(false);
+      expect(fixture.fetch).toHaveBeenCalledTimes(1);
+    });
   });
 });

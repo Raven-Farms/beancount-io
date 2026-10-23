@@ -5,6 +5,7 @@ import {
   type GetChangelogQuery,
 } from "@/graphql/definitions";
 import { SUPPORTED_LANGUAGES, type SupportedLanguage } from "@/i18n";
+import { decodeStringList } from "@/common/lib/storage/decode-string-list";
 import { useLocalStorageState } from "./use-local-storage-state";
 import { useTranslations } from "./use-translations";
 
@@ -16,6 +17,17 @@ const FLAGGED_FROM_KEY = "beancount.changelog.flaggedFrom";
 /** A first visit flags only releases from the last 30 days, not the history. */
 const FIRST_VISIT_WINDOW_MS = 30 * 24 * 60 * 60 * 1000;
 const CHANGELOG_LIMIT = 5;
+/**
+ * Saved read identities are browser data: valid JSON of another shape crashed
+ * the dashboard building its read set (w4/m39). A wrong-shaped value falls
+ * back to none read on load and keeps the last good list on a cross-tab sync.
+ */
+const READ_IDS_STORAGE = {
+  syncAcrossTabs: true,
+  deserializer: (raw: string) => decodeStringList(raw),
+};
+// Module-level so the storage hook's listener effect keeps one default.
+const NO_READ_IDS: string[] = [];
 const SITE_URL = "https://beancount.io";
 
 function parseTime(value: unknown): number | null {
@@ -115,8 +127,8 @@ export function useChangelogWatermark(): ChangelogWatermark {
   // Locale-independent identities, not transport ids — see releaseIdentity.
   const [readIds, setReadIds] = useLocalStorageState<string[]>(
     READ_IDS_KEY,
-    [],
-    { syncAcrossTabs: true },
+    NO_READ_IDS,
+    READ_IDS_STORAGE,
   );
   // Releases published before this instant never count as new. Recorded once,
   // on the first visit, and never moved afterwards: recomputing

@@ -1,5 +1,10 @@
 import "reflect-metadata";
 import { EmailTokenRedisModel } from "../redis-impl";
+import { getRedisClient } from "@/foundation/redis/redis-utils";
+
+jest.mock("@/foundation/redis/redis-utils", () => ({
+  getRedisClient: jest.fn(),
+}));
 
 const mockCache = {
   set: jest.fn().mockResolvedValue(undefined),
@@ -13,6 +18,10 @@ describe("EmailTokenRedisModel", () => {
   beforeEach(() => {
     model = new EmailTokenRedisModel({ cache: mockCache, expMins: 30 });
     jest.clearAllMocks();
+    jest.mocked(getRedisClient).mockReturnValue({
+      eval: async (_script: string, options: { arguments: string[] }) =>
+        options.arguments[0] === "legacy" ? 1 : null,
+    } as never);
   });
 
   describe("regenerateToken", () => {

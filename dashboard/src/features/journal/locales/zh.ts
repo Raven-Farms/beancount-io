@@ -430,10 +430,6 @@ const zhJournal: Record<string, TranslationEntry> = {
     message: "待定",
     description: "Pending transaction status",
   },
-  "journal.blankStatus": {
-    message: "（空白）",
-    description: "Blank transaction status option",
-  },
   "journal.addPosting": {
     message: "添加分录",
     description: "Accessible name for adding a transaction posting row",

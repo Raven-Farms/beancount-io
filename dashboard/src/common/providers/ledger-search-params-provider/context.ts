@@ -8,7 +8,11 @@ export interface LedgerSearchParams {
 
 interface ILedgerSearchParamsContext {
   searchParams: LedgerSearchParams;
-  setSearchParams: (searchParams: LedgerSearchParams) => void;
+  /**
+   * Change only the given filters, against the router's latest intended
+   * search — never a settled snapshot, which can be one navigation behind.
+   */
+  setSearchParams: (patch: Partial<LedgerSearchParams>) => void;
 }
 
 const defaultSearchParams: LedgerSearchParams = {

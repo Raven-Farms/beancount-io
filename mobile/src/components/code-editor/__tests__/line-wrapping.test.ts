@@ -30,6 +30,6 @@ describe("code editor line wrapping", () => {
   });
 
   it("leaves wrapping out of the language compartment, initially and on reconfigure", () => {
-    expect(count(compact, "beancount?beancountStreamLanguage:[]")).toBe(2);
+    expect(count(compact, "beancount?beancountLanguage:[]")).toBe(2);
   });
 });

@@ -171,3 +171,145 @@ describe("New Entry refuses unbalanced transactions (w3/499)", () => {
     ).toBeInTheDocument();
   });
 });
+
+/**
+ * A blank or whitespace currency is balanced as the primary currency, so it
+ * is submitted as that currency too, not as "" (w4/339).
+ */
+describe("New Entry submits the currency auto-balance used", () => {
+  let addTransaction: ReturnType<typeof vi.fn>;
+
+  beforeEach(() => {
+    addTransaction = vi.fn().mockResolvedValue({
+      data: { bulkEntries: { success: true } },
+    });
+    mockUseMutation.mockReturnValue([
+      addTransaction,
+      { loading: false },
+    ] as unknown as ReturnType<typeof useMutation>);
+  });
+
+  const units = () =>
+    sentPostings(addTransaction).map(
+      (p: { account: string; units: { number: string; currency: string } }) => [
+        p.account,
+        p.units.number,
+        p.units.currency,
+      ],
+    );
+
+  it.each([
+    ["empty", ""],
+    ["whitespace", "   "],
+  ])(
+    "sends the inferred posting with an %s currency in USD, ignoring the unused row",
+    async (_, blank) => {
+      render(<TransactionForm ledgerId="owner/ledger" />);
+      fillPostings([
+        ["Assets:Cash", "0.1", "USD"],
+        ["Expenses:Food:Groceries", "", blank],
+      ]);
+      // The inferred amount is shown before anything is sent.
+      expect(screen.getAllByRole("spinbutton")[1]).toHaveAttribute(
+        "placeholder",
+        "-0.1",
+      );
+
+      await submit();
+
+      await waitFor(() => expect(addTransaction).toHaveBeenCalledTimes(1));
+      expect(units()).toEqual([
+        ["Assets:Cash", "0.1", "USD"],
+        ["Expenses:Food:Groceries", "-0.1", "USD"],
+      ]);
+    },
+  );
+
+  it.each([
+    ["empty", ""],
+    ["whitespace", "   "],
+  ])("sends a filled posting with an %s currency in USD", async (_, blank) => {
+    render(<TransactionForm ledgerId="owner/ledger" />);
+    fillPostings([
+      ["Assets:Cash", "0.1", blank],
+      ["Expenses:Food:Groceries", "", "USD"],
+    ]);
+
+    await submit();
+
+    await waitFor(() => expect(addTransaction).toHaveBeenCalledTimes(1));
+    expect(units()).toEqual([
+      ["Assets:Cash", "0.1", "USD"],
+      ["Expenses:Food:Groceries", "-0.1", "USD"],
+    ]);
+  });
+
+  it("keeps explicit currencies, trimmed, in their own groups", async () => {
+    render(<TransactionForm ledgerId="owner/ledger" />);
+    fillPostings([
+      ["Expenses:Travel", "12.50", " EUR "],
+      ["Assets:Wallet", "", "EUR"],
+      ["Expenses:Food", "3", "USD"],
+      ["Assets:Cash", "", ""],
+    ]);
+
+    await submit();
+
+    await waitFor(() => expect(addTransaction).toHaveBeenCalledTimes(1));
+    expect(units()).toEqual([
+      ["Expenses:Travel", "12.50", "EUR"],
+      ["Assets:Wallet", "-12.50", "EUR"],
+      ["Expenses:Food", "3", "USD"],
+      ["Assets:Cash", "-3", "USD"],
+    ]);
+  });
+});
+
+/** The submit shortcut leaves an active composition to the input method (w4/965). */
+describe("New Entry Ctrl/Meta+Enter during composition", () => {
+  let addTransaction: ReturnType<typeof vi.fn>;
+
+  beforeEach(() => {
+    addTransaction = vi.fn().mockResolvedValue({
+      data: { bulkEntries: { success: true } },
+    });
+    mockUseMutation.mockReturnValue([
+      addTransaction,
+      { loading: false },
+    ] as unknown as ReturnType<typeof useMutation>);
+  });
+
+  it.each([
+    ["Ctrl", { ctrlKey: true }],
+    ["Meta", { metaKey: true }],
+  ])(
+    "sends nothing for a composing %s+Enter, then submits once after composition",
+    async (_, modifier) => {
+      render(<TransactionForm ledgerId="owner/ledger" />);
+      fillPostings([
+        ["Assets:Bank:Checking", "-1.25", "USD"],
+        ["Expenses:Food:Coffee", "", "USD"],
+      ]);
+      const payee = screen.getByRole("textbox", { name: "Payee" });
+      payee.focus();
+
+      // Both ways engines report a key the input method is consuming.
+      fireEvent.keyDown(payee, {
+        key: "Enter",
+        isComposing: true,
+        ...modifier,
+      });
+      fireEvent.keyDown(payee, { key: "Enter", keyCode: 229, ...modifier });
+      await new Promise((resolve) => setTimeout(resolve, 20));
+      expect(addTransaction).not.toHaveBeenCalled();
+
+      fireEvent.keyDown(payee, { key: "Enter", ...modifier });
+      await waitFor(() => expect(addTransaction).toHaveBeenCalledTimes(1));
+      expect(
+        sentPostings(addTransaction).map(
+          (p: { units: { number: string } }) => p.units.number,
+        ),
+      ).toEqual(["-1.25", "1.25"]);
+    },
+  );
+});

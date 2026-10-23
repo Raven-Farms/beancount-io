@@ -3,7 +3,8 @@
 beancount-migrate's generic path writes `<source>:sha256:<digest>` for a
 source it has no reference for (YNAB, Actual, a spreadsheet). `bea import`
 matched only `csv:`, `mint:`, `monarch:` and `qbo:`, so the first bank
-import after such a migration wrote every overlap row again, exit 0.
+import after such a migration wrote every overlap row again, exit 0. A source
+name with an underscore (`lunch_money:`) was still missed (w5/823).
 """
 
 from __future__ import annotations
@@ -30,7 +31,7 @@ LEDGER = """option "operating_currency" "USD"
 """
 
 
-@pytest.mark.parametrize("prefix", ["ynab", "actual", "my-sheet2", "monarch", "csv"])
+@pytest.mark.parametrize("prefix", ["ynab", "actual", "my-sheet2", "lunch_money", "monarch", "csv"])
 def test_a_migrated_row_is_an_exact_duplicate_under_any_source_prefix(
     tmp_path: Path, bea_config_dir: Path, prefix: str
 ) -> None:

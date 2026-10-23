@@ -1,3 +1,4 @@
+import { createDirectiveLimitPreview } from "@/features/ledger/operations/directive-limit-preview";
 import { LegacyEntryWorkflow } from "@/features/ledger/workflow/legacy-entry-workflow";
 import { LedgerArchiveService } from "@/features/ledger/service/ledger-archive-service";
 import { PullRequestWorkflow } from "@/features/gitea/pull-request/workflow/pull-request-workflow";
@@ -32,6 +33,8 @@ import { LedgerReceiptWorkflow } from "@/features/ledger/workflow/ledger-receipt
 import { DirectiveAppendWorkflow } from "@/features/ledger/workflow/directive-append-workflow";
 import { AccountService } from "@/features/auth/service/account-service";
 import { AuthService } from "@/features/auth/service/auth-service";
+import { AuthMailService } from "@/features/auth/service/auth-mail-service";
+import { isPwnedPassword } from "@/features/auth/operations/is-pwned-password";
 import { AuthSessionWorkflow } from "@/features/auth/workflow/auth-session-workflow";
 import { CliAuthService } from "@/features/auth/service/cli-auth-service";
 import { UserProfileService } from "@/features/gitea/user-profile/service/user-profile-service";
@@ -69,6 +72,10 @@ export function buildServiceLayer(input: {
     input.database.models,
     input.database.db,
     authorization,
+    {
+      sendgrid: input.clients.sendgrid,
+      sentBillingEmail: input.database.models.sentBillingEmail,
+    },
   );
   const apiKey = new ApiKeyService({
     db: input.database.db,
@@ -109,11 +116,27 @@ export function buildServiceLayer(input: {
     input.clients.favaClientFactory,
     authorization,
   );
+  // The one question the ledger service asks at commit, asked of a preview too (w5/904).
+  const directiveLimitPreview = createDirectiveLimitPreview({
+    models: input.database.models,
+    db: input.database.db,
+    stripe,
+    cacheHelper: input.clients.cacheHelper,
+  });
   const directiveAppend = new DirectiveAppendWorkflow(
     ledgerRepo,
     input.clients.favaClientFactory,
+    directiveLimitPreview,
+  );
+  const authMail = new AuthMailService(
+    input.database.models,
+    input.database.db,
+    input.clients.sendgrid,
+    input.config.jwt.secret,
+    input.config.dashboard.url,
   );
   return {
+    authMail,
     authorization,
     stripe,
     subscriptions,
@@ -185,6 +208,7 @@ export function buildServiceLayer(input: {
       input.database.models,
       input.database.db,
       authorization,
+      directiveLimitPreview,
     ),
     account: new AccountService(
       input.database.models,
@@ -201,6 +225,8 @@ export function buildServiceLayer(input: {
       stripe,
       input.clients.favaClientFactory,
       input.config,
+      isPwnedPassword,
+      authMail.enqueue,
     ),
     cliAuth: new CliAuthService(input.database.models, input.database.db),
     userProfile: new UserProfileService(
@@ -212,6 +238,13 @@ export function buildServiceLayer(input: {
     pullRequest: new PullRequestService(
       input.clients.giteaClientFactory,
       authorization,
+      {
+        models: input.database.models,
+        db: input.database.db,
+        stripe,
+        cacheHelper: input.clients.cacheHelper,
+        favaClientFactory: input.clients.favaClientFactory,
+      },
     ),
     feed: new FeedService(
       input.clients.cacheHelper,
@@ -245,11 +278,14 @@ export function buildWorkflowLayer(input: {
     input.database.db,
     input.config,
     input.services.authorization,
+    input.clients.cacheHelper,
   );
   const ledgerCollaborators = new LedgerCollaboratorsWorkflow(
     input.clients.favaClientFactory,
     input.services.stripe,
     input.services.authorization,
+    input.database.models,
+    input.database.db,
   );
   const ledgerReceipt = new LedgerReceiptWorkflow(
     input.clients.favaClientFactory,

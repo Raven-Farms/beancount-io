@@ -64,6 +64,41 @@ def test_locations_under_a_linked_folder_match_as_through_the_real_one(
         assert expected.format(base=linked_folder / base) in result.stdout, result.stdout
 
 
+@pytest.fixture
+def linked_books(tmp_path: Path) -> Path:
+    (tmp_path / "real").mkdir()
+    (tmp_path / "real" / "main.bean").write_text(
+        '2024-01-01 open Assets:Cash USD\n2024-01-01 open Expenses:Food USD\n\n2024-01-05 * "a"\n'
+        "  Assets:Cash  -10.00 USD\n  Expenses:Food\n"
+    )
+    (tmp_path / "link").symlink_to("real")
+    return tmp_path
+
+
+def _normalized(output: str, base: Path) -> str:
+    return "\n".join(
+        line if not line.startswith("Hash:") else "Hash:" for line in output.replace(str(base), "<base>").splitlines()
+    )
+
+
+@pytest.mark.parametrize(
+    ("op", "location", "expected"),
+    [("context", "4", "Location: <base>/main.bean:4"), ("region", "4:6", '"a"')],
+)
+def test_bare_lines_through_a_link_answer_as_through_the_real_path(
+    linked_books: Path, op: str, location: str, expected: str
+) -> None:
+    """w5/568 remapped the load but not the search, so a bare line missed (w5/767)."""
+    answers = {}
+    for base in ("real", "link"):
+        result = _doctor(linked_books, op, f"{base}/main.bean", location)
+
+        assert result.returncode == 0, f"{base}: {result.stdout + result.stderr}"
+        assert expected in _normalized(result.stdout, linked_books / base), result.stdout
+        answers[base] = _normalized(result.stdout, linked_books / base)
+    assert answers["link"] == answers["real"]
+
+
 def test_a_linked_root_file_reads_the_includes_beside_the_link(tmp_path: Path) -> None:
     (tmp_path / "shared").mkdir()
     (tmp_path / "books" / "txns").mkdir(parents=True)

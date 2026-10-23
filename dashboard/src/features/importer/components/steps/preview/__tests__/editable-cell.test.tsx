@@ -282,4 +282,63 @@ describe("EditableCell keyboard behavior", () => {
     fireEvent.click(button);
     expect(screen.getByDisplayValue("2025-12-01")).toBeInTheDocument();
   });
+
+  /**
+   * An input method's Enter confirms and its Escape cancels a candidate; the
+   * cell used to treat them as its own commit and cancel (w4/310).
+   */
+  describe("during input-method composition", () => {
+    function openPayee(onChange = vi.fn()) {
+      render(
+        <EditableCell
+          label="Payee"
+          rowNumber={1}
+          value="coffee"
+          onChange={onChange}
+          multiline
+        />,
+      );
+      fireEvent.click(
+        screen.getByRole("button", {
+          name: "Edit Payee, row 1. Current value: coffee",
+        }),
+      );
+      const editor = screen.getByRole("textbox", { name: "Payee, row 1" });
+      return { editor, onChange };
+    }
+
+    it.each([
+      ["Enter", { isComposing: true }],
+      ["Escape", { isComposing: true }],
+      ["Enter", { keyCode: 229 }],
+    ] as const)("leaves %s to the input method (%o)", (key, init) => {
+      const { editor, onChange } = openPayee();
+      editor.focus();
+      fireEvent.compositionStart(editor);
+      fireEvent.change(editor, { target: { value: "商店" } });
+      fireEvent.keyDown(editor, { key, ...init });
+      expect(screen.getByRole("textbox", { name: "Payee, row 1" })).toBe(
+        editor,
+      );
+      expect(editor).toHaveFocus();
+      expect(editor).toHaveValue("商店");
+      expect(onChange).not.toHaveBeenCalled();
+    });
+
+    it("commits the final text once with an ordinary Enter after composition", () => {
+      const { editor, onChange } = openPayee();
+      editor.focus();
+      fireEvent.compositionStart(editor);
+      fireEvent.change(editor, { target: { value: "商店" } });
+      fireEvent.keyDown(editor, { key: "Enter", isComposing: true });
+      fireEvent.compositionEnd(editor);
+      fireEvent.keyDown(editor, { key: "Enter" });
+      expect(onChange).toHaveBeenCalledTimes(1);
+      expect(onChange).toHaveBeenCalledWith("商店");
+      expect(screen.queryByRole("textbox")).toBeNull();
+      expect(
+        screen.getByRole("button", { name: /^Edit Payee, row 1\./ }),
+      ).toHaveFocus();
+    });
+  });
 });

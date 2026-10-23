@@ -1,5 +1,9 @@
 import { parseLedgerId } from "@/shared/str";
-import { unwrapFavaResponse } from "@/foundation/fava";
+import {
+  FavaApiError,
+  favaApiErrorToDomainError,
+  unwrapFavaResponse,
+} from "@/foundation/fava";
 import { decodeFileContent } from "@/shared/file-content";
 import { operationNotAllowedFromCause } from "@/features/ledger/utils/operation-not-allowed-from-cause";
 import type {
@@ -12,9 +16,19 @@ import {
   AuthorizedLedgerService,
 } from "@/features/ledger/utils/authorize-ledger";
 import { AUTHORIZATION_ACTIONS } from "@/server/api/authorization/authorization-contract";
-import { assertSafeRepoPath } from "@/features/ledger/utils/safe-repo-path";
+import {
+  assertPortableRepoPath,
+  assertSafeRepoPath,
+} from "@/features/ledger/utils/safe-repo-path";
+import { assertKeepsEntryPoint } from "@/features/ledger/utils/ledger-entry-point";
 import { assertExplicitFileContentSize } from "@/features/ledger/utils/explicit-file-size";
-import { BadUserInputError, ConflictError } from "@/shared/errors";
+import {
+  BadUserInputError,
+  ConflictError,
+  InternalServerError,
+  NotFoundError,
+} from "@/shared/errors";
+import { listDirectory } from "@/features/ledger/utils/directory-listing";
 
 type CommitUser = {
   login: string | null;
@@ -34,12 +48,20 @@ export type LedgerFileEntry = {
   path: string;
   name: string;
   type: "file" | "dir";
+  /** Bytes, as the ledger service lists them (GraphQL returns it too). */
+  size: number;
+  /** Blob SHA: the optimistic lock a delete or update sends back. */
+  sha: string;
+  /** The commit that last touched the entry, when the listing knows it. */
+  lastCommitSha: string | null;
 };
 
 export type LedgerFileWithContent = {
   path: string;
   content: string;
   sha: string;
+  /** Present when the file is not valid UTF-8: `content` holds U+FFFD. */
+  lossy?: true;
 };
 
 type FileChangesParams = {
@@ -98,6 +120,29 @@ export interface ILedgerRepoService {
     identity: Identity;
     overlays: { path: string; content: string | null }[];
   }): Promise<BeancountErrorPublic[]>;
+
+  /**
+   * The files the projected ledger loads — its include closure, globs and
+   * all — so a write can tell whether a file it routes to would be read
+   * (w23/062). Gated like `checkProjectedFiles`.
+   */
+  projectedSourceFiles(params: {
+    ledgerId: string;
+    identity: Identity;
+    overlays: { path: string; content: string }[];
+  }): Promise<string[]>;
+
+  /**
+   * The entry hash of the directive starting on each 1-based `line` of the
+   * projected files, `null` where none does: how a write that committed them
+   * reports what it created (w23/060). Gated like `checkProjectedFiles`.
+   */
+  projectedEntryHashes(params: {
+    ledgerId: string;
+    identity: Identity;
+    overlays: { path: string; content: string }[];
+    locations: { path: string; line: number }[];
+  }): Promise<(string | null)[]>;
 }
 
 export class LedgerRepoService
@@ -126,8 +171,20 @@ export class LedgerRepoService
       favaApiClient.repo.repoGetAllCommits(ledgerOwner, ledgerName, {
         sha: branchName,
         limit: 1,
+        // Only the commit's own fields are read, not its stats or files.
+        stat: false,
+        verification: false,
+        files: false,
       }),
       "get latest commit",
+      // The ledger was authorized just above, so a 404 here is the branch
+      // the caller named, not its ledger (w23/047).
+      (cause) =>
+        cause instanceof FavaApiError
+          ? cause.status === 404
+            ? new NotFoundError("Branch", branchName)
+            : favaApiErrorToDomainError(cause, "get latest commit")
+          : new InternalServerError("Failed to get latest commit"),
     );
 
     const commit = data[0];
@@ -178,11 +235,13 @@ export class LedgerRepoService
       identity?.userId,
     );
 
-    const entries = await unwrapFavaResponse(
-      favaApiClient.ledgers.getLedgerDirContent(ledgerOwner, ledgerName, {
-        dir_path: dirPath,
-      }),
-      "list ledger files",
+    const entries = await listDirectory(dirPath, () =>
+      unwrapFavaResponse(
+        favaApiClient.ledgers.getLedgerDirContent(ledgerOwner, ledgerName, {
+          dir_path: dirPath,
+        }),
+        "list ledger files",
+      ),
     );
 
     return [...entries]
@@ -190,7 +249,14 @@ export class LedgerRepoService
         if (a.type === b.type) return a.name.localeCompare(b.name);
         return a.type === "dir" ? -1 : 1;
       })
-      .map((e) => ({ path: e.path, name: e.name, type: e.type }));
+      .map((e) => ({
+        path: e.path,
+        name: e.name,
+        type: e.type,
+        size: e.size,
+        sha: e.sha,
+        lastCommitSha: e.last_commit_sha ?? null,
+      }));
   }
 
   async getFilesContent(params: {
@@ -231,11 +297,15 @@ export class LedgerRepoService
       );
     }
 
-    return files.map((file) => ({
-      path: file.path,
-      content: decodeFileContent(file),
-      sha: file.sha,
-    }));
+    return files.map((file) => {
+      const { content, lossy } = decodeFileContent(file);
+      return {
+        path: file.path,
+        content,
+        sha: file.sha,
+        ...(lossy && { lossy: true as const }),
+      };
+    });
   }
 
   async changeFiles(params: FileChangesParams): Promise<void> {
@@ -269,6 +339,23 @@ export class LedgerRepoService
     );
     operations.forEach((operation, index) => {
       assertSafeRepoPath(operation.path, `operations[${index}].path`);
+      // A new file's name has to work on every checkout; an existing one
+      // keeps whatever name it has (w23/054).
+      if (operation.operation === "create")
+        assertPortableRepoPath(operation.path, `operations[${index}].path`);
+      // A batch that creates the path again keeps the entry point.
+      if (
+        operation.operation === "delete" &&
+        !operations.some(
+          (other) =>
+            other.operation === "create" && other.path === operation.path,
+        )
+      )
+        assertKeepsEntryPoint(
+          operation.path,
+          "deleted",
+          `operations[${index}].path`,
+        );
       if (operation.from_path !== null && operation.from_path !== undefined) {
         assertSafeRepoPath(
           operation.from_path,
@@ -380,5 +467,70 @@ export class LedgerRepoService
       }),
       "check projected files",
     );
+  }
+
+  async projectedSourceFiles(params: {
+    ledgerId: string;
+    identity: Identity;
+    overlays: { path: string; content: string }[];
+  }): Promise<string[]> {
+    const { ledgerId, identity, overlays } = params;
+    await authorizeLedger(
+      identity,
+      ledgerId,
+      AUTHORIZATION_ACTIONS.LEDGER_FILES_WRITE,
+      this.authDeps,
+    );
+    overlays.forEach((overlay, index) =>
+      assertSafeRepoPath(overlay.path, `overlays[${index}].path`),
+    );
+    const { ledgerOwner, ledgerName } = parseLedgerId(ledgerId);
+    const favaApiClient = await this.favaClientFactory.getPublicApiClient(
+      ledgerId,
+      identity.userId,
+    );
+    return unwrapFavaResponse(
+      favaApiClient.reports.getProjectedSourceFiles(ledgerOwner, ledgerName, {
+        files: overlays.map((overlay) => ({
+          path: overlay.path,
+          content: Buffer.from(overlay.content, "utf8").toString("base64"),
+        })),
+      }),
+      "list projected source files",
+    );
+  }
+
+  async projectedEntryHashes(params: {
+    ledgerId: string;
+    identity: Identity;
+    overlays: { path: string; content: string }[];
+    locations: { path: string; line: number }[];
+  }): Promise<(string | null)[]> {
+    const { ledgerId, identity, overlays, locations } = params;
+    await authorizeLedger(
+      identity,
+      ledgerId,
+      AUTHORIZATION_ACTIONS.LEDGER_FILES_WRITE,
+      this.authDeps,
+    );
+    overlays.forEach((overlay, index) =>
+      assertSafeRepoPath(overlay.path, `overlays[${index}].path`),
+    );
+    const { ledgerOwner, ledgerName } = parseLedgerId(ledgerId);
+    const favaApiClient = await this.favaClientFactory.getPublicApiClient(
+      ledgerId,
+      identity.userId,
+    );
+    const { entry_hashes } = await unwrapFavaResponse(
+      favaApiClient.reports.getProjectedEntryIds(ledgerOwner, ledgerName, {
+        files: overlays.map((overlay) => ({
+          path: overlay.path,
+          content: Buffer.from(overlay.content, "utf8").toString("base64"),
+        })),
+        locations,
+      }),
+      "resolve projected entry hashes",
+    );
+    return entry_hashes;
   }
 }

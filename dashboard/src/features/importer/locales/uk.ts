@@ -136,9 +136,15 @@ const ukImporter: Record<string, TranslationEntry> = {
     message: "Поточний тип файлу потребує аналізу за допомогою ШІ",
     description: "Description of why premium is required",
   },
-  "importer.error.upgradeToPremium": {
-    message: "Перейти на преміум",
-    description: "Label for premium upgrade option",
+  "importer.error.upgradeToPlan": {
+    message: "Перейти на {plan}",
+    description:
+      "Heading over the paywall's upgrade button; {plan} is the plan the button recommends (the next tier up).",
+  },
+  "importer.error.upgradePlan": {
+    message: "Підвищити тариф",
+    description:
+      "Heading over the paywall's upgrade button when no higher self-serve plan exists.",
   },
   "importer.error.upgradeDescription": {
     message: "Автоматично аналізуйте PDF, OFX та зображення за допомогою ШІ",
@@ -167,6 +173,15 @@ const ukImporter: Record<string, TranslationEntry> = {
   "importer.error.failedToParse": {
     message: "Не вдалося проаналізувати файл",
     description: "Title for parse failure error",
+  },
+  "importer.error.notUtf8": {
+    message: "Файл не є текстом UTF-8",
+    description: "Title when an uploaded CSV is not UTF-8 text",
+  },
+  "importer.error.notUtf8Description": {
+    message:
+      "Цей CSV містить символи, які не є коректним UTF-8, тож імпорт змінив би текст отримувачів і описів. Збережіть файл знову як CSV UTF-8 у банку чи табличному редакторі та завантажте його.",
+    description: "How to re-save a CSV that is not UTF-8 text",
   },
   "importer.error.serverError": {
     message:
@@ -307,6 +322,36 @@ const ukImporter: Record<string, TranslationEntry> = {
   "importer.configure.currencyHint": {
     message: "Валюта для всіх транзакцій",
     description: "Hint text for currency field",
+  },
+  "importer.configure.currencyConflict_one": {
+    message:
+      "{count} рядок ({rows}) вказано в {symbol} ({currencies}), але цей імпорт провів би його як {currency}.",
+    description:
+      "Import refusal: a selected row's amount carries a currency symbol that is not the chosen import currency. {count} is 1, {rows} the row number, {symbol} the symbol from the bank file (€, £…), {currencies} the currencies it can mean, {currency} the selected currency code",
+  },
+  "importer.configure.currencyConflict_few": {
+    message:
+      "{count} рядки ({rows}) вказано в {symbol} ({currencies}), але цей імпорт провів би їх як {currency}.",
+    description:
+      "Import refusal for several selected rows whose amounts carry a currency symbol other than the chosen import currency. {rows} lists their row numbers, possibly ending in …",
+  },
+  "importer.configure.currencyConflict_many": {
+    message:
+      "{count} рядків ({rows}) вказано в {symbol} ({currencies}), але цей імпорт провів би їх як {currency}.",
+    description:
+      "Import refusal for several selected rows whose amounts carry a currency symbol other than the chosen import currency. {rows} lists their row numbers, possibly ending in …",
+  },
+  "importer.configure.currencyConflict_other": {
+    message:
+      "{count} рядка ({rows}) вказано в {symbol} ({currencies}), але цей імпорт провів би їх як {currency}.",
+    description:
+      "Import refusal for several selected rows whose amounts carry a currency symbol other than the chosen import currency. {rows} lists their row numbers, possibly ending in …",
+  },
+  "importer.configure.currencyConflictRemedy": {
+    message:
+      "Один імпорт проводить лише одну валюту. Виберіть валюту цих рядків або зніміть із них вибір та імпортуйте їх окремо. Нічого не імпортовано.",
+    description:
+      "How to resolve a currency conflict before importing: no conversion happens, so the user picks the matching currency or splits the file",
   },
   "importer.configure.assignTargetAccounts": {
     message: "Призначити цільові рахунки",
@@ -473,6 +518,12 @@ const ukImporter: Record<string, TranslationEntry> = {
   "importer.accountMapping.aiSuccessDescription_other": {
     message: "{count} транзакції успішно категоризовані",
     description: "Toast description for fractional transactions categorization",
+  },
+  "importer.accountMapping.aiNoneApplied": {
+    message:
+      "Жодна пропозиція не була достатньо впевненою, щоб заповнити цільовий рахунок.",
+    description:
+      "Toast description when AI Fill completed but no suggestion was confident enough to fill a target",
   },
   "importer.accountMapping.aiFailed": {
     message: "Категоризація ШІ не вдалася",

@@ -1,6 +1,7 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { UploadStep } from "../index";
+import { TEST_LOCATION_HREF } from "@/test/mocks/router";
 
 // The real CSV parser runs; only the server's AI parser is stubbed, so a test
 // that never sees it called proves no AI tokens were spent (w3/643).
@@ -11,13 +12,22 @@ vi.mock("../../../../hooks/use-llm-parser", () => ({
 }));
 
 vi.mock("@/common/hooks/use-translations", () => ({
-  useTranslations: () => ({ t: (key: string) => key }),
+  useTranslations: () => ({
+    t: (key: string, params?: Record<string, string>) =>
+      params ? `${key}(${Object.values(params).join(",")})` : key,
+  }),
 }));
 
 vi.mock("@/common/analytics", () => ({ track: vi.fn() }));
 
-vi.mock("@tanstack/react-router", () => ({
-  Link: ({ children }: { children: React.ReactNode }) => <a>{children}</a>,
+vi.mock("@tanstack/react-router", async () => {
+  const { routerMock } = await import("@/test/mocks/router");
+  return routerMock;
+});
+
+const mockTier = { current: "FREE" };
+vi.mock("@/common/hooks/use-user-limits", () => ({
+  useUserLimits: () => ({ tier: mockTier.current }),
 }));
 
 function upload(container: HTMLElement, name: string, content: string) {
@@ -49,6 +59,7 @@ const QUOTA_ERROR = {
 describe("UploadStep CSV parsing and the AI choice", () => {
   beforeEach(() => {
     parseLLMFile.mockReset();
+    mockTier.current = "FREE";
   });
 
   it("previews a semicolon EU export without AI parsing", async () => {
@@ -139,4 +150,35 @@ describe("UploadStep CSV parsing and the AI choice", () => {
       screen.getByText("importer.error.downloadCsvExample"),
     ).toBeInTheDocument();
   });
+
+  it.each([
+    ["FREE", "premium", "aiAgent.premiumTier"],
+    ["PREMIUM", "growth", "aiAgent.growthTier"],
+  ])(
+    "offers a %s user the next plan up, named in the heading, with the way back",
+    async (tier, plan, label) => {
+      mockTier.current = tier;
+      parseLLMFile.mockRejectedValue(QUOTA_ERROR);
+      vi.spyOn(console, "error").mockImplementation(() => {});
+      const { container } = render(<UploadStep onParseComplete={vi.fn()} />);
+
+      upload(container, "bank.csv", UNREADABLE);
+      fireEvent.click(
+        await screen.findByRole("button", {
+          name: "importer.aiOffer.parseWithAi",
+        }),
+      );
+
+      expect(
+        await screen.findByRole("link", { name: "importer.error.upgradeNow" }),
+      ).toHaveAttribute(
+        "href",
+        `/settings/billing?plan=${plan}&billing=yearly&from=importer_paywall&return=${encodeURIComponent(TEST_LOCATION_HREF)}`,
+      );
+      // The heading names the plan the button opens (w1/177).
+      expect(
+        screen.getByText(`importer.error.upgradeToPlan(${label})`),
+      ).toBeInTheDocument();
+    },
+  );
 });

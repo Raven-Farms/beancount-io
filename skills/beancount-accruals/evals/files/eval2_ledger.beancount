@@ -1,0 +1,13 @@
+option "operating_currency" "USD"
+
+2025-01-01 open Assets:Checking USD
+2025-01-01 open Liabilities:AccruedRent USD
+2025-01-01 open Expenses:Rent USD
+
+2025-02-01 * "February accrual"
+  Expenses:Rent                200.00 USD
+  Liabilities:AccruedRent     -200.00 USD
+
+2025-03-01 * "February accrual reversed"
+  Liabilities:AccruedRent      200.00 USD
+  Expenses:Rent               -200.00 USD

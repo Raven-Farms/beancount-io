@@ -128,16 +128,34 @@ describe("useQueryHistory", () => {
     expect(result.current.history).toEqual([]);
   });
 
-  it("should handle non-array localStorage data gracefully", () => {
-    localStorage.setItem(
-      "beancount-query-history",
-      JSON.stringify({ invalid: "data" }),
-    );
+  // The setup's Storage is a stub: getItem must actually return the stored
+  // text, or the parse-error fallback is all that runs (w4/272).
+  it.each([
+    ["null", "null"],
+    ["an object", JSON.stringify({ qa: "qa-20261020 controlled wrong shape" })],
+    ["a number", "7"],
+  ])("recovers usable history from %s", (_case, stored) => {
+    const getItemSpy = vi
+      .spyOn(localStorage, "getItem")
+      .mockReturnValue(stored);
 
     const { result } = renderHook(() => useQueryHistory());
-
-    // Should initialize with empty history instead of crashing
     expect(result.current.history).toEqual([]);
+    act(() => result.current.addQuery("SELECT 9"));
+    expect(result.current.history).toEqual(["SELECT 9"]);
+
+    getItemSpy.mockRestore();
+  });
+
+  it("keeps only the query strings of a mixed array", () => {
+    const getItemSpy = vi
+      .spyOn(localStorage, "getItem")
+      .mockReturnValue(JSON.stringify(["SELECT 1", 2, null, "SELECT 3"]));
+
+    const { result } = renderHook(() => useQueryHistory());
+    expect(result.current.history).toEqual(["SELECT 1", "SELECT 3"]);
+
+    getItemSpy.mockRestore();
   });
 
   it("should load valid history from localStorage", () => {

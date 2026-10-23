@@ -142,7 +142,7 @@ Your ledger stays the same plain-text file across all of them — hosted or loca
 | [`dashboard/`](./dashboard) | Active web client: ledgers, journal, reports, Monaco editor, imports, collaboration, AI assistant (React 19 + TanStack Start + Apollo) |
 | [`mobile/`](./mobile) | Active iOS & Android client (Expo + React Native + Apollo) |
 | [`cli/`](./cli) | Active `bea` CLI and Python tooling ([releases](https://github.com/bex-co/beancount-io/releases?q=bea)) |
-| [`skills/`](./skills) | Active agent ledger skills (the eight `beancount-*` workflows) |
+| [`skills/`](./skills) | Active agent ledger skills (thirteen `beancount-*` workflows; also installable as the `beancount-io` plugin) |
 | [`backend-cluster/`](./backend-cluster) | Active backend: GraphQL/REST gateway, ledger service, IDL, and agent sandbox |
 
 The dashboard and mobile app are clients for the Beancount.io API served by `backend-cluster/` — hosted, or self-run. Skills have two audiences: Beancount users get [`skills/`](./skills/README.md); repository contributors get [`.agents/skills/`](./.agents/skills) (see [`.agents/AGENTS.md`](./.agents/AGENTS.md)). The root `.claude/skills` links to `.agents/skills` so Claude Code and Codex share the internal workflows.
@@ -153,7 +153,7 @@ The dashboard and mobile app are clients for the Beancount.io API served by `bac
 
 Beancount.io is built for the agent era: your ledger is text an agent can read, and every write is validated and reversible.
 
-- **Coding-agent skills (local ledger)** — eight `beancount-*` workflows for Claude Code and Codex: scaffold a ledger, import bank exports without duplicates, reconcile against statements, migrate from Mint/Monarch/QuickBooks, query finances in plain language, and run a confirm-gated month-end close. [Install the skills](./skills/docs/installation.md) → [ask your first question](./skills/docs/first-query.md) → [first-month guide](./skills/docs/first-month.md) → [migration guide](./skills/docs/migration.md).
+- **Coding-agent skills (local ledger)** — thirteen `beancount-*` workflows for Claude Code and Codex: scaffold a ledger, record everyday entries, investment trades and property events, import bank exports without duplicates, reconcile against statements, migrate from Mint/Monarch/QuickBooks, query finances in plain language, explain balance-sheet movements, prepare supported accrual drafts, and run a confirm-gated month-end close. [Install the skills](./docs/skills/installation.md) → [ask your first question](./docs/skills/first-query.md) → [first-month guide](./docs/skills/first-month.md) → [migration guide](./docs/skills/migration.md). [Unified suite distribution](./docs/skills/suite-distribution.md) and [OpenClaw/Hermes installation](./docs/skills/installation.md#openclaw-and-hermes-agent) record the current publication and host compatibility limits.
 - **MCP server** — point any MCP client at a deployment to query and edit a ledger from an agent. Also listed on the official [MCP Registry](https://registry.modelcontextprotocol.io) as `io.beancount/beancount` (OAuth sign-in).
 
 <details>
@@ -194,7 +194,7 @@ Beancount.io builds on both (Fava ships inside the CLI). It adds native mobile a
 <details>
 <summary><strong>Can I migrate from Mint, Monarch, or QuickBooks?</strong></summary>
 
-Yes — the [migration guide](./skills/docs/migration.md) converts an export and keeps importing without duplicating transfers.
+Yes — the [migration guide](./docs/skills/migration.md) converts an export and keeps importing without duplicating transfers.
 
 </details>
 
@@ -247,7 +247,7 @@ cd cli && uv sync --all-groups && uv run bea --help
 | Dashboard | `cd dashboard && yarn format:check && yarn lint && yarn test && yarn build` |
 | Mobile | `cd mobile && yarn format:check && yarn lint && yarn typecheck && yarn test:unit` |
 | CLI | `cd cli && make check-all` |
-| Skills | `python3 skills/scripts/ci-check.py` |
+| Skills | `python3 scripts/skills/ci-check.py` |
 
 Every active package has path-filtered CI, and a repository-wide secret scan gates every push and pull request. Run `scripts/lint-deadcode.sh` from the repository root to check for unused files and symbols (`scripts/fix-deadcode.sh` applies removals; review the diff and rerun full checks).
 
@@ -272,5 +272,5 @@ Beancount.io stands on [Beancount](https://github.com/beancount/beancount) and [
 
 ## License
 
-[MIT](./LICENSE) © Beancount.io — covers the code in this repository; upstream projects remain under their own licenses.
+[MIT](./LICENSE) © Beancount.io applies by default. The customer skill suite under [`skills/`](./skills/) uses [MIT No Attribution (MIT-0)](./skills/LICENSE), including its instructions, references, and fixtures. Upstream projects remain under their own licenses.
 

@@ -1,4 +1,4 @@
-import { StyleSheet, Text, View } from "react-native";
+import { Platform, StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useThemeStyle, useTheme } from "@/common/hooks";
@@ -48,7 +48,11 @@ export const NoResultsState = () => {
   // the keyboard is usually up: centering in the full-height container puts the
   // message behind it. Shortening the container by the overlap centers it in the
   // visible region instead.
-  const keyboardOverlap = getKeyboardOverlap(keyboardHeight, insets.bottom);
+  const keyboardOverlap = getKeyboardOverlap(
+    keyboardHeight,
+    insets.bottom,
+    Platform.OS,
+  );
 
   return (
     <View

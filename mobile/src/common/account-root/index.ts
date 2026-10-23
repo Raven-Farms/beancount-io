@@ -23,17 +23,31 @@ const ROOT_PRIORITY: AccountRoot[] = [
   "assets",
 ];
 
-const KNOWN_ROOTS = new Set<string>(ROOT_PRIORITY);
+/**
+ * A ledger's names for its roots (`option "name_expenses" "Gastos"`). A root
+ * left out keeps Beancount's English name.
+ */
+export type RootNames = Partial<Record<AccountRoot, string>>;
 
 /**
  * Resolve an account name to its root type.
  * @param account - Full account name, e.g. `Expenses:Food:Restaurant`.
+ * @param roots - The ledger's renamed roots, so `Gastos:Comida` resolves to
+ *   `expenses` on a ledger that names it so (w21/073).
  * @returns The lowercased root, or null when it is not one of the five.
  */
-export function getAccountRoot(account: string): AccountRoot | null {
+export function getAccountRoot(
+  account: string,
+  roots: RootNames = {},
+): AccountRoot | null {
   if (!account) return null;
-  const first = account.split(":")[0].trim().toLowerCase();
-  return KNOWN_ROOTS.has(first) ? (first as AccountRoot) : null;
+  const first = account.split(":")[0].trim();
+  return (
+    ROOT_PRIORITY.find((root) => {
+      const renamed = roots[root];
+      return renamed ? first === renamed : first.toLowerCase() === root;
+    }) ?? null
+  );
 }
 
 /**
@@ -42,12 +56,15 @@ export function getAccountRoot(account: string): AccountRoot | null {
  * @param accounts - Every account on the directive (postings, or its own).
  * @returns The winning root, or null when none of them resolve.
  */
-export function pickAccountRoot(accounts: string[]): AccountRoot | null {
+export function pickAccountRoot(
+  accounts: string[],
+  roots: RootNames = {},
+): AccountRoot | null {
   if (!accounts?.length) return null;
 
   const present = new Set<AccountRoot>();
   for (const account of accounts) {
-    const root = getAccountRoot(account);
+    const root = getAccountRoot(account, roots);
     if (root) present.add(root);
   }
 
@@ -64,9 +81,12 @@ export function pickAccountRoot(accounts: string[]): AccountRoot | null {
  * wins over the account it was paid from. Accounts whose root does not resolve
  * sort last; ties keep their original order (stable).
  */
-export function orderAccountsByRootPriority(accounts: string[]): string[] {
+export function orderAccountsByRootPriority(
+  accounts: string[],
+  roots: RootNames = {},
+): string[] {
   const rank = (account: string): number => {
-    const root = getAccountRoot(account);
+    const root = getAccountRoot(account, roots);
     const idx = root ? ROOT_PRIORITY.indexOf(root) : -1;
     return idx === -1 ? ROOT_PRIORITY.length : idx;
   };

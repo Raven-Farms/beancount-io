@@ -4,6 +4,11 @@ import userEvent from "@testing-library/user-event";
 import { DashboardLayout } from "../dashboard-layout";
 import { MAIN_CONTENT_ID } from "@/common/lib/main-content";
 
+// The failed-renewal banner reads billing state the shell under test does
+// not provide; it has its own tests.
+vi.mock("@/common/components/billing/failed-renewal-banner", () => ({
+  FailedRenewalBanner: () => null,
+}));
 vi.mock("../dashboard-sidebar", () => ({
   DashboardSidebar: () => (
     <nav aria-label="Dashboard">

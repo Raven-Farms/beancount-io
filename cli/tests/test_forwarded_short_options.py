@@ -48,6 +48,10 @@ def recorded_engine(monkeypatch: pytest.MonkeyPatch) -> dict[str, Mock]:
 def test_ingest_preserves_glued_native_options_around_frontend_config(
     books: Path, recorded_engine: dict[str, Mock], operation: str, config_first: bool
 ) -> None:
+    if operation == "extract":
+        # Keep this forwarding fixture valid under extract's output preflight;
+        # the mocked engine still must receive the native tokens unchanged.
+        (books / "help").mkdir()
     native = ["-o./help/output.bean", "-e./history.bean", "input.csv"]
     config = ["--config", "other-ingest.py"]
     args = [*config, *native] if config_first else [*native, *config]
@@ -60,7 +64,10 @@ def test_ingest_preserves_glued_native_options_around_frontend_config(
     recorded_engine["run_optional_script"].assert_called_once_with(
         "beangulp", (books / "other-ingest.py").resolve(), [operation, *native], **placed
     )
-    assert not (books / "help").exists()
+    if operation == "extract":
+        assert not list((books / "help").iterdir())
+    else:
+        assert not (books / "help").exists()
 
 
 @pytest.mark.parametrize(
@@ -122,8 +129,9 @@ def test_existing_output_spellings_still_reach_the_destination(
     result = runner.invoke(app, ["treeify", *native, "input.txt"])
 
     assert result.exit_code == 0, result.output
-    # No `-r`/`-F`/`-A` was given, so bea's account pattern leads the argv (w5/137).
-    recorded_engine["capture_native"].assert_called_once_with("treeify", [ANY, "--", "input.txt"])
+    # No `-r`/`-F`/`-A` was given, so bea's account pattern leads the argv (w5/137);
+    # the file's text reaches upstream on stdin, not as a path (w5/723).
+    recorded_engine["capture_native"].assert_called_once_with("treeify", [ANY], input_text="Assets:Cash 1\n")
     assert recorded_engine["capture_native"].call_args.args[1][0].startswith("--pattern=")
     assert (books / written).read_text() == "native result\n"
 

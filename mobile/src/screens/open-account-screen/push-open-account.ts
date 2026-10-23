@@ -11,6 +11,11 @@ interface PushOpenAccountOptions {
   prefill: string;
   /** Root to fall back to when `prefill` names no canonical root. */
   prefillRoot: AccountRootPrefix;
+  /**
+   * The dated entry's `YYYY-MM-DD` when reached from one, so the account opens
+   * by then (w21/008). Open Account validates it and otherwise uses today.
+   */
+  openDate?: string;
   /** Receives the opened account. One-shot; consumed on the first success. */
   onCreated: (account: string) => void;
 }
@@ -25,11 +30,11 @@ interface PushOpenAccountOptions {
  */
 export const pushOpenAccount = (
   router: OpenAccountRouter,
-  { prefill, prefillRoot, onCreated }: PushOpenAccountOptions,
+  { prefill, prefillRoot, openDate, onCreated }: PushOpenAccountOptions,
 ): void => {
   AccountCreated.setFn(onCreated);
   router.push({
     pathname: "/(app)/open-account",
-    params: { prefill, prefillRoot },
+    params: { prefill, prefillRoot, ...(openDate ? { openDate } : {}) },
   });
 };

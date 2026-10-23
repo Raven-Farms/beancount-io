@@ -1,4 +1,5 @@
 import { publicAvatarUrl } from "@/shared/gitea-utils";
+import { assertHostPage } from "@/shared/host-page";
 import type { DbExecutor } from "@/drizzle/drizzle";
 import type { IModels } from "@/foundation/models";
 import type { IGiteaClientFactory } from "@/foundation/clients/gitea-client-factory";
@@ -60,6 +61,7 @@ export interface IUserProfileService {
     username: string,
     page?: number,
     limit?: number,
+    viewerUserId?: string,
   ): Promise<RepositoryListResponse>;
 }
 
@@ -358,6 +360,8 @@ export class UserProfileService implements IUserProfileService {
     page = 1,
     limit = 20,
   ): Promise<UserListResponse> {
+    // Outside the try: a refusal is not an upstream failure (w23/038).
+    assertHostPage(page, limit);
     try {
       const giteaClient = this.giteaClientFactory.getAdminApiClient();
       const response = await giteaClient.users.userListFollowers(
@@ -390,6 +394,8 @@ export class UserProfileService implements IUserProfileService {
     page = 1,
     limit = 20,
   ): Promise<UserListResponse> {
+    // Outside the try: a refusal is not an upstream failure (w23/038).
+    assertHostPage(page, limit);
     try {
       const giteaClient = this.giteaClientFactory.getAdminApiClient();
       const response = await giteaClient.users.userListFollowing(
@@ -421,14 +427,27 @@ export class UserProfileService implements IUserProfileService {
     username: string,
     page = 1,
     limit = 20,
+    viewerUserId?: string,
   ): Promise<RepositoryListResponse> {
+    // Outside the try: a refusal is not an upstream failure (w23/038).
+    assertHostPage(page, limit);
     try {
-      const giteaClient = this.giteaClientFactory.getAdminApiClient();
-      const response = await giteaClient.users.userListStarred(
-        username,
-        { page, limit },
-        { format: "json" },
-      );
+      // Gitea lists private stars only to the user themselves, and the admin
+      // client never is: a user's own starred private ledger was missing from
+      // their Starred list while its star showed filled (w21/130). The
+      // caller's own list is read with their credentials; anyone else's stays
+      // the public discovery read.
+      const own = viewerUserId
+        ? await this.ownGiteaClientFor(viewerUserId, username)
+        : null;
+      const response = own
+        ? await own.user.userCurrentListStarred(
+            { page, limit },
+            { format: "json" },
+          )
+        : await this.giteaClientFactory
+            .getAdminApiClient()
+            .users.userListStarred(username, { page, limit }, { format: "json" });
 
       const repositories = response.data || [];
       return {
@@ -440,6 +459,21 @@ export class UserProfileService implements IUserProfileService {
     } catch (error) {
       logger.error("Failed to fetch starred repos", { username, error });
       return { repositories: [], total: 0 };
+    }
+  }
+
+  /** The viewer's own Gitea client when `username` is the viewer, else null. */
+  private async ownGiteaClientFor(viewerUserId: string, username: string) {
+    try {
+      const client = await this.giteaClientFactory.getUserApiClient(
+        viewerUserId,
+      );
+      const me = await client.user.userGetCurrent({ format: "json" });
+      return me.data?.login?.toLowerCase() === username.toLowerCase()
+        ? client
+        : null;
+    } catch {
+      return null;
     }
   }
 

@@ -48,6 +48,21 @@
       },
       "buildNumber": "50"
     },
+    "locales": {
+      "en": "./locales/ios/en.json",
+      "zh": "./locales/ios/zh.json",
+      "bg": "./locales/ios/bg.json",
+      "ca": "./locales/ios/ca.json",
+      "de": "./locales/ios/de.json",
+      "es": "./locales/ios/es.json",
+      "fa": "./locales/ios/fa.json",
+      "fr": "./locales/ios/fr.json",
+      "nl": "./locales/ios/nl.json",
+      "pt": "./locales/ios/pt.json",
+      "ru": "./locales/ios/ru.json",
+      "sk": "./locales/ios/sk.json",
+      "uk": "./locales/ios/uk.json"
+    },
     "android": {
       "versionCode": 50,
       "package": "io.beancount.android",
@@ -65,7 +80,7 @@
             {
               "scheme": "https",
               "host": "beancount.io",
-              "pathPrefix": "/ledger"
+              "pathPattern": "/ledger/..*/..*"
             }
           ],
           "category": ["BROWSABLE", "DEFAULT"]
@@ -116,16 +131,18 @@
       [
         "expo-camera",
         {
-          "cameraPermission": "Allow $(PRODUCT_NAME) to access your camera",
-          "microphonePermission": "Allow $(PRODUCT_NAME) to access your microphone",
-          "recordAudioAndroid": true,
+          "cameraPermission": "Beancount uses the camera to scan receipts.",
+          "microphonePermission": false,
+          "recordAudioAndroid": false,
           "barcodeScannerEnabled": true
         }
       ],
       [
         "expo-image-picker",
         {
-          "photosPermission": "Allow $(PRODUCT_NAME) to access your photo library to attach receipts"
+          "photosPermission": "Beancount accesses your photos to scan receipts.",
+          "cameraPermission": "Beancount uses the camera to scan receipts.",
+          "microphonePermission": false
         }
       ],
       "expo-localization",
@@ -134,7 +151,12 @@
       "@react-native-community/datetimepicker",
       "@sentry/react-native",
       "expo-status-bar",
-      "expo-secure-store"
+      [
+        "expo-secure-store",
+        {
+          "faceIDPermission": false
+        }
+      ]
     ],
     "extra": {
       "eas": {

@@ -30,7 +30,8 @@ describe("loadConfig", () => {
 
   it("reads managed price overrides and lets an empty origin list disable the feature", () => {
     const cfg = loadConfig({
-      MANAGED_PRICE_ORIGINS: " http://localhost:14000/ , https://beancount.io:443/x,ftp://no,junk",
+      MANAGED_PRICE_ORIGINS:
+        " http://localhost:14000/ , https://beancount.io:443/x,ftp://no,junk",
       MANAGED_PRICE_REFRESH_SECONDS: "30",
       MANAGED_PRICE_RETRY_SECONDS: "5",
       MANAGED_PRICE_STALE_SECONDS: "0",
@@ -50,8 +51,8 @@ describe("loadConfig", () => {
       gatedPriceCookieName: "authSess:beancount.io",
     });
     expect(
-      loadConfig({ MANAGED_PRICE_ORIGINS: "" } as NodeJS.ProcessEnv).managedPrices
-        .origins,
+      loadConfig({ MANAGED_PRICE_ORIGINS: "" } as NodeJS.ProcessEnv)
+        .managedPrices.origins,
     ).toEqual([]);
   });
 
@@ -78,7 +79,9 @@ describe("loadConfig", () => {
     const cfg = loadConfig({
       MANAGED_PRICE_GATED_COOKIE_NAME: "",
     } as NodeJS.ProcessEnv);
-    expect(cfg.managedPrices.gatedPriceCookieName).toBe("authSess:beancount.io");
+    expect(cfg.managedPrices.gatedPriceCookieName).toBe(
+      "authSess:beancount.io",
+    );
     expect(cfg.managedPrices.gatedPriceHost).toBe("beancount.io");
   });
 
@@ -116,5 +119,21 @@ describe("loadConfig", () => {
       adminToken: "admin",
     });
     expect(cfg.loki).toEqual({ host: "http://loki:3100" });
+  });
+
+  // One worker on a one- or two-core host makes small parses wait behind
+  // large ones (w0/055); the count can be set where the memory allows.
+  it("reads RUSTLEDGER_WORKERS as a positive count, else leaves the default", () => {
+    expect(
+      loadConfig({} as NodeJS.ProcessEnv).rustledgerWorkers,
+    ).toBeUndefined();
+    expect(
+      loadConfig({ RUSTLEDGER_WORKERS: "2" } as NodeJS.ProcessEnv)
+        .rustledgerWorkers,
+    ).toBe(2);
+    expect(
+      loadConfig({ RUSTLEDGER_WORKERS: "zero" } as NodeJS.ProcessEnv)
+        .rustledgerWorkers,
+    ).toBe(1);
   });
 });

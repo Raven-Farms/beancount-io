@@ -128,3 +128,43 @@ def test_a_reimport_recognizes_the_written_entry(tmp_path: Path, bea_config_dir:
     assert result.exit_code == 0, result.output
     (row,) = json.loads(result.stdout)["data"]["rows"]
     assert row["status"] == "duplicate"
+
+
+MIXED = (
+    RECEIPT
+    + '2024-01-04 * "Shop" "unbalanced"\n  Expenses:Food  2.00 USD\n  Assets:Cash   -1.00 USD\n'
+    + "2024-01-05 balance Assets:Cash -5.00 USD\n"
+)
+
+
+@pytest.mark.parametrize("option", ["-C", "-v"])
+def test_a_check_option_reports_the_key_beside_the_other_errors(tmp_path: Path, option: str) -> None:
+    """Short-circuited, `check -C` listed the reserved key alone, `1 error(s).` (w5/850)."""
+    ledger = _ledger(tmp_path, MIXED)
+
+    result = runner.invoke(app, ["--file", str(ledger), "check", option])
+
+    assert result.exit_code == 1, result.output
+    assert f"{ledger}:3: {RESERVED.format('filename')}" in result.output
+    assert f"{ledger}:10: Transaction does not balance: (1.00 USD)" in result.output
+    assert f"{ledger}:13: Balance failed for 'Assets:Cash'" in result.output
+
+
+def test_native_json_carries_every_error(tmp_path: Path) -> None:
+    ledger = _ledger(tmp_path, MIXED)
+
+    result = runner.invoke(app, ["--file", str(ledger), "check", "--json"])
+
+    assert result.exit_code == 1, result.output
+    errors = json.loads(result.stdout)["errors"]
+    assert sorted(error["lineno"] for error in errors) == [3, 10, 13]
+    assert RESERVED.format("filename") in [error["message"] for error in errors]
+
+
+def test_plain_check_still_counts_all_three(tmp_path: Path) -> None:
+    ledger = _ledger(tmp_path, MIXED)
+
+    result = runner.invoke(app, ["--file", str(ledger), "check"])
+
+    assert result.exit_code == 1, result.output
+    assert f"{ledger}: 3 error(s)." in " ".join(result.output.split())

@@ -1,8 +1,11 @@
+import { COMMIT_READS } from "../../api/commit-reads";
 import {
   CommitsService,
+  MAX_COMMITS_PAGE_SIZE,
   isMissingCommitLookupError,
   stripCommitMetadata,
   parseFileStatsFromDiff,
+  commitFileChanges,
 } from "../commits-service";
 import {
   ForbiddenError,
@@ -396,6 +399,8 @@ index abc123..def456 100644
     expect(result.get("test.txt")).toEqual({
       additions: 1,
       deletions: 1,
+      status: "modified",
+      previousFilename: null,
     });
   });
 
@@ -423,10 +428,14 @@ index 333..444 100644
     expect(result.get("file1.txt")).toEqual({
       additions: 1,
       deletions: 0,
+      status: "modified",
+      previousFilename: null,
     });
     expect(result.get("file2.txt")).toEqual({
       additions: 0,
       deletions: 1,
+      status: "modified",
+      previousFilename: null,
     });
   });
 
@@ -449,6 +458,8 @@ index 0000000..abc123
     expect(result.get("new-file.txt")).toEqual({
       additions: 5,
       deletions: 0,
+      status: "added",
+      previousFilename: null,
     });
   });
 
@@ -469,6 +480,8 @@ index abc123..0000000
     expect(result.get("deleted.txt")).toEqual({
       additions: 0,
       deletions: 3,
+      status: "removed",
+      previousFilename: null,
     });
   });
 
@@ -487,6 +500,8 @@ index abc..def 100644
     expect(result.get("test.txt")).toEqual({
       additions: 1,
       deletions: 1,
+      status: "modified",
+      previousFilename: null,
     });
   });
 
@@ -509,6 +524,8 @@ index 111..222 100644
     expect(result.get("src/components/Button.tsx")).toEqual({
       additions: 1,
       deletions: 0,
+      status: "modified",
+      previousFilename: null,
     });
   });
 
@@ -538,6 +555,8 @@ index abc..def 100644
     expect(result.get("unchanged.txt")).toEqual({
       additions: 0,
       deletions: 0,
+      status: "modified",
+      previousFilename: null,
     });
   });
 
@@ -562,6 +581,8 @@ index abc..def 100644
     expect(result.get("large-file.txt")).toEqual({
       additions: 100,
       deletions: 50,
+      status: "modified",
+      previousFilename: null,
     });
   });
 
@@ -577,6 +598,8 @@ Binary files /dev/null and b/image.png differ`;
     expect(result.get("image.png")).toEqual({
       additions: 0,
       deletions: 0,
+      status: "added",
+      previousFilename: null,
     });
   });
 
@@ -595,6 +618,8 @@ index abc..def 100644
     expect(result.get("file with spaces.txt")).toEqual({
       additions: 1,
       deletions: 0,
+      status: "modified",
+      previousFilename: null,
     });
   });
 
@@ -618,6 +643,224 @@ index 111..222 100644
     expect(result.get("main.bean")).toEqual({
       additions: 2,
       deletions: 1,
+      status: "modified",
+      previousFilename: null,
     });
+  });
+});
+
+// w21/132: a rename read as two untouched files, and an empty file's
+// creation looked the same as its deletion.
+describe("commit file status", () => {
+  const rename = `diff --git a/qa-a.bean b/qa-c.bean
+similarity index 100%
+rename from qa-a.bean
+rename to qa-c.bean
+diff --git a/books.bean b/books.bean
+index 111..222 100644
+--- a/books.bean
++++ b/books.bean
+@@ -1 +1,2 @@
+ keep
+++++ a line that reads like a header
+`;
+
+  it("names a rename, and counts content that looks like a header", () => {
+    const stats = parseFileStatsFromDiff(rename);
+    expect([...stats.keys()]).toEqual(["qa-c.bean", "books.bean"]);
+    expect(stats.get("qa-c.bean")).toEqual({
+      additions: 0,
+      deletions: 0,
+      status: "renamed",
+      previousFilename: "qa-a.bean",
+    });
+    expect(stats.get("books.bean")?.additions).toBe(1);
+  });
+
+  it("collapses Gitea's removed + added pair into one renamed row", () => {
+    expect(
+      commitFileChanges(
+        [
+          { filename: "books.bean", status: "modified" },
+          { filename: "qa-a.bean", status: "removed" },
+          { filename: "qa-c.bean", status: "added" },
+        ],
+        parseFileStatsFromDiff(rename),
+      ),
+    ).toEqual([
+      {
+        filename: "books.bean",
+        additions: 1,
+        deletions: 0,
+        status: "modified",
+        previousFilename: null,
+      },
+      {
+        filename: "qa-c.bean",
+        additions: 0,
+        deletions: 0,
+        status: "renamed",
+        previousFilename: "qa-a.bean",
+      },
+    ]);
+  });
+
+  it("tells an empty file's creation from its deletion", () => {
+    const created = parseFileStatsFromDiff(
+      "diff --git a/qa/n.bean b/qa/n.bean\nnew file mode 100644\nindex 0000000..e69de29\n",
+    );
+    const deleted = parseFileStatsFromDiff(
+      "diff --git a/qa/n.bean b/qa/n.bean\ndeleted file mode 100644\nindex e69de29..0000000\n",
+    );
+    expect(created.get("qa/n.bean")?.status).toBe("added");
+    expect(deleted.get("qa/n.bean")?.status).toBe("removed");
+  });
+
+  it("reads a path containing ' b/' from its header", () => {
+    const stats = parseFileStatsFromDiff(
+      "diff --git a/x b/y.bean b/x b/y.bean\n--- a/x b/y.bean\n+++ b/x b/y.bean\n@@ -0,0 +1 @@\n+z\n",
+    );
+    expect([...stats.keys()]).toEqual(["x b/y.bean"]);
+  });
+
+  it("falls back to Gitea's status when the diff is unavailable", () => {
+    expect(
+      commitFileChanges(
+        [
+          { filename: "a.bean", status: "added" },
+          { filename: "b.bean", status: "deleted" },
+          { filename: "c.bean" },
+        ],
+        new Map(),
+      ).map((f) => f.status),
+    ).toEqual(["added", "removed", "modified"]);
+  });
+});
+
+// w21/133: the file name came from the first `b/` in the header, so a path
+// under `lib/` or `web/` never matched, and header-looking content lines
+// went uncounted.
+describe("per-file counts the old parser missed", () => {
+  it("keys a file under a directory ending in b by its real path", () => {
+    const stats = parseFileStatsFromDiff(
+      [
+        "diff --git a/lib/x.bean b/lib/x.bean",
+        "--- a/lib/x.bean",
+        "+++ b/lib/x.bean",
+        "@@ -1 +1 @@",
+        "-old",
+        "+new",
+      ].join("\n"),
+    );
+    expect([...stats.keys()]).toEqual(["lib/x.bean"]);
+    expect(stats.get("lib/x.bean")).toMatchObject({
+      additions: 1,
+      deletions: 1,
+    });
+  });
+
+  it("counts a deleted --- line and an added ++ line", () => {
+    const stats = parseFileStatsFromDiff(
+      [
+        "diff --git a/README.md b/README.md",
+        "--- a/README.md",
+        "+++ b/README.md",
+        "@@ -1,2 +1,2 @@",
+        " Title",
+        "----",
+        "+++note",
+      ].join("\n"),
+    );
+    expect(stats.get("README.md")).toMatchObject({
+      additions: 1,
+      deletions: 1,
+    });
+  });
+
+  it("names both sides of a rename whose paths contain b/", () => {
+    const stats = parseFileStatsFromDiff(
+      [
+        "diff --git a/web/b/old.bean b/lib/b/new.bean",
+        "similarity index 90%",
+        "rename from web/b/old.bean",
+        "rename to lib/b/new.bean",
+        "--- a/web/b/old.bean",
+        "+++ b/lib/b/new.bean",
+        "@@ -1 +1 @@",
+        "-a",
+        "+b",
+      ].join("\n"),
+    );
+    expect([...stats.keys()]).toEqual(["lib/b/new.bean"]);
+    expect(stats.get("lib/b/new.bean")).toEqual({
+      additions: 1,
+      deletions: 1,
+      status: "renamed",
+      previousFilename: "web/b/old.bean",
+    });
+  });
+});
+
+// w21/314: Gitea silently caps a commit page at 50, so a larger `limit` returned
+// 50 and a client treating a short page as the end stopped early; the list call
+// also asked Gitea for stats, verification and file lists it threw away.
+describe("CommitsService.listCommits page size", () => {
+  const identity = { userId: "usr_1", method: "session", scopes: new Set() };
+  const serviceWith = (history: jest.Mock) =>
+    new CommitsService(
+      {
+        getUserApiClient: jest.fn().mockResolvedValue({
+          repos: { repoGetAllCommits: history },
+        }),
+        getAnonymousApiClient: jest.fn(),
+      } as never,
+      { authorizeOrThrow: jest.fn().mockResolvedValue(undefined) } as never,
+    );
+
+  it.each([51, 100, 1000])(
+    "refuses limit=%d with the documented maximum, before any Gitea call",
+    async (limit) => {
+      const history = jest.fn();
+      await expect(
+        serviceWith(history).listCommits({
+          identity: identity as never,
+          ledgerId: "alice/main",
+          limit,
+        }),
+      ).rejects.toMatchObject({
+        category: "BAD_USER_INPUT",
+        message: "limit must be at most 50",
+      });
+      expect(history).not.toHaveBeenCalled();
+    },
+  );
+
+  it("accepts exactly 50 and asks Gitea only for what it reads", async () => {
+    const history = jest.fn().mockResolvedValue({ data: [] });
+    await serviceWith(history).listCommits({
+      identity: identity as never,
+      ledgerId: "alice/main",
+      limit: 50,
+    });
+    expect(history).toHaveBeenCalledWith(
+      "alice",
+      "main",
+      expect.objectContaining({
+        limit: 50,
+        stat: false,
+        verification: false,
+        files: false,
+      }),
+      expect.anything(),
+    );
+  });
+});
+
+describe("the commit list's published maximum (w21/314)", () => {
+  it("is enforced by the REST query schema and shown to GraphQL", () => {
+    const read = COMMIT_READS.find((entry) => entry.name === "ledgerCommits")!;
+    expect(read.query.safeParse({ limit: "50" }).success).toBe(true);
+    expect(read.query.safeParse({ limit: "51" }).success).toBe(false);
+    expect(MAX_COMMITS_PAGE_SIZE).toBe(50);
   });
 });

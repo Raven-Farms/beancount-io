@@ -6,6 +6,9 @@ export const ca: Translations = {
   guestTryExample: "Prova un exemple",
   guestChooseExample: "Tria un exemple",
   guestReadOnly: "Exemple de només lectura",
+  guestSignInHint: "Obre l'inici de sessió",
+  guestReadOnlyEditor:
+    "Exemple de només lectura. Inicieu la sessió per editar el vostre llibre.",
   guestExit: "Surt dels exemples",
   guestIntroduction:
     "Explora informes reals sense compte. Aquests llibres són de només lectura.",
@@ -27,6 +30,7 @@ export const ca: Translations = {
   discoveryTab_explore: "Explora",
   discoverySearch: "Cerca llibres",
   discoveryClear: "Esborra la cerca",
+  clearSearch: "Esborra la cerca",
   discoveryOpen: "Obre {{name}}",
   discoveryStar: "Desa {{name}} als preferits",
   discoveryUnstar: "Treu {{name}} dels preferits",
@@ -47,6 +51,15 @@ export const ca: Translations = {
     "No s’ha pogut completar l’acció. Comprova la connexió i l’accés al llibre i torna-ho a provar.",
   ledgerReadOnly:
     "Aquest llibre és de només lectura. Tria un llibre que puguis editar per fer-hi canvis.",
+  ledgerGoneTitle: "Aquest llibre ja no està disponible",
+  ledgerGoneMessage:
+    "S’ha eliminat, reanomenat o deixat de compartir. Tria un altre llibre per continuar.",
+  ledgerEditorNotUtf8:
+    "Aquest fitxer no és text UTF-8. Editar-lo aquí en canviaria alguns caràcters, així que s’obre només en lectura. Edita’l en un ordinador.",
+  ledgerEditorTooLarge:
+    "Aquest fitxer és massa gran per obrir-lo al telèfon, així que és només de lectura. Edita'l en un ordinador.",
+  ledgerEditorTooLargeToEdit:
+    "Aquest fitxer supera 1 MiB, més del que es pot desar des del telèfon, així que és només de lectura. Edita'l al web o amb la CLI.",
 
   // bottom tab bar
   home: "Inici",
@@ -79,25 +92,32 @@ export const ca: Translations = {
   merchantsEmptyMessage:
     "Els beneficiaris de les teves transaccions apareixeran aquí com un directori cercable.",
   merchantsNoSearchResults: "Cap comerciant coincideix amb la cerca.",
-  merchantsLoadError: "No s'han pogut carregar els comerciants: ",
+  merchantsLoadError: "No s'han pogut carregar els comerciants",
   merchantsSortByCount: "Ordena per nombre de transaccions",
   merchantsSortAlphabetical: "Ordena alfabèticament",
   merchantsRecurringSection: "Recurrent",
+  merchantsAllSection: "Tots els comerciants",
   merchantsRecurringBadge: "Recurrent",
   merchantsCadenceWeekly: "Setmanal",
   merchantsCadenceBiweekly: "Cada 2 setmanes",
+  merchantsCadenceSemimonthly: "Dos cops al mes",
   merchantsCadenceMonthly: "Mensual",
+  merchantsCadenceBimonthly: "Cada 2 mesos",
   merchantsCadenceQuarterly: "Trimestral",
+  merchantsCadenceSemiannual: "Cada 6 mesos",
   merchantsCadenceYearly: "Anual",
   merchantsCadenceIrregular: "Irregular",
   merchantsCadenceUnknown: "Historial insuficient",
+  merchantsCadenceInactive: "Sense pagaments recents",
   merchantsNextExpected: "Proper {{date}}",
   merchantsOverdue: "Vençut",
+  merchantsLastPaid: "Últim pagament {{date}}",
+  merchantsScheduled: "Programat per al {{date}}",
   merchantsRecurringToggle: "Recurrent",
   merchantsRecurringToggleHelper:
     "Fixa aquest comerç a Recurrent. L’elecció manual preval sobre la detecció i es guarda en aquest dispositiu.",
   merchantDetailDateRange: "{{first}} – {{last}}",
-  merchantDetailLoadError: "No s'ha pogut carregar el comerç: ",
+  merchantDetailLoadError: "No s'ha pogut carregar el comerç",
   merchantDetailRetry: "Torna-ho a provar",
   merchantDetailEmptyTitle: "Sense transaccions",
   merchantDetailEmptyMessage:
@@ -137,6 +157,7 @@ export const ca: Translations = {
   deleteAccountConfirmMessage:
     'Per confirmar, si us plau escriu "sudo delete my account" a continuació:',
   deleteAccountConfirmPhrase: "sudo delete my account",
+  deleteAccountConfirmMismatch: "Escriviu la frase exactament com es mostra.",
   deleteAccountConfirmPlaceholder: "Escriu la frase aquí",
   deleteAccountSuccess: "Compte eliminat",
   deleteAccountFailed: "No s'ha pogut eliminar el compte. Torna-ho a provar.",
@@ -146,6 +167,8 @@ export const ca: Translations = {
   accountSettings: "Compte",
   supportSettings: "Suport",
   signIn: "Iniciar sessió",
+  sessionEndedNotice:
+    "La sessió ha finalitzat. Torna a iniciar la sessió per continuar.",
   signUp: "Registrar-se",
   serverSettings: "Servidor",
   serverSettingsDescription:
@@ -168,6 +191,14 @@ export const ca: Translations = {
   serverConnectionUnreachable: "No s'ha pogut contactar amb aquest servidor.",
   serverConnectionIncompatible:
     "Aquest servidor no ofereix l'API necessària de Beancount.io.",
+  serverConnectionOlder:
+    "Aquest servidor és més antic que l'aplicació. Pots connectar-te, però algunes funcions potser no funcionen.",
+  serverConnectionNotConfigured:
+    "Aquest servidor encara no està configurat per iniciar la sessió.",
+  serverConnectionMismatch:
+    "Aquesta adreça no coincideix amb la que informa el servidor. Obriu la configuració del servidor i proveu la connexió.",
+  serverConnectionCanonical: "Aquest servidor s'identifica com a {{url}}.",
+  serverUseCanonical: "Utilitza aquesta adreça",
   serverConnectionAdvisory:
     "Podeu desar igualment aquest URL i provar d'iniciar sessió quan el servidor estigui disponible.",
   restoreDefaultServer: "Restaura el valor predeterminat de Beancount.io",
@@ -188,26 +219,37 @@ export const ca: Translations = {
   multiPostingsInvalidBalance: "Els apunts han de sumar zero",
   multiPostingsMissingAccount: "Cada apunt necessita un compte",
   multiPostingsZeroAmount: "Cada apunt necessita un import diferent de zero",
+  multiPostingsAmountFormat:
+    "Fes servir xifres i un sol punt decimal, com 1234.56",
   accountPicker: "Selector de compte",
   accountPickerSearchPlaceholder: "Cerca comptes",
   accountPickerRecent: "Recents",
   accountPickerAllTab: "Tots",
   accountPickerNoResults: "Cap compte coincident",
   accountPickerCreate: 'Crea "%{name}"',
-  next: "Següent",
+  accountPickerClosedOn: "{{name}} es va tancar el {{date}}",
+  accountPickerOpensOn:
+    "{{name}} s'obre el {{date}}. Canvieu la data per utilitzar-lo.",
+  accountPickerOpenLater:
+    "Els vostres comptes s'obren el {{date}}. Canvieu la data per utilitzar-los.",
+  accountPickerNoAccounts: "Aquest llibre encara no té comptes.",
   cancel: "Cancel·lar",
   confirm: "Confirmar",
   saving: "Guardant...",
+  deleting: "Suprimint...",
   saveSuccess: "Transacció guardada!",
   saveFailed: "Error al guardar",
-  amountEmptyError: "Si us plau, introdueix l'import",
-  accountEmptyError: "Tria el compte d'origen i el de destí",
+  profilePartialSave:
+    "El nom d'usuari s'ha desat, però no s'ha pogut desar el vostre nom. Torneu-ho a provar.",
   accounts: "Comptes",
   // Column header for the Accounts tab's account column. The balance column
   // reuses `balance`; each root row states its own valuation basis.
   account: "Compte",
   atCost: "{{amount}} a cost",
+  postingCost: "preu de cost {{amount}}",
+  postingPrice: "preu {{amount}}",
   notInTotal: "No inclòs al total: {{amounts}}",
+  spendingLastMonthNotInTotal: "El mes passat, no inclòs al total: {{amounts}}",
   atMarket: "{{amount}} a valor de mercat",
   atMarketValue: "A valor de mercat",
   pricesNotUpdatedSince: {
@@ -239,11 +281,15 @@ export const ca: Translations = {
   equity: "Patrimoni net",
   noDataCharts: "Afegir ràpid per mostrar gràfics",
   notEnoughChartData: "Encara no hi ha prou dades per al gràfic",
+  chartSummary:
+    "De {{start}}, {{startValue}}, a {{end}}, {{endValue}}. Mínim {{low}}, màxim {{high}}.",
+  chartPointValue: "{{period}}, {{value}}, {{change}} des de l'inici",
+  chartAdjustHint: "Llisqueu amunt o avall per recórrer els mesos",
+  chartAdjustHintAndroid: "Obriu el menú d'accions per recórrer els mesos",
   done: "Fet",
   payee: "Beneficiari",
   narration: "Descripció",
   suggestions: "Suggeriments",
-  aiSuggestions: "Suggeriments d'IA",
   from: "De",
   to: "A",
   date: "Data",
@@ -286,9 +332,11 @@ export const ca: Translations = {
     "Quan afegeixis transaccions, apareixeran aquí.",
   transactionsNoSearchResults:
     "Cap transacció coincideix amb la cerca o els filtres.",
-  transactionsLoadError: "No s'han pogut carregar les transaccions: ",
+  transactionsLoadError: "No s'han pogut carregar les transaccions",
   // transactions filter modal
   filters: "Filtres",
+  filtersActive: "Actius: {{count}}",
+  clearAccount: "Esborra el compte",
   filterStatus: "Estat",
   filterDateRange: "Període",
   filterDateRangeInvalid:
@@ -304,6 +352,7 @@ export const ca: Translations = {
   transactions: "Transaccions",
   search: "Buscar",
   unknown: "Desconegut",
+  datePlaceholder: "AAAA-MM-DD",
   openAccount: "Obrir compte",
   accountType: "Tipus de compte",
   currency: "Moneda",
@@ -312,34 +361,76 @@ export const ca: Translations = {
   chooseCurrency: "Tria la moneda",
   openAccountNamePlaceholder: "Bank:Checking",
   openAccountNoCurrency: "Sense moneda",
+  openAccountOtherCurrency: "Altra…",
+  openAccountOtherCurrencyTitle: "Una altra moneda",
+  openAccountOtherCurrencyMessage:
+    "Introduïu un codi de moneda o actiu, com EUR o VTI.",
+  openAccountCurrencyInvalid:
+    "Feu servir majúscules, dígits i ' . _ -, començant per una lletra, com EUR o VTI.",
   openAccountSaving: "S'està obrint...",
   openAccountFailed: "No s'ha pogut obrir el compte. Torna-ho a provar.",
   ledgerWouldBreak: "Això afegiria un error al teu llibre: {{detail}}",
+  ledgerRefusalLine: "línia {{line}}",
+  ledgerRefusalNearEntry: "a prop d'aquesta entrada",
+  ledgerRefusalQuoteHint:
+    "Per posar unes cometes dins d'un text, escriviu-les com \\\".",
+  ledgerWriteOffline: "No tens connexió. No s'ha desat res.",
+  ledgerWriteUnconfirmed:
+    "El servidor no ha confirmat el desat. Comproveu-ho abans de tornar-ho a provar.",
+  ledgerWriteRateLimited:
+    "Massa canvis alhora. Espera un moment i torna-ho a provar.",
+  ledgerInvalidAccount: "{{value}} no és un nom de compte vàlid.",
+  ledgerInvalidCurrency: "{{value}} no és una moneda vàlida.",
+  ledgerInvalidTag:
+    "#{{value}} no es pot fer servir com a etiqueta. Fes servir només les lletres A–Z, xifres i - _ . /",
+  ledgerInvalidLink:
+    "^{{value}} no es pot fer servir com a enllaç. Fes servir només les lletres A–Z, xifres i - _ . /",
+  ledgerInvalidFlag: "{{value}} no es pot fer servir com a marca.",
+  ledgerEntryOneAtATime: "Edita una sola entrada alhora.",
+  ledgerEntryIndent: "Sagna els apunts sota la línia de la data.",
+  ledgerEntryNotAnEntry:
+    "Les opcions, els connectors i les inclusions no són entrades. Canvia-les a l'editor de fitxers del llibre.",
   openAccountInvalidRoot: "Tria un tipus de compte vàlid.",
   openAccountNameRequired: "Escriu almenys un component del nom.",
   openAccountEmptyComponent: "Els components del nom no poden ser buits.",
   openAccountNamePreview: "Es crearà com a {{account}}",
   openAccountAlreadyOpen: "{{account}} ja està obert en aquest llibre.",
+  openAccountClosed:
+    "{{account}} es va tancar el {{date}} i no es pot tornar a obrir.",
   openAccountUppercaseComponent:
     "Cada component del nom ha de començar amb majúscula o xifra.",
   openAccountInvalidCharacters:
     "Als noms de compte, fes servir només lletres, xifres i guions.",
   transaction: "Transacció",
+  transactionActions: "Accions de la transacció",
   loadingMore: "Carregant més...",
   noMoreEntries: "No hi ha més entrades",
+  loadMoreFailed: "No s'han pogut carregar més entrades.",
+  a11yTapToExpand: "Toqueu dos cops per expandir",
+  a11yTapToCollapse: "Toqueu dos cops per contreure",
   noEntries: "Cap entrada",
   accountDetailUnavailable:
     "Aquest compte no està disponible al llibre seleccionat.",
   transactionDetailUnavailable:
     "Aquesta transacció no està disponible al llibre seleccionat.",
+  transactionDetailRemoved:
+    "Aquesta transacció s'ha canviat o eliminat. Torna enrere per veure la llista actual.",
+  transactionErrorOpenFile: "Obre a l'editor de fitxers",
+  pluginCopyNotice:
+    "Un connector ha generat aquesta entrada a partir d'una altra, per això no es pot editar ni suprimir aquí.",
+  pluginCopyOpenSource: "Obre l'entrada d'origen",
   merchantDetailUnavailable:
     "Aquest comerç no està disponible al llibre seleccionat.",
   commitDetailUnavailable:
     "Aquest canvi no està disponible al llibre seleccionat.",
-  journalLoadError: "Error en carregar el diari: ",
+  commitDetailGone: "Aquest canvi ja no està disponible.",
+  fileEditorUnavailable:
+    "Aquest fitxer no està disponible al llibre seleccionat.",
+  journalLoadError: "Error en carregar el diari",
   // entry context (transactions screen)
   journalError: "Error",
   journalNoData: "No hi ha dades de context d'entrada disponibles",
+  dateSectionHeaderTotal: "{{date}}, total del dia {{total}}",
   journalEntryContext: "Context de l'entrada",
   journalBalancesBefore: "Saldo abans de l'entrada",
   journalBalancesAfter: "Saldo després de l'entrada",
@@ -348,6 +439,7 @@ export const ca: Translations = {
   open: "Obertura",
   close: "Tancament",
   balance: "Saldo",
+  balanceOffBy: "Desviació de {{amount}}",
   note: "Nota",
   document: "Document",
   pad: "Ajust",
@@ -355,9 +447,11 @@ export const ca: Translations = {
   custom: "Personalitzada",
   cleared: "Conciliada",
   pending: "Pendent",
+  entryUpcoming: "Properament",
   other: "Altres",
   budget: "Pressupost",
   metadata: "Metadades",
+  accountOwnPostings: "{{name}} (pròpies)",
   postings: "Apunts",
   details: "Detalls",
   tags: "Etiquetes",
@@ -366,6 +460,8 @@ export const ca: Translations = {
   reports: "Informes",
   netProfit: "Benefici net",
   cashFlow: "Flux de caixa",
+  cashFlowRefunds: "Reemborsaments",
+  cashFlowClawbacks: "Reintegraments",
   moneyFlow: "Flux monetari",
   cashFlowEmpty: "Sense flux de caixa en aquest període",
   savings: "Estalvis",
@@ -377,12 +473,22 @@ export const ca: Translations = {
   notFoundGoHome: "Ves a l'inici",
   // home dashboard
   seeAll: "Mostra-ho tot",
+  seeAllCard: "Mostra-ho tot: {{title}}",
+  seeAllAccounts: "Mostra tots els comptes",
   netWorth: "Patrimoni net",
   noAccounts: "Cap compte",
+  reportsNoExpenses: "Cap despesa en aquest període",
+  reportsNoIncome: "Cap ingrés en aquest període",
   recentTransactions: "Transaccions recents",
   recentTransactionsEmpty: "Encara no hi ha transaccions",
+  recentTransactionsUpcoming:
+    "Res fins avui. Els moviments futurs surten a Transaccions.",
+  recentTransactionsEmptyRange: "Sense transaccions en aquest període",
   spending: "Despeses",
   spendingSubtitle: "Aquest mes en comparació amb l'anterior",
+  spendingChartSummary:
+    "Despeses: el mes passat {{lastMonth}}, aquest mes {{thisMonth}}.",
+  spendingEmpty: "Encara no hi ha despeses",
   thisMonth: "Aquest mes",
   lastMonth: "Mes passat",
   range1M: "1M",
@@ -392,6 +498,13 @@ export const ca: Translations = {
   range1Y: "1A",
   rangeLastYear: "AA",
   rangeAll: "TOT",
+  rangeSpoken1M: "1 mes",
+  rangeSpoken3M: "3 mesos",
+  rangeSpoken6M: "6 mesos",
+  rangeSpokenYTD: "Any fins avui",
+  rangeSpoken1Y: "1 any",
+  rangeSpokenLastYear: "Any passat",
+  rangeSpokenAll: "Tot el període",
   // edit / delete transaction
   editTransaction: "Edita la transacció",
   deleteTransaction: "Elimina",
@@ -400,8 +513,12 @@ export const ca: Translations = {
     "Segur que vols eliminar aquesta transacció? L'acció no es pot desfer.",
   deleteSuccess: "Transacció eliminada",
   deleteFailed: "No s'ha pogut eliminar la transacció",
+  deleteTransactionChanged:
+    "Aquesta transacció s'ha canviat en un altre lloc. S'ha tornat a carregar; torneu a provar d'eliminar-la.",
   editSuccess: "Transacció desada",
   editFailed: "No s'ha pogut desar la transacció",
+  editTransactionEmpty:
+    "No es pot desar una entrada buida. Per treure la transacció, fes servir Elimina al seu detall.",
   editTransactionLoadFailed: "No s'ha pogut carregar la transacció",
   editTransactionSource:
     "Edita a sota el codi beancount original. Una suma de verificació obsoleta o un beancount no vàlid es rebutjarà amb un error.",
@@ -415,12 +532,16 @@ export const ca: Translations = {
   receiptFlashOff: "Desactivat",
   receiptFlashOn: "Activat",
   receiptRetake: "Repeteix",
+  receiptTryAgain: "Torna-ho a provar",
   receiptUpload: "Puja",
   receiptOpenSettings: "Obre la Configuració",
+  receiptAllowCamera: "Permet la càmera",
   receiptCancel: "Cancel·la",
   receiptUploading: "S'està pujant la foto…",
+  receiptUploadingProgress: "S'està pujant la foto… {{percent}}%",
   receiptParsing: "La IA està llegint el teu rebut…",
   receiptRevealTitle: "Això és el que hem llegit",
+  receiptRevealSpoken: "Rebut llegit: {{summary}}",
   // Deliberately a proposal: nothing is written to the ledger until the user
   // saves on the next screen.
   receiptRevealHint:
@@ -440,14 +561,32 @@ export const ca: Translations = {
   notificationsChangesSection: "Canvis recents",
   notificationsLedgerHealthy: "El llibre està en ordre: cap error.",
   notificationsNoChanges: "Cap canvi recent.",
+  notificationsShowOlder: "Mostra els canvis anteriors",
+  commitNoMessage: "(sense missatge)",
   // commit detail
   commitDetailAuthor: "Autor",
   commitDetailStats: "Estadístiques",
   commitDetailFiles: "Fitxers",
+  commitFileAdded: "Afegit",
+  commitFileDeleted: "Suprimit",
+  commitFileRenamedFrom: "Canviat de nom des de {{name}}",
   commitDetailDiff: "Diferències",
+  commitDetailShowMore: {
+    one: "Mostra {{count}} línia més",
+    many: "Mostra {{count}} línies més",
+    other: "Mostra {{count}} línies més",
+  },
   commitDetailNoDiff: "No hi ha diferències disponibles.",
-  commitDetailAdditions: "+{{count}} línies",
-  commitDetailDeletions: "-{{count}} línies",
+  commitDetailAdditions: {
+    one: "+{{count}} línia",
+    many: "+{{count}} línies",
+    other: "+{{count}} línies",
+  },
+  commitDetailDeletions: {
+    one: "-{{count}} línia",
+    many: "-{{count}} línies",
+    other: "-{{count}} línies",
+  },
   // ledger file browser
   ledgerLoadError: "No s'ha pogut carregar",
   ledgerEmpty: "Cap fitxer",
@@ -460,20 +599,34 @@ export const ca: Translations = {
     "Escriu un nom únic de fitxer .bean o .beancount. Si no poses extensió, s'hi afegeix .bean.",
   ledgerCreateFilePlaceholder: "investments.bean",
   ledgerCreateFileSuccess: "S'ha creat {{name}}",
+  ledgerCreateFileSuccessIn: "S'ha creat {{name}} a {{ledger}}",
   ledgerCreateFileFailed: "No s'ha pogut crear el fitxer",
+  ledgerFileNameExists: "Ja existeix un fitxer anomenat {{name}}",
+  ledgerFileNameExtension: "Fes servir un nom .bean o .beancount",
+  ledgerFileNamePath: "Fes servir un nom sense \\, .. ni noms de carpeta buits",
+  ledgerFileNamePortable:
+    'Evita < > : " | ? *, parts que acabin en punt o espai i noms com con o nul',
   ledgerDeleteFile: "Elimina {{name}}",
+  ledgerFilesFolderLabel: "{{name}}, carpeta",
+  ledgerFilesFileLabel: "{{name}}, fitxer",
   ledgerDeleteFileTitle: "Elimina el fitxer del llibre",
   ledgerDeleteFileMessage:
     'Vols eliminar "{{name}}"? L\'acció no es pot desfer.',
   ledgerDeleteFileConfirm: "Elimina",
   ledgerDeleteFileSuccess: "S'ha eliminat {{name}}",
   ledgerDeleteFileFailed: "No s'ha pogut eliminar el fitxer",
+  ledgerDeleteFileChanged:
+    "Aquest fitxer ha canviat en un altre lloc. S'ha actualitzat la llista; torneu-ho a provar.",
   ledgerMainFileProtected: "main.bean no es pot eliminar",
   // ledger file editor
   ledgerEditorSave: "Desa",
   ledgerEditorSaving: "S'està desant...",
   ledgerEditorSaveSuccess: "Fitxer desat",
   ledgerEditorSaveFailed: "No s'ha pogut desar",
+  ledgerEditorSaveLeftErrorsTitle: "Desat, amb un error nou al llibre",
+  ledgerEditorSaveLeftErrors:
+    "El fitxer s'ha desat, però el teu llibre ara té un error que abans no tenia: {{error}}",
+  ledgerEditorViewErrors: "Mostra els errors",
   ledgerEditorLoadFailed: "No s'ha pogut carregar el fitxer",
   ledgerEditorFileUnavailable: "Aquest fitxer ja no és al llibre.",
   ledgerEditorBackToFiles: "Torna als fitxers",
@@ -482,11 +635,37 @@ export const ca: Translations = {
   ledgerEditorDiscardChanges: "Descarta",
   ledgerEditorConflictTitle: "El fitxer ha canviat",
   ledgerEditorConflictMessage:
-    "Aquest fitxer ha canviat al servidor. Vols descartar els canvis locals i tornar a carregar?",
+    "Aquest fitxer s'ha canviat en remot. Voleu desar el vostre text a sobre o copiar-lo i carregar la versió nova?",
+  ledgerEditorOverwrite: "Sobreescriu",
+  ledgerEditorCopyReload: "Copia i recarrega",
+  ledgerEditorOverwriteTitle: "Sobreescriure els canvis remots?",
+  ledgerEditorOverwriteMessage:
+    "El vostre text substitueix la versió desada en un altre lloc. Es perdran els seus canvis.",
+  ledgerEditorFileGoneTitle: "Fitxer suprimit",
+  ledgerEditorFileGoneMessage:
+    "Aquest fitxer s'ha suprimit o mogut en un altre lloc i no es pot desar. El vostre text encara és aquí: copieu-lo o deseu-lo com a fitxer nou a la mateixa ruta.",
+  ledgerEditorRecreate: "Desa com a fitxer nou",
+  ledgerEditorSaveFailedHint:
+    "El vostre text encara és aquí. Torneu-ho a provar d'aquí a un moment.",
+  ledgerEditorAccessRemoved:
+    "Ja no podeu editar aquest llibre. El vostre text continua aquí: copieu-lo per conservar-lo.",
+  ledgerEditorCopyFailed:
+    "No s'ha pogut copiar el text, per això el fitxer no s'ha recarregat.",
   ledgerEditorReload: "Torna a carregar",
   ledgerEditorKeepEditing: "Continua editant",
   keyboardAccessoryInsert: "Insereix {{symbol}}",
+  keyboardInsertDate: "Insereix la data d'avui",
+  keyboardInsertCleared: "Insereix la marca de conciliat",
+  keyboardInsertPending: "Insereix la marca de pendent",
+  keyboardInsertQuotes: "Insereix cometes",
+  keyboardInsertColon: "Insereix dos punts",
+  keyboardInsertTab: "Insereix tabulació",
+  keyboardInsertMinus: "Insereix menys",
+  keyboardInsertTag: "Insereix etiqueta",
+  keyboardInsertLink: "Insereix enllaç",
   keyboardAccessoryDismiss: "Amaga el teclat",
+  ledgerEditorErrorLine: "línia {{line}}",
+  ledgerEditorJumpToLine: "Salta a la línia {{line}}",
   ledgerEditorErrorCount: {
     one: "{{count}} error",
     many: "{{count}} errors",
@@ -510,14 +689,22 @@ export const ca: Translations = {
     "Defineix un objectiu per a qualsevol compte per començar-ne el seguiment.",
   budgetEmptyStateCta: "Afegeix el teu primer pressupost",
   budgetPanelEmpty: "Defineix un objectiu per a un compte",
+  budgetPanelEmptyGuest: "Inicieu la sessió per fixar objectius de despesa",
   budgetPanelRowValue:
     "{{actual}} de {{budget}}, {{percent}}% utilitzat, {{status}}",
+  budgetPanelRowValueNoBudget: "{{actual}} de {{budget}}, {{status}}",
+  budgetStartsOn: "Comença el {{date}}",
   budgetLoadFailed: "No s'han pogut carregar els pressupostos",
   budgetIntervalDaily: "Diari",
   budgetIntervalWeekly: "Setmanal",
   budgetIntervalMonthly: "Mensual",
   budgetIntervalQuarterly: "Trimestral",
   budgetIntervalYearly: "Anual",
+  budgetIntervalAdjDaily: "diari",
+  budgetIntervalAdjWeekly: "setmanal",
+  budgetIntervalAdjMonthly: "mensual",
+  budgetIntervalAdjQuarterly: "trimestral",
+  budgetIntervalAdjYearly: "anual",
   // add / update budget
   budgetAdd: "Afegeix pressupost",
   budgetUpdate: "Actualitza el pressupost",
@@ -531,10 +718,15 @@ export const ca: Translations = {
   budgetSaveFailed: "No s'ha pogut desar el pressupost",
   // delete
   budgetDelete: "Elimina",
+  budgetUpdateNamed: "Actualitza el pressupost de {{account}}, {{currency}}",
+  budgetDeleteNamed:
+    "Suprimeix l'entrada de pressupost del {{date}}, {{amount}}",
   budgetDeleteTitle: "Elimina el pressupost",
   budgetDeleteMessage:
     "Vols eliminar el pressupost {{interval}} de {{amount}} per a {{account}} vigent des del {{date}}? Això elimina una sola entrada i no es pot desfer.",
   budgetDeleteFailed: "No s'ha pogut eliminar el pressupost",
+  budgetDeleteChanged:
+    "Aquesta entrada de pressupost ha canviat en un altre lloc. S'ha actualitzat l'historial; torneu-ho a provar.",
 
   // Ask Beancount.io — the agent chat
   agentTitle: "Pregunta a Beancount.io",
@@ -573,10 +765,16 @@ export const ca: Translations = {
   createLedgerNameInvalid:
     "El nom ha d'incloure almenys una lletra o un número.",
   createLedgerNameConflict: "Ja existeix un llibre amb aquest nom.",
+  createLedgerNameReserved:
+    "Aquest nom era d'un llibre reanomenat i encara hi redirigeix. Tria un altre nom.",
+  createLedgerSetupUnsupported:
+    "Aquest servidor no admet la configuració guiada. Torna enrere i tria Inicial o Mostra per crear un llibre amb els valors per defecte del servidor.",
+  createLedgerCreated: "S'ha creat {{name}}",
   createLedgerSlugPreview: "Es crearà com a {{slug}}",
   createLedgerDescription: "Descripció",
   createLedgerDescriptionPlaceholder: "Opcional",
   createLedgerPrivate: "Privat",
+  createLedgerPublic: "Públic",
   createLedgerTemplate: "Plantilla",
   createLedgerTemplateStarter: "Inicial",
   createLedgerTemplateStarterHint:
@@ -588,6 +786,8 @@ export const ca: Translations = {
     "S'ha arribat al límit de llibres. No se'n pot crear cap més.",
   createLedgerGenericError:
     "No s'ha pogut crear el llibre. Torneu-ho a provar.",
+  createLedgerStillCreating:
+    "Aquest llibre encara s'està creant. Espereu uns segons i torneu a tocar Crea.",
   createLedgerDrawerRow: "Nou llibre",
   createLedgerEmptyTitle: "Encara no hi ha llibres",
   createLedgerEmptyBody: "Creeu un llibre o descobriu exemples públics.",
@@ -597,8 +797,15 @@ export const ca: Translations = {
   ledgerGuardMessage: "Creeu un llibre o descubriu-ne un per continuar.",
   removePosting: "Elimina l'assentament",
   toggleAmountSign: "Canvia el signe de l'import",
-  incomeExpenseChartSummary:
-    "Ingressos i despeses durant {{count}} mesos. Ingressos {{income}}, despeses {{expense}}, net {{net}}.",
+  postingSignToggle: "Signe de {{account}}",
+  signPlus: "Més",
+  signMinus: "Menys",
+  incomeExpenseChartSummary: {
+    one: "Ingressos i despeses durant {{count}} mes. Ingressos {{income}}, despeses {{expense}}, net {{net}}.",
+    many: "Ingressos i despeses durant {{count}} mesos. Ingressos {{income}}, despeses {{expense}}, net {{net}}.",
+    other:
+      "Ingressos i despeses durant {{count}} mesos. Ingressos {{income}}, despeses {{expense}}, net {{net}}.",
+  },
   cashFlowChartSummary:
     "Flux de caixa d'ingressos a despeses. Ingressos {{income}}, despeses {{expenses}}.",
   cashFlowChartSummaryWithSavings:
@@ -608,6 +815,7 @@ export const ca: Translations = {
   sankeyIncomeNodeLabel: "{{name}} (ingressos)",
   sankeyExpensesNodeLabel: "{{name}} (despeses)",
   ledgerNavigateUp: "Puja una carpeta",
+  ledgerNavigateUpTo: "Puja a {{folder}}",
   openLedgerDrawer: "Obre el menú",
   back: "Enrere",
   postingAmountLabel: "Import de {{account}}",
@@ -617,8 +825,14 @@ export const ca: Translations = {
   expandAccount: "Desplega {{account}}",
   collapseAccount: "Plega {{account}}",
   breakdownRowShare: "{{amount}}, {{percent}}% del total",
-  budgetChartSummary:
-    "Pressupost i real de {{span}}. Real {{actual}} d'un pressupost de {{budget}} en {{count}} períodes, {{over}} per sobre de l'objectiu.",
+  budgetChartSummary: {
+    one: "Pressupost i real de {{span}}. Real {{actual}} d'un pressupost de {{budget}} en {{count}} període, {{missed}}.",
+    many: "Pressupost i real de {{span}}. Real {{actual}} d'un pressupost de {{budget}} en {{count}} períodes, {{missed}}.",
+    other:
+      "Pressupost i real de {{span}}. Real {{actual}} d'un pressupost de {{budget}} en {{count}} períodes, {{missed}}.",
+  },
+  budgetSummaryOverTarget: "{{count}} per sobre de l'objectiu",
+  budgetSummaryBelowTarget: "{{count}} per sota de l'objectiu",
   feedSourceLedger: "Llibre",
   feedSourceBlog: "Blog",
   feedSourceRelease: "Versió",
@@ -631,6 +845,7 @@ export const ca: Translations = {
   profileUsernameHint:
     "Les adreces web dels teus llibres comencen amb el teu nom d'usuari, així que canviar-lo també les canvia.",
   profileUsernameRequired: "Introdueix un nom d'usuari",
+  profileNameTooLong: "Com a màxim 100 caràcters.",
   profileUsernameRule:
     "Fes servir d'1 a 20 caràcters: minúscules a–z, xifres 0–9 o guions baixos.",
   profileUsernameTaken: "Aquest nom d'usuari ja està agafat",
@@ -638,6 +853,53 @@ export const ca: Translations = {
   profileEmailReadOnly: "El correu electrònic no es pot canviar aquí",
   profileNotSet: "Sense definir",
   profilePhotoFromGravatar: "Foto de Gravatar",
+  profileAddGravatar: "Afegiu una foto a Gravatar",
   profileUpdated: "Perfil actualitzat",
   multiplePostings: "Diversos apunts",
+  createLedgerNext: "Següent",
+  createLedgerBack: "Enrere",
+  createLedgerStep: "Pas {{step}} de {{total}}",
+  createLedgerStartPreset: "Configuració predefinida",
+  createLedgerStartPresetHint:
+    "Tria un pla de comptes ja preparat per al que segueixes: una llar, un negoci, inversions.",
+  createLedgerCurrency: "Moneda d'operació",
+  createLedgerHistoryStart: "Els llibres comencen el",
+  createLedgerOpeningAccount: "Compte d'obertura",
+  createLedgerOpeningAmount: "Saldo inicial (opcional)",
+  createLedgerReviewOpening: "Saldo inicial: {{account}} {{amount}}",
+  createLedgerAmountOwed: "Import degut (opcional)",
+  createLedgerOpeningNone: "Decidir més tard",
+  createLedgerReview: "Revisar",
+  createLedgerReviewDescription:
+    "Això és exactament el que es crearà. Torneu enrere per canviar res.",
+  createLedgerAccounts: "Comptes",
+  createLedgerAmountInvalid: "Introduïu un import com 100 o -30.50",
+  createLedgerAmountReenter:
+    "Torna a introduir el saldo inicial o tria «Decidir més tard». No es conserva a l'esborrany desat.",
+  createLedgerCurrencyInvalid: "Tria un codi de moneda com USD o EUR.",
+  createLedgerHistoryStartInvalid: "Introdueix una data vàlida com 2026-01-01.",
+  createLedgerPresetPersonal: "Llibre personal",
+  createLedgerPresetPersonalOutcome:
+    "Registreu una compra i enteneu el seu efecte en els diners restants.",
+  createLedgerPresetFreelance: "Llibre d'autònom",
+  createLedgerPresetFreelanceOutcome:
+    "Registreu ingressos de clients o vegeu què deu un client impagat.",
+  createLedgerPresetBusiness: "Llibre d'empresa",
+  createLedgerPresetBusinessOutcome:
+    "Establiu una posició inicial i distingiu finançament d'ingressos.",
+  createLedgerPresetPortfolio: "Llibre de cartera",
+  createLedgerPresetPortfolioOutcome:
+    "Registreu una compra i verifiqueu unitats, adquisicions i moviment d'efectiu.",
+  createLedgerPresetRental: "Llibre de lloguer",
+  createLedgerPresetRentalOutcome:
+    "Registreu rebuts i distingiu el lloguer d'un dipòsit reemborsable.",
+  createLedgerPresetShared: "Llibre de despeses compartides",
+  createLedgerPresetSharedOutcome:
+    "Registreu una bestreta i vegeu qui deu a qui.",
+  createLedgerPresetCommunity: "Llibre de comunitat",
+  createLedgerPresetCommunityOutcome:
+    "Expliqueu contribucions, despeses de projectes i fons restants.",
+  createLedgerPresetBlank: "Llibre en blanc",
+  createLedgerPresetBlankOutcome:
+    "Afegiu una estructura triada sense eliminar categories no desitjades.",
 };

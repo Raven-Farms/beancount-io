@@ -190,7 +190,7 @@ def test_a_stored_window_closed_by_its_directive_date_is_refused(
     ledger = tmp_path / "main.bean"
     ledger.write_text(STORED)
     message = (
-        "This stored query's window covers no days: its query directive's date, 2024-03-11, closes the window "
+        f"Stored query \"{name}\"'s window covers no days: its query directive's date, 2024-03-11, closes the window "
         f"(exclusive), and OPEN ON starts {where}."
     )
 

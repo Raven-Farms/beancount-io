@@ -24,9 +24,9 @@ import typer
 from cli import context, output
 from cli.completion import fixed_values
 from cli.engine import launch
-from cli.errors import UsageError, placement_hint
-from cli.paths import expand_path
-from cli.utils import decode_error_message, inert_text
+from cli.errors import BeaError, UsageError, placement_hint
+from cli.paths import expand_path, is_descriptor_path
+from cli.utils import RawPath, decode_error_message, inert_text, writes_through_descriptor
 
 FORMATS = ("text", "csv", "beancount")
 
@@ -65,7 +65,7 @@ def _stdin_query() -> str:
     try:
         text = data.decode("utf-8-sig")
     except UnicodeDecodeError as exc:
-        message = decode_error_message("stdin", exc)
+        message = decode_error_message("stdin", exc, data)
         if data.startswith((b"\xff\xfe", b"\xfe\xff")):
             message = f"{message} {utf16}"
         raise UsageError(message) from exc
@@ -108,6 +108,12 @@ def _require_source_ledger(source: str) -> None:
     directory, or no path at all (`--source ""` from an unset shell variable)
     ended in a traceback through the engine instead (w5/250); those are refused
     here in the same words.
+
+    A `$VAR` the loader would expand is refused before the existence check: it
+    silently read another ledger with exit 0, or answered from an empty
+    database and replaced an `--output` export with a header row (w5/791).
+    A descriptor spelling (`/dev/fd/N`, `/dev/stdin`) is refused the same
+    way: the engine child cannot open it (w5/792).
     """
     import re
     from urllib.parse import urlparse
@@ -119,7 +125,16 @@ def _require_source_ledger(source: str) -> None:
         raise UsageError(f"--source '{source}' names no file; pass a ledger path, beancount:<path> or csv:<path>.")
     path = Path(parts.path)
     named = "" if parts.path == source else f" {source}"
+    if parts.scheme == "beancount":
+        context.refuse_expanding_ledger_path(parts.path, f" (from --source{named})")
     kind, label = ("ledger", "Ledger") if parts.scheme == "beancount" else ("CSV", "CSV")
+    if is_descriptor_path(parts.path):
+        # The engine child cannot open our descriptors; refused by name
+        # instead of "not found" mid-query (w5/792).
+        raise UsageError(
+            f"{label} path '{path}' (from --source{named}) is a file descriptor, not a file. "
+            "Save it to a file and pass that file."
+        )
     if not path.exists():
         raise UsageError(f"No {kind} file at '{path}' (from --source{named}).")
     if path.is_dir():
@@ -147,6 +162,15 @@ def _refuse_source_alias(source: str, destination: Path, *, spelling: Path | Non
         output.refuse_ledger_alias(destination, Path(parts.path), spelling=spelling)
     elif scheme == "csv" and parts.path:
         output.refuse_input_alias(destination, Path(parts.path))
+
+
+def _refuse_shell_descriptor(descriptor: str | None) -> None:
+    """Refuse a descriptor destination for the interactive shell, which writes each result itself."""
+    if descriptor is not None:
+        raise UsageError(
+            f"--output {descriptor} is a descriptor of this process, which the interactive shell cannot write; "
+            "pass the query as an argument or on stdin."
+        )
 
 
 def _refuse_one_shot_output(query_string: str) -> None:
@@ -294,7 +318,8 @@ def query(
         ),
     ] = None,
     output_file: Annotated[
-        str | None, typer.Option("--output", "-o", help="Write the result to this file instead of stdout")
+        str | None,
+        typer.Option("--output", "-o", click_type=RawPath(), help="Write the result to this file instead of stdout"),
     ] = None,
     numberify: Annotated[
         bool, typer.Option("--numberify", "-m", help="Split amounts into one column per currency")
@@ -360,6 +385,12 @@ def query(
             "--spreadsheet-safe applies to CSV from a local --file: pass --format csv (or -o FILE.csv), "
             "without --json or --source."
         )
+    # A descriptor this process holds — `-o >(cmd)`, `-o /dev/fd/3` — is
+    # closed in the engine, or is the engine's own reply pipe: rows landed in
+    # the envelope channel and the run failed (w5/853). This process writes it.
+    descriptor = output_file if output_file is not None and writes_through_descriptor(output_file) else None
+    if descriptor is not None:
+        output_file = None
     output_spelling = Path(output_file) if output_file is not None else None
     if output_file is not None:
         # Resolve once before checking aliases, then carry that target through
@@ -395,6 +426,7 @@ def query(
                 raise UsageError("A query is required with --no-input. Pass it as an argument or on stdin.")
             else:
                 _refuse_shell_without_terminal_stdout()
+                _refuse_shell_descriptor(descriptor)
                 # `--debug` reaches the prompt, where a mistake is otherwise only explained.
                 shell_argv = ["source-shell", *rendering, *(["--debug"] if ctx.debug else []), "--", source]
                 raise typer.Exit(launch.run_engine_argv(shell_argv, interactive=True))
@@ -407,7 +439,16 @@ def query(
         # `bean-query` does, but a missing stored query exits 2 instead of
         # printing an error and reporting success.
         debug = ["--debug"] if ctx.debug else []
-        raise typer.Exit(launch.run_engine_argv(["source-query", *rendering, *debug, "--", source, query_string]))
+        argv = ["source-query", *rendering, *debug, "--", source, query_string]
+        if descriptor is None:
+            raise typer.Exit(launch.run_engine_argv(argv))
+        completed = launch.capture_engine(argv)
+        sys.stderr.write(completed.stderr)
+        if completed.returncode == 0:
+            output.write_descriptor(descriptor, completed.stdout)
+        else:
+            output.write_data(completed.stdout)
+        raise typer.Exit(launch.captured_status(completed))
 
     file = ctx.entry_file()
     if output_file is not None:
@@ -423,6 +464,7 @@ def query(
             raise UsageError("A query is required with --no-input. Pass it as an argument or on stdin.")
         else:
             _refuse_shell_without_terminal_stdout()
+            _refuse_shell_descriptor(descriptor)
             # The read policy is frontend-resolved and must reach the shell:
             # a strict session answering from a ledger that does not load is
             # exactly what `--strict` exists to refuse, and suppressing the
@@ -463,7 +505,19 @@ def query(
     # would otherwise parse `--output=main.bean` as its own option.
     args += ["--", query_string]
 
-    data = launch.helper_json(args)
+    try:
+        data = launch.helper_json(args)
+    except BeaError as exc:
+        if ctx.json_output:
+            # A shell utility runs on the text path, so the engine's remedy
+            # does not know the mode it was asked in (w5/838).
+            exc.details = [
+                detail.replace("Run bea ", "Run bea --json ", 1)
+                if detail.lstrip().startswith("Run bea ") and "--json" not in detail
+                else detail
+                for detail in exc.details
+            ]
+        raise
     ledger_errors = [str(error) for error in data.get("errors", [])]
     if not no_errors:
         output.render_ledger_errors(ledger_errors, allow=True)
@@ -474,14 +528,18 @@ def query(
             payload = {"columns": data.get("columns", []), "rows": data.get("rows", [])}
         else:
             payload = {"text": str(data.get("text", ""))}
+        destination = descriptor or output_file
         output.emit(
             payload,
             target=output.file_target(file),
-            destination=Path(output_file) if output_file is not None else None,
+            destination=Path(destination) if destination is not None else None,
             ledger_errors=[output.format_ledger_error(error) for error in ledger_errors],
         )
         return
     text = str(data.get("text", ""))
+    if descriptor is not None:
+        output.write_descriptor(descriptor, text)
+        return
     if text:
         # A redirect or pipe gets the engine's bytes, the same ones `-o` writes.
         # A terminal is a person reading: CSV cells and `PRINT` directives hold

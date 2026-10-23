@@ -31,6 +31,9 @@ function dependencies(events: string[]): LogoutDependencies {
     clearLocalState: async () => {
       events.push("clear-local");
     },
+    markSignedOut: async () => {
+      events.push("mark-signed-out");
+    },
   };
 }
 
@@ -38,7 +41,14 @@ describe("performLogout", () => {
   it("revokes OAuth refresh access before clearing local account data", async () => {
     const events: string[] = [];
     await performLogout(oauthSession, dependencies(events));
-    expect(events).toEqual(["cancel-refreshes", "revoke-oauth", "clear-local"]);
+    // w21/153: the next sign-in asks which account, marked after the wipe so
+    // the wipe cannot erase it.
+    expect(events).toEqual([
+      "cancel-refreshes",
+      "revoke-oauth",
+      "clear-local",
+      "mark-signed-out",
+    ]);
   });
 
   it("preserves the legacy server logout path", async () => {
@@ -65,6 +75,58 @@ describe("performLogout", () => {
       "cancel-refreshes",
       "revoke-failed",
       "clear-local",
+      "mark-signed-out",
     ]);
+  });
+
+  // w21/352: revocation on a network that never answers held the sign-out for
+  // the OS request timeout, with the account still on the device.
+  it("goes on without a revocation that never answers", async () => {
+    const events: string[] = [];
+    const deps = dependencies(events);
+    deps.revokeTimeoutMs = 10;
+    deps.revokeOAuth = () => new Promise<void>(() => undefined);
+
+    await performLogout(oauthSession, deps);
+    expect(events).toEqual([
+      "cancel-refreshes",
+      "clear-local",
+      "mark-signed-out",
+    ]);
+  });
+
+  it("does not wait out the timeout when revocation answers", async () => {
+    const events: string[] = [];
+    const deps = dependencies(events);
+    deps.revokeTimeoutMs = 60_000;
+    const started = Date.now();
+    await performLogout(oauthSession, deps);
+    expect(Date.now() - started < 1000).toBe(true);
+    expect(events[1]).toBe("revoke-oauth");
+  });
+
+  it("allows about five seconds by default", () => {
+    const { REVOKE_TIMEOUT_MS } = require("../logout-action");
+    expect(REVOKE_TIMEOUT_MS).toBe(5000);
+  });
+});
+
+describe("the Settings log out button", () => {
+  it("ignores repeat taps and shows a busy state", () => {
+    const fs = require("fs");
+    const path = require("path");
+    const src = fs
+      .readFileSync(path.join(__dirname, "../main-content.tsx"), "utf8")
+      .replace(/\s+/g, "");
+    expect(
+      src.includes(
+        "if(loggingOutRef.current)return;loggingOutRef.current=true;setLoggingOut(true);",
+      ),
+    ).toBe(true);
+    expect(src.includes("busy={loggingOut}")).toBe(true);
+    const button = fs
+      .readFileSync(path.join(__dirname, "../list-item.tsx"), "utf8")
+      .replace(/\s+/g, "");
+    expect(button.includes("onPress={onPress}disabled={busy}")).toBe(true);
   });
 });

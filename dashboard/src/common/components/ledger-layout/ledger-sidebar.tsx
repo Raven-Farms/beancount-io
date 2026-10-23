@@ -83,6 +83,8 @@ interface LedgerSidebarProps {
   currentPath: string;
 }
 
+const NO_GROUPS: ReadonlySet<string> = new Set();
+
 /**
  * Ledger navigation organized around common user jobs. Specialist destinations
  * remain reachable through grouped disclosure while primary workflows stay at
@@ -94,6 +96,15 @@ export function LedgerSidebar({ ledgerId, currentPath }: LedgerSidebarProps) {
   const { ledgerData } = useLedger();
   const { t } = useTranslations();
   const [openGroups, setOpenGroups] = useState<Set<string>>(() => new Set());
+  // The page's own group opens on arrival, but the reader may still close it:
+  // that choice holds on this page, and arriving on another page reveals its
+  // group again (w4/300).
+  const [closedGroups, setClosedGroups] = useState(() => ({
+    path: currentPath,
+    ids: new Set<string>(),
+  }));
+  const closedHere =
+    closedGroups.path === currentPath ? closedGroups.ids : NO_GROUPS;
 
   const { data: errorsData } = useQuery(GetLedgerErrorsDocument, {
     variables: { ledgerId },
@@ -304,15 +315,15 @@ export function LedgerSidebar({ ledgerId, currentPath }: LedgerSidebarProps) {
     }
   };
 
-  const toggleGroup = (groupId: string) => {
-    setOpenGroups((current) => {
-      const next = new Set(current);
-      if (next.has(groupId)) {
-        next.delete(groupId);
-      } else {
-        next.add(groupId);
-      }
-      return next;
+  const toggleGroup = (groupId: string, open: boolean) => {
+    const without = (ids: ReadonlySet<string>) =>
+      new Set([...ids].filter((id) => id !== groupId));
+    setOpenGroups((current) =>
+      open ? without(current) : new Set(current).add(groupId),
+    );
+    setClosedGroups({
+      path: currentPath,
+      ids: open ? new Set(closedHere).add(groupId) : without(closedHere),
     });
   };
 
@@ -355,7 +366,8 @@ export function LedgerSidebar({ ledgerId, currentPath }: LedgerSidebarProps) {
       );
     }
 
-    const isOpen = hasActiveItem || openGroups.has(group.id);
+    const isOpen =
+      (hasActiveItem && !closedHere.has(group.id)) || openGroups.has(group.id);
     const Icon = group.icon;
     const submenuId = `ledger-sidebar-${group.id}`;
 
@@ -398,7 +410,7 @@ export function LedgerSidebar({ ledgerId, currentPath }: LedgerSidebarProps) {
             </Link>
           </SidebarMenuButton>
           <SidebarMenuAction
-            onClick={() => toggleGroup(group.id)}
+            onClick={() => toggleGroup(group.id, isOpen)}
             aria-label={group.label}
             aria-expanded={isOpen}
             aria-controls={submenuId}
@@ -415,7 +427,7 @@ export function LedgerSidebar({ ledgerId, currentPath }: LedgerSidebarProps) {
     return (
       <SidebarMenuItem key={group.id}>
         <SidebarMenuButton
-          onClick={() => toggleGroup(group.id)}
+          onClick={() => toggleGroup(group.id, isOpen)}
           isActive={hasActiveItem}
           tooltip={group.label}
           aria-expanded={isOpen}

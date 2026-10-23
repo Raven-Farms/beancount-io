@@ -1,4 +1,4 @@
-import { Link, useLocation } from "@tanstack/react-router";
+import { Link } from "@tanstack/react-router";
 import { LockKeyhole } from "lucide-react";
 import {
   Alert,
@@ -9,7 +9,7 @@ import { buttonVariants } from "@/common/components/ui/button";
 import { useIsAuthenticated } from "@/common/hooks/use-is-authenticated";
 import { useLedger } from "@/common/hooks/use-ledger";
 import { useTranslations } from "@/common/hooks/use-translations";
-import { getSafeReturnPath } from "@/common/lib/auth/auth";
+import { useSafeReturnPath } from "@/common/hooks/use-safe-return-path";
 
 type LedgerWriteAccessNoticeProps = {
   title: string;
@@ -34,7 +34,7 @@ export function LedgerWriteAccessNotice({
   const { t } = useTranslations();
   const isAuthenticated = useIsAuthenticated();
   const { ledgerData } = useLedger();
-  const location = useLocation();
+  const next = useSafeReturnPath();
 
   if (!isAuthenticated) {
     return (
@@ -45,7 +45,7 @@ export function LedgerWriteAccessNotice({
           <p>{signedOut}</p>
           <Link
             to="/auth/login"
-            search={{ next: getSafeReturnPath(location) }}
+            search={{ next }}
             className={buttonVariants({ size: "sm", className: "mt-2" })}
           >
             {t("common.writeAccess.signIn")}

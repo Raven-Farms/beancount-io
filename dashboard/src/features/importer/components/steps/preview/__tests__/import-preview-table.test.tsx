@@ -60,3 +60,17 @@ describe("ImportPreviewTable row identity", () => {
     expect(next.rows.map((row) => row.id)).toEqual(["row-1", "row-2"]);
   });
 });
+
+describe("ImportPreviewTable name", () => {
+  it("takes the Preview Imported Data card title (w4/242)", () => {
+    render(
+      <ImportPreviewTable
+        result={makeResult(["Starbucks"])}
+        onResultChange={vi.fn()}
+      />,
+    );
+    expect(
+      screen.getByRole("table", { name: "importer.preview.title" }),
+    ).toBeInTheDocument();
+  });
+});

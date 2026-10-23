@@ -10,6 +10,7 @@ import { UserProfileTabs } from "../user-profile-tabs";
  */
 
 vi.mock("@tanstack/react-router", () => ({
+  useHydrated: () => true,
   Link: ({
     children,
     to,

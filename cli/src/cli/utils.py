@@ -17,6 +17,7 @@ import typer
 from typer._click.types import ParamType
 
 from cli.errors import AuthError, LedgerError, UsageError
+from cli.paths import is_descriptor_path
 
 #: The engine twin (`bea_engine.ledger.text.CONTROL_CHARACTERS`) carries the
 #: same pattern and the full reasoning; neither side may import the other.
@@ -84,15 +85,22 @@ def has_bom(path: Path) -> bool:
         return False
 
 
-def decode_error_message(path: object, exc: UnicodeDecodeError) -> str:
+def decode_error_message(path: object, exc: UnicodeDecodeError, data: bytes | None = None) -> str:
     """A decode failure as path, byte offset, attempted encoding, and remedy.
 
     The engine twin (`bea_engine.ledger.text.decode_error_message`) carries
     the same wording; neither side may import the other, so the helper is
     repeated, not shared. Callers choose the category: a caller's input file
     is a usage error, an undecodable ledger is a validation error.
+
+    Pass the raw bytes when the failing decode used `utf-8-sig`: the codec
+    strips a leading BOM, so the offset is quoted against the raw bytes
+    (w5/738). Callers decoding plain `utf-8` pass nothing — a BOM decodes
+    there as an ordinary character, so their offsets are already raw.
     """
-    return f"Cannot decode '{path}' as UTF-8: {exc.reason} at byte {exc.start}. Re-save the file as UTF-8 and retry."
+    base = len(UTF8_BOM) if data is not None and data.startswith(UTF8_BOM) else 0
+    offset = exc.start + base
+    return f"Cannot decode '{path}' as UTF-8: {exc.reason} at byte {offset}. Re-save the file as UTF-8 and retry."
 
 
 def refuse_blank_filter(flag: str, value: str | None) -> None:
@@ -235,6 +243,10 @@ def refuse_empty_path(value: Any, param: Any) -> None:
         name = str(getattr(param, "human_readable_name", "PATH")).upper()
         raise UsageError(f"The {name} argument is empty ({str(value)!r}); name a file or directory.")
     name = param.opts[0] if param is not None and getattr(param, "opts", None) else "The path"
+    if getattr(param, "required", False):
+        # Omitting a required option fails as missing, so advising it sends
+        # the user from one refusal into the next (w5/738).
+        raise UsageError(f"{name} {str(value)!r} is empty; name a path.")
     raise UsageError(f"{name} {str(value)!r} is empty; name a path, or omit {name}.")
 
 
@@ -246,6 +258,22 @@ class NonEmptyPath(ParamType):
     def convert(self, value: Any, param: Any, ctx: Any) -> Path:
         refuse_empty_path(value, param)
         return Path(value)
+
+
+class RawPath(ParamType):
+    """A path parameter whose raw text reaches the command, for stdin checks.
+
+    `Path("./-")` normalizes to `Path("-")`, which would read stdin instead
+    of the file named `-` (w5/736): the stdin decision needs the raw token,
+    so this converts to `str`, refusing an empty value first like
+    `NonEmptyPath`.
+    """
+
+    name = "path"
+
+    def convert(self, value: Any, param: Any, ctx: Any) -> str:
+        refuse_empty_path(value, param)
+        return str(value)
 
 
 class IntoPath(ParamType):
@@ -294,7 +322,10 @@ def regex_reads_otherwise(pattern: str, flags: int = 0) -> str | None:
         re.purge()
         try:
             re.compile(pattern, flags)
-        except re.error:
+        except (re.error, OverflowError, RecursionError, MemoryError):
+            # An invalid pattern is its caller's to report; a repetition too
+            # large or nesting too deep to compile is invalid the same way
+            # (w5/806).
             return None
     changed = next(
         (str(item.message) for item in caught if issubclass(item.category, (FutureWarning, DeprecationWarning))),
@@ -320,6 +351,16 @@ def parse_opt_date(date_str: str | None) -> Date | None:
     return parse_date(date_str)
 
 
+def writes_through_descriptor(path: Path | str) -> bool:
+    """Whether an output path names one of this process's descriptors: `/dev/fd/N`, `/dev/stderr`, `>(…)`.
+
+    Only the process holding a descriptor can write it: a child opening the
+    same name finds it closed, or finds its own descriptor of that number —
+    the engine's reply pipe — and nothing can be staged beside it (w5/853).
+    """
+    return is_descriptor_path(path) or str(path) in ("/dev/stdout", "/dev/stderr")
+
+
 def atomic_write(path: Path, content: str, *, export: bool = False) -> None:
     """Replace atomically; exports preserve modes and follow destination links.
 
@@ -327,6 +368,11 @@ def atomic_write(path: Path, content: str, *, export: bool = False) -> None:
     the umask, avoiding any process-wide mask change while other threads run.
     """
     if export:
+        if writes_through_descriptor(path):
+            # `--json -o /dev/stderr` staged a copy in /dev/fd/ and failed (w5/853).
+            with path.open("w", encoding="utf-8") as stream:
+                stream.write(content)
+            return
         path = path.resolve()
     try:
         status = path.stat()

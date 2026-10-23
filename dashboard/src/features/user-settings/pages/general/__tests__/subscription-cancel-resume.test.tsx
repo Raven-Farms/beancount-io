@@ -21,6 +21,9 @@ const {
   mockUseUserLimits,
   mockUseAiCfoUsage,
   mockUseAllTierQuotas,
+  mockTrack,
+  mockCancelScheduled,
+  mockRunPreview,
 } = vi.hoisted(() => ({
   mockUseQuery: vi.fn(),
   mockCancelSubscription: vi.fn(),
@@ -34,9 +37,19 @@ const {
   mockUseUserLimits: vi.fn(),
   mockUseAiCfoUsage: vi.fn(),
   mockUseAllTierQuotas: vi.fn(),
+  mockTrack: vi.fn(),
+  mockCancelScheduled: vi.fn(),
+  // Like Apollo's lazy query: the promise resolves with the response.
+  mockRunPreview: vi.fn(async () => ({ data: undefined as unknown })),
 }));
 
+vi.mock("@/common/analytics", () => ({ track: mockTrack }));
+
 vi.mock("@apollo/client/react", () => ({
+  useLazyQuery: () => [
+    mockRunPreview,
+    { data: undefined, loading: false, error: undefined },
+  ],
   useQuery: () => mockUseQuery(),
   useMutation: (document: {
     definitions?: Array<{ name?: { value?: string } }>;
@@ -48,6 +61,8 @@ vi.mock("@apollo/client/react", () => ({
       return [mockResumeSubscription, { loading: false }];
     if (opName === "CreateStripePortalSession")
       return [mockCreateStripePortalSession, { loading: false }];
+    if (opName === "CancelScheduledPlanChange")
+      return [mockCancelScheduled, { loading: false }];
     return [vi.fn(), { loading: false }];
   },
 }));
@@ -174,16 +189,6 @@ vi.mock("@/common/hooks/use-translations", () => ({
     i18n: { language: "en" },
   }),
 }));
-vi.mock("../stripe-config", () => ({
-  stripePlanConfig: {
-    clientId: "test-client",
-    premium: { monthly: "price_premium" },
-    growth: { monthly: "price_growth" },
-    organization: { monthly: "price_org" },
-    monthly: "price_monthly",
-    yearly: "price_yearly",
-  },
-}));
 
 function setUserLimits(
   tier = "FREE" as string,
@@ -239,6 +244,15 @@ beforeEach(() => {
   setUserLimits();
 });
 
+/** The open cancel sheet; the dialog mock drops its test id. */
+function cancelSheet(): HTMLElement {
+  const sheet = screen
+    .getByText("userSettings.cancelSheetTitle")
+    .closest<HTMLElement>('[data-testid="dialog-content"]');
+  if (!sheet) throw new Error("cancel sheet missing");
+  return sheet;
+}
+
 describe("Cancel Subscription Functionality", () => {
   it("should open cancel dialog when cancel button clicked", async () => {
     const user = userEvent.setup();
@@ -263,7 +277,7 @@ describe("Cancel Subscription Functionality", () => {
 
     await waitFor(() => {
       expect(
-        screen.getByText("userSettings.cancelSubscriptionTitle"),
+        screen.getByText("userSettings.cancelSheetTitle"),
       ).toBeInTheDocument();
     });
   });
@@ -293,11 +307,13 @@ describe("Cancel Subscription Functionality", () => {
 
     await waitFor(() => {
       expect(
-        screen.getByText("userSettings.confirmCancel"),
+        within(cancelSheet()).getByText("userSettings.cancelSubscription"),
       ).toBeInTheDocument();
     });
 
-    const confirmButton = screen.getByText("userSettings.confirmCancel");
+    const confirmButton = within(cancelSheet()).getByText(
+      "userSettings.cancelSubscription",
+    );
     await user.click(confirmButton);
 
     await waitFor(() => {
@@ -328,20 +344,20 @@ describe("Cancel Subscription Functionality", () => {
 
     await waitFor(() => {
       expect(
-        screen.getByText("userSettings.cancelSubscriptionTitle"),
+        screen.getByText("userSettings.cancelSheetTitle"),
       ).toBeInTheDocument();
     });
 
-    const cancelDialog = screen
-      .getByText("userSettings.cancelSubscriptionTitle")
-      .closest('[data-testid="dialog"]') as HTMLElement;
-
-    const dialogCancelButton = within(cancelDialog).getByText("common.cancel");
-    await user.click(dialogCancelButton);
+    await user.click(
+      within(cancelSheet()).getByText("userSettings.planChangeKeep"),
+    );
 
     await waitFor(() => {
-      expect(cancelDialog.getAttribute("data-open")).toBe("false");
+      expect(
+        screen.queryByText("userSettings.cancelSheetTitle"),
+      ).not.toBeInTheDocument();
     });
+    expect(mockCancelSubscription).not.toHaveBeenCalled();
   });
 });
 
@@ -391,7 +407,7 @@ describe("Resume Subscription Functionality", () => {
         variables: { subscriptionId: "sub_456", clientId: "test-client" },
       });
       expect(mockToastSuccess).toHaveBeenCalled();
-      expect(mockRefetch).toHaveBeenCalled();
+      // Status refetches through the mutation's refetchQueries.
     });
   });
 
@@ -467,12 +483,14 @@ describe("Cancel Subscription - Success Flow", () => {
 
     await waitFor(() => {
       expect(
-        screen.getByText("userSettings.confirmCancel"),
+        within(cancelSheet()).getByText("userSettings.cancelSubscription"),
       ).toBeInTheDocument();
     });
 
     // Confirm cancellation
-    const confirmButton = screen.getByText("userSettings.confirmCancel");
+    const confirmButton = within(cancelSheet()).getByText(
+      "userSettings.cancelSubscription",
+    );
     await user.click(confirmButton);
 
     await waitFor(() => {
@@ -480,6 +498,7 @@ describe("Cancel Subscription - Success Flow", () => {
         variables: {
           subscriptionId: "sub_123",
           clientId: "test-client",
+          reason: null,
         },
       });
     });
@@ -491,7 +510,7 @@ describe("Cancel Subscription - Success Flow", () => {
     });
 
     await waitFor(() => {
-      expect(mockRefetch).toHaveBeenCalled();
+      // Status refetches through the mutation's refetchQueries.
     });
   });
 
@@ -527,15 +546,256 @@ describe("Cancel Subscription - Success Flow", () => {
 
     await waitFor(() => {
       expect(
-        screen.getByText("userSettings.confirmCancel"),
+        within(cancelSheet()).getByText("userSettings.cancelSubscription"),
       ).toBeInTheDocument();
     });
 
-    const confirmButton = screen.getByText("userSettings.confirmCancel");
+    const confirmButton = within(cancelSheet()).getByText(
+      "userSettings.cancelSubscription",
+    );
     await user.click(confirmButton);
 
     await waitFor(() => {
       expect(mockToastError).toHaveBeenCalledWith("Subscription not found");
     });
+  });
+});
+
+describe("Billing lifecycle events", () => {
+  const events = (name: string) =>
+    mockTrack.mock.calls.filter(([event]) => event === name);
+
+  beforeEach(() => {
+    mockTrack.mockClear();
+    setUserLimits("PREMIUM", {
+      aiCfoTokensUsed: 50,
+      aiCfoTokensMax: 100,
+      ledgersUsed: 2,
+      ledgersMax: 5,
+      collaboratorsPerLedgerMax: 5,
+    });
+  });
+
+  it("reports the cancel sheet opening once, and the cancellation with its reason once", async () => {
+    const user = userEvent.setup();
+    mockUseQuery.mockReturnValue({
+      data: mockActiveSubscriptionData,
+      loading: false,
+      error: null,
+      refetch: vi.fn(),
+    });
+    mockCancelSubscription.mockResolvedValue({
+      data: { cancelSubscription: { success: true } },
+    });
+
+    render(<SubscriptionSection />);
+    await user.click(screen.getByText("userSettings.cancelSubscription"));
+    expect(events("cancel_started")).toHaveLength(1);
+
+    await user.click(
+      within(cancelSheet()).getByRole("radio", {
+        name: "userSettings.cancelReasonTooExpensive",
+      }),
+    );
+    await user.click(
+      within(cancelSheet()).getByText("userSettings.cancelSubscription"),
+    );
+
+    await waitFor(() =>
+      expect(events("cancel_confirmed")).toEqual([
+        [
+          "cancel_confirmed",
+          expect.objectContaining({ reason: "too_expensive" }),
+        ],
+      ]),
+    );
+    expect(mockCancelSubscription).toHaveBeenCalledWith({
+      variables: expect.objectContaining({ reason: "TOO_EXPENSIVE" }),
+    });
+  });
+
+  it("reports no cancellation when Stripe refuses it", async () => {
+    const user = userEvent.setup();
+    mockUseQuery.mockReturnValue({
+      data: mockActiveSubscriptionData,
+      loading: false,
+      error: null,
+      refetch: vi.fn(),
+    });
+    mockCancelSubscription.mockResolvedValue({
+      data: { cancelSubscription: { success: false, message: "no" } },
+    });
+
+    render(<SubscriptionSection />);
+    await user.click(screen.getByText("userSettings.cancelSubscription"));
+    await user.click(
+      within(cancelSheet()).getByText("userSettings.cancelSubscription"),
+    );
+
+    await waitFor(() => expect(mockToastError).toHaveBeenCalled());
+    expect(events("cancel_confirmed")).toEqual([]);
+  });
+
+  it("reports a resume once it succeeds", async () => {
+    const user = userEvent.setup();
+    mockUseQuery.mockReturnValue({
+      data: mockCanceledSubscriptionData,
+      loading: false,
+      error: null,
+      refetch: vi.fn(),
+    });
+    mockResumeSubscription.mockResolvedValue({
+      data: { resumeSubscription: { success: true } },
+    });
+
+    render(<SubscriptionSection />);
+    await user.click(screen.getByText("userSettings.resumeSubscription"));
+    await user.click(screen.getByText("userSettings.confirmResume"));
+
+    await waitFor(() => expect(events("subscription_resumed")).toHaveLength(1));
+  });
+
+  it("undoes a scheduled change from the Scheduled panel and reports it", async () => {
+    const user = userEvent.setup();
+    const scheduled = structuredClone(mockActiveSubscriptionData);
+    scheduled.subscriptionStatus.subscriptions[0].scheduledChange = {
+      __typename: "ScheduledPlanChange",
+      priceId: "price_1RrSOGEqsEqs2tLVFnyB34qG",
+      effectiveAt: "2026-11-03T12:00:00Z",
+    };
+    mockUseQuery.mockReturnValue({
+      data: scheduled,
+      loading: false,
+      error: null,
+      refetch: vi.fn(),
+    });
+    mockCancelScheduled.mockResolvedValue({
+      data: { cancelScheduledPlanChange: { success: true } },
+    });
+
+    render(<SubscriptionSection />);
+    await user.click(screen.getByText("userSettings.scheduledKeepCurrent"));
+
+    expect(mockCancelScheduled).toHaveBeenCalledWith({
+      variables: { clientId: "beancount-web-prod" },
+    });
+    await waitFor(() =>
+      expect(events("plan_change_reverted")).toEqual([
+        [
+          "plan_change_reverted",
+          expect.objectContaining({ to: "premium_monthly" }),
+        ],
+      ]),
+    );
+    expect(mockToastSuccess).toHaveBeenCalledWith("userSettings.scheduledKept");
+  });
+
+  it("reports no undo, and says so, when the server refuses to keep the current plan", async () => {
+    const user = userEvent.setup();
+    const scheduled = structuredClone(mockActiveSubscriptionData);
+    scheduled.subscriptionStatus.subscriptions[0].scheduledChange = {
+      __typename: "ScheduledPlanChange",
+      priceId: "price_1RrSOGEqsEqs2tLVFnyB34qG",
+      effectiveAt: "2026-11-03T12:00:00Z",
+    };
+    mockUseQuery.mockReturnValue({
+      data: scheduled,
+      loading: false,
+      error: null,
+      refetch: vi.fn(),
+    });
+    mockCancelScheduled.mockResolvedValue({
+      data: { cancelScheduledPlanChange: { success: false, message: null } },
+    });
+
+    render(<SubscriptionSection />);
+    await user.click(screen.getByText("userSettings.scheduledKeepCurrent"));
+
+    expect(mockCancelScheduled).toHaveBeenCalledWith({
+      variables: { clientId: "beancount-web-prod" },
+    });
+    await waitFor(() =>
+      expect(mockToastError).toHaveBeenCalledWith(
+        "userSettings.scheduledKeepFailed",
+      ),
+    );
+    // The section reports once the undo settles, a turn after the toast.
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(events("plan_change_reverted")).toEqual([]);
+    expect(mockToastSuccess).not.toHaveBeenCalled();
+  });
+});
+
+describe("Cancel sheet alternative", () => {
+  it("closes the cancel sheet and opens the plan change sheet on the alternative plan", async () => {
+    const user = userEvent.setup();
+    setUserLimits("PREMIUM", {
+      aiCfoTokensUsed: 50,
+      aiCfoTokensMax: 100,
+      ledgersUsed: 2,
+      ledgersMax: 5,
+      collaboratorsPerLedgerMax: 5,
+    });
+    mockUseQuery.mockReturnValue({
+      data: mockActiveSubscriptionData,
+      loading: false,
+      error: null,
+      refetch: vi.fn(),
+    });
+    mockRunPreview.mockResolvedValue({
+      data: {
+        previewPlanChange: {
+          kind: "TO_YEARLY",
+          targetPriceId: "price_1US5htEqsEqs2tLVENCzLaZB",
+        },
+      },
+    });
+
+    render(<SubscriptionSection />);
+    expect(
+      screen.queryByText("userSettings.planChangeTitle"),
+    ).not.toBeInTheDocument();
+    await user.click(screen.getByText("userSettings.cancelSubscription"));
+    // Premium on monthly is offered Premium on yearly.
+    await user.click(
+      within(cancelSheet()).getByRole("button", {
+        name: "userSettings.cancelSheetSwitchToYearly",
+      }),
+    );
+
+    expect(
+      screen.queryByText("userSettings.cancelSheetTitle"),
+    ).not.toBeInTheDocument();
+    const sheet = screen
+      .getByText("userSettings.planChangeTitle")
+      .closest<HTMLElement>('[data-testid="dialog-content"]');
+    if (!sheet) throw new Error("plan change sheet missing");
+    expect(within(sheet).getByTestId("dialog-description")).toHaveTextContent(
+      "aiAgent.premiumTier · userSettings.monthly → aiAgent.premiumTier · userSettings.yearly",
+    );
+    expect(mockRunPreview).toHaveBeenCalledWith({
+      variables: {
+        clientId: "beancount-web-prod",
+        priceId: "price_1US5htEqsEqs2tLVENCzLaZB",
+      },
+    });
+    expect(mockCancelSubscription).not.toHaveBeenCalled();
+    await waitFor(() =>
+      expect(
+        mockTrack.mock.calls.filter(
+          ([event]) => event === "plan_change_previewed",
+        ),
+      ).toEqual([
+        [
+          "plan_change_previewed",
+          {
+            kind: "TO_YEARLY",
+            from: "premium_monthly",
+            to: "premium_yearly",
+            surface: "cancel_sheet",
+          },
+        ],
+      ]),
+    );
   });
 });

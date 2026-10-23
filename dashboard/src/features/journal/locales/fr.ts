@@ -461,10 +461,6 @@ const frJournal: Record<string, TranslationEntry> = {
     message: "En attente",
     description: "Pending transaction status",
   },
-  "journal.blankStatus": {
-    message: "(vide)",
-    description: "Blank transaction status option",
-  },
   "journal.addPosting": {
     message: "Ajouter une écriture",
     description: "Accessible name for adding a transaction posting row",

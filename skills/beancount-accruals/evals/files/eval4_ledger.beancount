@@ -1,0 +1,10 @@
+option "operating_currency" "USD"
+
+2025-01-01 open Assets:Checking USD
+2025-01-01 open Liabilities:AccruedRent USD
+2025-01-01 open Expenses:Rent USD
+
+2025-03-31 * "March rent accrual"
+  import-id: "accrual:rent:2025-03"
+  Expenses:Rent                100.00 USD
+  Liabilities:AccruedRent     -100.00 USD

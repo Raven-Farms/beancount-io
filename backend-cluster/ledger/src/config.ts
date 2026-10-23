@@ -21,6 +21,14 @@ export interface AppConfig {
     adminToken: string;
   };
   managedPrices: ManagedPricesConfig;
+  /**
+   * `RUSTLEDGER_WORKERS`: how many worker threads parse ledgers. Unset, the
+   * pool uses `min(2, cores - 1)`, which is one worker on a one- or two-core
+   * host, where a small ledger's parse then waits behind a large one's
+   * (w0/055). Each worker can hold a large ledger's parse in memory, so raise
+   * it only where the memory allows.
+   */
+  rustledgerWorkers?: number;
 }
 
 /**
@@ -123,6 +131,9 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
       httpPort: parseInt(env.BACKEND_V2_HTTP_PORT || "4104", 10),
       adminToken: env.BACKEND_V2_ADMIN_TOKEN || "",
     },
+    rustledgerWorkers: env.RUSTLEDGER_WORKERS
+      ? positiveInt(env.RUSTLEDGER_WORKERS, 1)
+      : undefined,
     managedPrices: {
       origins: parseManagedPriceOrigins(
         env.MANAGED_PRICE_ORIGINS ?? DEFAULT_MANAGED_PRICE_ORIGINS,
@@ -133,8 +144,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
       fetchTimeoutMs: positiveInt(env.MANAGED_PRICE_FETCH_TIMEOUT_MS, 5000),
       maxBodyBytes: positiveInt(env.MANAGED_PRICE_MAX_BODY_BYTES, 1024 * 1024),
       maxFeedsPerLedger: positiveInt(env.MANAGED_PRICE_MAX_FEEDS, 16),
-      gatedPriceHost:
-        env.MANAGED_PRICE_GATED_HOST ?? DEFAULT_GATED_PRICE_HOST,
+      gatedPriceHost: env.MANAGED_PRICE_GATED_HOST ?? DEFAULT_GATED_PRICE_HOST,
       gatedPriceCookieName:
         env.MANAGED_PRICE_GATED_COOKIE_NAME || DEFAULT_GATED_PRICE_COOKIE,
     },

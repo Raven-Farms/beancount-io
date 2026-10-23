@@ -45,6 +45,23 @@ describe("pushOpenAccount", () => {
     });
   });
 
+  it("carries the dated entry's open date when given", () => {
+    const router = makeRouter();
+
+    pushOpenAccount(router, {
+      prefill: "Snacks",
+      prefillRoot: "Expenses",
+      openDate: "2026-08-25",
+      onCreated: () => undefined,
+    });
+
+    expect(router.pushes[0].params).toEqual({
+      prefill: "Snacks",
+      prefillRoot: "Expenses",
+      openDate: "2026-08-25",
+    });
+  });
+
   it("delivers exactly once, then the registration is gone", () => {
     const router = makeRouter();
     const received: string[] = [];
@@ -88,5 +105,61 @@ describe("pushOpenAccount", () => {
     });
 
     expect(AccountCreated.getFn()).toBe(second);
+  });
+});
+
+// w21/581: Back during "Saving…" unmounts Open Account, which discards the
+// registration, so the delivery after the save found nothing and the picker's
+// posting stayed unfilled.
+describe("runAccountCreatedCallback after the screen was left", () => {
+  afterEach(() => {
+    AccountCreated.deleteFn();
+  });
+
+  it("still delivers the account to the callback taken when the create started", () => {
+    const delivered: string[] = [];
+    pushOpenAccount(makeRouter(), {
+      prefill: "Coffee",
+      prefillRoot: "Expenses",
+      onCreated: (account) => delivered.push(account),
+    });
+    const captured = AccountCreated.getFn();
+    // The screen unmounts while the save runs.
+    AccountCreated.deleteFn();
+    runAccountCreatedCallback("Expenses:Coffee", captured);
+    expect(delivered).toEqual(["Expenses:Coffee"]);
+  });
+
+  it("delivers once, and leaves no registration behind", () => {
+    const delivered: string[] = [];
+    pushOpenAccount(makeRouter(), {
+      prefill: "Coffee",
+      prefillRoot: "Expenses",
+      onCreated: (account) => delivered.push(account),
+    });
+    const captured = AccountCreated.getFn();
+    runAccountCreatedCallback("Expenses:Coffee", captured);
+    runAccountCreatedCallback("Expenses:Coffee");
+    expect(delivered).toEqual(["Expenses:Coffee"]);
+    expect(AccountCreated.getFn()).toBe(undefined);
+  });
+
+  it("is a no-op when nothing was registered", () => {
+    expect(() => runAccountCreatedCallback("Assets:Cash")).not.toThrow();
+  });
+
+  it("is what the screen does: takes the callback before the save", () => {
+    const screen = require("fs")
+      .readFileSync(
+        require("path").join(__dirname, "..", "open-account-screen.tsx"),
+        "utf8",
+      )
+      .replace(/\s+/g, "") as string;
+    const start = screen.indexOf("constonCreated=AccountCreated.getFn();");
+    expect(start > -1).toBe(true);
+    expect(start < screen.indexOf("awaitopenAccount({")).toBe(true);
+    expect(
+      screen.includes("runAccountCreatedCallback(account,onCreated);"),
+    ).toBe(true);
   });
 });

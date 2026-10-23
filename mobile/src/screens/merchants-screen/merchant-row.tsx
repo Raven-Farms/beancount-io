@@ -16,15 +16,12 @@ import {
 } from "@/common/theme";
 import { useThemeStyle } from "@/common/hooks";
 import { useTranslations } from "@/common/hooks/use-translations";
-import { formatLedgerDateShort } from "@/common/date-format";
+import { useToday } from "@/common/hooks/use-today";
 import { LEADING_TEXT_ALIGN, letterSpacing } from "@/common/rtl";
 import { AccountTypeIcon } from "@/components/account-type-icon";
 import { ColorTheme } from "@/types/theme-props";
-import { formatAmount } from "@/screens/transactions-screen/utils/transaction-display-utils";
-import {
-  cadenceLabelKey,
-  type MerchantListItem,
-} from "./selectors/merchant-sections";
+import { type MerchantListItem } from "./selectors/merchant-sections";
+import { merchantRowText } from "./merchant-row-text";
 
 const getStyles = (theme: ColorTheme) =>
   StyleSheet.create({
@@ -151,18 +148,6 @@ interface MerchantRowProps {
   onPress: () => void;
 }
 
-function primaryTypical(
-  amounts: Record<string, number>,
-): { currency: string; amount: number } | null {
-  const entries = Object.entries(amounts);
-  if (entries.length === 0) {
-    return null;
-  }
-  entries.sort((a, b) => Math.abs(b[1]!) - Math.abs(a[1]!));
-  const [currency, amount] = entries[0]!;
-  return { currency, amount };
-}
-
 /**
  * Directory row: brand logo, payee, count (or recurring cadence/amount/next),
  * optional RECURRING badge on general-list rows, overdue tint on the next date.
@@ -170,47 +155,19 @@ function primaryTypical(
 export function MerchantRow({ item, onPress }: MerchantRowProps) {
   const styles = useThemeStyle(getStyles);
   const { t, locale } = useTranslations();
+  const today = useToday();
   const { fontScale } = useWindowDimensions();
   const stacked = prefersStackedLayout(fontScale);
-  const { merchant, resolved, inRecurringSection } = item;
-  const showBadge = resolved.isRecurring && !inRecurringSection;
-  const detection = resolved.detection;
-
-  const countLabel = t("merchantsTransactionCount", {
-    count: merchant.transactionCount,
-  });
-  const lastDate = merchant.lastDate
-    ? formatLedgerDateShort(merchant.lastDate, locale)
-    : "";
-
-  let subtitle = countLabel;
-  let trailingAmount: string | null = null;
-  let trailingMeta: string | null = lastDate || null;
-  let trailingOverdue = false;
-
-  if (inRecurringSection && resolved.isRecurring) {
-    const cadenceKey = cadenceLabelKey(resolved.cadence);
-    const cadenceLabel = cadenceKey ? t(cadenceKey) : "";
-    const typical = detection
-      ? primaryTypical(detection.typicalAmountByCurrency)
-      : null;
-    const amountText = typical
-      ? `${detection?.isApproximate ? "~" : ""}${formatAmount(typical.amount, typical.currency)}`
-      : null;
-    subtitle = cadenceLabel;
-    trailingAmount = amountText;
-    if (detection?.nextExpected) {
-      const next = formatLedgerDateShort(detection.nextExpected, locale);
-      if (detection.isOverdue) {
-        trailingMeta = t("merchantsOverdue");
-        trailingOverdue = true;
-      } else {
-        trailingMeta = t("merchantsNextExpected", { date: next });
-      }
-    } else {
-      trailingMeta = null;
-    }
-  }
+  const { merchant, inRecurringSection } = item;
+  const {
+    showBadge,
+    subtitle,
+    lastDate,
+    trailingAmount,
+    trailingMeta,
+    trailingOverdue,
+    accessibilityLabel,
+  } = merchantRowText(item, t, locale, today);
 
   const leading = (
     <>
@@ -286,10 +243,10 @@ export function MerchantRow({ item, onPress }: MerchantRowProps) {
   return (
     <TouchableOpacity
       style={[styles.row, stacked && styles.rowStacked]}
-      testID="merchant-row"
+      testID={`merchant-row-${merchant.payee}`}
       onPress={onPress}
       accessibilityRole="button"
-      accessibilityLabel={merchant.payee}
+      accessibilityLabel={accessibilityLabel}
     >
       {stacked ? <View style={styles.stackedMain}>{leading}</View> : leading}
       {trailing}

@@ -1,5 +1,7 @@
-import { type BcioOptionsPublic } from "@/foundation/fava";
+import { type BcioOptionsPublic, unwrapFavaResponse } from "@/foundation/fava";
 import { logger } from "@/shared/logger";
+import { parseLedgerId } from "@/shared/str";
+import type { DirectiveLimitPreview } from "@/features/ledger/operations/directive-limit-preview";
 import { BadUserInputError } from "@/shared/errors";
 import { resolveEntryFile } from "@/features/ledger/utils/entry-file-resolver";
 import { parseDirectiveDate } from "@/features/ledger/utils/directive-date";
@@ -8,6 +10,9 @@ import {
   parseDirectiveText,
 } from "@/features/ledger/utils/directive-text";
 import { assertSafeRepoPath } from "@/features/ledger/utils/safe-repo-path";
+import { addIncludeLines } from "@/features/ledger/utils/include-target";
+import { LEDGER_ENTRY_POINT } from "@/features/ledger/utils/ledger-entry-point";
+import { assertWritableText } from "@/shared/file-content";
 import { unifiedDiff } from "@/shared/unified-diff";
 import {
   diffBeanCheckErrors,
@@ -61,7 +66,10 @@ export interface IDirectiveAppendWorkflow {
 /** Exactly the repository capabilities an append needs, and no others. */
 type RepoDeps = Pick<
   ILedgerRepoService,
-  "getFilesContent" | "checkProjectedFiles"
+  | "getFilesContent"
+  | "checkProjectedFiles"
+  | "projectedSourceFiles"
+  | "projectedEntryHashes"
 > &
   ILedgerGeneratedFileWriter;
 
@@ -71,6 +79,8 @@ export class DirectiveAppendWorkflow implements IDirectiveAppendWorkflow {
   constructor(
     private readonly ledgerRepo: RepoDeps,
     private readonly favaClientFactory: IFavaClientFactory,
+    /** Lets a preview refuse what the commit would (w5/904); absent, a preview does not look. */
+    private readonly limitPreview?: DirectiveLimitPreview,
   ) {}
 
   /**
@@ -105,7 +115,10 @@ export class DirectiveAppendWorkflow implements IDirectiveAppendWorkflow {
     // Still asserted here, ahead of any work, so a bad explicit path is a
     // refusal rather than a wasted read. Auto-routed targets are asserted too
     // now — by the repo service, on every operation it is handed.
-    if (path !== undefined) assertSafeRepoPath(path, "path");
+    if (path !== undefined) {
+      assertSafeRepoPath(path, "path");
+      await this.assertLoaded(ledgerId, identity, path);
+    }
 
     const bcioData = await this.fetchBcioOptions(ledgerId, identity);
 
@@ -140,13 +153,45 @@ export class DirectiveAppendWorkflow implements IDirectiveAppendWorkflow {
       ).map((file) => [file.path, file]),
     );
 
+    // Routing can reach a file nothing includes — a new year's file under
+    // per-year includes — whose directives would commit unseen by any report
+    // and pass a check that never loads them. The entry point gains the
+    // include in the same commit, ahead of any directive threaded into it
+    // (w23/062). A named `path` is a loaded file already (w23/035).
+    const included =
+      path === undefined
+        ? await this.unloadedTargets(
+            ledgerId,
+            identity,
+            [...byPath.keys()],
+            existing,
+          )
+        : [];
+    if (included.length > 0 && !existing.has(LEDGER_ENTRY_POINT)) {
+      const [entryPoint] = await this.ledgerRepo.getFilesContent({
+        ledgerId,
+        identity,
+        paths: [LEDGER_ENTRY_POINT],
+      });
+      if (entryPoint) existing.set(LEDGER_ENTRY_POINT, entryPoint);
+    }
+    const withIncludes = (target: string, content: string) =>
+      target === LEDGER_ENTRY_POINT
+        ? addIncludeLines(content, included)
+        : content;
+
     // One record per touched file rather than five collections keyed on the
     // same path: the sha, the projected text, and where each directive landed
     // travel together, so nothing has to be re-looked-up to build the commit.
     const targets = [...byPath].map(([target, targetDirectives]) => {
       const current = existing.get(target);
+      // Inserting re-encodes the whole file (w23/030).
+      if (current) assertWritableText(current);
       const before = current?.content ?? "";
-      const result = insertDirectives(before, targetDirectives);
+      const result = insertDirectives(
+        withIncludes(target, before),
+        targetDirectives,
+      );
       return {
         path: target,
         sha: current?.sha,
@@ -156,6 +201,33 @@ export class DirectiveAppendWorkflow implements IDirectiveAppendWorkflow {
         appended: result.appended,
       };
     });
+    const entryPoint = existing.get(LEDGER_ENTRY_POINT);
+    if (included.length > 0 && entryPoint && !byPath.has(LEDGER_ENTRY_POINT)) {
+      assertWritableText(entryPoint);
+      targets.push({
+        path: LEDGER_ENTRY_POINT,
+        sha: entryPoint.sha,
+        before: entryPoint.content,
+        content: withIncludes(LEDGER_ENTRY_POINT, entryPoint.content),
+        lines: [],
+        appended: false,
+      });
+    }
+
+    // Only a preview asks here: a commit is checked where it lands, by the
+    // ledger service, and a second look would only add a count to every write.
+    if (dryRun && this.limitPreview) {
+      const { ledgerOwner, ledgerName } = parseLedgerId(ledgerId);
+      await this.limitPreview.assertRoom({
+        client: await this.favaClientFactory.getPublicApiClient(
+          ledgerId,
+          identity.userId,
+        ),
+        owner: ledgerOwner,
+        repo: ledgerName,
+        adding: directives.length,
+      });
+    }
 
     const [baseline, projected] = await Promise.all([
       this.checkProjected(ledgerId, identity, []),
@@ -175,9 +247,17 @@ export class DirectiveAppendWorkflow implements IDirectiveAppendWorkflow {
       throw unbalancedOrValidationError(newErrors);
     }
 
-    const paths = targets.map((target) => target.path);
+    const paths = [...byPath.keys()];
     const noun = directives.length === 1 ? "directive" : "directives";
-    const summary = `${directives.length} ${noun} to ${paths.join(", ")}`;
+    const includes =
+      included.length === 0
+        ? ""
+        : `; ${LEDGER_ENTRY_POINT} ${dryRun ? "would include" : "now includes"} ${included.join(", ")}`;
+    const summary = `${directives.length} ${noun} to ${paths.join(", ")}${includes}`;
+    const wrote = targets.flatMap((target) =>
+      target.lines.map((line) => ({ path: target.path, line })),
+    );
+    let entryHashes: string[] = [];
     if (!dryRun) {
       await this.ledgerRepo.changeGeneratedFiles({
         ledgerId,
@@ -195,6 +275,12 @@ export class DirectiveAppendWorkflow implements IDirectiveAppendWorkflow {
         count: directives.length,
         paths,
       });
+      entryHashes = await this.writtenEntryHashes(
+        ledgerId,
+        identity,
+        targets,
+        wrote,
+      );
     }
 
     return {
@@ -202,11 +288,8 @@ export class DirectiveAppendWorkflow implements IDirectiveAppendWorkflow {
       message: dryRun ? `Would add ${summary}` : `Added ${summary}`,
       dryRun,
       count: directives.length,
-      wrote: dryRun
-        ? []
-        : targets.flatMap((target) =>
-            target.lines.map((line) => ({ path: target.path, line })),
-          ),
+      wrote: dryRun ? [] : wrote,
+      entryHashes,
       // A commit's diff is the ledger's history; a preview's diff is the only
       // place the caller can see what it approved — so it is only computed
       // when it will be read. A line-by-line diff of a whole ledger file is
@@ -224,6 +307,70 @@ export class DirectiveAppendWorkflow implements IDirectiveAppendWorkflow {
         .filter((target) => target.appended)
         .map((target) => target.path),
     };
+  }
+
+  /**
+   * The routed targets the ledger would not load once written: the closure
+   * of the repository plus the files this write creates (w23/062). A ledger
+   * service that cannot answer — one deployed before the route — leaves the
+   * write as it was before, rather than refusing every routed append.
+   */
+  private async unloadedTargets(
+    ledgerId: string,
+    identity: Identity,
+    paths: string[],
+    existing: Map<string, { content: string }>,
+  ): Promise<string[]> {
+    let loaded: Set<string>;
+    try {
+      loaded = new Set(
+        await this.ledgerRepo.projectedSourceFiles({
+          ledgerId,
+          identity,
+          overlays: paths
+            .filter((target) => !existing.has(target))
+            .map((target) => ({ path: target, content: "" })),
+        }),
+      );
+    } catch (error) {
+      this.logger.warn("Could not list the projected include closure", {
+        ledgerId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return [];
+    }
+    return paths.filter((target) => !loaded.has(target));
+  }
+
+  /**
+   * The hashes the committed directives now carry, in text order, so the
+   * caller can read, edit or delete what it wrote (w23/060). Best-effort:
+   * the commit has landed, so a failed lookup costs the hashes, not the
+   * write — and a partial list would not say which hash is whose.
+   */
+  private async writtenEntryHashes(
+    ledgerId: string,
+    identity: Identity,
+    targets: { path: string; content: string }[],
+    wrote: { path: string; line: number }[],
+  ): Promise<string[]> {
+    try {
+      const hashes = await this.ledgerRepo.projectedEntryHashes({
+        ledgerId,
+        identity,
+        overlays: targets.map(({ path, content }) => ({ path, content })),
+        locations: wrote,
+      });
+      return hashes.every((hash): hash is string => hash !== null)
+        ? hashes
+        : [];
+    } catch (error) {
+      this.logger.warn("Could not resolve the appended entries' hashes", {
+        ledgerId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return [];
+    }
   }
 
   private async checkProjected(
@@ -248,6 +395,34 @@ export class DirectiveAppendWorkflow implements IDirectiveAppendWorkflow {
    * a write, and routing to `main.bean` when a ledger declares no rules is the
    * long-standing fallback.
    */
+  /**
+   * A target the caller names must be a file the ledger loads: written
+   * anywhere else, the entry commits and no read ever shows it (w23/035).
+   * Auto-routed targets are the ledger's own routing rules and may create
+   * the file they route to.
+   */
+  private async assertLoaded(
+    ledgerId: string,
+    identity: Identity,
+    path: string,
+  ): Promise<void> {
+    const [ledgerOwner, ledgerName] = ledgerId.split("/");
+    const favaApiClient = await this.favaClientFactory.getPublicApiClient(
+      ledgerId,
+      identity.userId,
+    );
+    const sourceFiles = await unwrapFavaResponse(
+      favaApiClient.reports.getLedgerSourceFiles(ledgerOwner, ledgerName),
+      "get ledger source files",
+    );
+    if (sourceFiles.includes(path)) return;
+    throw new BadUserInputError(
+      `${path} is not included by the ledger (main.bean does not reach it); add an include for it, or omit path to auto-route`,
+      "path",
+      "Name a file the ledger loads (the `source-files` read lists them), or create the file and `include` it first.",
+    );
+  }
+
   private async fetchBcioOptions(
     ledgerId: string,
     identity: Identity,

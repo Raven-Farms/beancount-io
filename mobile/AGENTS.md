@@ -156,7 +156,7 @@ Content areas that wait on a query render a skeleton built from `LoadingTile`
 - The skeleton mirrors the loaded layout: same container, paddings, and dividers.
   Give real text fixed `lineHeight`s and size each tile + its vertical margins to
   fill that same line box, so the view doesn't shift a pixel when data lands
-  (see `ListItemSkeleton` in `src/screens/multi-postings-transaction/list-item.tsx`,
+  (see `SkeletonRows` in `src/screens/notifications-screen/notifications-screen.tsx`,
   the account-picker loading state, and the suggestions card in
   `src/components/text-input-screen/`).
 - Vary tile widths across rows (a const array of widths) so the skeleton reads
@@ -180,6 +180,8 @@ const { t } = useTranslations();
 
 When adding a string, add the key to the English file under `src/translations/` (the base). Other locales extend and override as needed.
 
+Keep one form of address per locale: German _Sie_, Dutch _je_, Spanish _tú_, French _vous_. `src/translations/__tests__/form-of-address.test.ts` fails on a German, Dutch or Spanish string in the other register.
+
 A count is a plural object, not `Label: {{count}}`. Give each locale exactly the categories `Intl.PluralRules` lists for it: `{ one, other }` in English, `{ one, few, many, other }` in Russian, Ukrainian and Slovak, and `{ other }` alone in Chinese. Then call `t(key, { count })`. `src/common/plural.ts` registers the per-locale rule with i18n-js, and `src/translations/__tests__/plural.test.ts` fails on a missing or extra category.
 
 ### Reactive variables for global state
@@ -189,6 +191,10 @@ import { useReactiveVar } from "@apollo/client";
 import { themeVar } from "@/common/vars";
 const currentTheme = useReactiveVar(themeVar);
 ```
+
+### Fetch policies — revalidate the persisted cache
+
+The Apollo cache is persisted and restored before first render, so the client's default watch-query policy is `cache-and-network` (`src/common/apollo/default-options.ts`). Cached rows render at once, offline too, and the network replaces them. Don't set `cache-first` on a ledger read; a cold start would then show the last session's data. Use `network-only` or `no-cache` only where a read must skip the cache. `default-options.test.ts` proves the cold-start behavior against a real client, and `fetch-policies.test.ts` pins the screens to it.
 
 ### Generated GraphQL
 

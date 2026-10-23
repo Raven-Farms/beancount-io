@@ -1,12 +1,19 @@
-import { useState, useMemo, type ReactNode, type RefObject } from "react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+  type RefObject,
+} from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useTranslations } from "@/common/hooks/use-translations";
+import { usePendingSubmit } from "@/common/hooks/use-pending-submit";
 import { useErrorMessage } from "@/common/lib/errors/error-message";
 import { restoreFocusOnDialogClose } from "@/common/lib/focus/restore-focus-on-dialog-close";
-import { useMutation } from "@apollo/client/react";
-import { format } from "date-fns";
+import { useApolloClient, useMutation } from "@apollo/client/react";
 import {
   BulkEntriesDocument,
   BudgetInterval,
@@ -45,10 +52,11 @@ import {
   CurrencyCombobox,
 } from "@/common/components/ledger-comboboxes";
 import { DatePicker } from "@/common/components/ui/date-picker";
+import { todayIsoDate } from "@/common/components/ui/date-picker-utils";
 
 const createBudgetSchema = (t: (key: string) => string) =>
   z.object({
-    date: z.date(),
+    date: z.iso.date(),
     account: z.string().min(1, t("page.budget.budgetAccountRequired")),
     interval: z.nativeEnum(BudgetInterval),
     number: z.string().min(1, t("page.budget.budgetAmountRequired")),
@@ -100,24 +108,14 @@ export function AddBudgetDialog({
     }),
     [t],
   );
-  const [addEntryBudget] = useMutation(BulkEntriesDocument, {
-    refetchQueries: [
-      {
-        query: GetLedgerJournalDocument,
-        variables: {
-          ledgerId,
-          query: { directiveTypes: ["Custom"], customSubtypes: ["budget"] },
-        },
-      },
-    ],
-    awaitRefetchQueries: true,
-  });
+  const client = useApolloClient();
+  const [addEntryBudget] = useMutation(BulkEntriesDocument);
   const [error, setError] = useState<string | null>(null);
 
   const form = useForm<FormData>({
     resolver: zodResolver(schema),
     defaultValues: {
-      date: new Date(),
+      date: todayIsoDate(),
       account: lockedAccount ?? "",
       interval: lockedInterval ?? defaultInterval ?? BudgetInterval.Monthly,
       number: "",
@@ -128,7 +126,7 @@ export function AddBudgetDialog({
 
   const resetForm = () => {
     form.reset({
-      date: new Date(),
+      date: todayIsoDate(),
       account: lockedAccount ?? "",
       interval: lockedInterval ?? defaultInterval ?? BudgetInterval.Monthly,
       number: "",
@@ -137,8 +135,20 @@ export function AddBudgetDialog({
     setError(null);
   };
 
+  // Each opening is its own draft. A write settles for the opening it was
+  // submitted from, so a late success cannot reset or close a later draft
+  // (w4/295).
+  const opening = useRef(0);
+  useEffect(() => {
+    if (open) return;
+    opening.current += 1;
+    resetForm();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
+
   const onSubmit = async (data: FormData) => {
     setError(null);
+    const submittedFrom = opening.current;
     try {
       const result = await addEntryBudget({
         variables: {
@@ -147,7 +157,7 @@ export function AddBudgetDialog({
             {
               type: LedgerEntryType.Budget,
               budget: {
-                date: format(data.date, "yyyy-MM-dd"),
+                date: data.date,
                 account: data.account,
                 interval: data.interval,
                 amount: {
@@ -161,9 +171,17 @@ export function AddBudgetDialog({
       });
 
       if (result.data?.bulkEntries.success) {
-        resetForm();
         onSuccess?.();
-        onOpenChange(false);
+        if (opening.current === submittedFrom) onOpenChange(false);
+        // The budget is saved; reading the list again is a separate step.
+        // Awaited inside the mutation, a failed read reported the saved
+        // budget as failed and offered the same write again (w4/m41). A
+        // failed refresh now shows on the Budget page's own query, with its
+        // Retry.
+        void client
+          .refetchQueries({ include: [GetLedgerJournalDocument] })
+          .catch(() => undefined);
+        return true;
       } else {
         setError(
           result.data?.bulkEntries.message ??
@@ -175,10 +193,15 @@ export function AddBudgetDialog({
     }
   };
 
+  // While the write is in flight its draft stays in front: fields are locked,
+  // and neither Cancel, Escape nor the close button can dismiss it.
+  const { submit, pending } = usePendingSubmit(form, onSubmit);
+
   return (
     <Dialog
       open={open}
       onOpenChange={(v) => {
+        if (!v && pending) return;
         if (!v) resetForm();
         onOpenChange(v);
       }}
@@ -202,110 +225,55 @@ export function AddBudgetDialog({
         </DialogHeader>
 
         <Form {...form}>
-          <form
-            onSubmit={form.handleSubmit(onSubmit)}
-            className="space-y-4 pt-2"
-          >
-            {error && (
-              <Alert variant="destructive">
-                <AlertDescription>{error}</AlertDescription>
-              </Alert>
-            )}
-
-            <FormField
-              control={form.control}
-              name="date"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>{t("page.budget.budgetDate")}</FormLabel>
-                  <FormControl>
-                    <DatePicker
-                      value={field.value}
-                      onChange={(d) => field.onChange(d)}
-                      className="[&>div]:w-full"
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
+          <form onSubmit={submit}>
+            <fieldset disabled={pending} className="min-w-0 space-y-4 pt-2">
+              {error && (
+                <Alert variant="destructive">
+                  <AlertDescription>{error}</AlertDescription>
+                </Alert>
               )}
-            />
 
-            <FormField
-              control={form.control}
-              name="account"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>{t("page.accounts.account")}</FormLabel>
-                  <FormControl>
-                    {lockedAccount ? (
-                      <Input value={field.value} disabled />
-                    ) : (
-                      <AccountCombobox
-                        ledgerId={ledgerId}
-                        value={field.value}
-                        onValueChange={field.onChange}
-                        placeholder={t("page.budget.budgetAccountPlaceholder")}
-                      />
-                    )}
-                  </FormControl>
-                  <FormDescription>
-                    {t("page.budget.budgetAccountHelp")}
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="interval"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>{t("page.budget.budgetInterval")}</FormLabel>
-                  <Select
-                    value={field.value}
-                    onValueChange={field.onChange}
-                    disabled={!!lockedInterval}
-                  >
+              <FormField
+                control={form.control}
+                name="date"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{t("page.budget.budgetDate")}</FormLabel>
                     <FormControl>
-                      <SelectTrigger>
-                        <SelectValue
-                          placeholder={t("page.budget.budgetSelectInterval")}
+                      <DatePicker
+                        value={field.value}
+                        onChange={(d) => field.onChange(d)}
+                        className="[&>div]:w-full"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="account"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{t("page.accounts.account")}</FormLabel>
+                    <FormControl>
+                      {lockedAccount ? (
+                        <Input value={field.value} disabled />
+                      ) : (
+                        <AccountCombobox
+                          ledgerId={ledgerId}
+                          value={field.value}
+                          onValueChange={field.onChange}
+                          placeholder={t(
+                            "page.budget.budgetAccountPlaceholder",
+                          )}
                         />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {/* Shortest to longest, as in the page's interval
-                          filter; the generated enum is alphabetical. */}
-                      {(Object.keys(intervalLabels) as BudgetInterval[]).map(
-                        (interval) => (
-                          <SelectItem key={interval} value={interval}>
-                            {intervalLabels[interval]}
-                          </SelectItem>
-                        ),
                       )}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <div className="flex gap-3">
-              <FormField
-                control={form.control}
-                name="number"
-                render={({ field }) => (
-                  <FormItem className="flex-1">
-                    <FormLabel>{t("page.budget.budgetAmount")}</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="number"
-                        placeholder="500"
-                        step="any"
-                        {...field}
-                      />
                     </FormControl>
+                    <FormDescription>
+                      {t("page.budget.budgetAccountHelp")}
+                    </FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -313,43 +281,99 @@ export function AddBudgetDialog({
 
               <FormField
                 control={form.control}
-                name="currency"
+                name="interval"
                 render={({ field }) => (
-                  <FormItem className="w-48">
-                    <FormLabel>{t("page.budget.budgetCurrency")}</FormLabel>
-                    <FormControl>
-                      <CurrencyCombobox
-                        ledgerId={ledgerId}
-                        value={field.value}
-                        onValueChange={field.onChange}
-                        placeholder="USD"
-                      />
-                    </FormControl>
+                  <FormItem>
+                    <FormLabel>{t("page.budget.budgetInterval")}</FormLabel>
+                    <Select
+                      value={field.value}
+                      onValueChange={field.onChange}
+                      disabled={!!lockedInterval}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue
+                            placeholder={t("page.budget.budgetSelectInterval")}
+                          />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {/* Shortest to longest, as in the page's interval
+                          filter; the generated enum is alphabetical. */}
+                        {(Object.keys(intervalLabels) as BudgetInterval[]).map(
+                          (interval) => (
+                            <SelectItem key={interval} value={interval}>
+                              {intervalLabels[interval]}
+                            </SelectItem>
+                          ),
+                        )}
+                      </SelectContent>
+                    </Select>
                     <FormMessage />
                   </FormItem>
                 )}
               />
-            </div>
 
-            <div className="flex justify-end gap-2 pt-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => {
-                  resetForm();
-                  onOpenChange(false);
-                }}
-              >
-                {t("common.cancel")}
-              </Button>
-              <Button
-                type="submit"
-                disabled={!form.formState.isValid}
-                loading={form.formState.isSubmitting}
-              >
-                {t("page.budget.budgetAddBudget")}
-              </Button>
-            </div>
+              <div className="flex gap-3">
+                <FormField
+                  control={form.control}
+                  name="number"
+                  render={({ field }) => (
+                    <FormItem className="flex-1">
+                      <FormLabel>{t("page.budget.budgetAmount")}</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          placeholder="500"
+                          step="any"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="currency"
+                  render={({ field }) => (
+                    <FormItem className="w-48">
+                      <FormLabel>{t("page.budget.budgetCurrency")}</FormLabel>
+                      <FormControl>
+                        <CurrencyCombobox
+                          ledgerId={ledgerId}
+                          value={field.value}
+                          onValueChange={field.onChange}
+                          placeholder="USD"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    resetForm();
+                    onOpenChange(false);
+                  }}
+                >
+                  {t("common.cancel")}
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={!form.formState.isValid}
+                  loading={pending}
+                >
+                  {t("page.budget.budgetAddBudget")}
+                </Button>
+              </div>
+            </fieldset>
           </form>
         </Form>
       </DialogContent>

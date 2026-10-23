@@ -18,7 +18,7 @@
  *
  * Free of `@/` imports so the jest-lite runner can require it.
  */
-import { operatingKey, resolveCurrencyBalance } from "./balance-util";
+import { resolveCurrencyBalance } from "./balance-util";
 import {
   amountIn,
   holdingsOf,
@@ -32,6 +32,8 @@ import {
 } from "./balance-display";
 import { formatLedgerDateShort } from "./date-format";
 import { formatSignedMoneyWithCurrency } from "./number-utils";
+import { utcTime } from "./calendar-date";
+import { isolateLtr } from "./bidi";
 
 /**
  * One commodity pair's price history, as `getLedgerCommodities` returns it.
@@ -168,7 +170,7 @@ export function valueBasisOf(
 function daysBetween(from: string, to: string): number {
   const utc = (iso: string) => {
     const [year, month, day] = iso.split("-").map(Number);
-    return Date.UTC(year, month - 1, day);
+    return utcTime(year, month - 1, day);
   };
   return Math.round((utc(to) - utc(from)) / 86400000);
 }
@@ -276,20 +278,51 @@ export function selectValuation({
   const marketValue = resolveCurrencyBalance(market, currency);
   const costValue =
     cost == null ? null : resolveCurrencyBalance(cost, currency);
-  const key = operatingKey(market, currency);
-  const converted = holdingsOf(units).filter(
-    (holding) =>
-      holding.currency !== currency &&
-      holding.currency !== key &&
-      amountIn(market, holding.currency).number === 0,
-  );
+  // A commodity is converted when more of it is held than the market map
+  // still carries: a cost-less lot beside lots with a cost stays in the map,
+  // and used to switch the valuation off for all of it (w21/278). What is
+  // priced is the converted part.
+  const converted = holdingsOf(units).flatMap((holding) => {
+    if (holding.currency === currency) return [];
+    const { number: left, scale } = amountIn(market, holding.currency);
+    if (Math.abs(holding.number) <= Math.abs(left)) return [];
+    // Rounded at the recorded scale: 2.05 − 0.05 is not 2 in floating point.
+    const part = Number(
+      (holding.number - left).toFixed(
+        Math.min(100, Math.max(holding.scale, scale)),
+      ),
+    );
+    return [{ ...holding, number: part }];
+  });
   const reference = date !== undefined && date < today ? date : today;
 
   const priced: PricedHolding[] = [];
   const atCostNoPrice: Holding[] = [];
+  // The ledger values a lot at a price in its cost currency, else at cost;
+  // it never hops through another currency. The cost map's currencies are
+  // those cost currencies, so a lot bought in EUR is priced by an EUR price,
+  // not the operating currency's: the caption said "at cost (no price)" over
+  // a market value, and "priced" over a cost (w21/124).
+  // Callers that read no `at_cost` map (the Accounts root, the account detail)
+  // pass none: the market map then names them, since a lot priced against its
+  // cost currency is left in that currency there (w21/291).
+  const costCurrencies = holdingsOf(cost ?? market).map(
+    (holding) => holding.currency,
+  );
   if (prices !== undefined) {
     for (const holding of converted) {
-      const dates = priceDates(prices, holding.currency, currency, date);
+      const candidates = costCurrencies.filter(
+        (candidate) => candidate !== holding.currency,
+      );
+      let priceCurrency = currency;
+      let dates: string[] = [];
+      for (const candidate of candidates.length > 0 ? candidates : [currency]) {
+        const found = priceDates(prices, holding.currency, candidate, date);
+        if ((found.at(-1) ?? "") > (dates.at(-1) ?? "")) {
+          dates = found;
+          priceCurrency = candidate;
+        }
+      }
       const priceDate = dates.at(-1);
       if (priceDate === undefined) {
         atCostNoPrice.push(holding);
@@ -301,7 +334,7 @@ export function selectValuation({
             entry.commodity ?? "",
             entry.quote ?? "",
             holding.currency,
-            currency,
+            priceCurrency,
           ),
         ) ?? null;
       priced.push({
@@ -349,26 +382,36 @@ export function valuationStatus(
 ): string | null {
   const parts: string[] = [];
   if (valuation.valuesHoldings) {
-    parts.push(t("atMarketValue"));
-    const stale = stalePrices(valuation);
-    if (stale.length > 0) {
-      parts.push(
-        t("pricesNotUpdatedSince", {
-          count: stale.length,
-          date: formatLedgerDateShort(stale[0].priceDate, locale),
-        }),
-      );
-    }
-    if (valuation.atCostNoPrice.length > 0) {
-      parts.push(
-        t("atCostNoPriceCount", { count: valuation.atCostNoPrice.length }),
-      );
-    }
+    parts.push(t("atMarketValue"), ...priceAttention(valuation, t, locale));
   }
   if (valuation.notInTotal.length > 0) {
     parts.push(t("notInTotalCount", { count: valuation.notInTotal.length }));
   }
   return parts.length > 0 ? parts.join(" · ") : null;
+}
+
+/** Prices behind and holdings still at cost: what a valued figure flags. */
+function priceAttention(
+  valuation: Valuation,
+  t: Translate,
+  locale: string,
+): string[] {
+  const parts: string[] = [];
+  const stale = stalePrices(valuation);
+  if (stale.length > 0) {
+    parts.push(
+      t("pricesNotUpdatedSince", {
+        count: stale.length,
+        date: formatLedgerDateShort(stale[0].priceDate, locale),
+      }),
+    );
+  }
+  if (valuation.atCostNoPrice.length > 0) {
+    parts.push(
+      t("atCostNoPriceCount", { count: valuation.atCostNoPrice.length }),
+    );
+  }
+  return parts;
 }
 
 /**
@@ -398,9 +441,10 @@ export function costBasisLine(
   if (cost === null || unrealized === null || Math.abs(unrealized) < 0.005) {
     return null;
   }
+  // Isolated so a Persian sentence keeps each amount's sign in place (w21/095).
   return t("costBasisLine", {
-    cost: formatSignedMoneyWithCurrency(cost, currency),
-    gain: formatSignedMoneyWithCurrency(unrealized, currency, true),
+    cost: isolateLtr(formatSignedMoneyWithCurrency(cost, currency)),
+    gain: isolateLtr(formatSignedMoneyWithCurrency(unrealized, currency, true)),
   });
 }
 
@@ -422,10 +466,23 @@ export function balanceNotes(
       : notInTotalNotes(display.notInTotal, t);
   }
   const { value } = display;
-  if (value === null || value.basis === null) return [];
+  const attention =
+    display.valuation && display.valuation.valuesHoldings
+      ? priceAttention(display.valuation, t, locale)
+      : [];
+  // A holding priced only in its cost currency has no value in this one, but
+  // its stale price and its lots left at cost are still worth saying (w21/426).
+  if (value === null) {
+    return [...notInTotalNotes(display.notInTotal, t), ...attention];
+  }
+  if (value.basis === null) return [];
   return [
     t(value.basis === "market" ? "atMarket" : "atCost", {
-      amount: formatSignedMoneyWithCurrency(value.amount, currency),
+      // Isolated so a Persian sentence keeps the sign beside its number
+      // (w21/249).
+      amount: isolateLtr(formatSignedMoneyWithCurrency(value.amount, currency)),
     }),
+    ...notInTotalNotes(display.notInTotal, t),
+    ...attention,
   ];
 }

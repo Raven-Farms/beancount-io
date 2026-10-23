@@ -35,6 +35,7 @@ import { type IFeatureUsageService } from "@/features/feature-usage/service/feat
 import { type IAiCfoUsageService } from "@/features/feature-usage/service/ai-cfo-usage-service";
 import { type IAccountService } from "@/features/auth/service/account-service";
 import { type IAuthService } from "@/features/auth/service/auth-service";
+import type { IAuthMailService } from "@/features/auth/service/auth-mail-service";
 import { type IAuthSessionWorkflow } from "@/features/auth/workflow/auth-session-workflow";
 import { type ICliAuthService } from "@/features/auth/service/cli-auth-service";
 import { type IUserProfileService } from "@/features/gitea/user-profile/service/user-profile-service";
@@ -102,6 +103,7 @@ export interface ServiceLayer {
   aiCfoUsage: IAiCfoUsageService;
   account: IAccountService;
   auth: IAuthService;
+  authMail: IAuthMailService;
   cliAuth: ICliAuthService;
   userProfile: IUserProfileService;
   pullRequest: IPullRequestService;

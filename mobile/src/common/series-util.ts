@@ -26,6 +26,30 @@ export const RANGE_LABEL_KEYS: Record<TimeRange, string> = {
   ALL: "rangeAll",
 };
 
+/**
+ * What VoiceOver says for a range pill, by the key of its short label: "1M" was
+ * read as "1 M" and "YTD" spelled out letter by letter (w21/560).
+ */
+const SPOKEN_RANGE_KEYS: Record<string, string> = {
+  range1M: "rangeSpoken1M",
+  range3M: "rangeSpoken3M",
+  range6M: "rangeSpoken6M",
+  rangeYTD: "rangeSpokenYTD",
+  range1Y: "rangeSpoken1Y",
+  rangeLastYear: "rangeSpokenLastYear",
+  rangeAll: "rangeSpokenAll",
+};
+
+/** A range pill's short label and the full name that is spoken for it. */
+export function rangePillText(
+  t: (key: string) => string,
+  labelKey: string,
+): { label: string; spoken: string } {
+  const label = t(labelKey);
+  const spokenKey = SPOKEN_RANGE_KEYS[labelKey];
+  return { label, spoken: spokenKey ? t(spokenKey) : label };
+}
+
 // Fixed month-window lengths. "YTD" (year-to-date) and "ALL" are handled
 // specially in filterSeriesByRange, so they are excluded here.
 const RANGE_MONTHS: Record<Exclude<TimeRange, "ALL" | "YTD">, number> = {
@@ -39,8 +63,8 @@ const RANGE_MONTHS: Record<Exclude<TimeRange, "ALL" | "YTD">, number> = {
  * Convert a `{ date, balance }` series (net worth, an account's balance
  * history, …) into a monthly `SeriesPoint[]` in the active currency: one
  * (most recent) point per month, ascending by date. Reads each balance with the
- * shared currency-balance resolver (active currency, USD fallback, string
- * coercion) unless `read` says otherwise — a units series reads strictly.
+ * shared currency-balance resolver (active currency, string coercion) unless
+ * `read` says otherwise — a units series reads strictly.
  */
 export function pointsToMonthlySeries(
   currency: string,
@@ -65,6 +89,74 @@ export function pointsToMonthlySeries(
   return Array.from(byMonth.values()).sort((a, b) =>
     a.date.localeCompare(b.date),
   );
+}
+
+/**
+ * A balance series with every month between its first and last point: a
+ * month with no postings repeats the balance it closed with, dated its last
+ * day. Spaced by index, a dormant month otherwise had no point or scrub stop,
+ * and the curve drew a September "~$1,750" where the close was $2,000
+ * (w21/164). For balances only: a per-period change series is zero in a
+ * dormant month, not the month before.
+ */
+export function forwardFillMonths(
+  series: readonly SeriesPoint[],
+): SeriesPoint[] {
+  const filled: SeriesPoint[] = [];
+  for (const point of series) {
+    const previous = filled[filled.length - 1];
+    if (previous) {
+      let year = Number(previous.date.slice(0, 4));
+      let month = Number(previous.date.slice(5, 7));
+      const target = point.date.slice(0, 7);
+      for (;;) {
+        month += 1;
+        if (month > 12) {
+          month = 1;
+          year += 1;
+        }
+        const key = `${String(year).padStart(4, "0")}-${String(month).padStart(2, "0")}`;
+        if (key >= target) break;
+        const lastDay = new Date(Date.UTC(year, month, 0)).getUTCDate();
+        filled.push({
+          date: `${key}-${String(lastDay).padStart(2, "0")}`,
+          value: previous.value,
+        });
+      }
+    }
+    filled.push(point);
+  }
+  return filled;
+}
+
+/**
+ * A balance series as of `today`, carried to its month with its last balance.
+ * A series has a point only where the balance changed, so one account's last
+ * point is that account's last posting; windows counted back from it showed a
+ * quiet account's old changes as recent: on 21 October, a Savings account last
+ * moved in March read "+$500.00" over 1M (w21/240). Points after today go the
+ * other way: one entry pre-entered for next month (or a price dated then) put
+ * the last point in November, and Home's 1M read November's rent, not
+ * October's salary (w21/641). Rows after the current month go, and a point
+ * later this month is dated today, as account detail's are (w21/491).
+ * Balances only. A series with nothing after today and a point this month is
+ * returned as it is.
+ */
+export function carryBalanceToToday(
+  series: SeriesPoint[],
+  today: string,
+): SeriesPoint[] {
+  const thisMonth = today.slice(0, 7);
+  const upToToday = series.some((point) => point.date > today)
+    ? series
+        .filter((point) => point.date.slice(0, 7) <= thisMonth)
+        .map((point) =>
+          point.date > today ? { ...point, date: today } : point,
+        )
+    : series;
+  const last = upToToday[upToToday.length - 1];
+  if (!last || last.date.slice(0, 7) >= thisMonth) return upToToday;
+  return forwardFillMonths([...upToToday, { date: today, value: last.value }]);
 }
 
 /** The balance map of a series' latest point (series are chronological). */
@@ -128,6 +220,51 @@ export function filterSeriesByRange(
     currentYear,
   );
   return series.filter((point) => point.date.slice(0, 7) >= cutoffKey);
+}
+
+/**
+ * The month a report's flow ranges end on: the latest month with data, but
+ * never after the current one. A single pre-entered rent cheque for next
+ * month otherwise moved every range onto a month that had not happened, so
+ * "1M" in October showed only November (w21/166). A stale ledger, whose data
+ * ends earlier, keeps its latest month.
+ */
+/** The device's current "YYYY-MM". */
+export function currentYearMonth(now: Date = new Date()): string {
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+}
+
+export function flowAnchorMonth(
+  latestDataMonth: string,
+  currentMonth: string,
+): string {
+  return latestDataMonth < currentMonth ? latestDataMonth : currentMonth;
+}
+
+/**
+ * Range filter for **flow series** in Reports (income, expenses, net profit):
+ * the range ends on `flowAnchorMonth`, so a future month falls outside every
+ * range except "ALL". Balance series keep `filterBalanceSeriesByRange`, which
+ * stays consistent with headlines that include future entries.
+ */
+export function filterFlowSeriesByRange(
+  series: SeriesPoint[],
+  range: TimeRange,
+  currentMonth: string,
+  currentYear?: number,
+): SeriesPoint[] {
+  if (range === "ALL" || series.length === 0) {
+    return series;
+  }
+  const anchor = flowAnchorMonth(
+    series[series.length - 1].date.slice(0, 7),
+    currentMonth,
+  );
+  const cutoffKey = rangeStartMonth(range, anchor, currentYear);
+  return series.filter((point) => {
+    const month = point.date.slice(0, 7);
+    return month >= cutoffKey && month <= anchor;
+  });
 }
 
 /**

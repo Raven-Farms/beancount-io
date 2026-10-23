@@ -5,6 +5,7 @@ import type { SerializableTreeNode } from "@/graphql/definitions";
 import { useLedger } from "@/common/hooks/use-ledger";
 import { useTranslations } from "@/common/hooks/use-translations";
 import { useFormatNumber } from "@/common/hooks/use-format-number";
+import { fractionDigitsOf } from "@/common/lib/format/format-number";
 import { cn } from "@/common/lib/utils/utils";
 import { isZeroStatementAmount } from "@/features/reports/export/presentation";
 import type {
@@ -78,7 +79,11 @@ function PrimaryCurrencyColumn({
   const value = Number(raw);
   return (
     <span className="text-sm font-mono tabular-nums whitespace-nowrap [overflow-wrap:normal]">
-      {formatNum(inverted ? -value : value, primaryCurrency)}
+      {formatNum(
+        inverted ? -value : value,
+        primaryCurrency,
+        fractionDigitsOf(String(raw)),
+      )}
     </span>
   );
 }
@@ -112,7 +117,11 @@ function OtherBalancesColumn({
             key !== currencyLower &&
             !isZeroAmount(value),
         )
-        .map(([commodity, value]) => ({ commodity, value: Number(value) })),
+        .map(([commodity, value]) => ({
+          commodity,
+          value: Number(value),
+          digits: fractionDigitsOf(String(value)),
+        })),
     [balanceData, currencyUpper, currencyLower],
   );
 
@@ -124,13 +133,13 @@ function OtherBalancesColumn({
   const shown = expanded ? otherBalances : otherBalances.slice(0, 3);
   return (
     <div className="space-y-1">
-      {shown.map(({ commodity, value }) => (
+      {shown.map(({ commodity, value, digits }) => (
         <div
           key={commodity}
           className="text-sm whitespace-nowrap [overflow-wrap:normal]"
         >
           <span className="text-muted-foreground font-mono tabular-nums">
-            {formatNum(inverted ? -value : value, commodity)}
+            {formatNum(inverted ? -value : value, commodity, digits)}
           </span>{" "}
           <span className="text-muted-foreground">{commodity}</span>
         </div>

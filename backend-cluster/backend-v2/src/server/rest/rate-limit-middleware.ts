@@ -7,6 +7,7 @@ import {
 import { RateLimitedError } from "@/shared/errors";
 import { identityFromState } from "./identity-middleware";
 import { requestOpId } from "@/server/api/rest-op-id";
+import { clientAddress } from "@/server/client-address";
 
 /**
  * The REST half of the rate limiter.
@@ -26,28 +27,28 @@ export function restRateLimitMiddleware(): Router.Middleware {
     const identity = identityFromState(ctx);
     const opId = matchedOpId(ctx);
 
-    if (identity && opId) {
-      // A mount may say which op this particular request spends — MCP's
-      // handshake moves to its own cheap bucket rather than the session's
-      // budget (w2/014). The policy can redirect the charge, never waive it,
-      // so every request still costs something here.
-      await enforceRateLimit({
-        opId: rateLimitOpIdFor(opId, ctx.request.body),
-        identity,
-        ip: clientIp(ctx),
-      });
-    } else {
-      const decision = await consumeAnonymous({
-        path: ctx.path,
-        ip: clientIp(ctx),
-      });
-      if (!decision.allowed) {
-        ctx.set("Retry-After", String(decision.retryAfterSeconds));
-        throw new RateLimitedError(decision.retryAfterSeconds);
-      }
-    }
-
     try {
+      if (identity && opId) {
+        // A mount may say which op this particular request spends — MCP's
+        // handshake moves to its own cheap bucket rather than the session's
+        // budget (w2/014). The policy can redirect the charge, never waive it,
+        // so every request still costs something here.
+        await enforceRateLimit({
+          opId: rateLimitOpIdFor(opId, ctx.request.body),
+          identity,
+          ip: clientIp(ctx),
+        });
+      } else {
+        const decision = await consumeAnonymous({
+          path: ctx.path,
+          ip: clientIp(ctx),
+        });
+        if (!decision.allowed) {
+          ctx.set("Retry-After", String(decision.retryAfterSeconds));
+          throw new RateLimitedError(decision.retryAfterSeconds);
+        }
+      }
+
       await next();
     } catch (err) {
       // The header belongs on the response whichever half refused, and only
@@ -65,15 +66,12 @@ export function restRateLimitMiddleware(): Router.Middleware {
 }
 
 /**
- * The caller's IP.
- *
- * `ctx.ip` honours Koa's `proxy` setting for `X-Forwarded-For`; behind
- * Cloudflare and Caddy the left-most entry is client-controlled, so this is a
- * best-effort bucket key for anonymous traffic and never an authorization
- * input.
+ * The caller's IP: the `X-Forwarded-For` entry the nearest trusted proxy
+ * appended (`TRUSTED_PROXY_HOPS`, set on the Koa app), or the socket address
+ * when nothing is trusted. A bucket key, never an authorization input.
  */
 function clientIp(ctx: RouterContext): string {
-  return ctx.ip || "unknown";
+  return clientAddress(ctx);
 }
 
 function matchedOpId(ctx: RouterContext): string | undefined {

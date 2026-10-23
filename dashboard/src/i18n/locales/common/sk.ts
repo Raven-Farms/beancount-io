@@ -405,6 +405,11 @@ const skCommon: Record<string, TranslationEntry> = {
     message: "Stiahnuť",
     description: "Auto-generated from code usage",
   },
+  "common.downloadFailed": {
+    message: "Súbor sa nepodarilo stiahnuť. Skúste to znova.",
+    description:
+      "Error shown when the browser could not generate a file download",
+  },
   "common.moreActions": {
     message: "Ďalšie akcie",
     description: "Label for dropdown menu with additional actions",
@@ -743,6 +748,11 @@ const skCommon: Record<string, TranslationEntry> = {
     message: "Neboli nájdené žiadne účty",
     description: "Message when no accounts match search",
   },
+  "component.suggestions.unavailable": {
+    message: "Návrhy sa nepodarilo načítať. Hodnotu môžete napriek tomu zadať.",
+    description:
+      "Notice under a form field when its suggestions failed to load; the field still accepts typed text",
+  },
   "component.sourceFileCombobox.placeholder": {
     message: "Hľadať súbory...",
     description: "Placeholder for ledger file search",
@@ -1075,6 +1085,25 @@ const skCommon: Record<string, TranslationEntry> = {
     message: "Ste v obraze",
     description:
       "Description under the What's new heading when every release has been read",
+  },
+  "common.failedRenewal": {
+    message:
+      "Nepodarilo sa nám strhnúť platbu za {plan} z {card}. Aktualizujte ju do {date}, aby ste si ponechali {plan}.",
+    description:
+      "Banner while a renewal payment is past due: the card, the plan and the next retry date",
+  },
+  "common.failedRenewalUpdate": {
+    message: "Aktualizovať spôsob platby",
+    description: "Button that opens the billing portal to fix a failed renewal",
+  },
+  "common.failedRenewalYourCard": {
+    message: "vašej karty",
+    description: "Stands in for the card name when it is unknown",
+  },
+  "common.failedRenewalDismiss": {
+    message: "Zatiaľ skryť",
+    description:
+      "Accessible name of the button that hides the failed-renewal banner for this session",
   },
 };
 

@@ -5,6 +5,8 @@ from typing import Any, TypeVar
 
 from attrs import define as _attrs_define
 
+from ..types import UNSET, Unset
+
 T = TypeVar("T", bound="PutApiGatewayV1LedgersOwnerNameEntrySourceBody")
 
 
@@ -15,11 +17,14 @@ class PutApiGatewayV1LedgersOwnerNameEntrySourceBody:
         entry_hash (str):
         sha256sum (str):
         new_content (str):
+        allow_invalid (bool | Unset): Commit even when the write would add bean-check errors (VALIDATION_FAILED with
+            newLedgerErrors), instead of refusing it.
     """
 
     entry_hash: str
     sha256sum: str
     new_content: str
+    allow_invalid: bool | Unset = UNSET
 
     def to_dict(self) -> dict[str, Any]:
         entry_hash = self.entry_hash
@@ -27,6 +32,8 @@ class PutApiGatewayV1LedgersOwnerNameEntrySourceBody:
         sha256sum = self.sha256sum
 
         new_content = self.new_content
+
+        allow_invalid = self.allow_invalid
 
         field_dict: dict[str, Any] = {}
 
@@ -37,6 +44,8 @@ class PutApiGatewayV1LedgersOwnerNameEntrySourceBody:
                 "newContent": new_content,
             }
         )
+        if allow_invalid is not UNSET:
+            field_dict["allowInvalid"] = allow_invalid
 
         return field_dict
 
@@ -49,10 +58,13 @@ class PutApiGatewayV1LedgersOwnerNameEntrySourceBody:
 
         new_content = d.pop("newContent")
 
+        allow_invalid = d.pop("allowInvalid", UNSET)
+
         put_api_gateway_v1_ledgers_owner_name_entry_source_body = cls(
             entry_hash=entry_hash,
             sha256sum=sha256sum,
             new_content=new_content,
+            allow_invalid=allow_invalid,
         )
 
         return put_api_gateway_v1_ledgers_owner_name_entry_source_body

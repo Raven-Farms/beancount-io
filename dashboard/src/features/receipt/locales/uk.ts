@@ -235,6 +235,12 @@ const ukReceipt: Record<string, TranslationEntry> = {
     message: "Не вдалося записати транзакцію за чеком",
     description: "Error message when recording the transaction fails",
   },
+  "receipt.workflow.recordUnconfirmed": {
+    message:
+      "Можливо, її все ж записано — перевірте Журнал, перш ніж записувати її знову.",
+    description:
+      "Added after a connection failure while recording: the transaction may exist",
+  },
 };
 
 export default ukReceipt;

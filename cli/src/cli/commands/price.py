@@ -18,6 +18,7 @@ from cli.engine import launch
 from cli.errors import LedgerError, UsageError, refuse_json, refuse_misplaced_global
 from cli.native_command import ForwardingCommand
 from cli.native_help import native_options
+from cli.paths import refuse_too_long_name
 
 #: `price`'s own verbs; anything else is forwarded to bean-price.
 _VERBS = {
@@ -49,7 +50,10 @@ def price(ctx: typer.Context) -> None:
     file named `status` must be passed by path.
     """
     args = list(ctx.args)
-    refuse_misplaced_global("price", args, native_options("price"))
+    # Only status, refresh and export answer in JSON; `bea --json price FILE`,
+    # the form the forward was sent to, is refused (w5/839).
+    forwards = args[:1] not in (["status"], ["refresh"], ["export"])
+    refuse_misplaced_global("price", args, native_options("price"), json_output=not forwards)
     if args[:1] == ["status"]:
         _status(args[1:])
         return
@@ -98,15 +102,22 @@ def _status(extra: list[str]) -> None:
     file = current.entry_file()
     data = _answer(["price-status", "--file", str(file)], table_covers_sources=True)
     sources: list[dict[str, Any]] = data["sources"]
+    refused: list[dict[str, str]] = data.get("refused") or []
     if current.json_output:
         output.emit(
-            {"sources": sources},
+            {"sources": sources, "refused": refused},
             target=output.file_target(file),
             ledger_errors=[output.format_ledger_error(error) for error in data.get("errors") or []],
         )
         return
+    # A refused URL include is still an include: "no managed price includes"
+    # right below its refusal denied what the line above reported (w5/861).
+    if refused:
+        typer.echo(f"Refused URL includes ({len(refused)}), never fetched:")
+        for include in refused:
+            typer.echo(f"  {include['url']}: {include['reason']}")
     if not sources:
-        typer.echo("No managed price includes in this ledger.")
+        typer.echo("No usable managed price sources." if refused else "No managed price includes in this ledger.")
         return
     output.table(
         ["ALIAS", "FRESHNESS", "REVISION", "OBSERVED AT", "NEXT REFRESH", "SHADOWED", "ERROR"],
@@ -201,6 +212,12 @@ def _export(args: list[str]) -> None:
             if not value.strip():
                 raise UsageError("bea price export --output needs a directory.")
             take_output("--output", value)
+        elif arg.startswith("-o") and len(arg) > 2:
+            # The attached spelling every Typer option accepts, `-o/abs/exp` (w5/852).
+            value = arg[2:]
+            if not value.strip():
+                raise UsageError(f"bea price export -o {value!r} is empty; name the directory to export into.")
+            take_output("-o", value)
         elif arg == "--allow-errors":
             allow_errors = True
         elif arg == "--force":
@@ -209,6 +226,12 @@ def _export(args: list[str]) -> None:
             raise UsageError(f"bea price export takes only --output, --allow-errors and --force; got: {arg}.")
     current = context.current()
     file = current.entry_file()
+    if output_dir is not None:
+        # The export root holds a ledger every later command would refuse
+        # to read; refuse it before anything is written, as `init`
+        # does (w5/579, w5/794).
+        context.refuse_expanding_ledger_path(output_dir)
+        refuse_too_long_name(output_dir, output_flag)
     argv = ["price-export", "--file", str(file)]
     if output_dir is not None:
         argv += ["--output", output_dir]

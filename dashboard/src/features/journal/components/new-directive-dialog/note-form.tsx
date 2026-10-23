@@ -14,7 +14,6 @@ import {
   FormLabel,
   FormMessage,
 } from "@/common/components/ui/form";
-import { format } from "date-fns";
 
 import {
   BulkEntriesDocument,
@@ -26,29 +25,38 @@ import { useTranslations } from "@/common/hooks/use-translations";
 import { useErrorMessage } from "@/common/lib/errors/error-message";
 
 import { DatePicker } from "@/common/components/ui/date-picker";
+import { todayIsoDate } from "@/common/components/ui/date-picker-utils";
 import { AccountCombobox } from "@/common/components/ledger-comboboxes";
 import { track } from "@/common/analytics";
 import { AccountAvailabilityNotice } from "./account-availability-notice";
-import { entryDay, useAccountAvailability } from "./use-account-availability";
+import { useAccountAvailability } from "./use-account-availability";
+import { usePendingSubmit } from "@/common/hooks/use-pending-submit";
 
 interface NoteFormProps {
   ledgerId: string;
   onSuccess?: () => void;
+  /** Reports a write in flight, so the dialog can hold its tabs and close. */
+  onPendingChange?: (pending: boolean) => void;
 }
 
-// Zod validation schema factory
+// Zod validation schema factory. Required text is trimmed before its
+// required check, so whitespace alone is refused rather than sent as "" (w4/334).
 const createNoteSchema = (t: (key: string) => string) =>
   z.object({
-    date: z.date(),
-    account: z.string().min(1, t("journal.accountRequired")).trim(),
-    content: z.string().min(1, t("journal.noteContentRequired")).trim(),
+    date: z.iso.date(),
+    account: z.string().trim().min(1, t("journal.accountRequired")),
+    content: z.string().trim().min(1, t("journal.noteContentRequired")),
   });
 
 /**
  * Form component for creating note entries
  * Fields: date, account, note content
  */
-export function NoteForm({ ledgerId, onSuccess }: NoteFormProps) {
+export function NoteForm({
+  ledgerId,
+  onSuccess,
+  onPendingChange,
+}: NoteFormProps) {
   const { t } = useTranslations();
   const formatError = useErrorMessage();
   const [addNote] = useMutation(BulkEntriesDocument);
@@ -60,7 +68,7 @@ export function NoteForm({ ledgerId, onSuccess }: NoteFormProps) {
   const form = useForm<NoteFormData>({
     resolver: zodResolver(noteSchema),
     defaultValues: {
-      date: new Date(),
+      date: todayIsoDate(),
       account: "",
       content: "",
     },
@@ -68,19 +76,18 @@ export function NoteForm({ ledgerId, onSuccess }: NoteFormProps) {
   });
 
   const accounts = useAccountAvailability(ledgerId);
-  const day = entryDay(form.watch("date"));
+  const day = form.watch("date") || null;
   const account = form.watch("account");
 
   const onSubmit = async (data: NoteFormData) => {
     setError(null);
 
     try {
-      const entryDate = entryDay(data.date);
-      if (accounts.blocks([data.account], entryDate)) return;
+      if (accounts.blocks([data.account], data.date)) return;
 
       // Create note input
       const noteInput: LedgerNoteInput = {
-        date: format(data.date, "yyyy-MM-dd"),
+        date: data.date,
         account: data.account,
         content: data.content,
       };
@@ -88,7 +95,7 @@ export function NoteForm({ ledgerId, onSuccess }: NoteFormProps) {
       const variables: BulkEntriesMutationVariables = {
         ledgerId,
         entries: [
-          ...accounts.openEntries([data.account], entryDate),
+          ...accounts.openEntries([data.account], data.date),
           { type: LedgerEntryType.Note, note: noteInput },
         ],
       };
@@ -98,13 +105,14 @@ export function NoteForm({ ledgerId, onSuccess }: NoteFormProps) {
       if (result.data?.bulkEntries.success) {
         // Reset form
         form.reset({
-          date: new Date(),
+          date: todayIsoDate(),
           account: "",
           content: "",
         });
         accounts.reset();
         track("directive_added", { directive_type: "note" });
         onSuccess?.();
+        return true;
       } else {
         // Payload message is intentional server feedback — safe to show.
         setError(
@@ -116,95 +124,96 @@ export function NoteForm({ ledgerId, onSuccess }: NoteFormProps) {
     }
   };
 
+  const { submit, pending } = usePendingSubmit(form, onSubmit, onPendingChange);
+
   return (
     <Form {...form}>
-      <form
-        onSubmit={form.handleSubmit(onSubmit)}
-        className="space-y-6 pt-1 px-1"
-      >
-        {error && (
-          <Alert variant="destructive">
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
-        )}
+      <form onSubmit={submit}>
+        <fieldset disabled={pending} className="min-w-0 space-y-6 pt-1 px-1">
+          {error && (
+            <Alert variant="destructive">
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
 
-        <div className="grid grid-cols-1 gap-2 md:flex md:items-start md:gap-2">
+          <div className="grid grid-cols-1 gap-2 md:flex md:items-start md:gap-2">
+            <FormField
+              control={form.control}
+              name="date"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="sr-only">{t("journal.date")}</FormLabel>
+                  <FormControl>
+                    <DatePicker
+                      value={field.value}
+                      onChange={(newDate) => field.onChange(newDate)}
+                      required
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="account"
+              render={({ field }) => (
+                <FormItem className="flex-1">
+                  <FormLabel className="sr-only">
+                    {t("journal.accountLabel")}
+                  </FormLabel>
+                  <FormControl>
+                    <AccountCombobox
+                      ledgerId={ledgerId}
+                      value={field.value}
+                      onValueChange={field.onChange}
+                      placeholder={t("journal.accountPlaceholder")}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                  <AccountAvailabilityNotice
+                    check={accounts}
+                    account={account}
+                    day={day}
+                  />
+                </FormItem>
+              )}
+            />
+          </div>
+
           <FormField
             control={form.control}
-            name="date"
+            name="content"
             render={({ field }) => (
               <FormItem>
-                <FormLabel className="sr-only">{t("journal.date")}</FormLabel>
-                <FormControl>
-                  <DatePicker
-                    value={field.value}
-                    onChange={(newDate) => field.onChange(newDate)}
-                    required
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          <FormField
-            control={form.control}
-            name="account"
-            render={({ field }) => (
-              <FormItem className="flex-1">
                 <FormLabel className="sr-only">
-                  {t("journal.accountLabel")}
+                  {t("journal.noteContent")}
                 </FormLabel>
                 <FormControl>
-                  <AccountCombobox
-                    ledgerId={ledgerId}
-                    value={field.value}
-                    onValueChange={field.onChange}
-                    placeholder={t("journal.accountPlaceholder")}
+                  <Textarea
+                    placeholder={t("journal.noteContent")}
+                    rows={4}
+                    {...field}
                   />
                 </FormControl>
                 <FormMessage />
-                <AccountAvailabilityNotice
-                  check={accounts}
-                  account={account}
-                  day={day}
-                />
               </FormItem>
             )}
           />
-        </div>
 
-        <FormField
-          control={form.control}
-          name="content"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel className="sr-only">
-                {t("journal.noteContent")}
-              </FormLabel>
-              <FormControl>
-                <Textarea
-                  placeholder={t("journal.noteContent")}
-                  rows={4}
-                  {...field}
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        <div className="flex justify-end">
-          <Button
-            type="submit"
-            disabled={
-              !form.formState.isValid || accounts.blocks([account], day)
-            }
-            loading={form.formState.isSubmitting}
-          >
-            {t("journal.createNoteEntry")}
-          </Button>
-        </div>
+          <div className="flex justify-end">
+            <Button
+              type="submit"
+              disabled={
+                !form.formState.isValid || accounts.blocks([account], day)
+              }
+              loading={pending}
+            >
+              {t("journal.createNoteEntry")}
+            </Button>
+          </div>
+        </fieldset>
       </form>
     </Form>
   );

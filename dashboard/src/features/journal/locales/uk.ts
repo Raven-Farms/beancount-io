@@ -476,10 +476,6 @@ const ukJournal: Record<string, TranslationEntry> = {
     message: "Очікує на розгляд",
     description: "Pending transaction status",
   },
-  "journal.blankStatus": {
-    message: "(порожній)",
-    description: "Blank transaction status option",
-  },
   "journal.addPosting": {
     message: "Додати проводку",
     description: "Accessible name for adding a transaction posting row",

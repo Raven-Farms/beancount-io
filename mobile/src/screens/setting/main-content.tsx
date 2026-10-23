@@ -1,17 +1,24 @@
 import Constants from "expo-constants";
 import * as WebBrowser from "expo-web-browser";
-import { useState } from "react";
-import { Alert, Platform } from "react-native";
+import { useRef, useState } from "react";
+import { Alert, Linking, Platform, View } from "react-native";
+import { CardLoadFailure } from "@/components/card-load-failure";
+import { LoadingTile } from "@/components/loading-tile";
 import { List as List2 } from "@/components";
 
 import { i18n, setLocale } from "@/translations";
 import { useTranslations } from "@/common/hooks/use-translations";
+import { helpCenterUrl } from "@/common/site-url";
 import { useDeleteAccountMutation } from "@/generated-graphql/graphql";
 import { useSession } from "@/common/hooks/use-session";
 import { actionLogout } from "./logout";
 import { runAccountDeletion } from "./delete-account";
 import { flushLocale, localeVar, themeVar } from "@/common/vars";
-import { applyLayoutDirection, layoutDirectionChanges } from "@/common/rtl";
+import {
+  applyLayoutDirection,
+  isRtlLayout,
+  languageChangePlan,
+} from "@/common/rtl";
 import { reloadApp } from "@/common/reload-app";
 import { useReactiveVar } from "@apollo/client";
 import { router } from "expo-router";
@@ -28,6 +35,8 @@ import { useTheme } from "@/common/theme";
 import { Ionicons } from "@expo/vector-icons";
 import { useCurrentUser } from "@/common/hooks/use-current-user";
 import { UserAvatar } from "@/components/user-avatar";
+import { deleteConfirmationCheck } from "./delete-confirmation";
+import { openReviewPage } from "./review-app";
 
 export const MainContent = () => {
   const session = useSession();
@@ -36,7 +45,13 @@ export const MainContent = () => {
   const currentTheme = useReactiveVar(themeVar);
   const theme = useTheme().colorTheme;
   const { t } = useTranslations();
-  const { user, displayName } = useCurrentUser();
+  const {
+    user,
+    displayName,
+    loading: userLoading,
+    error: userError,
+    refetch: refetchUser,
+  } = useCurrentUser();
   const [languageModalVisible, setLanguageModalVisible] = useState(false);
   const [themeModalVisible, setThemeModalVisible] = useState(false);
   const [deleteAccountModalVisible, setDeleteAccountModalVisible] =
@@ -75,6 +90,9 @@ export const MainContent = () => {
   const [deleteAccountMutation, { loading: deleteAccountLoading }] =
     useDeleteAccountMutation();
 
+  const [loggingOut, setLoggingOut] = useState(false);
+  const loggingOutRef = useRef(false);
+
   const getLanguageLabel = (lng: string) => {
     return LANGUAGES[lng as keyof typeof LANGUAGES] || LANGUAGES.en;
   };
@@ -102,7 +120,13 @@ export const MainContent = () => {
   const handleDeleteAccountConfirm = (inputText: string) => {
     setDeleteAccountModalVisible(false);
     // Proceed with deletion only if the input matches
-    if (inputText === t("deleteAccountConfirmPhrase")) {
+    if (
+      deleteConfirmationCheck(
+        inputText,
+        t("deleteAccountConfirmPhrase"),
+        t("deleteAccountConfirmMismatch"),
+      ) === true
+    ) {
       handleDeleteAccount();
     }
   };
@@ -110,7 +134,23 @@ export const MainContent = () => {
   return (
     <>
       <List2>
-        {user && <SectionHeader title={t("accountSettings")} />}
+        {/* The Account section is the only way into Profile, so it is never
+            dropped without a word: a skeleton while the profile loads, and a
+            retry if it could not (w21/405). */}
+        {(user || userLoading || userError) && (
+          <SectionHeader title={t("accountSettings")} />
+        )}
+        {!user && userLoading && (
+          <View
+            testID="setting-profile-loading"
+            style={{ paddingHorizontal: 16, paddingVertical: 18 }}
+          >
+            <LoadingTile height={28} width={180} />
+          </View>
+        )}
+        {!user && !userLoading && userError && (
+          <CardLoadFailure onRetry={() => void refetchUser()} />
+        )}
         {user && (
           <ListItemHorizontal
             testID="setting-profile"
@@ -146,28 +186,26 @@ export const MainContent = () => {
           icon={<Ionicons name="star" size={22} color={theme.black80} />}
           title={t("reviewApp")}
           content={Platform.OS === "ios" ? "App Store" : "Google Play"}
-          onPress={async () => {
-            const storeUrl =
-              Platform.OS === "ios"
-                ? "https://apps.apple.com/us/app/id1527950512"
-                : "https://play.google.com/store/apps/details?id=io.beancount.android";
-            if (storeUrl) {
-              await WebBrowser.openBrowserAsync(storeUrl);
-            }
-          }}
+          onPress={() =>
+            void openReviewPage(
+              Platform.OS,
+              (url) => Linking.openURL(url),
+              (url) => WebBrowser.openBrowserAsync(url),
+            )
+          }
         />
         <ListItemHorizontal
           icon={<Ionicons name="help-circle" size={22} color={theme.black80} />}
           title={t("helpCenter")}
           onPress={async () => {
-            const helpCenterUrl = "https://beancount.io/docs/help-center";
-            await WebBrowser.openBrowserAsync(helpCenterUrl);
+            await WebBrowser.openBrowserAsync(helpCenterUrl(locale));
           }}
         />
         {session && (
           <ListItemHorizontal
             icon={<Ionicons name="trash" size={22} color={theme.black80} />}
             title={t("deleteAccount")}
+            busy={deleteAccountLoading}
             description={
               deleteAccountLoading
                 ? t("deleteAccountInProgress")
@@ -200,7 +238,7 @@ export const MainContent = () => {
             />
           }
           title={t("currentVersion")}
-          content={Constants.expoConfig?.version || "Unknown"}
+          content={Constants.expoConfig?.version || t("unknown")}
         />
       </List2>
 
@@ -209,6 +247,7 @@ export const MainContent = () => {
           title={t("logout")}
           icon={<Ionicons name="log-out" size={20} color={theme.error} />}
           destructive
+          busy={loggingOut}
           onPress={() => {
             Alert.alert(
               "",
@@ -218,8 +257,18 @@ export const MainContent = () => {
                 {
                   text: t("logoutAlertConfirm"),
                   onPress: async () => {
-                    await actionLogout(session);
-                    router.replace("/auth/welcome");
+                    // One sign-out at a time: a second tap used to start a
+                    // parallel one (w21/352).
+                    if (loggingOutRef.current) return;
+                    loggingOutRef.current = true;
+                    setLoggingOut(true);
+                    try {
+                      await actionLogout(session);
+                      router.replace("/auth/welcome");
+                    } finally {
+                      loggingOutRef.current = false;
+                      setLoggingOut(false);
+                    }
                   },
                 },
               ],
@@ -233,19 +282,22 @@ export const MainContent = () => {
         items={languageSource}
         onSelect={async (item) => {
           const changeTo = item.value ? String(item.value) : "en";
-          if (changeTo === locale) {
+          // A layout that disagrees with the language costs a restart:
+          // `I18nManager.forceRTL` is read by the native side at startup.
+          // Decided from the live layout, so a cancelled prompt can be
+          // brought back by picking the language again (w21/086).
+          const plan = languageChangePlan(locale, changeTo, isRtlLayout());
+          if (!plan.switchLanguage && !plan.promptRestart) {
             return;
           }
-          localeVar(changeTo);
-          i18n.locale = changeTo;
-          setLocale(changeTo);
+          if (plan.switchLanguage) {
+            localeVar(changeTo);
+            i18n.locale = changeTo;
+            setLocale(changeTo);
+          }
           setLanguageModalVisible(false);
 
-          // Crossing the left-to-right / right-to-left boundary is the only
-          // language change that costs a restart: `I18nManager.forceRTL` is
-          // read by the native side at startup, so until the app relaunches
-          // the layout and the text disagree. `de` → `fr` stays instant.
-          if (!layoutDirectionChanges(locale, changeTo)) {
+          if (!plan.promptRestart) {
             return;
           }
           Alert.alert(
@@ -305,7 +357,13 @@ export const MainContent = () => {
         confirmButtonText={t("deleteAccountAlertConfirm")}
         cancelButtonText={t("deleteAccountAlertCancel")}
         destructive
-        validateInput={(text) => text === t("deleteAccountConfirmPhrase")}
+        validateInput={(text) =>
+          deleteConfirmationCheck(
+            text,
+            t("deleteAccountConfirmPhrase"),
+            t("deleteAccountConfirmMismatch"),
+          )
+        }
       />
     </>
   );

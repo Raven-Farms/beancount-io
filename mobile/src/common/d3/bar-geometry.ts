@@ -45,7 +45,8 @@ export function barRectAt(
 
 /**
  * Smallest height a bar is drawn at, so a period worth almost nothing still
- * reads as a bar rather than as missing data.
+ * reads as a bar rather than as missing data. A value of exactly zero is
+ * nothing, and draws nothing (w21/496).
  */
 const MIN_BAR_HEIGHT = 2;
 
@@ -66,6 +67,7 @@ export function restingBarRect(
 ): BarRect {
   "worklet";
   const growsUp = value >= 0;
+  if (value === 0) return { height: 0, y: zeroY };
   const spanned = growsUp ? zeroY - valueY : valueY - zeroY;
   return {
     height: Math.max(Math.abs(spanned), minHeight),

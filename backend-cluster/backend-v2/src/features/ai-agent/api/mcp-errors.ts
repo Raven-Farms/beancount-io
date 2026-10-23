@@ -72,7 +72,7 @@ const CATEGORY_HINTS: Record<ErrorCategory, string> = {
   [ErrorCategory.FORBIDDEN]:
     "This credential lacks the authority for that operation. Check `beancount://{owner}/{name}/metadata` for your permission on the ledger.",
   [ErrorCategory.NOT_FOUND]:
-    "Confirm the target exists: `listLedgers` for ledgers, `listLedgerFiles` or `beancount://{owner}/{name}/source-files` for files.",
+    "Confirm the target exists: `listLedgers` for ledgers, `listLedgerFiles` or `beancount://{owner}/{name}/source-files` for files, `listLedgerEntries` for entry hashes, which change when an entry is edited.",
   [ErrorCategory.BAD_USER_INPUT]:
     "Fix the named argument and call again; `tools/list` publishes each tool's input schema.",
   [ErrorCategory.VALIDATION_FAILED]:
@@ -126,20 +126,39 @@ function withoutPlanWording(text: string, fallback: string): string {
  * pretty-printed — a screenful per bad argument. What an agent needs is which
  * argument and why, so the path is kept and the dump is dropped.
  */
+type ZodIssueJson = {
+  code?: string;
+  path?: unknown[];
+  message?: string;
+  errors?: ZodIssueJson[][];
+};
+
+/**
+ * One issue as `path: message`. A union refusal says only "Invalid input",
+ * which named neither the unknown key nor the expected fields (w23/052), so it
+ * speaks for the branch that came closest — the one with the fewest issues.
+ */
+function describeIssue(issue: ZodIssueJson, prefix: unknown[] = []): string {
+  const path = [...prefix, ...(Array.isArray(issue.path) ? issue.path : [])];
+  if (issue.code === "invalid_union" && Array.isArray(issue.errors)) {
+    const closest = issue.errors
+      .filter((branch) => Array.isArray(branch) && branch.length > 0)
+      .sort((a, b) => a.length - b.length)[0];
+    if (closest) return describeIssue(closest[0], path);
+  }
+  const named = path.join(".");
+  return named ? `${named}: ${issue.message}` : String(issue.message);
+}
+
 function compactZodMessage(message: string): string | undefined {
   const trimmed = message.trim();
   if (!trimmed.startsWith("[") && !trimmed.includes('"path"')) return undefined;
   try {
     const issues = JSON.parse(
       trimmed.slice(trimmed.indexOf("[")),
-    ) as (unknown & { path?: unknown[]; message?: string })[];
+    ) as ZodIssueJson[];
     if (!Array.isArray(issues) || issues.length === 0) return undefined;
-    return issues
-      .map((issue) => {
-        const path = Array.isArray(issue.path) ? issue.path.join(".") : "";
-        return path ? `${path}: ${issue.message}` : String(issue.message);
-      })
-      .join("; ");
+    return issues.map((issue) => describeIssue(issue)).join("; ");
   } catch {
     return undefined;
   }

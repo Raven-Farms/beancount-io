@@ -168,10 +168,17 @@ export default function UserProfilePage() {
                           </time>
                         </span>
                       )}
+                      {/* Merged like the tab strip's change: a literal search
+                          dropped the ledger collection's q, sort and show
+                          (w4/336). */}
                       <Link
+                        from="/ledger/$username"
                         to="/ledger/$username"
                         params={{ username }}
-                        search={{ tab: "followers" }}
+                        search={(previous) => ({
+                          ...previous,
+                          tab: "followers",
+                        })}
                         className="flex items-center gap-1.5 rounded-sm hover:text-primary hover:underline focus-visible:outline-2 focus-visible:outline-ring"
                       >
                         <Users aria-hidden="true" className="size-3.5" />

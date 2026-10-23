@@ -53,16 +53,24 @@ afterEach(() => {
 });
 
 function feedPage(offset: number, hasMore = true): GetFeedQuery {
+  return feedItems(
+    Array.from({ length: 10 }, (_, index) => offset + index),
+    hasMore,
+  );
+}
+
+/** A page holding exactly these activity numbers, in order. */
+function feedItems(numbers: number[], hasMore = true): GetFeedQuery {
   return {
     getFeed: {
       __typename: "FeedResponse",
       total: 30,
       hasMore,
-      items: Array.from({ length: 10 }, (_, index) => ({
+      items: numbers.map((number) => ({
         __typename: "FeedItem",
-        id: `activity-${offset + index}`,
-        title: `Ledger change ${offset + index}`,
-        summary: `Recorded transaction ${offset + index}`,
+        id: `activity-${number}`,
+        title: `Ledger change ${number}`,
+        summary: `Recorded transaction ${number}`,
         link: "/ledger/alice/books",
         publishedAt: "2026-09-01T12:00:00Z",
         author: "alice",
@@ -354,5 +362,108 @@ describe("Activity feed pagination through Apollo", () => {
     expect(screen.queryByRole("article")).not.toBeInTheDocument();
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
     expect(screen.queryByRole("button")).not.toBeInTheDocument();
+  });
+
+  /**
+   * Newer activity moves the server's offset boundary, so the next page can
+   * repeat cards already on screen; the raw append rendered them twice under
+   * the same key (w4/302).
+   */
+  describe("when newer activity shifts the next page", () => {
+    const titles = () =>
+      screen
+        .getAllByRole("article")
+        .map((card) => within(card).getByText(/^Ledger change /).textContent);
+    const showMore = () =>
+      screen.getByRole("button", { name: en["page.dashboard.showMore"] });
+
+    it("appends only unseen cards and keeps advancing by whole pages", async () => {
+      const { requests } = await mountFeed();
+      const user = userEvent.setup();
+      await resolvePage(requests[0], 0);
+      await waitFor(() => expectCards(10));
+      const firstCards = screen.getAllByRole("article");
+
+      await user.click(showMore());
+      await waitFor(() => expect(requests).toHaveLength(2));
+      // Two cards slid over the boundary, and one id repeats within the page.
+      await act(async () =>
+        requests[1].resolve(feedItems([8, 9, 10, 11, 11, 12, 13, 14, 15, 16])),
+      );
+      await waitFor(() =>
+        expect(screen.getAllByRole("article")).toHaveLength(17),
+      );
+      expect(new Set(titles()).size).toBe(17);
+      expect(screen.getAllByRole("article").slice(0, 10)).toEqual(firstCards);
+      expect(screen.getByRole("status")).toHaveTextContent(
+        "Loaded 7 more items",
+      );
+      expect(showMore()).toHaveFocus();
+
+      await user.click(showMore());
+      await waitFor(() => expect(requests).toHaveLength(3));
+      expect(requests[2].variables.offset).toBe(20);
+      await act(async () =>
+        requests[2].resolve(feedItems([18, 19, 20, 21], false)),
+      );
+      await waitFor(() =>
+        expect(screen.getAllByRole("article")).toHaveLength(21),
+      );
+      expect(new Set(titles()).size).toBe(21);
+      expect(screen.getByRole("status")).toHaveFocus();
+      expect(screen.getByRole("status")).toHaveTextContent("No more results");
+    });
+
+    it("keeps Show More usable when a page adds nothing new", async () => {
+      const { requests } = await mountFeed();
+      const user = userEvent.setup();
+      await resolvePage(requests[0], 0);
+      await waitFor(() => expectCards(10));
+
+      await user.click(showMore());
+      await waitFor(() => expect(requests).toHaveLength(2));
+      await act(async () => requests[1].resolve(feedItems([5, 6, 7, 8, 9])));
+      await waitFor(() =>
+        expect(screen.getByRole("status")).toHaveTextContent(
+          "Loaded 0 more items",
+        ),
+      );
+      expectCards(10);
+      expect(showMore()).toBeEnabled();
+      expect(showMore()).toHaveFocus();
+
+      await user.click(showMore());
+      await waitFor(() => expect(requests).toHaveLength(3));
+      expect(requests[2].variables.offset).toBe(20);
+    });
+
+    it("shows exactly the refreshed list when an overlapped feed revalidates", async () => {
+      const { requests } = await mountFeed();
+      const user = userEvent.setup();
+      await resolvePage(requests[0], 0);
+      await waitFor(() => expectCards(10));
+      await user.click(showMore());
+      await waitFor(() => expect(requests).toHaveLength(2));
+      await act(async () =>
+        requests[1].resolve(feedItems([8, 9, 10, 11, 12, 13, 14, 15, 16, 17])),
+      );
+      await waitFor(() =>
+        expect(screen.getAllByRole("article")).toHaveLength(18),
+      );
+
+      // A revalidation (Back to the dashboard) replaces the accumulated list.
+      await act(async () => {
+        void clients[0]!.refetchQueries({ include: "active" });
+      });
+      await waitFor(() => expect(requests).toHaveLength(3));
+      expect(requests[2].variables.offset).toBe(0);
+      await act(async () =>
+        requests[2].resolve(feedItems([20, 21, 0, 1, 2, 3, 4, 5, 6, 7])),
+      );
+      await waitFor(() =>
+        expect(screen.getAllByRole("article")).toHaveLength(10),
+      );
+      expect(new Set(titles()).size).toBe(10);
+    });
   });
 });

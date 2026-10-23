@@ -4,6 +4,8 @@ import { authMiddleware, giteaClientForRequest } from "@/server/auth";
 import { successResponse } from "@/server/envelope";
 import { toUserPublic, type UserPublic } from "./serializers";
 import { intQuery } from "./query-params";
+import { isGiteaNotFound } from "@/features/gitea/utils/gitea-error";
+import { NotFoundError } from "@/shared/errors/domain-errors";
 
 /** Python `LedgerCollaboratorPermission`. */
 interface LedgerCollaboratorPermission {
@@ -38,6 +40,25 @@ export function setCollaboratorsHandler(router: Router): void {
     authMiddleware,
     async (ctx) => {
       const client = giteaClientForRequest(ctx);
+      const { owner, repo_name, collaborator } = ctx.params;
+      // The host answers a permission lookup for any account, with that
+      // account's email and last login, so a ledger admin could read any
+      // user's profile by naming them. Answer only for the owner and actual
+      // collaborators; everyone else, existing or not, gets the same 404.
+      if (collaborator.toLowerCase() !== owner.toLowerCase()) {
+        try {
+          await client.repos.repoCheckCollaborator(
+            owner,
+            repo_name,
+            encodeURIComponent(collaborator),
+          );
+        } catch (error) {
+          if (isGiteaNotFound(error)) {
+            throw new NotFoundError(`Collaborator '${collaborator}'`);
+          }
+          throw error;
+        }
+      }
       const res = await client.repos.repoGetRepoPermissions(
         ctx.params.owner,
         ctx.params.repo_name,

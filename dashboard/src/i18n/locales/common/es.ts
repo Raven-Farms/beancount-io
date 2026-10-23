@@ -400,6 +400,11 @@ const esCommon: Record<string, TranslationEntry> = {
     message: "Descargar",
     description: "Auto-generated from code usage",
   },
+  "common.downloadFailed": {
+    message: "No se pudo descargar el archivo. Inténtalo de nuevo.",
+    description:
+      "Error shown when the browser could not generate a file download",
+  },
   "common.moreActions": {
     message: "Más acciones",
     description: "Label for dropdown menu with additional actions",
@@ -740,6 +745,12 @@ const esCommon: Record<string, TranslationEntry> = {
     message: "No se encontraron cuentas",
     description: "Message when no accounts match search",
   },
+  "component.suggestions.unavailable": {
+    message:
+      "No se pudieron cargar las sugerencias. Aun así puedes escribir un valor.",
+    description:
+      "Notice under a form field when its suggestions failed to load; the field still accepts typed text",
+  },
   "component.sourceFileCombobox.placeholder": {
     message: "Buscar archivos...",
     description: "Placeholder for ledger file search",
@@ -1069,6 +1080,25 @@ const esCommon: Record<string, TranslationEntry> = {
     message: "Estás al día",
     description:
       "Description under the What's new heading when every release has been read",
+  },
+  "common.failedRenewal": {
+    message:
+      "No pudimos cobrar {plan} en {card}. Actualízala antes del {date} para conservar {plan}.",
+    description:
+      "Banner while a renewal payment is past due: the card, the plan and the next retry date",
+  },
+  "common.failedRenewalUpdate": {
+    message: "Actualizar método de pago",
+    description: "Button that opens the billing portal to fix a failed renewal",
+  },
+  "common.failedRenewalYourCard": {
+    message: "tu tarjeta",
+    description: "Stands in for the card name when it is unknown",
+  },
+  "common.failedRenewalDismiss": {
+    message: "Ocultar por ahora",
+    description:
+      "Accessible name of the button that hides the failed-renewal banner for this session",
   },
 };
 

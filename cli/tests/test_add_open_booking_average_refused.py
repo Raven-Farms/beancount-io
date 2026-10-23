@@ -126,6 +126,57 @@ def test_fifo_control_opens_buys_and_sells(tmp_path: Path) -> None:
     assert "-1 HOOL {}" in text
 
 
+AVERAGE_LEDGER = LEDGER.replace(
+    'option "operating_currency" "USD"\n', 'option "operating_currency" "USD"\noption "booking_method" "AVERAGE"\n'
+)
+
+
+def test_open_inheriting_average_warns_but_writes(tmp_path: Path) -> None:
+    """An open without booking inherits the option's AVERAGE, which may never hold lots (w5/764)."""
+    ledger = tmp_path / "main.bean"
+    ledger.write_text(AVERAGE_LEDGER)
+    result = _bea(tmp_path, "add", "open", "--date", "2026-01-01", "--account", "Assets:Avg")
+    assert result.returncode == 0, result.stderr
+    assert "Assets:Avg inherits booking method AVERAGE" in result.stderr + result.stdout
+    assert 'option "booking_method"' in result.stderr + result.stdout
+    assert "2026-01-01 open Assets:Avg" in ledger.read_text()
+
+
+def test_open_inheriting_average_warns_in_json(tmp_path: Path) -> None:
+    ledger = tmp_path / "main.bean"
+    ledger.write_text(AVERAGE_LEDGER)
+    result = _bea(tmp_path, "--json", "add", "open", "--date", "2026-01-01", "--account", "Assets:Avg")
+    assert result.returncode == 0, result.stderr
+    warnings = json.loads(result.stdout)["data"]["warnings"]
+    assert any("inherits booking method AVERAGE" in warning for warning in warnings), warnings
+
+
+def test_explicit_booking_under_average_option_stays_silent(tmp_path: Path) -> None:
+    ledger = tmp_path / "main.bean"
+    ledger.write_text(AVERAGE_LEDGER)
+    result = _bea(tmp_path, *_open("FIFO"))
+    assert result.returncode == 0, result.stderr
+    assert "inherits booking method AVERAGE" not in result.stderr + result.stdout
+
+
+def test_sale_from_an_inheriting_account_names_the_option(tmp_path: Path) -> None:
+    ledger = tmp_path / "main.bean"
+    ledger.write_text(AVERAGE_LEDGER)
+    opened = _bea(tmp_path, "add", "open", "--date", "2026-01-01", "--account", "Assets:Avg")
+    assert opened.returncode == 0, opened.stderr
+    for command in (BUY_1, BUY_2):
+        result = _bea(tmp_path, *command)
+        assert result.returncode == 0, result.stderr or result.stdout
+    before = ledger.read_text()
+    result = _bea(tmp_path, *SELL)
+    assert result.returncode == 1, result.stderr or result.stdout
+    assert "AVERAGE method is not supported." in result.stderr
+    assert "Assets:Avg, which inherits" in result.stderr
+    assert 'option "booking_method"' in result.stderr
+    assert "or change the option" in result.stderr
+    assert ledger.read_text() == before
+
+
 def test_sale_from_a_hand_written_average_account_names_the_remedy(tmp_path: Path) -> None:
     ledger = tmp_path / "main.bean"
     ledger.write_text(LEDGER + '2026-01-01 open Assets:Avg "AVERAGE"\n')

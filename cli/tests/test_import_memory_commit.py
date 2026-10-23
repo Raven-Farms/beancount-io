@@ -60,9 +60,13 @@ def test_applied_import_remembers_validated_headers_when_source_changes(
     real_helper = launch.helper_json
 
     def launch_then_change_source(
-        args: Sequence[str], *, stdin: str | None = None, writes: bool = False
+        args: Sequence[str],
+        *,
+        stdin: str | None = None,
+        writes: bool = False,
+        pass_fds: Sequence[int] = (),
     ) -> dict[str, Any]:
-        result = real_helper(args, stdin=stdin, writes=writes)
+        result = real_helper(args, stdin=stdin, writes=writes, pass_fds=pass_fds)
         if args[0] == "root":
             # The root lookup before memory is read (w5/613); only the apply changes the source.
             return result

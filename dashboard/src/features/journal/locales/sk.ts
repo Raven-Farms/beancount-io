@@ -476,10 +476,6 @@ const skJournal: Record<string, TranslationEntry> = {
     message: "Čaká sa",
     description: "Pending transaction status",
   },
-  "journal.blankStatus": {
-    message: "(prázdne)",
-    description: "Blank transaction status option",
-  },
   "journal.addPosting": {
     message: "Pridať položku",
     description: "Accessible name for adding a transaction posting row",

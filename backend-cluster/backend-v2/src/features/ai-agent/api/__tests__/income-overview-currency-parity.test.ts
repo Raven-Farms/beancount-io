@@ -235,7 +235,7 @@ describe.each(families)("empty %s currency labels", (family) => {
           Array.from({ length: 2 }, () => [
             "alice",
             "main",
-            { ...scope, conversion: conversion ?? "USD" },
+            { ...scope, ...(conversion === undefined ? {} : { conversion }) },
           ]),
         );
         expect(f.check).toHaveBeenCalledTimes(2);
@@ -294,7 +294,7 @@ describe("observed income and overview currency controls", () => {
           for (const report of Object.values(f.reports)) {
             expect(report).toHaveBeenLastCalledWith("alice", "main", {
               ...scope,
-              conversion: conversion ?? "USD",
+              ...(conversion === undefined ? {} : { conversion }),
             });
           }
         }
