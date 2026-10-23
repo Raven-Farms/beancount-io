@@ -29,6 +29,7 @@ function createService(signup?: {
       favaApi: { adminUser: "admin", adminPassword: "pw" },
       ...(signup ? { signup } : {}),
     } as any,
+    async () => false,
   );
   return { service, user, signupOtpSession, createUser, sendgrid };
 }

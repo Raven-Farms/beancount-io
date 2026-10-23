@@ -190,15 +190,6 @@ describe("createLedger operation", () => {
 
     it("treats a -1 ledger limit as unlimited", async () => {
       mockGetUserTier.mockResolvedValue(SubscriptionTier.ENTERPRISE);
-      mockFavaApiClient.ledgers.listLedgers.mockResolvedValue({
-        data: {
-          success: true,
-          data: [
-            { name: "a", full_name: "testuser/a" },
-            { name: "b", full_name: "testuser/b" },
-          ],
-        },
-      });
       mockFavaApiClient.ledgers.createLedger.mockResolvedValue({
         data: {
           success: true,
@@ -223,6 +214,8 @@ describe("createLedger operation", () => {
         userId,
       });
       expect(ledger.fullName).toBe("testuser/new-ledger");
+      // Unlimited: no need to count existing ledgers.
+      expect(mockFavaApiClient.ledgers.listUserLedgers).not.toHaveBeenCalled();
     });
 
     it("should throw error when create ledger API fails", async () => {

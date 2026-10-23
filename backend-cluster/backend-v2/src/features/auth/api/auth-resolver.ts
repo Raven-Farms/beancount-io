@@ -224,6 +224,7 @@ export class AuthResolver {
       result.token,
       result.expireAt,
       ctx.config.env === "production",
+      ctx.config.jwt.cookieDomain,
     );
     return { token: result.token, expireAt: result.expireAt };
   }
